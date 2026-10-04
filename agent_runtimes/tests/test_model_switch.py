@@ -180,10 +180,14 @@ def test_a_model_ai_inference_does_not_serve_is_refused_and_the_agent_kept(
     _configure(runtime, agent_id=AGENT, agent_spec=THROUGH_AI_INFERENCE)
     tux = _tux(runtime, monkeypatch)
 
-    assert "Not served by ai-inference" in _models(tux)
+    # Only what ai-inference serves is listed: Qwen is not, and a switch to
+    # it is refused with what ai-inference serves.
+    listing = _models(tux)
+    assert "Models (1)" in listing and QWEN not in listing
+    assert "Not running" not in listing and "Installed locally" not in listing
     assert (
-        f"{QWEN} cannot be used on this runtime (Not served by ai-inference): "
-        "nothing was switched." in _models(tux, QWEN)
+        f"this runtime does not offer {QWEN} to this agent: nothing was "
+        "switched. sonnet" in _models(tux, QWEN)
     )
     assert f"does not offer {OPUS} to this agent" in _models(tux, OPUS)
 

@@ -35,6 +35,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from ._version import __version__
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -861,7 +862,7 @@ async def _create_and_register_cli_agent(
         "icon": getattr(agent_spec, "icon", None),
         "emoji": getattr(agent_spec, "emoji", None),
         "color": getattr(agent_spec, "color", None),
-        "suggestions": list(getattr(agent_spec, "suggestions", []) or []),
+        "suggestions": [item.model_dump() for item in agent_spec.suggestions],
         "welcome_message": getattr(agent_spec, "welcome_message", None),
         "welcome_notebook": getattr(agent_spec, "welcome_notebook", None),
         "welcome_document": getattr(agent_spec, "welcome_document", None),
@@ -1021,7 +1022,8 @@ class ServerConfig(BaseModel):
 
     title: str = "Agent Runtimes Server"
     description: str = "FastAPI server for agent-runtimes with ACP protocol support"
-    version: str = "0.1.0"
+    #: What ``/api/v1/runtime/status`` says it runs: the package's version.
+    version: str = __version__
 
     # CORS settings
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])

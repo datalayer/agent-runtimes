@@ -141,6 +141,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
             "enableToolReranker": True,
         },
         mcp_servers=[SimpleNamespace(id="filesystem")],
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(
@@ -272,6 +273,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             frontend_tools=[],
             trigger=None,
             advanced=None,
+            suggestions=[],
         ),
     )
 
@@ -386,6 +388,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         codemode=None,
         mcp_servers=[],
         disable_tool_approvals=True,
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(

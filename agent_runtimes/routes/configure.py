@@ -30,6 +30,7 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
+from agent_runtimes.tools.decisions import DecisionQuestion, decide
 from agent_runtimes.types import AgentSuggestion, FrontendConfig
 
 logger = logging.getLogger(__name__)
@@ -351,6 +352,38 @@ async def list_inference_models() -> dict[str, Any]:
     return {"provider": provider, "models": served, "source": source, "note": note}
 
 
+class DecisionsRequest(BaseModel):
+    """Typed questions about a text, as ``/decisions`` asks them."""
+
+    state: str
+    questions: list[DecisionQuestion]
+
+
+@router.post("/inference/decisions")
+async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
+    """Ask Jev typed questions about a text, as the ``decide`` tool does.
+
+    Through this runtime's ai-inference, with the token its models are called
+    with: on Datalayer the user's, narrowed to ai-inference. ``loop``'s
+    ``/decisions`` asks here.
+
+    Parameters
+    ----------
+    body : DecisionsRequest
+        The text (``state``) and the questions, each named and typed.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``model`` and ``answers`` by question name; or ``refusal``, the
+        sentence saying why nothing was decided.
+    """
+    answer = await decide(body.state, body.questions)
+    if isinstance(answer, str):
+        return {"refusal": answer}
+    return answer
+
+
 @router.get("/models")
 async def list_catalog_models(
     agent_id: str | None = Query(
@@ -371,6 +404,11 @@ async def list_catalog_models(
     A model installed locally with no spec is reported separately, as an
     invitation to add a spec — never as a silent option.
 
+    When ai-inference decides (``source`` ``ai-inference``), only the models
+    it serves are listed: no local model, runtime or uncatalogued install,
+    and none of the agent's models it does not serve (a switch to one is
+    refused in a sentence).
+
     The typed-decision models ai-inference lists (Jev) come apart, in
     ``decision_models`` with ``decisions_note``: a decision asks them through
     ``/decisions``, and no agent may be switched to one.
@@ -386,6 +424,7 @@ async def list_catalog_models(
         agent_inference_provider,
         availability,
         decision_rows,
+        listed,
         load_inference_models,
         models_source,
         offered_model_ids,
@@ -401,7 +440,9 @@ async def list_catalog_models(
             status_code=404, detail=f"No agent '{agent_id}' runs on this runtime."
         )
 
-    installed = discover_installed_models()
+    # Local runtimes are not this runtime's when ai-inference decides.
+    on_ai_inference = source == "ai-inference"
+    installed = {} if on_ai_inference else discover_installed_models()
 
     models: list[dict[str, Any]] = []
     catalogued_local: set[tuple[str, str]] = set()
@@ -416,6 +457,7 @@ async def list_catalog_models(
         if agent_models is not None
         else list_chat_models()
     )
+    offered = [model for model in offered if listed(model.id, provider)]
     for model in offered:
         # Through ai-inference the provider's keys are ai-inference's: this
         # process needs none of them.
@@ -481,15 +523,19 @@ async def list_catalog_models(
         if (provider_name, name) not in catalogued_local
     ]
 
-    runtimes = {
-        name: {
-            "label": spec.label,
-            "base_url": spec.base_url(),
-            "reachable": name in installed,
-            "installed": list(installed.get(name, ())),
+    runtimes = (
+        {}
+        if on_ai_inference
+        else {
+            name: {
+                "label": spec.label,
+                "base_url": spec.base_url(),
+                "reachable": name in installed,
+                "installed": list(installed.get(name, ())),
+            }
+            for name, spec in LOCAL_PROVIDERS.items()
         }
-        for name, spec in LOCAL_PROVIDERS.items()
-    }
+    )
 
     return {
         "models": models,
@@ -656,21 +702,11 @@ async def get_configuration(
                 if isinstance(spec_welcome, str) and spec_welcome.strip():
                     config.welcome_message = spec_welcome.strip()
 
-                raw_suggestions = spec.get("suggestions")
-                if isinstance(raw_suggestions, list):
-                    # A spec's suggestion is a bare string or, since openers
-                    # carry marks, an `AgentSuggestion` record.
-                    config.suggestions = [
-                        AgentSuggestion(text=item.strip())
-                        if isinstance(item, str)
-                        else AgentSuggestion.model_validate(item)
-                        for item in raw_suggestions
-                        if (isinstance(item, str) and item.strip())
-                        or (
-                            isinstance(item, dict)
-                            and str(item.get("text") or "").strip()
-                        )
-                    ]
+                # The agentspec's suggestions, kept with its creation spec
+                # as `AgentSuggestion` records.
+                config.suggestions = [
+                    AgentSuggestion.model_validate(item) for item in spec["suggestions"]
+                ]
 
             # What has been sent to this agent so far, for the composer's arrow
             # keys: part of the initial state, so a reloaded page walks back

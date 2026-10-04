@@ -933,6 +933,7 @@ async def _run_lines(tux: Any, lines: List[str]) -> int:
         not run).
     """
     tux.running = True
+    tux.scripted = True
     try:
         for number, line in enumerate(lines, 1):
             _say(f"[{number}/{len(lines)}] {line}")

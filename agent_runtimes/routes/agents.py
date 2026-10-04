@@ -66,7 +66,7 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import Agentspec, MCPServer, SubAgentsConfig
+from ..types import Agentspec, AgentSuggestion, MCPServer, SubAgentsConfig
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -2620,6 +2620,20 @@ async def create_agent(
         if isinstance(parameter_schema, dict):
             stored["parameters"] = parameter_schema
         stored["agent_parameters"] = launch_parameters
+        # What the agentspec suggests, served with the creation spec
+        # (`/configure/agents/{id}/spec`, `/configure`): the forwarded spec's
+        # when it names them — a switch forwards the stored spec — else the
+        # library spec's. The pod companion forwards the platform's spec as it
+        # is, and the request itself has no field for them.
+        forwarded_suggestions = _spec_value("suggestions")
+        stored["suggestions"] = [
+            AgentSuggestion.model_validate(item).model_dump()
+            for item in (
+                forwarded_suggestions
+                if forwarded_suggestions is not None
+                else (library_spec.suggestions if library_spec else [])
+            )
+        ]
         _agentspecs[agent_id] = stored
         logger.info(f"Stored creation spec for agent '{agent_id}'")
 

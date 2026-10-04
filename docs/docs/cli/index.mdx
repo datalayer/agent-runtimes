@@ -110,7 +110,7 @@ A runtime on Datalayer calls its models **through datalayer-ai-inference, with y
 
 - **Every agent goes through ai-inference.** This holds whatever its agentspec's `inference_provider` says. An agentspec that says `local`, such as `example-simple`, still runs locally on your machine, and on Datalayer through ai-inference.
 - **The token is yours, narrowed to ai-inference.** When the runtime is assigned to you, IAM mints it from your session. It can call ai-inference's chat completions, its model list and its decisions, and every other Datalayer service refuses it. It lasts as long as the runtime's reservation. Every model call is metered on your account, as a call from the Datalayer UI is.
-- **What is offered is what ai-inference serves.** With your token, the runtime asks ai-inference which models it serves, and offers your agent those of its agentspec's `model` and `model_additionals` that ai-inference serves, such as Qwen (`alibaba:qwen-max`) beside Claude Sonnet.
+- **What is offered is what ai-inference serves.** With your token, the runtime asks ai-inference which models it serves, and offers your agent those of its agentspec's `model` and `model_additionals` that ai-inference serves, such as Qwen (`alibaba:qwen-max`) beside Claude Sonnet. Only those are listed: a model of the agent's that ai-inference does not serve is left out, and so are local models and runtimes (Ollama, LM Studio, …), which a runtime going through ai-inference does not call. The same holds on this machine when the provider is `datalayer`.
 - **Before the token arrives, nothing is called.** A runtime waiting in the pool has no user, so it has no token yet. Until it is assigned, `/models` says `This runtime has no ai-inference token yet: …`, every model is marked `No ai-inference token`, and a message fails with that sentence.
 - **Decisions are listed apart.** ai-inference also serves typed-decision models, such as Jev on Workers AI (`cloudflare:wrk/typesafe/jev`). `/models` lists them under **Decisions**, with one line saying what they are for: they answer a decision's typed questions, and agents do not chat with them. Each is marked usable when ai-inference serves it, by the same rule as the chat models: before the token arrives, it is listed and marked `No ai-inference token`. `/models cloudflare:wrk/typesafe/jev` is refused: `cloudflare:wrk/typesafe/jev answers typed decisions, not a conversation: an agent cannot run on it, so nothing was switched. A decision asks it through /decisions.` The agent stays as it was.
 - **When the token expires, the runtime stops calling models.** If a runtime outlives its token, it says when the token expired and calls no model any more. Start a new runtime.
@@ -123,6 +123,18 @@ An agent decides with Jev through its `decide` tool (agentspecs `tools/decide.ya
 - **Where it goes.** To ai-inference's `POST /decisions`, model `cloudflare:wrk/typesafe/jev`, with the runtime's ai-inference token — the one its model calls use. With no token, or no ai-inference configured (`DATALAYER_AI_INFERENCE_URL`), it asks nothing and the agent is told why in a sentence (`Nothing was decided. This runtime has no ai-inference token yet: …`).
 - **It only reads.** Its action class is `read`: it reaches nothing but ai-inference and changes nothing.
 
+You can ask Jev yourself, without the agent, with `/decisions`: the text in quotes, then the questions — `--yes-no "<question>"`, `--choice "<question>" A,B,C` and `--score "<question>" 1-5` (a range, or named steps lowest first), as many as you want. The runtime asks them as the `decide` tool does (`POST /api/v1/configure/inference/decisions`), with its own ai-inference token, so it works the same on this machine and on Datalayer. Each answer is one line, named after its question. `/decisions` alone shows how to use it.
+
+```text
+/decisions "Payouts have failed for 3 days." --yes-no "Is it urgent?" --choice "Which team?" Billing,Tech,Sales
+
+● Decided by cloudflare:wrk/typesafe/jev
+  is_it_urgent: yes (0.93 that it holds)
+  which_team: Billing (confidence 1.00)
+```
+
+A runtime older than `loop` that does not have the route says so in a sentence, with its version (`… (agent-runtimes 1.3.32) does not say decisions (/decisions): it is older than this loop (1.3.33).`).
+
 ```bash
 loop --local -a example-simple --no-codemode \
   --prompt "Is this support ticket urgent? 'Payouts have failed for 3 days.' Use your decision tool."
@@ -132,9 +144,10 @@ loop --local -a example-simple --no-codemode \
 
 The terminal reaches a cloud runtime through a relay on your machine that adds your Datalayer token to every request. Every slash command reads the session's one server address, so on Datalayer `/models`, `/skills`, `/tools`, `/mcp`, `/status`, `/context` and the others query and act on the **cloud runtime**, exactly as they do on a local one:
 
-- `/models` lists the models the cloud runtime offers its agent, under `Models on RUNTIME on Datalayer`: the agentspec's `model` and `model_additionals`, each marked usable or not, and below the title who decided — on Datalayer, `ai-inference at … serves …`, the list the runtime asked datalayer-ai-inference for when it was assigned to you. `/models <id>` switches the runtime's agent to a model only if the runtime offers it to this agent and can use it. The switch recreates the agent the session talks to from its agentspec, on that model — its `model_additionals` stay its models, so it can be switched back. Otherwise the switch is refused in a sentence (`… cannot be used on RUNTIME on Datalayer (Not served by ai-inference): nothing was switched.`), and the sandbox never moves to this machine. Asked directly (`POST /api/v1/agents/configure-from-spec`), the runtime refuses a model ai-inference does not serve before it touches the agent in place.
+- `/models` lists the models the cloud runtime offers its agent, under `Models on RUNTIME on Datalayer`: those of the agentspec's `model` and `model_additionals` that ai-inference serves, under **Cloud**, and Jev under **Decisions**, and below the title who decided — on Datalayer, `ai-inference at … serves …`, the list the runtime asked datalayer-ai-inference for when it was assigned to you. `/models <id>` switches the runtime's agent to a model only if the runtime offers it to this agent and can use it. The switch recreates the agent the session talks to from its agentspec, on that model — its `model_additionals` stay its models, so it can be switched back. Otherwise the switch is refused in a sentence, with what ai-inference serves (`RUNTIME on Datalayer does not offer … to this agent: nothing was switched. ai-inference at … serves ….`), and the sandbox never moves to this machine. Asked directly (`POST /api/v1/agents/configure-from-spec`), the runtime refuses a model ai-inference does not serve before it touches the agent in place.
 - `/skills`, `/tools` and `/mcp` list and change the skills, tools and MCP servers of the cloud runtime's agent.
 - `/status` shows `Agent Runtime  RUNTIME on Datalayer (ENVIRONMENT)` and the relay it goes through.
+- `/suggestions` lists the agentspec's suggestions, each as its summary and the text it sends, and asks which one to send.
 
 Nothing falls back to this machine. If the cloud runtime does not answer, a command that needs it is not run, and `loop` says so in a sentence. `/help`, `/exit`, `/status` and the other commands that read nothing from the runtime still work.
 
@@ -145,7 +158,7 @@ To check a runtime's models from a script or CI, without typing them in, see [Ru
 `--prompt` (short `-q`) runs `loop` without a person at the keyboard. `loop` starts the agent, runs each line you give it as if you had typed it at the prompt, prints what comes back, stops the agent and exits:
 
 - **Repeat it** for several lines. They run in the order given, in **one session**, so a model switched by one line is the model the next line talks to, and the conversation carries over.
-- A line that starts with `/` runs that **slash command**, the same as at the prompt: `/models`, `/models <id>`, `/skills`, `/tools`, `/status` and the others.
+- A line that starts with `/` runs that **slash command**, the same as at the prompt: `/models`, `/models <id>`, `/skills`, `/tools`, `/status` and the others. A command that would ask something does not: `/suggestions` lists the suggestions and sends none, and the next line runs next.
 - Any other line is a **message** to the agent, and its answer is printed.
 
 It runs **on this machine** unless you say `--cloud`:
@@ -169,10 +182,11 @@ It runs **on this machine** unless you say `--cloud`:
 
 A slash command that **refuses** what it is asked has not failed: it did its job. `/models <id>` with a model the runtime does not offer, or with a typed-decision model such as `cloudflare:wrk/typesafe/jev`, prints its refusal (`… nothing was switched.`) and the run goes on to the next line, with exit code `0` at the end.
 
-Check what a Datalayer runtime offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
+Check what a Datalayer runtime suggests and offers, switch to Qwen, ask it who it is, then try a model the runtime does not serve:
 
 ```bash
 loop --cloud -a example-simple -m 10 \
+  --prompt "/suggestions" \
   --prompt "/models" \
   --prompt "/models alibaba:qwen-max" \
   --prompt "Who are you and which model are you? One sentence." \
@@ -182,6 +196,15 @@ loop --cloud -a example-simple -m 10 \
 Its standard output has this shape (the runtime's name, the models offered and the answer's words vary):
 
 ```text
+● Suggestions (7):
+
+  1. Tell a joke
+     Tell me a joke
+  …
+  5. Decide: is it urgent?
+     Is this support ticket urgent? 'Payouts have failed for 3 days.'
+  …
+
 ● Models on RUNTIME on Datalayer (ai-agents-env) (2)
   ai-inference at … serves bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
 
@@ -200,10 +223,10 @@ Its standard output has this shape (the runtime's name, the models offered and t
   alibaba:qwen-max
 
 I am Qwen, a large language model created by Alibaba Cloud.
-RUNTIME on Datalayer (ai-agents-env) does not offer bedrock:us.anthropic.claude-opus-5 to this agent: nothing was switched.
+RUNTIME on Datalayer (ai-agents-env) does not offer bedrock:us.anthropic.claude-opus-5 to this agent: nothing was switched. ai-inference at … serves bedrock:us.anthropic.claude-sonnet-4-6, alibaba:qwen-max.
 ```
 
-Standard error has the launch, `[1/4] /models` to `[4/4] /models bedrock:us.anthropic.claude-opus-5`, and `Stopped RUNTIME.` at the end. The exit code is `0`.
+Only what ai-inference serves is listed: no local models, no `Not running: …` line for local runtimes. Standard error has the launch, `[1/5] /suggestions` to `[5/5] /models bedrock:us.anthropic.claude-opus-5`, and `Stopped RUNTIME.` at the end. The exit code is `0`.
 
 In CI, keep the output and fail the job when a line fails:
 
@@ -277,7 +300,9 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/tools` | `Esc T` | List available tools |
 | `/mcp-servers` | `Esc M` | List MCP servers |
 | `/skills` | `Esc K` | List available skills |
-| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer, and apart, under Decisions, the typed-decision models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
+| `/models` | `Esc D` | The agent's models — its `model` and `model_additionals` — as the runtime offers them, locally or on Datalayer (through ai-inference, only those it serves), and apart, under Decisions, the typed-decision models ai-inference serves (no agent runs on them); `/models <id>` switches to one it can use. From a script: [Run without interaction](#run-without-interaction) |
+| `/decisions` | | Ask Jev typed questions about a text — `/decisions "<text>" --yes-no "<question>"`, `--choice "<question>" A,B,C`, `--score "<question>" 1-5` — through the runtime, with its ai-inference token; each answer in a line. See [The decide tool](#the-decide-tool) |
+| `/suggestions` | `Esc U` | The agentspec's suggestions, each as its summary and its text; the one chosen is sent. Under `--prompt`, listed and none sent |
 | `/codemode-toggle` | `Esc O` | Toggle codemode on/off |
 | `/agents` | `Esc A` | List agents on the server |
 | `/tools-last` | `Esc L` | Show tool calls from last response |

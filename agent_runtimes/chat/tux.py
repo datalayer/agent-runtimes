@@ -161,6 +161,9 @@ class CliTux:
         self.eggs = eggs
         self.jupyter_url = jupyter_url
         self.extra_suggestions: list[str] = extra_suggestions or []
+        #: Whether the lines come from ``loop --prompt`` rather than a person:
+        #: a command then asks nothing (the next line is the next prompt).
+        self.scripted = False
         # Piped or redirected, what is printed is not wrapped at a guessed
         # width, so an answer stays one greppable line per line it has.
         self.console = Console(soft_wrap=not sys.stdout.isatty())

@@ -414,6 +414,37 @@ def availability(
     return True, None
 
 
+def listed(model_id: str, inference_provider: str | None = None) -> bool:
+    """
+    Whether a model is listed among those an agent may run on.
+
+    Parameters
+    ----------
+    model_id : str
+        A model the agent offers (its ``model`` or a ``model_additionals``).
+    inference_provider : str | None
+        Where the agent's inference goes; the runtime's when ``None``.
+
+    Returns
+    -------
+    bool
+        When ai-inference decides, only the models it serves: never a local
+        one, and none it said it does not serve; before it answered (a runtime
+        waiting for its token), every hosted model, each marked. Otherwise
+        every model.
+    """
+    from agent_runtimes.specs.models import get_model
+
+    source, _ = models_source(inference_provider)
+    if source != "ai-inference":
+        return True
+    spec = get_model(model_id)
+    if spec is None or spec.local:
+        return False
+    _, reason = availability(model_id, inference_provider)
+    return reason != "Not served by ai-inference"
+
+
 def decision_refusal(model_id: str, *, switch: bool) -> str | None:
     """
     Why an agent cannot run on a typed-decision model, in a sentence, or ``None``.
@@ -678,13 +709,16 @@ def model_rows(
 
     Two reasons are not interchangeable and travel with the row: a missing
     key is something the reader can fix, a model this deployment is not
-    entitled to — or that ai-inference does not serve — is not.
+    entitled to is not. A model ai-inference does not serve is not listed
+    when it decides (``listed``).
     """
     from agent_runtimes.specs.models import get_model, is_chat_model
     from agent_runtimes.types import AIModelRuntime
 
     rows: list[AIModelRuntime] = []
     for model_id in model_ids:
+        if not listed(model_id, inference_provider):
+            continue
         spec = get_model(model_id)
         if spec is not None and not is_chat_model(spec):
             # A typed-decision model is listed apart (``decision_rows``).

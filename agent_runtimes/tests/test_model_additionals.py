@@ -223,11 +223,11 @@ class TestAnAgentsModels:
                 inference_provider="datalayer",
             )
         )
+        # Only what ai-inference serves is offered: Qwen, which it does not
+        # serve, is not listed (a switch to it is refused in a sentence).
         rows = {row.id: row for row in config.models}
-        assert list(rows) == [SONNET, QWEN]
+        assert list(rows) == [SONNET]
         assert rows[SONNET].is_available is True
-        assert rows[QWEN].is_available is False
-        assert rows[QWEN].unavailable_reason == "Not served by ai-inference"
         payload = config.model_dump(by_alias=True)
         assert payload["modelsSource"] == "ai-inference"
         assert payload["modelsNote"] == "ai-inference at u serves it."
@@ -244,10 +244,8 @@ class TestAnAgentsModels:
         set_inference_models(InferenceModels(served=(SONNET,), url="u", note="said"))
         payload = asyncio.run(list_catalog_models(agent_id=agent))
         assert [(m["id"], m["available"]) for m in payload["models"]] == [
-            (SONNET, True),
-            (QWEN, False),
+            (SONNET, True)
         ]
-        assert payload["models"][1]["reason"] == "Not served by ai-inference"
         assert (payload["source"], payload["note"]) == ("ai-inference", "said")
 
 

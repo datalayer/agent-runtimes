@@ -179,7 +179,14 @@ def _refusal(
         (m for m in catalog.get("models") or [] if m.get("id") == model_id), None
     )
     if entry is None:
-        return f"{where} does not offer {model_id} to this agent: nothing was switched."
+        refused = (
+            f"{where} does not offer {model_id} to this agent: nothing was switched."
+        )
+        # When ai-inference decides, a model it does not serve is not listed:
+        # what it serves is said beside the refusal.
+        if catalog["source"] == "ai-inference":
+            return f"{refused} {catalog['note']}"
+        return refused
     if entry.get("local") and not entry.get("reachable"):
         return f"{model_id} is not running on {where}: nothing was switched."
     if not entry.get("local") and entry.get("available") is False:

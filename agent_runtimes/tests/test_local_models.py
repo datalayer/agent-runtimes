@@ -225,6 +225,34 @@ class TestCatalogEndpoint:
         ]
         assert "ollama:mystery-model:7b" not in {m["id"] for m in payload["models"]}
 
+    def test_through_ai_inference_only_what_it_serves_is_listed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No local model, runtime or install: ai-inference decides, not this machine."""
+        from agent_runtimes.models.offered import (
+            InferenceModels,
+            give_inference_token,
+            set_inference_models,
+        )
+
+        sonnet = "bedrock:us.anthropic.claude-sonnet-4-6"
+        monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+        give_inference_token("the-runtime-token")
+        set_inference_models(
+            InferenceModels(served=(sonnet,), url="u", note="ai-inference serves it.")
+        )
+        payload = self._payload(monkeypatch, {"ollama": ("mystery-model:7b",)})
+
+        assert [(m["id"], m["available"]) for m in payload["models"]] == [
+            (sonnet, True)
+        ]
+        assert payload["local_runtimes"] == {}
+        assert payload["uncatalogued_local"] == []
+        assert (payload["source"], payload["note"]) == (
+            "ai-inference",
+            "ai-inference serves it.",
+        )
+
     def test_hosted_models_report_missing_env_vars(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -277,6 +305,8 @@ class TestModelsCommand:
                                 )
                             ],
                             "decision_models": [],
+                            "source": "local",
+                            "note": "This runtime calls the providers itself.",
                         }
                     )
                 # The agent's creation spec, as the runtime answers it.
