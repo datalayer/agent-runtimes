@@ -1,0 +1,121 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * Pictures as tests (LOOP T-16, and T-27's states of the floating assistant).
+ *
+ * Each picture is a page of `html/pictures.html` — the real chat components
+ * with fixed data (`src/stories/loop/ReferenceScreens.tsx`) — taken once its
+ * fonts are in, with motion reduced and animations stopped, and compared with
+ * its baseline. A changed token shows as a failed test and a `-diff.png` in
+ * `pictures/test-results/`: fix it, or accept it with
+ * `npm run test:pictures:accept`.
+ *
+ * `PICTURES_THEMES=loop,datalayer` narrows the themes for a quicker run.
+ * `PICTURES_CSS` adds a stylesheet to every page before it is pictured — to
+ * see what a token change would do before making it, e.g.
+ * `PICTURES_CSS='[data-datalayer-theme-scope] { --theme-radius-bubble: 20px !important }'`.
+ */
+
+import { expect, test, type Page } from '@playwright/test';
+
+/** The registry's themes, in its order (`themeConfigs` of primer-addons). */
+const ALL_THEMES = [
+  'datalayer',
+  'spatial',
+  'lovely',
+  'matrix',
+  'earth',
+  'sand',
+  'ivory',
+  'sun',
+  'loop',
+];
+const THEMES = process.env.PICTURES_THEMES
+  ? process.env.PICTURES_THEMES.split(',').map(theme => theme.trim())
+  : ALL_THEMES;
+const MODES = ['light', 'dark'] as const;
+const SCREENS = [
+  'conversation',
+  'beside-work',
+  'worker-activity',
+  'approval',
+] as const;
+const ASSISTANT = [
+  'idle',
+  'thinking',
+  'working',
+  'waiting',
+  'speaking',
+  'aside',
+] as const;
+
+async function show(page: Page, query: string): Promise<void> {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(String(error)));
+  await page.goto(`/html/pictures.html?${query}`, {
+    waitUntil: 'commit',
+    timeout: 240_000,
+  });
+  // A cold dependency cache re-optimizes on the first page and reloads it;
+  // the wait carries over the reload.
+  const ready = page.locator('html[data-pictures-ready]');
+  try {
+    await ready.waitFor({ state: 'attached', timeout: 120_000 });
+  } catch {
+    // Once in a long run a page never says it is ready; a second load does.
+    test.info().annotations.push({
+      type: 'reloaded',
+      description: errors.join('\n') || 'no page error',
+    });
+    await page.reload({ waitUntil: 'commit' });
+    await ready.waitFor({ state: 'attached', timeout: 120_000 });
+  }
+  if (process.env.PICTURES_CSS) {
+    await page.addStyleTag({ content: process.env.PICTURES_CSS });
+  }
+}
+
+for (const theme of THEMES) {
+  for (const mode of MODES) {
+    test.describe(`${theme} · ${mode}`, () => {
+      test.use({ colorScheme: mode, viewport: { width: 960, height: 640 } });
+      for (const screen of SCREENS) {
+        test(screen, async ({ page }) => {
+          await show(page, `screen=${screen}&theme=${theme}&mode=${mode}`);
+          await expect(page.locator('html')).toHaveAttribute(
+            'data-reference-theme',
+            theme,
+          );
+          await expect(page).toHaveScreenshot(`${screen}-${theme}-${mode}.png`);
+        });
+      }
+    });
+  }
+}
+
+// The floating assistant in the theme of applications, in both modes (T-27).
+for (const mode of MODES) {
+  test.describe(`assistant · ${mode}`, () => {
+    test.use({ colorScheme: mode, viewport: { width: 480, height: 360 } });
+    for (const picture of ASSISTANT) {
+      test(picture, async ({ page }) => {
+        await show(page, `assistant=${picture}&theme=loop&mode=${mode}`);
+        const stage = page.locator('[data-assistant-state]');
+        if (picture === 'aside') {
+          // A dialog over it: it steps aside, and the picture holds that.
+          await expect(stage).toHaveAttribute(
+            'data-assistant-aside',
+            'obstacle',
+          );
+        } else {
+          await expect(stage).toHaveAttribute('data-assistant-state', picture);
+          await expect(stage).not.toHaveAttribute('data-assistant-aside', /.+/);
+        }
+        await expect(page).toHaveScreenshot(`assistant-${picture}-${mode}.png`);
+      });
+    }
+  });
+}

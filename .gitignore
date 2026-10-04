@@ -216,3 +216,7 @@ python-dist
 # Include
 !**/.*ignore
 !skills
+
+# Pictures as tests (pictures/): what a run leaves; the baselines are kept
+pictures/test-results/
+pictures/playwright-report/

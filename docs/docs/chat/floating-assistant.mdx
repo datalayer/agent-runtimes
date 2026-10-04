@@ -135,6 +135,15 @@ and its own menu, open, puts nothing aside. The page is looked over every
 400 milliseconds (`useKeepClear`, in `AssistantStage.tsx`; the rules in
 `state.ts`).
 
+## Pictured
+
+Each state of the paper clip — idle, thinking, working, waiting for you,
+speaking (with its balloon) — and the paper clip stepped aside for a dialog
+are pictures, in the light and the dark mode, that `npm run test:pictures`
+takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
+change in how the assistant is drawn fails that run with a picture of the
+difference; see *Pictures as tests* in `TESTING.md` to accept it.
+
 ## Datalayer's characters
 
 Four characters are drawn for this assistant and owned by Datalayer
