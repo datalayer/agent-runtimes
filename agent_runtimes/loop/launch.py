@@ -46,6 +46,11 @@ MAX_MINUTES = 480
 #: The environment an agent runs in on Datalayer unless another is chosen.
 DEFAULT_ENVIRONMENT = "ai-agents-env"
 
+#: The agentspec a new cloud runtime is launched with unless ``-a`` names
+#: another: the launch path configures an agent only from an agentspec (the
+#: companion's ``run-start-hooks``), and this is the one ``loop`` starts with.
+DEFAULT_CLOUD_AGENTSPEC = "example-simple"
+
 #: Where the last answer to *where?* is kept, to offer it first next time.
 PREFERENCES = Path.home() / ".datalayer" / "loop.json"
 
@@ -119,15 +124,23 @@ def choose_where(
     return answer
 
 
-def _select(
-    question: str, choices: list[tuple[str, str]], default: str
-) -> Optional[str]:
+def _select(question: str, choices: list[tuple], default: str) -> Optional[str]:
+    """Ask for one of ``choices``: ``(title, value)``, or ``(title, value, why_not)``.
+
+    A choice with a reason why not is shown, greyed with that reason, and
+    cannot be picked.
+    """
     import questionary
 
     return questionary.select(
         question,
         choices=[
-            questionary.Choice(title=title, value=value) for title, value in choices
+            questionary.Choice(
+                title=choice[0],
+                value=choice[1],
+                disabled=choice[2] if len(choice) > 2 and choice[2] else None,
+            )
+            for choice in choices
         ],
         default=default,
     ).ask()
@@ -452,16 +465,12 @@ def offer_lines(offer: CloudOffer) -> list[str]:
         lines.append("Credits: not known (the usage service did not say).")
     else:
         lines.append(f"Credits: {offer.credits:,.2f} left.")
-    agents = offer.agent_environments
-    if agents:
-        lines.append("Agent environments:")
-        for env in agents:
-            title = f" — {env.title}" if getattr(env, "title", "") else ""
-            lines.append(
-                f"  ● {env.name}{title}, {credits_for(env, 1):.3f} credits a minute"
-            )
-    else:
-        lines.append("Agent environments: none offered to this account.")
+    silent = [env for env in offer.environments if not declares_capabilities(env)]
+    if silent:
+        lines.append(
+            f"{len(silent)} of your environments say nothing about agents and are not "
+            "listed: --environment <name> to try one."
+        )
     running = offer.agent_runtimes
     if running:
         lines.append("Running agent runtimes:")
@@ -496,6 +505,40 @@ def check_credits(credits: Optional[float], environment: Any, minutes: int) -> N
         )
 
 
+def describe(environment: Any) -> str:
+    """An environment's description in one line: its own, without markup, else its title."""
+    import html
+    import re
+
+    raw = str((getattr(environment, "metadata", None) or {}).get("description") or "")
+    text = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", raw)).split())
+    text = text or str(getattr(environment, "title", "") or "")
+    return text if len(text) <= 50 else text[:47].rstrip() + "..."
+
+
+#: Why an environment that says what it can do is not offered for an agent.
+NO_AGENT = "cannot launch an agent (no agent capability)"
+
+
+def environment_choices(environments: list[Any]) -> list[tuple[str, str, str]]:
+    """The environments as offered: the agent-capable first, the others greyed with why.
+
+    Only environments that declare their capabilities are listed — the
+    platform's. One that declares none (a user environment) says nothing
+    about agents, so it is left out, and can still be named (``--environment``).
+    """
+    listed = [env for env in environments if declares_capabilities(env)]
+    listed.sort(key=lambda env: (not agent_capable(env), env.name))
+    choices = []
+    for env in listed:
+        per_minute = credits_for(env, 1)
+        rate = f"{per_minute:.3f} credits a minute" if per_minute else "not priced"
+        about = describe(env)
+        title = f"{env.name} — {about}, {rate}" if about else f"{env.name} — {rate}"
+        choices.append((title, env.name, "" if agent_capable(env) else NO_AGENT))
+    return choices
+
+
 def choose_environment(
     environments: list[Any],
     *,
@@ -503,29 +546,42 @@ def choose_environment(
     can_ask: bool,
     ask: Optional[Callable[..., Optional[str]]] = None,
 ) -> Any:
-    """The environment to run in: the one named, else the agents' one, else asked."""
+    """The environment of a new cloud runtime: the one named, else the person's pick.
+
+    Every environment the SDK lists that says what it can do is shown, with
+    its description and what a minute costs; only those that can launch an
+    agent can be picked. The default is the first of those
+    (``ai-agents-env`` when offered). Named with ``--environment``, an
+    environment that says it cannot hold an agent is refused; one that says
+    nothing is tried.
+    """
     by_name = {env.name: env for env in environments}
+    supported = [env for env in environments if agent_capable(env)]
     if environment:
-        if environment not in by_name:
-            raise ValueError(
-                f"There is no environment named “{environment}”. "
-                f"Available: {', '.join(sorted(by_name)) or 'none'}."
+        named = by_name.get(environment)
+        if named is None:
+            raise CloudRefused(
+                f"There is no environment named “{environment}” on Datalayer. "
+                f"Agent environments: {', '.join(e.name for e in supported) or 'none'}."
             )
-        return by_name[environment]
-    if not environments:
-        raise ValueError("No environment is available to this account on Datalayer.")
-    default = by_name.get(DEFAULT_ENVIRONMENT) or environments[0]
-    if len(environments) == 1 or not can_ask:
+        if declares_capabilities(named) and not agent_capable(named):
+            raise CloudRefused(
+                f"{environment} {NO_AGENT}; agent environments: "
+                f"{', '.join(e.name for e in supported) or 'none'}."
+            )
+        return named
+    if not supported:
+        raise CloudRefused(
+            "No environment that can launch an agent is offered to this account on Datalayer."
+        )
+    default = by_name.get(DEFAULT_ENVIRONMENT, supported[0])
+    if not agent_capable(default):
+        default = supported[0]
+    if not can_ask:
         return default
     answer = (ask or _select)(
-        "In which environment?",
-        [
-            (
-                f"{env.name}  ({env.title})" if getattr(env, "title", "") else env.name,
-                env.name,
-            )
-            for env in environments
-        ],
+        "In which environment? (only those that can launch an agent can be picked)",
+        environment_choices(environments),
         default.name,
     )
     if answer is None:
@@ -762,38 +818,6 @@ def find_running(offer: CloudOffer, name: str) -> Any:
     )
 
 
-def pick_environment(
-    offer: CloudOffer,
-    *,
-    environment: Optional[str],
-    can_ask: bool,
-    ask: Optional[Callable[..., Optional[str]]] = None,
-) -> Any:
-    """An environment that can hold the agent: named, else the agents' one, else asked."""
-    if environment:
-        named = next((e for e in offer.environments if e.name == environment), None)
-        if (
-            named is not None
-            and declares_capabilities(named)
-            and not agent_capable(named)
-        ):
-            agents = ", ".join(e.name for e in offer.agent_environments) or "none"
-            raise CloudRefused(
-                f"{environment} cannot hold an agent (it has no agent capability); agent environments: {agents}."
-            )
-        if named is not None:
-            return named
-    try:
-        return choose_environment(
-            offer.agent_environments,
-            environment=environment,
-            can_ask=can_ask,
-            ask=ask,
-        )
-    except ValueError as error:
-        raise CloudRefused(str(error)) from None
-
-
 def _attach(
     runtime: Any,
     *,
@@ -847,15 +871,16 @@ def launch_cloud(
     offer: Optional[CloudOffer] = None,
     can_ask: Optional[bool] = None,
     status: Callable[[str], None] = lambda message: None,
-    choose_agentspec: Optional[Callable[[], str]] = None,
+    note: Callable[[str], None] = lambda message: None,
 ) -> CloudLaunch:
     """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
 
     ``runtime`` names a running runtime to attach to, and nothing is launched.
     Otherwise a running agent runtime is offered first (L-06), then a new one
-    is reserved in an agent environment, priced against the credits left.
-    ``choose_agentspec`` asks for the agentspec only once a new runtime is
-    being launched, when ``agent_id`` is not given.
+    is reserved in an environment that can launch an agent, chosen from the
+    SDK's list and priced against the credits left. No agentspec is asked
+    for: the runtime's agent is ``agent_id``, else `DEFAULT_CLOUD_AGENTSPEC`,
+    said through ``note``.
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
@@ -879,11 +904,15 @@ def launch_cloud(
             if back is not None:
                 return back
             status(f"{again.runtime_name} does not answer: launching a new runtime.")
+    chosen = choose_environment(
+        offer.environments, environment=environment, can_ask=asking
+    )
     if not agent_id:
-        if choose_agentspec is None:
-            raise CloudRefused("Name the agentspec to launch (--agentspec-id).")
-        agent_id = choose_agentspec()
-    chosen = pick_environment(offer, environment=environment, can_ask=asking)
+        agent_id = DEFAULT_CLOUD_AGENTSPEC
+        note(
+            f"The runtime's agent is {agent_id}, the agent loop starts with: "
+            "a runtime is configured from an agentspec. -a <agentspec> for another."
+        )
     reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
     check_credits(offer.credits, chosen, reserved)
     status(

@@ -70,18 +70,30 @@ def test_a_person_is_asked_where_and_the_answer_is_offered_first_next_time(
 
 
 def test_the_environment_and_the_minutes() -> None:
-    envs = [Env("python-cpu-env", "Python"), Env("ai-agents-env", "Agents")]
+    envs = [
+        Env(
+            "python-cpu-env", "Python", metadata={"capabilities": [{"name": "sandbox"}]}
+        ),
+        Env("ai-agents-env", "Agents", metadata=AGENT_CAPABILITIES),
+    ]
     assert choose_environment(envs, can_ask=False).name == "ai-agents-env"
-    assert (
-        choose_environment(envs, environment="python-cpu-env", can_ask=True).name
-        == "python-cpu-env"
-    )
-    with pytest.raises(ValueError, match="no environment named"):
+    with pytest.raises(launch.CloudRefused, match="cannot launch an agent"):
+        choose_environment(envs, environment="python-cpu-env", can_ask=True)
+    with pytest.raises(launch.CloudRefused, match="no environment named"):
         choose_environment(envs, environment="nope", can_ask=False)
-    picked = choose_environment(
-        envs, can_ask=True, ask=lambda q, choices, default: "python-cpu-env"
-    )
-    assert picked.name == "python-cpu-env"
+    offered: List[list] = []
+
+    def pick(question: str, choices: list, default: str) -> str:
+        offered.append(choices)
+        assert default == "ai-agents-env"
+        return default
+
+    assert choose_environment(envs, can_ask=True, ask=pick).name == "ai-agents-env"
+    # Shown both, the agent-capable first; the other greyed with why.
+    assert [(c[1], c[2]) for c in offered[0]] == [
+        ("ai-agents-env", ""),
+        ("python-cpu-env", launch.NO_AGENT),
+    ]
 
     assert choose_minutes(envs[1], can_ask=False) == DEFAULT_MINUTES
     assert choose_minutes(envs[1], minutes=12, can_ask=True) == 12

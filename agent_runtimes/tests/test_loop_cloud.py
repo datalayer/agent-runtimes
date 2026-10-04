@@ -30,12 +30,13 @@ from agent_runtimes.loop.launch import (
     Relay,
     agent_capable,
     check_credits,
+    choose_environment,
     choose_where,
     ensure_agentspec,
+    environment_choices,
     find_running,
     finish_cloud,
     offer_lines,
-    pick_environment,
     read_offer,
 )
 
@@ -63,7 +64,12 @@ class Running:
 
 ENVIRONMENTS = [
     Env("ai-agents-env", "AI Agents Environment", 0.0008, AGENTS),
-    Env("kaggle-cpu", "Kaggle CPU", 0.0, SANDBOX),
+    Env(
+        "kaggle-cpu",
+        "Kaggle CPU",
+        0.0,
+        {**SANDBOX, "description": "<p>Kaggle notebook sessions</p>"},
+    ),
     Env("eric/geospatial-analysis", "Geospatial analysis", 0.0008, {}),
 ]
 
@@ -142,7 +148,12 @@ def test_only_environments_that_hold_an_agent_are_offered(
 
     lines = offer_lines(offer)
     assert lines[0] == "Credits: 100.00 left."
-    assert "  ● ai-agents-env — AI Agents Environment, 0.048 credits a minute" in lines
+    assert (
+        "1 of your environments say nothing about agents and are not listed: "
+        "--environment <name> to try one." in lines
+    )
+    # The environments are offered in the picker, not here.
+    assert not any("ai-agents-env —" in line for line in lines)
     assert any(line.startswith("  ● runtime-9 — ai-agents-env, 1") for line in lines)
     # The cloud's models are the runtime's, never this machine's keys.
     assert "not this machine's keys" in lines[-1]
@@ -162,20 +173,38 @@ def test_credits_are_checked_before_anything_is_reserved() -> None:
         check_credits(1.0, env, 30)
 
 
+def test_the_cloud_environments_are_offered_with_what_they_cost() -> None:
+    choices = environment_choices(ENVIRONMENTS)
+    # The SDK's environments that say what they can do; agent-capable first.
+    assert choices == [
+        (
+            "ai-agents-env — AI Agents Environment, 0.048 credits a minute",
+            "ai-agents-env",
+            "",
+        ),
+        (
+            "kaggle-cpu — Kaggle notebook sessions, not priced",
+            "kaggle-cpu",
+            launch.NO_AGENT,
+        ),
+    ]
+    # A user environment says nothing about agents: left out of the list.
+    assert "eric/geospatial-analysis" not in [value for _, value, _ in choices]
+
+
 def test_an_environment_that_cannot_hold_an_agent_is_refused() -> None:
-    offer = CloudOffer(list(ENVIRONMENTS), [], 100.0)
-    assert pick_environment(offer, environment=None, can_ask=False).name == (
-        "ai-agents-env"
-    )
-    with pytest.raises(CloudRefused, match="kaggle-cpu cannot hold an agent"):
-        pick_environment(offer, environment="kaggle-cpu", can_ask=False)
+    assert choose_environment(ENVIRONMENTS, can_ask=False).name == "ai-agents-env"
+    with pytest.raises(CloudRefused, match="kaggle-cpu cannot launch an agent"):
+        choose_environment(ENVIRONMENTS, environment="kaggle-cpu", can_ask=False)
     # A user environment says nothing of its capabilities: named, it is tried.
-    named = pick_environment(
-        offer, environment="eric/geospatial-analysis", can_ask=False
+    named = choose_environment(
+        ENVIRONMENTS, environment="eric/geospatial-analysis", can_ask=False
     )
     assert named.name == "eric/geospatial-analysis"
     with pytest.raises(CloudRefused, match="no environment named"):
-        pick_environment(offer, environment="nope", can_ask=False)
+        choose_environment(ENVIRONMENTS, environment="nope", can_ask=False)
+    with pytest.raises(CloudRefused, match="No environment that can launch"):
+        choose_environment(ENVIRONMENTS[1:], can_ask=False)
 
 
 def test_a_runtime_is_found_by_name_or_refused_in_a_sentence() -> None:
@@ -220,35 +249,46 @@ def test_attaching_launches_nothing_and_makes_the_agent_the_chosen_one(
         launch.launch_cloud("crawler", runtime="runtime-0", can_ask=False)
 
 
-def test_the_agentspec_is_chosen_only_for_a_new_runtime(
-    datalayer: FakeDatalayer,
+def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
+    datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    chosen: List[str] = []
+    asked: List[str] = []
 
-    def choose() -> str:
-        chosen.append("asked")
-        return "example-simple"
+    def select(question: str, choices: list, default: str) -> str:
+        asked.append(question)
+        return default
 
+    monkeypatch.setattr(launch, "_select", select)
+    monkeypatch.setattr(launch, "_text", lambda q, default, validate: "10")
+    notes: List[str] = []
     started = launch.launch_cloud(
-        None, minutes=10, can_ask=False, choose_agentspec=choose
+        None, reconnect=False, can_ask=True, note=notes.append
     )
     try:
-        assert chosen == ["asked"]
+        assert asked == [
+            "In which environment? (only those that can launch an agent can be picked)"
+        ]
         assert datalayer.created == {
             "environment": "ai-agents-env",
             "time_reservation": 10,
             "agent_spec_id": "example-simple",
         }
+        # The default agent, said once, with how to choose another.
+        assert len(notes) == 1 and "example-simple" in notes[0] and "-a" in notes[0]
         assert started.agent_spec_id == "example-simple"
         assert started.credits == pytest.approx(0.0008 * 60 * 10)
     finally:
         started.relay.stop()
 
-    # Nobody to ask and nothing named: a sentence, nothing launched.
-    datalayer.created = {}
-    with pytest.raises(CloudRefused, match="--agentspec-id"):
-        launch.launch_cloud(None, can_ask=False)
-    assert datalayer.created == {}
+    # -a names the agent, and nothing is said about a default.
+    notes.clear()
+    started = launch.launch_cloud(
+        "crawler", minutes=5, can_ask=False, note=notes.append
+    )
+    try:
+        assert datalayer.created["agent_spec_id"] == "crawler" and notes == []
+    finally:
+        started.relay.stop()
 
 
 def test_refusals_launch_nothing(datalayer: FakeDatalayer) -> None:
@@ -591,20 +631,26 @@ def test_a_refusal_is_one_sentence_and_the_exit(
     assert datalayer.created == {}
 
 
-def test_the_cloud_agentspec_list_ignores_this_machines_keys(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+def test_on_datalayer_no_agentspec_list_is_shown(
+    datalayer: FakeDatalayer,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
 ) -> None:
     from agent_runtimes.chat import cli
 
-    for name in list(__import__("os").environ):
-        if name.endswith("_API_KEY") or name.startswith("AWS_"):
-            monkeypatch.delenv(name, raising=False)
-    monkeypatch.setattr("builtins.input", lambda prompt="": "")
-    chosen = cli._pick_agentspec_interactive(cloud=True)
-    out = capsys.readouterr().out
-    assert "Agentspecs on Datalayer" in out
-    assert "Model specs available by env vars" not in out
-    assert chosen  # the default, selectable without a single local key
+    def never(*args: Any, **kwargs: Any) -> str:
+        raise AssertionError("no agentspec list on Datalayer")
+
+    monkeypatch.setattr(cli, "_pick_agentspec_interactive", never)
+    monkeypatch.setattr(launch, "interactive", lambda: False)
+    started = cli._launch_on_datalayer(None, environment=None, minutes=5)
+    try:
+        out = capsys.readouterr().out
+        assert "Credits: 100.00 left." in out
+        assert "The runtime's agent is example-simple" in out
+        assert datalayer.created["environment"] == "ai-agents-env"
+    finally:
+        started.relay.stop()
 
 
 def test_loop_forwards_where_to_the_chat(monkeypatch: pytest.MonkeyPatch) -> None:

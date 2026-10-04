@@ -325,7 +325,9 @@ def main_callback(
         "--cloud",
         help=(
             "Run the agent on Datalayer, in a cloud runtime billed by the minute, "
-            "without asking where (chat mode). Needs `datalayer login` or DATALAYER_API_KEY."
+            "without asking where (chat mode): an environment is picked, not an "
+            "agentspec; the agent is example-simple unless -a names another. "
+            "Needs `datalayer login` or DATALAYER_API_KEY."
         ),
     ),
     runtime: str | None = typer.Option(
@@ -341,7 +343,10 @@ def main_callback(
         None,
         "--environment",
         "-e",
-        help="The Datalayer environment of a new cloud runtime (default: ai-agents-env).",
+        help=(
+            "The Datalayer environment of a new cloud runtime, without asking "
+            "(default: the first that can launch an agent, ai-agents-env)."
+        ),
     ),
     minutes: int | None = typer.Option(
         None,
