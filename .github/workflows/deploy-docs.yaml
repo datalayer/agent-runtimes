@@ -32,6 +32,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Before the slow build: a page's example names a call that exists, and
+      # its links to other pages resolve (docs/scripts/check_examples.py).
+      - name: Check the examples
+        run: python3 docs/scripts/check_examples.py
+
       - name: Setup UV
         uses: astral-sh/setup-uv@v7
         with:

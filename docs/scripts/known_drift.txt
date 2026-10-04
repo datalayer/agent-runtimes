@@ -1,0 +1,28 @@
+# Examples that name a call which no longer exists, as of 2026-10-04.
+# These pages predate the current package and are to be rewritten; until they
+# are, check_examples.py reports them and fails only on drift not listed here
+# (and on a line here that no longer drifts, so that the list only shrinks).
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useA2A
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useAcp
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useAGUI
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useAIAgents
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useBackendTool
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useChat
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useChatKeyboardShortcuts
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useFrontendTool
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useKeyboardShortcuts
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useNotebookAgents
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export usePendingToolCalls
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useRegisteredTools
+docs/docs/hooks/index.mdx: @datalayer/agent-runtimes: does not export useVercelAI
+docs/docs/identity/index.mdx: agent_runtimes.identity.dcr: no such module
+docs/docs/identity/index.mdx: agent_runtimes.identity: no such module
+docs/docs/identity/index.mdx: @datalayer/agent-runtimes: does not export AgentRuntimeFormExample
+docs/docs/identity/index.mdx: @datalayer/agent-runtimes: does not export useOAuthConnect
+docs/docs/integrations/index.mdx: agent_runtimes: has no AgentRuntimesApp
+docs/docs/integrations/index.mdx: agent_runtimes.mcp: has no get_mcp_toolsets
+docs/docs/integrations/index.mdx: @datalayer/agent-runtimes: does not export DocumentAgentRuntime
+docs/docs/integrations/index.mdx: @datalayer/agent-runtimes: does not export NotebookAgentsRuntime
+docs/docs/integrations/index.mdx: @datalayer/agent-runtimes/lib/runtime: no such module in src/
+docs/docs/programmatic-tools/index.mdx: agent_runtimes.mcp: has no get_mcp_toolsets
+docs/docs/protocols/index.mdx: @datalayer/agent-runtimes: does not export A2UIAdapter

@@ -474,7 +474,8 @@ is said where it would have been drawn.
 ## Extending Loop
 
 A host plugin is ordinary reactor code. One that adds an editor, its tools,
-and a command:
+and a command — the contribution points are imported from `lib/loop/core`,
+which `lib/loop` does not re-export:
 
 ```tsx
 import { contribution, definePlugin } from '@datalayer/reactor';
@@ -483,7 +484,7 @@ import {
   LoopEditorView,
   LoopFrontendTool,
   requestSurface,
-} from '@datalayer/agent-runtimes/lib/loop';
+} from '@datalayer/agent-runtimes/lib/loop/core';
 
 export const MyEditorPlugin = definePlugin({
   name: '@me/loop-plugin-spreadsheet',

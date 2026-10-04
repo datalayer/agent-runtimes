@@ -1,0 +1,112 @@
+---
+sidebar_position: 2
+title: Rendering an application
+---
+
+# Rendering an application
+
+`AppRenderer` draws an application from its Appspec: the [Loop
+workspace](./index.mdx) configured for it, through `LoopEmbed`. It is the one
+renderer of every place an application appears — the Studio's Preview, its
+hosted page, an [embed](./embedding.mdx), and the light home page of
+datalayer.ai — so that what a builder sees while building is what its users
+get.
+
+```tsx
+import { useState } from 'react';
+import { AppRenderer } from '@datalayer/agent-runtimes/lib/loop';
+import type { PresenceState } from '@datalayer/agent-runtimes/lib/chat/presence/presenceStatus';
+import { APP_CATALOGUE } from '@datalayer/agent-runtimes/lib/specs/apps';
+
+export function WebResearch() {
+  const app = APP_CATALOGUE['web-research'];
+  const [presence, setPresence] = useState<PresenceState>('idle');
+  return (
+    <div style={{ height: 640 }} data-presence={presence}>
+      <AppRenderer app={app} onPresence={setPresence} />
+    </div>
+  );
+}
+```
+
+## Its props
+
+`AppRenderer` takes every prop of `LoopEmbed` but `agentId` (the agent is the
+application's own, created under its id), and four of its own:
+
+| Prop         | What it says                                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app`        | The application, as an `AppSpec`.                                                                                                                                                                            |
+| `instance`   | What its record is kept under on Datalayer — `appUid`, `deploymentUid`, `version` — sent with the agent so that a runtime knows which deployment it serves.                                                    |
+| `onPresence` | Told what the application is doing — idle, thinking, working, waiting for you — for a host that draws its face in a frame of its own. Read once, when the workspace is built: pass a stable function, such as a state setter. |
+| `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
+
+From the application, `AppRenderer` sets on `LoopEmbed`:
+
+| `LoopEmbed` prop                                   | Set to                                                                                                                       |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `presence`                                         | `{ name, face, welcome, onPresence }`: the application's name, its emoji, its welcome (or its description), and `onPresence`. See [An application's presence](../chat/presence.mdx). |
+| `showTokenUsage`                                   | `false`: no counters under the prompt — a person using an application is not asking about tokens.                           |
+| `themeVariant`                                     | `"loop"`: the conversation wears the `loop` theme.                                                                           |
+| `targetFixed`                                      | `true`: where the application runs is its host's to decide, not offered to its user.                                         |
+| `teamPicker`, `showAgentVariants`, `graph`, `pluginsPanel` | `false`.                                                                                                             |
+| `editors`, `showViewSelector`, `pageLayout`, `pageLayoutArrangement`, … | What its layout asks for (`appLayoutOptions(app)`): see [An application's layout](./index.mdx#an-applications-layout). |
+| `datalayerAgentSpecId`, `datalayerCreatePayload`   | On Datalayer, a runtime allocated with a plain agentspec and the application's agent created on it with the application's spec, so that the runtime enforces its rules. |
+
+**A host wins over the application.** Every `LoopEmbed` prop a host passes is
+applied after these, and replaces them: `showTokenUsage` brings the counters
+back, `pageLayoutArrangement` or `editors` replace what the layout implies. A
+host that passes its own `presence` replaces the whole of it — `onPresence`
+included, so a host that does both puts its `onPresence` inside its
+`presence`.
+
+Other `LoopEmbed` props a host commonly passes: `target` (where the agent
+runs: `browser`, a local server, or `datalayer`), `serverUrl`,
+`hideChatHeader` (when the host draws the application's face and name
+itself), `autoFocusPrompt` (`false` when the application is one section of a
+longer page), `frameHeight`, `plugins` (the host's own, mounted beside the
+application's).
+
+## The layouts
+
+`interface.layout` says how the application is drawn — `chat`, `page` or
+`split` — on the workspace's own page-layout plugin; a surface composed for a
+`chat` layout is not drawn, and `surfaceUnshown(app)` says so in a sentence.
+The table is under [An application's layout](./index.mdx#an-applications-layout),
+and an application's page under [An application's page](./index.mdx#an-applications-page).
+
+## On the light home page
+
+The home page of datalayer.ai, while it is a preview at `/preview/home`, is
+one application — *Web research* — rendered by `AppRenderer` with
+`target="browser"`, `hideChatHeader`, `autoFocusPrompt` and `onPresence`. The
+page draws the face, the name and the line of status itself, from
+`onPresence`, and beside them one line that says what the visitor is talking
+to:
+
+| It says                        | Where it comes from                                                                                                                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| *Live*                         | A model answers now; nothing plays from a recording.                                                                                                                                                                                                        |
+| the model, *Claude Sonnet 4.6* | Resolved as the chat resolves it on the browser target: the agent spec under the application's id, then the agent the application names, then the platform's default (`DEFAULT_MODEL`), shown by its catalogue name without its provider. The application's own `model` is sent only to a runtime, and is not read in the browser. |
+| *nothing is kept*              | A signed-out conversation is not saved: closing the page ends it.                                                                                                                                                                                           |
+| the limit                      | **Not built.** There is no limit per visitor and no spend ceiling for the day yet, and no recorded conversation that would play, saying it is one, when the limit is reached (LOOP H-04, H-08). The page says nothing about a limit until there is one. |
+
+*How it is built*, a quiet link under the chat, turns the frame over to show
+the same application written out, read only, as the Studio's text view writes
+it (`writeAppspecYaml`), with how it was built (`APP_BUILT`). The page's own
+documentation is on the site, at
+[/docs/applications/home-chat](https://datalayer.ai/docs/applications/home-chat).
+
+**What it does not do yet.** In the browser the model answers alone: no
+runtime, no tool, no search. *Web research* then cites nothing it opened,
+which is why the page stays a preview until a signed-out visitor has a
+runtime that runs applications (LOOP H-27, R-30).
+
+## What is tested, and what is not
+
+Tested: the options per layout and the embed's inline mode
+(`app-layout.test.tsx`); the presence state (`presence-status.test.ts`); in
+the landing, the home page's line — the model resolved as the chat resolves
+it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
+Not tested: no test renders `AppRenderer` and checks the header, the empty
+state or the line in a browser.
