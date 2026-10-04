@@ -98,6 +98,43 @@ export function canvasBlocksReactor(
   return reactor;
 }
 
+/**
+ * The palette of an organization: the block plugins of the UI plugins it has
+ * turned off (`plugins_off` in IAM, catalogue ids such as 'a2ui') switched
+ * off. A UI plugin of the catalogue that contributes no block takes nothing
+ * off; an id the catalogue does not have is said by `unknownPluginsOff`.
+ */
+export function canvasBlocksReactorOf(
+  pluginsOff: readonly string[],
+): ReactorPlatform {
+  const blockPlugins = new Set(CANVAS_BLOCK_PLUGINS.map(plugin => plugin.name));
+  return canvasBlocksReactor(
+    pluginsOff
+      .map(canvasBlocksPluginName)
+      .filter(name => blockPlugins.has(name)),
+  );
+}
+
+/** The ids an organization turns off that no UI plugin of the catalogue has. */
+export function unknownPluginsOff(pluginsOff: readonly string[]): string[] {
+  const known = new Set(listUIPlugins().map(uiPlugin => uiPlugin.id));
+  return pluginsOff.filter(id => !known.has(id));
+}
+
+/**
+ * What an application's page uses from a UI plugin its organization has
+ * turned off, as its setup notes say it (`blockSetupNotes`, on the palette of
+ * `canvasBlocksReactorOf`).
+ */
+export function pluginsOffSetupNotes(
+  app: Pick<AppSpec, 'interface'>,
+  pluginsOff: readonly string[],
+): string[] {
+  return pluginsOff.length > 0
+    ? blockSetupNotes(app, canvasBlocksReactorOf(pluginsOff))
+    : [];
+}
+
 /** The blocks the enabled plugins contribute, in contribution order: the palette. */
 export function canvasBlocksOf(reactor: BlocksReader): ComponentSpec[] {
   return reactor

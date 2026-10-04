@@ -11,7 +11,10 @@ call — the instant checks of the Studio — in a terminal and in CI:
   resolve, said in sentences;
 - **safety**: what the application can do without a rule of its own saying
   so, what it reaches in whose name, and whether it keeps a record;
-- **setup**: what it names that is not enabled today.
+- **setup**: what it names that is not enabled today — a block of its page
+  from a UI plugin its organization has turned off among it, with
+  ``--organization`` (LOOP C-12: read from IAM with the caller's token; with
+  no organization, or offline, none is off and the run says so).
 
 Its verdict is said in the Studio's words. *Not ready* when the spec is
 wrong; *Needs attention* when a safety check has something to say; otherwise
@@ -31,10 +34,13 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from agent_runtimes.loop.apps.plugins_off import PluginsOff
 
 app = typer.Typer(
     name="apps",
@@ -72,6 +78,8 @@ class Report:
     safety: List[Dict[str, str]] = field(default_factory=list)
     #: *Safety: 4 of 4 held.*, once asked.
     safety_says: str = ""
+    #: Where the plugins taken as off came from, in a sentence (LOOP C-12).
+    plugins_off_says: str = ""
 
 
 def _require_agentspecs() -> Any:
@@ -167,11 +175,27 @@ def read_document(path: Path) -> Dict[str, Any]:
     return yaml.safe_load(path.read_text()) or {}
 
 
-def validate_file(path: Path) -> Report:
-    """The instant checks of one Appspec file, or of the spec an ``app.py`` builds."""
+def validate_file(path: Path, plugins_off: Optional[PluginsOff] = None) -> Report:
+    """The instant checks of one Appspec file, or of the spec an ``app.py`` builds.
+
+    Parameters
+    ----------
+    path : Path
+        The Appspec, or the ``app.py`` that builds one.
+    plugins_off : PluginsOff or None
+        The plugins its organization has turned off; none when not given.
+
+    Returns
+    -------
+    Report
+        Its verdict and what the checks found.
+    """
     import yaml
 
     from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
+
+    off = plugins_off.plugins if plugins_off else []
 
     module = _require_agentspecs()
     try:
@@ -191,16 +215,22 @@ def validate_file(path: Path) -> Report:
     except module.AppError as error:
         return Report(str(path), NOT_READY, problems=[str(error)])
     problems = module.app_problems(application)
+    setup = [
+        *module.app_setup(application),
+        *plugins_off_setup_notes(application.interface, off),
+    ]
+    says = plugins_off.says if plugins_off else ""
     if problems:
         return Report(
-            str(path), NOT_READY, problems=problems, setup=module.app_setup(application)
+            str(path), NOT_READY, problems=problems, setup=setup, plugins_off_says=says
         )
     attention = safety_notes(module, application)
     return Report(
         str(path),
         NEEDS_ATTENTION if attention else PASSES,
         attention=attention,
-        setup=module.app_setup(application),
+        setup=setup,
+        plugins_off_says=says,
     )
 
 
@@ -248,6 +278,11 @@ def apps_validate(
     yes: bool = typer.Option(
         False, "--yes", "-y", help="With --cloud: launch without asking."
     ),
+    organization: str = typer.Option(
+        None,
+        "--organization",
+        help="The organization's uid: its turned-off plugins, read from IAM, are said in the setup notes.",
+    ),
 ) -> None:
     """Run the instant checks of one or more applications, and its safety set.
 
@@ -269,7 +304,8 @@ def apps_validate(
         raise typer.BadParameter(
             "On Datalayer the engine runs a saved application: name it with --app."
         )
-    reports = [validate_file(path) for path in paths]
+    plugins_off = organization_plugins_off(organization)
+    reports = [validate_file(path, plugins_off) for path in paths]
     unjudged = False
     if safety:
         for path, report in zip(paths, reports):
@@ -291,6 +327,7 @@ def apps_validate(
     if as_json:
         typer.echo(json.dumps([asdict(report) for report in reports], indent=2))
     else:
+        console.print(f"· Plugins: {plugins_off.says}", highlight=False)
         for report in reports:
             colour = {NOT_READY: "red", NEEDS_ATTENTION: "yellow"}.get(
                 report.verdict, "green"
@@ -730,6 +767,11 @@ def apps_run(
         "-w",
         help="Build the application again when its file changes, before the next turn.",
     ),
+    organization: str = typer.Option(
+        None,
+        "--organization",
+        help="The organization's uid: its turned-off plugins, read from IAM, are said in the setup notes.",
+    ),
 ) -> None:
     """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
 
@@ -812,7 +854,16 @@ def apps_run(
         configured = configure_on(base_url, document)
         if not speak_ag_ui(base_url):
             raise RuntimeError("The application's agent did not come up.")
-        for note in configured.get("setup") or []:
+        from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
+
+        plugins_off = organization_plugins_off(organization)
+        console.print(
+            f"[yellow]•[/yellow] Plugins: {plugins_off.says}", highlight=False
+        )
+        for note in [
+            *(configured.get("setup") or []),
+            *plugins_off_setup_notes(application.interface, plugins_off.plugins),
+        ]:
             console.print(f"[yellow]•[/yellow] {note}")
         agent_url = f"{base_url}/api/v1/ag-ui/{CLOUD_AGENT_NAME}/"
         starters = [starter.message for starter in application.interface.starters]
@@ -943,6 +994,31 @@ def apps_deploy(
         markup=False,
         highlight=False,
     )
+
+
+def organization_plugins_off(organization: Optional[str]) -> PluginsOff:
+    """The plugins an organization has turned off, read from IAM with the caller's token.
+
+    Parameters
+    ----------
+    organization : str or None
+        The organization's uid; none is read without one.
+
+    Returns
+    -------
+    PluginsOff
+        The list — empty with no organization, signed out or offline — and why.
+    """
+    from agent_runtimes.loop.apps.plugins_off import read_plugins_off
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    if not organization:
+        return read_plugins_off(None, iam_url="", token=None)
+    try:
+        client, token = make_client()
+    except NotSignedIn:
+        return read_plugins_off(organization, iam_url="", token=None)
+    return read_plugins_off(organization, iam_url=client.urls.iam_url, token=token)
 
 
 def _store() -> Any:

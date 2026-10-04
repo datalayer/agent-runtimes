@@ -45,6 +45,7 @@ import type {
   AppSpec,
   ComponentSpec,
 } from '../../types/agentspecs';
+import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
 import { parseAppspec } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
 
@@ -404,10 +405,30 @@ function setupNotes(app: AppSpec): string[] {
   return setup;
 }
 
+/**
+ * Where an application is checked: the plugins its organization has turned
+ * off (catalogue ids, `plugins_off` in IAM), none when it has decided nothing
+ * or the checks run with no organization.
+ */
+export interface CheckContext {
+  pluginsOff: readonly string[];
+}
+
+const NO_ORGANIZATION: CheckContext = { pluginsOff: [] };
+
 /** The instant checks of an application as an editor holds it. */
-export function checkApp(app: AppSpec, read: string[] = []): AppCheck {
+export function checkApp(
+  app: AppSpec,
+  read: string[] = [],
+  context: CheckContext = NO_ORGANIZATION,
+): AppCheck {
   const problems = [...read, ...shapeProblems(app), ...referenceProblems(app)];
-  const setup = setupNotes(app);
+  // A block its page uses from a plugin its organization turned off is said
+  // with the rest of what is not enabled today (C-12).
+  const setup = [
+    ...setupNotes(app),
+    ...pluginsOffSetupNotes(app, context.pluginsOff),
+  ];
   if (problems.length > 0) {
     return { verdict: NOT_READY, problems, attention: [], setup };
   }
@@ -693,7 +714,14 @@ export function documentShapeProblems(document: unknown): string[] {
 }
 
 /** The instant checks of an application's document, what reading it found included. */
-export function checkAppspec(document: unknown): AppCheck {
+export function checkAppspec(
+  document: unknown,
+  context: CheckContext = NO_ORGANIZATION,
+): AppCheck {
   const { app, problems } = parseAppspec(document);
-  return checkApp(app, [...problems, ...documentShapeProblems(document)]);
+  return checkApp(
+    app,
+    [...problems, ...documentShapeProblems(document)],
+    context,
+  );
 }

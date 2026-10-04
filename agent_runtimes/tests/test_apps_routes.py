@@ -230,3 +230,42 @@ def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> Non
     )
     assert refused.status_code == 409
     assert "keeps no feedback" in refused.json()["detail"]
+
+
+TABLE_OFF = (
+    "The UI plugin “A2UI” is not enabled, and its page uses its block Table: "
+    "it is off the Canvas until it is."
+)
+
+
+def test_configure_says_a_block_of_a_plugin_its_organization_turned_off(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+
+    asked: list[tuple[str, dict]] = []
+
+    def get(url: str, headers: dict, timeout: float) -> httpx.Response:
+        asked.append((url, headers))
+        return httpx.Response(200, json={"success": True, "plugins_off": ["a2ui"]})
+
+    monkeypatch.setattr(httpx, "get", get)
+    with_table = {**WEB_RESEARCH, "interface": {"components": ["Table"]}}
+    response = client.post(
+        "/api/v1/apps/configure",
+        json={"app": with_table, "organization_uid": "01ORG", "user_token": "t"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert TABLE_OFF in body["setup"]
+    assert body["plugins_off_says"] == "Organization 01ORG has turned off: a2ui."
+    [(url, headers)] = asked
+    assert url.endswith("/api/iam/v1/organizations/01ORG/plugins-off")
+    assert headers == {"Authorization": "Bearer t"}
+
+
+def test_configure_with_no_organization_takes_none_off_and_says_so(client: Any) -> None:
+    with_table = {**WEB_RESEARCH, "interface": {"components": ["Table"]}}
+    body = client.post("/api/v1/apps/configure", json={"app": with_table}).json()
+    assert TABLE_OFF not in body["setup"]
+    assert body["plugins_off_says"].startswith("No organization was named")

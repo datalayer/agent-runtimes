@@ -369,6 +369,7 @@ export {
   checkApp,
   checkAppspec,
   type AppCheck,
+  type CheckContext,
   defineAppPlugin,
   type AppRendererProps,
   type AppInstance,

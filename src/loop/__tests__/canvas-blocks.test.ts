@@ -17,8 +17,13 @@ import {
   canvasBlocksOf,
   canvasBlocksPluginName,
   canvasBlocksReactor,
+  canvasBlocksReactorOf,
   componentsUsedBy,
+  pluginsOffSetupNotes,
+  unknownPluginsOff,
 } from '../plugins/canvas-blocks';
+import { checkApp, checkAppspec } from '../apps/checks';
+import { dumpAppspec } from '../apps/appspec';
 import { LoopCanvasBlock } from '../core';
 import { emptyAppspec } from '../apps/appspec';
 import { listComponents } from '../../specs/uiPlugins';
@@ -131,5 +136,43 @@ describe('an application using a block whose plugin is off', () => {
     expect(
       blockSetupNotes(withPage(['Nope']), canvasBlocksReactor([A2UI])),
     ).toEqual([]);
+  });
+});
+
+describe('the plugins an organization has turned off', () => {
+  it('take the blocks of a UI plugin off its palette, by catalogue id', () => {
+    expect(canvasBlocksOf(canvasBlocksReactorOf(['a2ui']))).toEqual([]);
+    expect(canvasBlocksOf(canvasBlocksReactorOf([])).length).toBe(
+      listComponents().length,
+    );
+  });
+
+  it('take nothing off for a UI plugin with no blocks, or one the catalogue does not have', () => {
+    expect(
+      canvasBlocksOf(canvasBlocksReactorOf(['mcp-ui', 'no-such-plugin']))
+        .length,
+    ).toBe(listComponents().length);
+    expect(unknownPluginsOff(['a2ui', 'mcp-ui', 'no-such-plugin'])).toEqual([
+      'no-such-plugin',
+    ]);
+  });
+
+  it('are said in the setup notes of an application using their blocks', () => {
+    const app = withPage(['Table']);
+    expect(pluginsOffSetupNotes(app, [])).toEqual([]);
+    expect(pluginsOffSetupNotes(app, ['a2ui'])).toEqual([
+      'The UI plugin “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.',
+    ]);
+  });
+
+  it('are said by checkApp and checkAppspec, given them, and by nothing else', () => {
+    const app = withPage(['Table']);
+    const note =
+      'The UI plugin “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.';
+    expect(checkApp(app).setup).not.toContain(note);
+    expect(checkApp(app, [], { pluginsOff: ['a2ui'] }).setup).toContain(note);
+    expect(
+      checkAppspec(dumpAppspec(app), { pluginsOff: ['a2ui'] }).setup,
+    ).toContain(note);
   });
 });

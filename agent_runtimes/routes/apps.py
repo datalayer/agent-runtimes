@@ -35,6 +35,7 @@ calls not ready.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -78,6 +79,10 @@ class ConfigureAppRequest(BaseModel):
     user_token: Optional[str] = None
     jupyter_sandbox: Optional[str] = None
     mcp_proxy_url: Optional[str] = None
+    organization_uid: Optional[str] = Field(
+        None,
+        description="The organization it runs for: the plugins it has turned off are read from IAM (LOOP C-12)",
+    )
 
 
 class DecideRequest(BaseModel):
@@ -170,9 +175,25 @@ async def configure_app(
     body: ConfigureAppRequest,
     authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
-    """Make the runtime's agent the one the application runs."""
+    """Make the runtime's agent the one the application runs.
+
+    The plugins its organization has turned off are read from IAM with the
+    person's token, and a block of its page from one of them is said in its
+    setup notes; ``plugins_off_says`` says where the list came from, or why
+    none is off.
+    """
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    from agent_runtimes.loop.apps.plugins_off import read_plugins_off
+
+    plugins_off = await asyncio.to_thread(
+        read_plugins_off,
+        body.organization_uid,
+        iam_url=DatalayerURLs.from_environment().iam_url,
+        token=body.user_token or bearer_of(http_request.headers.get("authorization")),
+    )
     try:
-        app = load_app(body.app)
+        app = load_app(body.app, plugins_off.plugins)
     except AppNotRunnable as error:
         raise HTTPException(
             status_code=422, detail={"problems": error.problems}
@@ -218,6 +239,7 @@ async def configure_app(
             "emoji": app.emoji,
         },
         "setup": app.setup,
+        "plugins_off_says": plugins_off.says,
     }
 
 

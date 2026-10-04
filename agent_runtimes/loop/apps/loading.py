@@ -12,7 +12,7 @@ the session work on.
 
 from __future__ import annotations
 
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Sequence
 
 from agent_runtimes.types import AppSpec
 
@@ -25,8 +25,14 @@ class AppNotRunnable(ValueError):
         super().__init__(" ".join(problems))
 
 
-def load_app(document: Mapping[str, Any]) -> AppSpec:
-    """An application from its document, validated, or `AppNotRunnable`."""
+def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> AppSpec:
+    """An application from its document, validated, or `AppNotRunnable`.
+
+    Its setup notes say what it names that is not enabled today, a block of
+    its page from a UI plugin in ``plugins_off`` — the catalogue ids its
+    organization has turned off (LOOP C-12) — among it.
+    """
+    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
     from agentspecs import apps as spec
 
     try:
@@ -44,7 +50,10 @@ def load_app(document: Mapping[str, Any]) -> AppSpec:
     interface.setdefault("layout", validated.layout.value)
     record = data.setdefault("record", {})
     record["retention_days"] = validated.record.retention_days
-    data["setup"] = spec.app_setup(validated)
+    data["setup"] = [
+        *spec.app_setup(validated),
+        *plugins_off_setup_notes(validated.interface, plugins_off),
+    ]
     return AppSpec.model_validate(data)
 
 
