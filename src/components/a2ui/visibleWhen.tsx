@@ -39,6 +39,7 @@ import {
   isWritable,
 } from '@a2ui/web_core/v0_9';
 import { VISIBLE_WHEN, isShown } from './visibility';
+import { OWN_COMPONENTS } from './datalayer';
 
 /**
  * Whether a node's resolved properties let it be drawn: no condition, or one
@@ -104,13 +105,15 @@ export function withVisibleWhen(
 }
 
 /**
- * The catalog Datalayer's renderer draws from: A2UI's basic catalog, under
- * its own id — the payloads name it — with `visible_when` on every component.
+ * The catalog Datalayer's renderer draws from: A2UI's basic catalog and
+ * Datalayer's own components (Table, Chart, File upload, Chat, Evidence,
+ * Form — `./datalayer`), under the basic catalog's id — the payloads name
+ * it — with `visible_when` on every component.
  */
 export const datalayerCatalog = new Catalog<ReactComponentImplementation>(
   basicCatalog.id,
   basicCatalog.protocolVersion,
-  [...basicCatalog.components.values()].map(withVisibleWhen),
+  [...basicCatalog.components.values(), ...OWN_COMPONENTS].map(withVisibleWhen),
   [...basicCatalog.functions.values()],
   basicCatalog.themeSchema,
   basicCatalog.instructions,

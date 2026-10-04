@@ -12,7 +12,7 @@
  * @module chat/display/EmptyState
  */
 
-import { type ReactNode } from 'react';
+import { type KeyboardEvent, type ReactNode } from 'react';
 import {
   Text,
   LabelGroup,
@@ -130,6 +130,15 @@ export function ChatEmptyState({
             },
           }}
           onClick={() => handleSuggestionClick(suggestion)}
+          // A chip is a button to the keyboard as well as to the pointer.
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              handleSuggestionClick(suggestion);
+            }
+          }}
         >
           {/* `maxWidth="100%"` truncates to whatever room the chip's own
               fixed width leaves once its padding is spoken for, rather than

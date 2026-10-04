@@ -82,5 +82,41 @@ listComponents().filter(c => !c.standard).map(c => c.id);
   the component catalog is A2UI's own, Datalayer's components carry a schema their
   example meets, and an unknown name is `None`.
 
+## How they are drawn
+
+`datalayerCatalog` (`src/components/a2ui`, `@datalayer/agent-runtimes/lib/components/a2ui`)
+is the A2UI catalog every Datalayer surface draws from — the decision surface,
+`InlineSurface`, `A2uiView`, an application's page and the Studio's components page.
+It holds A2UI's basic components **and a renderer for each of Datalayer's own six**
+(LOOP C-18), under the basic catalog's id, with `visible_when` on every one.
+
+Each renderer is made by `@a2ui/react`'s own `createComponentImplementation`, so it
+binds and acts exactly as a basic component does. Its A2UI schema is built from the
+catalog (`ownComponentSchema(id)`): every property its JSON Schema declares, typed as
+it says; each name in `bindings.shows` and `bindings.sends` a binding — a
+`{"path": …}` into the data model, or a value given in place; an `action`, written as a
+Button's; and `weight`. The schema is strict: a key the catalog does not declare
+refuses the tree. Sending is A2UI's path: the renderer writes what a person did where
+its `sends` binding points, then dispatches its `action`, whose context reads that path.
+
+| Component | Shows | Sends, then dispatches its action |
+|---|---|---|
+| `Table` | `rows`: a list of records, under `columns`, `page_size` at a time | `selected`: the row chosen by pointer or by Enter/Space, when `selectable` |
+| `Chart` | `points`: a list of records, drawn with ECharts as a `bar`, `line`, `area` or `scatter` of `y` by `x`, a series per value of `series`; its numbers also as a table under *The numbers* | — |
+| `FileUpload` | — | `files`: `[{name, type, size, data_url}]`, once each file is of a kind in `accept` and within `max_mb` |
+| `Chat` | `messages`: `{role: 'user' \| 'assistant', text}` or `{role: 'tool', name, args, result}` (shown while `show_tools`), drawn by the chat's `ChatMessageList`; `welcome` and `starters` before the first | `message`: what is written in the composer, or a starter chosen |
+| `Evidence` | `sources`: `{title, url, passage}`, the first `max_items` and the rest behind *more* | — (opening a source dispatches its action) |
+| `Form` | `values`: the record the form starts from, its fields generated from `schema` with `@datalayer/primer-rjsf` | `values`: the form's values when it is valid and sent |
+
+```json
+{"id": "runs", "component": "Table", "columns": ["model", "cost"], "selectable": true,
+ "rows": {"path": "/runs"}, "selected": {"path": "/chosen"},
+ "action": {"event": {"name": "choose", "context": {"run": {"path": "/chosen"}}}}}
+```
+
+`DRAWN_OWN_COMPONENTS` (`lib/components/a2ui/datalayer/drawn`) lists them without
+loading the renderers; the renderers' module refuses to load when it and the catalog
+disagree, so a component added to the catalog without a renderer fails at once.
+
 Not built yet: a version per component, and the standard components' properties as a
 JSON Schema of the catalog's own (they are A2UI's today).

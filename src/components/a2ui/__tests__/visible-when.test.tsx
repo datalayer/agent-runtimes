@@ -18,7 +18,7 @@ import {
   InlineSurface,
   SURFACE_CATALOG_ID,
 } from '../../../loop/plugins/a2ui-surface/InlineSurface';
-import { VISIBLE_WHEN, datalayerCatalog, isShown } from '..';
+import { OWN_COMPONENT_IDS, VISIBLE_WHEN, datalayerCatalog, isShown } from '..';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -87,6 +87,7 @@ describe('visible_when', () => {
     expect(datalayerCatalog.id).toBe(basicCatalog.id);
     expect([...datalayerCatalog.components.keys()]).toEqual([
       ...basicCatalog.components.keys(),
+      ...OWN_COMPONENT_IDS,
     ]);
     for (const component of datalayerCatalog.components.values()) {
       const shape = (component.schema as { shape: Record<string, unknown> })
