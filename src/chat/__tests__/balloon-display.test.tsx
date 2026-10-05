@@ -15,6 +15,7 @@
 import React, { act, createRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { DisplayItem } from '../../types/chat';
 import { ThemeProvider } from '@primer/react';
 import {
   AssistantStage,
@@ -31,7 +32,6 @@ import {
   type BalloonToolLine,
 } from '../assistant/toolLine';
 import { conversationHeaderText } from '../assistant/BalloonParts';
-import { balloonHistoryOf } from '../assistant/state';
 
 const mounted: Array<() => void> = [];
 
@@ -231,18 +231,21 @@ describe('a tool call in the balloon', () => {
         },
       });
       const tool = () => container.querySelector('[data-balloon-tool]');
+      // The chat's own tool card, its status the call's.
+      const status = () =>
+        tool()
+          ?.querySelector('[data-tool-call="list_invoices"]')
+          ?.getAttribute('data-tool-call-status');
       expect(tool()?.getAttribute('data-balloon-tool')).toBe('running');
-      expect(tool()?.textContent).toBe('Using list_invoices…');
-      expect(tool()?.querySelector('strong')?.textContent).toBe(
-        'list_invoices',
-      );
+      expect(status()).toBe('executing');
+      // Heard in plain words, once.
       expect(announced(container)).toBe('Using list_invoices…');
 
       await draw({
         balloonDisplay: display,
         balloon: { text: '', tool: line('done') },
       });
-      expect(tool()?.textContent).toBe('Done: list_invoices');
+      expect(status()).toBe('complete');
       expect(announced(container)).toBe('Done: list_invoices');
 
       await draw({
@@ -250,7 +253,7 @@ describe('a tool call in the balloon', () => {
         balloon: { text: '', tool: line('failed', 'c2') },
       });
       expect(tool()?.getAttribute('data-balloon-tool')).toBe('failed');
-      expect(tool()?.textContent).toBe('list_invoices failed');
+      expect(status()).toBe('error');
       expect(announced(container)).toBe('list_invoices failed');
     });
   }
@@ -287,41 +290,89 @@ describe('a tool call in the balloon', () => {
       onToggle,
       balloon: { text: 'Using list_invoices…', tool: line('running') },
     });
-    const peek = container.querySelector<HTMLElement>('[data-balloon-peek]');
-    expect(peek?.querySelector('[data-balloon-tool="running"]')).not.toBeNull();
-    act(() => peek?.click());
-    expect(onToggle).toHaveBeenCalledTimes(1);
+    // The chat's own tool card, beside the peek rather than in its button:
+    // a click on the card opens the card, as in the chat.
+    const tool = container.querySelector<HTMLElement>(
+      '[data-balloon-tool="running"]',
+    );
+    expect(
+      tool?.querySelector('[data-tool-call="list_invoices"]'),
+    ).not.toBeNull();
+    act(() => tool?.querySelector<HTMLElement>('button')?.click());
+    expect(onToggle).not.toHaveBeenCalled();
   });
 });
 
 describe('the history balloon lists the conversation', () => {
-  const conversation = [
-    { id: 'u1', role: 'user', content: 'Who wrote about late deliveries?' },
-    { id: 'a1', role: 'assistant', content: 'Ada, Grace and **Alan**.' },
-    { id: 't1', role: 'assistant', toolName: 'readCell', content: '' },
-    { id: 'u2', role: 'user', content: 'Is the notebook up to date?' },
-    { id: 'a2', role: 'assistant', content: 'Yes, it ran at 9:40.' },
+  // The conversation as the chat holds it: messages and a tool call.
+  const at = new Date(0);
+  const history: DisplayItem[] = [
+    {
+      id: 'u1',
+      role: 'user',
+      content: 'Who wrote about late deliveries?',
+      createdAt: at,
+    },
+    {
+      id: 'a1',
+      role: 'assistant',
+      content: 'Ada, Grace and **Alan**.',
+      createdAt: at,
+    },
+    {
+      id: 't1',
+      type: 'tool-call',
+      toolCallId: 't1',
+      toolName: 'readCell',
+      args: {},
+      status: 'complete',
+    },
+    {
+      id: 'u2',
+      role: 'user',
+      content: 'Is the notebook up to date?',
+      createdAt: at,
+    },
+    {
+      id: 'a2',
+      role: 'assistant',
+      content: 'Yes, it ran at 9:40.',
+      createdAt: at,
+    },
   ];
-  const history = balloonHistoryOf(conversation);
   const messagesIn = (container: HTMLElement) =>
-    Array.from(
-      container.querySelectorAll('[data-balloon-history-message]'),
-    ).map(message => message.textContent);
+    Array.from(container.querySelectorAll('[data-chat-message]')).map(
+      message => message.textContent,
+    );
 
-  it('reads the person’s and the agent’s messages, not the tool calls', () => {
-    expect(history).toEqual([
-      { id: 'u1', role: 'user', text: 'Who wrote about late deliveries?' },
-      { id: 'a1', role: 'assistant', text: 'Ada, Grace and Alan.' },
-      { id: 'u2', role: 'user', text: 'Is the notebook up to date?' },
-      { id: 'a2', role: 'assistant', text: 'Yes, it ran at 9:40.' },
-    ]);
+  it('draws the messages with the chat’s own components: markdown, and the tool call', async () => {
+    const { container } = await render({
+      balloon: { text: 'Yes, it ran at 9:40.', history },
+    });
+    expect(
+      container.querySelector(
+        '[data-chat-message="assistant"] [data-chat-markdown] [data-streamdown="strong"]',
+      )?.textContent,
+    ).toBe('Alan');
+    expect(
+      container
+        .querySelector(
+          '[data-balloon-history-list] [data-tool-call="readCell"]',
+        )
+        ?.getAttribute('data-tool-call-status'),
+    ).toBe('complete');
   });
 
   it('history: every message, under a header that counts them, scrolled', async () => {
     const { container } = await render({
       balloon: { text: 'Yes, it ran at 9:40.', history },
     });
-    expect(messagesIn(container)).toEqual(history.map(entry => entry.text));
+    expect(messagesIn(container)).toEqual([
+      'Who wrote about late deliveries?',
+      'Ada, Grace and Alan.',
+      'Is the notebook up to date?',
+      'Yes, it ran at 9:40.',
+    ]);
     expect(
       container.querySelector('[data-balloon-history] [data-balloon-header]')
         ?.textContent,
@@ -341,11 +392,16 @@ describe('the history balloon lists the conversation', () => {
       },
     });
     expect(messagesIn(container)).toHaveLength(4);
-    expect(
-      container
-        .querySelector('[data-balloon-history-tool] [data-balloon-tool]')
-        ?.getAttribute('data-balloon-tool'),
-    ).toBe('running');
+    // Last in the list, as the chat's tool card.
+    const cards = container.querySelectorAll(
+      '[data-balloon-history-list] [data-tool-call]',
+    );
+    expect(cards[cards.length - 1]?.getAttribute('data-tool-call')).toBe(
+      'list_invoices',
+    );
+    expect(cards[cards.length - 1]?.getAttribute('data-tool-call-status')).toBe(
+      'executing',
+    );
   });
 
   it('current: the one thing said now, not the list', async () => {

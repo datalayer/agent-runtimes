@@ -279,12 +279,15 @@ describe("the team's balloons", () => {
     const sales = balloonOf(container, 'sales');
     const accounting = balloonOf(container, 'accounting');
     expect(sales?.getAttribute('data-balloon-display')).toBe('current');
-    expect(sales?.querySelector('[data-balloon-tool]')?.textContent).toBe(
-      'Asking Accounting…',
-    );
+    // The tools, through the chat's own tool card: Sales' in its own words.
     expect(
-      accounting?.querySelector('[data-balloon-tool="running"]')?.textContent,
-    ).toBe('Using list_invoices…');
+      sales?.querySelector('[data-balloon-tool] [data-tool-call]')?.textContent,
+    ).toContain('Asking Accounting…');
+    expect(
+      accounting
+        ?.querySelector('[data-balloon-tool="running"] [data-tool-call]')
+        ?.getAttribute('data-tool-call-status'),
+    ).toBe('executing');
     expect(
       accounting?.querySelector('[data-balloon-announce]')?.textContent,
     ).toBe('Using list_invoices…');
@@ -415,17 +418,45 @@ describe("a member's menu", () => {
             onToggle: () => {},
             conversationLabel: 'Ask Sales',
             history: [
-              { id: '1', role: 'user', text: 'Open invoices?' },
-              { id: '2', role: 'assistant', text: 'Two are open.' },
+              {
+                id: '1',
+                role: 'user',
+                content: 'Open invoices?',
+                createdAt: new Date(0),
+              },
+              {
+                id: '2',
+                role: 'assistant',
+                content: 'Two are open.',
+                createdAt: new Date(0),
+              },
             ],
             onBalloonDisplayChange: onChange,
           }}
           peer={{
             ...member('accounting', AT_REST),
             history: [
-              { id: 'p1', role: 'user', text: 'List open invoices.' },
-              { id: 'p2', role: 'assistant', text: 'Used list_invoices' },
-              { id: 'p3', role: 'assistant', text: 'Two are open.' },
+              {
+                id: 'p1',
+                role: 'user',
+                content: 'List open invoices.',
+                createdAt: new Date(0),
+              },
+              // The tool it called, as the chat holds one.
+              {
+                id: 'p2',
+                type: 'tool-call',
+                toolCallId: 'c1',
+                toolName: 'list_invoices',
+                args: {},
+                status: 'complete',
+              },
+              {
+                id: 'p3',
+                role: 'assistant',
+                content: 'Two are open.',
+                createdAt: new Date(0),
+              },
             ],
           }}
           flow="still"
@@ -442,9 +473,7 @@ describe("a member's menu", () => {
     await choose('balloon-history');
     expect(onChange).toHaveBeenCalledWith('history');
     expect(
-      balloonOf(container, 'sales')?.querySelectorAll(
-        '[data-balloon-history-message]',
-      ),
+      balloonOf(container, 'sales')?.querySelectorAll('[data-chat-message]'),
     ).toHaveLength(2);
     await open(container, 'sales');
     expect(
@@ -462,10 +491,13 @@ describe("a member's menu", () => {
       document.querySelector('[data-assistant-menu-item="conversation"]'),
     ).toBeNull();
     await choose('balloon-history');
+    const listed = balloonOf(container, 'accounting');
+    expect(listed?.querySelectorAll('[data-chat-message]')).toHaveLength(2);
+    // Its tool call, drawn by the chat's own tool card.
     expect(
-      balloonOf(container, 'accounting')?.querySelectorAll(
-        '[data-balloon-history-message]',
-      ),
-    ).toHaveLength(3);
+      listed
+        ?.querySelector('[data-tool-call="list_invoices"]')
+        ?.getAttribute('data-tool-call-status'),
+    ).toBe('complete');
   });
 });

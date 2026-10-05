@@ -358,7 +358,8 @@ const AssistantGalleryExample: React.FC = () => {
                 {
                   id: 'notebook',
                   role: 'assistant' as const,
-                  text: SAMPLE_NOTEBOOK_SAYING,
+                  content: SAMPLE_NOTEBOOK_SAYING,
+                  createdAt: new Date(0),
                 },
               ]
             : []),

@@ -83,7 +83,12 @@ import {
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
-import type { BalloonDisplay, BalloonToolLine } from './toolLine';
+import {
+  conversationCount,
+  type BalloonDisplay,
+  type BalloonToolLine,
+} from './toolLine';
+import type { DisplayItem } from '../../types/chat';
 import {
   ASSISTANT_OBSTACLES,
   POINTER_CALM_MS,
@@ -92,7 +97,6 @@ import {
   type AssistantAway,
   type AssistantState,
   type BalloonApproval,
-  type BalloonHistoryMessage,
 } from './state';
 
 /** The motions, by the state the stage is in. */
@@ -553,7 +557,7 @@ export interface AssistantStageProps {
      * The conversation's messages (`history`): the balloon lists them all,
      * counted and scrolled, rather than the newest line alone.
      */
-    history?: readonly BalloonHistoryMessage[];
+    history?: readonly DisplayItem[];
     /**
      * The large visual `attachment` is the compact form of (a notebook):
      * the balloon offers *Expand*, and draws it large — into
@@ -816,7 +820,7 @@ export function AssistantStage({
     balloonDisplay !== 'current' && history && history.length > 0
       ? {
           id: 'balloon-history',
-          title: conversationHeaderText(history.length),
+          title: conversationHeaderText(conversationCount(history)),
           shrink: true,
           render: () => (
             <BalloonHistoryLarge

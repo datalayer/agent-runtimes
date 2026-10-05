@@ -73,6 +73,13 @@ export interface ToolCallDisplayProps {
    * icon, else the emoji, else nothing.
    */
   marks?: Marks | null;
+  /** What it does in its runtime's words: shown in place of the arguments. */
+  summary?: string;
+  /**
+   * How dense: the chat's (`comfortable`), or the floating assistant's
+   * balloon (`compact`: a smaller header, the same card).
+   */
+  density?: 'comfortable' | 'compact';
 }
 
 /**
@@ -215,7 +222,10 @@ export function ToolCallDisplay({
   onDeny,
   approvalLoading = false,
   marks,
+  summary,
+  density = 'comfortable',
 }: ToolCallDisplayProps) {
+  const compact = density === 'compact';
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Determine effective exit code from props or execution result
@@ -237,7 +247,7 @@ export function ToolCallDisplay({
 
   const statusDisplay = getStatusDisplay(status, errorType);
   const displayName = formatToolName(toolName);
-  const argsSummary = getArgsSummary(args);
+  const argsSummary = summary || getArgsSummary(args);
   const resultObject =
     result && typeof result === 'object'
       ? (result as Record<string, unknown>)
@@ -273,11 +283,13 @@ export function ToolCallDisplay({
 
   return (
     <Box
+      data-tool-call={toolName}
+      data-tool-call-status={status}
       sx={{
         width: '100%',
         border: '1px solid',
         borderColor: 'border.default',
-        borderRadius: '12px',
+        borderRadius: compact ? '8px' : '12px',
         overflow: 'hidden',
         backgroundColor: 'canvas.default',
       }}
@@ -290,8 +302,8 @@ export function ToolCallDisplay({
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
-          padding: 2,
+          gap: compact ? 1 : 2,
+          padding: compact ? 1 : 2,
           backgroundColor: 'canvas.subtle',
           border: 'none',
           borderBottom: isExpanded ? '1px solid' : 'none',
@@ -323,7 +335,7 @@ export function ToolCallDisplay({
         <Text
           sx={{
             fontWeight: 'semibold',
-            fontSize: 1,
+            fontSize: compact ? 0 : 1,
             color: 'fg.default',
             flexShrink: 0,
           }}

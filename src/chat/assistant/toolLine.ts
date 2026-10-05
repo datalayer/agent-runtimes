@@ -13,6 +13,7 @@
  */
 
 import { BACKEND_TOOL_CATALOG } from '../../specs/backendTools';
+import type { DisplayItem, ToolCallMessage } from '../../types/chat';
 
 /**
  * How the balloon shows the conversation: `history`, every message,
@@ -185,4 +186,62 @@ export function conversationCount(items: readonly unknown[]): number {
       typeof message.toolName !== 'string'
     );
   }).length;
+}
+
+/**
+ * A tool line as the chat holds it: a tool call (`ToolCallMessage`), drawn
+ * by the chat's own tool card in the balloon, its runtime's own words
+ * (`Asking Accounting…`) as its summary; or, when it names no tool — what
+ * the agent is doing, in its own words only — the agent's message saying
+ * so.
+ */
+export function displayItemOfLine(line: BalloonToolLine): DisplayItem {
+  if (!line.tool && !line.name) {
+    return {
+      id: `balloon-activity:${line.id}`,
+      role: 'assistant',
+      content: line.words ?? '',
+      createdAt: new Date(0),
+    };
+  }
+  return toolCallOfLine(line);
+}
+
+/** A tool line as the chat's own tool call (`ToolCallMessage`). */
+export function toolCallOfLine(line: BalloonToolLine): ToolCallMessage {
+  return {
+    id: `balloon-tool:${line.id}`,
+    type: 'tool-call',
+    toolCallId: line.id,
+    toolName: line.tool || line.name,
+    args: {},
+    status:
+      line.phase === 'failed'
+        ? 'error'
+        : line.phase === 'done'
+          ? 'complete'
+          : 'executing',
+    ...(line.words ? { summary: line.words } : {}),
+  };
+}
+
+/**
+ * The conversation with the tool being called, when the conversation does
+ * not hold that call already: what the history balloon lists.
+ */
+export function withToolCall(
+  items: readonly DisplayItem[],
+  line: BalloonToolLine | undefined,
+): readonly DisplayItem[] {
+  if (
+    !line ||
+    items.some(
+      item =>
+        (item as Partial<ToolCallMessage>).toolCallId === line.id ||
+        item.id === line.id,
+    )
+  ) {
+    return items;
+  }
+  return [...items, displayItemOfLine(line)];
 }

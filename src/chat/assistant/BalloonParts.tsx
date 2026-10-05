@@ -12,16 +12,18 @@
  * @module chat/assistant/BalloonParts
  */
 
-import type { JSX, ReactNode } from 'react';
+import type { JSX, ReactNode, RefObject } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { CheckIcon, ToolsIcon, XIcon } from '@primer/octicons-react';
-import { SpecMark, hasMark, marksOfToolCall } from '../marks';
 import { TypingDots } from '../indicators/TypingDots';
+import { ChatMessageList } from '../messages/ChatMessageList';
+import { ChatMarkdown, type ChatDensity } from '../messages/ChatMarkdown';
+import { agentRuntimeStore } from '../../stores/agentRuntimeStore';
+import type { DisplayItem } from '../../types/chat';
 import {
   toolAnnouncement,
-  toolLineParts,
+  displayItemOfLine,
   type BalloonToolLine,
   type ToolLinePhase,
 } from './toolLine';
@@ -36,77 +38,94 @@ const VISUALLY_HIDDEN = {
   whiteSpace: 'nowrap',
 } as const;
 
-const PHASE_COLOR: Record<ToolLinePhase, string> = {
-  running: 'fg.muted',
-  done: 'success.fg',
-  failed: 'danger.fg',
-};
+/** How the balloon's chat items know their people: no avatars are drawn. */
+const BALLOON_AVATARS = {
+  userAvatar: null,
+  assistantAvatar: null,
+  showAvatars: false,
+  avatarSize: 0,
+  userAvatarBg: 'neutral.muted',
+  assistantAvatarBg: 'accent.emphasis',
+} as const;
 
 /**
- * A tool call in the balloon, in plain words: its mark when the catalogue
- * gives one (an MCP server's, a skill's, a tool set's), else a tool; "Using
- * **list_invoices**…", "Done: **list_invoices**", "**list_invoices** failed".
+ * Inline approvals answered in the balloon go where the chat's go: the
+ * shared monitoring socket.
+ */
+async function respondInBalloon(
+  _toolCallId: string,
+  result: unknown,
+): Promise<void> {
+  if (result && typeof result === 'object') {
+    const record = result as Record<string, unknown>;
+    if (
+      record.type === 'tool-approval-decision' &&
+      typeof record.approved === 'boolean' &&
+      typeof record.approvalId === 'string'
+    ) {
+      agentRuntimeStore
+        .getState()
+        .sendDecision(record.approvalId, record.approved);
+    }
+  }
+}
+
+/**
+ * The conversation's items in the balloon, drawn by the chat's own
+ * components (`ChatMessageList`): markdown, code blocks, tool calls and
+ * their approvals, notes, the three dots — in the compact density, or the
+ * chat's own when drawn large.
+ */
+export function BalloonChatItems({
+  items,
+  density = 'compact',
+  waiting = false,
+}: {
+  items: readonly DisplayItem[];
+  density?: ChatDensity;
+  /** At work with nothing written yet: the chat's dots, last. */
+  waiting?: boolean;
+}): JSX.Element {
+  const end = useRef<HTMLDivElement>(null);
+  return (
+    <Box data-balloon-chat-items="" sx={{ minWidth: 0 }}>
+      <ChatMessageList
+        displayItems={items as DisplayItem[]}
+        isLoading={waiting}
+        isStreaming={false}
+        showLoadingIndicator={waiting}
+        hideMessagesAfterToolUI={false}
+        avatarConfig={BALLOON_AVATARS}
+        padding={0}
+        onRespond={respondInBalloon}
+        messagesEndRef={end as RefObject<HTMLDivElement>}
+        emptyContent={waiting ? <TypingDots size={6} /> : null}
+        density={density}
+      />
+    </Box>
+  );
+}
+
+/**
+ * The tool being called, in the balloon: the chat's tool call card, compact,
+ * with its runtime's own words (`Asking Accounting…`) as its summary.
  * Seen, not read out: {@link ToolLineAnnouncer} says it once per change.
  */
-export function BalloonToolLineView({
+export function BalloonToolCall({
   line,
+  waiting = false,
 }: {
   line: BalloonToolLine;
+  waiting?: boolean;
 }): JSX.Element {
-  const { before, name, after } = toolLineParts(line);
-  const marks = line.tool ? marksOfToolCall(line.tool, undefined) : null;
-  const Icon =
-    line.phase === 'done'
-      ? CheckIcon
-      : line.phase === 'failed'
-        ? XIcon
-        : ToolsIcon;
   return (
     <Box
-      as="span"
       aria-hidden="true"
       data-balloon-tool={line.phase}
       data-balloon-tool-name={line.tool || undefined}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        minWidth: 0,
-        maxWidth: '100%',
-        color: line.phase === 'failed' ? 'danger.fg' : 'fg.default',
-      }}
+      sx={{ minWidth: 0, width: '100%' }}
     >
-      <Box
-        as="span"
-        sx={{
-          display: 'inline-flex',
-          flexShrink: 0,
-          color: PHASE_COLOR[line.phase],
-        }}
-      >
-        {line.phase === 'running' && hasMark(marks) ? (
-          <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={14} />
-        ) : (
-          <Icon size={14} />
-        )}
-      </Box>
-      <Box
-        as="span"
-        sx={{
-          minWidth: 0,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {before}
-        {name ? (
-          <Box as="strong" sx={{ fontWeight: 'semibold' }}>
-            {name}
-          </Box>
-        ) : null}
-        {after}
-      </Box>
+      <BalloonChatItems items={[displayItemOfLine(line)]} waiting={waiting} />
     </Box>
   );
 }
@@ -278,10 +297,7 @@ export function CurrentBalloonBody({
     >
       <BalloonNow busy={busy} />
       {tool ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <BalloonToolLineView line={tool} />
-          {waiting && <TypingDots size={5} />}
-        </Box>
+        <BalloonToolCall line={tool} waiting={waiting} />
       ) : text ? (
         <Box
           aria-live="polite"
@@ -294,19 +310,21 @@ export function CurrentBalloonBody({
                   maxHeight: 240,
                   overflowY: 'auto',
                   overflowWrap: 'anywhere',
-                  whiteSpace: 'pre-wrap',
                   pr: 1,
                 }
               : {
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
+                  // About four lines; *more* shows the rest.
+                  maxHeight: '5.6em',
                   overflow: 'hidden',
                   overflowWrap: 'anywhere',
                 }
           }
         >
-          {whole ? (fullText ?? text) : text}
+          {/* The chat's own markdown: the words as written, whole. */}
+          <ChatMarkdown
+            density="compact"
+            text={whole ? (fullText ?? text) : text}
+          />
           {waiting && (
             <Box as="span" sx={{ ml: 2, display: 'inline-flex' }}>
               <TypingDots size={5} />

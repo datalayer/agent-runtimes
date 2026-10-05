@@ -339,9 +339,13 @@ describe('the balloon, as the configuration says (T-23)', () => {
     });
     const balloon = el.querySelector('[data-speech-balloon]');
     expect(balloon?.getAttribute('data-balloon-display')).toBe('current');
-    expect(balloon?.querySelector('[data-balloon-tool]')?.textContent).toBe(
-      'Analyst is adding a cell…',
-    );
+    // What it does, in its own words: the agent's message, drawn by the
+    // chat's own components.
+    expect(
+      balloon?.querySelector(
+        '[data-balloon-tool] [data-chat-message="assistant"]',
+      )?.textContent,
+    ).toBe('Analyst is adding a cell…');
     expect(balloon?.querySelector('[data-balloon-announce]')?.textContent).toBe(
       'Analyst is adding a cell…',
     );

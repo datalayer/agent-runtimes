@@ -127,6 +127,7 @@ export function ExpandedVisual({
       element,
     );
   }
+  // The dialog's × (and Esc) is what shrinks it back: no Shrink of its own.
   return (
     <Dialog
       title={visual.title}
@@ -143,18 +144,6 @@ export function ExpandedVisual({
         data-balloon-visual={visual.id}
         sx={{ minWidth: 0 }}
       >
-        {visual.shrink && (
-          <Button
-            size="small"
-            variant="invisible"
-            leadingVisual={ScreenNormalIcon}
-            onClick={onClose}
-            data-balloon-shrink=""
-            sx={{ float: 'right' }}
-          >
-            Shrink
-          </Button>
-        )}
         {visual.render('overlay')}
       </Box>
     </Dialog>

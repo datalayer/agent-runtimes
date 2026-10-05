@@ -58,7 +58,7 @@ import {
   type AssistantAbout,
 } from '../../chat/assistant/AssistantStage';
 import type { BalloonSuggestion } from '../../chat/assistant/SpeechBalloon';
-import type { BalloonHistoryMessage } from '../../chat/assistant/state';
+import type { DisplayItem } from '../../types/chat';
 import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMenu';
 import type { AssistantSandbox } from '../../chat/assistant/assistantDetails';
 import { useSignalValue } from '@datalayer/reactor/react';
@@ -147,7 +147,7 @@ export type A2ATeamGraphMember = {
    * What it said and did, as its `history` balloon lists it (`useA2ATeam`'s
    * `entryHistory`, `peerHistory`): shown when its menu chooses *History*.
    */
-  history?: readonly BalloonHistoryMessage[];
+  history?: readonly DisplayItem[];
   /** Its balloon's display was chosen in its menu: the page may keep it. */
   onBalloonDisplayChange?: (display: BalloonDisplay) => void;
 };

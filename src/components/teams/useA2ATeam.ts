@@ -33,10 +33,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { stepCountIs, ToolLoopAgent, type ModelMessage } from 'ai';
-import type {
-  AssistantState,
-  BalloonHistoryMessage,
-} from '../../chat/assistant/state';
+import type { AssistantState } from '../../chat/assistant/state';
+import type { ChatMessage } from '../../types/messages';
+import type { DisplayItem, ToolCallMessage } from '../../types/chat';
 import {
   createBrowserModel,
   type BrowserModelOptions,
@@ -160,13 +159,16 @@ export type A2ATeam = {
   setEntryAway: (away: boolean) => void;
   setPeerAway: (away: boolean) => void;
   turns: A2ATeamTurn[];
-  /** The entry's conversation, as its `history` balloon lists it. */
-  entryHistory: BalloonHistoryMessage[];
   /**
-   * What the peer was asked, what it did (its tool lines) and what it
-   * answered, as its `history` balloon lists it.
+   * The entry's conversation, in the chat's model (its messages): what its
+   * `history` balloon draws with the chat's components.
    */
-  peerHistory: BalloonHistoryMessage[];
+  entryHistory: DisplayItem[];
+  /**
+   * What the peer was asked, the tools it called and what it answered, in
+   * the chat's model (messages and tool calls).
+   */
+  peerHistory: DisplayItem[];
   /** The peer's last answer, as it gave it. */
   report: string | null;
   /** What the peer gave besides words with its last answer, by media type. */
@@ -213,15 +215,39 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   }));
   const [peerPersona, setPeerPersona] = useState<A2ATeamPersona>(AT_REST);
   const [turns, setTurns] = useState<A2ATeamTurn[]>([]);
-  const [peerHistory, setPeerHistory] = useState<BalloonHistoryMessage[]>([]);
+  const [peerHistory, setPeerHistory] = useState<DisplayItem[]>([]);
   const told = useRef(0);
-  const tell = useCallback(
-    (role: BalloonHistoryMessage['role'], text: string) => {
-      told.current += 1;
-      const id = `peer-${told.current}`;
-      setPeerHistory(prev => [...prev, { id, role, text }]);
+  const tell = useCallback((role: 'user' | 'assistant', text: string) => {
+    told.current += 1;
+    const message: ChatMessage = {
+      id: `peer-${told.current}`,
+      role,
+      content: text,
+      createdAt: new Date(),
+    };
+    setPeerHistory(prev => [...prev, message]);
+  }, []);
+  // A tool the peer calls, as the chat holds one: added when it starts,
+  // updated when it ends.
+  const toolCalled = useCallback(
+    (step: { id?: string; name: string; ended: boolean; error?: string }) => {
+      const id = step.id ?? step.name;
+      const call: ToolCallMessage = {
+        id: `peer-tool:${id}`,
+        type: 'tool-call',
+        toolCallId: id,
+        toolName: toolOwnName(step.name, peerConnections),
+        args: {},
+        status: step.error ? 'error' : step.ended ? 'complete' : 'executing',
+        ...(step.error ? { error: step.error } : {}),
+      };
+      setPeerHistory(prev =>
+        prev.some(item => item.id === call.id)
+          ? prev.map(item => (item.id === call.id ? call : item))
+          : [...prev, call],
+      );
     },
-    [],
+    [peerConnections],
   );
   const [report, setReport] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<A2APeerArtifact[]>([]);
@@ -280,13 +306,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           tool: undefined,
         }));
       } else if (event.phase === 'working') {
-        if (event.tool?.ended) {
-          tell(
-            'assistant',
-            event.tool.error
-              ? `${event.tool.name} failed: ${event.tool.error}`
-              : `Used ${toolOwnName(event.tool.name, peerConnections)}`,
-          );
+        if (event.tool) {
+          toolCalled(event.tool);
         }
         setPeerPersona(prev => ({
           ...prev,
@@ -335,7 +356,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       }
     },
-    [peerApp.id, peerConnections, inspector, tell],
+    [peerApp.id, peerConnections, inspector, tell, toolCalled],
   );
 
   const agent = useMemo(() => {
@@ -543,12 +564,13 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     [],
   );
 
-  const entryHistory = useMemo(
+  const entryHistory = useMemo<DisplayItem[]>(
     () =>
-      turns.map((turn, index) => ({
+      turns.map((turn, index): ChatMessage => ({
         id: `turn-${index}`,
         role: turn.role,
-        text: turn.text,
+        content: turn.text,
+        createdAt: new Date(0),
       })),
     [turns],
   );

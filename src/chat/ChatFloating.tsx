@@ -81,7 +81,6 @@ import {
 import type { AssistantCharacterData } from './assistant/formats/types';
 import {
   assistantStateOf,
-  balloonHistoryOf,
   latestSaying,
   newestIsAnswer,
   keepAway,
@@ -90,7 +89,6 @@ import {
   type AssistantAway,
   type AssistantSaying,
   type BalloonApproval,
-  type BalloonHistoryMessage,
 } from './assistant/state';
 import {
   presenceState,
@@ -119,6 +117,7 @@ import type { BalloonSuggestion } from './assistant/SpeechBalloon';
 import type {
   ChatCommonProps,
   ChatViewMode,
+  DisplayItem,
   ProtocolConfig,
   ThemeOverrides,
 } from '../types';
@@ -552,9 +551,9 @@ export function ChatFloating({
   const [ownTool, setOwnTool] = useState<BalloonToolLine | undefined>();
   const [messageCount, setMessageCount] = useState(0);
   // The conversation's messages, listed in the closed `history` balloon.
-  const [ownHistory, setOwnHistory] = useState<
-    readonly BalloonHistoryMessage[]
-  >([]);
+  // The chat's own items — its messages and tool calls — as it holds them:
+  // the balloon draws them with the chat's components.
+  const [ownHistory, setOwnHistory] = useState<readonly DisplayItem[]>([]);
   /*
    * Its voice (VOICE.md V1): the answers said by the speech service, as
    * they are written (VO-20), the state following the sound (VO-22).
@@ -698,8 +697,18 @@ export function ChatFloating({
   const toolSaid =
     toolLine && (toolLine.phase === 'running' || atWork) ? toolLine : undefined;
   // Current: what is said now — thinking until the answer's words arrive.
+  // The words as written (markdown, drawn by the chat's markdown), or cut
+  // to fit with the whole kept for *more*.
   const currentWords =
-    atWork && !answering ? 'Thinking…' : saying?.text || undefined;
+    atWork && !answering
+      ? 'Thinking…'
+      : (saying?.more ? saying.text : saying?.markdown) || undefined;
+  const currentWhole =
+    atWork && !answering
+      ? undefined
+      : saying?.more
+        ? saying.markdown
+        : undefined;
   // History: the closed balloon lists the conversation, not its newest line.
   const listedHistory =
     !showsCurrent && !conversation && ownHistory.length > 0
@@ -707,7 +716,7 @@ export function ChatFloating({
       : undefined;
   const withHistory = <T extends object>(
     said: T,
-  ): T & { history?: readonly BalloonHistoryMessage[] } =>
+  ): T & { history?: readonly DisplayItem[] } =>
     listedHistory ? { ...said, history: listedHistory } : said;
   const assistantBalloon =
     assistantState === 'paused'
@@ -734,6 +743,7 @@ export function ChatFloating({
                   ? // Current: the words as they are written, whole.
                     {
                       text: currentWords ?? description,
+                      fullText: currentWhole,
                       more: saying?.more,
                       speaking: answering && atWork,
                       busy: atWork,
@@ -819,17 +829,7 @@ export function ChatFloating({
           : line,
       );
       setMessageCount(conversationCount(items));
-      const listed = balloonHistoryOf(items);
-      setOwnHistory(previous =>
-        previous.length === listed.length &&
-        previous.every(
-          (message, index) =>
-            message.id === listed[index].id &&
-            message.text === listed[index].text,
-        )
-          ? previous
-          : listed,
-      );
+      setOwnHistory(items as readonly DisplayItem[]);
       setVoiceItems(items);
       const said = latestSaying(items);
       setSaying(previous =>
@@ -1768,6 +1768,7 @@ export function ChatFloating({
             <Box sx={{ px: 3, pt: 3, pb: 2, overflow: 'hidden' }}>
               <CurrentBalloonBody
                 text={toolSaid ? undefined : (currentWords ?? description)}
+                fullText={toolSaid ? undefined : currentWhole}
                 tool={toolSaid}
                 busy={atWork}
                 speaking={answering && atWork}

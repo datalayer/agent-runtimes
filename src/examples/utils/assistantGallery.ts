@@ -20,12 +20,11 @@ import {
 } from '../../chat/assistant/toolLine';
 import {
   ASSISTANT_WORDS,
-  balloonHistoryOf,
   latestSaying,
   type AssistantState,
   type BalloonApproval,
-  type BalloonHistoryMessage,
 } from '../../chat/assistant/state';
+import type { DisplayItem } from '../../types/chat';
 
 /** What the gallery poses a character in: a state, or stepped aside. */
 export type GalleryPose = AssistantState | 'aside';
@@ -112,21 +111,43 @@ export function sampleSaying(index: number): { text: string; more: boolean } {
 }
 
 /**
- * The conversation so far, after `count` sample exchanges (wrapping), as the
- * `history` balloon lists it: every message, the person's and the agent's,
- * read by `balloonHistoryOf` as the floating assistant reads the chat.
+ * The conversation so far, after `count` sample exchanges (wrapping), as
+ * the chat holds it — its messages and tool calls — which the `history`
+ * balloon draws with the chat's components.
  */
-export function sampleHistory(count: number): BalloonHistoryMessage[] {
-  const items: unknown[] = [];
+export function sampleHistory(count: number): DisplayItem[] {
+  const items: DisplayItem[] = [];
   for (let turn = 0; turn < count; turn += 1) {
     const conversation =
       SAMPLE_CONVERSATIONS[turn % SAMPLE_CONVERSATIONS.length];
-    for (const item of conversation) {
-      const message = item as { id: string };
-      items.push({ ...message, id: `${turn}-${message.id}` });
+    for (const entry of conversation) {
+      const item = entry as {
+        id: string;
+        role: 'user' | 'assistant';
+        content: string;
+        toolName?: string;
+      };
+      const id = `${turn}-${item.id}`;
+      items.push(
+        item.toolName
+          ? {
+              id,
+              type: 'tool-call',
+              toolCallId: id,
+              toolName: item.toolName,
+              args: {},
+              status: 'complete',
+            }
+          : {
+              id,
+              role: item.role,
+              content: item.content,
+              createdAt: new Date(0),
+            },
+      );
     }
   }
-  return balloonHistoryOf(items);
+  return items;
 }
 
 /** The tool the gallery calls (T-23): Odoo's, as Accounting calls it. */
@@ -218,7 +239,7 @@ export function balloonForPose(
     /** What goes with the words in a `current` balloon: a notebook. */
     attachment?: NonNullable<AssistantStageProps['balloon']>['attachment'];
     /** The conversation so far, listed in a `history` balloon. */
-    history?: readonly BalloonHistoryMessage[];
+    history?: readonly DisplayItem[];
     /** The large visual the attachment is the compact form of: expandable. */
     visual?: NonNullable<AssistantStageProps['balloon']>['visual'];
   },

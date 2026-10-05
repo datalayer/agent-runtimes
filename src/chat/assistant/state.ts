@@ -125,6 +125,11 @@ export interface AssistantSaying {
   text: string;
   /** Whether there was more than the balloon holds. */
   more: boolean;
+  /**
+   * Its words as written, markdown and all: what the `current` balloon
+   * draws, through the chat's markdown.
+   */
+  markdown: string;
 }
 
 /** How much of a message is kept as the agent's saying before it is cut. */
@@ -157,43 +162,21 @@ export function plainWordsOf(content: unknown): string {
     .trim();
 }
 
-/** A message of the conversation, as the `history` balloon lists it. */
-export interface BalloonHistoryMessage {
-  id: string;
-  /** Who said it: the person, or the agent. */
-  role: 'user' | 'assistant';
-  /** Its words, plain. */
-  text: string;
-}
-
-/**
- * The conversation as the `history` balloon lists it (T-23): the person's
- * and the agent's messages with words, in order — not the tool calls, not
- * an empty message — the same messages its header counts.
- */
-export function balloonHistoryOf(
-  items: readonly unknown[],
-): BalloonHistoryMessage[] {
-  const history: BalloonHistoryMessage[] = [];
-  items.forEach((entry, index) => {
-    const item = entry as {
-      id?: unknown;
-      role?: unknown;
-      toolName?: unknown;
-      content?: unknown;
-    };
-    if (
-      (item.role !== 'user' && item.role !== 'assistant') ||
-      typeof item.toolName === 'string'
-    ) {
-      return;
-    }
-    const text = plainWordsOf(item.content);
-    if (text) {
-      history.push({ id: String(item.id ?? index), role: item.role, text });
-    }
-  });
-  return history;
+/** A message's text parts as written, markdown and all. */
+export function markdownOf(content: unknown): string {
+  return typeof content === 'string'
+    ? content
+    : Array.isArray(content)
+      ? content
+          .map(part =>
+            part &&
+            typeof part === 'object' &&
+            (part as { type?: unknown }).type === 'text'
+              ? String((part as { text?: unknown }).text ?? '')
+              : '',
+          )
+          .join('\n\n')
+      : '';
 }
 
 /**
@@ -219,8 +202,14 @@ export function latestSaying(
     if (!plain) {
       continue;
     }
+    const markdown = markdownOf(item.content);
     if (plain.length <= SAYING_LIMIT) {
-      return { id: String(item.id ?? index), text: plain, more: false };
+      return {
+        id: String(item.id ?? index),
+        text: plain,
+        more: false,
+        markdown,
+      };
     }
     const cut = plain.slice(0, SAYING_LIMIT);
     const atWord = cut.slice(
@@ -231,6 +220,7 @@ export function latestSaying(
       id: String(item.id ?? index),
       text: `${atWord.trimEnd()}…`,
       more: true,
+      markdown,
     };
   }
   return undefined;

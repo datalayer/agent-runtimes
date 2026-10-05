@@ -78,20 +78,20 @@ describe('the balloons', () => {
 
   it('lists the conversation so far in a history balloon', () => {
     const history = sampleHistory(2);
-    // Two exchanges: two questions, two answers, the tool call left out.
-    expect(history.map(message => message.role)).toEqual([
-      'user',
-      'assistant',
-      'user',
-      'assistant',
-    ]);
+    // Two exchanges, as the chat holds them: two questions, the tool call,
+    // two answers.
+    expect(
+      history.map(item =>
+        'toolName' in item ? `tool:${item.toolName}` : item.role,
+      ),
+    ).toEqual(['user', 'assistant', 'user', 'tool:readCell', 'assistant']);
     expect(
       balloonForPose('speaking', {
         saying: sampleSaying(1),
         approval,
         history,
       })?.history,
-    ).toHaveLength(4);
+    ).toHaveLength(5);
     expect(sampleHistory(0)).toEqual([]);
   });
 

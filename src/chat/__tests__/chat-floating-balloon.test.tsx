@@ -135,10 +135,15 @@ describe('the floating assistant’s balloon, by display', () => {
       ],
       false,
     );
-    expect(
-      stage().balloon.history.map((m: { text: string }) => m.text),
-    ).toEqual([
+    // The chat's own items, as it holds them: one source for both.
+    const history = stage().balloon.history as Array<{
+      id: string;
+      toolName?: string;
+      content?: string;
+    }>;
+    expect(history.map(item => item.toolName ?? item.content)).toEqual([
       'Open invoices?',
+      'list_invoices',
       'Two: Ada and Grace.',
       'Since when?',
       'March and April.',
@@ -194,10 +199,11 @@ describe('the floating assistant’s balloon, by display', () => {
     const window = container.querySelector('[data-conversation-balloon]');
     expect(window?.getAttribute('data-balloon-display')).toBe('current');
     expect(window?.querySelector('[data-balloon-header]')).toBeNull();
-    expect(
-      window?.querySelector('[data-balloon-current] [data-balloon-tool]')
-        ?.textContent,
-    ).toBe('Using list_invoices…');
+    // The chat's own tool card, compact, under Now.
+    const card = window?.querySelector(
+      '[data-balloon-current] [data-balloon-tool] [data-tool-call="list_invoices"]',
+    );
+    expect(card?.getAttribute('data-tool-call-status')).toBe('executing');
   });
 });
 

@@ -33,16 +33,12 @@ import {
   XCircleFillIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { Streamdown } from 'streamdown';
-import {
-  streamdownMarkdownStyles,
-  streamdownCodeBlockStyles,
-} from '../styles/streamdownStyles';
+import { streamdownCodeBlockStyles } from '../styles/streamdownStyles';
+import { ChatMarkdown, type ChatDensity } from './ChatMarkdown';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
 import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
 import { TypingDots } from '../indicators/TypingDots';
 import { TurnFooter } from './TurnFooter';
-import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { parseFormSubmission } from './formSubmission';
 import { FormSubmissionMessage } from './FormSubmissionMessage';
 
@@ -149,6 +145,12 @@ export interface ChatMessageListProps {
    * and runtime tools are found in the catalogues.
    */
   mcpServers?: readonly MarkedMcpServer[];
+  /**
+   * How dense it draws: the chat's own (`comfortable`), or the floating
+   * assistant's balloon (`compact`: no avatars, smaller bubbles and tool
+   * rows, no turn footers). The same components either way.
+   */
+  density?: ChatDensity;
 }
 
 // ---------------------------------------------------------------------------
@@ -534,11 +536,13 @@ function DefaultToolCallRenderer({
   item,
   onRespond,
   mcpServers,
+  density,
 }: {
   item: ToolCallMessage;
   approvalConfig?: ToolApprovalConfig;
   onRespond: RespondCallback;
   mcpServers?: readonly MarkedMcpServer[];
+  density?: ChatDensity;
 }) {
   const resultObject =
     item.result && typeof item.result === 'object'
@@ -715,6 +719,8 @@ function DefaultToolCallRenderer({
         }
         approvalLoading={false}
         marks={marks}
+        summary={item.summary}
+        density={density}
       />
       {isSubagentDelegation && (
         <SubagentChatPanel
@@ -748,7 +754,14 @@ export function ChatMessageList({
   onRemoveItems,
   renderMessageFooter,
   mcpServers,
+  density = 'comfortable',
 }: ChatMessageListProps) {
+  const compact = density === 'compact';
+  if (compact) {
+    // The balloon's: no avatars, no turn footers.
+    avatarConfig = { ...avatarConfig, showAvatars: false };
+    showTurnFooters = false;
+  }
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
   }
@@ -878,6 +891,7 @@ export function ChatMessageList({
           approvalConfig={approvalConfig}
           onRespond={createRespondCallback(item.toolCallId)}
           mcpServers={mcpServers}
+          density={density}
         />
       );
 
@@ -900,6 +914,7 @@ export function ChatMessageList({
       return (
         <Box
           key={item.id}
+          data-chat-tool-row={item.toolName}
           sx={{
             display: 'flex',
             flexDirection: 'column',
@@ -915,7 +930,7 @@ export function ChatMessageList({
                 */
             width: '100%',
             px: padding,
-            py: 1,
+            py: compact ? '2px' : 1,
           }}
         >
           {toolUI}
@@ -1033,12 +1048,13 @@ export function ChatMessageList({
     return (
       <Box
         key={message.id}
+        data-chat-message={message.role}
         sx={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: isUser ? 'flex-end' : 'flex-start',
           px: padding,
-          py: 1,
+          py: compact ? '2px' : 1,
         }}
       >
         <Box
@@ -1096,7 +1112,7 @@ export function ChatMessageList({
             </Box>
           )}
 
-          <Box sx={{ maxWidth: '85%', minWidth: 0 }}>
+          <Box sx={{ maxWidth: compact ? '92%' : '85%', minWidth: 0 }}>
             {/* Speaker header — who said it, and who it was said to */}
             {speaker ? (
               <Box
@@ -1157,7 +1173,8 @@ export function ChatMessageList({
             {/* Message bubble */}
             <Box
               sx={{
-                p: 2,
+                p: compact ? 1 : 2,
+                px: compact ? 2 : 2,
                 overflowX: 'auto',
                 // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
                 borderRadius: 'var(--theme-radius-bubble, 6px)',
@@ -1224,7 +1241,7 @@ export function ChatMessageList({
                   ) : (
                     <Text
                       sx={{
-                        fontSize: 1,
+                        fontSize: compact ? 0 : 1,
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                       }}
@@ -1253,13 +1270,10 @@ export function ChatMessageList({
               ) : message.live && !getMessageText(message) ? (
                 <TypingDots size={6} />
               ) : (
-                <Box sx={streamdownMarkdownStyles}>
-                  <Streamdown>
-                    {normalizeAssistantMarkdown(
-                      getMessageText(message) || (isStreaming ? '...' : ''),
-                    )}
-                  </Streamdown>
-                </Box>
+                <ChatMarkdown
+                  density={density}
+                  text={getMessageText(message) || (isStreaming ? '...' : '')}
+                />
               )}
             </Box>
             {renderMessageFooter ? (
@@ -1301,6 +1315,7 @@ export function ChatMessageList({
       {/* Typing indicator cursor — shows when waiting for response */}
       {showLoadingIndicator && (isLoading || isStreaming) && (
         <Box
+          data-chat-typing=""
           sx={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -1339,10 +1354,10 @@ export function ChatMessageList({
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                p: 2,
+                p: compact ? 1 : 2,
                 borderRadius: 'var(--theme-radius-bubble, 6px)',
                 bg: 'canvas.subtle',
-                minHeight: '32px',
+                minHeight: compact ? '20px' : '32px',
               }}
             >
               <TypingDots />

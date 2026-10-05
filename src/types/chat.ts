@@ -188,6 +188,11 @@ export interface ToolCallMessage {
   };
   /** Exit code when code called sys.exit() */
   exitCode?: number | null;
+  /**
+   * What the tool does, in its runtime's own words (`Asking Accounting…`):
+   * shown in place of its arguments' summary.
+   */
+  summary?: string;
 }
 
 /**

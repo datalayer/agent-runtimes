@@ -125,10 +125,18 @@ describe('the three dots', () => {
     await render({
       state: 'thinking',
       balloonDisplay: 'history',
-      balloon: { text: 'Hi', history: [{ id: '1', role: 'user', text: 'Hi' }] },
+      balloon: {
+        text: 'Hi',
+        history: [
+          { id: '1', role: 'user', content: 'Hi', createdAt: new Date(0) },
+        ],
+      },
     });
+    // The chat's own indicator, last in the chat's own list.
     expect(
-      document.querySelector('[data-balloon-waiting] [data-typing-dots]'),
+      document.querySelector(
+        '[data-balloon-history-list] [data-chat-typing] [data-typing-dots]',
+      ),
     ).not.toBeNull();
   });
 
@@ -179,12 +187,27 @@ describe('words cut to fit', () => {
 
 describe('the history, large', () => {
   const history = [
-    { id: '1', role: 'user' as const, text: 'Open invoices?' },
-    { id: '2', role: 'assistant' as const, text: 'Two are open.' },
-    { id: '3', role: 'user' as const, text: 'Thanks.' },
+    {
+      id: '1',
+      role: 'user' as const,
+      content: 'Open invoices?',
+      createdAt: new Date(0),
+    },
+    {
+      id: '2',
+      role: 'assistant' as const,
+      content: 'Two are **open**.',
+      createdAt: new Date(0),
+    },
+    {
+      id: '3',
+      role: 'user' as const,
+      content: 'Thanks.',
+      createdAt: new Date(0),
+    },
   ];
 
-  it('opens over the page with every message; Shrink and Esc take it back', async () => {
+  it('opens over the page with every message; its × and Esc take it back', async () => {
     await render({
       balloonDisplay: 'history',
       balloon: { text: 'Thanks.', history },
@@ -195,14 +218,27 @@ describe('the history, large', () => {
     const dialog = document.querySelector('[role="dialog"]');
     expect(
       dialog?.querySelectorAll(
-        '[data-balloon-history-large] [data-balloon-history-message]',
+        '[data-balloon-history-large] [data-chat-message]',
       ),
     ).toHaveLength(3);
-    await act(async () =>
-      dialog
-        ?.querySelector<HTMLElement>('button[data-balloon-shrink]')
-        ?.click(),
-    );
+    // The agent's words, through the chat's markdown.
+    expect(
+      dialog?.querySelector(
+        '[data-chat-message="assistant"] [data-chat-markdown] [data-streamdown="strong"]',
+      )?.textContent,
+    ).toBe('open');
+    // No Shrink of its own in the overlay: the dialog's × shrinks it back.
+    expect(dialog?.querySelector('[data-balloon-shrink]')).toBeNull();
+    const closeOf = (box: Element | null | undefined) =>
+      Array.from(box?.querySelectorAll<HTMLElement>('button') ?? []).find(
+        button =>
+          (button.getAttribute('aria-label') ??
+            document.getElementById(
+              button.getAttribute('aria-labelledby') ?? '',
+            )?.textContent) === 'Close',
+      );
+    expect(closeOf(dialog)).toBeDefined();
+    await act(async () => closeOf(dialog)?.click());
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     await act(async () => expand()?.click());
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
@@ -227,9 +263,7 @@ describe('the history, large', () => {
         .querySelector<HTMLElement>('[data-balloon-history-expand]')
         ?.click(),
     );
-    expect(
-      target.querySelectorAll('[data-balloon-history-message]'),
-    ).toHaveLength(3);
+    expect(target.querySelectorAll('[data-chat-message]')).toHaveLength(3);
     await act(async () =>
       target.querySelector<HTMLElement>('[data-balloon-shrink]')?.click(),
     );

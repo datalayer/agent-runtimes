@@ -36,24 +36,26 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
-import {
-  ASSISTANT_WORDS,
-  type BalloonApproval,
-  type BalloonHistoryMessage,
-} from './state';
+import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import type { DisplayItem } from '../../types/chat';
 import { moreWaiting } from './ConversationBalloon';
 import { DecisionAsk } from './DecisionAsk';
 import type { DecisionAsker } from './decisions';
 import {
-  BalloonToolLineView,
+  BalloonChatItems,
+  BalloonToolCall,
   CurrentBalloonBody,
   ToolLineAnnouncer,
   conversationHeaderText,
 } from './BalloonParts';
-import type { BalloonDisplay, BalloonToolLine } from './toolLine';
+import {
+  conversationCount,
+  withToolCall,
+  type BalloonDisplay,
+  type BalloonToolLine,
+} from './toolLine';
 import { BalloonExpandButton } from './BalloonVisual';
 import { ScreenFullIcon } from '@primer/octicons-react';
-import { TypingDots } from '../indicators/TypingDots';
 
 /** A suggestion the balloon offers: its label, and the prompt it sends. */
 export type BalloonSuggestion = { label: string; prompt: string };
@@ -128,10 +130,11 @@ export interface SpeechBalloonProps {
   /** What goes with the words, under them: a notebook given, read-only. */
   attachment?: ReactNode;
   /**
-   * The conversation's messages (`history`): listed in the balloon, every
-   * one, in place of the newest line alone.
+   * The conversation (`history`), in the chat's own model — its messages
+   * and tool calls, as the chat holds them — listed in the balloon by the
+   * chat's own components, in place of the newest line alone.
    */
-  history?: readonly BalloonHistoryMessage[];
+  history?: readonly DisplayItem[];
   /**
    * What goes with the words is a large visual (a notebook): an *Expand*
    * button under it draws it large, named by `expandTitle`.
@@ -180,7 +183,7 @@ export function BalloonHistoryLarge({
   tool,
   attachment,
 }: {
-  history: readonly BalloonHistoryMessage[];
+  history: readonly DisplayItem[];
   tool?: BalloonToolLine;
   attachment?: ReactNode;
 }): JSX.Element {
@@ -189,27 +192,12 @@ export function BalloonHistoryLarge({
       role="log"
       aria-label="Conversation"
       data-balloon-history-large=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 1 }}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
     >
-      {history.map(message => (
-        <Box
-          key={message.id}
-          data-balloon-history-message={message.role}
-          sx={{
-            alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-            maxWidth: '80%',
-            px: 3,
-            py: 2,
-            borderRadius: 2,
-            bg: message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-            whiteSpace: 'pre-wrap',
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {message.text}
-        </Box>
-      ))}
-      {tool ? <BalloonToolLineView line={tool} /> : null}
+      <BalloonChatItems
+        items={withToolCall(history, tool)}
+        density="comfortable"
+      />
       {attachment ? <Box>{attachment}</Box> : null}
     </Box>
   );
@@ -220,8 +208,14 @@ function BalloonHistory({
   onOpen,
   maxHeight = BALLOON_HISTORY_MAX_HEIGHT,
   onExpand,
+  tool,
+  waiting = false,
 }: {
-  history: readonly BalloonHistoryMessage[];
+  history: readonly DisplayItem[];
+  /** The tool being called, listed last when the history does not hold it. */
+  tool?: BalloonToolLine;
+  /** At work with nothing written yet: the chat's dots, last. */
+  waiting?: boolean;
   onOpen: () => void;
   maxHeight?: number;
   /** Draws the history large: *Expand*. */
@@ -234,7 +228,21 @@ function BalloonHistory({
     if (list) {
       list.scrollTop = list.scrollHeight;
     }
-  }, [history.length, newest]);
+  }, [history.length, newest, waiting, tool?.id, tool?.phase]);
+  // The chat's markdown draws after the list does: kept at the newest as
+  // what is drawn grows.
+  useEffect(() => {
+    const list = listRef.current;
+    const content = list?.firstElementChild;
+    if (!list || !content || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      list.scrollTop = list.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
   return (
     <Box
       data-balloon-history=""
@@ -261,7 +269,7 @@ function BalloonHistory({
           '&:hover': { textDecoration: 'underline' },
         }}
       >
-        {conversationHeaderText(history.length)}
+        {conversationHeaderText(conversationCount(history))}
       </Box>
       {onExpand ? (
         <IconButton
@@ -284,27 +292,13 @@ function BalloonHistory({
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: 1,
           pr: 1,
         }}
       >
-        {history.map(message => (
-          <Box
-            key={message.id}
-            data-balloon-history-message={message.role}
-            sx={{
-              alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '88%',
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              bg: message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {message.text}
-          </Box>
-        ))}
+        <BalloonChatItems
+          items={withToolCall(history, tool)}
+          waiting={waiting}
+        />
       </Box>
     </Box>
   );
@@ -439,12 +433,20 @@ export function SpeechBalloon({
             history={listed}
             onOpen={onOpen}
             onExpand={onExpandHistory}
+            tool={tool}
+            waiting={waiting}
             maxHeight={
               attachment
                 ? BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT
                 : BALLOON_HISTORY_MAX_HEIGHT
             }
           />
+        ) : tool ? (
+          // The tool being called: the chat's card, not inside the peek's
+          // button (the card is a button of its own).
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <BalloonToolCall line={tool} />
+          </Box>
         ) : (
           <Box
             as="button"
@@ -466,13 +468,9 @@ export function SpeechBalloon({
               '&:hover': { textDecoration: 'underline' },
             }}
           >
-            {tool ? (
-              <BalloonToolLineView line={tool} />
-            ) : (
-              <Box as="span" role="status" aria-live="polite">
-                {text}
-              </Box>
-            )}
+            <Box as="span" role="status" aria-live="polite">
+              {text}
+            </Box>
           </Box>
         )}
         {onDismissPeek && !approval ? (
@@ -510,15 +508,10 @@ export function SpeechBalloon({
           {whole ? 'less' : 'more'}
         </Box>
       ) : null}
-      {listed && tool ? (
-        <Box data-balloon-history-tool="" sx={{ mt: 1 }}>
-          <BalloonToolLineView line={tool} />
-        </Box>
-      ) : null}
-      {/* History: last, while the turn runs and nothing is written yet. */}
-      {!current && waiting ? (
+      {/* No history listed, at work with nothing written yet: the dots. */}
+      {!current && !listed && waiting ? (
         <Box data-balloon-waiting="" sx={{ mt: 1 }}>
-          <TypingDots size={6} />
+          <BalloonChatItems items={[]} waiting />
         </Box>
       ) : null}
       {approval && (
