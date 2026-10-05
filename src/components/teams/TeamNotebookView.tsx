@@ -29,6 +29,7 @@ import { useSignalValue } from '@datalayer/reactor/react';
 import { notebookStore } from '@datalayer/jupyter-react';
 import { EphemeralNotebook } from '../../chat/notebook/EphemeralNotebook';
 import { createBrowserSandboxService } from '../../loop/plugins/agents/browserService';
+import { teamNotebookKernel } from './teamNotebookKernel';
 import type { A2APeerArtifact } from '../../runtimes/browser/a2aPeer';
 
 export type TeamNotebookViewProps = {
@@ -106,6 +107,21 @@ export function TeamNotebookView({
     (service.getServiceManager() as ServiceManager.IManager | null) ??
     undefined;
   const running = snapshot.state === 'running' && manager !== undefined;
+
+  // Say which kernel the notebook runs on, while it does: the browser
+  // agent's *Code Sandbox Details…* lists its variables.
+  useEffect(() => {
+    const kernel = running ? service.getKernelConnection() : null;
+    if (!kernel) {
+      return;
+    }
+    teamNotebookKernel.value = kernel;
+    return () => {
+      if (teamNotebookKernel.peek() === kernel) {
+        teamNotebookKernel.value = null;
+      }
+    };
+  }, [running, service]);
 
   return (
     <QueryClientProvider client={queries}>

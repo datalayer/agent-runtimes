@@ -22,7 +22,7 @@
 
 import { computed, signal, type Signal } from '@datalayer/reactor';
 import { PageConfig } from '@jupyterlab/coreutils';
-import type { ServiceManager } from '@jupyterlab/services';
+import type { Kernel, ServiceManager } from '@jupyterlab/services';
 import type { SandboxSnapshot, SandboxState } from '../../core';
 import type {
   SandboxExecution,
@@ -43,6 +43,12 @@ export type BrowserSandboxService = SandboxService & {
    * point of a shared sandbox.
    */
   getServiceManager: () => ServiceManager.IManager | null;
+  /**
+   * The kernel's connection, once it is up: what a view that follows the
+   * kernel itself listens to — its variables (jupyter-react's
+   * `KernelVariables`), refreshed after each execution.
+   */
+  getKernelConnection: () => Kernel.IKernelConnection | null;
 };
 
 type KernelConnection = {
@@ -201,6 +207,7 @@ export function createBrowserSandboxService(
 
   let serviceManager: ServiceManager.IManager | null = null;
   let kernel: KernelConnection | null = null;
+  let kernelConnection: Kernel.IKernelConnection | null = null;
   let starting: Promise<void> | null = null;
 
   async function start(): Promise<void> {
@@ -216,6 +223,7 @@ export function createBrowserSandboxService(
       type: 'notebook',
       kernel: { name: 'python' },
     });
+    kernelConnection = connection.kernel;
     kernel = connection.kernel as unknown as KernelConnection;
 
     status.value = {
@@ -237,6 +245,7 @@ export function createBrowserSandboxService(
     // lives on the server — should ask `kind` rather than discover it here.
     serverUrl: '',
     getServiceManager: () => serviceManager,
+    getKernelConnection: () => kernelConnection,
     report(next) {
       status.value = next;
     },
@@ -262,6 +271,7 @@ export function createBrowserSandboxService(
         // notebook that is open.
         void kernel?.shutdown?.();
         kernel = null;
+        kernelConnection = null;
         serviceManager = source.owned ? null : serviceManager;
         // And hand back whatever the source borrowed from the page.
         source.release?.();

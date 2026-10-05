@@ -43,7 +43,9 @@ import {
 import { ActionList, ActionMenu, IconButton, useTheme } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import {
+  CodeIcon,
   CommentDiscussionIcon,
+  DependabotIcon,
   InfoIcon,
   MuteIcon,
   PencilIcon,
@@ -70,6 +72,7 @@ import {
   type AssistantMenuItem,
 } from './AssistantContextMenu';
 import type { AgentInspectorSink } from '../../components/inspector/agentInspector';
+import type { AssistantSandbox } from './assistantDetails';
 import {
   BalloonExpandContext,
   ExpandedVisual,
@@ -150,6 +153,12 @@ const AgentInspectorDialog = lazy(
   () => import('../../components/inspector/AgentInspectorDialog'),
 );
 
+/** *Agent Details…*: loaded when it is first asked for. */
+const AgentDetailsDialog = lazy(() => import('./AgentDetailsDialog'));
+
+/** *Code Sandbox Details…*: loaded when it is first asked for. */
+const SandboxDetailsDialog = lazy(() => import('./SandboxDetailsDialog'));
+
 /** What the assistant's *About* says. */
 export type AssistantAbout = {
   /** The agent's name, or its application's. */
@@ -160,6 +169,19 @@ export type AssistantAbout = {
   model?: string;
   /** Where it runs: `in your browser`, `on a runtime`. */
   where?: string;
+  /** What it does, in a sentence: its card's or its spec's description. */
+  description?: string;
+  /** What it can do: its card's skills. */
+  skills?: string[];
+  /**
+   * The agent on an agent-runtimes server, and that server: *Agent
+   * Details…* then reads its spec, MCP servers and codemode there.
+   */
+  agentId?: string;
+  apiBase?: string;
+  /** How it is reached (`a2a`, `ag-ui`, …) and where. */
+  protocol?: string;
+  url?: string;
 };
 
 /**
@@ -174,6 +196,10 @@ export function assistantMenuItems(options: {
   /** The conversation entry's label; `false` leaves it out. */
   conversationLabel?: string | false;
   inspect?: () => void;
+  /** Opens *Agent Details…*: offered where the host describes the agent. */
+  agentDetails?: () => void;
+  /** Opens *Code Sandbox Details…*: offered where the agent has a sandbox. */
+  sandboxDetails?: () => void;
   balloonDisplay?: BalloonDisplay;
   onBalloonDisplayChange?: (display: BalloonDisplay) => void;
   suggestions?: readonly BalloonSuggestion[];
@@ -195,6 +221,22 @@ export function assistantMenuItems(options: {
       label: 'Inspect the agent…',
       icon: PulseIcon,
       onSelect: options.inspect,
+    });
+  }
+  if (options.agentDetails) {
+    items.push({
+      id: 'agent-details',
+      label: 'Agent Details…',
+      icon: DependabotIcon,
+      onSelect: options.agentDetails,
+    });
+  }
+  if (options.sandboxDetails) {
+    items.push({
+      id: 'sandbox-details',
+      label: 'Code Sandbox Details…',
+      icon: CodeIcon,
+      onSelect: options.sandboxDetails,
     });
   }
   if (options.conversationLabel !== false) {
@@ -559,8 +601,13 @@ export interface AssistantStageProps {
   speech?: { muted: boolean; onToggle: () => void };
   /** Puts it back where it started, after a drag: offered in its menu. */
   onResetPosition?: () => void;
-  /** What its menu's *About* says. */
+  /** What its menu's *About* and *Agent Details…* say. */
   about?: AssistantAbout;
+  /**
+   * The agent's code sandbox, when it has one: its menu offers *Code
+   * Sandbox Details…* — where it runs, and its variables.
+   */
+  sandbox?: AssistantSandbox;
   /** The host's or a plugin's own entries of its menu. */
   contextMenu?: readonly AssistantMenuItem[];
   /** Send it away (T-27): for the page, for the session, or for good. */
@@ -660,6 +707,7 @@ export function AssistantStage({
   speech,
   onResetPosition,
   about,
+  sandbox,
   contextMenu,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
@@ -682,6 +730,7 @@ export function AssistantStage({
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const [inspecting, setInspecting] = useState(false);
   const [telling, setTelling] = useState(false);
+  const [detailing, setDetailing] = useState<'agent' | 'sandbox' | null>(null);
   const characterRef = useRef<HTMLElement>(null);
   const longPress = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -693,7 +742,12 @@ export function AssistantStage({
   const aside = useKeepClear(
     stageRef,
     ownRef,
-    menuOpen || menuAt !== null || inspecting || telling || stayPut,
+    menuOpen ||
+      menuAt !== null ||
+      inspecting ||
+      telling ||
+      detailing !== null ||
+      stayPut,
   );
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
@@ -715,6 +769,8 @@ export function AssistantStage({
     onDismiss,
     conversationLabel,
     inspect: inspector ? () => setInspecting(true) : undefined,
+    agentDetails: about ? () => setDetailing('agent') : undefined,
+    sandboxDetails: sandbox ? () => setDetailing('sandbox') : undefined,
     balloonDisplay,
     onBalloonDisplayChange,
     suggestions,
@@ -1060,6 +1116,30 @@ export function AssistantStage({
             title={`${about?.name ?? name} \u00b7 Agent Inspector`}
             onClose={() => {
               setInspecting(false);
+              characterRef.current?.focus();
+            }}
+          />
+        </Suspense>
+      )}
+      {detailing === 'agent' && about && (
+        <Suspense fallback={null}>
+          <AgentDetailsDialog
+            about={about}
+            name={name}
+            onClose={() => {
+              setDetailing(null);
+              characterRef.current?.focus();
+            }}
+          />
+        </Suspense>
+      )}
+      {detailing === 'sandbox' && sandbox && (
+        <Suspense fallback={null}>
+          <SandboxDetailsDialog
+            sandbox={sandbox}
+            name={about?.name ?? name}
+            onClose={() => {
+              setDetailing(null);
               characterRef.current?.focus();
             }}
           />

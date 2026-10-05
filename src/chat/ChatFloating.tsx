@@ -110,6 +110,11 @@ import {
 import type { AgentInspectorSink } from '../components/inspector/agentInspector';
 import type { AssistantMenuItem } from './assistant/AssistantContextMenu';
 import type { AssistantAbout } from './assistant/AssistantStage';
+import {
+  assistantSandboxOf,
+  type AssistantSandbox,
+} from './assistant/assistantDetails';
+import { useAgentRuntimeCodemodeStatus } from '../stores/agentRuntimeStore';
 import type { BalloonSuggestion } from './assistant/SpeechBalloon';
 import type {
   ChatCommonProps,
@@ -305,8 +310,17 @@ export interface ChatFloatingProps extends ChatCommonProps {
   onBalloonDisplayChange?: (display: BalloonDisplay) => void;
   /** Opens the host's character picker, from the assistant's menu. */
   onChangeCharacter?: () => void;
-  /** What the assistant's menu's *About* says. */
+  /**
+   * What the assistant's menu's *About* and *Agent Details…* say. The
+   * chat's own agent (its id and runtime, from `endpoint`) is described
+   * without it.
+   */
   about?: AssistantAbout;
+  /**
+   * The agent's code sandbox, for *Code Sandbox Details…*. Without it, the
+   * sandbox the agent's runtime reports (its codemode status), if any.
+   */
+  sandbox?: AssistantSandbox;
   /** The host's own entries of the assistant's menu. */
   contextMenu?: readonly AssistantMenuItem[];
 
@@ -434,6 +448,7 @@ export function ChatFloating({
   onBalloonDisplayChange,
   onChangeCharacter,
   about,
+  sandbox,
   contextMenu,
 }: ChatFloatingProps) {
   // The chat's own send, once it can: what a suggestion in the balloon sends.
@@ -1011,6 +1026,37 @@ export function ChatFloating({
     showSkillsMenu,
     showTokenUsage,
   ]);
+
+  // What the assistant's menu says of the agent (*Agent Details…*): the
+  // host's words first, the chat's own agent and runtime under them.
+  const runtimeBase = endpoint?.match(/^(.*?)\/api\/v1\//)?.[1];
+  const agentAbout = useMemo<AssistantAbout | undefined>(
+    () =>
+      about || protocol?.agentId
+        ? {
+            name: title,
+            protocol: protocol?.type,
+            url: protocol?.endpoint,
+            agentId: protocol?.agentId,
+            apiBase: runtimeBase,
+            ...about,
+          }
+        : undefined,
+    [about, protocol, title, runtimeBase],
+  );
+  // Its sandbox (*Code Sandbox Details…*): the host's, or what its runtime
+  // reports.
+  const codemodeStatus = useAgentRuntimeCodemodeStatus();
+  const agentSandbox = useMemo<AssistantSandbox | undefined>(
+    () =>
+      sandbox ??
+      assistantSandboxOf(
+        (codemodeStatus as { sandbox?: Record<string, unknown> | null } | null)
+          ?.sandbox,
+        { agentId: protocol?.agentId, serverUrl: runtimeBase },
+      ),
+    [sandbox, codemodeStatus, protocol?.agentId, runtimeBase],
+  );
 
   // Clear messages when endpoint/protocol changes (e.g., switching examples)
   useEffect(() => {
@@ -1838,7 +1884,8 @@ export function ChatFloating({
               : undefined
           }
           onResetPosition={stageDrag.position ? stageDrag.reset : undefined}
-          about={about}
+          about={agentAbout}
+          sandbox={agentSandbox}
           contextMenu={contextMenu}
         />
       )}

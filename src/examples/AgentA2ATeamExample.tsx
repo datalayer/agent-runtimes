@@ -296,6 +296,7 @@ function AgentA2ATeam(): JSX.Element {
               spec: `${SALES.id}:${SALES.version}`,
               model: SALES.model || undefined,
               where: 'in your browser',
+              description: SALES.description || undefined,
             },
           }}
           peer={{
@@ -314,6 +315,12 @@ function AgentA2ATeam(): JSX.Element {
               spec: `${ACCOUNTING.id}:${ACCOUNTING.version}`,
               model: ACCOUNTING.model || undefined,
               where: accountingWhere,
+              // What its A2A card says, once it is reached.
+              description:
+                peer?.card.description || ACCOUNTING.description || undefined,
+              skills: peer?.card.skills.map(skill => skill.name),
+              protocol: peer ? 'a2a' : undefined,
+              url: peer ? accountingUrl : undefined,
             },
           }}
           flow={team.flow}

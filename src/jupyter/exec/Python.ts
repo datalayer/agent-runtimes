@@ -3,39 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-export function listVariables(): string {
-  return `
-def _list_variables():
-    import json
-    from types import BuiltinFunctionType, BuiltinMethodType, FunctionType, MethodType, MethodWrapperType, ModuleType, TracebackType
-
-    _FORBIDDEN_TYPES = [type, BuiltinFunctionType, BuiltinMethodType, FunctionType, MethodType, MethodWrapperType, ModuleType, TracebackType]
-    try:
-        from IPython.core.autocall import ExitAutocall
-        _FORBIDDEN_TYPES.append(ExitAutocall)
-    except ImportError:
-        pass
-    _exclude = tuple(_FORBIDDEN_TYPES)
-
-    _all = frozenset(globals())
-    _vars = {}
-    for _n in _all:
-        _v = globals()[_n]
-        
-        if not (
-            _n.startswith('_') or
-            isinstance(_v, _exclude) or
-            # Special IPython variables
-            (_n == 'In' and isinstance(_v, list)) or
-            (_n == 'Out' and isinstance(_v, dict))
-        ):
-            _vars[_n] = type(_v).__qualname__
-
-    return json.dumps(_vars)
-
-_list_variables()`;
-}
-
 export function saveVariables(variables: string[]): string {
   return `
 def _pickle_variables():

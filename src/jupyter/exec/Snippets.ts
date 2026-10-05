@@ -7,6 +7,10 @@ import * as Python from './Python';
 
 /**
  * Runtime snippets.
+ *
+ * Listing a kernel's variables is not one of them: jupyter-react's
+ * `listKernelVariables` does it, with the one snippet every variables view
+ * shares.
  */
 export interface IRuntimeSnippets {
   /**
@@ -16,13 +20,6 @@ export interface IRuntimeSnippets {
    * @returns The code snippet
    */
   changeCurrentWorkingDirectory(path: string): string;
-
-  /**
-   * Code snippet to list the transferable kernel variables.
-   *
-   * @returns The code snippet
-   */
-  listVariables(): string;
 
   /**
    * Code snippet to load kernel variables.
@@ -107,15 +104,6 @@ export class RuntimeSnippetsFacade {
     return RuntimeSnippetsFacade.$language
       .get(this.language)!
       .changeCurrentWorkingDirectory(path);
-  }
-
-  /**
-   * Code snippet to list the transferable kernel variables.
-   *
-   * @returns The code snippet
-   */
-  listVariables(): string {
-    return RuntimeSnippetsFacade.$language.get(this.language)!.listVariables();
   }
 
   /**

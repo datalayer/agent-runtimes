@@ -69,9 +69,19 @@ import {
   LoopChatLayout,
   LoopChatTurn,
   LoopSlots,
+  IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  IDLE_SANDBOX_TARGET_SIGNAL,
   type ChatTurnSnapshot,
+  type LoopWorkspaceContext,
 } from '../../core';
 import { assistantCharacterFor } from '../assistant-characters';
+import { useOptionalSandboxService } from '../agents/useSandboxService';
+import { TARGET_SPECS } from '../agents/switchable';
+import type {
+  AssistantSandbox,
+  AssistantSandboxKind,
+} from '../../../chat/assistant/assistantDetails';
+import type { AssistantAbout } from '../../../chat/assistant/AssistantStage';
 import type {
   BalloonDisplay,
   BalloonToolLine,
@@ -103,6 +113,11 @@ export type LoopAssistantConfig = {
    * (`current`). The Appspec's `interface.balloon`.
    */
   balloon?: BalloonDisplay;
+  /**
+   * The workspace it is drawn over (the root slot's): its agent and
+   * server, for *Agent Details…* and *Code Sandbox Details…*.
+   */
+  workspace?: LoopWorkspaceContext;
 };
 
 /** The character's size, in pixels, as the chat's own assistant. */
@@ -187,6 +202,7 @@ export function LoopAssistant({
   appId,
   decisions,
   balloon: displayGiven = 'history',
+  workspace,
 }: LoopAssistantConfig): JSX.Element | null {
   // The balloon's display, as its menu chose it; the Appspec's until then.
   const [chosenDisplay, setChosenDisplay] = useState<BalloonDisplay>();
@@ -243,6 +259,65 @@ export function LoopAssistant({
       setHeardId(saying.id);
     }
   }, [open, saying?.id]);
+
+  // The workspace's sandbox (the agents plugin's), for the menu's *Agent
+  // Details…* and *Code Sandbox Details…*.
+  const sandboxService = useOptionalSandboxService();
+  const snapshot = useSignalValue(
+    sandboxService?.snapshot ?? IDLE_SANDBOX_SNAPSHOT_SIGNAL,
+  );
+  const target = useSignalValue(
+    sandboxService?.target ?? IDLE_SANDBOX_TARGET_SIGNAL,
+  );
+  const agentId = workspace?.agentId || undefined;
+  const agentAbout = useMemo<AssistantAbout>(
+    () => ({
+      name: appId,
+      spec: appId,
+      model: workspace?.model,
+      where: target ? TARGET_SPECS[target]?.label : undefined,
+      agentId,
+      apiBase:
+        snapshot.agentBaseUrl ??
+        (workspace?.serverUrl || sandboxService?.serverUrl || undefined),
+    }),
+    [
+      appId,
+      target,
+      agentId,
+      workspace?.model,
+      workspace?.serverUrl,
+      sandboxService,
+      snapshot.agentBaseUrl,
+    ],
+  );
+  const agentSandbox = useMemo<AssistantSandbox | undefined>(() => {
+    if (
+      !sandboxService ||
+      !target ||
+      (snapshot.state !== 'running' && snapshot.state !== 'starting')
+    ) {
+      return undefined;
+    }
+    const kinds: Record<string, AssistantSandboxKind> = {
+      browser: 'browser',
+      local: 'local',
+      jupyter: 'jupyter',
+      datalayer: 'cloud',
+    };
+    return {
+      kind: kinds[target] ?? 'runtime',
+      status: snapshot.state,
+      variant: snapshot.variant,
+      url: snapshot.jupyterUrl,
+      token: snapshot.jupyterToken,
+      kernelId: snapshot.kernelId,
+      agentId,
+      connection:
+        target === 'browser' ? sandboxService.getKernelConnection() : undefined,
+      serverUrl: snapshot.agentBaseUrl ?? sandboxService.serverUrl,
+    };
+  }, [sandboxService, target, snapshot, agentId]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });
@@ -372,7 +447,8 @@ export function LoopAssistant({
         decide={decide}
         onResetPosition={drag.position ? drag.reset : undefined}
         onBalloonDisplayChange={setChosenDisplay}
-        about={appId ? { name: appId, spec: appId } : undefined}
+        about={agentAbout}
+        sandbox={agentSandbox}
         contextMenu={menuContributions}
       />
     </>
@@ -393,8 +469,13 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
     'The chat as a character on the page: the application’s own, or the one the person chose, from the characters the enabled plugins contribute.',
   octicon: 'paperclip',
   build: ({ config }) => {
-    const Configured = (): JSX.Element | null => (
+    const Configured = ({
+      workspace,
+    }: {
+      workspace?: LoopWorkspaceContext;
+    }): JSX.Element | null => (
       <LoopAssistant
+        workspace={workspace}
         app={config.app}
         person={config.person}
         appId={config.appId}

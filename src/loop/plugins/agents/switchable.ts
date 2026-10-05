@@ -29,6 +29,7 @@ import {
   type ReadonlySignal,
   type Signal,
 } from '@datalayer/reactor';
+import type { Kernel } from '@jupyterlab/services';
 import type { SandboxSnapshot } from '../../core';
 import {
   browserSource,
@@ -169,6 +170,8 @@ export type SwitchableSandboxService = SandboxService & {
   setTarget: (target: SandboxTarget) => Promise<void>;
   /** The in-browser services, when the browser is the active target. */
   getServiceManager: () => unknown | null;
+  /** The in-browser kernel's connection, when the browser is the active target. */
+  getKernelConnection: () => Kernel.IKernelConnection | null;
 };
 
 export type SwitchableConfig = {
@@ -356,6 +359,8 @@ export function createSwitchableSandboxService({
     serverUrl,
     getServiceManager: () =>
       target.peek() === 'browser' ? browser.getServiceManager() : null,
+    getKernelConnection: () =>
+      target.peek() === 'browser' ? browser.getKernelConnection() : null,
     report(next) {
       active.peek().report(next);
     },

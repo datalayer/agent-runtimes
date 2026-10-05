@@ -60,6 +60,9 @@ import {
 import type { BalloonSuggestion } from '../../chat/assistant/SpeechBalloon';
 import type { BalloonHistoryMessage } from '../../chat/assistant/state';
 import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMenu';
+import type { AssistantSandbox } from '../../chat/assistant/assistantDetails';
+import { useSignalValue } from '@datalayer/reactor/react';
+import { teamNotebookKernel } from './teamNotebookKernel';
 import type { AgentInspectorSink } from '../inspector/agentInspector';
 import { SpecMark } from '../../chat/marks/SpecMark';
 import {
@@ -124,8 +127,14 @@ export type A2ATeamGraphMember = {
   inspector?: AgentInspectorSink | null;
   /** Stops its turn, from its menu, while it works. */
   onStop?: () => void;
-  /** What its menu's *About* says. */
+  /** What its menu's *About* and *Agent Details…* say. */
   about?: AssistantAbout;
+  /**
+   * Its code sandbox, for *Code Sandbox Details…*. The entry — the agent in
+   * the page — has the kernel of the notebook open under the graph, while
+   * one is.
+   */
+  sandbox?: AssistantSandbox;
   /** The host's own entries of its menu. */
   contextMenu?: readonly AssistantMenuItem[];
   /**
@@ -347,6 +356,7 @@ const MemberNode = memo(function MemberNode({
             inspectAgent={member.name}
             onStop={member.onStop}
             about={member.about}
+            sandbox={member.sandbox}
             contextMenu={member.contextMenu}
             // A member of the graph: what is clicked around it is the graph.
             stayPut
@@ -738,9 +748,26 @@ export function A2ATeamGraph({
       connectionHeight,
     ],
   );
+  // The notebook open under the graph runs on a Pyodide kernel in the page:
+  // the entry's sandbox, while it is open.
+  const notebookKernel = useSignalValue(teamNotebookKernel);
+  const entryMember = useMemo<A2ATeamGraphMember>(
+    () =>
+      entry.sandbox || !notebookKernel
+        ? entry
+        : {
+            ...entry,
+            sandbox: {
+              kind: 'browser',
+              status: 'running',
+              connection: notebookKernel,
+            },
+          },
+    [entry, notebookKernel],
+  );
   const members = useMemo(
-    () => ({ [entry.id]: entry, [peer.id]: peer }),
-    [entry, peer],
+    () => ({ [entry.id]: entryMember, [peer.id]: peer }),
+    [entry.id, entryMember, peer],
   );
   const words = flowWords(flow, entry.name, peer.name);
   // The tool each connection is answering now, in words, by its node's id.

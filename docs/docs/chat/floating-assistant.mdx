@@ -292,6 +292,8 @@ entries it supports:
 | Entry | Shown when the host passes |
 | --- | --- |
 | Inspect the agent… | `inspector`: the Agent Inspector in a large dialog, loaded only then |
+| Agent Details… | `about`: the agent's `AgentDetails` in a dialog, loaded only then. On a runtime (`about.agentId` and `about.apiBase`; the floating chat fills them from its `endpoint`) it reads the spec, MCP servers and codemode there; an agent in the page shows its spec, model, description and where it runs |
+| Code Sandbox Details… | `sandbox`: where the agent's code runs (Pyodide in the page, a local or remote Jupyter server, a Datalayer runtime, the runtime's own `eval`), its URL without tokens, its kernel, and its variables (jupyter-react's `KernelVariables`, with its renderers; ipywidgets live where the page talks to the kernel). The floating chat takes it from the runtime's codemode status, the Loop from its sandbox, a team's entry from the notebook open under the graph |
 | Open / Close the conversation | always, unless `conversationLabel={false}`; a host may rename it (*Ask Sales*) |
 | Stop the turn | `onStop`, while the agent works |
 | New conversation, Clear the conversation | `onNewChat`, `onClear` |
