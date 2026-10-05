@@ -293,7 +293,7 @@ const ChatAssistantGalleryExample: React.FC = () => {
       >
         <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
           <Heading as="h1" sx={{ mb: 2 }}>
-            Floating assistant gallery
+            Chat Assistant gallery
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
             Every character in every state the floating assistant acts, with its

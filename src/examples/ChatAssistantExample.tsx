@@ -96,7 +96,7 @@ const ChatAssistantExample: React.FC = () => {
       <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
         <Box sx={{ maxWidth: 720, mx: 'auto' }}>
           <Heading as="h1" sx={{ mb: 2 }}>
-            Floating assistant
+            Chat Assistant
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3 }}>
             The chat as a character on the page. It greets you, acts out what
