@@ -131,6 +131,7 @@ export function LoopEmbed({
       preset.showTokenUsage,
       // By its content: an application's spec written inline is a new object each render.
       JSON.stringify(preset.datalayerCreatePayload ?? null),
+      JSON.stringify(preset.datalayerVisitors ?? null),
       preset.defaultEditor,
       preset.showViewSelector,
       preset.hideChatHeader,

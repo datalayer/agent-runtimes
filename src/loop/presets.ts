@@ -170,6 +170,8 @@ export type LoopPresetOptions = {
   datalayerAgentSpecId?: string;
   /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
   datalayerCreatePayload?: Record<string, unknown>;
+  /** A conversation without an account, on the visitors' runtime (LOOP R-30). */
+  datalayerVisitors?: AgentsConfig['datalayerVisitors'];
   /** The target is the host's to fix, even with the agent control hidden. */
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
@@ -289,6 +291,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     localAgentSpec,
     datalayerAgentSpecId,
     datalayerCreatePayload,
+    datalayerVisitors,
     targetFixed,
     themeVariant,
     themeOverrides,
@@ -365,6 +368,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       target,
       datalayerAgentSpecId,
       datalayerCreatePayload,
+      datalayerVisitors,
       targetFixed,
       showAgentVariants,
       showAgentSummary: agentSummary,

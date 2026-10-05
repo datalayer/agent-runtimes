@@ -21,6 +21,7 @@
  * @module loop/plugins/agents/plugin
  */
 
+import type { DatalayerVisitors } from '../../apps/visitorToken';
 import { ServerIcon } from '@primer/octicons-react';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorSlotComponent } from '@datalayer/reactor/react';
@@ -126,6 +127,12 @@ export type AgentsConfig = {
    * decides its tool calls by its rules (LOOP R-05, R-03).
    */
   datalayerCreatePayload?: Record<string, unknown>;
+  /**
+   * A conversation without an account (LOOP R-30): the application's agent
+   * is already on the visitors' runtime, so nothing is allocated or created,
+   * and the chat speaks to it with a visitor's token for the application.
+   */
+  datalayerVisitors?: DatalayerVisitors;
   /**
    * The target is the host's decision, not the reader's: started there even
    * with the control hidden. For an application that runs where it is

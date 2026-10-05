@@ -102,6 +102,8 @@ import {
   useAgentRuntimeContextSnapshot,
 } from '../../../stores';
 import { useIAMStore } from '../../../state';
+import { useVisitorToken } from '../../apps/visitorToken';
+import { AGENTS_PLUGIN_NAME, type AgentsConfig } from '../agents/plugin';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type {
@@ -1407,7 +1409,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * chat says so with the person's token. The embed hands its own.
    */
   const runsApp = Boolean(blueprintTurn?.createPayload?.app_spec);
-  const iamToken = useIAMStore(state => state.token);
+  const memberToken = useIAMStore(state => state.token);
+  /*
+   * Without an account (LOOP R-30) the application runs on the visitors'
+   * runtime, which answers a visitor's token for it and nobody signed in.
+   */
+  const visitors =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
+  const visitor = useVisitorToken(visitors);
+  const iamToken = visitors ? visitor.token : memberToken;
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage

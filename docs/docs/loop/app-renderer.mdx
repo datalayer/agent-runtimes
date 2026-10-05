@@ -56,6 +56,7 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 | `teamPicker`, `showAgentVariants`, `graph`, `pluginsPanel` | `false`.                                                                                                             |
 | `editors`, `showViewSelector`, `pageLayout`, `pageLayoutArrangement`, … | What its layout asks for (`appLayoutOptions(app)`): see [An application's layout](./index.mdx#an-applications-layout). |
 | `datalayerAgentSpecId`, `datalayerCreatePayload`   | On Datalayer, a runtime allocated with a plain agentspec and the application's agent created on it with the application's spec, so that the runtime enforces its rules. |
+| `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account (LOOP R-30), the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
 
 **A host wins over the application.** Every `LoopEmbed` prop a host passes is
 applied after these, and replaces them: `showTokenUsage` brings the counters
@@ -246,10 +247,10 @@ it (`writeAppspecYaml`), with how it was built (`APP_BUILT`). The page's own
 documentation is on the site, at
 [/docs/applications/home-chat](https://datalayer.ai/docs/applications/home-chat).
 
-**What it does not do yet.** In the browser the model answers alone: no
-runtime, no tool, no search. *Web research* then cites nothing it opened,
-which is why the page stays a preview until a signed-out visitor has a
-runtime that runs applications (LOOP H-27, R-30).
+**On the visitors' runtime.** Given `target="datalayer"` and
+`datalayerVisitors`, it runs on the visitors' runtime (LOOP R-30): with its
+search, reading only, nothing kept, under a visitor's limits. In the browser
+target the model answers alone: no runtime, no tool, no search.
 
 ## Feedback on its answers
 

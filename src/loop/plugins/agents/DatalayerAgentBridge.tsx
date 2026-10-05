@@ -50,6 +50,9 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   const agentSpecId =
     agentsConfig?.datalayerAgentSpecId ?? DEFAULT_DATALAYER_AGENTSPEC;
   const createPayload = agentsConfig?.datalayerCreatePayload;
+  // A conversation without an account (LOOP R-30): the agent is already on
+  // the visitors' runtime, kept warm there; nothing is allocated or made.
+  const visitors = agentsConfig?.datalayerVisitors;
 
   const service = useOptionalSandboxService();
   const target = useSignalValue(service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL);
@@ -101,12 +104,21 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     agentSpecId,
     agentConfig,
     variant: 'cloud-pydanticai',
-    autoStart: onDatalayer,
-    autoCreateAgent: onDatalayer,
+    autoStart: onDatalayer && !visitors,
+    autoCreateAgent: onDatalayer && !visitors,
   });
 
   useEffect(() => {
     if (!service || !onDatalayer) {
+      return;
+    }
+    if (visitors) {
+      service.report({
+        variant: 'datalayer',
+        // No sandbox: a visitor's application runs no code.
+        sandbox_running: false,
+        agent_base_url: visitors.url,
+      });
       return;
     }
     if (error) {
@@ -143,7 +155,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       // host's server for an agent that is not on it.
       agent_base_url: runtime.agentBaseUrl,
     });
-  }, [service, onDatalayer, runtime, status, error]);
+  }, [service, onDatalayer, runtime, status, error, visitors]);
 
   return null;
 }
