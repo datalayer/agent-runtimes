@@ -45,6 +45,7 @@ const NAMES: Record<AssistantState, string[]> = {
     'GestureDown',
     'Acknowledge',
   ],
+  paused: ['IdleSnooze', 'Sleep', 'Sleeping', 'Snooze', 'Rest', 'RestPose'],
   greeting: ['Greeting', 'Greet', 'Show', 'Wave'],
   speaking: [
     'Explain',
@@ -63,6 +64,7 @@ const AUTHORED: Record<AssistantState, string[]> = {
   thinking: [],
   working: [],
   waiting: ['Listening'],
+  paused: [],
   greeting: ['Showing'],
   speaking: ['Speaking'],
   goodbye: ['Hiding'],
@@ -75,6 +77,7 @@ const STATES: AssistantState[] = [
   'thinking',
   'working',
   'waiting',
+  'paused',
   'greeting',
   'speaking',
   'goodbye',

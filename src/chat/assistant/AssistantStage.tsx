@@ -36,6 +36,7 @@ import {
   pointerNear,
   type AssistantAway,
   type AssistantState,
+  type BalloonApproval,
 } from './state';
 
 /** The motions, by the state the stage is in. */
@@ -71,6 +72,10 @@ const MOTIONS = {
   '@keyframes assistantTalk': {
     '0%, 100%': { transform: 'scaleY(1)' },
     '50%': { transform: 'scaleY(2.2)' },
+  },
+  '@keyframes assistantDoze': {
+    '0%, 100%': { transform: 'translateY(2px) scale(1, 0.97)' },
+    '50%': { transform: 'translateY(3px) scale(1.02, 0.95)' },
   },
   '@keyframes assistantLeave': {
     from: { transform: 'scale(1)', opacity: 1 },
@@ -256,9 +261,10 @@ export interface AssistantStageProps {
   /**
    * What the balloon says while the conversation is closed: the agent's
    * newest words, as the Office Assistant said them (T-23), or a welcome.
-   * `more` adds *Open the conversation* for the rest.
+   * `more` adds *Open the conversation* for the rest; `approval`, an
+   * approval to answer there, with *Approve* and *Deny*.
    */
-  balloon?: { text: string; more?: boolean };
+  balloon?: { text: string; more?: boolean; approval?: BalloonApproval };
   /** Show the balloon without being hovered: something new to say. */
   insist?: boolean;
   /** Send it away (T-27): for the page, for the session, or for good. */
@@ -369,6 +375,17 @@ export function AssistantStage({
         '&[data-assistant-state="speaking"] .assistant-body': {
           animation: 'assistantFloat 1.6s ease-in-out infinite',
         },
+        // Paused (R-17): it dozes — its eyes shut, its breath slow, a little
+        // greyed — and, still, it is asleep: the shut eyes are not a motion.
+        '&[data-assistant-state="paused"] .assistant-body': {
+          animation: 'assistantDoze 4.8s ease-in-out infinite',
+          filter: 'grayscale(0.5)',
+          opacity: 0.8,
+        },
+        '&[data-assistant-state="paused"] .assistant-lids ellipse': {
+          animation: 'none',
+          transform: 'scaleY(1)',
+        },
         '&[data-assistant-state="goodbye"] .assistant-body': {
           animation: 'assistantLeave 0.6s ease-in forwards',
         },
@@ -384,6 +401,7 @@ export function AssistantStage({
         <SpeechBalloon
           text={balloon.text}
           more={balloon.more}
+          approval={balloon.approval}
           onOpen={onToggle}
           above={size + 8}
           side={balloonSide(place).side}

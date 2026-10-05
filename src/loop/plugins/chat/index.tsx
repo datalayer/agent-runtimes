@@ -79,8 +79,13 @@ export interface ChatPresence {
   /** What it says before anyone writes. */
   welcome?: string;
   /**
+   * Its deployment is paused (LOOP R-17): it says so beside its face, and
+   * its assistant dozes (T-08, T-22), whatever its last turn left behind.
+   */
+  paused?: boolean;
+  /**
    * Told what it is doing as it changes — idle, thinking, working, waiting
-   * for you — for a host that draws the face itself, in a frame of its own.
+   * for you, paused — for a host that draws the face itself, in a frame of its own.
    * Read once, when the workspace is built: pass a stable function, such as
    * a state setter.
    */
@@ -324,6 +329,7 @@ export const ChatPlugin = definePlugin<ChatPluginConfig>({
         id: 'chat-turn',
         turn: feed.turn,
         conversation: feed.conversation,
+        presence: feed.presence,
         ...feedWriters(feed),
       },
       { id: 'chat-turn' },

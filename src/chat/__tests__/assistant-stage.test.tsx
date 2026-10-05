@@ -20,7 +20,7 @@ import {
   AssistantStage,
   type AssistantStageProps,
 } from '../assistant/AssistantStage';
-import { POINTER_CALM_MS } from '../assistant/state';
+import { ASSISTANT_WORDS, POINTER_CALM_MS } from '../assistant/state';
 
 const mounted: Array<() => void> = [];
 
@@ -90,6 +90,54 @@ describe('the floating assistant', () => {
       open: true,
     });
     expect(balloon(open.container)).toBeNull();
+  });
+
+  it('dozes while paused, its eyes shut, and says it is paused', async () => {
+    const { container } = await render({
+      state: 'paused',
+      balloon: { text: ASSISTANT_WORDS.paused },
+      insist: true,
+    });
+    expect(
+      container
+        .querySelector('[data-assistant-state]')
+        ?.getAttribute('data-assistant-state'),
+    ).toBe('paused');
+    expect(balloon(container)?.textContent).toContain(ASSISTANT_WORDS.paused);
+  });
+
+  it('holds an approval in its balloon, answered there with Approve or Deny (T-23)', async () => {
+    const onApprove = vi.fn();
+    const onDeny = vi.fn();
+    const { container, onToggle } = await render({
+      state: 'waiting',
+      balloon: {
+        text: ASSISTANT_WORDS.approval,
+        approval: {
+          id: 'ap-1',
+          asks: 'send_email',
+          why: 'Send anything: ask me first',
+          others: 0,
+          onApprove,
+          onDeny,
+        },
+      },
+      insist: true,
+    });
+    const held = container.querySelector('[data-balloon-approval="ap-1"]');
+    expect(held?.textContent).toContain('send_email');
+    expect(held?.textContent).toContain('Send anything: ask me first');
+    expect(held?.textContent).not.toContain('more waiting');
+    const button = (label: string) =>
+      Array.from(held?.querySelectorAll('button') ?? []).find(
+        b => b.textContent === label,
+      ) as HTMLButtonElement;
+    await act(async () => button(ASSISTANT_WORDS.approve).click());
+    await act(async () => button(ASSISTANT_WORDS.deny).click());
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(onDeny).toHaveBeenCalledTimes(1);
+    // Answering is not opening the conversation.
+    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it('opens the conversation on a click, and not at the end of a drag', async () => {

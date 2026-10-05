@@ -179,4 +179,13 @@ describe('the conversation', () => {
     feed.items([]);
     expect(feed.conversation.value).toEqual([]);
   });
+
+  it('keeps what the application is doing, for whoever acts it out (T-22)', () => {
+    const feed = createTurnFeed();
+    expect(feed.presence.value).toBe('idle');
+    feed.setPresence('paused');
+    expect(feed.presence.value).toBe('paused');
+    feed.setPresence('waiting');
+    expect(feed.presence.value).toBe('waiting');
+  });
 });

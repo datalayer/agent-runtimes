@@ -47,18 +47,22 @@ three moments of its own. One set of motions serves every character
 | `idle` | Between turns | Floats gently and blinks now and then. |
 | `thinking` | A turn runs and no tool is open | Tilts its head, eyes up. |
 | `working` | A tool has not returned | A quick sway, eyes down to the work. |
-| `waiting` | A tool waits on the person's approval | Calls for attention; the balloon says *Waiting for you*. |
+| `waiting` | A tool waits on the person's approval | Calls for attention; the balloon holds the approval, with *Approve* and *Deny*. |
+| `paused` | Its owner paused its deployment | Dozes: its eyes shut, its breath slow, a little greyed; the balloon says it is paused. |
 | `greeting` | It has just appeared | Two hops on arrival. |
 | `speaking` | The answer is being written | Its mouth moves while the words arrive. |
 | `goodbye` | It is being sent away | Shrinks away. |
 
 The state is read from the chat itself — whether a turn is running and the
-newest tool call — never from the model's words (`assistantStateOf`). Going
-and arriving win, being short; then *waiting*, which must never be missed;
-then *speaking* over *thinking*.
+newest tool call — never from the model's words (`assistantStateOf`); paused
+is the deployment's, said by its host. Going wins, being short; then
+*paused* — a paused application neither greets nor speaks; then arriving;
+then *waiting*, which must never be missed; then *speaking* over *thinking*.
 
 Nothing moves for a reader whose system asks for reduced motion
-(`prefers-reduced-motion`): each state stands as one still frame.
+(`prefers-reduced-motion`): each state stands as one still frame — paused,
+its eyes shut. A character one brings dozes with its own snooze or sleep
+animation when it has one (`IdleSnooze`, `Sleep`, `Rest`…), else idles.
 
 ## The speech balloon
 
@@ -74,8 +78,20 @@ balloon over the character**, as the Office Assistant said them
   rest;
 - shown while the words arrive and for 12 seconds after, and on a hover until
   the conversation has been opened — opening it counts the words as read;
-- while an approval is asked, the balloon says *Waiting for you — open the
-  conversation to answer.*
+- while an approval is asked, **the balloon holds it and it is answered
+  there**: *Waiting for you*, what it asks to do, the rule it was asked
+  under, **Approve** and **Deny**, and how many more wait. The answer goes
+  where every approval of the application is answered (the Tool Approvals
+  page, its rules card, its page, the channels): over the ai-agents `/ws`,
+  where each decision is broadcast, so an approval answered in the balloon
+  leaves every list. In a LOOP workspace the assistant reads them as the
+  rules card does, by the application's id (`appId` in its config) and only
+  signed in; the chat's own floating assistant answers with the chat's own
+  `pendingApprovals`, `onApproveApproval` and `onRejectApproval`. Without
+  them, the balloon says *Waiting for you — open the conversation to
+  answer.*;
+- while its deployment is paused, the balloon says *Paused — it answers
+  again once it is resumed.*
 
 With nothing new to say, a hover shows the chat's `description` — its
 welcome. The balloon stays inside the window: it opens toward the middle of
@@ -137,8 +153,9 @@ and its own menu, open, puts nothing aside. The page is looked over every
 
 ## Pictured
 
-Each state of the paper clip — idle, thinking, working, waiting for you,
-speaking (with its balloon) — and the paper clip stepped aside for a dialog
+Each state of the paper clip — idle, thinking, working, waiting for you (an
+approval in its balloon, with *Approve* and *Deny*), paused (with its
+balloon), speaking (with its balloon) — and the paper clip stepped aside for a dialog
 are pictures, in the light and the dark mode, that `npm run test:pictures`
 takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
 change in how the assistant is drawn fails that run with a picture of the
@@ -278,14 +295,22 @@ import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/loop/plugins/
   plugins={[
     AssistantCharactersPlugin,
     OwlCharacterPlugin,
-    configurePlugin(LoopAssistantPlugin, { app: app.interface.assistant, person: 'cat' }),
+    configurePlugin(LoopAssistantPlugin, {
+      app: app.interface.assistant,
+      person: 'cat',
+      appId: app.id,
+    }),
   ]}
 />
 ```
 
-It acts out the workspace's chat turn (`LoopChatTurn`: thinking, working
-while a tool runs, speaking while the answer is written, idle), says the
-agent's newest words in its balloon while the conversation is out of sight,
+It acts out what the application is doing as its chat says it
+(`LoopChatTurn`'s `presence`: thinking, working while a tool runs, waiting
+for the person, paused when its deployment is, idle) and speaks while the
+answer is written; it says the agent's newest words in its balloon while the
+conversation is out of sight, holds there the approvals the application
+waits on when it is given the application's id (`appId`), answered with
+*Approve* or *Deny*,
 and is dragged and sent away as the chat's own assistant is. Clicked, it opens
 and closes the conversation panel on a page layout, and takes the person to
 the composer where the conversation is always on screen. An id nothing
@@ -449,8 +474,10 @@ chat's mode; a character contributed by a plugin is drawn in the *Chat
 Assistant* example and pictured (`character-owl-*.png`). The choice of a
 character — the application's over the person's over the paper clip, an
 unknown id said and not replaced — and the assistant in a LOOP workspace,
-drawn from a plugin's character and acting out the chat's turn, are tested
-(`loop-assistant.test.tsx`); an Appspec naming a plugin's character is read,
+drawn from a plugin's character and acting out the chat's turn, dozing while
+paused and holding an approval of its application in its balloon — answered
+there, never another application's — are tested (`loop-assistant.test.tsx`;
+the chat's own assistant in `chat-floating-conversation.test.tsx`); an Appspec naming a plugin's character is read,
 and a wrongly shaped id refused (`app-checks.test.ts`).
 
 **Not verified yet.** A real `.acs` file someone holds the rights to (the
@@ -459,6 +486,4 @@ clippy.js characters, in memory, not kept); the floating popup's blink and
 balloon seen in a browser; stepping aside, seen in a browser.
 
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
-Agent character while it speaks; `.acf` files; answering an approval in the
-balloon itself; the *paused*
-state, which arrives with pausing a deployment; the assistant on the hosted page.
+Agent character while it speaks; `.acf` files; the assistant on the hosted page.

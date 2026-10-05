@@ -5,7 +5,8 @@
 
 /**
  * What the floating assistant acts out (LOOP T-22): the presence of the
- * application (T-08), and three moments of its own — greeting when it
+ * application (T-08) — paused among them, when its owner paused it — and
+ * three moments of its own — greeting when it
  * arrives, speaking while an answer streams in, goodbye when it is sent away.
  *
  * @module chat/assistant/state
@@ -19,6 +20,7 @@ export type AssistantState =
   | 'thinking'
   | 'working'
   | 'waiting'
+  | 'paused'
   | 'greeting'
   | 'speaking'
   | 'goodbye';
@@ -36,9 +38,10 @@ export interface AssistantMoment {
 /**
  * The state to act, from the application's presence and the moment.
  *
- * Leaving and arriving win, being short; then waiting for the person, which
- * must never be missed; then speaking over thinking, since words arriving
- * are what the person watches; then the presence as it is.
+ * Leaving wins, being short; then paused — a paused application neither
+ * greets nor speaks, it dozes; then arriving; then waiting for the person,
+ * which must never be missed; then speaking over thinking, since words
+ * arriving are what the person watches; then the presence as it is.
  */
 export function assistantStateOf(
   presence: PresenceState,
@@ -46,6 +49,9 @@ export function assistantStateOf(
 ): AssistantState {
   if (moment.leaving) {
     return 'goodbye';
+  }
+  if (presence === 'paused') {
+    return 'paused';
   }
   if (moment.arriving) {
     return 'greeting';
@@ -71,6 +77,38 @@ export function newestIsAnswer(items: readonly unknown[]): boolean {
     newest.role === 'assistant' &&
     typeof newest.toolName !== 'string'
   );
+}
+
+/** What the balloon says for a state, when the agent has said nothing newer. */
+export const ASSISTANT_WORDS = {
+  /** An approval waits and cannot be answered in the balloon itself. */
+  waiting: 'Waiting for you — open the conversation to answer.',
+  /** It waits on the person's yes: Approve or Deny, in the balloon (T-23). */
+  approval: 'Waiting for you',
+  approve: 'Approve',
+  deny: 'Deny',
+  /** Its deployment is paused (R-17). */
+  paused: 'Paused — it answers again once it is resumed.',
+} as const;
+
+/**
+ * An approval asked of the person, answered in the balloon (T-23): what is
+ * asked, under which rule, and the two answers, sent where every approval is
+ * answered (U-19).
+ */
+export interface BalloonApproval {
+  /** Its id: a new one is a new question. */
+  id: string;
+  /** What it asks to do: the tool it would call. */
+  asks: string;
+  /** The rule or check it was asked under, when the runtime said. */
+  why?: string;
+  /** How many more wait after this one. */
+  others: number;
+  /** An answer is being sent. */
+  deciding?: boolean;
+  onApprove: () => void;
+  onDeny: () => void;
 }
 
 /** A word from the agent, for the character's balloon. */

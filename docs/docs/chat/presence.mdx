@@ -54,6 +54,7 @@ One line beside the face says what the application is doing, in plain words
 | `thinking` | *Thinking…* | A turn is running and no tool is open: the model is reading and writing. |
 | `working` | *Working…* | A tool has been called and has not returned. |
 | `waiting` | *Waiting for you* | A tool waits on the person's approval. The line is set in bold. |
+| `paused` | *Paused* | Its owner paused its deployment: it answers nobody until it is resumed. |
 
 The state is read from the chat, never from the model's words
 (`presenceState`, `presenceToolOf`): whether a turn is running, and the
@@ -62,6 +63,10 @@ result says an approval is pending. *Waiting for you* is said whether or not
 the turn is still streaming, since the stream may end while the approval is
 asked. A tool left open by a stopped turn is not work: the line says
 *Ready*.
+
+*Paused* is not read from the chat: it is the deployment's state, which its
+host knows and says (`presence.paused`, `AppRenderer`'s `paused`). It wins
+over everything the last turn left behind.
 
 The line is a polite live region (`role="status"`), so a screen reader hears
 it change.
@@ -74,6 +79,8 @@ motion around the face (`PresenceFace`, in `chat/presence/Presence.tsx`):
 - *Thinking…* and *Working…*: a soft ring in the accent breathes around the
   face;
 - *Waiting for you*: the ring stands, still;
+- *Paused*: a still, muted dashed circle, and the face dimmed and greyed —
+  dimmed, not redrawn;
 - *Ready*: no ring.
 
 The ring fades in and out at the theme's status pace
@@ -94,10 +101,16 @@ interface ChatPresence {
   face?: string;
   /** What it says before anyone writes. */
   welcome?: string;
-  /** Told what it is doing as it changes: idle, thinking, working, waiting. */
+  /** Its deployment is paused: the line says *Paused*, its assistant dozes. */
+  paused?: boolean;
+  /** Told what it is doing as it changes: idle, thinking, working, waiting, paused. */
   onPresence?: (state: PresenceState) => void;
 }
 ```
+
+The chat also hands the state to whoever reads its turn
+(`LoopChatTurn`'s `presence` signal): the [floating
+assistant](./floating-assistant.mdx) acts it out from there.
 
 `LoopEmbed` passes `presence` and `showTokenUsage` through to the plugin. A
 chat without `presence` keeps its header as it is: the agent's name and
@@ -106,7 +119,7 @@ mark, no line of status.
 `AppRenderer` sets all of this from the application itself — its name, its
 emoji, its welcome (or its description), with the counters off and the
 conversation in the `loop` theme. A host only adds `onPresence` when it
-wants to know.
+wants to know, and `paused` when the deployment it shows is paused.
 
 ## `onPresence`: a host that frames the face itself
 
@@ -142,14 +155,13 @@ function, such as a state setter, not a new arrow on every render.
 **Verified.** The state, from a turn and the newest tool call, is unit
 tested (`presence-status.test.ts`): ready between turns, thinking during a
 turn, working while a tool has not returned, waiting while an approval is
-asked (streaming or not), and not working on a tool a stopped turn left
-open.
+asked (streaming or not), not working on a tool a stopped turn left
+open, and paused while its deployment is, whatever the turn left.
 
 **Not verified yet.** No test renders an application's chat to check the
 face, name, welcome and line in its header and empty state, or the ring
 around the face; the ring's contrast in every accent, light and dark, is not
 measured.
 
-**Not built yet.** *Paused*, which is a deployment's state, arrives with
-pausing a deployment. The same state drives the [floating
-assistant](./floating-assistant.mdx)'s motions.
+The same state drives the [floating assistant](./floating-assistant.mdx)'s
+motions.

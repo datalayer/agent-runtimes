@@ -35,8 +35,14 @@ import { ChatMessageList } from '../../chat/messages/ChatMessageList';
 import { InputPrompt } from '../../chat/prompt/InputPrompt';
 import { PresenceFace, PresenceLine } from '../../chat/presence/Presence';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
-import { AssistantStage } from '../../chat/assistant/AssistantStage';
-import type { AssistantState } from '../../chat/assistant/state';
+import {
+  AssistantStage,
+  type AssistantStageProps,
+} from '../../chat/assistant/AssistantStage';
+import {
+  ASSISTANT_WORDS,
+  type AssistantState,
+} from '../../chat/assistant/state';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import {
   AssistantCharactersPlugin,
@@ -60,6 +66,7 @@ export const ASSISTANT_PICTURES = [
   'thinking',
   'working',
   'waiting',
+  'paused',
   'speaking',
   'aside',
 ] as const;
@@ -462,13 +469,25 @@ export const REFERENCE_SCREEN_COMPONENTS: Record<
 // ---------------------------------------------------------------------------
 
 const BALLOONS: Partial<
-  Record<AssistantPicture, { text: string; more?: boolean }>
+  Record<AssistantPicture, AssistantStageProps['balloon']>
 > = {
   speaking: {
     text: 'Three customers wrote about late deliveries this week: Ada, Grace and Alan.',
     more: true,
   },
-  waiting: { text: 'Waiting for you: send the reply to Ada?' },
+  // An approval it waits on, answered in the balloon (T-23).
+  waiting: {
+    text: ASSISTANT_WORDS.approval,
+    approval: {
+      id: 'picture',
+      asks: 'send_reply',
+      why: 'Send a reply to a customer: ask me first',
+      others: 1,
+      onApprove: () => undefined,
+      onDeny: () => undefined,
+    },
+  },
+  paused: { text: ASSISTANT_WORDS.paused },
 };
 
 /**

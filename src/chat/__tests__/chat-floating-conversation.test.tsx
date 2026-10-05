@@ -19,6 +19,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import type { FloatingConversation } from '../ChatFloating';
+import { ASSISTANT_WORDS } from '../assistant/state';
 
 const seen = vi.hoisted(() => ({
   chatBase: 0,
@@ -217,5 +218,64 @@ describe('ChatFloating, holding its host’s conversation', () => {
     expect(props.insist).toBe(true);
     expect(typeof props.onDismiss).toBe('function');
     expect(typeof props.onDragStart).toBe('function');
+  });
+  it('dozes while the host says it is paused, and says so in its balloon', async () => {
+    const { draw } = await render({
+      defaultViewMode: 'assistant',
+      conversation: conversation({ presence: 'paused' }),
+    });
+    await draw({
+      defaultViewMode: 'assistant',
+      conversation: conversation({ presence: 'paused' }),
+    });
+    const props = seen.stage.at(-1)!;
+    expect(props.state).toBe('paused');
+    expect(props.balloon).toEqual({ text: ASSISTANT_WORDS.paused });
+  });
+
+  it('holds the first approval in its balloon, answered by the chat’s own answers (T-23)', async () => {
+    const onApproveApproval = vi.fn();
+    const onRejectApproval = vi.fn();
+    const pendingApprovals = [
+      {
+        id: 'ap-1',
+        toolName: 'send_email',
+        args: {},
+        agentId: 'a',
+        requestedAt: '2026-10-05T00:00:00Z',
+      },
+      {
+        id: 'ap-2',
+        toolName: 'delete_file',
+        args: {},
+        agentId: 'a',
+        requestedAt: '2026-10-05T00:00:01Z',
+      },
+    ];
+    await render({
+      defaultViewMode: 'assistant',
+      conversation: conversation({ presence: 'waiting' }),
+      pendingApprovals,
+      onApproveApproval,
+      onRejectApproval,
+    });
+    const props = seen.stage.at(-1)!;
+    const balloon = props.balloon as {
+      text: string;
+      approval: {
+        asks: string;
+        others: number;
+        onApprove: () => void;
+        onDeny: () => void;
+      };
+    };
+    expect(balloon.text).toBe(ASSISTANT_WORDS.approval);
+    expect(balloon.approval.asks).toBe('send_email');
+    expect(balloon.approval.others).toBe(1);
+    expect(props.insist).toBe(true);
+    await act(async () => balloon.approval.onApprove());
+    await act(async () => balloon.approval.onDeny());
+    expect(onApproveApproval).toHaveBeenCalledWith('ap-1');
+    expect(onRejectApproval).toHaveBeenCalledWith('ap-1');
   });
 });

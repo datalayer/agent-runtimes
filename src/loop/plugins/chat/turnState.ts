@@ -23,6 +23,7 @@ import { signal, type ReadonlySignal, type Signal } from '@datalayer/reactor';
 import type { ContextSnapshotData } from '../../../types';
 import type { DisplayItem, ToolCallMessage } from '../../../types/chat';
 import type { ChatMessage } from '../../../types/messages';
+import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import type {
   ChatTurnSnapshot,
   ChatTurnStatus,
@@ -49,6 +50,10 @@ export type TurnFeed = {
   conversation: ReadonlySignal<ConversationEntry[]>;
   /** The chat's items as they now stand, streaming included. */
   items: (items: DisplayItem[]) => void;
+  /** What the application is doing, as its chat says it (T-08), for readers. */
+  presence: ReadonlySignal<PresenceState>;
+  /** What the application is doing now. */
+  setPresence: (state: PresenceState) => void;
 };
 
 /** A message's words, whether its content is a string or parts. */
@@ -114,9 +119,16 @@ export function createTurnFeed(): TurnFeed {
   const conversation: Signal<ConversationEntry[]> = signal<ConversationEntry[]>(
     [],
   );
+  const presence: Signal<PresenceState> = signal<PresenceState>('idle');
   return {
     turn,
     conversation,
+    presence,
+    setPresence: state => {
+      if (presence.value !== state) {
+        presence.value = state;
+      }
+    },
     items: items => {
       const next = conversationOf(items);
       // Nothing new: readers do not re-render for an identical conversation.

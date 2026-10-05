@@ -127,6 +127,7 @@ export function LoopEmbed({
       preset.presence?.name,
       preset.presence?.face,
       preset.presence?.welcome,
+      preset.presence?.paused,
       preset.showTokenUsage,
       // By its content: an application's spec written inline is a new object each render.
       JSON.stringify(preset.datalayerCreatePayload ?? null),

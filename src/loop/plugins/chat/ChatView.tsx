@@ -341,11 +341,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     open: false,
     pendingApproval: false,
   });
-  const presenceNow = presenceState(busy, presenceTool);
+  const presenceNow = presenceState(
+    busy,
+    presenceTool,
+    config?.presence?.paused === true,
+  );
   const onPresence = config?.presence?.onPresence;
-  // A host drawing the face in a frame of its own is told as it changes.
+  // A host drawing the face in a frame of its own is told as it changes, and
+  // so is whoever reads the turn: the floating assistant acts it out (T-22).
   useEffect(() => {
     onPresence?.(presenceNow);
+    turnFeedRef.current?.setPresence(presenceNow);
   }, [onPresence, presenceNow]);
   // What it last said, for a host that says it outside the conversation —
   // the embed's floating chrome (LOOP R-01): its balloon and its blink.

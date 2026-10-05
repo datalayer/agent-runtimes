@@ -26,6 +26,7 @@ import type { FrontendToolDefinition } from '../../types/tools';
 import type { ContextSnapshotData } from '../../types/context';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
+import type { PresenceState } from '../../chat/presence/presenceStatus';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -1197,6 +1198,13 @@ export type ChatTurnContribution = {
    * reply as it streams included; empty again when the chat starts over.
    */
   conversation: ReadonlySignal<ConversationEntry[]>;
+  /**
+   * What the application is doing, as its chat says it beside its face
+   * (LOOP T-08) — waiting for the person on an approval, paused when its
+   * deployment is — for whoever acts it out away from the chat: the
+   * floating assistant (T-22).
+   */
+  presence: ReadonlySignal<PresenceState>;
 };
 
 export const LoopChatTurn =

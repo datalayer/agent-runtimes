@@ -665,6 +665,7 @@ describe('stateAnimations', () => {
         'Idle1_1',
         'IdleAtom',
         'IDLEEYEBROWRAISE',
+        'IdleSnooze',
         'thinking',
         'Processing',
         'Writing',
@@ -677,10 +678,12 @@ describe('stateAnimations', () => {
       ]),
     );
     expect(states).toEqual({
-      idle: ['Idle1_1', 'IdleAtom', 'IDLEEYEBROWRAISE'],
+      idle: ['Idle1_1', 'IdleAtom', 'IDLEEYEBROWRAISE', 'IdleSnooze'],
       thinking: ['thinking'],
       working: ['Processing', 'Writing'],
       waiting: ['GetAttention'],
+      // Paused, it dozes with its own snooze when it has one.
+      paused: ['IdleSnooze'],
       greeting: ['Greeting', 'Wave'],
       speaking: ['Explain'],
       goodbye: ['GoodBye', 'Wave'],
@@ -715,6 +718,8 @@ describe('stateAnimations', () => {
     expect(states.greeting).toEqual(['Greet', 'Show']);
     expect(states.speaking).toEqual(['Speak']);
     expect(states.goodbye).toEqual(['Hide']);
+    // No snooze of its own: paused, it stands in its rest pose.
+    expect(states.paused).toEqual(['RestPose']);
   });
 
   it('falls back to the idle animations, then to the first animation, never empty', () => {

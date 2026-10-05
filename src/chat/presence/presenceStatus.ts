@@ -10,8 +10,12 @@
  * @module chat/presence/presenceStatus
  */
 
-/** The states a person is told about. Paused waits for a pause to exist. */
-export type PresenceState = 'idle' | 'thinking' | 'working' | 'waiting';
+/**
+ * The states a person is told about. Paused is its deployment's: its owner
+ * paused it (LOOP R-17), and it answers nobody until it is resumed.
+ */
+export type PresenceState =
+  'idle' | 'thinking' | 'working' | 'waiting' | 'paused';
 
 /** The line each state is said by. */
 export const PRESENCE_LINES: Record<PresenceState, string> = {
@@ -19,6 +23,7 @@ export const PRESENCE_LINES: Record<PresenceState, string> = {
   thinking: 'Thinking…',
   working: 'Working…',
   waiting: 'Waiting for you',
+  paused: 'Paused',
 };
 
 /** The newest tool call of the conversation, as far as presence reads it. */
@@ -30,8 +35,11 @@ export interface PresenceTool {
 }
 
 /**
- * The state, from whether a turn is running and the newest tool call.
+ * The state, from whether a turn is running, the newest tool call, and
+ * whether its deployment is paused.
  *
+ * Paused wins: a paused application does nothing, whatever its last turn
+ * left behind.
  * Waiting for an approval is said whether or not the turn is still
  * streaming — the stream may end while the approval is asked. A tool that
  * has not returned counts as work only during a turn: a stopped turn can
@@ -40,7 +48,11 @@ export interface PresenceTool {
 export function presenceState(
   busy: boolean,
   tool?: PresenceTool,
+  paused = false,
 ): PresenceState {
+  if (paused) {
+    return 'paused';
+  }
   if (tool?.open && tool.pendingApproval) {
     return 'waiting';
   }

@@ -156,6 +156,11 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    */
   onPresence?: (state: PresenceState) => void;
   /**
+   * Its deployment is paused (LOOP R-17), as its host knows it: its chat
+   * says *Paused* beside its face and its assistant dozes (T-08, T-22).
+   */
+  paused?: boolean;
+  /**
    * Told what the application last said, and whether its newest words are
    * an answer — for a host that says them outside the conversation: the
    * embed's floating chrome, its balloon and its blink (R-01). A stable
@@ -384,6 +389,7 @@ export function AppRenderer({
   instance,
   onPresence,
   onSaying,
+  paused = false,
   sidebar = false,
   frame = false,
   page,
@@ -484,6 +490,7 @@ export function AppRenderer({
         name: app.name,
         face: app.emoji,
         welcome: app.interface.welcome || app.description,
+        paused,
         onPresence,
         onSaying,
       }}

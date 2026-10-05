@@ -50,6 +50,7 @@ const ASSISTANT = [
   'thinking',
   'working',
   'waiting',
+  'paused',
   'speaking',
   'aside',
 ] as const;

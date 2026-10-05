@@ -55,8 +55,10 @@ import {
   newestIsAnswer,
   keepAway,
   keptAway,
+  ASSISTANT_WORDS,
   type AssistantAway,
   type AssistantSaying,
+  type BalloonApproval,
 } from './assistant/state';
 import {
   presenceState,
@@ -90,7 +92,7 @@ import type {
 export type FloatingConversation = {
   /** What the window holds, under its header (the face, the title, close). */
   body: React.ReactNode;
-  /** What it is doing: idle, thinking, working, waiting for the person. */
+  /** What it is doing: idle, thinking, working, waiting for the person, paused. */
   presence: PresenceState;
   /** Its newest words, said in the balloon until heard. */
   saying?: AssistantSaying;
@@ -462,15 +464,47 @@ export function ChatFloating({
     },
   );
   const unheard = !!saying && saying.id !== heardId;
+  /*
+   * The approval it waits on, answered in the balloon (T-23) by the chat's
+   * own answers to its approvals — those its tool-approval banner sends.
+   */
+  const [deciding, setDeciding] = useState(false);
+  const firstPending = pendingApprovals?.[0];
+  const balloonApproval: BalloonApproval | undefined =
+    firstPending && onApproveApproval && onRejectApproval
+      ? {
+          id: firstPending.id,
+          asks: firstPending.toolDescription || firstPending.toolName,
+          others: (pendingApprovals?.length ?? 1) - 1,
+          deciding,
+          onApprove: () => {
+            setDeciding(true);
+            void Promise.resolve(onApproveApproval(firstPending.id)).finally(
+              () => setDeciding(false),
+            );
+          },
+          onDeny: () => {
+            setDeciding(true);
+            void Promise.resolve(onRejectApproval(firstPending.id)).finally(
+              () => setDeciding(false),
+            );
+          },
+        }
+      : undefined;
   const assistantBalloon =
-    assistantState === 'waiting'
-      ? { text: 'Waiting for you — open the conversation to answer.' }
-      : unheard && saying
-        ? { text: saying.text, more: saying.more }
-        : { text: description };
+    assistantState === 'paused'
+      ? { text: ASSISTANT_WORDS.paused }
+      : balloonApproval
+        ? { text: ASSISTANT_WORDS.approval, approval: balloonApproval }
+        : assistantState === 'waiting'
+          ? { text: ASSISTANT_WORDS.waiting }
+          : unheard && saying
+            ? { text: saying.text, more: saying.more }
+            : { text: description };
   const balloonInsists =
     assistantState === 'greeting' ||
     assistantState === 'waiting' ||
+    !!balloonApproval ||
     (unheard && (assistantState === 'speaking' || freshSaying));
   const panelOnLoadingChange = panelProps?.onLoadingChange;
   const panelOnDisplayItemsChange = panelProps?.onDisplayItemsChange;

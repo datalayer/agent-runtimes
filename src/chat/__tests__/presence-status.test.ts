@@ -4,8 +4,9 @@
  */
 
 /**
- * An application's line of status (LOOP T-08): idle, thinking, working or
- * waiting for you, from the turn and the newest tool call.
+ * An application's line of status (LOOP T-08): idle, thinking, working,
+ * waiting for you or paused, from the turn, the newest tool call and its
+ * deployment.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -41,5 +42,14 @@ describe('the presence of an application', () => {
     expect(presenceState(false, { open: true, pendingApproval: false })).toBe(
       'idle',
     );
+  });
+
+  it('is paused while its deployment is, whatever its turn left', () => {
+    expect(presenceState(false, undefined, true)).toBe('paused');
+    expect(
+      presenceState(true, { open: true, pendingApproval: true }, true),
+    ).toBe('paused');
+    expect(presenceState(false, undefined, false)).toBe('idle');
+    expect(PRESENCE_LINES.paused).toBe('Paused');
   });
 });

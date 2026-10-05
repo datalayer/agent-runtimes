@@ -8,7 +8,8 @@
  * motion around it while it thinks or works, and one line saying what it is
  * doing. The face is never redrawn; the motion is a soft ring in the accent,
  * still under `prefers-reduced-motion`, and the line changes at the theme's
- * status pace (T-10).
+ * status pace (T-10). Paused, the ring is a still, muted dashed circle and
+ * the face is dimmed: nothing moves around something that does nothing.
  *
  * @module chat/presence/Presence
  */
@@ -47,6 +48,7 @@ export function PresenceFace({
   state: PresenceState;
 }) {
   const active = state === 'thinking' || state === 'working';
+  const paused = state === 'paused';
   return (
     <Box
       as="span"
@@ -70,8 +72,10 @@ export function PresenceFace({
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
-          boxShadow: `0 0 0 2px ${ACCENT}`,
-          opacity: active ? 0.9 : state === 'waiting' ? 0.9 : 0,
+          boxShadow: paused ? 'none' : `0 0 0 2px ${ACCENT}`,
+          border: paused ? '2px dashed' : 'none',
+          borderColor: 'border.default',
+          opacity: active || state === 'waiting' || paused ? 0.9 : 0,
           transition:
             'opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)',
           animation: active
@@ -86,7 +90,18 @@ export function PresenceFace({
           },
         }}
       />
-      <FaceDrawing face={face} size={size} />
+      <Box
+        as="span"
+        sx={{
+          display: 'inline-flex',
+          opacity: paused ? 0.55 : 1,
+          filter: paused ? 'grayscale(0.6)' : 'none',
+          transition:
+            'opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)',
+        }}
+      >
+        <FaceDrawing face={face} size={size} />
+      </Box>
     </Box>
   );
 }

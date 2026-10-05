@@ -44,6 +44,13 @@ describe('what the assistant acts out', () => {
     );
   });
 
+  it('dozes while paused: it neither greets nor speaks, and still leaves', () => {
+    expect(assistantStateOf('paused')).toBe('paused');
+    expect(assistantStateOf('paused', { arriving: true })).toBe('paused');
+    expect(assistantStateOf('paused', { speaking: true })).toBe('paused');
+    expect(assistantStateOf('paused', { leaving: true })).toBe('goodbye');
+  });
+
   it('speaks while words arrive, but never over a person it waits for', () => {
     expect(assistantStateOf('thinking', { speaking: true })).toBe('speaking');
     expect(assistantStateOf('idle', { speaking: true })).toBe('idle');

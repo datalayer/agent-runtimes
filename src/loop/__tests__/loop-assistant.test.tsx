@@ -12,7 +12,7 @@
 
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import {
   buildReactorFromPlugins,
@@ -37,7 +37,36 @@ import {
   LoopSlots,
   type ChatTurnSnapshot,
 } from '../core';
-import { ASSISTANT_AWAY_KEY } from '../../chat/assistant/state';
+import {
+  ASSISTANT_AWAY_KEY,
+  ASSISTANT_WORDS,
+} from '../../chat/assistant/state';
+import type { PresenceState } from '../../chat/presence/presenceStatus';
+import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
+
+const seen = vi.hoisted(() => ({
+  approved: [] as string[],
+  rejected: [] as string[],
+  waiting: [] as Array<Record<string, unknown>>,
+}));
+
+// The approvals path U-19 answers on (ai-agents `/ws`), as the rules card's
+// tests stand it in.
+vi.mock('../../hooks/useToolApprovals', () => ({
+  useToolApprovalsQuery: () => ({
+    data: { approvals: seen.waiting, total: seen.waiting.length },
+  }),
+  useApproveToolRequest: () => ({
+    isPending: false,
+    connectionState: 'connected',
+    mutate: ({ id }: { id: string }) => seen.approved.push(id),
+  }),
+  useRejectToolRequest: () => ({
+    isPending: false,
+    connectionState: 'connected',
+    mutate: ({ id }: { id: string }) => seen.rejected.push(id),
+  }),
+}));
 
 const owl = {
   name: 'Owl',
@@ -58,13 +87,14 @@ const OwlPlugin = definePlugin({
 });
 
 const turn = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
+const presence = signal<PresenceState>('idle');
 
 const TurnPlugin = definePlugin({
   name: 'test-chat-turn',
   contributes: [
     contribution(
       LoopChatTurn,
-      { id: 'turn', turn, conversation: signal([]) },
+      { id: 'turn', turn, conversation: signal([]), presence },
       { id: 'turn' },
     ),
   ],
@@ -108,6 +138,11 @@ afterEach(async () => {
   window.localStorage.removeItem(ASSISTANT_AWAY_KEY);
   window.sessionStorage.removeItem(ASSISTANT_AWAY_KEY);
   turn.value = { id: 0, status: 'idle' };
+  presence.value = 'idle';
+  seen.waiting.splice(0);
+  seen.approved.splice(0);
+  seen.rejected.splice(0);
+  iamStore.setState({ token: undefined } as never);
 });
 
 describe('the character the workspace draws', () => {
@@ -202,24 +237,62 @@ describe('the character the workspace draws', () => {
 });
 
 describe("the character acts out the chat's turn", () => {
-  it('thinks, works, speaks and idles as the turn goes', () => {
-    expect(assistantStateOfTurn({ id: 1, status: 'thinking' })).toBe(
-      'thinking',
-    );
+  it('thinks, works, speaks and idles as the chat says, and speaks as the turn goes', () => {
     expect(
-      assistantStateOfTurn({
-        id: 1,
-        status: 'streaming',
-        activity: 'Adding a cell…',
-      }),
+      assistantStateOfTurn({ id: 1, status: 'thinking' }, 'thinking'),
+    ).toBe('thinking');
+    expect(
+      assistantStateOfTurn(
+        {
+          id: 1,
+          status: 'streaming',
+          activity: 'Adding a cell…',
+        },
+        'working',
+      ),
     ).toBe('working');
     expect(
-      assistantStateOfTurn({ id: 1, status: 'streaming', assistant: 'Hi' }),
+      assistantStateOfTurn(
+        { id: 1, status: 'streaming', assistant: 'Hi' },
+        'thinking',
+      ),
     ).toBe('speaking');
-    expect(assistantStateOfTurn({ id: 1, status: 'done' })).toBe('idle');
+    expect(assistantStateOfTurn({ id: 1, status: 'done' }, 'idle')).toBe(
+      'idle',
+    );
     expect(
-      assistantStateOfTurn({ id: 1, status: 'done' }, { arriving: true }),
+      assistantStateOfTurn({ id: 1, status: 'done' }, 'idle', {
+        arriving: true,
+      }),
     ).toBe('greeting');
+    expect(assistantStateOfTurn({ id: 1, status: 'done' }, 'waiting')).toBe(
+      'waiting',
+    );
+  });
+
+  it('dozes while its deployment is paused, arriving or not, and says why', async () => {
+    expect(
+      assistantStateOfTurn({ id: 1, status: 'streaming' }, 'paused', {
+        arriving: true,
+      }),
+    ).toBe('paused');
+    expect(
+      assistantStateOfTurn({ id: 1, status: 'done' }, 'paused', {
+        leaving: true,
+      }),
+    ).toBe('goodbye');
+    presence.value = 'paused';
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      LoopAssistantPlugin,
+    ]);
+    const stage = el.querySelector('[data-assistant-state]') as HTMLElement;
+    expect(stage.getAttribute('data-assistant-state')).toBe('paused');
+    await act(async () => {
+      stage.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+    expect(document.body.textContent).toContain(ASSISTANT_WORDS.paused);
   });
 
   it('says the newest words in its balloon while the conversation is out of sight', async () => {
@@ -241,5 +314,52 @@ describe("the character acts out the chat's turn", () => {
         ?.getAttribute('data-assistant-state'),
     ).toBe('greeting');
     expect(document.body.textContent).toContain('The report is ready.');
+  });
+});
+
+describe('an approval waits in the balloon (T-23)', () => {
+  const asked = {
+    id: 'ap-1',
+    agent_id: 'web-research',
+    tool_name: 'send_email',
+    tool_args: { _rule: 'Send anything: ask me first' },
+    status: 'pending',
+  };
+
+  it('is answered there with Approve or Deny, on the approvals path', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    seen.waiting.push(asked, { ...asked, id: 'ap-2' });
+    presence.value = 'waiting';
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      configurePlugin(LoopAssistantPlugin, { appId: 'web-research' }),
+    ]);
+    const balloon = el.querySelector('[data-balloon-approval]') as HTMLElement;
+    expect(balloon.getAttribute('data-balloon-approval')).toBe('ap-1');
+    expect(balloon.textContent).toContain('send_email');
+    expect(balloon.textContent).toContain('Send anything: ask me first');
+    expect(balloon.textContent).toContain('1 more waiting.');
+    const button = (label: string) =>
+      Array.from(balloon.querySelectorAll('button')).find(
+        b => b.textContent === label,
+      ) as HTMLButtonElement;
+    await act(async () => button(ASSISTANT_WORDS.approve).click());
+    await act(async () => button(ASSISTANT_WORDS.deny).click());
+    expect(seen.approved).toEqual(['ap-1']);
+    expect(seen.rejected).toEqual(['ap-1']);
+  });
+
+  it("is not another application's, nor read signed out", async () => {
+    seen.waiting.push({ ...asked, agent_id: 'other-app' });
+    iamStore.setState({ token: 'jwt' } as never);
+    presence.value = 'waiting';
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      configurePlugin(LoopAssistantPlugin, { appId: 'web-research' }),
+    ]);
+    expect(el.querySelector('[data-balloon-approval]')).toBeNull();
+    expect(document.body.textContent).toContain(ASSISTANT_WORDS.waiting);
   });
 });
