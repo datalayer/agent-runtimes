@@ -831,7 +831,9 @@ class StrategyTermination(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     max_iterations: int = Field(
-        default=10, ge=1, description="Maximum iterations before the strategy is stopped"
+        default=10,
+        ge=1,
+        description="Maximum iterations before the strategy is stopped",
     )
     success_criteria: List[str] = Field(
         default_factory=list, description="Conditions that mark the goal as reached"
