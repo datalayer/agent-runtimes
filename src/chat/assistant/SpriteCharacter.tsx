@@ -99,6 +99,7 @@ export function SpriteCharacter({
   const scale = size / Math.max(width, height);
   return (
     <span
+      className="assistant-sprite"
       role="img"
       aria-label={character.name}
       data-sprite-animation={play.name}

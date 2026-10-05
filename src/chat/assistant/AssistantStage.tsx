@@ -405,6 +405,11 @@ export function AssistantStage({
         '&[data-assistant-state="goodbye"] .assistant-body': {
           animation: 'assistantLeave 0.6s ease-in forwards',
         },
+        // A sprite plays its own goodbye, and leaves as the drawn ones do:
+        // a character whose file has no goodbye would otherwise stay.
+        '&[data-assistant-state="goodbye"] .assistant-sprite': {
+          animation: 'assistantLeave 0.6s ease-in forwards',
+        },
         // One still frame per state for a reader who asks for no motion.
         '@media (prefers-reduced-motion: reduce)': {
           '& *': { animation: 'none !important' },

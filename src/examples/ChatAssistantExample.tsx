@@ -10,10 +10,11 @@
  *
  * The characters offered are what the enabled plugins contribute to
  * `loop.assistant.character` (T-24): Datalayer's four, and an owl from a
- * small example plugin (`utils/owlCharacterPlugin`).
+ * small example plugin (`utils/owlCharacterPlugin`). Pixel, the test sprite,
+ * is read through the clippy.js reader, as a character a person brings is.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { Button, Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -26,6 +27,7 @@ import {
   assistantCharactersOf,
 } from '../loop/plugins/assistant-characters';
 import { OwlCharacterPlugin } from './utils/owlCharacterPlugin';
+import { readTestSpriteCharacter } from './utils/testSpriteCharacter';
 import {
   readAcsCharacter,
   readClippyCharacter,
@@ -91,6 +93,35 @@ const ChatAssistantExample: React.FC = () => {
       ? assistantCharacterNamed(reactor, character)
       : character;
   const [loadError, setLoadError] = useState<string | undefined>();
+  // Pixel, the test sprite, read once through the clippy.js reader.
+  const [pixel, setPixel] = useState<AssistantCharacterData>();
+  useEffect(() => {
+    let cancelled = false;
+    readTestSpriteCharacter().then(
+      read => {
+        if (!cancelled) {
+          setPixel(read);
+        }
+      },
+      error => {
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : String(error));
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // The object URL lives as long as the page does.
+  useEffect(
+    () => () => {
+      if (pixel) {
+        URL.revokeObjectURL(pixel.sprite);
+      }
+    },
+    [pixel],
+  );
   return (
     <ThemedProvider>
       <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
@@ -119,6 +150,19 @@ const ChatAssistantExample: React.FC = () => {
                 {option.name}
               </Button>
             ))}
+            {pixel && (
+              <Button
+                variant={character === pixel ? 'primary' : 'default'}
+                onClick={() => {
+                  setCharacter(pixel);
+                  setLoadError(undefined);
+                }}
+                aria-pressed={character === pixel}
+                data-assistant-character="sprite"
+              >
+                {pixel.name} (sprite)
+              </Button>
+            )}
           </Box>
           <Box as="section" sx={{ mt: 4 }}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
@@ -156,7 +200,7 @@ const ChatAssistantExample: React.FC = () => {
                 {loadError}
               </Text>
             )}
-            {typeof character !== 'string' && (
+            {typeof character !== 'string' && character !== pixel && (
               <Text as="p" sx={{ mt: 2 }}>
                 Playing {character.name}.
               </Text>
