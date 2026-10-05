@@ -279,6 +279,9 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               state: 'thinking',
               saying: 'Thanks!',
             }));
+            // Accounting has handed its answer over: back at rest, its last
+            // words still in its balloon.
+            setPeerPersona(prev => ({ ...prev, state: 'idle' }));
           } else if (part.type === 'text-delta') {
             said += part.text;
             setEntryPersona(prev => ({
@@ -319,6 +322,10 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       } finally {
         abort.current = null;
         setBusy(false);
+        // However the turn ended, neither member is still at work.
+        setPeerPersona(prev =>
+          prev.state === 'idle' ? prev : { ...prev, state: 'idle' },
+        );
       }
     },
     [agent, busy, askTool, peerApp.name],

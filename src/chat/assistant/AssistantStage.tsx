@@ -292,6 +292,12 @@ export interface AssistantStageProps {
    * the talking loop. Still, for a reader who asks for reduced motion.
    */
   mouthLevel?: () => number;
+  /**
+   * Set in a layout — a team's graph — rather than floating over the page:
+   * it never steps aside (T-27), since what is around it is its own label
+   * and its neighbours, not a page somebody is working on.
+   */
+  stayPut?: boolean;
 }
 
 /** The openings of the mouth, by level: shut, a little, half, wide. */
@@ -348,6 +354,7 @@ export function AssistantStage({
   ownRef,
   decide,
   mouthLevel,
+  stayPut = false,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -367,7 +374,7 @@ export function AssistantStage({
   const [menuOpen, setMenuOpen] = useState(false);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
-  const aside = useKeepClear(stageRef, ownRef, menuOpen);
+  const aside = useKeepClear(stageRef, ownRef, menuOpen || stayPut);
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);

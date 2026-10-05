@@ -209,6 +209,8 @@ const MemberNode = memo(function MemberNode({
             }
             insist={persona.insist}
             onDismiss={away => member.onAway?.(away !== 'none')}
+            // A member of the graph: what is clicked around it is the graph.
+            stayPut
           />
         )}
       </Box>

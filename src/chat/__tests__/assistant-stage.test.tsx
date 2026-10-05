@@ -447,6 +447,25 @@ describe('keeping clear (T-27)', () => {
     expect(stage.getAttribute('data-assistant-aside')).toBeNull();
   });
 
+  it('set in a layout (stayPut), stays put for a press just beside it', async () => {
+    vi.useFakeTimers();
+    const { stage } = await renderPlaced({ stayPut: true });
+    const label = document.createElement('div');
+    document.body.appendChild(label);
+    await act(async () => {
+      label.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          clientX: 990,
+          clientY: 620,
+          buttons: 1,
+        }),
+      );
+    });
+    await tick();
+    expect(stage.getAttribute('data-assistant-aside')).toBeNull();
+  });
+
   it('is not put aside by a press on itself', async () => {
     vi.useFakeTimers();
     const { stage } = await renderPlaced();
