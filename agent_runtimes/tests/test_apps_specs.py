@@ -37,7 +37,7 @@ from agent_runtimes.specs.actions import (
     APP_BEHAVIOURS,
     APP_ESCALATIONS,
     SERVER_ACTIONS,
-    TOOL_ACTIONS,
+    BACKEND_TOOL_ACTIONS,
 )
 from agent_runtimes.specs.apps import APP_CATALOGUE, get_app, list_apps
 from agent_runtimes.types import ActionConditionSpec, AppSpec
@@ -130,10 +130,10 @@ class TestTheCatalogue:
 
 class TestActionClasses:
     def test_every_tool_of_the_catalogue_has_a_class(self) -> None:
-        assert [tool for tool, classes in TOOL_ACTIONS.items() if not classes] == []
+        assert [tool for tool, classes in BACKEND_TOOL_ACTIONS.items() if not classes] == []
         assert all(
             item in ACTION_CLASSES
-            for classes in TOOL_ACTIONS.values()
+            for classes in BACKEND_TOOL_ACTIONS.values()
             for item in classes
         )
 

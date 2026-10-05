@@ -6,7 +6,7 @@
 import type { SkillSpec } from './skills';
 import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
 import type {
-  ToolSpec,
+  BackendToolSpec,
   FrontendToolSpec,
   FrontendRenderToolSpec,
 } from './tools';
@@ -675,7 +675,7 @@ export interface Agentspec {
   /** Skills available to this agent */
   skills: SkillSpec[];
   /** Runtime tools available to this agent */
-  tools?: ToolSpec[];
+  tools?: BackendToolSpec[];
   /** Disable tool approvals for this spec (default: false). */
   disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */

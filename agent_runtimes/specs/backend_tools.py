@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 """
-Tool Catalog.
+Backend Tool Catalog.
 
 Predefined runtime tools that can be attached to agents.
 
@@ -11,13 +11,13 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 from typing import Dict, List
 
-from agent_runtimes.types import ToolRuntimeSpec, ToolSpec
+from agent_runtimes.types import BackendToolRuntimeSpec, BackendToolSpec
 
 # ============================================================================
-# Tool Definitions
+# Backend Tool Definitions
 # ============================================================================
 
-CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
+CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="create-plan",
     version="0.0.1",
     name="Create Plan",
@@ -27,7 +27,7 @@ CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="create_plan",
@@ -36,7 +36,7 @@ CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="📋",
 )
 
-CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
+CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="current-time",
     version="0.0.1",
     name="Current Time",
@@ -46,7 +46,7 @@ CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="current_time",
@@ -55,7 +55,7 @@ CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🕒",
 )
 
-DECIDE_TOOL_SPEC_0_0_1 = ToolSpec(
+DECIDE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="decide",
     version="0.0.1",
     name="Decide",
@@ -65,7 +65,7 @@ DECIDE_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.tools.decisions",
         method="decide",
@@ -74,7 +74,7 @@ DECIDE_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="⚖️",
 )
 
-DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
+DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="display-recipe",
     version="0.0.1",
     name="Display Recipe",
@@ -84,7 +84,7 @@ DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="display_recipe",
@@ -93,7 +93,7 @@ DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🍳",
 )
 
-EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-create-plan",
     version="0.0.1",
     name="Create Plan",
@@ -103,7 +103,7 @@ EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="create_plan",
@@ -112,7 +112,7 @@ EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="📋",
 )
 
-EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-current-time",
     version="0.0.1",
     name="Current Time",
@@ -122,7 +122,7 @@ EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="current_time",
@@ -131,7 +131,7 @@ EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🕒",
 )
 
-EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-display-recipe",
     version="0.0.1",
     name="Display Recipe",
@@ -141,7 +141,7 @@ EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="display_recipe",
@@ -150,7 +150,7 @@ EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🍳",
 )
 
-EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-generate-haiku",
     version="0.0.1",
     name="Generate Haiku",
@@ -160,7 +160,7 @@ EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_haiku",
@@ -169,7 +169,7 @@ EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🖋️",
 )
 
-EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-generate-task-steps",
     version="0.0.1",
     name="Generate Task Steps",
@@ -179,7 +179,7 @@ EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_task_steps",
@@ -188,7 +188,7 @@ EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🙋",
 )
 
-EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-get-weather",
     version="0.0.1",
     name="Get Weather",
@@ -198,7 +198,7 @@ EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="get_weather",
@@ -207,7 +207,7 @@ EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🌤️",
 )
 
-EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_RENDER_A2UI_SURFACE_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-render-a2ui-surface",
     version="0.0.1",
     name="Render A2UI Surface",
@@ -217,7 +217,7 @@ EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.a2ui",
         method="render_a2ui_surface",
@@ -226,7 +226,7 @@ EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🎛️",
 )
 
-EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
+EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="example-update-plan-step",
     version="0.0.1",
     name="Update Plan Step",
@@ -236,7 +236,7 @@ EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="update_plan_step",
@@ -245,7 +245,7 @@ EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="✅",
 )
 
-GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
+GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="generate-haiku",
     version="0.0.1",
     name="Generate Haiku",
@@ -255,7 +255,7 @@ GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_haiku",
@@ -264,7 +264,7 @@ GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🖋️",
 )
 
-GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
+GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="generate-task-steps",
     version="0.0.1",
     name="Generate Task Steps",
@@ -274,7 +274,7 @@ GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_task_steps",
@@ -283,7 +283,7 @@ GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🙋",
 )
 
-GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
+GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="get-weather",
     version="0.0.1",
     name="Get Weather",
@@ -293,7 +293,7 @@ GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="get_weather",
@@ -302,7 +302,7 @@ GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🌤️",
 )
 
-RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
+RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="runtime-echo",
     version="0.0.1",
     name="Runtime Echo",
@@ -312,7 +312,7 @@ RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",
         method="runtime_echo",
@@ -321,7 +321,7 @@ RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="💬",
 )
 
-RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
+RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="runtime-send-mail",
     version="0.0.1",
     name="Runtime Send Mail (Fake)",
@@ -331,7 +331,7 @@ RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="manual",
     timeout=None,
     requires_approval=True,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",
         method="runtime_send_mail",
@@ -340,7 +340,7 @@ RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="📧",
 )
 
-RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
+RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="runtime-sensitive-echo",
     version="0.0.1",
     name="Runtime Sensitive Echo",
@@ -350,7 +350,7 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="manual",
     timeout=None,
     requires_approval=True,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools",
         method="runtime_sensitive_echo",
@@ -359,7 +359,7 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
     emoji="🛡️",
 )
 
-UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
+UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1 = BackendToolSpec(
     id="update-plan-step",
     version="0.0.1",
     name="Update Plan Step",
@@ -369,7 +369,7 @@ UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
     approval="auto",
     timeout=None,
     requires_approval=False,
-    runtime=ToolRuntimeSpec(
+    runtime=BackendToolRuntimeSpec(
         language="python",
         package="agent_runtimes.examples.tools.ag_ui",
         method="update_plan_step",
@@ -379,43 +379,43 @@ UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
 )
 
 # ============================================================================
-# Tool Catalog
+# Backend Tool Catalog
 # ============================================================================
 
-TOOL_CATALOG: Dict[str, ToolSpec] = {
-    "create-plan": CREATE_PLAN_TOOL_SPEC_0_0_1,
-    "current-time": CURRENT_TIME_TOOL_SPEC_0_0_1,
-    "decide": DECIDE_TOOL_SPEC_0_0_1,
-    "display-recipe": DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
-    "example-create-plan": EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
-    "example-current-time": EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
-    "example-display-recipe": EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
-    "example-generate-haiku": EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
-    "example-generate-task-steps": EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
-    "example-get-weather": EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
-    "example-render-a2ui-surface": EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
-    "example-update-plan-step": EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
-    "generate-haiku": GENERATE_HAIKU_TOOL_SPEC_0_0_1,
-    "generate-task-steps": GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
-    "get-weather": GET_WEATHER_TOOL_SPEC_0_0_1,
-    "runtime-echo": RUNTIME_ECHO_TOOL_SPEC_0_0_1,
-    "runtime-send-mail": RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
-    "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
-    "update-plan-step": UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
+BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {
+    "create-plan": CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
+    "current-time": CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
+    "decide": DECIDE_BACKEND_TOOL_SPEC_0_0_1,
+    "display-recipe": DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
+    "example-create-plan": EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
+    "example-current-time": EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
+    "example-display-recipe": EXAMPLE_DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
+    "example-generate-haiku": EXAMPLE_GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
+    "example-generate-task-steps": EXAMPLE_GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
+    "example-get-weather": EXAMPLE_GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+    "example-render-a2ui-surface": EXAMPLE_RENDER_A2UI_SURFACE_BACKEND_TOOL_SPEC_0_0_1,
+    "example-update-plan-step": EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
+    "generate-haiku": GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
+    "generate-task-steps": GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
+    "get-weather": GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+    "runtime-echo": RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+    "runtime-send-mail": RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
+    "runtime-sensitive-echo": RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+    "update-plan-step": UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 }
 
 
-def get_tool_spec(tool_id: str) -> ToolSpec | None:
+def get_backend_tool_spec(tool_id: str) -> BackendToolSpec | None:
     """Get a tool specification by ID (accepts both bare and versioned refs)."""
-    spec = TOOL_CATALOG.get(tool_id)
+    spec = BACKEND_TOOL_CATALOG.get(tool_id)
     if spec is not None:
         return spec
     base, _, ver = tool_id.rpartition(":")
     if base and "." in ver:
-        return TOOL_CATALOG.get(base)
+        return BACKEND_TOOL_CATALOG.get(base)
     return None
 
 
-def list_tool_specs() -> List[ToolSpec]:
+def list_backend_tool_specs() -> List[BackendToolSpec]:
     """List all tool specifications."""
-    return list(TOOL_CATALOG.values())
+    return list(BACKEND_TOOL_CATALOG.values())

@@ -293,7 +293,7 @@ def _decisions(spec: AppSpec) -> List[_Decision]:
                     escalation=True,
                 )
             )
-    for ref in spec.tools:
+    for ref in spec.backend_tools:
         tool = split_ref(ref)[1]
         classes = classes_of(tool)
         if classes:

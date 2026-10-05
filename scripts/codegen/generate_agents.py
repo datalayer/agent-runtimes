@@ -234,6 +234,15 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
     return fragments
 
 
+def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
+    """Refuse an agent spec that still says `tools`: it is `backend_tools` now."""
+    if "tools" in spec:
+        raise SystemExit(
+            f"Error: {path} says `tools`: the field is `backend_tools` — the tools "
+            "that run on the runtime, as `frontend_tools` are those that run on the page"
+        )
+
+
 def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
     """
     Load all YAML agent specifications from directory and subdirectories.
@@ -254,6 +263,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
             spec = yaml.safe_load(f)
             if spec:  # Skip empty files
                 ensure_spec_version(spec)
+                refuse_tools_field(spec, yaml_file)
                 specs.append(("", spec))
 
     # Then, load specs from subdirectories (one level deep)
@@ -264,6 +274,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
                     spec = yaml.safe_load(f)
                     if spec:  # Skip empty files
                         ensure_spec_version(spec)
+                        refuse_tools_field(spec, yaml_file)
                         specs.append((subdir.name, spec))
 
     fragments = load_fragments(specs_dir)
@@ -399,7 +410,7 @@ from agent_runtimes.types import (
                 for skill in spec.get("skills", [])
             ]
             tool_refs = [
-                versioned_ref(*split_spec_ref(tool)) for tool in spec.get("tools", [])
+                versioned_ref(*split_spec_ref(tool)) for tool in spec.get("backend_tools", [])
             ]
             frontend_tool_refs = [
                 versioned_ref(*split_spec_ref(ft))
@@ -591,7 +602,7 @@ from agent_runtimes.types import (
 {model_additionals_py_line}    inference_provider={inference_provider_str},
     mcp_servers=[{mcp_servers_str}],
     skills={_fmt_list(skill_refs)},
-    tools={_fmt_list(tool_refs)},
+    backend_tools={_fmt_list(tool_refs)},
 {disable_tool_approvals_line}    frontend_tools={_fmt_list(frontend_tool_refs)},
 {frontend_render_tools_py_line}    environment_name="{spec.get("environment_name", "ai-agents-env")}",
     icon={icon},
@@ -740,7 +751,7 @@ def generate_typescript_code(
             used_mcp_servers.add(versioned_ref(*split_spec_ref(server)))
         for skill in spec.get("skills", []):
             used_skills.add(versioned_ref(*split_spec_ref(skill)))
-        for tool in spec.get("tools", []):
+        for tool in spec.get("backend_tools", []):
             used_tools.add(versioned_ref(*split_spec_ref(tool)))
         for ft in spec.get("frontend_tools", []):
             used_frontend_tools.add(versioned_ref(*split_spec_ref(ft)))
@@ -786,7 +797,7 @@ def generate_typescript_code(
         if tref in used_tools:
             const_name = (
                 tid.upper().replace("-", "_")
-                + "_TOOL_SPEC"
+                + "_BACKEND_TOOL_SPEC"
                 + version_suffix(spec["version"])
             )
             tool_imports.append(const_name)
@@ -830,7 +841,7 @@ def generate_typescript_code(
     types_import_path = "../../types" if is_root_layout else "../../../types"
     mcp_import_path = "../mcpServers" if is_root_layout else "../../mcpServers"
     skills_import_path = "../skills" if is_root_layout else "../../skills"
-    tools_import_path = "../tools" if is_root_layout else "../../tools"
+    tools_import_path = "../backendTools" if is_root_layout else "../../backendTools"
     frontend_tools_import_path = (
         "../frontendTools" if is_root_layout else "../../frontendTools"
     )
@@ -929,7 +940,7 @@ function toAgentSkillSpec(skill: SkillSpec) {
     if has_tools:
         code += """
 /**
- * Map tool IDs to ToolSpec objects.
+ * Map backend tool IDs to BackendToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
 """
@@ -1019,9 +1030,9 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             else:
                 skills_str = ""
 
-            # Get tools - resolve to ToolSpec via TOOL_MAP
+            # Get backend tools - resolve to BackendToolSpec via TOOL_MAP
             tool_ids_list = [
-                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("tools", [])
+                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("backend_tools", [])
             ]
             if has_tools and tool_ids_list:
                 tools_str = ", ".join(f"TOOL_MAP['{tid}']" for tid in tool_ids_list)
@@ -1165,7 +1176,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     model: {model_ts},
 {model_additionals_ts_line}{inference_provider_line}    mcpServers: [{mcp_servers_str}],
     skills: [{skills_str}].filter(Boolean) as SkillSpec[],
-    tools: [{tools_str}],
+    backendTools: [{tools_str}],
 {disable_tool_approvals_line}    frontendTools: [{frontend_tools_str}],
 {frontend_render_tools_ts_line}    environmentName: '{spec.get("environment_name", "ai-agents-env")}',
     icon: {icon},
@@ -1338,7 +1349,7 @@ def generate_subfolder_structure(specs: List[tuple[str, Dict[str, Any]]], args):
     # Get MCP and skills specs directories
     mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
     skills_specs_dir = args.specs_dir.parent / "skills"
-    tools_specs_dir = args.specs_dir.parent / "tools"
+    tools_specs_dir = args.specs_dir.parent / "backend-tools"
 
     # Determine base directories
     python_base = args.python_output.parent / "agents"
@@ -1624,7 +1635,7 @@ export * from './modelProviders';
 export * from './notifications';
 export * from './outputs';
 export * from './skills';
-export * from './tools';
+export * from './backendTools';
 export * from './triggers';
 export * from './uiPlugins';
 export * from './frames';
@@ -1698,7 +1709,7 @@ def main():
         # Get MCP and skills specs directories (siblings to agents directory)
         mcp_specs_dir = args.specs_dir.parent / "mcp-servers"
         skills_specs_dir = args.specs_dir.parent / "skills"
-        tools_specs_dir = args.specs_dir.parent / "tools"
+        tools_specs_dir = args.specs_dir.parent / "backend-tools"
         typescript_code = generate_typescript_code(
             specs,
             str(mcp_specs_dir),

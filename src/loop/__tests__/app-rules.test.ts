@@ -17,7 +17,7 @@ import {
   APP_BEHAVIOURS,
   APP_ESCALATIONS,
   SERVER_ACTIONS,
-  TOOL_ACTIONS,
+  BACKEND_TOOL_ACTIONS,
 } from '../../specs/actions';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type {
@@ -65,7 +65,7 @@ const rule = (appliesTo: string[], behaviour: AppBehaviour) => ({
 
 describe('action classes', () => {
   it('every tool of the catalogue has a class', () => {
-    for (const [tool, classes] of Object.entries(TOOL_ACTIONS)) {
+    for (const [tool, classes] of Object.entries(BACKEND_TOOL_ACTIONS)) {
       expect(classes.length, tool).toBeGreaterThan(0);
     }
   });

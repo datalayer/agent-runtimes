@@ -1078,6 +1078,17 @@ class CreateAgentRequest(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    @model_validator(mode="before")
+    @classmethod
+    def _says_backend_tools(cls, data: Any) -> Any:
+        """Refuse `tools`: the field is `backend_tools` (`backendTools`)."""
+        if isinstance(data, dict) and "tools" in data:
+            raise ValueError(
+                "`tools` is now `backend_tools` (`backendTools`): the tools that run "
+                "on the runtime, as `frontend_tools` are those that run on the page"
+            )
+        return data
+
     name: str = Field(..., description="Agent name")
     description: str = Field(default="", description="Agent description")
     goal: str | None = Field(
@@ -1118,9 +1129,10 @@ class CreateAgentRequest(BaseModel):
         default_factory=list,
         description="Selected skill names to enable for this agent",
     )
-    tools: list[str] = Field(
+    backend_tools: list[str] = Field(
         default_factory=list,
-        description="Selected runtime tool IDs to enable for this agent",
+        description="Selected backend tool IDs (agentspecs/backend-tools) to enable for this agent",
+        alias="backendTools",
     )
     enable_codemode: bool = Field(
         default=False,
@@ -1298,7 +1310,8 @@ async def create_agent(
         # Detect when the caller explicitly passed tools=[] so spec tools are
         # not auto-applied (e.g. sandbox demo that wants no pre-built tools).
         caller_disabled_tools = (
-            "tools" in request.model_fields_set and len(request.tools) == 0
+            "backend_tools" in request.model_fields_set
+            and len(request.backend_tools) == 0
         )
 
         # Normalize optional UI-forwarded spec payload to make applying defaults easier.
@@ -1352,8 +1365,12 @@ async def create_agent(
                 and not caller_disabled_skills
             ):
                 request.skills = library_spec.skills
-            if not request.tools and library_spec.tools and not caller_disabled_tools:
-                request.tools = library_spec.tools
+            if (
+                not request.backend_tools
+                and library_spec.backend_tools
+                and not caller_disabled_tools
+            ):
+                request.backend_tools = library_spec.backend_tools
             if (
                 library_spec.system_prompt_codemode_addons
                 and not request.enable_codemode
@@ -1488,10 +1505,10 @@ async def create_agent(
                 raw_skills = _spec_value("skills")
                 if isinstance(raw_skills, list):
                     request.skills = [str(s) for s in raw_skills]
-            if not request.tools:
-                raw_tools = _spec_value("tools")
+            if not request.backend_tools:
+                raw_tools = _spec_value("backendTools", "backend_tools")
                 if isinstance(raw_tools, list):
-                    request.tools = [str(t) for t in raw_tools]
+                    request.backend_tools = [str(t) for t in raw_tools]
             if not request.sandbox_variant:
                 request.sandbox_variant = _spec_value(
                     "sandboxVariant", "sandbox_variant"
@@ -2269,7 +2286,7 @@ async def create_agent(
             # NOTE: We don't pass MCP toolsets here. They will be dynamically
             # fetched at run time by the adapter to reflect current server state.
             # Only non-MCP toolsets (codemode, skills) are passed at construction.
-            tool_ids = list(request.tools or [])
+            tool_ids = list(request.backend_tools or [])
             capabilities = None
             usage_limits = None
 
@@ -3407,7 +3424,7 @@ async def update_agent_transport(
     if new_transport == "ag-ui":
         try:
             _switch_spec = _agentspecs.get(agent_id, {})
-            _switch_tools = _switch_spec.get("tools") or []
+            _switch_tools = _switch_spec.get("backend_tools") or []
             _switch_disable = _switch_spec.get("disable_tool_approvals")
             _switch_approval_ids = (
                 tools_requiring_approval_ids(_switch_tools)
@@ -3442,7 +3459,7 @@ async def update_agent_transport(
             if not _has_ft and stored_spec.get("agent_spec_id"):
                 _lib = get_library_agent_spec(stored_spec["agent_spec_id"])
                 _has_ft = bool(_lib and getattr(_lib, "frontend_tools", None))
-            _stored_tools = stored_spec.get("tools") or []
+            _stored_tools = stored_spec.get("backend_tools") or []
             # Respect the per-agent tool-approvals override captured at creation
             # time. Agents launched with disableToolApprovals must never be
             # reported as having approval tools, regardless of the runtime
@@ -4891,9 +4908,9 @@ async def configure_from_spec_endpoint(
     endpoint stores it in ``DATALAYER_USER_TOKEN`` *before* calling
     ``create_agent``.  Inside ``create_agent``:
 
-    1. ``spec.tools`` is forwarded to ``CreateAgentRequest.tools``.
+    1. ``spec.backend_tools`` is forwarded to ``CreateAgentRequest.backend_tools``.
     2. ``tools_requiring_approval_ids(tool_ids)`` detects tools whose
-       ToolSpec has ``requires_approval=True`` or ``approval='manual'``.
+       BackendToolSpec has ``requires_approval=True`` or ``approval='manual'``.
     3. When approval tools are found, a ``ToolsGuardrailCapability`` is
        auto-added; ``ToolApprovalConfig.from_env()`` reads
        ``DATALAYER_USER_TOKEN`` to populate ``user_jwt_token``.
@@ -4991,10 +5008,10 @@ async def configure_from_spec_endpoint(
         jupyter_sandbox=body.jupyter_sandbox,
         # Forward spec tools so create_agent can identify tools that require
         # manual approval (requires_approval=True / approval='manual' in
-        # ToolSpec) and auto-add ToolsGuardrailCapability.  Without this field
+        # BackendToolSpec) and auto-add ToolsGuardrailCapability.  Without this field
         # tool_ids would be empty, no approval capability would be registered,
         # and tools would execute without waiting for human sign-off.
-        tools=list(spec.tools or []),
+        backend_tools=list(spec.backend_tools or []),
         app_spec=body.app_spec,
         app_instance=body.app_instance,
         **({"model": body.model} if body.model else {}),

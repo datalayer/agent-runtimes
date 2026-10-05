@@ -491,7 +491,7 @@ async def _create_and_register_cli_agent(
     if skills_prompt_section:
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
-    tool_ids = list(agent_spec.tools or [])
+    tool_ids = list(agent_spec.backend_tools or [])
     capabilities = build_capabilities_from_agent_spec(
         agent_spec, agent_id=agent_id, model=model
     )
@@ -858,7 +858,9 @@ async def _create_and_register_cli_agent(
         "enable_codemode": enable_codemode,
         "enable_skills": len(skills) > 0,
         "skills": list(skills) if skills else [],
-        "tools": list(agent_spec.tools) if agent_spec.tools else [],
+        "backend_tools": list(agent_spec.backend_tools)
+        if agent_spec.backend_tools
+        else [],
         "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
         "icon": getattr(agent_spec, "icon", None),
         "emoji": getattr(agent_spec, "emoji", None),

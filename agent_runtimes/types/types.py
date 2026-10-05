@@ -6,7 +6,14 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 
 class EnvvarSpec(BaseModel):
@@ -113,7 +120,7 @@ class SkillSpec(BaseModel):
     )
 
 
-class ToolRuntimeSpec(BaseModel):
+class BackendToolRuntimeSpec(BaseModel):
     """Runtime binding for resolving a tool implementation."""
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -132,7 +139,7 @@ class ToolRuntimeSpec(BaseModel):
     )
 
 
-class ToolSpec(BaseModel):
+class BackendToolSpec(BaseModel):
     """
     Specification for a runtime tool.
     """
@@ -153,7 +160,7 @@ class ToolSpec(BaseModel):
         default=None,
         description="Approval timeout duration (e.g. 0h5m0s, 2d6h, 1mo2d3h4m5s)",
     )
-    runtime: ToolRuntimeSpec = Field(
+    runtime: BackendToolRuntimeSpec = Field(
         ...,
         description="Runtime binding metadata",
     )
@@ -367,7 +374,7 @@ class FrameSpec(BaseModel):
     architecture: str = Field(default="")
     prompts: List[FramePromptSpec] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
-    tools: List[str] = Field(default_factory=list)
+    backend_tools: List[str] = Field(default_factory=list)
     mcp_servers: List[str] = Field(default_factory=list)
     guards: List[FrameGuardSpec] = Field(default_factory=list)
 
@@ -1628,6 +1635,17 @@ class Agentspec(BaseModel):
         alias="inferenceProvider",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _says_backend_tools(cls, data: Any) -> Any:
+        """Refuse `tools`: the field is `backend_tools` (agentspecs >= 0.0.36)."""
+        if isinstance(data, dict) and "tools" in data:
+            raise ValueError(
+                "an agent spec says `backend_tools`, not `tools`: the tools that run "
+                "on the runtime, as `frontend_tools` are those that run on the page"
+            )
+        return data
+
     @field_validator("model_additionals")
     @classmethod
     def _model_additionals_in_catalogue(cls, value: List[str]) -> List[str]:
@@ -1659,9 +1677,10 @@ class Agentspec(BaseModel):
         default_factory=list,
         description="Skill IDs available to this agent",
     )
-    tools: List[str] = Field(
+    backend_tools: List[str] = Field(
         default_factory=list,
-        description="Tool IDs available to this agent",
+        description="Backend tool IDs (agentspecs/backend-tools) available to this agent",
+        alias="backendTools",
     )
     disable_tool_approvals: bool = Field(
         default=False,
@@ -2379,7 +2398,7 @@ class AppSpec(BaseModel):
     instructions: str = Field(default="")
     model: str = Field(default="")
     skills: List[str] = Field(default_factory=list)
-    tools: List[str] = Field(default_factory=list)
+    backend_tools: List[str] = Field(default_factory=list)
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
     )

@@ -291,7 +291,7 @@ def ensure_local_agent(
         "transport": transport,
         "agent_spec_id": agent_spec_id,
         "enable_skills": enable_skills,
-        "tools": [],
+        "backendTools": [],
         "disableToolApprovals": disable_tool_approvals,
         **(fields or {}),
     }

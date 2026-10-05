@@ -168,7 +168,7 @@ def generate_typescript_code(specs: list[dict[str, Any]], specs_dir: Path) -> st
         [("", spec) for spec in specs],
         str(root / "mcp-servers"),
         str(root / "skills"),
-        str(root / "tools"),
+        str(root / "backend-tools"),
     )
     marker = "// ============================================================================\n// Agent Specs Registry"
     if marker not in code:
@@ -208,7 +208,7 @@ def generate_typescript_code(specs: list[dict[str, Any]], specs_dir: Path) -> st
     # is one directory up, beside the catalogues it imports.
     head = head.replace("from '../../types'", "from '../types'")
     head = re.sub(
-        r"from '\.\./(mcpServers|skills|tools|frontendTools)'", r"from './\1'", head
+        r"from '\.\./(mcpServers|skills|backendTools|frontendTools)'", r"from './\1'", head
     )
 
     lines = [

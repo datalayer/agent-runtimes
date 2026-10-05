@@ -932,12 +932,12 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Skills',
       type: 'array',
     },
-    tools: {
-      description: "Tools of the catalogue it adds to its agent's",
+    backend_tools: {
+      description: "Backend tools of the catalogue it adds to its agent's",
       items: {
         type: 'string',
       },
-      title: 'Tools',
+      title: 'Backend Tools',
       type: 'array',
     },
     context: {

@@ -19,9 +19,9 @@ import pytest
 
 from agent_runtimes.models.offered import NO_TOKEN_NOTE, give_inference_token
 from agent_runtimes.services.runtime_tools import register_agent_tools
-from agent_runtimes.specs.actions import TOOL_ACTIONS
+from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS
 from agent_runtimes.specs.agents import get_agent_spec
-from agent_runtimes.specs.tools import get_tool_spec
+from agent_runtimes.specs.backend_tools import get_backend_tool_spec
 from agent_runtimes.tools import decisions
 from agent_runtimes.tools.decisions import DecisionQuestion, decide
 
@@ -192,10 +192,10 @@ def test_a_refusal_of_ai_inference_is_said_with_its_words(
 
 
 def test_the_tool_is_a_reader_and_the_simple_agent_has_it() -> None:
-    spec = get_tool_spec("decide:0.0.1")
+    spec = get_backend_tool_spec("decide:0.0.1")
     assert spec is not None and spec.approval == "auto"
     assert spec.runtime.package == "agent_runtimes.tools.decisions"
-    assert TOOL_ACTIONS["decide"] == ["read"]
+    assert BACKEND_TOOL_ACTIONS["decide"] == ["read"]
     simple = get_agent_spec("example-simple")
     assert simple is not None and "decide:0.0.1" in simple.tools
     assert any("urgent" in s.text for s in simple.suggestions)

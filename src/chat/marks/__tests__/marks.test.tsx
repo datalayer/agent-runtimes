@@ -10,7 +10,7 @@ import { createRoot } from 'react-dom/client';
 import { MCP_SERVER_LIBRARY } from '../../../specs/mcpServers';
 import { SKILLS_CATALOG } from '../../../specs/skills';
 import { FRONTEND_TOOL_CATALOG } from '../../../specs/frontendTools';
-import { TOOL_CATALOG } from '../../../specs/tools';
+import { BACKEND_TOOL_CATALOG } from '../../../specs/backendTools';
 import { ToolCallDisplay } from '../../tools/ToolCallDisplay';
 import {
   exportNameOf,
@@ -23,7 +23,7 @@ import {
 const CATALOGUES = {
   'mcp-servers': Object.values(MCP_SERVER_LIBRARY),
   skills: Object.values(SKILLS_CATALOG),
-  tools: Object.values(TOOL_CATALOG),
+  tools: Object.values(BACKEND_TOOL_CATALOG),
   'frontend-tools': Object.values(FRONTEND_TOOL_CATALOG),
 };
 

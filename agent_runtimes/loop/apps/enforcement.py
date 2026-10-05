@@ -86,7 +86,7 @@ from agent_runtimes.loop.apps.rules import (
     matches,
 )
 from agent_runtimes.loop.apps.visitors import visitor_refusal
-from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
+from agent_runtimes.specs.actions import SERVER_ACTIONS, BACKEND_TOOL_ACTIONS
 from agent_runtimes.types import AppSpec
 
 #: Tools of the runtime itself that only look: discovering tools and skills.
@@ -163,10 +163,10 @@ def _id_of(ref: str) -> str:
 
 def _catalogue_ids_by_name() -> Dict[str, Set[str]]:
     """The tools of the catalogue, by their id and by the method that runs them."""
-    from agent_runtimes.specs.tools import TOOL_CATALOG
+    from agent_runtimes.specs.backend_tools import BACKEND_TOOL_CATALOG
 
     names: Dict[str, Set[str]] = {}
-    for identity, spec in TOOL_CATALOG.items():
+    for identity, spec in BACKEND_TOOL_CATALOG.items():
         names.setdefault(identity, set()).add(identity)
         method = getattr(getattr(spec, "runtime", None), "method", None)
         if isinstance(method, str) and method:
@@ -267,7 +267,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             except Exception:
                 self._catalogue = {}
         found = set(self._catalogue.get(name, set()))
-        if name in TOOL_ACTIONS:
+        if name in BACKEND_TOOL_ACTIONS:
             found.add(name)
         return found
 

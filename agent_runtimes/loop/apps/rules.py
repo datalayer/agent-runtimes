@@ -39,7 +39,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
+from agent_runtimes.specs.actions import SERVER_ACTIONS, BACKEND_TOOL_ACTIONS
 from agent_runtimes.types import ActionConditionSpec, AppConnectionSpec, AppSpec
 
 DO_IT = "do_it"
@@ -170,7 +170,7 @@ def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[
     """
     server, name = split_ref(ref)
     if server is None:
-        return list(TOOL_ACTIONS.get(name, []))
+        return list(BACKEND_TOOL_ACTIONS.get(name, []))
     classes, conditions = _entry(server, name)
     for condition in conditions:
         if arguments is None or condition_holds(condition, arguments):

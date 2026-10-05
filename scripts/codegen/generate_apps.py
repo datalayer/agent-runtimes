@@ -350,7 +350,7 @@ def generate_actions_python_code(actions: dict[str, Any]) -> str:
         f"ACTION_CLASSES: List[str] = {actions['classes']!r}",
         "",
         "#: What each tool of the tools catalogue does, by id.",
-        f"TOOL_ACTIONS: Dict[str, List[str]] = {actions['tools']!r}",
+        f"BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {actions['tools']!r}",
         "",
         "#: What each MCP server's tools do, by server id. `checked` is the day the",
         "#: names were read off the running server, or None when nobody looked.",
@@ -401,7 +401,7 @@ def generate_actions_typescript_code(actions: dict[str, Any]) -> str:
         f"export const ACTION_CLASSES: ActionClass[] = {json.dumps(actions['classes'])};",
         "",
         "/** What each tool of the tools catalogue does, by id. */",
-        "export const TOOL_ACTIONS: Record<string, ActionClass[]> = "
+        "export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = "
         + json.dumps(actions["tools"], indent=2)
         + ";",
         "",

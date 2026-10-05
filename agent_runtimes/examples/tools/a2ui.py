@@ -13,7 +13,7 @@ canvas) using the ``@a2ui/react`` renderer, giving the agent the ability to
 generate real, interactive user interfaces — forms, cards and lists — from a
 natural-language request.
 
-The tool is referenced from a ToolSpec ``runtime`` block via ``package`` +
+The tool is referenced from a BackendToolSpec ``runtime`` block via ``package`` +
 ``method`` and registered on a ``pydantic_ai.Agent`` through
 ``register_agent_tools`` (which wires it with ``tool_plain``).
 """

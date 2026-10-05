@@ -88,7 +88,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
         "# Distributed under the terms of the Modified BSD License.",
         '"""',
-        "Tool Catalog.",
+        "Backend Tool Catalog.",
         "",
         "Predefined runtime tools that can be attached to agents.",
         "",
@@ -98,11 +98,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Dict, List",
         "",
-        "from agent_runtimes.types import ToolRuntimeSpec, ToolSpec",
+        "from agent_runtimes.types import BackendToolRuntimeSpec, BackendToolSpec",
         "",
         "",
         "# " + "=" * 76,
-        "# Tool Definitions",
+        "# Backend Tool Definitions",
         "# " + "=" * 76,
         "",
     ]
@@ -111,7 +111,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
@@ -122,7 +122,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         lines.extend(
             [
-                f"{const_name} = ToolSpec(",
+                f"{const_name} = BackendToolSpec(",
                 f'    id="{tool_id}",',
                 f'    version="{version}",',
                 f"    name={json.dumps(spec['name'], ensure_ascii=False)},",
@@ -132,7 +132,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f'    approval="{spec.get("approval", "auto")}",',
                 f"    timeout={timeout_py},",
                 f"    requires_approval={requires_approval},",
-                "    runtime=ToolRuntimeSpec(",
+                "    runtime=BackendToolRuntimeSpec(",
                 f'        language="{runtime["language"]}",',
                 f'        package="{runtime["package"]}",',
                 f'        method="{runtime["method"]}",',
@@ -147,10 +147,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     lines.extend(
         [
             "# " + "=" * 76,
-            "# Tool Catalog",
+            "# Backend Tool Catalog",
             "# " + "=" * 76,
             "",
-            "TOOL_CATALOG: Dict[str, ToolSpec] = {",
+            "BACKEND_TOOL_CATALOG: Dict[str, BackendToolSpec] = {",
         ]
     )
 
@@ -158,7 +158,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         )
         lines.append(f'    "{tool_id}": {const_name},')
 
@@ -167,20 +167,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "}",
             "",
             "",
-            "def get_tool_spec(tool_id: str) -> ToolSpec | None:",
+            "def get_backend_tool_spec(tool_id: str) -> BackendToolSpec | None:",
             '    """Get a tool specification by ID (accepts both bare and versioned refs)."""',
-            "    spec = TOOL_CATALOG.get(tool_id)",
+            "    spec = BACKEND_TOOL_CATALOG.get(tool_id)",
             "    if spec is not None:",
             "        return spec",
             "    base, _, ver = tool_id.rpartition(':')",
             "    if base and '.' in ver:",
-            "        return TOOL_CATALOG.get(base)",
+            "        return BACKEND_TOOL_CATALOG.get(base)",
             "    return None",
             "",
             "",
-            "def list_tool_specs() -> List[ToolSpec]:",
+            "def list_backend_tool_specs() -> List[BackendToolSpec]:",
             '    """List all tool specifications."""',
-            "    return list(TOOL_CATALOG.values())",
+            "    return list(BACKEND_TOOL_CATALOG.values())",
             "",
         ]
     )
@@ -196,7 +196,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " */",
         "",
         "/**",
-        " * Tool Catalog",
+        " * Backend Tool Catalog",
         " *",
         " * Predefined runtime tools that can be attached to agents.",
         " *",
@@ -204,10 +204,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { ToolSpec } from '../types';",
+        "import type { BackendToolSpec } from '../types';",
         "",
         "// " + "=" * 76,
-        "// Tool Definitions",
+        "// Backend Tool Definitions",
         "// " + "=" * 76,
         "",
     ]
@@ -216,7 +216,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         )
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
@@ -228,7 +228,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
         lines.extend(
             [
-                f"export const {const_name}: ToolSpec = {{",
+                f"export const {const_name}: BackendToolSpec = {{",
                 f"  id: '{tool_id}',",
                 f"  version: '{version}',",
                 # JSON-escaped: an apostrophe in a description is not a syntax error.
@@ -254,10 +254,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     lines.extend(
         [
             "// " + "=" * 76,
-            "// Tool Catalog",
+            "// Backend Tool Catalog",
             "// " + "=" * 76,
             "",
-            "export const TOOL_CATALOG: Record<string, ToolSpec> = {",
+            "export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {",
         ]
     )
 
@@ -265,7 +265,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         tool_id = spec["id"]
         version = spec["version"]
         const_name = (
-            f"{tool_id.upper().replace('-', '_')}_TOOL_SPEC{version_suffix(version)}"
+            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         )
         lines.append(f"  '{tool_id}': {const_name},")
 
@@ -273,22 +273,22 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         [
             "};",
             "",
-            "export function getToolSpecs(): ToolSpec[] {",
-            "  return Object.values(TOOL_CATALOG);",
+            "export function getBackendToolSpecs(): BackendToolSpec[] {",
+            "  return Object.values(BACKEND_TOOL_CATALOG);",
             "}",
             "",
-            "function resolveToolId(toolId: string): string {",
-            "  if (toolId in TOOL_CATALOG) return toolId;",
+            "function resolveBackendToolId(toolId: string): string {",
+            "  if (toolId in BACKEND_TOOL_CATALOG) return toolId;",
             "  const idx = toolId.lastIndexOf(':');",
             "  if (idx > 0) {",
             "    const base = toolId.slice(0, idx);",
-            "    if (base in TOOL_CATALOG) return base;",
+            "    if (base in BACKEND_TOOL_CATALOG) return base;",
             "  }",
             "  return toolId;",
             "}",
             "",
-            "export function getToolSpec(toolId: string): ToolSpec | undefined {",
-            "  return TOOL_CATALOG[resolveToolId(toolId)];",
+            "export function getBackendToolSpec(toolId: string): BackendToolSpec | undefined {",
+            "  return BACKEND_TOOL_CATALOG[resolveBackendToolId(toolId)];",
             "}",
             "",
         ]

@@ -31,7 +31,7 @@ export const ACTION_CLASSES: ActionClass[] = [
 ];
 
 /** What each tool of the tools catalogue does, by id. */
-export const TOOL_ACTIONS: Record<string, ActionClass[]> = {
+export const BACKEND_TOOL_ACTIONS: Record<string, ActionClass[]> = {
   'create-plan': ['read'],
   'current-time': ['read'],
   decide: ['read'],

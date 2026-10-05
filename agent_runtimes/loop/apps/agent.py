@@ -162,9 +162,9 @@ def local_agent(
     needs = [
         (app.connections, "connections"),
         (app.skills, "skills"),
-        (app.tools, "tools"),
+        (app.backend_tools, "backend tools"),
         (spec.skills if spec else [], "its agent's skills"),
-        (spec.tools if spec else [], "its agent's tools"),
+        (spec.backend_tools if spec else [], "its agent's backend tools"),
     ]
     for items, what in needs:
         if items:

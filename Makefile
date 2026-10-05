@@ -172,7 +172,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/agents/ \
 	agent_runtimes/specs/teams/ \
 	agent_runtimes/specs/skills.py \
-	agent_runtimes/specs/tools.py \
+	agent_runtimes/specs/backend_tools.py \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/ui_plugins.py \
@@ -463,11 +463,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/skills \
 	  --python-output agent_runtimes/specs/skills.py \
 	  --typescript-output src/specs/skills.ts
-	$(call step,Generating tool specifications)
-	python scripts/codegen/generate_tools.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/tools \
-	  --python-output agent_runtimes/specs/tools.py \
-	  --typescript-output src/specs/tools.ts
+	$(call step,Generating backend tool specifications)
+	python scripts/codegen/generate_backend_tools.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/backend-tools \
+	  --python-output agent_runtimes/specs/backend_tools.py \
+	  --typescript-output src/specs/backendTools.ts
 	$(call step,Generating frontend tool specifications)
 	python scripts/codegen/generate_frontend_tools.py \
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/frontend-tools \

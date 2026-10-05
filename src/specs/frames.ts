@@ -72,7 +72,7 @@ export const BOARD_REPORTING_FRAME_0_0_1: FrameSpec = {
   architecture: '',
   prompts: [],
   skills: [],
-  tools: [],
+  backendTools: [],
   mcpServers: [],
   guards: [
     {
@@ -177,7 +177,7 @@ export const CUSTOMER_RESEARCH_FRAME_0_0_1: FrameSpec = {
   architecture: '',
   prompts: [],
   skills: ['text-summarizer:0.0.1'],
-  tools: [],
+  backendTools: [],
   mcpServers: [],
   guards: [
     {
@@ -255,7 +255,7 @@ export const DATALAYER_FRAME_0_0_1: FrameSpec = {
   architecture: '',
   prompts: [],
   skills: [],
-  tools: [],
+  backendTools: [],
   mcpServers: [],
   guards: [
     {
@@ -339,7 +339,7 @@ export const SALES_PIPELINE_FRAME_0_0_1: FrameSpec = {
   architecture: '',
   prompts: [],
   skills: ['events:0.0.1'],
-  tools: [],
+  backendTools: [],
   mcpServers: [],
   guards: [
     {
@@ -442,7 +442,7 @@ export const WEB_RESEARCH_FRAME_0_0_1: FrameSpec = {
   architecture: '',
   prompts: [],
   skills: ['crawl:0.0.1', 'github:0.0.1'],
-  tools: [],
+  backendTools: [],
   mcpServers: ['tavily:0.0.1'],
   guards: [
     {

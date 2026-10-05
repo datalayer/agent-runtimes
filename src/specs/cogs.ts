@@ -22,7 +22,7 @@ import {
   TEXT_SUMMARIZER_SKILL_SPEC_0_0_1,
 } from './skills';
 import type { SkillSpec } from '../types';
-import { RUNTIME_ECHO_TOOL_SPEC_0_0_1 } from './tools';
+import { RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1 } from './backendTools';
 import {
   JUPYTER_NOTEBOOK_FRONTEND_TOOL_SPEC_0_0_1,
   LEXICAL_DOCUMENT_FRONTEND_TOOL_SPEC_0_0_1,
@@ -64,11 +64,11 @@ function toAgentSkillSpec(skill: SkillSpec) {
 }
 
 /**
- * Map tool IDs to ToolSpec objects.
+ * Map backend tool IDs to BackendToolSpec objects.
  */
 const TOOL_MAP: Record<string, any> = {
-  'runtime-echo:0.0.1': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
-  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
+  'runtime-echo:0.0.1': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+  'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
 };
 
 /**
@@ -101,6 +101,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
   domain: 'market-analyst',
   enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [MCP_SERVER_MAP['tavily:0.0.1']],
   skills: [
     SKILL_MAP['github:0.0.1']
@@ -113,7 +114,7 @@ const COG_CRAWLER_AGENTSPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['crawl:0.0.1'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  tools: [],
+  backendTools: [],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
@@ -283,7 +284,7 @@ const COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],
@@ -474,7 +475,7 @@ const COG_SALES_PIPELINE_BOARD_REPORT_AGENTSPEC_0_0_1: Agentspec = {
       ? toAgentSkillSpec(SKILL_MAP['events:0.0.1'])
       : undefined,
   ].filter(Boolean) as SkillSpec[],
-  tools: [TOOL_MAP['runtime-echo:0.0.1']],
+  backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
   frontendTools: [
     FRONTEND_TOOL_MAP['jupyter-notebook:0.0.1'],
     FRONTEND_TOOL_MAP['lexical-document:0.0.1'],

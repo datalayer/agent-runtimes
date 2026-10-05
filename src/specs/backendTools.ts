@@ -4,7 +4,7 @@
  */
 
 /**
- * Tool Catalog
+ * Backend Tool Catalog
  *
  * Predefined runtime tools that can be attached to agents.
  *
@@ -12,13 +12,13 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { ToolSpec } from '../types';
+import type { BackendToolSpec } from '../types';
 
 // ============================================================================
-// Tool Definitions
+// Backend Tool Definitions
 // ============================================================================
 
-export const CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
+export const CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'create-plan',
   version: '0.0.1',
   name: 'Create Plan',
@@ -38,7 +38,7 @@ export const CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '📋',
 };
 
-export const CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
+export const CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'current-time',
   version: '0.0.1',
   name: 'Current Time',
@@ -57,7 +57,7 @@ export const CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🕒',
 };
 
-export const DECIDE_TOOL_SPEC_0_0_1: ToolSpec = {
+export const DECIDE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'decide',
   version: '0.0.1',
   name: 'Decide',
@@ -77,7 +77,7 @@ export const DECIDE_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '⚖️',
 };
 
-export const DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
+export const DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'display-recipe',
   version: '0.0.1',
   name: 'Display Recipe',
@@ -97,7 +97,7 @@ export const DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🍳',
 };
 
-export const EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
+export const EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'example-create-plan',
   version: '0.0.1',
   name: 'Create Plan',
@@ -117,7 +117,7 @@ export const EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '📋',
 };
 
-export const EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
+export const EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'example-current-time',
   version: '0.0.1',
   name: 'Current Time',
@@ -136,7 +136,7 @@ export const EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🕒',
 };
 
-export const EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
+export const EXAMPLE_DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'example-display-recipe',
   version: '0.0.1',
   name: 'Display Recipe',
@@ -156,7 +156,7 @@ export const EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🍳',
 };
 
-export const EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
+export const EXAMPLE_GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'example-generate-haiku',
   version: '0.0.1',
   name: 'Generate Haiku',
@@ -176,27 +176,28 @@ export const EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🖋️',
 };
 
-export const EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1: ToolSpec = {
-  id: 'example-generate-task-steps',
-  version: '0.0.1',
-  name: 'Generate Task Steps',
-  description:
-    'Generate task steps for human review and emit an AG-UI state snapshot.',
-  tags: ['example', 'ag-ui', 'human-in-the-loop'],
-  enabled: true,
-  approval: 'auto',
-  timeout: undefined,
-  requiresApproval: false,
-  runtime: {
-    language: 'python',
-    package: 'agent_runtimes.examples.tools.ag_ui',
-    method: 'generate_task_steps',
-  },
-  icon: '@primer/octicons-react:tasklist',
-  emoji: '🙋',
-};
+export const EXAMPLE_GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'example-generate-task-steps',
+    version: '0.0.1',
+    name: 'Generate Task Steps',
+    description:
+      'Generate task steps for human review and emit an AG-UI state snapshot.',
+    tags: ['example', 'ag-ui', 'human-in-the-loop'],
+    enabled: true,
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.examples.tools.ag_ui',
+      method: 'generate_task_steps',
+    },
+    icon: '@primer/octicons-react:tasklist',
+    emoji: '🙋',
+  };
 
-export const EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
+export const EXAMPLE_GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'example-get-weather',
   version: '0.0.1',
   name: 'Get Weather',
@@ -216,47 +217,49 @@ export const EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🌤️',
 };
 
-export const EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1: ToolSpec = {
-  id: 'example-render-a2ui-surface',
-  version: '0.0.1',
-  name: 'Render A2UI Surface',
-  description:
-    'Turn a declarative field spec into a validated A2UI v0.9 surface rendered live by the frontend as an interactive form/card.',
-  tags: ['example', 'ag-ui', 'a2ui', 'generative-ui'],
-  enabled: true,
-  approval: 'auto',
-  timeout: undefined,
-  requiresApproval: false,
-  runtime: {
-    language: 'python',
-    package: 'agent_runtimes.examples.tools.a2ui',
-    method: 'render_a2ui_surface',
-  },
-  icon: '@primer/octicons-react:browser',
-  emoji: '🎛️',
-};
+export const EXAMPLE_RENDER_A2UI_SURFACE_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'example-render-a2ui-surface',
+    version: '0.0.1',
+    name: 'Render A2UI Surface',
+    description:
+      'Turn a declarative field spec into a validated A2UI v0.9 surface rendered live by the frontend as an interactive form/card.',
+    tags: ['example', 'ag-ui', 'a2ui', 'generative-ui'],
+    enabled: true,
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.examples.tools.a2ui',
+      method: 'render_a2ui_surface',
+    },
+    icon: '@primer/octicons-react:browser',
+    emoji: '🎛️',
+  };
 
-export const EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
-  id: 'example-update-plan-step',
-  version: '0.0.1',
-  name: 'Update Plan Step',
-  description:
-    'Update a plan step and emit an AG-UI state delta (JSON Patch RFC 6902).',
-  tags: ['example', 'ag-ui', 'state'],
-  enabled: true,
-  approval: 'auto',
-  timeout: undefined,
-  requiresApproval: false,
-  runtime: {
-    language: 'python',
-    package: 'agent_runtimes.examples.tools.ag_ui',
-    method: 'update_plan_step',
-  },
-  icon: '@primer/octicons-react:checklist',
-  emoji: '✅',
-};
+export const EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec =
+  {
+    id: 'example-update-plan-step',
+    version: '0.0.1',
+    name: 'Update Plan Step',
+    description:
+      'Update a plan step and emit an AG-UI state delta (JSON Patch RFC 6902).',
+    tags: ['example', 'ag-ui', 'state'],
+    enabled: true,
+    approval: 'auto',
+    timeout: undefined,
+    requiresApproval: false,
+    runtime: {
+      language: 'python',
+      package: 'agent_runtimes.examples.tools.ag_ui',
+      method: 'update_plan_step',
+    },
+    icon: '@primer/octicons-react:checklist',
+    emoji: '✅',
+  };
 
-export const GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
+export const GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'generate-haiku',
   version: '0.0.1',
   name: 'Generate Haiku',
@@ -276,7 +279,7 @@ export const GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🖋️',
 };
 
-export const GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1: ToolSpec = {
+export const GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'generate-task-steps',
   version: '0.0.1',
   name: 'Generate Task Steps',
@@ -296,7 +299,7 @@ export const GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🙋',
 };
 
-export const GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
+export const GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'get-weather',
   version: '0.0.1',
   name: 'Get Weather',
@@ -316,7 +319,7 @@ export const GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🌤️',
 };
 
-export const RUNTIME_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
+export const RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'runtime-echo',
   version: '0.0.1',
   name: 'Runtime Echo',
@@ -335,7 +338,7 @@ export const RUNTIME_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '💬',
 };
 
-export const RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1: ToolSpec = {
+export const RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'runtime-send-mail',
   version: '0.0.1',
   name: 'Runtime Send Mail (Fake)',
@@ -355,7 +358,7 @@ export const RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '📧',
 };
 
-export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
+export const RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'runtime-sensitive-echo',
   version: '0.0.1',
   name: 'Runtime Sensitive Echo',
@@ -374,7 +377,7 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
   emoji: '🛡️',
 };
 
-export const UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
+export const UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1: BackendToolSpec = {
   id: 'update-plan-step',
   version: '0.0.1',
   name: 'Update Plan Step',
@@ -395,45 +398,49 @@ export const UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
 };
 
 // ============================================================================
-// Tool Catalog
+// Backend Tool Catalog
 // ============================================================================
 
-export const TOOL_CATALOG: Record<string, ToolSpec> = {
-  'create-plan': CREATE_PLAN_TOOL_SPEC_0_0_1,
-  'current-time': CURRENT_TIME_TOOL_SPEC_0_0_1,
-  decide: DECIDE_TOOL_SPEC_0_0_1,
-  'display-recipe': DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
-  'example-create-plan': EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1,
-  'example-current-time': EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1,
-  'example-display-recipe': EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1,
-  'example-generate-haiku': EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1,
-  'example-generate-task-steps': EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
-  'example-get-weather': EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1,
-  'example-render-a2ui-surface': EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1,
-  'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
-  'generate-haiku': GENERATE_HAIKU_TOOL_SPEC_0_0_1,
-  'generate-task-steps': GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1,
-  'get-weather': GET_WEATHER_TOOL_SPEC_0_0_1,
-  'runtime-echo': RUNTIME_ECHO_TOOL_SPEC_0_0_1,
-  'runtime-send-mail': RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1,
-  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1,
-  'update-plan-step': UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1,
+export const BACKEND_TOOL_CATALOG: Record<string, BackendToolSpec> = {
+  'create-plan': CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
+  'current-time': CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
+  decide: DECIDE_BACKEND_TOOL_SPEC_0_0_1,
+  'display-recipe': DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
+  'example-create-plan': EXAMPLE_CREATE_PLAN_BACKEND_TOOL_SPEC_0_0_1,
+  'example-current-time': EXAMPLE_CURRENT_TIME_BACKEND_TOOL_SPEC_0_0_1,
+  'example-display-recipe': EXAMPLE_DISPLAY_RECIPE_BACKEND_TOOL_SPEC_0_0_1,
+  'example-generate-haiku': EXAMPLE_GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
+  'example-generate-task-steps':
+    EXAMPLE_GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
+  'example-get-weather': EXAMPLE_GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+  'example-render-a2ui-surface':
+    EXAMPLE_RENDER_A2UI_SURFACE_BACKEND_TOOL_SPEC_0_0_1,
+  'example-update-plan-step': EXAMPLE_UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
+  'generate-haiku': GENERATE_HAIKU_BACKEND_TOOL_SPEC_0_0_1,
+  'generate-task-steps': GENERATE_TASK_STEPS_BACKEND_TOOL_SPEC_0_0_1,
+  'get-weather': GET_WEATHER_BACKEND_TOOL_SPEC_0_0_1,
+  'runtime-echo': RUNTIME_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+  'runtime-send-mail': RUNTIME_SEND_MAIL_BACKEND_TOOL_SPEC_0_0_1,
+  'runtime-sensitive-echo': RUNTIME_SENSITIVE_ECHO_BACKEND_TOOL_SPEC_0_0_1,
+  'update-plan-step': UPDATE_PLAN_STEP_BACKEND_TOOL_SPEC_0_0_1,
 };
 
-export function getToolSpecs(): ToolSpec[] {
-  return Object.values(TOOL_CATALOG);
+export function getBackendToolSpecs(): BackendToolSpec[] {
+  return Object.values(BACKEND_TOOL_CATALOG);
 }
 
-function resolveToolId(toolId: string): string {
-  if (toolId in TOOL_CATALOG) return toolId;
+function resolveBackendToolId(toolId: string): string {
+  if (toolId in BACKEND_TOOL_CATALOG) return toolId;
   const idx = toolId.lastIndexOf(':');
   if (idx > 0) {
     const base = toolId.slice(0, idx);
-    if (base in TOOL_CATALOG) return base;
+    if (base in BACKEND_TOOL_CATALOG) return base;
   }
   return toolId;
 }
 
-export function getToolSpec(toolId: string): ToolSpec | undefined {
-  return TOOL_CATALOG[resolveToolId(toolId)];
+export function getBackendToolSpec(
+  toolId: string,
+): BackendToolSpec | undefined {
+  return BACKEND_TOOL_CATALOG[resolveBackendToolId(toolId)];
 }

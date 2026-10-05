@@ -18,7 +18,7 @@
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { SKILLS_CATALOG } from '../../specs/skills';
 import { FRONTEND_TOOL_CATALOG } from '../../specs/frontendTools';
-import { TOOL_CATALOG } from '../../specs/tools';
+import { BACKEND_TOOL_CATALOG } from '../../specs/backendTools';
 
 /** The two marks of a catalogue entry. */
 export interface Marks {
@@ -92,7 +92,7 @@ function frontendTools(): Map<string, { id: string } & Marks> {
 function runtimeTools(): Map<string, { id: string } & Marks> {
   if (!runtimeIndex) {
     runtimeIndex = new Map();
-    for (const spec of Object.values(TOOL_CATALOG)) {
+    for (const spec of Object.values(BACKEND_TOOL_CATALOG)) {
       const method = spec.runtime?.method;
       if (method && !runtimeIndex.has(method)) {
         runtimeIndex.set(method, { id: spec.id, ...marksOf(spec) });

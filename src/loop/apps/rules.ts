@@ -36,7 +36,7 @@
  * @module loop/apps/rules
  */
 
-import { SERVER_ACTIONS, TOOL_ACTIONS } from '../../specs/actions';
+import { SERVER_ACTIONS, BACKEND_TOOL_ACTIONS } from '../../specs/actions';
 import type {
   ActionClass,
   ActionConditionSpec,
@@ -178,7 +178,7 @@ function entryOf(
 export function classesOf(ref: string, args?: ToolArguments): ActionClass[] {
   const [server, name] = splitRef(ref);
   if (server === undefined) {
-    return [...(own(TOOL_ACTIONS, name) ?? [])];
+    return [...(own(BACKEND_TOOL_ACTIONS, name) ?? [])];
   }
   const [classes, conditions] = entryOf(server, name);
   for (const condition of conditions) {

@@ -18,7 +18,7 @@ from agent_runtimes.types import ServerActionsSpec
 ACTION_CLASSES: List[str] = ["read", "write", "send", "buy", "delete", "publish"]
 
 #: What each tool of the tools catalogue does, by id.
-TOOL_ACTIONS: Dict[str, List[str]] = {
+BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
     "create-plan": ["read"],
     "current-time": ["read"],
     "decide": ["read"],

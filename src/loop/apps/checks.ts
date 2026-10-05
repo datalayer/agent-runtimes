@@ -38,7 +38,7 @@ import { getModel } from '../../specs/models';
 import { getNotificationSpec } from '../../specs/notifications';
 import { getSkillSpec } from '../../specs/skills';
 import { getTeamSpec } from '../../specs/teams';
-import { getToolSpec } from '../../specs/tools';
+import { getBackendToolSpec } from '../../specs/backendTools';
 import { getTrack } from '../../specs/tracks';
 import type {
   ActionClass,
@@ -224,7 +224,7 @@ function referenceProblems(
     if (!getSkillSpec(idOf(ref))) missing('skill', ref);
   }
   for (const ref of app.tools) {
-    if (!getToolSpec(idOf(ref))) missing('tool', ref);
+    if (!getBackendToolSpec(idOf(ref))) missing('tool', ref);
   }
   for (const ref of app.checks.guards) {
     if (!own(GUARD_CATALOGUE, idOf(ref))) missing('Guard', ref);
@@ -293,7 +293,7 @@ function referenceProblems(
       if (CLASS_NAMES.has(target)) continue;
       const [server, name] = splitRef(target);
       if (server === undefined) {
-        if (!getToolSpec(name)) {
+        if (!getBackendToolSpec(name)) {
           problems.push(
             `The rule “${rule.action}” names the tool “${target}”, which the catalogue does not have.`,
           );
@@ -415,7 +415,7 @@ function setupNotes(app: AppSpec): string[] {
     );
   }
   for (const ref of app.skills) note('skill', ref, getSkillSpec(idOf(ref)));
-  for (const ref of app.tools) note('tool', ref, getToolSpec(idOf(ref)));
+  for (const ref of app.tools) note('tool', ref, getBackendToolSpec(idOf(ref)));
   for (const ref of app.checks.guards)
     note('Guard', ref, own(GUARD_CATALOGUE, idOf(ref)));
   for (const ref of app.checks.gates) note('Gate', ref, getGate(ref));
