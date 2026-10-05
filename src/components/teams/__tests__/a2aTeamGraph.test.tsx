@@ -12,10 +12,30 @@
 import * as React from 'react';
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ANSWER_SHOWN_MS, flowAfter, flowEnds } from '../a2aTeamFlow';
-import { A2ATeamGraph, flowWords, teamViewport } from '../A2ATeamGraph';
+import {
+  ANSWER_SHOWN_MS,
+  CALL_SHOWN_MS,
+  callsAfter,
+  connectionOfTool,
+  flowAfter,
+  flowEnds,
+  pruneCalls,
+  toolWords,
+  type A2ATeamCall,
+  type A2ATeamConnection,
+} from '../a2aTeamFlow';
+import { ReactFlowProvider } from '@xyflow/react';
+import {
+  A2ATeamGraph,
+  CallEdge,
+  flowWords,
+  teamViewport,
+} from '../A2ATeamGraph';
+import { teamConnectionsOf } from '../teamConnections';
 import { AT_REST, balloonLine, type A2ATeamPersona } from '../useA2ATeam';
 import type { A2ATeamFlow } from '../a2aTeamFlow';
+import type { A2APeerEvent } from '../../../runtimes/browser/a2aPeer';
+import { ACCOUNTING_APP_0_0_1 } from '../../../specs/apps';
 
 beforeAll(() => {
   // React Flow measures its box; jsdom has no layout.
@@ -152,5 +172,249 @@ describe('A2ATeamGraph', () => {
       'Accounting answers Sales',
     );
     expect(flowWords('still', 'Sales', 'Accounting')).toBe('');
+  });
+});
+
+const ODOO: A2ATeamConnection = {
+  id: 'odoo-accounting',
+  name: 'Odoo Accounting',
+  label: 'Odoo',
+  emoji: '🧮',
+  via: 'via MCP',
+  tools: ['odoo_accounting_list_invoices', 'odoo_accounting_trial_balance'],
+  prefix: 'odoo_accounting_',
+};
+
+const call = (name: string, ended = false, id = 'c1'): A2APeerEvent => ({
+  phase: 'working',
+  taskId: 't',
+  tool: { id, name, ended },
+});
+
+describe("Accounting's connections", () => {
+  it('are read from its Appspec: the odoo-accounting server, its mark and its tools', () => {
+    const [odoo, ...others] = teamConnectionsOf(ACCOUNTING_APP_0_0_1);
+    expect(others).toEqual([]);
+    expect(odoo).toMatchObject({
+      id: 'odoo-accounting',
+      name: 'Odoo Accounting',
+      label: 'Odoo',
+      icon: '@datalayer/icons-react:odoo',
+      via: 'via MCP',
+      prefix: 'odoo_accounting_',
+    });
+    expect(odoo.tools).toContain('odoo_accounting_list_invoices');
+  });
+
+  it('own the tools named for them, with or without a host prefix', () => {
+    expect(connectionOfTool('odoo_accounting_list_invoices', [ODOO])).toBe(
+      ODOO,
+    );
+    expect(
+      connectionOfTool('odoo-accounting_odoo_accounting_trial_balance', [ODOO]),
+    ).toBe(ODOO);
+    expect(connectionOfTool('odoo_accounting_new_tool', [ODOO])).toBe(ODOO);
+    expect(connectionOfTool('tavily_search', [ODOO])).toBeUndefined();
+    expect(toolWords('odoo_accounting_list_invoices', ODOO)).toBe(
+      'list invoices',
+    );
+  });
+});
+
+describe('callsAfter', () => {
+  it('keeps a call from its start to its end, and shows a quick one a moment longer', () => {
+    let calls = callsAfter(
+      [],
+      call('odoo_accounting_list_invoices'),
+      'accounting',
+      [ODOO],
+      1000,
+    ).calls;
+    expect(calls).toEqual([
+      {
+        member: 'accounting',
+        connection: 'odoo-accounting',
+        tool: 'odoo_accounting_list_invoices',
+        id: 'c1',
+        started: 1000,
+      },
+    ]);
+    // Ended at once: still shown until CALL_SHOWN_MS has passed.
+    const quick = callsAfter(
+      calls,
+      call('odoo_accounting_list_invoices', true),
+      'accounting',
+      [ODOO],
+      1200,
+    );
+    expect(quick.holdMs).toBe(CALL_SHOWN_MS - 200);
+    expect(quick.calls[0].ended).toBe(true);
+    expect(pruneCalls(quick.calls, 1000 + CALL_SHOWN_MS)).toEqual([]);
+    // Ended after it was shown long enough: gone.
+    calls = callsAfter(
+      calls,
+      call('odoo_accounting_list_invoices', true),
+      'accounting',
+      [ODOO],
+      1000 + CALL_SHOWN_MS + 1,
+    ).calls;
+    expect(calls).toEqual([]);
+  });
+
+  it('ignores the tools of nothing drawn, and ends every call with the answer', () => {
+    const started = callsAfter(
+      [],
+      call('odoo_accounting_trial_balance'),
+      'accounting',
+      [ODOO],
+      0,
+    ).calls;
+    expect(
+      callsAfter(started, call('tavily_search'), 'accounting', [ODOO], 1).calls,
+    ).toBe(started);
+    expect(
+      callsAfter(
+        started,
+        { phase: 'answered', taskId: 't', answer: 'done' },
+        'accounting',
+        [ODOO],
+        2,
+      ).calls,
+    ).toEqual([]);
+  });
+});
+
+function TeamWithOdoo({ calls }: { calls: A2ATeamCall[] }) {
+  return (
+    <A2ATeamGraph
+      entry={member('sales', 'Sales', AT_REST)}
+      peer={{
+        ...member('accounting', 'Accounting', {
+          ...AT_REST,
+          state: 'working',
+        }),
+        connections: [ODOO],
+      }}
+      flow="asking"
+      connected
+      calls={calls}
+    />
+  );
+}
+
+/** A page's graph, driven by what Accounting tells over A2A. */
+function DrivenByEvents({ events }: { events: A2APeerEvent[] }) {
+  let calls: A2ATeamCall[] = [];
+  events.forEach((event, at) => {
+    calls = callsAfter(calls, event, 'accounting', [ODOO], at * 10_000).calls;
+  });
+  return <TeamWithOdoo calls={calls} />;
+}
+
+describe('A2ATeamGraph with a connection', () => {
+  it('draws Odoo under Accounting: its mark, its name and how it is reached', () => {
+    const { container } = render(<TeamWithOdoo calls={[]} />);
+    const odoo = container.querySelector(
+      '[data-team-connection="odoo-accounting"]',
+    );
+    expect(odoo?.textContent).toContain('Odoo');
+    expect(odoo?.querySelector('[data-connection-via]')?.textContent).toBe(
+      'via MCP',
+    );
+    expect(odoo?.querySelector('[data-mark]')).not.toBeNull();
+    expect(odoo?.getAttribute('data-connection-busy')).toBe('false');
+    // The library's credit is not on the page.
+    expect(container.querySelector('.react-flow__attribution')).toBeNull();
+  });
+
+  it('flows toward Odoo while Accounting calls one of its tools, and stops when it ends', () => {
+    const asked: A2APeerEvent = { phase: 'asked', request: 'Open invoices?' };
+    const { container, rerender } = render(
+      <DrivenByEvents
+        events={[asked, call('odoo_accounting_list_invoices')]}
+      />,
+    );
+    const graph = () => container.querySelector('[data-a2a-team-graph]');
+    expect(
+      container
+        .querySelector('[data-team-connection="odoo-accounting"]')
+        ?.getAttribute('data-connection-busy'),
+    ).toBe('true');
+    expect(graph()?.getAttribute('data-a2a-calls')).toBe('1');
+    expect(graph()?.textContent).toContain(
+      'Accounting calls Odoo · list invoices',
+    );
+    act(() =>
+      rerender(
+        <DrivenByEvents
+          events={[
+            asked,
+            call('odoo_accounting_list_invoices'),
+            call('odoo_accounting_list_invoices', true),
+          ]}
+        />,
+      ),
+    );
+    expect(
+      container
+        .querySelector('[data-team-connection="odoo-accounting"]')
+        ?.getAttribute('data-connection-busy'),
+    ).toBe('false');
+    expect(graph()?.getAttribute('data-a2a-calls')).toBe('0');
+    expect(graph()?.textContent).not.toContain('calls Odoo');
+  });
+
+  it('under reduced motion, keeps the arrow and the words, without movement', () => {
+    const { container } = render(
+      <DrivenByEvents events={[call('odoo_accounting_trial_balance')]} />,
+    );
+    // Told to a screen reader, and on the edge, in words.
+    expect(container.textContent).toContain(
+      'Accounting calls Odoo · trial balance',
+    );
+    const css = Array.from(document.querySelectorAll('style'))
+      .map(style => style.textContent ?? '')
+      .join('\n');
+    const reduced = css.slice(css.indexOf('prefers-reduced-motion'));
+    expect(reduced).toMatch(
+      /a2a-team-flow[^{]*a2a-team-connection-busy[^{]*\{[^}]*animation:\s*none/,
+    );
+  });
+});
+
+/** The edge from a member to its connection, drawn alone (jsdom measures no handles). */
+function Edge({ calling }: { calling: string }) {
+  return (
+    <ReactFlowProvider>
+      <svg>
+        <CallEdge
+          {...({
+            id: 'accounting->accounting/odoo-accounting',
+            source: 'accounting',
+            target: 'accounting/odoo-accounting',
+            sourceX: 100,
+            sourceY: 0,
+            targetX: 100,
+            targetY: 44,
+            data: { calling },
+          } as unknown as React.ComponentProps<typeof CallEdge>)}
+        />
+      </svg>
+    </ReactFlowProvider>
+  );
+}
+
+describe('The edge to a connection', () => {
+  it('is still at rest, and flows toward the connection with an arrow while a call runs', () => {
+    const { container, rerender } = render(<Edge calling="" />);
+    expect(container.querySelector('[data-mcp-edge-call]')).toBeNull();
+    act(() => rerender(<Edge calling="list invoices" />));
+    const call = container.querySelector('[data-mcp-edge-call]');
+    expect(call?.getAttribute('data-mcp-edge-call')).toBe('list invoices');
+    // The moving dashes, and the arrow that says the way without them.
+    expect(call?.querySelector('.a2a-team-call.a2a-team-flow')).not.toBeNull();
+    expect(call?.querySelectorAll('path').length).toBe(2);
+    act(() => rerender(<Edge calling="" />));
+    expect(container.querySelector('[data-mcp-edge-call]')).toBeNull();
   });
 });

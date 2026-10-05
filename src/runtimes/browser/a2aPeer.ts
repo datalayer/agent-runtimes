@@ -109,10 +109,30 @@ export async function connectA2APeer(
   return { client, card, skill };
 }
 
+/**
+ * A tool the peer calls while it works, as its runtime tells it: the call,
+ * then its end (`ended`), the two sharing the call's id.
+ */
+export type A2APeerToolStep = {
+  /** The call's id, when the runtime gives one: its end has the same. */
+  id?: string;
+  name: string;
+  /** Whether this is the call's end rather than its start. */
+  ended: boolean;
+  /** Why it failed, when it did. */
+  error?: string;
+};
+
 /** What happens to one request, as it happens. */
 export type A2APeerEvent =
   | { phase: 'asked'; request: string }
-  | { phase: 'working'; taskId: string; note?: string }
+  | {
+      phase: 'working';
+      taskId: string;
+      note?: string;
+      /** The tool it calls or has finished with, when the step is one. */
+      tool?: A2APeerToolStep;
+    }
   | { phase: 'answered'; taskId: string; answer: string }
   | { phase: 'failed'; error: string };
 
@@ -144,26 +164,51 @@ export function textMessage(text: string): Message {
   };
 }
 
-/** What a tool call or a tool result says while the peer works, in a few words. */
-function noteOf(message: Message | undefined): string | undefined {
+/**
+ * What a working status says while the peer works: in a few words, and the
+ * tool step when it is one.
+ *
+ * The runtime's A2A worker publishes each tool call of its agent, and each
+ * call's end, as a `working` status whose message has one data part:
+ * `{tool_call: {id, name, arguments}}`, then
+ * `{tool_result: {id, name, result, error}}`.
+ */
+export function stepOf(message: Message | undefined): {
+  note?: string;
+  tool?: A2APeerToolStep;
+} {
   for (const part of message?.parts ?? []) {
     const content = part.content;
     if (content?.$case === 'text' && content.value.trim()) {
-      return content.value;
+      return { note: content.value };
     }
     if (content?.$case === 'data' && content.value) {
-      // What the runtime's A2A worker publishes while its agent works.
       const data = content.value as {
-        tool_call?: { name?: string };
-        tool_result?: { name?: string };
+        tool_call?: { id?: string | null; name?: string | null };
+        tool_result?: {
+          id?: string | null;
+          name?: string | null;
+          error?: string | null;
+        };
       };
-      const name = (data.tool_call ?? data.tool_result)?.name;
-      if (name) {
-        return data.tool_call ? `Calling ${name}` : `Read ${name}`;
+      const told = data.tool_call ?? data.tool_result;
+      if (told?.name) {
+        const ended = !data.tool_call;
+        return {
+          note: ended ? `Read ${told.name}` : `Calling ${told.name}`,
+          tool: {
+            ...(told.id ? { id: told.id } : {}),
+            name: told.name,
+            ended,
+            ...(data.tool_result?.error
+              ? { error: String(data.tool_result.error) }
+              : {}),
+          },
+        };
       }
     }
   }
-  return undefined;
+  return {};
 }
 
 const ENDED_BADLY: Partial<Record<TaskState, string>> = {
@@ -231,7 +276,7 @@ async function streamTask(
       const status = payload.value.status;
       taskId = payload.value.taskId || taskId;
       if (status?.state === TaskState.TASK_STATE_WORKING) {
-        onEvent?.({ phase: 'working', taskId, note: noteOf(status.message) });
+        onEvent?.({ phase: 'working', taskId, ...stepOf(status.message) });
       } else if (status) {
         ended = status.state;
         final = textOf(status.message?.parts) || final;

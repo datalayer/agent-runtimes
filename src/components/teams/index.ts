@@ -13,5 +13,6 @@
  */
 
 export * from './a2aTeamFlow';
+export * from './teamConnections';
 export * from './useA2ATeam';
 export * from './A2ATeamGraph';

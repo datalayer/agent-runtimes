@@ -115,6 +115,11 @@ describe('Sales asks Accounting over A2A', () => {
       'Calling odoo_accounting_list_invoices',
       'Read odoo_accounting_list_invoices',
     ]);
+    // Each tool call and its end, as the runtime's A2A worker tells them.
+    expect(working.map(event => event.tool).filter(Boolean)).toEqual([
+      { id: 'c1', name: 'odoo_accounting_list_invoices', ended: false },
+      { id: 'c1', name: 'odoo_accounting_list_invoices', ended: true },
+    ]);
     expect(events.at(-1)).toMatchObject({ phase: 'answered', answer: REPORT });
   });
 

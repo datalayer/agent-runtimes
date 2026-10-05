@@ -242,6 +242,48 @@ class TestTheWire:
         assert "user_token" not in agent.contexts[0].metadata
 
     @pytest.mark.asyncio
+    async def test_each_tool_call_and_its_end_reach_the_caller_as_working_statuses(
+        self, state: Any, monkeypatch: Any
+    ) -> None:
+        """What a page draws on the edge to Odoo: the tool, while it runs."""
+        call = {"id": "c-1", "name": "odoo_accounting_list_invoices", "arguments": {}}
+        ended = {**call, "result": "2 open", "error": None}
+
+        async def stream(self: Any, prompt: str, context: Any) -> Any:
+            self.contexts.append(context)
+            yield StreamEvent(type="tool_call", data=call)
+            yield StreamEvent(type="tool_result", data=ended)
+            yield StreamEvent(type="text", data=REPORT)
+
+        monkeypatch.setattr(Accounting, "stream", stream)
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post("/", json=_stream_request("Open invoices?"))
+        updates = [
+            event["result"]["statusUpdate"]["status"]
+            for event in _events(response.text)
+            if "statusUpdate" in event["result"]
+        ]
+        told = [
+            part["data"]
+            for status in updates
+            if status["state"] == "TASK_STATE_WORKING" and "message" in status
+            for part in status["message"]["parts"]
+            if "data" in part
+        ]
+        assert told == [
+            {"tool_call": call},
+            {
+                "tool_result": {
+                    "id": "c-1",
+                    "name": "odoo_accounting_list_invoices",
+                    "result": "2 open",
+                    "error": None,
+                }
+            },
+        ]
+        assert updates[-1]["state"] == "TASK_STATE_COMPLETED"
+
+    @pytest.mark.asyncio
     async def test_fasta2a_s_own_method_names_are_answered_as_before(
         self, state: Any
     ) -> None:

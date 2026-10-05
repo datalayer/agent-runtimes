@@ -14,7 +14,9 @@
  * {@link a2aPeerTool}. What each of them does is kept as a persona — the
  * state its character acts and what its balloon says — and the exchange
  * between them as a log, the peer's last answer as the report, and the way
- * the link carries a message as the flow ({@link flowAfter}).
+ * the link carries a message as the flow ({@link flowAfter}). The tools the
+ * peer calls on its connections (its MCP servers), told over A2A as it calls
+ * them, are kept as the calls running now ({@link callsAfter}).
  *
  * What `A2ATeamGraph` draws, and what a page's composer sends.
  *
@@ -34,7 +36,16 @@ import {
   type A2APeerEvent,
 } from '../../runtimes/browser/a2aPeer';
 import type { AppSpec } from '../../types/agentspecs';
-import { flowAfter, type A2ATeamFlow } from './a2aTeamFlow';
+import {
+  callsAfter,
+  flowAfter,
+  pruneCalls,
+  type A2ATeamCall,
+  type A2ATeamConnection,
+  type A2ATeamFlow,
+} from './a2aTeamFlow';
+
+const NO_CONNECTIONS: A2ATeamConnection[] = [];
 
 /** What one member's character does: its state, its balloon, and whether it was sent away. */
 export type A2ATeamPersona = {
@@ -74,6 +85,8 @@ export type UseA2ATeamOptions = {
   askTool?: string;
   /** The most steps of one turn. */
   maxSteps?: number;
+  /** The peer's connections (`teamConnectionsOf(peerApp)`): the calls to them are kept. */
+  peerConnections?: A2ATeamConnection[];
 };
 
 export type A2ATeam = {
@@ -88,6 +101,8 @@ export type A2ATeam = {
   report: string | null;
   /** Which way the link carries a message now. */
   flow: A2ATeamFlow;
+  /** The tool calls the peer's connections are answering now. */
+  calls: A2ATeamCall[];
   /** Whether a turn is under way. */
   busy: boolean;
   /** Whether the entry can be asked: its peer is connected. */
@@ -98,7 +113,14 @@ export type A2ATeam = {
 
 /** Run a team of two over A2A in the page. */
 export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
-  const { entry, peerApp, peer, inference, maxSteps = 6 } = options;
+  const {
+    entry,
+    peerApp,
+    peer,
+    inference,
+    maxSteps = 6,
+    peerConnections = NO_CONNECTIONS,
+  } = options;
   const askTool = options.askTool ?? `ask_${peerApp.id.replace(/-/g, '_')}`;
   const [entryPersona, setEntryPersona] = useState<A2ATeamPersona>(() => ({
     ...AT_REST,
@@ -111,6 +133,11 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   const [report, setReport] = useState<string | null>(null);
   const [exchange, setExchange] = useState<string[]>([]);
   const [flow, setFlow] = useState<A2ATeamFlow>('still');
+  const [calls, setCalls] = useState<A2ATeamCall[]>([]);
+  const callsNow = useRef<A2ATeamCall[]>([]);
+  const callTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const [busy, setBusy] = useState(false);
   const history = useRef<ModelMessage[]>([]);
   const abort = useRef<AbortController | null>(null);
@@ -126,6 +153,24 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       setFlow(next.flow);
       if (next.holdMs) {
         flowTimer.current = setTimeout(() => setFlow('still'), next.holdMs);
+      }
+      // The calls to the peer's connections: a call's end, when it came
+      // quickly, is shown a moment longer.
+      const after = callsAfter(
+        callsNow.current,
+        event,
+        peerApp.id,
+        peerConnections,
+        Date.now(),
+      );
+      callsNow.current = after.calls;
+      setCalls(after.calls);
+      if (after.holdMs) {
+        clearTimeout(callTimer.current);
+        callTimer.current = setTimeout(() => {
+          callsNow.current = pruneCalls(callsNow.current, Date.now());
+          setCalls(callsNow.current);
+        }, after.holdMs);
       }
       if (event.phase === 'asked') {
         setExchange(prev => [
@@ -173,7 +218,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       }
     },
-    [entry.name, peerApp.name],
+    [entry.name, peerApp.id, peerApp.name, peerConnections],
   );
 
   const agent = useMemo(() => {
@@ -269,6 +314,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           insist: true,
         }));
         setFlow('still');
+        callsNow.current = [];
+        setCalls([]);
       } finally {
         abort.current = null;
         setBusy(false);
@@ -283,6 +330,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     () => () => {
       abort.current?.abort();
       clearTimeout(flowTimer.current);
+      clearTimeout(callTimer.current);
     },
     [],
   );
@@ -305,6 +353,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     exchange,
     report,
     flow,
+    calls,
     busy,
     ready: agent !== null,
     send,

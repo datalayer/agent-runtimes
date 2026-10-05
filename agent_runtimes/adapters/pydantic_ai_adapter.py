@@ -102,6 +102,28 @@ def model_messages(history: list[Any]) -> list[ModelMessage]:
     return messages
 
 
+def _tool_call_of(event: Any) -> dict[str, Any]:
+    """A tool call as the stream tells it: its id, its name and its arguments."""
+    part = event.part
+    try:
+        arguments = part.args_as_dict()
+    except Exception:  # Arguments the model wrote badly: the call is still told.
+        arguments = {}
+    return {"id": part.tool_call_id, "name": part.tool_name, "arguments": arguments}
+
+
+def _tool_result_of(event: Any, retry_part: type) -> dict[str, Any]:
+    """A tool call's end as the stream tells it: what it returned, or why it is retried."""
+    part = event.part
+    retried = isinstance(part, retry_part)
+    return {
+        "id": part.tool_call_id,
+        "name": part.tool_name,
+        "result": None if retried else part.content,
+        "error": str(part.content) if retried else None,
+    }
+
+
 class PydanticAIAdapter(BaseAgent):
     """
     Adapter for Pydantic AI agents.
@@ -883,7 +905,14 @@ class PydanticAIAdapter(BaseAgent):
         import asyncio
         import time
 
-        from pydantic_ai.messages import PartDeltaEvent, PartStartEvent, TextPartDelta
+        from pydantic_ai.messages import (
+            FunctionToolCallEvent,
+            FunctionToolResultEvent,
+            PartDeltaEvent,
+            PartStartEvent,
+            RetryPromptPart,
+            TextPartDelta,
+        )
 
         # The conversation before the prompt, as pydantic-ai's own messages.
         message_history = model_messages(context.conversation_history)
@@ -930,22 +959,40 @@ class PydanticAIAdapter(BaseAgent):
 
             for continuation_round in range(_MAX_DEFERRED_APPROVAL_CONTINUATIONS + 1):
                 # -- per-round queue & handler --------------------------------
-                text_queue: asyncio.Queue[str | None] = asyncio.Queue()
+                text_queue: asyncio.Queue[StreamEvent | None] = asyncio.Queue()
 
                 async def _event_handler(_run_ctx: Any, events: Any) -> None:
                     # Called for each model request of the run, so the text of
                     # every round is the stream's; a part's first chunk arrives
-                    # as the part's start, and the rest as deltas.
+                    # as the part's start, and the rest as deltas. Each tool
+                    # call is told as it starts and as it ends, in the order
+                    # they happen among the text: a caller over A2A sees which
+                    # tool its peer is using, and for how long.
                     async for ev in events:
                         if isinstance(ev, PartStartEvent) and isinstance(
                             ev.part, TextPart
                         ):
                             if ev.part.content:
-                                await text_queue.put(ev.part.content)
+                                await text_queue.put(
+                                    StreamEvent(type="text", data=ev.part.content)
+                                )
                         elif isinstance(ev, PartDeltaEvent) and isinstance(
                             ev.delta, TextPartDelta
                         ):
-                            await text_queue.put(ev.delta.content_delta)
+                            await text_queue.put(
+                                StreamEvent(type="text", data=ev.delta.content_delta)
+                            )
+                        elif isinstance(ev, FunctionToolCallEvent):
+                            await text_queue.put(
+                                StreamEvent(type="tool_call", data=_tool_call_of(ev))
+                            )
+                        elif isinstance(ev, FunctionToolResultEvent):
+                            await text_queue.put(
+                                StreamEvent(
+                                    type="tool_result",
+                                    data=_tool_result_of(ev, RetryPromptPart),
+                                )
+                            )
 
                 run_kwargs: dict[str, Any] = {
                     "message_history": current_message_history,
@@ -991,10 +1038,10 @@ class PydanticAIAdapter(BaseAgent):
                 # -- yield text deltas from queue -----------------------------
                 try:
                     while True:
-                        text_delta = await text_queue.get()
-                        if text_delta is None:
+                        streamed = await text_queue.get()
+                        if streamed is None:
                             break
-                        yield StreamEvent(type="text", data=text_delta)
+                        yield streamed
                 except BaseException:
                     run_task.cancel()
                     raise

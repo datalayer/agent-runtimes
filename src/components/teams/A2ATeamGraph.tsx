@@ -14,6 +14,13 @@
  * who asks for no motion sees the same thing without the movement: the arrow
  * at the end the message goes to, and the word for it on the edge.
  *
+ * A member's connections — the MCP servers it reaches, Odoo for Accounting —
+ * hang under it, each a node half a member's size with the server's mark
+ * (`SpecMark`), linked to it by an edge of its own. That edge is still until
+ * the member calls one of the connection's tools: then it flows toward the
+ * connection for as long as the call runs ({@link A2ATeamCall}), with the
+ * tool's name on it; under reduced motion, the arrow and the words alone.
+ *
  * The graph is a picture, not an editor: nothing is dragged, panned or
  * zoomed, and the wheel scrolls the page. Its viewport is worked out from its
  * box, so it fits a phone as it fits a desk.
@@ -47,7 +54,13 @@ import '@xyflow/react/dist/base.css';
 import { Button, Label, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { AssistantStage } from '../../chat/assistant/AssistantStage';
-import type { A2ATeamFlow } from './a2aTeamFlow';
+import { SpecMark } from '../../chat/marks/SpecMark';
+import {
+  toolWords,
+  type A2ATeamCall,
+  type A2ATeamConnection,
+  type A2ATeamFlow,
+} from './a2aTeamFlow';
 import type { A2ATeamPersona } from './useA2ATeam';
 
 /** One member of the team, as the graph draws it. */
@@ -64,6 +77,8 @@ export type A2ATeamGraphMember = {
   onToggle?: () => void;
   /** It was sent away, or called back. */
   onAway?: (away: boolean) => void;
+  /** The MCP servers it reaches, drawn under it (`teamConnectionsOf`). */
+  connections?: A2ATeamConnection[];
 };
 
 export type A2ATeamGraphProps = {
@@ -79,6 +94,8 @@ export type A2ATeamGraphProps = {
   label?: string;
   /** The character's size, in pixels at full scale. */
   size?: number;
+  /** The tool calls running now, to the members' connections (`useA2ATeam`). */
+  calls?: A2ATeamCall[];
 };
 
 /** The graph's own coordinates: the members, and room above them for their balloons. */
@@ -86,6 +103,11 @@ const NODE_WIDTH = 200;
 const BALLOON_ROOM = 120;
 const GAP = 220;
 const WIDTH = NODE_WIDTH * 2 + GAP;
+/** A connection's node: half a member's. */
+const CONNECTION_WIDTH = NODE_WIDTH / 2;
+/** Between a member and its connections. */
+const CONNECTION_GAP = 44;
+const CONNECTIONS_APART = 16;
 
 /** Where the edge leaves and reaches a member: the middle of its character. */
 const HANDLE = (size: number) => ({
@@ -112,6 +134,13 @@ type MemberData = {
  * moved. The nodes stay the same objects; what they show is read from here.
  */
 const Members = createContext<Record<string, A2ATeamGraphMember>>({});
+
+/** The connections being called now, by node id: read by their nodes, as the members are. */
+const Busy = createContext<Record<string, string>>({});
+
+/** A connection's node id: under its member. */
+const connectionNodeId = (member: string, connection: string) =>
+  `${member}/${connection}`;
 
 const MemberNode = memo(function MemberNode({
   data,
@@ -199,6 +228,91 @@ const MemberNode = memo(function MemberNode({
         style={HANDLE(size)}
         isConnectable={false}
       />
+      {member.connections?.length ? (
+        <Handle
+          id="connections"
+          type="source"
+          position={Position.Bottom}
+          style={{ ...HANDLE(size), top: 'auto', bottom: 0 }}
+          isConnectable={false}
+        />
+      ) : null}
+    </Box>
+  );
+});
+
+type ConnectionData = {
+  member: string;
+  connection: string;
+  size: number;
+};
+
+/** A connection of a member's: the server's mark, what it reaches, and how. */
+const ConnectionNode = memo(function ConnectionNode({
+  id,
+  data,
+}: NodeProps<Node<ConnectionData>>): JSX.Element | null {
+  const { member, connection: connectionId, size } = data;
+  const connection = useContext(Members)[member]?.connections?.find(
+    known => known.id === connectionId,
+  );
+  const tool = useContext(Busy)[id];
+  if (!connection) {
+    return null;
+  }
+  return (
+    <Box
+      className="nodrag nopan nowheel"
+      sx={{
+        width: CONNECTION_WIDTH,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '2px',
+        cursor: 'default',
+        pointerEvents: 'all',
+      }}
+      title={connection.name}
+      data-team-connection={connection.id}
+      data-connection-busy={tool ? 'true' : 'false'}
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ ...HANDLE(0), top: 0 }}
+        isConnectable={false}
+      />
+      <Box
+        className={tool ? 'a2a-team-connection-busy' : undefined}
+        sx={{
+          width: size,
+          height: size,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: tool ? 'accent.emphasis' : 'border.default',
+          bg: 'canvas.default',
+        }}
+      >
+        <SpecMark
+          icon={connection.icon}
+          emoji={connection.emoji}
+          size={Math.round(size * 0.66)}
+        />
+      </Box>
+      <Text sx={{ fontWeight: 600, fontSize: 1, textAlign: 'center' }}>
+        {connection.label}
+      </Text>
+      {connection.via && (
+        <Text
+          sx={{ fontSize: '10px', color: 'fg.muted', textAlign: 'center' }}
+          data-connection-via=""
+        >
+          {connection.via}
+        </Text>
+      )}
     </Box>
   );
 });
@@ -282,8 +396,89 @@ const LinkEdge = memo(function LinkEdge({
   );
 });
 
-const NODE_TYPES = { member: MemberNode };
-const EDGE_TYPES = { a2a: LinkEdge };
+type CallData = {
+  /** The tool being called, in words (`list invoices`); empty while none is. */
+  calling: string;
+};
+
+/** A member's link to a connection: still, or flowing toward it while a call runs. */
+export const CallEdge = memo(function CallEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  data,
+}: EdgeProps<Edge<CallData>>): JSX.Element {
+  const calling = Boolean(data?.calling);
+  const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+  const arrow = `M ${targetX},${targetY} L ${targetX - ARROW / 1.6},${targetY - ARROW} L ${targetX + ARROW / 1.6},${targetY - ARROW} Z`;
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        style={{
+          stroke: 'var(--borderColor-default, #d0d7de)',
+          strokeWidth: 2,
+          opacity: calling ? 0.3 : 0.8,
+        }}
+      />
+      {calling && (
+        <g data-mcp-edge-call={data?.calling}>
+          <path
+            d={path}
+            fill="none"
+            className="a2a-team-flow a2a-team-call"
+            stroke="var(--fgColor-accent, #0969da)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray="6 8"
+          />
+          <path d={arrow} fill="var(--fgColor-accent, #0969da)" />
+        </g>
+      )}
+      {calling && (
+        <EdgeLabelRenderer>
+          <Box
+            className="nodrag nopan"
+            sx={{
+              position: 'absolute',
+              // Beside the edge, toward the middle of the graph.
+              transform: `translate(calc(-100% - 10px), -50%) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Label variant="accent">{data?.calling}</Label>
+          </Box>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+});
+
+const NODE_TYPES = { member: MemberNode, connection: ConnectionNode };
+const EDGE_TYPES = { a2a: LinkEdge, mcp: CallEdge };
+
+/** Where a member's connections sit: under it, side by side, centred. */
+function connectionsX(memberX: number, count: number): number[] {
+  const row = count * CONNECTION_WIDTH + (count - 1) * CONNECTIONS_APART;
+  const left = memberX + (NODE_WIDTH - row) / 2;
+  return Array.from(
+    { length: count },
+    (_, at) => left + at * (CONNECTION_WIDTH + CONNECTIONS_APART),
+  );
+}
+
+/** What a member's call says, on its edge and to a screen reader. */
+export function callWords(
+  member: string,
+  connection: A2ATeamConnection,
+  tool: string,
+): string {
+  return `${member} calls ${connection.label} · ${toolWords(tool, connection)}`;
+}
 
 /** The viewport that shows the graph's width whole in a box `width` wide, never larger than drawn. */
 export function teamViewport(width: number): Viewport {
@@ -299,6 +494,7 @@ export function A2ATeamGraph({
   connected,
   label = 'A2A',
   size = 96,
+  calls = [],
 }: A2ATeamGraphProps): JSX.Element {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
@@ -319,9 +515,25 @@ export function A2ATeamGraph({
   const viewport = useMemo(() => teamViewport(width || WIDTH), [width]);
   // The members' height: the character, its name and where it runs.
   const memberHeight = size + 56;
-  const height = Math.ceil((BALLOON_ROOM + memberHeight) * viewport.zoom);
+  const connectionSize = Math.round(size / 2);
+  // Its mark, its label and how it is reached (about 45px under the mark),
+  // and room under it before the graph's edge.
+  const connectionHeight = connectionSize + 58;
+  // The connections' ids, member by member: the nodes change only when they do.
+  const placed = [entry, peer].map(member => ({
+    member: member.id,
+    connections: (member.connections ?? []).map(connection => connection.id),
+  }));
+  const placedKey = JSON.stringify(placed);
+  const hasConnections = placed.some(({ connections }) => connections.length);
+  const height = Math.ceil(
+    (BALLOON_ROOM +
+      memberHeight +
+      (hasConnections ? CONNECTION_GAP + connectionHeight : 0)) *
+      viewport.zoom,
+  );
 
-  const nodes = useMemo<Node<MemberData>[]>(
+  const nodes = useMemo<Node<MemberData | ConnectionData>[]>(
     () => [
       {
         id: entry.id,
@@ -346,15 +558,63 @@ export function A2ATeamGraph({
         zIndex: 10,
         data: { id: peer.id, side: 'right', size },
       },
+      ...(JSON.parse(placedKey) as typeof placed).flatMap(
+        ({ member, connections }, side) => {
+          const xs = connectionsX(
+            side === 0 ? 0 : NODE_WIDTH + GAP,
+            connections.length,
+          );
+          return connections.map((connection, at) => ({
+            id: connectionNodeId(member, connection),
+            type: 'connection',
+            position: {
+              x: xs[at],
+              y: BALLOON_ROOM + memberHeight + CONNECTION_GAP,
+            },
+            width: CONNECTION_WIDTH,
+            height: connectionHeight,
+            draggable: false,
+            selectable: false,
+            zIndex: 5,
+            data: { member, connection, size: connectionSize },
+          }));
+        },
+      ),
     ],
-    [entry.id, peer.id, size, memberHeight],
+    [
+      entry.id,
+      peer.id,
+      size,
+      memberHeight,
+      placedKey,
+      connectionSize,
+      connectionHeight,
+    ],
   );
   const members = useMemo(
     () => ({ [entry.id]: entry, [peer.id]: peer }),
     [entry, peer],
   );
   const words = flowWords(flow, entry.name, peer.name);
-  const edges = useMemo<Edge<LinkData>[]>(
+  // The tool each connection is answering now, in words, by its node's id.
+  const busy = useMemo(() => {
+    const byNode: Record<string, string> = {};
+    const said: string[] = [];
+    for (const call of calls) {
+      const member = call.member === entry.id ? entry : peer;
+      const connection = member.connections?.find(
+        known => known.id === call.connection,
+      );
+      if (!connection || member.id !== call.member) {
+        continue;
+      }
+      const node = connectionNodeId(member.id, connection.id);
+      byNode[node] ??= toolWords(call.tool, connection);
+      said.push(callWords(member.name, connection, call.tool));
+    }
+    return { byNode, said: [...new Set(said)] };
+  }, [calls, entry, peer]);
+  const edges = useMemo<Edge<LinkData | CallData>[]>(
     () => [
       {
         id: `${entry.id}->${peer.id}`,
@@ -369,15 +629,34 @@ export function A2ATeamGraph({
           label: words ? `${label} · ${words}` : label,
         },
       },
+      ...(JSON.parse(placedKey) as typeof placed).flatMap(
+        ({ member, connections }) =>
+          connections.map(connection => {
+            const node = connectionNodeId(member, connection);
+            const calling = busy.byNode[node] ?? '';
+            return {
+              id: `${member}->${node}`,
+              source: member,
+              sourceHandle: 'connections',
+              target: node,
+              type: 'mcp',
+              selectable: false,
+              focusable: false,
+              data: { calling },
+            };
+          }),
+      ),
     ],
-    [entry.id, peer.id, flow, connected, label, words],
+    [entry.id, peer.id, flow, connected, label, words, placedKey, busy],
   );
+  const heard = [words, ...busy.said].filter(Boolean).join('. ');
 
   return (
     <Box
       ref={box}
       data-a2a-team-graph=""
       data-a2a-flow={flow}
+      data-a2a-calls={calls.length}
       sx={{
         width: '100%',
         height,
@@ -392,17 +671,32 @@ export function A2ATeamGraph({
         '& .a2a-team-flow-answering': {
           animation: 'a2aTeamFlow 0.6s linear infinite reverse',
         },
+        '@keyframes a2aTeamCall': {
+          from: { strokeDashoffset: 14 },
+          to: { strokeDashoffset: 0 },
+        },
+        '@keyframes a2aTeamPulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
+          '50%': {
+            boxShadow: '0 0 0 4px var(--bgColor-accent-muted, #ddf4ff)',
+          },
+        },
+        '& .a2a-team-call': {
+          animation: 'a2aTeamCall 0.5s linear infinite',
+        },
+        '& .a2a-team-connection-busy': {
+          animation: 'a2aTeamPulse 1s ease-in-out infinite',
+        },
         // The arrow and the words say which way; the movement is extra.
         '@media (prefers-reduced-motion: reduce)': {
-          '& .a2a-team-flow': { animation: 'none' },
+          '& .a2a-team-flow, & .a2a-team-connection-busy': {
+            animation: 'none',
+          },
         },
         '& .react-flow, & .react-flow__renderer, & .react-flow__viewport': {
           overflow: 'visible',
         },
         '& .react-flow__node': { cursor: 'default' },
-        // The library's credit stays, quietly (as the landing's network does).
-        '& .react-flow__attribution': { bg: 'transparent', color: 'fg.muted' },
-        '& .react-flow__attribution a': { color: 'fg.muted' },
       }}
     >
       {/* What a screen reader hears of the exchange as it happens. */}
@@ -418,32 +712,36 @@ export function A2ATeamGraph({
           whiteSpace: 'nowrap',
         }}
       >
-        {words}
+        {heard}
       </Box>
       <Members.Provider value={members}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={NODE_TYPES}
-          edgeTypes={EDGE_TYPES}
-          viewport={viewport}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          nodesFocusable={false}
-          edgesFocusable={false}
-          elementsSelectable={false}
-          deleteKeyCode={null}
-          selectionKeyCode={null}
-          multiSelectionKeyCode={null}
-          panOnDrag={false}
-          panOnScroll={false}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          preventScrolling={false}
-          style={{ overflow: 'visible', background: 'transparent' }}
-          aria-label={`${entry.name} and ${peer.name}, over A2A`}
-        />
+        <Busy.Provider value={busy.byNode}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={NODE_TYPES}
+            edgeTypes={EDGE_TYPES}
+            viewport={viewport}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            nodesFocusable={false}
+            edgesFocusable={false}
+            elementsSelectable={false}
+            deleteKeyCode={null}
+            selectionKeyCode={null}
+            multiSelectionKeyCode={null}
+            panOnDrag={false}
+            panOnScroll={false}
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            preventScrolling={false}
+            style={{ overflow: 'visible', background: 'transparent' }}
+            // The library is MIT: its credit is not required on the page.
+            proOptions={{ hideAttribution: true }}
+            aria-label={`${entry.name} and ${peer.name}, over A2A`}
+          />
+        </Busy.Provider>
       </Members.Provider>
     </Box>
   );

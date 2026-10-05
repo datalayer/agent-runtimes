@@ -16,8 +16,10 @@
  * Accounting the wizard, as their Appspecs say, in a graph (`A2ATeamGraph`)
  * whose one edge is the A2A link. The exchange is shown as it happens: Sales
  * asks — the edge flows toward Accounting — Accounting works and then answers
- * — the edge flows back — each in its own state and balloon. Then the report
- * appears. The page's own state is `useA2ATeam`'s, which the landing's home
+ * — the edge flows back — each in its own state and balloon. Under
+ * Accounting hangs Odoo, its connection (the odoo-accounting MCP server, from
+ * its Appspec): the edge to it flows while Accounting calls one of its tools,
+ * the tool's name on it. Then the report appears. The page's own state is `useA2ATeam`'s, which the landing's home
  * page runs too.
  *
  * Where Accounting is: `VITE_A2A_ACCOUNTING_URL`, else the examples' local
@@ -43,13 +45,19 @@ import {
   useAnonymousSessionStore,
 } from '../runtimes/browser/anonymousToken';
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
-import { A2ATeamGraph, useA2ATeam } from '../components/teams';
+import {
+  A2ATeamGraph,
+  teamConnectionsOf,
+  useA2ATeam,
+} from '../components/teams';
 import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_1 } from '../specs/apps';
 import { SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 } from '../specs/teams/teams';
 
 const TEAM = SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1;
 const SALES = SALES_APP_0_0_1;
 const ACCOUNTING = ACCOUNTING_APP_0_0_1;
+/** What Accounting reaches, from its Appspec: Odoo, through the odoo-accounting MCP server. */
+const ACCOUNTING_CONNECTIONS = teamConnectionsOf(ACCOUNTING);
 
 /** The members of the team, as the team spec says them. */
 function members() {
@@ -115,6 +123,7 @@ function AgentA2ATeam(): JSX.Element {
     peer,
     inference,
     askTool: 'ask_accounting',
+    peerConnections: ACCOUNTING_CONNECTIONS,
   });
   const send = (text: string) => {
     setDraft('');
@@ -222,8 +231,10 @@ function AgentA2ATeam(): JSX.Element {
             where: accountingWhere,
             persona: team.peerPersona,
             onAway: team.setPeerAway,
+            connections: ACCOUNTING_CONNECTIONS,
           }}
           flow={team.flow}
+          calls={team.calls}
           connected={peer !== null}
           label={peer ? `A2A · ${peer.skill.name}` : 'A2A · not connected'}
         />

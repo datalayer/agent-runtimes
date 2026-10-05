@@ -161,21 +161,26 @@ the peer calls), then `answered` or `failed`.
 the components barrel, because it brings React Flow:
 
 ```tsx
-import { A2ATeamGraph, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+import { A2ATeamGraph, teamConnectionsOf, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
 
-const team = useA2ATeam({ entry: SALES, peerApp: ACCOUNTING, peer, inference });
+// What Accounting reaches, from its Appspec: Odoo, through odoo-accounting.
+const ACCOUNTING_CONNECTIONS = teamConnectionsOf(ACCOUNTING);
+
+const team = useA2ATeam({ entry: SALES, peerApp: ACCOUNTING, peer, inference, peerConnections: ACCOUNTING_CONNECTIONS });
 
 <A2ATeamGraph
   entry={{ id: 'sales', name: 'Sales', character: 'paperclip', where: 'in your browser', persona: team.entryPersona }}
-  peer={{ id: 'accounting', name: 'Accounting', character: 'wizard', where: 'on a runtime', persona: team.peerPersona }}
+  peer={{ id: 'accounting', name: 'Accounting', character: 'wizard', where: 'on a runtime', persona: team.peerPersona, connections: ACCOUNTING_CONNECTIONS }}
   flow={team.flow}
+  calls={team.calls}
   connected={peer !== null}
   label={`A2A · ${peer.skill.name}`}
 />;
 team.send('Which invoices are still open?');
 ```
 
-- **`A2ATeamGraph`** is a React Flow graph of two nodes and one edge. Each
+- **`A2ATeamGraph`** is a React Flow graph of the two members and the edge
+  between them, and of each member's connections under it. Each
   node is the member's character (`AssistantStage`), with its name and where
   it runs. The edge is still until a message travels on it. It flows from
   Sales to Accounting while Sales asks, and from Accounting to Sales while
@@ -183,14 +188,42 @@ team.send('Which invoices are still open?');
   says *Sales asks Accounting* or *Accounting answers Sales*. With reduced
   motion the edge does not move, but the arrow and the words stay. The graph
   is a picture: nothing is dragged, panned or zoomed, and it scales to its
-  box, down to a phone's width.
+  box, down to a phone's width. React Flow is MIT; its credit is hidden.
+- **A member's connections** are the MCP servers it reaches. Each is a node
+  half a member's size under it, with the server's mark (`SpecMark`, from
+  the spec's `icon`: `@datalayer/icons-react:odoo`), the system it reaches
+  (*Odoo*) and *via MCP*, linked to the member by an edge of its own. That
+  edge is still until the member calls one of the connection's tools. Then
+  it flows toward the connection for as long as the call runs, with the
+  tool's name on it (*list invoices*), and the node pulses. A quick call is
+  shown for at least `CALL_SHOWN_MS` (0.9 s). With reduced motion the arrow
+  and the words stay and nothing moves.
+- **`teamConnectionsOf(app)`** reads the connections from the Appspec: each
+  `connections[].server`, then the MCP server's spec for its name, mark and
+  tools (the tool names of its `actions`). A tool belongs to a connection
+  when it is one of those names, with or without a host's prefix, or begins
+  with the server's id as the gateway names its toolsets
+  (`odoo_accounting_`).
 - **`useA2ATeam`** runs the entry's loop in the page (the Vercel AI SDK's
   `ToolLoopAgent`, its model through ai-inference) with its one tool to the
   peer. It keeps each member's persona (its state and its balloon), the
-  conversation, the exchange, the last report, and the flow.
+  conversation, the exchange, the last report, the flow, and the calls the
+  peer's connections are answering (`calls`, from `callsAfter`).
 - **`flowAfter`** turns an `A2APeerEvent` into the flow. `asked` and
   `working` give `asking`. `answered` gives `answering` for
   `ANSWER_SHOWN_MS` (1.8 s). `failed` gives `still`.
+
+### How a tool call reaches the graph
+
+Accounting's runtime tells each tool call over A2A, as it happens. Its
+pydantic-ai adapter streams every tool call and every tool call's end, among
+the text. The A2A worker publishes each one as a `working` status whose
+message has one data part: `{tool_call: {id, name, arguments}}` when the
+call starts, then `{tool_result: {id, name, result, error}}` when it ends.
+In the browser, `askA2APeer` reads them into the `working` event's `tool`
+(`{id, name, ended}`), beside its `note`. `callsAfter` keeps a call from its
+start to its end, matched by its id. A new request, an answer or a failure
+ends them all.
 
 Datalayer's home page runs the same team for signed-out visitors: Sales in
 their browser with their trial key, Accounting on a cloud runtime open to
