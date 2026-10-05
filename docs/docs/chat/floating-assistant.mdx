@@ -113,7 +113,9 @@ top of the window, beside it when the window is too short for either:
   (the chat's `description`, never sent nor kept), and an approval waiting
   as a message with **Approve** and **Deny**;
 - **the composer last**, its Lexical variant;
-- **no header and no footer**: no title bar, none of the session's controls
+- **a header line that counts it** — *Conversation · 6*, the messages of the
+  person and the agent, not the tool calls — and nothing else on top;
+- **no footer**, and none of the session's controls
   (agents, model, tools, skills, context), no turn footers, no *Powered by*;
 - **a close control** in its corner (×) — closing keeps the conversation,
   and Escape closes it too;
@@ -122,6 +124,77 @@ top of the window, beside it when the window is too short for either:
   sight at the bottom;
 - *Ask a decision* beside the composer, when it is given a runtime to ask
   (below).
+
+That is the `history` display. The other one is `current`.
+
+### History or current
+
+**How the balloon shows the conversation is a setting of its own**,
+`balloonDisplay` on `ChatFloating` and `AssistantStage`, `balloon` in the
+LOOP assistant plugin's config, and `interface.balloon` in an application's
+Appspec (`history` or `current`; the page's own when unsaid):
+
+| | `history` | `current` |
+| --- | --- | --- |
+| Closed | a peek of the newest words, cut to their first words | **Now**, then what is said or done now — the answer as it is written, whole (four lines at most, nothing to scroll), or the tool it calls |
+| Open | the whole conversation under *Conversation · 6*, scrolled, the composer last | that one line over the composer, 230px tall, no header, no history |
+| Looks | the plain balloon, the theme's border | a compact speech bubble edged with the theme's accent, *Now* with a dot that breathes while the agent works (still under reduced motion) |
+| Default for | the floating chat (`ChatFloating`), the LOOP workspace's assistant | a team's members (`A2ATeamGraph`) |
+
+```tsx
+<ChatFloating defaultViewMode="assistant" balloonDisplay="current" … />
+```
+
+```yaml
+interface:
+  assistant: wizard
+  balloon: current   # or history
+```
+
+In `current` the balloon replaces its content as the turn goes on —
+*Thinking…*, then the tool, then the words — and the words are read out
+once they have all arrived (`aria-busy` while they stream), not at every
+token. An application embedded as an assistant takes `interface.balloon`;
+its conversation, drawn by the page that hosts it, opens as it is drawn
+there.
+
+### Tool calls in the balloon
+
+**When the agent calls a tool, the balloon says so in plain words**:
+*Using **list_invoices**…* while it runs, then *Done: list_invoices*, or
+*list_invoices failed*. The name is the one the tool's spec displays when it
+has one (`Current Time` for `current_time`), else its name without its MCP
+server's prefix; the mark beside it is the catalogue's (its MCP server's,
+skill's or tool set's, `SpecMark`), a tool otherwise. Where the runtime says
+what a tool does in its own words, those are said instead (*Writing a
+notebook…*, a LOOP turn's `activity`, *Asking Accounting…*).
+
+- **Closed**, in either display, the peek is the tool line while the call
+  runs and while its turn goes on — the person sees what the agent is doing
+  without opening it;
+- **open in `current`**, it replaces the line said now;
+- **open in `history`**, the call is a compact line of the conversation, as
+  the chat draws every tool call (`ToolCallDisplay`).
+
+A screen reader hears a tool line **once when the call starts and once when
+it ends**, politely, from a live region of its own — never while it runs,
+nor at every redraw (`toolAnnouncement`).
+
+The lines are read from the chat's items (`newestToolLine`: the newest item,
+when it is a tool call), from a LOOP turn's `activity`, or, in a team, from
+the steps a peer tells over A2A (`toolLineOfStep`).
+
+### In a team
+
+A team's members (`A2ATeamGraph`) speak in `current` balloons: Sales says
+*Asking Accounting…* while its `ask_accounting` call runs, and Accounting
+*Using list_invoices…* while it calls Odoo, from the tool events A2A carries.
+When Accounting gives a notebook, **Sales' balloon shows it read-only**:
+jupyter-react's `Notebook` with `readonly`, on `ServiceManagerLess` — no
+kernel, no Pyodide, nothing to run or edit — loaded only when a notebook
+arrives (`NotebookPreview`), scrolled within the balloon, with *Open it below
+to run it*. A click there scrolls to and focuses the notebook that runs,
+right under the team (`TeamNotebook`, on the browser sandbox).
 
 ## Ask a decision
 
@@ -258,8 +331,10 @@ Each state of the paper clip — idle, thinking, working, waiting for you (an
 approval peeking, with *Approve* and *Deny* and *1 more*), paused (its
 notification peeking), speaking (a new message peeking by its first words) —
 the paper clip stepped aside for a dialog, and the conversation open as its
-balloon (`assistant-open`: the welcome first, the Lexical composer last, no
-header nor footer) are pictures, in the light and the dark mode, that `npm run test:pictures`
+balloon (`assistant-open`: *Conversation · 2* over the history, the welcome
+first, the Lexical composer last, no footer) and the `current` balloon saying
+the tool it calls (`assistant-current`: *Now*, *Using list_invoices…*) are
+pictures, in the light and the dark mode, that `npm run test:pictures`
 takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
 change in how the assistant is drawn fails that run with a picture of the
 difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the
@@ -285,8 +360,16 @@ from static data — no agent, no server, no sign-in:
 - **one at a time**: pick a character and a state, *Say something* for the
   agent's latest saying in the balloon, drag the character, send it away
   (its own menu, or *Send it away*) and call it back;
+- **the two balloon displays**: *History* or *Current*; *Use a tool* steps a
+  tool line through *Using list_invoices…*, *Done: list_invoices* and
+  *list_invoices failed*; *Give a notebook* puts a small recorded notebook in
+  the current balloon, read-only, with jupyter-react's notebook (no kernel,
+  loaded only then);
 - **a grid**: all the characters by all the states, small, for a quick visual
-  check (`AssistantGalleryGrid`, in `src/examples/utils/`).
+  check (`AssistantGalleryGrid`, in `src/examples/utils/`), and under it the
+  balloon's displays for the chosen character — a history peek, a current
+  balloon with a tool line, and one with the same notebook
+  (`GalleryBalloons`).
 
 Every cell is the real `AssistantStage`; nothing in the gallery is drawn for
 it.

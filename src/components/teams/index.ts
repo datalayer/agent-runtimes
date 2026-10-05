@@ -17,3 +17,4 @@ export * from './teamConnections';
 export * from './useA2ATeam';
 export * from './A2ATeamGraph';
 export * from './TeamNotebook';
+export * from './NotebookPreview';

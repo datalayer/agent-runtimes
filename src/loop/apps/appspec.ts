@@ -371,6 +371,9 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   if (isAssistantCharacterId(data.assistant)) {
     parsed.assistant = data.assistant;
   }
+  if (data.balloon === 'history' || data.balloon === 'current') {
+    parsed.balloon = data.balloon;
+  }
   return parsed;
 }
 
@@ -692,6 +695,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   }
   if (spec.assistant) {
     writer.data.assistant = spec.assistant;
+  }
+  if (spec.balloon) {
+    writer.data.balloon = spec.balloon;
   }
   // Its voice, when it says one (VO-41): a spec made before voice has none.
   if (spec.voice) {

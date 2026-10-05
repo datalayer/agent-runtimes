@@ -317,6 +317,42 @@ describe("the character acts out the chat's turn", () => {
   });
 });
 
+describe('the balloon, as the configuration says (T-23)', () => {
+  it('says what the agent does while a tool runs, and is current when asked', async () => {
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      configurePlugin(LoopAssistantPlugin, { balloon: 'current' }),
+    ]);
+    expect(
+      el
+        .querySelector('[data-assistant-state]')
+        ?.getAttribute('data-assistant-balloon'),
+    ).toBe('current');
+    await act(async () => {
+      turn.value = {
+        id: 3,
+        status: 'streaming',
+        activity: 'Analyst is adding a cell…',
+      };
+    });
+    const balloon = el.querySelector('[data-speech-balloon]');
+    expect(balloon?.getAttribute('data-balloon-display')).toBe('current');
+    expect(balloon?.querySelector('[data-balloon-tool]')?.textContent).toBe(
+      'Analyst is adding a cell…',
+    );
+    expect(balloon?.querySelector('[data-balloon-announce]')?.textContent).toBe(
+      'Analyst is adding a cell…',
+    );
+    await act(async () => {
+      turn.value = { id: 3, status: 'streaming', assistant: 'One cell added.' };
+    });
+    expect(el.querySelector('[data-balloon-current-text]')?.textContent).toBe(
+      'One cell added.',
+    );
+  });
+});
+
 describe('an approval waits in the balloon (T-23)', () => {
   const asked = {
     id: 'ap-1',

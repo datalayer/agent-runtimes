@@ -2282,6 +2282,14 @@ class AppInterfaceSpec(BaseModel):
             "Datalayer's); the paper clip when unsaid"
         ),
     )
+    balloon: Optional[Literal["history", "current"]] = Field(
+        default=None,
+        description=(
+            "How its floating assistant's balloon shows the conversation: "
+            "`history` (every message, the composer last) or `current` (only "
+            "what it says or does now); the page's own when unsaid"
+        ),
+    )
     voice: AppVoiceSpec = Field(
         default_factory=AppVoiceSpec,
         description="Its voice: whether it listens and speaks, with which voice (VO-41)",

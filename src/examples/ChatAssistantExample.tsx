@@ -21,6 +21,7 @@ import { Button, Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
+import type { BalloonDisplay } from '../chat/assistant/toolLine';
 import type { AssistantCharacter } from '../chat/assistant/characters';
 import {
   AssistantCharactersPlugin,
@@ -100,6 +101,8 @@ const ChatAssistantExample: React.FC = () => {
       ? assistantCharacterNamed(reactor, character)
       : character;
   const [loadError, setLoadError] = useState<string | undefined>();
+  // How the balloon shows the conversation (T-23): history, or current.
+  const [balloon, setBalloon] = useState<BalloonDisplay>('history');
   // Pixel, the test sprite, read once through the clippy.js reader.
   const [pixel, setPixel] = useState<AssistantCharacterData>();
   useEffect(() => {
@@ -210,6 +213,31 @@ const ChatAssistantExample: React.FC = () => {
           </Box>
           <Box as="section" sx={{ mt: 4 }}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
+              The balloon
+            </Heading>
+            <Text as="p" sx={{ color: 'fg.muted', mb: 2 }}>
+              <strong>History</strong>: open, the whole conversation, counted in
+              its header, the composer last. <strong>Current</strong>: only what
+              it says or does now — the answer as it is written, or the tool it
+              calls (&ldquo;Using current_time…&rdquo;) — in one compact
+              balloon. Either way, a tool call is said in the balloon.
+            </Text>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {(['history', 'current'] as const).map(option => (
+                <Button
+                  key={option}
+                  variant={option === balloon ? 'primary' : 'default'}
+                  aria-pressed={option === balloon}
+                  data-assistant-balloon-choice={option}
+                  onClick={() => setBalloon(option)}
+                >
+                  {option === 'history' ? 'History' : 'Current'}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+          <Box as="section" sx={{ mt: 4 }}>
+            <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
               The clippy.js characters
             </Heading>
             <Text as="p" sx={{ color: 'fg.muted', mb: 2 }}>
@@ -287,6 +315,7 @@ const ChatAssistantExample: React.FC = () => {
           key={typeof character === 'string' ? character : character.sprite}
           defaultViewMode="assistant"
           assistantCharacter={drawn}
+          balloonDisplay={balloon}
           protocol="vercel-ai"
           endpoint={`${SERVER}/api/v1/vercel-ai/assistant`}
           title="Assistant"

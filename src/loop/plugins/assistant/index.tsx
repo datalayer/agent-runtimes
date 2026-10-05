@@ -18,6 +18,12 @@
  * the runtime to ask (`decisions`), its balloon offers *Ask a decision*: a
  * typed decision asked of Jev through the runtime, answered there.
  *
+ * Its balloon shows the conversation as `balloon` says (LOOP T-23; the
+ * Appspec's `interface.balloon`): a peek of the newest words (`history`, the
+ * default), or the one thing being said or done now (`current`). Either way
+ * what the agent is doing while a tool runs — the turn's `activity` — is said
+ * there, and heard once as it starts.
+ *
  * The workspace's chat is the conversation: on a page layout, its side panel
  * is opened and closed; where the conversation is always on screen, a click
  * takes the person to its composer.
@@ -65,6 +71,10 @@ import {
   type ChatTurnSnapshot,
 } from '../../core';
 import { assistantCharacterFor } from '../assistant-characters';
+import type {
+  BalloonDisplay,
+  BalloonToolLine,
+} from '../../../chat/assistant/toolLine';
 
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
@@ -86,6 +96,12 @@ export type LoopAssistantConfig = {
    * decision*. Without it, it does not.
    */
   decisions?: { serverUrl: string; token?: string };
+  /**
+   * How the balloon shows the conversation (T-23): a peek of the newest
+   * words (`history`, the default), or only what is said or done now
+   * (`current`). The Appspec's `interface.balloon`.
+   */
+  balloon?: BalloonDisplay;
 };
 
 /** The character's size, in pixels, as the chat's own assistant. */
@@ -169,6 +185,7 @@ export function LoopAssistant({
   person,
   appId,
   decisions,
+  balloon: display = 'history',
 }: LoopAssistantConfig): JSX.Element | null {
   const contributed = useContributions(LoopAssistantCharacter).map(
     entry => entry.value,
@@ -259,6 +276,18 @@ export function LoopAssistant({
 
   const state = assistantStateOfTurn(turn, presence, { arriving, leaving });
   const unheard = !!saying && saying.id !== heardId;
+  // What the agent does while a tool runs, in its own words (T-23).
+  const tool: BalloonToolLine | undefined = turn.activity
+    ? {
+        id: `${turn.id}:${turn.activity}`,
+        tool: '',
+        name: '',
+        phase: 'running',
+        words: turn.activity,
+      }
+    : undefined;
+  const atWork = turn.status === 'streaming' || turn.status === 'thinking';
+  const current = display === 'current';
   const balloon =
     state === 'paused'
       ? { text: ASSISTANT_WORDS.paused }
@@ -266,20 +295,34 @@ export function LoopAssistant({
         ? { text: ASSISTANT_WORDS.approval, approval }
         : presence === 'waiting'
           ? { text: ASSISTANT_WORDS.waiting }
-          : unheard && saying
-            ? {
-                // A peek: the first words; the rest is in the conversation.
-                ...peekLine(saying.text),
-                onDismiss: () => {
-                  setHeardId(saying.id);
-                  setFresh(false);
-                },
-              }
-            : { text: 'Click me to open the conversation.' };
+          : tool
+            ? { text: turn.activity ?? '', tool, busy: true }
+            : current && (atWork || unheard)
+              ? {
+                  text:
+                    turn.status === 'thinking'
+                      ? 'Thinking…'
+                      : (saying?.text ?? 'Thinking…'),
+                  more: saying?.more,
+                  speaking: turn.status === 'streaming',
+                  busy: atWork,
+                }
+              : unheard && saying
+                ? {
+                    // A peek: the first words; the rest is in the conversation.
+                    ...peekLine(saying.text),
+                    onDismiss: () => {
+                      setHeardId(saying.id);
+                      setFresh(false);
+                    },
+                  }
+                : { text: 'Click me to open the conversation.' };
   const insist =
     state === 'greeting' ||
     presence === 'waiting' ||
     (!!approval && state !== 'paused') ||
+    !!tool ||
+    (current && atWork) ||
     (unheard && (state === 'speaking' || fresh));
   const onToggle = () => {
     if (onPageLayout) {
@@ -315,6 +358,7 @@ export function LoopAssistant({
         open={open}
         onToggle={onToggle}
         balloon={balloon}
+        balloonDisplay={display}
         insist={insist}
         onDismiss={onDismiss}
         decide={decide}
@@ -330,6 +374,7 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
     person: undefined,
     appId: undefined,
     decisions: undefined,
+    balloon: undefined,
   },
   displayName: 'Floating assistant',
   description:
@@ -342,6 +387,7 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
         person={config.person}
         appId={config.appId}
         decisions={config.decisions}
+        balloon={config.balloon}
       />
     );
     return {

@@ -496,6 +496,7 @@ const ENUMS = {
   ],
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
   mode: ['inline', 'bubble', 'panel', 'assistant'],
+  balloon: ['history', 'current'],
   trigger: ['schedule', 'event', 'once'],
   criterion: ['metric', 'noul', 'choice', 'score'],
   direction: ['higher', 'lower'],
@@ -619,6 +620,7 @@ export function documentShapeProblems(document: unknown): string[] {
   mapping(d.interface, 'interface', ui => {
     oneOf(ui.layout, ENUMS.layout, 'interface.layout');
     oneOf(ui.accent, ENUMS.accent, 'interface.accent');
+    oneOf(ui.balloon, ENUMS.balloon, 'interface.balloon');
     if (ui.assistant !== undefined && !isAssistantCharacterId(ui.assistant)) {
       at(
         'interface.assistant',

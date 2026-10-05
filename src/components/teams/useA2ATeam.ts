@@ -44,11 +44,16 @@ import type { AppSpec } from '../../types/agentspecs';
 import {
   callsAfter,
   flowAfter,
+  toolOwnName,
   pruneCalls,
   type A2ATeamCall,
   type A2ATeamConnection,
   type A2ATeamFlow,
 } from './a2aTeamFlow';
+import {
+  toolLineOfStep,
+  type BalloonToolLine,
+} from '../../chat/assistant/toolLine';
 
 const NO_CONNECTIONS: A2ATeamConnection[] = [];
 
@@ -60,6 +65,13 @@ export type A2ATeamPersona = {
   /** Whether the balloon shows without the pointer over it. */
   insist: boolean;
   away: boolean;
+  /**
+   * The tool it calls now, or just called (LOOP T-23): "Using
+   * list_invoices…", "Asking Accounting…"; said in place of its words.
+   */
+  tool?: BalloonToolLine;
+  /** A notebook it was given: in its balloon, read-only, under its words. */
+  notebook?: A2APeerArtifact;
 };
 
 export const AT_REST: A2ATeamPersona = {
@@ -232,6 +244,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           state: 'greeting',
           saying: 'On it. Let me read the books.',
           insist: true,
+          tool: undefined,
         }));
       } else if (event.phase === 'working') {
         if (event.note) {
@@ -241,7 +254,15 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           ...prev,
           state: 'working',
           saying: event.note ? balloonLine(event.note) : prev.saying,
-          insist: Boolean(event.note) || prev.insist,
+          insist: Boolean(event.note) || Boolean(event.tool) || prev.insist,
+          // The tool it calls, in plain words, from the step it told; a
+          // step without a tool (its own words) puts the tool line away.
+          tool: event.tool
+            ? toolLineOfStep(
+                event.tool,
+                toolOwnName(event.tool.name, peerConnections),
+              )
+            : undefined,
         }));
       } else if (event.phase === 'answered') {
         setExchange(prev => [
@@ -259,7 +280,12 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           state: 'speaking',
           saying: balloonLine(event.answer),
           insist: true,
+          tool: undefined,
         }));
+        // The entry was given a notebook: in its balloon, read-only.
+        if (given) {
+          setEntryPersona(prev => ({ ...prev, notebook: given }));
+        }
       } else {
         setExchange(prev => [
           ...prev,
@@ -270,6 +296,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           state: 'idle',
           saying: balloonLine(event.error),
           insist: true,
+          tool: undefined,
         }));
       }
     },
@@ -330,12 +357,21 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               state: 'waiting',
               saying: balloonLine(`${peerApp.name}, could you: ${request}`),
               insist: true,
+              // Its one tool, in its own words: it asks its peer.
+              tool: {
+                id: part.toolCallId,
+                tool: askTool,
+                name: askTool,
+                phase: 'running',
+                words: `Asking ${peerApp.name}…`,
+              },
             }));
           } else if (part.type === 'tool-result' && part.toolName === askTool) {
             setEntryPersona(prev => ({
               ...prev,
               state: 'thinking',
               saying: 'Thanks!',
+              tool: undefined,
             }));
             // Accounting has handed its answer over: back at rest, its last
             // words still in its balloon.
@@ -347,6 +383,15 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               state: 'speaking',
               saying: balloonLine(said),
               insist: true,
+              tool: undefined,
+            }));
+          } else if (part.type === 'tool-error' && part.toolName === askTool) {
+            setEntryPersona(prev => ({
+              ...prev,
+              state: 'thinking',
+              tool: prev.tool
+                ? { ...prev.tool, phase: 'failed', words: undefined }
+                : undefined,
             }));
           } else if (part.type === 'error') {
             throw part.error;
@@ -373,6 +418,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           state: 'idle',
           saying: balloonLine(`Something went wrong: ${message}`),
           insist: true,
+          tool: undefined,
         }));
         setFlow('still');
         callsNow.current = [];
@@ -382,7 +428,9 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         setBusy(false);
         // However the turn ended, neither member is still at work.
         setPeerPersona(prev =>
-          prev.state === 'idle' ? prev : { ...prev, state: 'idle' },
+          prev.state === 'idle' && !prev.tool
+            ? prev
+            : { ...prev, state: 'idle', tool: undefined },
         );
       }
     },

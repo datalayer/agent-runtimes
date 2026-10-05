@@ -62,6 +62,9 @@ import {
   type A2ATeamFlow,
 } from './a2aTeamFlow';
 import type { A2ATeamPersona } from './useA2ATeam';
+import { NotebookPreview, focusTeamNotebook } from './NotebookPreview';
+import { toolLineText } from '../../chat/assistant/toolLine';
+import type { BalloonDisplay } from '../../chat/assistant/toolLine';
 
 /** One member of the team, as the graph draws it. */
 export type A2ATeamGraphMember = {
@@ -79,6 +82,17 @@ export type A2ATeamGraphMember = {
   onAway?: (away: boolean) => void;
   /** The MCP servers it reaches, drawn under it (`teamConnectionsOf`). */
   connections?: A2ATeamConnection[];
+  /**
+   * How its balloon shows what it says (LOOP T-23): only what it says or
+   * does now (`current`, a team's default) — the words, the tool it calls,
+   * a notebook it was given — or a peek (`history`).
+   */
+  balloonDisplay?: BalloonDisplay;
+  /**
+   * The notebook in its balloon was clicked: by default, the page's
+   * `TeamNotebook` is scrolled to and focused.
+   */
+  onNotebookOpen?: () => void;
 };
 
 export type A2ATeamGraphProps = {
@@ -100,7 +114,11 @@ export type A2ATeamGraphProps = {
 
 /** The graph's own coordinates: the members, and room above them for their balloons. */
 const NODE_WIDTH = 200;
-const BALLOON_ROOM = 120;
+const BALLOON_ROOM = 144;
+/** The room a balloon that holds a notebook needs above its member. */
+const NOTEBOOK_BALLOON_ROOM = 340;
+/** How tall the notebook in a balloon grows before it scrolls. */
+const NOTEBOOK_PREVIEW_HEIGHT = 180;
 const GAP = 220;
 const WIDTH = NODE_WIDTH * 2 + GAP;
 /** A connection's node: half a member's. */
@@ -202,10 +220,35 @@ const MemberNode = memo(function MemberNode({
             onDragStart={() => undefined}
             open={false}
             onToggle={member.onToggle ?? (() => undefined)}
+            balloonDisplay={member.balloonDisplay ?? 'current'}
             balloon={
-              persona.saying
-                ? { text: persona.saying, more: persona.saying.endsWith('…') }
-                : undefined
+              persona.tool
+                ? {
+                    text: toolLineText(persona.tool),
+                    tool: persona.tool,
+                    busy: persona.state !== 'idle',
+                  }
+                : persona.saying
+                  ? {
+                      text: persona.saying,
+                      more: persona.saying.endsWith('…'),
+                      speaking: persona.state === 'speaking',
+                      busy:
+                        persona.state === 'thinking' ||
+                        persona.state === 'working' ||
+                        persona.state === 'speaking',
+                      // A notebook it was given, read-only: the one that
+                      // runs is under the graph.
+                      attachment: persona.notebook ? (
+                        <NotebookPreview
+                          notebook={persona.notebook.data}
+                          title={persona.notebook.name || 'The notebook'}
+                          maxHeight={NOTEBOOK_PREVIEW_HEIGHT}
+                          onOpen={member.onNotebookOpen ?? focusTeamNotebook}
+                        />
+                      ) : undefined,
+                    }
+                  : undefined
             }
             insist={persona.insist}
             onDismiss={away => member.onAway?.(away !== 'none')}
@@ -528,8 +571,12 @@ export function A2ATeamGraph({
   }));
   const placedKey = JSON.stringify(placed);
   const hasConnections = placed.some(({ connections }) => connections.length);
+  // A notebook in a balloon: more room above the members.
+  const room = [entry, peer].some(member => member.persona.notebook)
+    ? NOTEBOOK_BALLOON_ROOM
+    : BALLOON_ROOM;
   const height = Math.ceil(
-    (BALLOON_ROOM +
+    (room +
       memberHeight +
       (hasConnections ? CONNECTION_GAP + connectionHeight : 0)) *
       viewport.zoom,
@@ -540,7 +587,7 @@ export function A2ATeamGraph({
       {
         id: entry.id,
         type: 'member',
-        position: { x: 0, y: BALLOON_ROOM },
+        position: { x: 0, y: room },
         width: NODE_WIDTH,
         height: memberHeight,
         draggable: false,
@@ -552,7 +599,7 @@ export function A2ATeamGraph({
       {
         id: peer.id,
         type: 'member',
-        position: { x: NODE_WIDTH + GAP, y: BALLOON_ROOM },
+        position: { x: NODE_WIDTH + GAP, y: room },
         width: NODE_WIDTH,
         height: memberHeight,
         draggable: false,
@@ -571,7 +618,7 @@ export function A2ATeamGraph({
             type: 'connection',
             position: {
               x: xs[at],
-              y: BALLOON_ROOM + memberHeight + CONNECTION_GAP,
+              y: room + memberHeight + CONNECTION_GAP,
             },
             width: CONNECTION_WIDTH,
             height: connectionHeight,
@@ -587,6 +634,7 @@ export function A2ATeamGraph({
       entry.id,
       peer.id,
       size,
+      room,
       memberHeight,
       placedKey,
       connectionSize,

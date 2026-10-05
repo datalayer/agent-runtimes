@@ -301,6 +301,22 @@ describe('the instant checks', () => {
     );
   });
 
+  it('read how the balloon shows the conversation, and refuse any other word (T-23)', () => {
+    for (const balloon of ['history', 'current'] as const) {
+      const app = parseAppspec({ ...BASE, interface: { balloon } }).app;
+      expect(app.interface.balloon).toBe(balloon);
+      expect(dumpAppspec(app).interface).toEqual({ balloon });
+      expect(parseAppspec(dumpAppspec(app)).app).toEqual(app);
+      expect(
+        checkAppspec({ ...BASE, interface: { balloon } }).problems,
+      ).toEqual([]);
+    }
+    expect(parseAppspec(BASE).app.interface.balloon).toBeUndefined();
+    expect(
+      checkAppspec({ ...BASE, interface: { balloon: 'latest' } }).problems,
+    ).toContain('interface.balloon: is one of history, current.');
+  });
+
   it('checks a context of an organization’s own against the organization’s (LOOP U-32)', () => {
     const own = { ...BASE, context: ['org-house-style'] };
     expect(

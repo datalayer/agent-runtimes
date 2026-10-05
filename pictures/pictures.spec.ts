@@ -54,6 +54,7 @@ const ASSISTANT = [
   'paused',
   'speaking',
   'aside',
+  'current',
 ] as const;
 // Each character idle, light and dark (T-25), and the owl an example plugin
 // contributes (T-24); the paper clip's is `assistant-idle`.
@@ -118,8 +119,19 @@ for (const mode of MODES) {
             'obstacle',
           );
         } else {
-          await expect(stage).toHaveAttribute('data-assistant-state', picture);
+          await expect(stage).toHaveAttribute(
+            'data-assistant-state',
+            picture === 'current' ? 'working' : picture,
+          );
           await expect(stage).not.toHaveAttribute('data-assistant-aside', /.+/);
+        }
+        if (picture === 'current') {
+          // Current (T-23): only what it does now, the tool it calls.
+          await expect(
+            page.locator(
+              '[data-balloon-display="current"] [data-balloon-tool="running"]',
+            ),
+          ).toHaveText('Using list_invoices…');
         }
         await expect(page).toHaveScreenshot(`assistant-${picture}-${mode}.png`);
       });
@@ -139,6 +151,10 @@ for (const mode of MODES) {
       await expect(
         page.locator('[data-conversation-balloon] [contenteditable="true"]'),
       ).toBeVisible();
+      // History: its header counts the messages (T-23).
+      await expect(
+        page.locator('[data-conversation-balloon] [data-balloon-header]'),
+      ).toHaveText('Conversation · 2');
       await expect(page).toHaveScreenshot(`assistant-open-${mode}.png`);
     });
   });

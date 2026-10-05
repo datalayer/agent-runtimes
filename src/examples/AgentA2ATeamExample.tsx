@@ -19,14 +19,18 @@
  * — the edge flows back — each in its own state and balloon. Under
  * Accounting hangs Odoo, its connection (the odoo-accounting MCP server, from
  * its Appspec): the edge to it flows while Accounting calls one of its tools,
- * the tool's name on it. Then the report appears. The page's own state is `useA2ATeam`'s, which the landing's home
- * page runs too.
+ * the tool's name on it. Each balloon shows only what its member says or
+ * does now (`current`): "Asking Accounting…" for Sales' one tool, "Using
+ * list_invoices…" while Accounting calls Odoo. Then the report appears. The
+ * page's own state is `useA2ATeam`'s, which the landing's home page runs too.
  *
  * Sales accepts a Jupyter notebook from Accounting besides its words
  * (`acceptedOutputModes`, `NOTEBOOK_AND_WORDS`). When Accounting gives one,
- * it opens under the conversation in place of the report, on the browser
+ * Sales' balloon shows it read-only (`NotebookPreview`: no kernel), and it
+ * opens right under the team, in place of the report, on the browser
  * sandbox — a Pyodide kernel in this page — to run, change and download
- * (`TeamNotebook`, loaded only then).
+ * (`TeamNotebook`, loaded only then); a click on the one in the balloon
+ * comes to it.
  *
  * Where Accounting is: `VITE_A2A_ACCOUNTING_URL`, else the examples' local
  * server (`…:8765/api/v1/a2a/agents/accounting`), which answers this machine
@@ -250,6 +254,18 @@ function AgentA2ATeam(): JSX.Element {
         />
       </Box>
 
+      {/* The notebook Accounting gave, right under the team, to run and
+          edit here; Sales' balloon shows it read-only, and a click there
+          comes here. */}
+      {team.notebook && (
+        <Box sx={{ mb: 3 }} data-team-notebook-placement="under-graph">
+          <TeamNotebook
+            notebook={team.notebook}
+            title={`${ACCOUNTING.name}\u2019s notebook`}
+          />
+        </Box>
+      )}
+
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         <Box sx={{ flex: '1 1 420px', minWidth: 0 }}>
           <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
@@ -358,14 +374,6 @@ function AgentA2ATeam(): JSX.Element {
           )}
         </Box>
       </Box>
-      {team.notebook && (
-        <Box sx={{ mt: 3 }}>
-          <TeamNotebook
-            notebook={team.notebook}
-            title={`${ACCOUNTING.name}\u2019s notebook`}
-          />
-        </Box>
-      )}
     </Box>
   );
 }

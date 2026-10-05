@@ -14,6 +14,11 @@
 
 import type { AssistantStageProps } from '../../chat/assistant/AssistantStage';
 import {
+  toolLineText,
+  type BalloonToolLine,
+  type ToolLinePhase,
+} from '../../chat/assistant/toolLine';
+import {
   ASSISTANT_WORDS,
   latestSaying,
   type AssistantState,
@@ -104,6 +109,51 @@ export function sampleSaying(index: number): { text: string; more: boolean } {
   return { text: saying.text, more: saying.more };
 }
 
+/** The tool the gallery calls (T-23): Odoo's, as Accounting calls it. */
+export const SAMPLE_TOOL = 'list_invoices';
+
+/** The sample tool's line, at a phase: "Using list_invoices…", "Done: …", "… failed". */
+export function sampleToolLine(phase: ToolLinePhase): BalloonToolLine {
+  return { id: 'gallery-tool', tool: SAMPLE_TOOL, name: SAMPLE_TOOL, phase };
+}
+
+/**
+ * A small recorded notebook (nbformat 4), as Accounting gives one: a
+ * heading, the code that totals the open invoices, and its one output.
+ */
+export const SAMPLE_NOTEBOOK = {
+  nbformat: 4,
+  nbformat_minor: 5,
+  metadata: {
+    kernelspec: {
+      name: 'python3',
+      display_name: 'Python 3',
+      language: 'python',
+    },
+    language_info: { name: 'python' },
+  },
+  cells: [
+    {
+      id: 'gallery-markdown',
+      cell_type: 'markdown',
+      metadata: {},
+      source: '## Open invoices\n\nFrom the books, **in EUR**.',
+    },
+    {
+      id: 'gallery-code',
+      cell_type: 'code',
+      metadata: {},
+      execution_count: 1,
+      source: 'due = {"Ada": 1200, "Grace": 860}\nprint(sum(due.values()))',
+      outputs: [{ output_type: 'stream', name: 'stdout', text: '2060\n' }],
+    },
+  ],
+};
+
+/** What the gallery says with the notebook it was given. */
+export const SAMPLE_NOTEBOOK_SAYING =
+  'Here is the notebook Accounting gave: the open invoices.';
+
 /** The approval the gallery waits on (T-23): answered in the balloon. */
 export function sampleApproval(
   onApprove: () => void,
@@ -128,9 +178,15 @@ export function balloonForPose(
   {
     saying,
     approval,
+    tool,
+    attachment,
   }: {
     saying?: { text: string; more: boolean };
     approval: BalloonApproval;
+    /** A tool being called: its line stands in for the words. */
+    tool?: BalloonToolLine;
+    /** What goes with the words in a `current` balloon: a notebook. */
+    attachment?: NonNullable<AssistantStageProps['balloon']>['attachment'];
   },
 ): AssistantStageProps['balloon'] {
   if (pose === 'waiting') {
@@ -141,6 +197,16 @@ export function balloonForPose(
   }
   if (pose === 'goodbye' || pose === 'aside') {
     return undefined;
+  }
+  if (tool) {
+    return {
+      text: toolLineText(tool),
+      tool,
+      busy: tool.phase === 'running',
+    };
+  }
+  if (saying && attachment) {
+    return { ...saying, attachment };
   }
   return saying;
 }

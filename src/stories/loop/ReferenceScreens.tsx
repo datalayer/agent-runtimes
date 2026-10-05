@@ -52,6 +52,7 @@ import {
   peekLine,
 } from '../../chat/assistant/ConversationBalloon';
 import { DecisionAsk } from '../../chat/assistant/DecisionAsk';
+import { ConversationBalloonHeader } from '../../chat/assistant/BalloonParts';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import {
   AssistantCharactersPlugin,
@@ -84,6 +85,7 @@ export const ASSISTANT_PICTURES = [
   'speaking',
   'aside',
   'open',
+  'current',
 ] as const;
 export type AssistantPicture = (typeof ASSISTANT_PICTURES)[number];
 
@@ -570,6 +572,17 @@ const BALLOONS: Partial<
     },
   },
   paused: { text: ASSISTANT_WORDS.paused },
+  // Current (T-23): only what it does now — the tool it calls.
+  current: {
+    text: 'Using list_invoices…',
+    tool: {
+      id: 'picture-tool',
+      tool: 'list_invoices',
+      name: 'list_invoices',
+      phase: 'running',
+    },
+    busy: true,
+  },
 };
 
 /**
@@ -584,7 +597,11 @@ export function AssistantScreen({
 }): JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null);
   const state: AssistantState =
-    picture === 'aside' || picture === 'open' ? 'idle' : picture;
+    picture === 'aside' || picture === 'open'
+      ? 'idle'
+      : picture === 'current'
+        ? 'working'
+        : picture;
   const balloon = BALLOONS[picture];
   return (
     <Box sx={{ flex: 1, position: 'relative' }}>
@@ -623,6 +640,7 @@ export function AssistantScreen({
         open={picture === 'open'}
         onToggle={() => undefined}
         balloon={balloon}
+        balloonDisplay={picture === 'current' ? 'current' : 'history'}
         insist={!!balloon}
         onDismiss={() => undefined}
       />
@@ -678,6 +696,7 @@ function OpenConversation(): JSX.Element {
       }}
     >
       <ConversationBalloonClose onClose={() => undefined} />
+      <ConversationBalloonHeader count={OPEN_CONVERSATION.length - 1} />
       <Box
         sx={{
           flex: 1,

@@ -9,7 +9,11 @@
  * contributes to `loop.assistant.character`, a test sprite read through
  * the clippy.js reader, and, when asked, the characters clippy.js publishes,
  * fetched from jsDelivr — in each state it acts, stepped aside, with its
- * balloon, in light and dark, moving or still.
+ * balloon, in light and dark, moving or still. The balloon shows the
+ * conversation either way (T-23): a peek of it (`history`), or only what is
+ * said or done now (`current`); a tool call is said in plain words ("Using
+ * list_invoices…", "Done: list_invoices", "list_invoices failed"), and a
+ * recorded notebook shows read-only in the current balloon.
  *
  * Static data, no agent: it opens without a server or an account.
  */
@@ -34,8 +38,11 @@ import { useExampleThemeStore } from './utils/themeStore';
 import { AssistantStage } from '../chat/assistant/AssistantStage';
 import { useViewportDrag } from '../chat/useViewportDrag';
 import type { AssistantAway, AssistantState } from '../chat/assistant/state';
+import type { BalloonDisplay, ToolLinePhase } from '../chat/assistant/toolLine';
 import {
   AssistantGalleryGrid,
+  GalleryBalloons,
+  GalleryNotebook,
   GalleryObstacle,
   Still,
   useGalleryCharacters,
@@ -44,9 +51,11 @@ import {
 import {
   GALLERY_POSES,
   GALLERY_POSE_LABELS,
+  SAMPLE_NOTEBOOK_SAYING,
   balloonForPose,
   sampleApproval,
   sampleSaying,
+  sampleToolLine,
   stateOfPose,
   type GalleryPose,
 } from './utils/assistantGallery';
@@ -61,7 +70,7 @@ type View = 'stage' | 'grid';
 type Presence = 'here' | 'leaving' | 'away' | 'arriving';
 
 const STAGE_SIZE = 96;
-const PANEL_HEIGHT = 420;
+const PANEL_HEIGHT = 520;
 const LEAVE_MS = 700;
 const ARRIVE_MS = 1900;
 
@@ -85,7 +94,9 @@ function ModePanel({
   onCallBack,
   away,
   replay,
+  display,
 }: {
+  display: BalloonDisplay;
   mode: 'light' | 'dark';
   character: GalleryCharacter;
   pose: GalleryPose;
@@ -178,6 +189,7 @@ function ModePanel({
           open={false}
           onToggle={onToggle}
           balloon={presence === 'here' ? balloon : undefined}
+          balloonDisplay={display}
           insist={insist}
           onDismiss={onDismiss}
         />
@@ -251,6 +263,10 @@ const ChatAssistantGalleryExample: React.FC = () => {
   const [presence, setPresence] = useState<Presence>('here');
   const [away, setAway] = useState<AssistantAway>('none');
   const [replay, setReplay] = useState(0);
+  // How the balloon shows the conversation, a tool being called, a notebook (T-23).
+  const [display, setDisplay] = useState<BalloonDisplay>('current');
+  const [toolPhase, setToolPhase] = useState<ToolLinePhase | undefined>();
+  const [withNotebook, setWithNotebook] = useState(false);
   const character =
     characters.find(entry => entry.id === characterId) ?? characters[0];
 
@@ -283,11 +299,27 @@ const ChatAssistantGalleryExample: React.FC = () => {
     () => setDecision('Denied: send_reply.'),
   );
   const balloon = balloonForPose(pose, {
-    saying: saying === undefined ? undefined : sampleSaying(saying),
+    saying:
+      saying === undefined
+        ? withNotebook
+          ? { text: SAMPLE_NOTEBOOK_SAYING, more: false }
+          : undefined
+        : sampleSaying(saying),
     approval,
+    tool: toolPhase ? sampleToolLine(toolPhase) : undefined,
+    attachment:
+      withNotebook && display === 'current' ? (
+        <GalleryNotebook
+          onOpen={() => setDecision('The notebook would open below to run.')}
+        />
+      ) : undefined,
   });
   const insist =
-    saying !== undefined || pose === 'waiting' || pose === 'paused';
+    saying !== undefined ||
+    toolPhase !== undefined ||
+    withNotebook ||
+    pose === 'waiting' ||
+    pose === 'paused';
 
   return (
     <ThemedProvider>
@@ -446,8 +478,49 @@ const ChatAssistantGalleryExample: React.FC = () => {
                     alignItems: 'center',
                   }}
                 >
+                  <SegmentedControl aria-label="Balloon">
+                    {(['history', 'current'] as const).map(option => (
+                      <SegmentedControl.Button
+                        key={option}
+                        selected={display === option}
+                        onClick={() => setDisplay(option)}
+                        data-gallery-balloon={option}
+                      >
+                        {option === 'history' ? 'History' : 'Current'}
+                      </SegmentedControl.Button>
+                    ))}
+                  </SegmentedControl>
                   <Button onClick={say} data-gallery-say="">
                     Say something
+                  </Button>
+                  <Button
+                    data-gallery-tool={toolPhase ?? 'none'}
+                    onClick={() =>
+                      setToolPhase(
+                        toolPhase === undefined
+                          ? 'running'
+                          : toolPhase === 'running'
+                            ? 'done'
+                            : toolPhase === 'done'
+                              ? 'failed'
+                              : undefined,
+                      )
+                    }
+                  >
+                    {toolPhase === undefined
+                      ? 'Use a tool'
+                      : toolPhase === 'running'
+                        ? 'Tool done'
+                        : toolPhase === 'done'
+                          ? 'Tool failed'
+                          : 'No tool'}
+                  </Button>
+                  <Button
+                    data-gallery-notebook={withNotebook ? 'on' : 'off'}
+                    aria-pressed={withNotebook}
+                    onClick={() => setWithNotebook(!withNotebook)}
+                  >
+                    {withNotebook ? 'Take the notebook' : 'Give a notebook'}
                   </Button>
                   {saying !== undefined && (
                     <Button
@@ -511,6 +584,7 @@ const ChatAssistantGalleryExample: React.FC = () => {
                     onCallBack={callBack}
                     away={away}
                     replay={replay}
+                    display={display}
                   />
                 )}
               </InModes>
@@ -532,6 +606,8 @@ const ChatAssistantGalleryExample: React.FC = () => {
                       key={replay}
                       characters={characters}
                     />
+                    {/* The balloon's displays: history, a tool, a notebook. */}
+                    <GalleryBalloons character={character} />
                   </Box>
                 )}
               </InModes>

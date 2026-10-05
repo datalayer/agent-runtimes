@@ -166,6 +166,9 @@ function FloatingApp({
     <ChatFloating
       defaultViewMode={view}
       {...(character ? { assistantCharacter: character } : {})}
+      {...(app.interface.balloon
+        ? { balloonDisplay: app.interface.balloon }
+        : {})}
       title={app.name}
       description={welcome}
       brandIcon={<Face emoji={app.emoji} />}

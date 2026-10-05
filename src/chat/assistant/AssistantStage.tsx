@@ -20,7 +20,7 @@
  * @module chat/assistant/AssistantStage
  */
 
-import type { JSX, RefObject } from 'react';
+import type { JSX, ReactNode, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ActionList, ActionMenu, IconButton, useTheme } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -30,6 +30,7 @@ import { SpeechBalloon } from './SpeechBalloon';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
+import type { BalloonDisplay, BalloonToolLine } from './toolLine';
 import {
   ASSISTANT_OBSTACLES,
   POINTER_CALM_MS,
@@ -271,7 +272,21 @@ export interface AssistantStageProps {
     approval?: BalloonApproval;
     /** Puts the peek away (a × beside its line); never an approval's. */
     onDismiss?: () => void;
+    /** The tool being called: "Using list_invoices…" in place of the words. */
+    tool?: BalloonToolLine;
+    /** Words are being written (`current`): read out once all have arrived. */
+    speaking?: boolean;
+    /** The agent is at work (`current`): *Now* breathes. */
+    busy?: boolean;
+    /** What goes with the words (`current`): a notebook given, read-only. */
+    attachment?: ReactNode;
   };
+  /**
+   * How the balloon shows the conversation (LOOP T-23): a peek of it
+   * (`history`, the default — open, the conversation is the whole history),
+   * or the one thing being said or done now (`current`).
+   */
+  balloonDisplay?: BalloonDisplay;
   /** Show the balloon without being hovered: something new to say. */
   insist?: boolean;
   /** Send it away (T-27): for the page, for the session, or for good. */
@@ -355,6 +370,7 @@ export function AssistantStage({
   decide,
   mouthLevel,
   stayPut = false,
+  balloonDisplay = 'history',
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -385,6 +401,7 @@ export function AssistantStage({
       ref={stageRef}
       data-assistant-state={state}
       data-assistant-aside={aside}
+      data-assistant-balloon={balloonDisplay}
       sx={{
         position: 'fixed',
         zIndex: 1002,
@@ -495,6 +512,11 @@ export function AssistantStage({
           more={balloon.more}
           approval={balloon.approval}
           onDismissPeek={balloon.onDismiss}
+          display={balloonDisplay}
+          tool={balloon.tool}
+          speaking={balloon.speaking}
+          busy={balloon.busy}
+          attachment={balloon.attachment}
           decide={decide}
           onDecisionActive={setDeciding}
           wide={deciding}

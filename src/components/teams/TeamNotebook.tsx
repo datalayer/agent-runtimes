@@ -63,7 +63,22 @@ export function TeamNotebook({
       as="section"
       aria-label={title}
       data-team-notebook=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}
+      // Focused when the notebook in a balloon is clicked (`focusTeamNotebook`).
+      tabIndex={-1}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        minWidth: 0,
+        scrollMarginTop: '16px',
+        '&:focus': { outline: 'none' },
+        '&:focus-visible': {
+          outline: '2px solid',
+          outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+          outlineOffset: 4,
+          borderRadius: 2,
+        },
+      }}
     >
       <Heading as="h3" sx={{ fontSize: 2, m: 0 }}>
         {title}

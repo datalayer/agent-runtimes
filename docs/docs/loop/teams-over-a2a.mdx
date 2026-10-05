@@ -204,6 +204,15 @@ where the reader runs cells, changes them and adds their own. The view,
 JupyterLab and Pyodide are loaded only once a notebook is drawn: a page that
 shows the team loads none of them before.
 
+The notebook goes **right under the team's graph**, before the composer and
+the conversation, in the example and on the landing's home page. Sales'
+balloon shows it read-only at the same time (`persona.notebook`, drawn by
+`NotebookPreview`: jupyter-react's notebook with `readonly` on
+`ServiceManagerLess`, no kernel), with *Open it below to run it*; a click
+there scrolls to and focuses the one that runs (`focusTeamNotebook`). The
+members' balloons say their tools too (`persona.tool`): *Asking
+Accounting…*, *Using list_invoices…*.
+
 ```tsx
 import { NOTEBOOK_AND_WORDS, TeamNotebook, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
 

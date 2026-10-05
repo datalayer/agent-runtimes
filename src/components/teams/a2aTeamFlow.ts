@@ -141,6 +141,21 @@ export function toolWords(
 }
 
 /**
+ * A tool's own name, without its connection's prefix: `list_invoices` for
+ * `odoo_accounting_list_invoices` — as a balloon says it (LOOP T-23).
+ */
+export function toolOwnName(
+  tool: string,
+  connections: A2ATeamConnection[],
+): string {
+  const prefix = connectionOfTool(tool, connections)?.prefix;
+  if (prefix && tool.includes(prefix)) {
+    return tool.slice(tool.indexOf(prefix) + prefix.length) || tool;
+  }
+  return tool;
+}
+
+/**
  * The calls running after an event of the peer's (`member`): a call it
  * starts to one of its connections is added; its end marks it ended, and
  * drops it once it has been shown long enough (else `holdMs` says when to

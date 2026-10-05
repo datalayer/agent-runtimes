@@ -14,10 +14,17 @@
  * the conversation is elsewhere (the LOOP workspace), *Ask a decision*: a
  * typed decision asked of Jev, its answer said back in the balloon.
  *
+ * Shown `current` (LOOP T-23), it is the one thing being said or done now:
+ * *Now*, then the words as they are written, or the tool being called
+ * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
+ * (a notebook given, read-only). Either way a tool line stands in for the
+ * peek while a tool runs, and a screen reader hears it once as it starts and
+ * once as it ends.
+ *
  * @module chat/assistant/SpeechBalloon
  */
 
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
@@ -25,6 +32,12 @@ import { ASSISTANT_WORDS, type BalloonApproval } from './state';
 import { moreWaiting } from './ConversationBalloon';
 import { DecisionAsk } from './DecisionAsk';
 import type { DecisionAsker } from './decisions';
+import {
+  BalloonToolLineView,
+  CurrentBalloonBody,
+  ToolLineAnnouncer,
+} from './BalloonParts';
+import type { BalloonDisplay, BalloonToolLine } from './toolLine';
 
 export interface SpeechBalloonProps {
   text: string;
@@ -50,6 +63,19 @@ export interface SpeechBalloonProps {
   wide?: boolean;
   /** Puts the peek away: a × beside its line. Never for an approval. */
   onDismissPeek?: () => void;
+  /**
+   * How it is shown: a peek of the conversation (`history`, the default),
+   * or the one thing being said or done now (`current`).
+   */
+  display?: BalloonDisplay;
+  /** The tool being called: said in place of the words while it runs. */
+  tool?: BalloonToolLine;
+  /** Words are being written: read out once they have all arrived. */
+  speaking?: boolean;
+  /** The agent is at work: *Now* breathes. */
+  busy?: boolean;
+  /** What goes with the words, under them: a notebook given, read-only. */
+  attachment?: ReactNode;
 }
 
 export function SpeechBalloon({
@@ -65,12 +91,17 @@ export function SpeechBalloon({
   onDecisionActive,
   wide = false,
   onDismissPeek,
+  display = 'history',
+  tool,
+  speaking = false,
+  busy = false,
+  attachment,
 }: SpeechBalloonProps): JSX.Element {
+  const current = display === 'current';
   return (
     <Box
-      role="status"
-      aria-live="polite"
       data-speech-balloon=""
+      data-balloon-display={display}
       sx={{
         position: 'absolute',
         // Pixels, as strings: a number here is read as the theme's space
@@ -79,14 +110,15 @@ export function SpeechBalloon({
           ? { bottom: `${above}px` }
           : { top: `${above}px` }),
         [align]: 0,
-        maxWidth: wide ? 300 : 280,
-        width: wide ? 300 : 'max-content',
+        maxWidth: wide || (current && attachment) ? 300 : current ? 260 : 280,
+        width: wide || (current && attachment) ? 300 : 'max-content',
         px: 3,
         py: 2,
         bg: 'canvas.default',
         color: 'fg.default',
         border: '1px solid',
-        borderColor: 'border.default',
+        // The current balloon is the agent's voice now: its accent's edge.
+        borderColor: current ? 'accent.muted' : 'border.default',
         borderRadius: 'var(--theme-radius-bubble, 16px)',
         boxShadow: 'shadow.medium',
         fontSize: 1,
@@ -102,34 +134,68 @@ export function SpeechBalloon({
           bg: 'canvas.default',
           borderRight: '1px solid',
           borderBottom: '1px solid',
-          borderColor: 'border.default',
+          borderColor: current ? 'accent.muted' : 'border.default',
           transform: side === 'above' ? 'rotate(45deg)' : 'rotate(225deg)',
         },
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-        <Box
-          as="button"
-          type="button"
-          data-balloon-peek=""
-          data-balloon-more={more ? '' : undefined}
-          onClick={onOpen}
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            m: 0,
-            p: 0,
-            border: 0,
-            bg: 'transparent',
-            color: 'inherit',
-            font: 'inherit',
-            textAlign: 'left',
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
-        >
-          {text}
-        </Box>
+        {current && !approval ? (
+          <Box
+            as="button"
+            type="button"
+            data-balloon-peek=""
+            onClick={onOpen}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              m: 0,
+              p: 0,
+              border: 0,
+              bg: 'transparent',
+              color: 'inherit',
+              font: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <CurrentBalloonBody
+              text={text}
+              tool={tool}
+              busy={busy}
+              speaking={speaking}
+            />
+          </Box>
+        ) : (
+          <Box
+            as="button"
+            type="button"
+            data-balloon-peek=""
+            data-balloon-more={more ? '' : undefined}
+            onClick={onOpen}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              m: 0,
+              p: 0,
+              border: 0,
+              bg: 'transparent',
+              color: 'inherit',
+              font: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+              '&:hover': { textDecoration: 'underline' },
+            }}
+          >
+            {tool ? (
+              <BalloonToolLineView line={tool} />
+            ) : (
+              <Box as="span" role="status" aria-live="polite">
+                {text}
+              </Box>
+            )}
+          </Box>
+        )}
         {onDismissPeek && !approval ? (
           <IconButton
             icon={XIcon}
@@ -176,6 +242,12 @@ export function SpeechBalloon({
           ) : null}
         </Box>
       )}
+      {current && attachment ? (
+        <Box data-balloon-attachment="" sx={{ mt: 2 }}>
+          {attachment}
+        </Box>
+      ) : null}
+      {!current ? <ToolLineAnnouncer line={tool} /> : null}
       {decide && <DecisionAsk ask={decide} onActiveChange={onDecisionActive} />}
     </Box>
   );

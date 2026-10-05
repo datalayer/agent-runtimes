@@ -423,6 +423,9 @@ export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
  */
 export type AppAssistantCharacter = string;
 
+/** How a floating assistant's balloon shows the conversation (LOOP T-23). */
+export type AppBalloonDisplay = 'history' | 'current';
+
 /** How an application sits in another product's page (LOOP D-07). */
 export type AppEmbedMode = 'inline' | 'bubble' | 'panel' | 'assistant';
 
@@ -511,6 +514,12 @@ export interface AppInterfaceSpec {
    * Said, it wins over the one the person chose in their settings.
    */
   assistant?: AppAssistantCharacter;
+  /**
+   * How its floating assistant's balloon shows the conversation: `history`
+   * (every message, the composer last) or `current` (only what it says or
+   * does now). The page's own when unsaid.
+   */
+  balloon?: AppBalloonDisplay;
   /** Its voice: off unless said (VO-41); absent from a spec made before voice. */
   voice?: AppVoiceSpec;
   /**

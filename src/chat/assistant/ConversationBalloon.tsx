@@ -31,6 +31,12 @@ export const CONVERSATION_BALLOON_WIDTH = 380;
 export const CONVERSATION_BALLOON_MAX_HEIGHT = 560;
 export const CONVERSATION_BALLOON_VIEWPORT_SHARE = 0.6;
 
+/**
+ * The open balloon's height when it shows only what is said now
+ * (`current`): the line and the composer, nothing to scroll.
+ */
+export const CURRENT_BALLOON_HEIGHT = 230;
+
 /** The open balloon's height for a window this tall: 60% of it, 560px at most. */
 export function conversationBalloonHeight(viewportHeight: number): number {
   return Math.max(

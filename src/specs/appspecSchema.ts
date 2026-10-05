@@ -355,6 +355,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             "The character its floating assistant shows, by the id a plugin contributes it under (lowercase letters and digits, words joined by a hyphen): Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The paper clip when unsaid; an id no enabled plugin contributes is refused where the plugins are known, the runtime and the page. Said here, it wins over a person's own choice in their settings",
           title: 'Assistant',
         },
+        balloon: {
+          anyOf: [
+            {
+              $ref: '#/$defs/BalloonDisplay',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "How its floating assistant's balloon shows the conversation: `history` (every message, scrolled, the composer last) or `current` (only what it says or does now, the answer being written or the tool it calls, in one balloon). The page's own when unsaid: `history` for the floating chat",
+        },
         voice: {
           $ref: '#/$defs/AppVoice',
           description:
@@ -822,6 +835,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       title: 'AppVoice',
       type: 'object',
+    },
+    BalloonDisplay: {
+      description:
+        "How a floating assistant's balloon shows the conversation (LOOP T-23).",
+      enum: ['history', 'current'],
+      title: 'BalloonDisplay',
+      type: 'string',
     },
     Behaviour: {
       description:

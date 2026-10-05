@@ -15,6 +15,7 @@
  * @module examples/utils/AssistantGalleryGrid
  */
 
+import type React from 'react';
 import type { JSX, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Text } from '@primer/react';
@@ -28,10 +29,16 @@ import {
   assistantCharactersOf,
 } from '../../loop/plugins/assistant-characters';
 import { OWL_CHARACTER, OwlCharacterPlugin } from './owlCharacterPlugin';
+import { NotebookPreview } from '../../components/teams/NotebookPreview';
+import type { BalloonDisplay } from '../../chat/assistant/toolLine';
 import { readTestSpriteCharacter } from './testSpriteCharacter';
 import {
   GALLERY_POSES,
   GALLERY_POSE_LABELS,
+  SAMPLE_NOTEBOOK,
+  SAMPLE_NOTEBOOK_SAYING,
+  sampleSaying,
+  sampleToolLine,
   stateOfPose,
   type GalleryPose,
 } from './assistantGallery';
@@ -267,6 +274,129 @@ export function AssistantGalleryGrid({
           </tr>
         ))}
       </tbody>
+    </Box>
+  );
+}
+
+/** How tall the notebook in a balloon is, in the stage and in the grid. */
+export const GALLERY_NOTEBOOK_HEIGHT = 160;
+
+/** The notebook a balloon holds in the gallery: jupyter-react's, read-only. */
+export function GalleryNotebook({
+  onOpen,
+}: {
+  onOpen?: () => void;
+}): JSX.Element {
+  return (
+    <NotebookPreview
+      notebook={SAMPLE_NOTEBOOK}
+      title="Accounting’s notebook"
+      maxHeight={GALLERY_NOTEBOOK_HEIGHT}
+      onOpen={onOpen}
+    />
+  );
+}
+
+/** One balloon display, pictured: a character with what its balloon says. */
+function BalloonCell({
+  character,
+  label,
+  display,
+  balloon,
+  height,
+}: {
+  character: GalleryCharacter;
+  label: string;
+  display: BalloonDisplay;
+  balloon: NonNullable<React.ComponentProps<typeof AssistantStage>['balloon']>;
+  height: number;
+}): JSX.Element {
+  const stageRef = useRef<HTMLDivElement>(null);
+  return (
+    <Box
+      data-gallery-cell={`balloon-${label.toLowerCase().replace(/\W+/g, '-')}`}
+      sx={{
+        position: 'relative',
+        width: 330,
+        height,
+        border: '1px solid',
+        borderColor: 'border.muted',
+        borderRadius: 2,
+      }}
+    >
+      <Text
+        sx={{
+          position: 'absolute',
+          top: 1,
+          right: 2,
+          fontSize: 0,
+          fontWeight: 600,
+          color: 'fg.muted',
+        }}
+      >
+        {label}
+      </Text>
+      <AssistantStage
+        character={character.character}
+        state={balloon.tool ? 'working' : 'speaking'}
+        size={48}
+        place={{ position: 'absolute', left: '12px', bottom: '8px' }}
+        stageRef={stageRef}
+        onDragStart={() => undefined}
+        open={false}
+        onToggle={() => undefined}
+        onDismiss={() => undefined}
+        balloon={balloon}
+        balloonDisplay={display}
+        insist
+      />
+    </Box>
+  );
+}
+
+/**
+ * The balloon's displays (T-23), one character: a peek of the history, the
+ * current balloon with a tool line, and with a notebook given — the same
+ * read-only jupyter-react notebook as in the stage, loaded when drawn.
+ */
+export function GalleryBalloons({
+  character,
+}: {
+  character: GalleryCharacter;
+}): JSX.Element {
+  return (
+    <Box
+      data-gallery-balloons=""
+      sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mt: 3 }}
+    >
+      <BalloonCell
+        character={character}
+        label="History"
+        display="history"
+        height={180}
+        balloon={{ ...sampleSaying(0), onDismiss: () => undefined }}
+      />
+      <BalloonCell
+        character={character}
+        label="Current · tool"
+        display="current"
+        height={180}
+        balloon={{
+          text: 'Using list_invoices…',
+          tool: sampleToolLine('running'),
+          busy: true,
+        }}
+      />
+      <BalloonCell
+        character={character}
+        label="Current · notebook"
+        display="current"
+        height={GALLERY_NOTEBOOK_HEIGHT + 210}
+        balloon={{
+          text: SAMPLE_NOTEBOOK_SAYING,
+          attachment: <GalleryNotebook />,
+        }}
+      />
     </Box>
   );
 }
