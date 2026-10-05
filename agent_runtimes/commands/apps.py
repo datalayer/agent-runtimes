@@ -793,16 +793,24 @@ BOOTSTRAP_AGENT_SPEC_ID = "example-simple"
 
 
 def configure_on(
-    base_url: str, document: Dict[str, Any], organization: Optional[str] = None
+    base_url: str,
+    document: Dict[str, Any],
+    organization: Optional[str] = None,
+    a2a_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Configure a runtime with an application; its refusal said in sentences.
 
     With ``organization``, the runtime reads the plugins it turned off and the
     contexts its agent keeps to (LOOP C-12, U-31) with the caller's token.
+    With ``a2a_url``, the runtime's address as its callers reach it, it also
+    serves the application over A2A, to the members of its team.
     """
     import httpx
 
     body: Dict[str, Any] = {"app": document}
+    if a2a_url is not None:
+        body["a2a"] = True
+        body["public_url"] = a2a_url
     if organization:
         from agent_runtimes.loop.launch import NotSignedIn, make_client
 
@@ -865,8 +873,26 @@ def apps_run(
         "--organization",
         help="The organization's uid: its turned-off plugins and its contexts, read from IAM.",
     ),
+    runtime: str = typer.Option(
+        None,
+        "--runtime",
+        "-r",
+        help="A running Datalayer runtime to run it on, by its uid or name (with --cloud).",
+    ),
+    a2a: bool = typer.Option(
+        False,
+        "--a2a",
+        help=(
+            "Serve it over A2A to the members of its team, and wait: its address and its "
+            "agent card are printed, and the session is the runtime's, not the terminal's."
+        ),
+    ),
 ) -> None:
     """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
+
+    With --a2a it is served over A2A with fasta2a, at
+    /api/v1/a2a/agents/<its id>/, to the members of a team that ask it
+    (agentspecs `talks_to`), until Ctrl-C.
 
     The runtime is configured with the application, so its rules decide every
     tool call; its starters are the terminal's suggestions. An app.py is built
@@ -909,6 +935,9 @@ def apps_run(
     # The terminal is the conversation: no request log over it.
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    if runtime and not cloud:
+        console.print("[red]✗[/red] --runtime names a Datalayer runtime: add --cloud.")
+        raise typer.Exit(1)
     where = choose_where(local=local, cloud=cloud)
     cloud_launch = None
     process = None
@@ -919,6 +948,7 @@ def apps_run(
                 label=f"{application.emoji} {application.name}",
                 environment=environment,
                 minutes=minutes,
+                runtime=runtime,
                 status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
             )
         except NotSignedIn:
@@ -944,7 +974,27 @@ def apps_run(
         base_url = f"http://127.0.0.1:{port}"
 
     try:
-        configured = configure_on(base_url, document, organization)
+        public_url = None
+        if a2a:
+            from agent_runtimes.client.agent_client import (
+                build_agent_runtimes_base_url,
+            )
+
+            # The card names the address its callers reach: the runtime's
+            # ingress, not the relay on this machine.
+            public_url = (
+                build_agent_runtimes_base_url(cloud_launch.ingress)
+                if cloud_launch
+                else base_url
+            )
+        configured = (
+            configure_on(base_url, document, organization, a2a_url=public_url)
+            if a2a
+            else configure_on(base_url, document, organization)
+        )
+        if a2a:
+            _serve_over_a2a(application, configured, cloud_launch)
+            return
         if not speak_ag_ui(base_url):
             raise RuntimeError("The application's agent did not come up.")
         from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
@@ -1006,6 +1056,42 @@ def apps_run(
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+
+
+def _serve_over_a2a(
+    application: Any, configured: Dict[str, Any], cloud_launch: Any
+) -> None:
+    """Say where the application is served over A2A, and wait until Ctrl-C."""
+    import time
+
+    served = configured.get("a2a") or {}
+    for note in configured.get("setup") or []:
+        console.print(f"[yellow]•[/yellow] {note}")
+    where = (
+        f"on Datalayer ({cloud_launch.runtime_name})"
+        if cloud_launch
+        else "on this machine"
+    )
+    console.print(
+        f"{application.emoji}  {application.name} is served over A2A {where}.",
+        highlight=False,
+    )
+    console.print(f"  A2A:  {served.get('url', '')}", highlight=False)
+    console.print(f"  Card: {served.get('card', '')}", highlight=False)
+    if cloud_launch:
+        console.print(
+            f"  A key granted to it names the task {served.get('task', '')}…: "
+            f"examples/sales-accounting-a2a/make_temp_key.py --runtime {cloud_launch.runtime_name}",
+            highlight=False,
+        )
+    else:
+        console.print("  From this machine it needs no key.", highlight=False)
+    console.print("Ctrl-C to stop serving.", highlight=False)
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass
 
 
 @app.command(name="deploy")

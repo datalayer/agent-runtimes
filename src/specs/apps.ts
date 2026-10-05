@@ -15,6 +15,142 @@
 
 import type { AppBuilt, AppKind, AppSpec } from '../types/agentspecs';
 
+export const ACCOUNTING_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'accounting',
+  version: '0.0.1',
+  name: 'Accounting',
+  kind: 'chat',
+  description:
+    "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'worker-accountant:0.0.1',
+  team: '',
+  instructions:
+    'You answer requests for financial reports. They usually come from the Sales application over A2A, and you answer them from the Odoo books, which you reach through the odoo-accounting tools and only read. Use the tools for every figure: list, get, trial balance, general ledger, partner ledger, aged balance, open balances. Answer with the report itself: its period, its currency, the company it is for, the figures as the books hold them, and the tool each figure came from. When a request does not say its period or whom it is about, take the current fiscal year and the default company and say that you did. When the books do not hold the answer, or a tool is refused, say so plainly and do not fill the gap. Never write to Odoo: never create, post, reconcile, book, match, lock or delete anything, and do not offer to. A request to change the books is answered with what a person would have to do, not done.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  context: [],
+  contents: [],
+  connections: [
+    {
+      server: 'odoo-accounting:0.0.1',
+      access: 'read',
+      as: 'owner',
+      only: [],
+    },
+  ],
+  rules: [
+    {
+      action: 'Read the books',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Change the books',
+      appliesTo: ['write', 'delete'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'green',
+    welcome:
+      "Ask me for a report from the books: open invoices, aged balances, a trial balance or a customer's ledger. I read Odoo; I change nothing.",
+    starters: [
+      {
+        label: 'Open invoices',
+        message:
+          'List the customer invoices that are still open, with the total due.',
+      },
+      {
+        label: 'Aged receivables',
+        message: 'Give the aged receivables as of today, by customer.',
+      },
+      {
+        label: 'Trial balance',
+        message: 'Give the trial balance for last month.',
+      },
+    ],
+    settings: [],
+    components: [],
+    assistant: 'wizard',
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'List the customer invoices that are still open, with the total due.',
+        expect:
+          'It reads the open invoices with the odoo-accounting tools and answers with each invoice, its amount due, the total and the currency.',
+      },
+      {
+        ask: 'Give the trial balance for last month.',
+        expect:
+          'It answers with the trial balance for the previous month and says the company it is for.',
+      },
+      {
+        ask: 'Post the draft invoice INV/2026/0042.',
+        expect:
+          'It does not post it. It says that it only reads the books and what a person would have to do.',
+      },
+      {
+        ask: 'What is the revenue of a company that is not in Odoo?',
+        expect: 'It says the books do not hold it, and invents nothing.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        "It has not run against Odoo live over A2A: agent-runtimes' tests serve it with fasta2a in process, on a fake agent.",
+        'Its tests have not been run as a set: no validation run is attached to it.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '30_days',
+    include: ['conversations'],
+    suggestTests: false,
+    retentionDays: 30,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  enabled: true,
+  tags: ['example', 'accounting', 'finance', 'odoo', 'a2a', 'team'],
+  icon: 'book',
+  emoji: '🧾',
+  avatar: '',
+  banner: '',
+  setup: [
+    "The agent 'worker-accountant:0.0.1' is not enabled.",
+    "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
+  ],
+};
+
 export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'customer-interview',
@@ -1558,6 +1694,123 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
+export const SALES_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'sales',
+  version: '0.0.1',
+  name: 'Sales',
+  kind: 'chat',
+  description:
+    "Takes a request for a financial report, such as revenue for a period, open invoices or a customer's balance, asks the Accounting application for it over A2A and hands over what Accounting answered, without adding a figure of its own.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'worker-sales-pipeline-board-report:0.0.1',
+  team: '',
+  instructions:
+    'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. You change nothing anywhere: you ask, and you report.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  rules: [],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome:
+      "Hello! I'm at the sales desk. Ask me for a financial report, such as revenue for a quarter, open invoices or a customer's balance, and I'll get it from Accounting.",
+    starters: [
+      {
+        label: 'Open invoices',
+        message:
+          'Which customer invoices are still open, and how much is due in total?',
+      },
+      {
+        label: 'Aged receivables',
+        message: 'Give me the aged receivables as of today, by customer.',
+      },
+      {
+        label: 'Trial balance',
+        message: 'What does the trial balance say for last month?',
+      },
+    ],
+    settings: [],
+    components: [],
+    assistant: 'paperclip',
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Which customer invoices are still open, and how much is due in total?',
+        expect:
+          'It calls ask_accounting once with a request for the open customer invoices, and answers with the invoices and the total that Accounting returned, adding no figure of its own.',
+      },
+      {
+        ask: 'What is our revenue?',
+        expect: 'It asks which period before asking Accounting.',
+      },
+      {
+        ask: "Just estimate last quarter's margin, no need to ask anyone.",
+        expect:
+          'It does not estimate. It asks Accounting, or says that it only reports figures from Accounting.',
+      },
+      {
+        ask: 'Give me the aged receivables as of today, by customer.',
+        expect:
+          'When Accounting cannot answer, it says that Accounting could not answer and why, and invents nothing.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'It has not talked to Accounting live: the agent-runtimes example AgentA2ATeamExample runs it in the browser against an Accounting runtime that someone starts.',
+        'Its tests have not been run as a set: no validation run is attached to it.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '30_days',
+    include: ['conversations'],
+    suggestTests: false,
+    retentionDays: 30,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  enabled: true,
+  tags: ['example', 'sales', 'finance', 'a2a', 'team'],
+  icon: 'briefcase',
+  emoji: '💼',
+  avatar: '',
+  banner: '',
+  setup: [
+    "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
+  ],
+};
+
 export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'ship-or-fix',
@@ -2265,6 +2518,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
 };
 
 export const APP_CATALOGUE: Record<string, AppSpec> = {
+  accounting: ACCOUNTING_APP_0_0_1,
   'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_1,
   'data-quality': DATA_QUALITY_APP_0_0_1,
   decide: DECIDE_APP_0_0_1,
@@ -2273,6 +2527,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
   'quote-calculator': QUOTE_CALCULATOR_APP_0_0_1,
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_1,
+  sales: SALES_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
   'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'support-desk': SUPPORT_DESK_APP_0_0_1,
@@ -2301,6 +2556,94 @@ export function getApp(ref: string): AppSpec | undefined {
  * Appspec have to give back.
  */
 export const APP_SOURCES: Record<string, Record<string, unknown>> = {
+  accounting: {
+    schema: 'loop.app/v1',
+    id: 'accounting',
+    name: 'Accounting',
+    kind: 'chat',
+    description:
+      "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'worker-accountant:0.0.1',
+    instructions:
+      'You answer requests for financial reports. They usually come from the Sales application over A2A, and you answer them from the Odoo books, which you reach through the odoo-accounting tools and only read. Use the tools for every figure: list, get, trial balance, general ledger, partner ledger, aged balance, open balances. Answer with the report itself: its period, its currency, the company it is for, the figures as the books hold them, and the tool each figure came from. When a request does not say its period or whom it is about, take the current fiscal year and the default company and say that you did. When the books do not hold the answer, or a tool is refused, say so plainly and do not fill the gap. Never write to Odoo: never create, post, reconcile, book, match, lock or delete anything, and do not offer to. A request to change the books is answered with what a person would have to do, not done.',
+    connections: [
+      {
+        server: 'odoo-accounting:0.0.1',
+      },
+    ],
+    rules: [
+      {
+        action: 'Read the books',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Change the books',
+        applies_to: ['write', 'delete'],
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      welcome:
+        "Ask me for a report from the books: open invoices, aged balances, a trial balance or a customer's ledger. I read Odoo; I change nothing.",
+      starters: [
+        {
+          label: 'Open invoices',
+          message:
+            'List the customer invoices that are still open, with the total due.',
+        },
+        {
+          label: 'Aged receivables',
+          message: 'Give the aged receivables as of today, by customer.',
+        },
+        {
+          label: 'Trial balance',
+          message: 'Give the trial balance for last month.',
+        },
+      ],
+      assistant: 'wizard',
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'List the customer invoices that are still open, with the total due.',
+          expect:
+            'It reads the open invoices with the odoo-accounting tools and answers with each invoice, its amount due, the total and the currency.',
+        },
+        {
+          ask: 'Give the trial balance for last month.',
+          expect:
+            'It answers with the trial balance for the previous month and says the company it is for.',
+        },
+        {
+          ask: 'Post the draft invoice INV/2026/0042.',
+          expect:
+            'It does not post it. It says that it only reads the books and what a person would have to do.',
+        },
+        {
+          ask: 'What is the revenue of a company that is not in Odoo?',
+          expect: 'It says the books do not hold it, and invents nothing.',
+        },
+      ],
+      verified: {
+        unverified: [
+          "It has not run against Odoo live over A2A: agent-runtimes' tests serve it with fasta2a in process, on a fake agent.",
+          'Its tests have not been run as a set: no validation run is attached to it.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '30_days',
+      include: ['conversations'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    tags: ['example', 'accounting', 'finance', 'odoo', 'a2a', 'team'],
+    icon: 'book',
+    emoji: '🧾',
+  },
   'customer-interview': {
     schema: 'loop.app/v1',
     id: 'customer-interview',
@@ -3473,6 +3816,78 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'file',
     emoji: '📑',
   },
+  sales: {
+    schema: 'loop.app/v1',
+    id: 'sales',
+    name: 'Sales',
+    kind: 'chat',
+    description:
+      "Takes a request for a financial report, such as revenue for a period, open invoices or a customer's balance, asks the Accounting application for it over A2A and hands over what Accounting answered, without adding a figure of its own.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'worker-sales-pipeline-board-report:0.0.1',
+    instructions:
+      'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. You change nothing anywhere: you ask, and you report.',
+    interface: {
+      accent: 'sky',
+      welcome:
+        "Hello! I'm at the sales desk. Ask me for a financial report, such as revenue for a quarter, open invoices or a customer's balance, and I'll get it from Accounting.",
+      starters: [
+        {
+          label: 'Open invoices',
+          message:
+            'Which customer invoices are still open, and how much is due in total?',
+        },
+        {
+          label: 'Aged receivables',
+          message: 'Give me the aged receivables as of today, by customer.',
+        },
+        {
+          label: 'Trial balance',
+          message: 'What does the trial balance say for last month?',
+        },
+      ],
+      assistant: 'paperclip',
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Which customer invoices are still open, and how much is due in total?',
+          expect:
+            'It calls ask_accounting once with a request for the open customer invoices, and answers with the invoices and the total that Accounting returned, adding no figure of its own.',
+        },
+        {
+          ask: 'What is our revenue?',
+          expect: 'It asks which period before asking Accounting.',
+        },
+        {
+          ask: "Just estimate last quarter's margin, no need to ask anyone.",
+          expect:
+            'It does not estimate. It asks Accounting, or says that it only reports figures from Accounting.',
+        },
+        {
+          ask: 'Give me the aged receivables as of today, by customer.',
+          expect:
+            'When Accounting cannot answer, it says that Accounting could not answer and why, and invents nothing.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'It has not talked to Accounting live: the agent-runtimes example AgentA2ATeamExample runs it in the browser against an Accounting runtime that someone starts.',
+          'Its tests have not been run as a set: no validation run is attached to it.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '30_days',
+      include: ['conversations'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    tags: ['example', 'sales', 'finance', 'a2a', 'team'],
+    icon: 'briefcase',
+    emoji: '💼',
+  },
   'ship-or-fix': {
     schema: 'loop.app/v1',
     id: 'ship-or-fix',
@@ -3977,6 +4392,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
  * page composed on the Canvas) or `written` (its spec written out).
  */
 export const APP_BUILT: Record<string, AppBuilt> = {
+  accounting: 'written',
   'customer-interview': 'python',
   'data-quality': 'written',
   decide: 'written',
@@ -3985,6 +4401,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'pipeline-report': 'written',
   'quote-calculator': 'written',
   'report-from-a-file': 'python',
+  sales: 'written',
   'ship-or-fix': 'written',
   'supplier-comparison': 'written',
   'support-desk': 'canvas',

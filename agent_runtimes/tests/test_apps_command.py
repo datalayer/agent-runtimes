@@ -109,6 +109,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         path.stem: validate_file(path) for path in sorted(CATALOGUE.glob("*.yaml"))
     }
     assert set(reports) == {
+        "accounting",
         "customer-interview",
         "data-quality",
         "decide",
@@ -117,6 +118,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "pipeline-report",
         "quote-calculator",
         "report-from-a-file",
+        "sales",
         "ship-or-fix",
         "supplier-comparison",
         "support-desk",
@@ -126,6 +128,13 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     assert reports["web-research"].setup == []
     assert reports["decide"].setup == []
     assert any("not enabled" in line for line in reports["inbox-triage"].setup)
+    # The team over A2A: each ready, its setup what is not enabled today.
+    assert reports["sales"].setup == [
+        "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled."
+    ]
+    assert "The MCP server 'odoo-accounting:0.0.1' is not enabled." in (
+        reports["accounting"].setup
+    )
 
 
 def test_json_for_ci(tmp_path: Path) -> None:

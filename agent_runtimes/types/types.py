@@ -2460,6 +2460,13 @@ class TeamSubagentspec(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TeamLinkSpec(BaseModel):
+    """One member asking another directly, over a protocol (agentspecs `TeamLink`)."""
+
+    member: str = Field(..., description="The member asked, by its id in the team")
+    over: Literal["a2a"] = Field(default="a2a", description="The protocol")
+
+
 class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
@@ -2472,6 +2479,21 @@ class TeamAgentspec(BaseModel):
             "names one inherits its model, tools, prompt and subagents; the "
             "fields below then say what is different about it in this team."
         ),
+    )
+    app: str = Field(
+        default="",
+        description=(
+            "Application catalogue reference, in place of `ref`: the member is "
+            "that application, with its agent, connections, rules and interface"
+        ),
+    )
+    runs_in: Optional[Literal["browser", "runtime"]] = Field(
+        default=None,
+        description="Where its loop turns: in the person's browser, or on a runtime",
+    )
+    talks_to: List["TeamLinkSpec"] = Field(
+        default_factory=list,
+        description="The members it asks directly while it works, and over what",
     )
     role: str = Field(
         default="contributor",
@@ -2582,6 +2604,10 @@ class TeamSupervisorSpec(BaseModel):
     ref: str = Field(
         default="",
         description="Agent catalogue reference, `id` or `id:version`",
+    )
+    app: str = Field(
+        default="",
+        description="Application catalogue reference, in a team of applications",
     )
     model: str = Field(
         default="", description="Model id, overriding the referenced agent's"
@@ -2763,6 +2789,10 @@ class TeamSpec(BaseModel):
         default="",
         description="Instructions for routing tasks between agents",
         alias="routingInstructions",
+    )
+    entry: str = Field(
+        default="",
+        description="The member a person talks to, by its id: the team's front door",
     )
     suggestions: list[TeamSuggestionSpec] = Field(
         default_factory=list,

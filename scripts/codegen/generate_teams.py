@@ -147,6 +147,19 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
     # The reference into the agent catalogue. Emitted before the overrides
     # because it is what the member *is*; the rest says how it differs here.
     lines.append(f'            ref="{agent.get("ref", "")}",')
+    # A member that is an application, where it runs and whom it asks:
+    # emitted only when said, as a team of agents says none of them.
+    if agent.get("app"):
+        lines.append(f'            app="{agent["app"]}",')
+    if agent.get("runs_in"):
+        lines.append(f'            runs_in="{agent["runs_in"]}",')
+    links = agent.get("talks_to") or []
+    if links:
+        rendered_links = ", ".join(
+            f'TeamLinkSpec(member="{link["member"]}", over="{link.get("over", "a2a")}")'
+            for link in links
+        )
+        lines.append(f"            talks_to=[{rendered_links}],")
     lines.append(f'            role="{agent.get("role", "contributor")}",')
     goal = agent.get("goal", "").replace('"', '\\"').replace("\n", " ").strip()
     lines.append(f'            goal="{goal}",')
@@ -204,10 +217,25 @@ def _generate_team_agent_ts(agent: Dict[str, Any]) -> str:
         if subagents
         else "[]"
     )
+    links = agent.get("talks_to") or []
+    application = (
+        (f"\n      app: '{agent['app']}'," if agent.get("app") else "")
+        + (f"\n      runsIn: '{agent['runs_in']}'," if agent.get("runs_in") else "")
+        + (
+            "\n      talksTo: ["
+            + ", ".join(
+                f"{{ member: '{link['member']}', over: '{link.get('over', 'a2a')}' }}"
+                for link in links
+            )
+            + "],"
+            if links
+            else ""
+        )
+    )
     return f"""    {{
       id: '{agent.get("id", "")}',
       name: '{agent.get("name", "")}',
-      ref: '{agent.get("ref", "")}',
+      ref: '{agent.get("ref", "")}',{application}
       role: '{agent.get("role", "contributor")}',
       goal: `{goal}`,
       dependsOn: {depends_on},
@@ -236,6 +264,7 @@ from typing import Dict, Optional
 
 from agent_runtimes.types import (
     TeamAgentspec,
+    TeamLinkSpec,
     TeamContextSpec,
     TeamDelegationSpec,
     TeamSubagentspec,
@@ -314,8 +343,11 @@ from agent_runtimes.types import (
                     .replace("\n", " ")
                     .strip()
                 )
+                sup_app = (
+                    f'app="{supervisor["app"]}", ' if supervisor.get("app") else ""
+                )
                 supervisor_code = (
-                    f'TeamSupervisorSpec(name="{sup_name}", ref="{sup_ref}", '
+                    f'TeamSupervisorSpec(name="{sup_name}", ref="{sup_ref}", {sup_app}'
                     f'model="{sup_model}", goal="{sup_goal}", '
                     f'instructions="{sup_instructions}", '
                     f'approval="{supervisor.get("approval", "auto")}", '
@@ -426,6 +458,8 @@ from agent_runtimes.types import (
             )
             code += f"    supervisor={supervisor_code},\n"
             code += f'    routing_instructions="{routing}",\n'
+            if spec.get("entry"):
+                code += f'    entry="{spec["entry"]}",\n'
             suggestions = spec.get("suggestions") or []
             if suggestions:
                 rendered = ", ".join(
@@ -596,8 +630,11 @@ import type {{ TeamSpec }} from '{types_import_path}';
                     .replace("\n", " ")
                     .strip()
                 )
+                sup_app_ts = (
+                    f"app: '{supervisor['app']}', " if supervisor.get("app") else ""
+                )
                 supervisor_ts = (
-                    f"{{ name: '{sup_name}', ref: '{sup_ref}', "
+                    f"{{ name: '{sup_name}', ref: '{sup_ref}', {sup_app_ts}"
                     f"model: '{sup_model}', goal: `{sup_goal}`, "
                     f"instructions: `{sup_instructions}`, "
                     f"approval: '{supervisor.get('approval', 'auto')}', "
@@ -714,6 +751,8 @@ import type {{ TeamSpec }} from '{types_import_path}';
             code += f"  executionMode: '{spec.get('execution_mode', 'sequential')}',\n"
             code += f"  supervisor: {supervisor_ts},\n"
             code += f"  routingInstructions: `{routing}`,\n"
+            if spec.get("entry"):
+                code += f"  entry: '{spec['entry']}',\n"
             # What an empty chat offers. Emitted only when the team names
             # some: an empty array in every generated team would be four
             # hundred lines saying nothing.

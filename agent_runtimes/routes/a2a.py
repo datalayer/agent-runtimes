@@ -48,6 +48,10 @@ class A2AAgentCard:
     version: str = "1.0.0"
     skills: list[dict[str, Any]] | None = None
     provider: dict[str, str] | None = None
+    #: How a caller authenticates, as the card says it (fasta2a's
+    #: `SecurityScheme` and `SecurityRequirement`); checked by the mount's gate.
+    security_schemes: dict[str, Any] | None = None
+    security_requirements: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -162,6 +166,7 @@ def register_a2a_agent(
     card: A2AAgentCard,
     broker: Any | None = None,
     storage: Any | None = None,
+    gate: Any | None = None,
 ) -> None:
     """
     Register an agent with the A2A server.
@@ -179,6 +184,13 @@ def register_a2a_agent(
         broker: Optional custom broker (defaults to one kept in the runtime's
             protocol state store, which runs again the work left unfinished).
         storage: Optional custom storage (defaults to one kept in that store).
+        gate: Optional ASGI wrapper the mount is served through, which may
+            refuse a request before the agent sees it: an application's
+            route admits only the callers it was granted to
+            (`agent_runtimes.loop.apps.a2a`).
+
+    fasta2a answers A2A 1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`)
+    as well as its own method names, as its card says it does.
     """
     if not FASTA2A_AVAILABLE:
         logger.warning("fasta2a not installed, A2A agent registration skipped")
@@ -197,6 +209,10 @@ def register_a2a_agent(
                     id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
                     name=s.get("name", ""),
                     description=s.get("description"),
+                    tags=list(s.get("tags") or []),
+                    input_modes=list(s.get("input_modes") or ["text/plain"]),
+                    output_modes=list(s.get("output_modes") or ["text/plain"]),
+                    **({"examples": list(s["examples"])} if s.get("examples") else {}),
                 )
                 for s in card.skills
             ]
@@ -266,6 +282,8 @@ def register_a2a_agent(
                     },
                 )
             ],
+            security_schemes=card.security_schemes,
+            security_requirements=card.security_requirements,
             lifespan=lifespan,
         )
 
@@ -278,13 +296,15 @@ def register_a2a_agent(
         )
         _a2a_agents[agent_id] = registration
 
+        served = gate(a2a_app) if gate is not None else a2a_app
+
         # Create mount for this agent
-        mount = Mount(f"/{agent_id}", app=a2a_app)
+        mount = Mount(f"/{agent_id}", app=served)
         _a2a_mounts.append(mount)
 
         # If app is available, also add route dynamically to running app
         if _app is not None:
-            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
+            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=served)
             _app.routes.append(full_mount)
             logger.info(
                 f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"

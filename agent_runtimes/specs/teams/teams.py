@@ -15,6 +15,7 @@ from agent_runtimes.types import (
     TeamContextSpec,
     TeamDelegationSpec,
     TeamHealthMonitoring,
+    TeamLinkSpec,
     TeamOutputSpec,
     TeamReactionRule,
     TeamSpec,
@@ -1451,6 +1452,87 @@ PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1 = TeamSpec(
     ),
 )
 
+SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 = TeamSpec(
+    id="sales-and-accounting",
+    version="0.0.1",
+    name="Sales and Accounting",
+    description="A sales desk in the browser that gets financial reports from an accounting application on a runtime, over A2A. Sales takes the request and reports the answer; Accounting reads the Odoo books and answers.",
+    tags=["example", "sales", "accounting", "finance", "a2a", "odoo"],
+    enabled=True,
+    icon="people",
+    emoji="🤝",
+    color="#0969da",
+    agent_spec_id="",
+    orchestration_protocol="a2a",
+    execution_mode="supervisor",
+    supervisor=TeamSupervisorSpec(
+        name="Sales",
+        ref="",
+        app="sales:0.0.1",
+        model="",
+        goal="",
+        instructions="",
+        approval="auto",
+        can_terminate=True,
+    ),
+    routing_instructions="Sales asks Accounting for every figure from the books, one request each time, and reports what Accounting answers without adding to it.",
+    entry="sales",
+    suggestions=[
+        TeamSuggestionSpec(
+            text="Which customer invoices are still open, and how much is due in total?",
+            emoji="🧾",
+        ),
+        TeamSuggestionSpec(
+            text="Give me the aged receivables as of today, by customer.", emoji="⏳"
+        ),
+        TeamSuggestionSpec(
+            text="What does the trial balance say for last month?", emoji="⚖️"
+        ),
+    ],
+    delegation=TeamDelegationSpec(
+        max_depth=1, allow_peer_delegation=True, include_general_purpose=False
+    ),
+    context=TeamContextSpec(sharing="shared"),
+    validation=TeamValidationSpec(
+        timeout="300s", retry_on_failure=False, max_retries=0
+    ),
+    agents=[
+        TeamAgentspec(
+            id="sales",
+            name="",
+            ref="",
+            app="sales:0.0.1",
+            runs_in="browser",
+            talks_to=[TeamLinkSpec(member="accounting", over="a2a")],
+            role="initiator",
+            goal="Take the person's request for a financial report, ask Accounting for it, and hand over what Accounting answered.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+        TeamAgentspec(
+            id="accounting",
+            name="",
+            ref="",
+            app="accounting:0.0.1",
+            runs_in="runtime",
+            role="contributor",
+            goal="Answer report requests from the Odoo books, read only, over A2A.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+    ],
+)
+
 SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1 = TeamSpec(
     id="sync-crm-contacts",
     version="0.0.1",
@@ -1592,6 +1674,7 @@ TEAM_SPECS: Dict[str, TeamSpec] = {
     "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
     "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
     "process-clinical-trial-data": PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
+    "sales-and-accounting": SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1,
     "sync-crm-contacts": SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 }
 

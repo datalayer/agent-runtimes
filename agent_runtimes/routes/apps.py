@@ -90,6 +90,20 @@ class ConfigureAppRequest(BaseModel):
             "from IAM (LOOP C-12), and its contexts, which the agent keeps to (U-31)"
         ),
     )
+    a2a: bool = Field(
+        False,
+        description=(
+            "Also serve it over A2A, with fasta2a, at /api/v1/a2a/agents/<its id>/: "
+            "to the members of its team that ask it (agentspecs `talks_to`)"
+        ),
+    )
+    public_url: Optional[str] = Field(
+        None,
+        description=(
+            "The runtime's address as its callers reach it, for its agent card: "
+            "a cloud runtime's ingress; the request's own address when unsaid"
+        ),
+    )
 
 
 class DecideRequest(BaseModel):
@@ -293,6 +307,21 @@ async def configure_app(
     # Its own plugin, whether or not agent creation registered it already.
     register_app(app)
     _RUNNING["default"] = app.id
+    # Served over A2A on its agent as it is now: the agent configured before
+    # is not answered for, whichever application it ran.
+    from agent_runtimes.loop.apps.a2a import serve_app_over_a2a, stop_serving_apps
+
+    a2a: Optional[Dict[str, str]] = None
+    if body.a2a:
+        from agent_runtimes.routes.a2a import _api_prefix
+        from agent_runtimes.routes.acp import _agents
+
+        base = (body.public_url or str(http_request.base_url)).rstrip("/")
+        a2a = serve_app_over_a2a(
+            app, _agents["default"][0], f"{base}{_api_prefix}/a2a/agents/{app.id}"
+        )
+    else:
+        stop_serving_apps()
     return {
         **result,
         "app": {
@@ -303,6 +332,7 @@ async def configure_app(
         },
         "setup": app.setup,
         "plugins_off_says": plugins_off.says,
+        **({"a2a": a2a} if a2a else {}),
     }
 
 
