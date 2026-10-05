@@ -391,17 +391,20 @@ def build_capabilities_from_agent_spec(
         identity = resolve_memory_identity()
         memory_config = getattr(agent_spec, "memory_config", None)
         effective_memory_agent_id = agent_id
-        memory_gate = None
+        app_memory_key = ""
         if isinstance(memory_config, dict):
             override: Any = None
             datalayer_overrides = memory_config.get("datalayer")
             if isinstance(datalayer_overrides, dict):
                 override = datalayer_overrides.get("memory_agent_id")
-                # An application's memory is its owner's (LOOP R-18).
-                if datalayer_overrides.get("owner_only"):
-                    from ..loop.apps.memory import remembering
-
-                    memory_gate = remembering
+                # An application's memory: per person, shared as they allow
+                # (LOOP R-18, R-35, R-36).
+                if datalayer_overrides.get("app_memory"):
+                    app_memory_key = str(override or "").strip()
+                    if not app_memory_key:
+                        raise ValueError(
+                            "An application's memory is kept under its key: none was given."
+                        )
             if override is None:
                 override = memory_config.get("memory_agent_id")
             if isinstance(override, str) and override.strip():
@@ -414,13 +417,17 @@ def build_capabilities_from_agent_spec(
                 filtered_config.pop("memory_agent_id", None)
                 memory_config = filtered_config
 
-        memory_capability = build_memory_capability(
-            memory_type,
-            user_id=identity.user_id,
-            agent_id=effective_memory_agent_id,
-            config=memory_config,
-            gate=memory_gate,
-        )
+        if app_memory_key:
+            from ..loop.apps.memory import app_memory_capability
+
+            memory_capability = app_memory_capability(app_memory_key)
+        else:
+            memory_capability = build_memory_capability(
+                memory_type,
+                user_id=identity.user_id,
+                agent_id=effective_memory_agent_id,
+                config=memory_config,
+            )
         if memory_capability is not None:
             capabilities.append(memory_capability)
 

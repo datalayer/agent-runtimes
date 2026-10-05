@@ -594,6 +594,90 @@ export const forgetRuntimeMemories = async (
 };
 
 /**
+ * One allowance of a person (LOOP R-35): `reader` uses what `source`
+ * remembers of them, both applications by their key `app:<uid>`.
+ */
+export interface RuntimeMemoryShare {
+  source: string;
+  reader: string;
+  /** When it was allowed (ISO). */
+  allowed_at: string | null;
+}
+
+/**
+ * The caller's allowances: who reads what one application remembers of them
+ * (`source`), or what one application reads besides its own (`reader`).
+ */
+export const listRuntimeMemoryShares = async (
+  token: string,
+  filter: { source?: string; reader?: string },
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<RuntimeMemoryShare[]> => {
+  validateToken(token);
+  const query = new URLSearchParams();
+  if (filter.source) {
+    query.set('source', filter.source.trim());
+  }
+  if (filter.reader) {
+    query.set('reader', filter.reader.trim());
+  }
+  const response = await requestDatalayerAPI<{ shares?: RuntimeMemoryShare[] }>(
+    {
+      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares?${query.toString()}`,
+      method: 'GET',
+      token,
+    },
+  );
+  return Array.isArray(response?.shares) ? response.shares : [];
+};
+
+/**
+ * Allow `reader` to use what `source` remembers of the caller (LOOP R-35).
+ * Allowed again, it is kept as it was.
+ */
+export const allowRuntimeMemoryShare = async (
+  token: string,
+  source: string,
+  reader: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<RuntimeMemoryShare> => {
+  validateToken(token);
+  validateRequiredString(source, 'The application remembering');
+  validateRequiredString(reader, 'The application reading');
+  const response = await requestDatalayerAPI<{ share?: RuntimeMemoryShare }>({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares`,
+    method: 'PUT',
+    body: { source: source.trim(), reader: reader.trim() },
+    token,
+  });
+  return response?.share as RuntimeMemoryShare;
+};
+
+/**
+ * Stop sharing what `source` remembers of the caller with `reader`
+ * (LOOP R-35); the service refuses (404) what was never allowed.
+ */
+export const stopRuntimeMemoryShare = async (
+  token: string,
+  source: string,
+  reader: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<void> => {
+  validateToken(token);
+  validateRequiredString(source, 'The application remembering');
+  validateRequiredString(reader, 'The application reading');
+  const query = new URLSearchParams({
+    source: source.trim(),
+    reader: reader.trim(),
+  });
+  await requestDatalayerAPI({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares?${query.toString()}`,
+    method: 'DELETE',
+    token,
+  });
+};
+
+/**
  * Resume a paused runtime by restoring from a checkpoint (async).
  *
  * Returns immediately with a 202 Accepted response.  The actual restore

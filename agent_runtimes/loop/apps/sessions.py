@@ -63,6 +63,7 @@ from typing import (
     Tuple,
 )
 
+from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
@@ -550,14 +551,16 @@ class LiveSession:
             )
         queue = self._open_stream(run_id)
         self.state = "running"
+        # The caller's token, set by the route: what they allow is read with it.
+        token = get_request_user_jwt() or ""
 
         async def runner() -> None:
             """The turn, framed, its failure said on the stream."""
-            from agent_runtimes.loop.apps.memory import withhold_for
+            from agent_runtimes.loop.apps.memory import remember_for
 
-            # What it remembers is its owner's: nobody else's turn reads or
-            # writes it (LOOP R-18).
-            withhold_for(self.opened_by)
+            # It remembers for whoever opened the session, each person apart,
+            # a visitor not signed in nothing (LOOP R-18, R-36).
+            remember_for(self.opened_by, token)
             try:
                 if wraps_run:
                     self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))

@@ -1,8 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application remembers (LOOP R-18), forgetting it, and correcting
-it in place (LOOP R-34).
+"""What an application remembers (LOOP R-18), forgetting it, correcting it
+in place (LOOP R-34), each person apart (LOOP R-36), and what another
+remembers, read when the person allows it (LOOP R-35).
 
 On a real mem0, its store a FAISS index in a temporary directory: the
 memories are put in its vector store as mem0 keeps them — what it learned,
@@ -19,26 +20,32 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai.toolsets import FunctionToolset
 from reactor import ContributionRegistry
 
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
+from agent_runtimes.loop.apps import memory as app_memories
 from agent_runtimes.loop.apps import plugins
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.memory import (
+    EMBEDDED,
+    NOT_SIGNED_IN,
+    AppMemory,
+    SharesUnread,
     agent_memory,
     app_memory,
     key_of,
     memory_key,
-    remembering,
+    remember_for,
+    rememberer,
     remembers_with,
-    withhold_for,
+    withheld,
 )
 from agent_runtimes.memory import EphemeralMemory, MemoryCapability, get_memory_backend
-from agent_runtimes.memory.capability import WITHHELD
 from agent_runtimes.memory.mem0_backend import Mem0Backend
 from agent_runtimes.routes import apps as routes
 
@@ -67,6 +74,8 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
                 "path": str(tmp_path / "faiss"),
                 "collection_name": "memories",
                 "embedding_model_dims": DIMS,
+                # A search scores by similarity: a fixed question finds all.
+                "distance_strategy": "cosine",
             },
         },
         # Never asked here: nothing is learned, only read and forgotten.
@@ -108,7 +117,7 @@ def learned(
 @pytest.fixture()
 def remembered(store: Dict[str, Any]) -> Dict[str, str]:
     """Keep Ada's memories of two applications, and Bob's of the first."""
-    backend = app_memory(key_of("app-1"))
+    backend = app_memory(key_of("app-1"), "ada")
     return {
         "tone": learned(
             backend,
@@ -165,7 +174,7 @@ def test_its_memories_are_kept_per_application_not_per_deployment() -> None:
     assert memory_key(app, None) == "app:inbox-triage"
     assert agent_memory(app, deployment) == (
         "mem0",
-        {"datalayer": {"memory_agent_id": "app:app-1", "owner_only": True}},
+        {"datalayer": {"memory_agent_id": "app:app-1", "app_memory": True}},
     )
     assert agent_memory(load_app({**TRIAGE, "memory": ""}), deployment) == (
         "ephemeral",
@@ -175,7 +184,7 @@ def test_its_memories_are_kept_per_application_not_per_deployment() -> None:
         key_of(" ")
 
 
-def test_its_agent_remembers_under_the_owner_and_its_key(
+def test_its_agent_remembers_under_its_key_for_whoever_the_turn_is_of(
     store: Dict[str, Any],
 ) -> None:
     memory, config = agent_memory(load_app(TRIAGE), {"app_uid": "app-1"})
@@ -195,39 +204,45 @@ def test_its_agent_remembers_under_the_owner_and_its_key(
     capabilities = build_capabilities_from_agent_spec(spec, agent_id="inbox-triage")
     assert any(isinstance(c, MemoryCapability) for c in capabilities)
     backend = get_memory_backend("app:app-1")
-    assert isinstance(backend, Mem0Backend)
-    assert (backend.user_id, backend.agent_id) == ("ada", "app:app-1")
+    assert isinstance(backend, AppMemory)
+    assert backend.key == "app:app-1"
     [capability] = [c for c in capabilities if isinstance(c, MemoryCapability)]
-    # Its owner's only: asked at each run.
-    assert capability.gate is remembering
+    # Whether the turn remembers is asked at each run.
+    assert capability.withheld is withheld
 
 
-def _in_a_turn_opened_by(caller: Caller) -> bool:
-    """Whether a turn of a session ``caller`` opened remembers, in its own task."""
+def _in_a_turn_opened_by(caller: Caller) -> tuple[str, str]:
+    """Whose memories a turn of a session ``caller`` opened reaches, in its own task."""
 
-    async def turn() -> bool:
-        withhold_for(caller)
-        return remembering()
+    async def turn() -> tuple[str, str]:
+        remember_for(caller, "")
+        return rememberer().user_id, withheld()
 
-    async def outside() -> bool:
+    async def outside() -> tuple[str, str]:
         answered = await asyncio.get_running_loop().create_task(turn())
-        # The turn's task carries its own answer; the rest of the runtime remembers.
-        assert remembering() is True
+        # The turn's task carries its own answer; the rest of the runtime is the owner's.
+        assert (rememberer().user_id, withheld()) == ("ada", "")
         return answered
 
     return asyncio.run(outside())
 
 
-def test_it_remembers_only_in_conversations_its_owner_opened(
+def test_it_remembers_each_person_apart_and_never_a_visitor_as_its_owner(
     store: Dict[str, Any],
 ) -> None:
-    assert _in_a_turn_opened_by(Caller(kind="person", uid="ada")) is True
-    assert _in_a_turn_opened_by(Caller(kind="local")) is True
-    assert _in_a_turn_opened_by(Caller(kind="person", uid="bob")) is False
-    assert _in_a_turn_opened_by(Caller(kind="anonymous")) is False
-    assert _in_a_turn_opened_by(Caller(kind="embed", app_uid="app-1")) is False
+    assert _in_a_turn_opened_by(Caller(kind="person", uid="ada")) == ("ada", "")
+    assert _in_a_turn_opened_by(Caller(kind="local")) == ("ada", "")
+    # A visitor signed in, under their own identity (LOOP R-36).
+    assert _in_a_turn_opened_by(Caller(kind="person", uid="bob")) == ("bob", "")
+    # Nobody known: nothing remembered, said — never the owner's.
+    assert _in_a_turn_opened_by(Caller(kind="anonymous")) == ("", NOT_SIGNED_IN)
+    assert _in_a_turn_opened_by(Caller(kind="person", uid="")) == ("", NOT_SIGNED_IN)
+    assert _in_a_turn_opened_by(Caller(kind="embed", uid="ada", app_uid="app-1")) == (
+        "",
+        EMBEDDED,
+    )
     # Outside a session — the scheduler's tick, as its owner — it remembers.
-    assert remembering() is True
+    assert (rememberer().user_id, withheld()) == ("ada", "")
 
 
 def test_a_withheld_conversation_reads_and_writes_nothing() -> None:
@@ -239,9 +254,9 @@ def test_a_withheld_conversation_reads_and_writes_nothing() -> None:
             return "## Relevant memories\n- Prefers short replies"
 
     backend = Kept(user_id="ada", agent_id="app:app-1")
-    open_ = {"value": False}
+    why = {"value": NOT_SIGNED_IN}
     capability = MemoryCapability(
-        backend=backend, agent_id="app:app-1", gate=lambda: open_["value"]
+        backend=backend, agent_id="app:app-1", withheld=lambda: why["value"]
     )
     run: Any = type("Ctx", (), {"prompt": "What do I prefer?", "run_id": "r1"})()
     asyncio.run(capability.before_run(run))
@@ -249,10 +264,12 @@ def test_a_withheld_conversation_reads_and_writes_nothing() -> None:
     toolset = capability.get_toolset()
     assert isinstance(toolset, FunctionToolset)
     tools = toolset.tools
-    assert asyncio.run(tools["remember"].function("Bob reads in French")) == WITHHELD
-    assert asyncio.run(tools["search_memory"].function("French")) == WITHHELD
+    assert (
+        asyncio.run(tools["remember"].function("Bob reads in French")) == NOT_SIGNED_IN
+    )
+    assert asyncio.run(tools["search_memory"].function("French")) == NOT_SIGNED_IN
     assert asyncio.run(backend.list_all()) == []
-    open_["value"] = True
+    why["value"] = ""
     asyncio.run(capability.before_run(run))
     assert Kept.asked == 1
 
@@ -283,21 +300,21 @@ def test_mem0_is_asked_with_filters_as_its_api_takes_them() -> None:
 def test_it_lists_what_it_remembers_of_its_owner_newest_first(
     remembered: Dict[str, str],
 ) -> None:
-    listed = asyncio.run(app_memory(key_of("app-1")).list_all())
+    listed = asyncio.run(app_memory(key_of("app-1"), "ada").list_all())
     assert what(listed) == ["Mail from Grace is urgent", "Prefers short replies"]
     assert listed[0]["created_at"] == "2026-10-03T09:00:00+00:00"
     assert listed[0]["id"] == remembered["boss"]
 
 
 def test_forgetting_one_reaches_only_its_own(remembered: Dict[str, str]) -> None:
-    backend = app_memory(key_of("app-1"))
+    backend = app_memory(key_of("app-1"), "ada")
     # Bob's, and another application's, are not found by their id.
     assert asyncio.run(backend.forget(remembered["bob"])) is False
     assert asyncio.run(backend.forget(remembered["other_app"])) is False
     assert asyncio.run(backend.forget(str(uuid.uuid4()))) is False
     assert asyncio.run(backend.forget(remembered["tone"])) is True
     assert what(asyncio.run(backend.list_all())) == ["Mail from Grace is urgent"]
-    assert what(asyncio.run(app_memory(key_of("app-2")).list_all())) == [
+    assert what(asyncio.run(app_memory(key_of("app-2"), "ada").list_all())) == [
         "Reports go out on Fridays"
     ]
 
@@ -305,13 +322,13 @@ def test_forgetting_one_reaches_only_its_own(remembered: Dict[str, str]) -> None
 def test_forgetting_everything_counts_and_keeps_the_rest(
     remembered: Dict[str, str],
 ) -> None:
-    assert asyncio.run(app_memory(key_of("app-1")).forget_all(batch=1)) == 2
-    assert asyncio.run(app_memory(key_of("app-1")).list_all()) == []
-    assert what(asyncio.run(app_memory(key_of("app-2")).list_all())) == [
+    assert asyncio.run(app_memory(key_of("app-1"), "ada").forget_all(batch=1)) == 2
+    assert asyncio.run(app_memory(key_of("app-1"), "ada").list_all()) == []
+    assert what(asyncio.run(app_memory(key_of("app-2"), "ada").list_all())) == [
         "Reports go out on Fridays"
     ]
     bobs = Mem0Backend(user_id="bob", agent_id="app:app-1", config=None)
-    bobs._memory = app_memory(key_of("app-1"))._ensure_initialized()
+    bobs._memory = app_memory(key_of("app-1"), "ada")._ensure_initialized()
     assert what(asyncio.run(bobs.list_all())) == ["Bob reads in French"]
 
 
@@ -334,7 +351,7 @@ def embeds_corrections(backend: Mem0Backend) -> List[str]:
 def test_correcting_one_changes_its_words_and_keeps_who_and_when(
     remembered: Dict[str, str],
 ) -> None:
-    backend = app_memory(key_of("app-1"))
+    backend = app_memory(key_of("app-1"), "ada")
     asked = embeds_corrections(backend)
     # Bob's, and another application's, are not found by their id.
     assert asyncio.run(backend.correct(remembered["bob"], "x", "ada")) is None
@@ -400,22 +417,31 @@ def test_its_owner_reads_what_it_remembers(
     }
 
 
-def test_nobody_else_reads_or_forgets_them(
+def test_a_visitor_reads_and_forgets_only_their_own(
     remote: TestClient, remembered: Dict[str, str]
 ) -> None:
     assert remote.get("/api/v1/apps/memories/app-1").status_code == 401
-    refused = remote.get("/api/v1/apps/memories/app-1", headers=as_("bob"))
-    assert refused.status_code == 403
-    assert "its owner" in refused.json()["detail"]
+    # Bob, a visitor, reads what it remembers of him — not of its owner (LOOP R-36).
+    his = remote.get("/api/v1/apps/memories/app-1", headers=as_("bob"))
+    assert his.status_code == 200, his.text
+    assert what(his.json()["memories"]) == ["Bob reads in French"]
     assert (
         remote.delete(
             f"/api/v1/apps/memories/app-1/{remembered['tone']}", headers=as_("bob")
         ).status_code
-        == 403
+        == 404
     )
     assert (
-        remote.delete("/api/v1/apps/memories/app-1?count=9", headers=as_("bob"))
-    ).status_code == 403
+        remote.patch(
+            f"/api/v1/apps/memories/app-1/{remembered['tone']}",
+            json={"memory": "x"},
+            headers=as_("bob"),
+        ).status_code
+        == 404
+    )
+    # Forgetting everything, he forgets his own: one thing.
+    gone = remote.delete("/api/v1/apps/memories/app-1?count=1", headers=as_("bob"))
+    assert (gone.status_code, gone.json()) == (200, {"forgotten": 1})
     still = remote.get("/api/v1/apps/memories/app-1", headers=as_("ada")).json()
     assert still["count"] == 2
 
@@ -470,7 +496,7 @@ def test_its_owner_corrects_one_thing_and_nobody_else_does(
     )
     url = f"/api/v1/apps/memories/app-1/{remembered['tone']}"
     assert (
-        remote.patch(url, json={"memory": "x"}, headers=as_("bob")).status_code == 403
+        remote.patch(url, json={"memory": "x"}, headers=as_("bob")).status_code == 404
     )
     empty = remote.patch(url, json={"memory": "  "}, headers=as_("ada"))
     assert empty.status_code == 422
@@ -494,3 +520,151 @@ def test_its_owner_corrects_one_thing_and_nobody_else_does(
         entry for entry in listed["memories"] if entry["id"] == remembered["tone"]
     ]
     assert (tone["memory"], tone["corrected_by"]) == ("Prefers long replies", "ada")
+
+
+# --- Its agent, for each person apart (LOOP R-36), and shared as allowed (R-35) -----
+
+
+@pytest.fixture()
+def embeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A search embeds the question: a fixed vector, near every memory kept here."""
+    from mem0.embeddings.openai import OpenAIEmbedding
+
+    monkeypatch.setattr(
+        OpenAIEmbedding, "embed", lambda self, text, action=None: [0.1, 0.2, 0.3, 0.4]
+    )
+
+
+def found_by(
+    caller: Caller, token: str = "", key: str = "app:app-1"
+) -> List[Dict[str, Any]]:
+    """What the agent of an application finds in a turn of a session ``caller`` opened."""
+
+    async def turn() -> List[Dict[str, Any]]:
+        remember_for(caller, token)
+        return await AppMemory(key).search("What do you know of me?", limit=10)
+
+    return asyncio.run(turn())
+
+
+def test_its_agent_finds_what_it_remembers_of_whoever_opened_the_session(
+    remembered: Dict[str, str], embeds: None
+) -> None:
+    assert sorted(what(found_by(Caller(kind="person", uid="ada")))) == [
+        "Mail from Grace is urgent",
+        "Prefers short replies",
+    ]
+    # A visitor at its address: his own, apart from its owner's (LOOP R-36).
+    assert what(found_by(Caller(kind="person", uid="bob"))) == ["Bob reads in French"]
+    assert what(found_by(Caller(kind="person", uid="carol"))) == []
+
+
+def test_what_it_learns_of_a_visitor_is_kept_under_the_visitor(
+    store: Dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    kept: List[tuple[str, str]] = []
+
+    async def add(self: Mem0Backend, messages: list, metadata: Any = None) -> None:
+        kept.append((self.user_id, str(self.agent_id)))
+
+    monkeypatch.setattr(Mem0Backend, "add", add)
+
+    async def turn(caller: Caller) -> None:
+        remember_for(caller, "")
+        await AppMemory("app:app-1").add([{"role": "user", "content": "Call me Bo"}])
+
+    asyncio.run(turn(Caller(kind="person", uid="bob")))
+    asyncio.run(turn(Caller(kind="local")))
+    assert kept == [("bob", "app:app-1"), ("ada", "app:app-1")]
+
+
+def test_a_visitor_nobody_knows_has_nothing_remembered_nor_read(
+    remembered: Dict[str, str], embeds: None
+) -> None:
+    capability = app_memories.app_memory_capability("app:app-1")
+    toolset = capability.get_toolset()
+    assert isinstance(toolset, FunctionToolset)
+
+    async def turn(caller: Caller) -> tuple[str, str]:
+        remember_for(caller, "")
+        tools = toolset.tools
+        return (
+            await tools["search_memory"].function("replies"),
+            await tools["remember"].function("Likes tea"),
+        )
+
+    assert asyncio.run(turn(Caller(kind="anonymous"))) == (NOT_SIGNED_IN, NOT_SIGNED_IN)
+    assert asyncio.run(turn(Caller(kind="embed", uid="ada", app_uid="app-1"))) == (
+        EMBEDDED,
+        EMBEDDED,
+    )
+    # Never its owner's in their place.
+    with pytest.raises(app_memories.MemoryNotKept):
+        found_by(Caller(kind="anonymous"))
+
+
+@pytest.fixture()
+def shares(monkeypatch: pytest.MonkeyPatch) -> Dict[str, List[Any]]:
+    """The runtimes service: what each token's person allowed, and what it was asked."""
+    service: Dict[str, List[Any]] = {"allowed": [], "asked": []}
+
+    async def ask(url: str, token: str) -> List[Dict[str, Any]]:
+        service["asked"].append((url, token))
+        reader = str(httpx.URL(url).params.get("reader"))
+        return [
+            {"source": share["source"], "reader": share["reader"]}
+            for share in service["allowed"]
+            if share["user"] == token and share["reader"] == reader
+        ]
+
+    monkeypatch.setitem(app_memories._asker, "ask", ask)
+    monkeypatch.setenv("DATALAYER_RUNTIMES_URL", "https://runtimes.example/")
+    return service
+
+
+def _allow(shares: Dict[str, List[Any]], user: str, source: str, reader: str) -> None:
+    shares["allowed"].append({"user": user, "source": source, "reader": reader})
+
+
+def test_it_reads_another_application_only_when_the_person_allows_it(
+    remembered: Dict[str, str], embeds: None, shares: Dict[str, List[Any]]
+) -> None:
+    ada = Caller(kind="person", uid="ada")
+    # Not allowed: its own only.
+    assert "Reports go out on Fridays" not in what(found_by(ada, "ada"))
+    _allow(shares, "ada", "app:app-2", "app:app-1")
+    # Allowed by somebody else, or for another application: not Ada's allowance.
+    _allow(shares, "bob", "app:app-3", "app:app-1")
+    found = found_by(ada, "ada")
+    # Its own first, then what the application allowed remembers of Ada.
+    assert sorted(what(found[:2])) == [
+        "Mail from Grace is urgent",
+        "Prefers short replies",
+    ]
+    assert what(found[2:]) == ["Reports go out on Fridays"]
+    assert found[2]["metadata"]["remembered_by"] == "app:app-2"
+    # Read with the caller's token, at the runtimes service.
+    assert shares["asked"][-1] == (
+        "https://runtimes.example/api/runtimes/v1/memory-shares?reader=app%3Aapp-1",
+        "ada",
+    )
+    # Another application Ada allowed nothing reads only its own.
+    assert what(found_by(ada, "ada", key="app:app-2")) == ["Reports go out on Fridays"]
+    # Bob's allowance reads Bob's memories, never Ada's.
+    assert what(found_by(Caller(kind="person", uid="bob"), "bob")) == [
+        "Bob reads in French"
+    ]
+
+
+def test_without_a_token_it_reads_its_own_and_an_unknown_service_is_said(
+    remembered: Dict[str, str],
+    embeds: None,
+    shares: Dict[str, List[Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _allow(shares, "ada", "app:app-2", "app:app-1")
+    # The machine itself, or a run outside a session: no allowance is read.
+    assert "Reports go out on Fridays" not in what(found_by(Caller(kind="local")))
+    monkeypatch.delenv("DATALAYER_RUNTIMES_URL")
+    with pytest.raises(SharesUnread, match="DATALAYER_RUNTIMES_URL"):
+        found_by(Caller(kind="person", uid="ada"), "ada")

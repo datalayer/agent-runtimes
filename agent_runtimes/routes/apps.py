@@ -16,8 +16,9 @@ interface shows before it is made. `GET /api/v1/apps` lists the applications
 the runtime knows. `POST /api/v1/apps/feedback` keeps what a person says of a
 conversation — a thumb up or down, and a comment — in the application's
 record (LOOP V-18). `GET /api/v1/apps/memories/{app}` is what an
-application remembers of its owner, and `DELETE` forgets one thing of it, or
-everything once its owner confirmed how many (LOOP R-18).
+application remembers of the caller — its owner, or a visitor apart (LOOP
+R-36) — and `DELETE` forgets one thing of it, or everything once the caller
+confirmed how many (LOOP R-18).
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
@@ -756,39 +757,39 @@ async def session_agui(agent: str, request: Request) -> Any:
         raise _refused(refused) from None
 
 
-# --- What an application remembers (LOOP R-18) -------------------------------
+# --- What an application remembers (LOOP R-18, R-36) --------------------------
 
 
-async def _owner(request: Request) -> str:
-    """The person whose memories this runtime keeps, or the machine itself: their uid.
+async def _whose(request: Request) -> str:
+    """Whose memories the caller reaches: their own — the owner's, or a visitor's.
 
-    An application's memories are kept per person and application, under the
-    runtime's owner (`agent_runtimes.loop.apps.memory`): its owner reads and
-    forgets them, as the person, for its Preview and its deployments alike —
-    a deployment has no memories of its own, and its principal reaches none.
+    An application's memories are kept per person and application
+    (`agent_runtimes.loop.apps.memory`): each person reads, corrects and
+    forgets what it remembers of them — its owner for its Preview and its
+    deployments alike, a visitor at its address what it remembers of the
+    visitor (R-36) — and nobody else's. The machine itself is the owner.
     """
     from agent_runtimes.memory.identity import resolve_memory_identity
 
     authorized = await _authorize(request, person_only=True, for_app=None)
     caller = authorized.caller
     identity = resolve_memory_identity()
-    if caller.kind == "local":
-        return identity.user_uid or identity.user_id
-    if caller.uid != identity.user_uid:
-        raise HTTPException(
-            status_code=403,
-            detail="What an application remembers is shown to its owner: "
-            "this runtime keeps the memories of the person it runs for.",
-        )
-    return caller.uid
+    if caller.kind == "local" or (caller.uid and caller.uid == identity.user_uid):
+        return identity.user_id
+    if caller.kind == "person" and caller.uid:
+        return caller.uid
+    raise HTTPException(
+        status_code=403,
+        detail="What an application remembers is kept for each person who is signed in.",
+    )
 
 
-def _memory_of(app: str) -> Any:
-    """The memories of an application of the runtime's owner, or a refusal."""
+def _memory_of(app: str, user_id: str) -> Any:
+    """What an application remembers of a person, or a refusal."""
     from agent_runtimes.loop.apps.memory import MemoryNotKept, app_memory, key_of
 
     try:
-        return app_memory(key_of(app))
+        return app_memory(key_of(app), user_id)
     except ValueError as refused:
         raise HTTPException(status_code=422, detail=str(refused)) from None
     except MemoryNotKept as missing:
@@ -811,13 +812,12 @@ def _remembered(entry: Dict[str, Any]) -> Dict[str, Any]:
 async def app_memories(
     app: str, request: Request, limit: int = Query(500, ge=1, le=1000)
 ) -> Dict[str, Any]:
-    """What an application remembers of its owner, newest first.
+    """What an application remembers of the caller, newest first.
 
     ``app`` is its uid — the `app` item it is kept as — or, for an
     application run from its file, its id.
     """
-    await _owner(request)
-    memory = _memory_of(app)
+    memory = _memory_of(app, await _whose(request))
     listed = await memory.list_all(limit=limit)
     return {
         "app": app,
@@ -828,9 +828,8 @@ async def app_memories(
 
 @router.delete("/memories/{app}/{memory_id}")
 async def forget_memory(app: str, memory_id: str, request: Request) -> Dict[str, Any]:
-    """Forget one thing an application remembers; somebody else's is not found."""
-    await _owner(request)
-    if not await _memory_of(app).forget(memory_id):
+    """Forget one thing an application remembers of the caller; somebody else's is not found."""
+    if not await _memory_of(app, await _whose(request)).forget(memory_id):
         raise HTTPException(
             status_code=404, detail=f"{app} remembers nothing as {memory_id}."
         )
@@ -856,7 +855,7 @@ async def correct_memory(
     Its words change — mem0 embeds them again — and the correction is kept
     with who made it and when. Somebody else's is not found.
     """
-    owner = await _owner(request)
+    whose = await _whose(request)
     words = " ".join(correction.memory.split())
     if not words:
         raise HTTPException(
@@ -868,8 +867,8 @@ async def correct_memory(
             status_code=422,
             detail=f"A correction is at most {CORRECTION_LIMIT} characters, not {len(words)}.",
         )
-    memory = _memory_of(app)
-    corrected = await memory.correct(memory_id, words, corrected_by=owner)
+    memory = _memory_of(app, whose)
+    corrected = await memory.correct(memory_id, words, corrected_by=whose)
     if corrected is None:
         raise HTTPException(
             status_code=404, detail=f"{app} remembers nothing as {memory_id}."
@@ -883,11 +882,10 @@ async def forget_everything(
 ) -> Dict[str, Any]:
     """Forget everything an application remembers — no more than ``count``.
 
-    ``count`` is what its owner was shown and confirmed: when it remembers
+    ``count`` is what the caller was shown and confirmed: when it remembers
     more now, nothing is forgotten (409).
     """
-    await _owner(request)
-    memory = _memory_of(app)
+    memory = _memory_of(app, await _whose(request))
     if len(await memory.list_all(limit=count + 1)) > count:
         raise HTTPException(
             status_code=409,
