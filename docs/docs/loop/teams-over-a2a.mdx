@@ -205,20 +205,28 @@ JupyterLab and Pyodide are loaded only once a notebook is drawn: a page that
 shows the team loads none of them before.
 
 The notebook goes **right under the team's graph**, before the composer and
-the conversation, in the example and on the landing's home page. Sales'
-balloon shows it read-only at the same time (`persona.notebook`, drawn by
-`NotebookPreview`: jupyter-react's notebook with `readonly` on
-`ServiceManagerLess`, no kernel), with *Open it below to run it*; a click
-there scrolls to and focuses the one that runs (`focusTeamNotebook`). The
+the conversation, in the example and on the landing's home page: the page
+names that area with a ref, `expandTarget` on the entry member, and the
+graph draws the notebook that runs there, through a portal, as it arrives.
+Sales' balloon shows it read-only at the same time (`persona.notebook`,
+drawn by `NotebookPreview`: jupyter-react's notebook with `readonly` on
+`ServiceManagerLess`, no kernel), with *Open it below to run it* and
+*Expand*; a click there scrolls to and focuses the one that runs. Without an
+area, *Expand* opens it in a dialog over the page. The
 members' balloons say their tools too (`persona.tool`): *Asking
 Accounting…*, *Using list_invoices…*.
 
 ```tsx
-import { NOTEBOOK_AND_WORDS, TeamNotebook, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+import { A2ATeamGraph, NOTEBOOK_AND_WORDS, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
 
 const team = useA2ATeam({ entry, peerApp, peer, inference, accept: NOTEBOOK_AND_WORDS });
+const notebookArea = useRef<HTMLDivElement>(null);
 // …
-{team.notebook && <TeamNotebook notebook={team.notebook} title="Accounting's notebook" />}
+<A2ATeamGraph
+  entry={{ …, persona: team.entryPersona, expandTarget: notebookArea, notebookTitle: "Accounting's notebook" }}
+  …
+/>
+<div ref={notebookArea} />
 ```
 
 ## The application asking: `@a2a-js/sdk` in the browser

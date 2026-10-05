@@ -20,6 +20,7 @@ import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { useBalloonExpand } from '../../chat/assistant/BalloonVisual';
 
 /** jupyter-react's notebook, read-only, with no kernel: loaded when a notebook is drawn. */
 const NotebookPreviewView = lazy(() => import('./NotebookPreviewView'));
@@ -61,8 +62,17 @@ export type NotebookPreviewProps = {
   title: string;
   /** How tall it is, in pixels; it scrolls within. */
   maxHeight?: number;
-  /** Takes the reader to the notebook that runs; the line under it says so. */
+  /**
+   * Takes the reader to the notebook that runs; the line under it says so.
+   * Unsaid, in a balloon that carries the notebook as its large visual, a
+   * click expands it (`BalloonVisual`).
+   */
   onOpen?: () => void;
+  /**
+   * The line under it, which opens it: `Open it below to run it`. Shown
+   * when `onOpen` or this is given — in a balloon, its *Expand* says it.
+   */
+  openLabel?: string;
 };
 
 /** A notebook, read-only and small, with the way to the one that runs. */
@@ -70,8 +80,11 @@ export function NotebookPreview({
   notebook,
   title,
   maxHeight = 220,
-  onOpen,
+  onOpen: onOpenGiven,
+  openLabel,
 }: NotebookPreviewProps): JSX.Element | null {
+  const expand = useBalloonExpand();
+  const onOpen = onOpenGiven ?? expand ?? undefined;
   const doc = notebookDocument(notebook);
   if (!doc) {
     return null;
@@ -107,7 +120,7 @@ export function NotebookPreview({
           <NotebookPreviewView nbformat={doc} height={maxHeight} />
         </Suspense>
       </Box>
-      {onOpen ? (
+      {onOpen && (onOpenGiven || openLabel) ? (
         <Text
           as="button"
           type="button"
@@ -124,7 +137,7 @@ export function NotebookPreview({
             '&:hover': { textDecoration: 'underline' },
           }}
         >
-          Open it below to run it
+          {openLabel ?? 'Open it to run it'}
         </Text>
       ) : null}
     </Box>

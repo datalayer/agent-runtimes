@@ -30,13 +30,16 @@ import {
 } from '../../loop/plugins/assistant-characters';
 import { OWL_CHARACTER, OwlCharacterPlugin } from './owlCharacterPlugin';
 import { NotebookPreview } from '../../components/teams/NotebookPreview';
+import { notebookBalloonVisual } from '../../components/teams/TeamNotebook';
 import type { BalloonDisplay } from '../../chat/assistant/toolLine';
 import { readTestSpriteCharacter } from './testSpriteCharacter';
 import {
   GALLERY_POSES,
   GALLERY_POSE_LABELS,
   SAMPLE_NOTEBOOK,
+  SAMPLE_NOTEBOOK_ARTIFACT,
   SAMPLE_NOTEBOOK_SAYING,
+  sampleHistory,
   sampleSaying,
   sampleToolLine,
   stateOfPose,
@@ -297,6 +300,18 @@ export function GalleryNotebook({
   );
 }
 
+/**
+ * The sample notebook as the balloon's large visual: expanded, the notebook
+ * that runs and is edited on the browser sandbox (`TeamNotebook`).
+ */
+export function galleryNotebookVisual() {
+  return notebookBalloonVisual(
+    SAMPLE_NOTEBOOK_ARTIFACT,
+    'Accounting’s notebook',
+    420,
+  );
+}
+
 /** One balloon display, pictured: a character with what its balloon says. */
 function BalloonCell({
   character,
@@ -355,7 +370,7 @@ function BalloonCell({
 }
 
 /**
- * The balloon's displays (T-23), one character: a peek of the history, the
+ * The balloon's displays (T-23), one character: the history, every message listed, the
  * current balloon with a tool line, and with a notebook given — the same
  * read-only jupyter-react notebook as in the stage, loaded when drawn.
  */
@@ -373,8 +388,12 @@ export function GalleryBalloons({
         character={character}
         label="History"
         display="history"
-        height={180}
-        balloon={{ ...sampleSaying(0), onDismiss: () => undefined }}
+        height={340}
+        balloon={{
+          ...sampleSaying(1),
+          history: sampleHistory(2),
+          onDismiss: () => undefined,
+        }}
       />
       <BalloonCell
         character={character}
@@ -395,6 +414,7 @@ export function GalleryBalloons({
         balloon={{
           text: SAMPLE_NOTEBOOK_SAYING,
           attachment: <GalleryNotebook />,
+          visual: galleryNotebookVisual(),
         }}
       />
     </Box>

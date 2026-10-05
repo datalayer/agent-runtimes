@@ -66,6 +66,7 @@ import {
   getExampleEntries,
   type ExampleEntry,
 } from './example-selector';
+import { EXAMPLE_GROUP_ORDER, getExampleGroup } from './exampleGroups';
 import {
   RUNTIME_TARGETS,
   runtimeTargetCapabilities,
@@ -105,19 +106,6 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
   '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 
-const EXAMPLE_GROUP_ORDER = [
-  'Apps',
-  'A2UI',
-  'A2A',
-  'AG-UI',
-  'Chat',
-  'Document',
-  'Notebook',
-  'Capabilities',
-  'Cell',
-  'CopilotKit',
-] as const;
-
 /**
  * The examples that open without an account.
  *
@@ -148,37 +136,13 @@ const ANONYMOUS_EXAMPLES = new Set([
   'DecksAgent',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
-  'ChatAssistantExample',
+  'AssistantExample',
   // Every character in every state, from static data: no agent at all.
-  'ChatAssistantGalleryExample',
+  'AssistantGalleryExample',
   // Voice: heard in the page, the agent on the local server, the speech
   // service named in the address.
   'VoiceChatExample',
 ]);
-
-const getExampleGroup = (id: string): string => {
-  if (
-    id === 'AgentspecsExample' ||
-    id.startsWith('Loop') ||
-    id === 'DecksAgent'
-  ) {
-    return 'Apps';
-  }
-  if (id.startsWith('A2Ui')) return 'A2UI';
-  // Agents reached over the A2A protocol: their own category, after A2UI.
-  if (id.startsWith('AgentA2A')) return 'A2A';
-  if (id.startsWith('AgUi')) return 'AG-UI';
-  if (id.startsWith('CopilotKit')) return 'CopilotKit';
-  // Each remaining Agent* example demonstrates one capability of the
-  // runtime: checkpoints, hooks, memory, guardrails…
-  if (id.startsWith('Agent')) return 'Capabilities';
-  if (id.startsWith('Chat') || id === 'VoiceChatExample') return 'Chat';
-  // The document examples: the ones on the Lexical editor, and the page
-  // with a document on it.
-  if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
-  if (id.startsWith('Notebook')) return 'Notebook';
-  return 'Cell';
-};
 
 const wait = (ms: number) =>
   new Promise<void>(resolve => {

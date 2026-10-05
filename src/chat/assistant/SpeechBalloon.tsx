@@ -14,6 +14,10 @@
  * the conversation is elsewhere (the LOOP workspace), *Ask a decision*: a
  * typed decision asked of Jev, its answer said back in the balloon.
  *
+ * Shown `history` with the conversation's messages (`history`), it lists
+ * them all — the person's and the agent's, under a header that counts them,
+ * scrolled to the newest — rather than the newest line alone.
+ *
  * Shown `current` (LOOP T-23), it is the one thing being said or done now:
  * *Now*, then the words as they are written, or the tool being called
  * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
@@ -25,10 +29,15 @@
  */
 
 import type { JSX, ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
-import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import {
+  ASSISTANT_WORDS,
+  type BalloonApproval,
+  type BalloonHistoryMessage,
+} from './state';
 import { moreWaiting } from './ConversationBalloon';
 import { DecisionAsk } from './DecisionAsk';
 import type { DecisionAsker } from './decisions';
@@ -36,8 +45,10 @@ import {
   BalloonToolLineView,
   CurrentBalloonBody,
   ToolLineAnnouncer,
+  conversationHeaderText,
 } from './BalloonParts';
 import type { BalloonDisplay, BalloonToolLine } from './toolLine';
+import { BalloonExpandButton } from './BalloonVisual';
 
 export interface SpeechBalloonProps {
   text: string;
@@ -76,6 +87,110 @@ export interface SpeechBalloonProps {
   busy?: boolean;
   /** What goes with the words, under them: a notebook given, read-only. */
   attachment?: ReactNode;
+  /**
+   * The conversation's messages (`history`): listed in the balloon, every
+   * one, in place of the newest line alone.
+   */
+  history?: readonly BalloonHistoryMessage[];
+  /**
+   * What goes with the words is a large visual (a notebook): an *Expand*
+   * button under it draws it large, named by `expandTitle`.
+   */
+  onExpand?: () => void;
+  /** What the large visual is, for the *Expand* button: `Accounting's notebook`. */
+  expandTitle?: string;
+}
+
+/** How tall the listed conversation grows before it scrolls, in pixels. */
+export const BALLOON_HISTORY_MAX_HEIGHT = 220;
+
+/** Shorter, when something goes with the words under it (a notebook). */
+export const BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT = 120;
+
+/**
+ * The conversation in the `history` balloon: a header that counts it and
+ * opens it, then every message, the person's to the right, scrolled to the
+ * newest.
+ */
+function BalloonHistory({
+  history,
+  onOpen,
+  maxHeight = BALLOON_HISTORY_MAX_HEIGHT,
+}: {
+  history: readonly BalloonHistoryMessage[];
+  onOpen: () => void;
+  maxHeight?: number;
+}): JSX.Element {
+  const listRef = useRef<HTMLDivElement>(null);
+  const newest = history[history.length - 1]?.id;
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [history.length, newest]);
+  return (
+    <Box
+      data-balloon-history=""
+      sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
+    >
+      <Box
+        as="button"
+        type="button"
+        data-balloon-peek=""
+        data-balloon-header=""
+        onClick={onOpen}
+        sx={{
+          m: 0,
+          p: 0,
+          pb: 1,
+          border: 0,
+          bg: 'transparent',
+          font: 'inherit',
+          textAlign: 'left',
+          cursor: 'pointer',
+          fontSize: 0,
+          fontWeight: 'semibold',
+          color: 'fg.muted',
+          '&:hover': { textDecoration: 'underline' },
+        }}
+      >
+        {conversationHeaderText(history.length)}
+      </Box>
+      <Box
+        ref={listRef}
+        role="log"
+        aria-label="Conversation"
+        data-balloon-history-list=""
+        sx={{
+          maxHeight,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          pr: 1,
+        }}
+      >
+        {history.map(message => (
+          <Box
+            key={message.id}
+            data-balloon-history-message={message.role}
+            sx={{
+              alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '88%',
+              px: 2,
+              py: 1,
+              borderRadius: 2,
+              bg: message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {message.text}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
 }
 
 export function SpeechBalloon({
@@ -96,8 +211,13 @@ export function SpeechBalloon({
   speaking = false,
   busy = false,
   attachment,
+  history,
+  onExpand,
+  expandTitle,
 }: SpeechBalloonProps): JSX.Element {
   const current = display === 'current';
+  // History with messages to list: all of them, not the newest line alone.
+  const listed = !current && history && history.length > 0 ? history : null;
   return (
     <Box
       data-speech-balloon=""
@@ -110,8 +230,9 @@ export function SpeechBalloon({
           ? { bottom: `${above}px` }
           : { top: `${above}px` }),
         [align]: 0,
-        maxWidth: wide || (current && attachment) ? 300 : current ? 260 : 280,
-        width: wide || (current && attachment) ? 300 : 'max-content',
+        maxWidth:
+          wide || listed || (current && attachment) ? 300 : current ? 260 : 280,
+        width: wide || listed || (current && attachment) ? 300 : 'max-content',
         px: 3,
         py: 2,
         bg: 'canvas.default',
@@ -166,6 +287,16 @@ export function SpeechBalloon({
               speaking={speaking}
             />
           </Box>
+        ) : listed ? (
+          <BalloonHistory
+            history={listed}
+            onOpen={onOpen}
+            maxHeight={
+              attachment
+                ? BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT
+                : BALLOON_HISTORY_MAX_HEIGHT
+            }
+          />
         ) : (
           <Box
             as="button"
@@ -208,6 +339,11 @@ export function SpeechBalloon({
           />
         ) : null}
       </Box>
+      {listed && tool ? (
+        <Box data-balloon-history-tool="" sx={{ mt: 1 }}>
+          <BalloonToolLineView line={tool} />
+        </Box>
+      ) : null}
       {approval && (
         <Box data-balloon-approval={approval.id} sx={{ mt: 1 }}>
           <Text as="p" sx={{ m: 0, fontWeight: 'semibold' }}>
@@ -242,9 +378,19 @@ export function SpeechBalloon({
           ) : null}
         </Box>
       )}
-      {current && attachment ? (
-        <Box data-balloon-attachment="" sx={{ mt: 2 }}>
+      {/* What goes with the words, in either display, a tool line or not. */}
+      {attachment ? (
+        <Box
+          data-balloon-attachment=""
+          sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}
+        >
           {attachment}
+          {onExpand ? (
+            <BalloonExpandButton
+              title={expandTitle ?? 'the visual'}
+              onExpand={onExpand}
+            />
+          ) : null}
         </Box>
       ) : null}
       {!current ? <ToolLineAnnouncer line={tool} /> : null}

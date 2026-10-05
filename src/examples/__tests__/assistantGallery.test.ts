@@ -19,6 +19,7 @@ import {
   SAMPLE_CONVERSATIONS,
   balloonForPose,
   sampleApproval,
+  sampleHistory,
   sampleSaying,
   stateOfPose,
 } from '../utils/assistantGallery';
@@ -27,6 +28,7 @@ import {
   testSpriteMapPng,
 } from '../utils/testSpriteCharacter';
 import { EXAMPLES, getExampleEntries } from '../example-selector';
+import { getExampleGroup } from '../exampleGroups';
 
 const approval = sampleApproval(
   () => undefined,
@@ -68,10 +70,29 @@ describe('the balloons', () => {
 
   it('says the latest saying when asked, and nothing leaving or aside', () => {
     const saying = sampleSaying(0);
-    expect(balloonForPose('speaking', { saying, approval })).toBe(saying);
+    expect(balloonForPose('speaking', { saying, approval })).toEqual(saying);
     expect(balloonForPose('idle', { approval })).toBeUndefined();
     expect(balloonForPose('goodbye', { saying, approval })).toBeUndefined();
     expect(balloonForPose('aside', { saying, approval })).toBeUndefined();
+  });
+
+  it('lists the conversation so far in a history balloon', () => {
+    const history = sampleHistory(2);
+    // Two exchanges: two questions, two answers, the tool call left out.
+    expect(history.map(message => message.role)).toEqual([
+      'user',
+      'assistant',
+      'user',
+      'assistant',
+    ]);
+    expect(
+      balloonForPose('speaking', {
+        saying: sampleSaying(1),
+        approval,
+        history,
+      })?.history,
+    ).toHaveLength(4);
+    expect(sampleHistory(0)).toEqual([]);
   });
 
   it('reads the samples as the assistant reads a chat', () => {
@@ -119,11 +140,12 @@ describe('the test sprite', () => {
 });
 
 describe('the registry', () => {
-  it('lists the gallery in the Chat group', () => {
+  it('lists the gallery in the Assistant group', () => {
     const entry = getExampleEntries().find(
-      e => e.id === 'ChatAssistantGalleryExample',
+      e => e.id === 'AssistantGalleryExample',
     );
-    expect(entry?.title).toBe('Chat Assistant Gallery');
-    expect(EXAMPLES.ChatAssistantGalleryExample).toBeTypeOf('function');
+    expect(entry?.title).toBe('Assistant Gallery');
+    expect(EXAMPLES.AssistantGalleryExample).toBeTypeOf('function');
+    expect(getExampleGroup('AssistantGalleryExample')).toBe('Assistant');
   });
 });

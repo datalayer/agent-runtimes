@@ -26,6 +26,7 @@ import { Suspense, lazy } from 'react';
 import { Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { A2APeerArtifact } from '../../runtimes/browser/a2aPeer';
+import type { BalloonVisual } from '../../chat/assistant/BalloonVisual';
 
 /** The view itself: jupyter-react, JupyterLab and Pyodide, loaded when a notebook is drawn. */
 const TeamNotebookView = lazy(() => import('./TeamNotebookView'));
@@ -63,7 +64,7 @@ export function TeamNotebook({
       as="section"
       aria-label={title}
       data-team-notebook=""
-      // Focused when the notebook in a balloon is clicked (`focusTeamNotebook`).
+      // Focused when the notebook in a balloon is clicked (`focusExpanded`).
       tabIndex={-1}
       sx={{
         display: 'flex',
@@ -98,6 +99,25 @@ export function TeamNotebook({
       </Suspense>
     </Box>
   );
+}
+
+/**
+ * A notebook as a balloon's large visual: read-only in the balloon, and,
+ * expanded, this notebook — editable, run on the browser sandbox, loaded
+ * only then.
+ */
+export function notebookBalloonVisual(
+  notebook: A2APeerArtifact,
+  title: string,
+  height?: number,
+): BalloonVisual {
+  return {
+    id: `notebook:${notebook.filename ?? notebook.name}`,
+    title,
+    render: () => (
+      <TeamNotebook notebook={notebook} title={title} height={height} />
+    ),
+  };
 }
 
 export default TeamNotebook;

@@ -17,7 +17,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
-import { Button, Heading, Text } from '@primer/react';
+import { Button, Heading, Text, ToggleSwitch } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
@@ -91,7 +91,7 @@ async function readPicked(files: File[]): Promise<AssistantCharacterData> {
   });
 }
 
-const ChatAssistantExample: React.FC = () => {
+const AssistantExample: React.FC = () => {
   const [character, setCharacter] = useState<string | AssistantCharacterData>(
     'paperclip',
   );
@@ -174,7 +174,7 @@ const ChatAssistantExample: React.FC = () => {
       <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
         <Box sx={{ maxWidth: 720, mx: 'auto' }}>
           <Heading as="h1" sx={{ mb: 2 }}>
-            Chat Assistant
+            Assistant
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3 }}>
             The chat as a character on the page. It greets you, acts out what
@@ -216,24 +216,39 @@ const ChatAssistantExample: React.FC = () => {
               The balloon
             </Heading>
             <Text as="p" sx={{ color: 'fg.muted', mb: 2 }}>
-              <strong>History</strong>: open, the whole conversation, counted in
-              its header, the composer last. <strong>Current</strong>: only what
-              it says or does now — the answer as it is written, or the tool it
-              calls (&ldquo;Using current_time…&rdquo;) — in one compact
-              balloon. Either way, a tool call is said in the balloon.
+              <strong>History</strong>: the whole conversation, counted in its
+              header — closed, every message listed and scrolled; open, the
+              composer last. <strong>Current</strong>: only what it says or does
+              now — the answer as it is written, or the tool it calls
+              (&ldquo;Using current_time…&rdquo;) — in one compact balloon.
+              Either way, a tool call is said in the balloon.
             </Text>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {(['history', 'current'] as const).map(option => (
-                <Button
-                  key={option}
-                  variant={option === balloon ? 'primary' : 'default'}
-                  aria-pressed={option === balloon}
-                  data-assistant-balloon-choice={option}
-                  onClick={() => setBalloon(option)}
-                >
-                  {option === 'history' ? 'History' : 'Current'}
-                </Button>
-              ))}
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+              data-assistant-balloon-toggle=""
+            >
+              <Text
+                id="assistant-balloon-history"
+                sx={{ fontWeight: 'semibold' }}
+              >
+                History
+              </Text>
+              <ToggleSwitch
+                aria-labelledby="assistant-balloon-history"
+                size="small"
+                checked={balloon === 'history'}
+                // Controlled, Primer's switch flips only through its click.
+                onClick={() =>
+                  setBalloon(balloon === 'history' ? 'current' : 'history')
+                }
+              />
+              <Text
+                aria-live="polite"
+                data-toggle-state=""
+                sx={{ color: 'fg.muted' }}
+              >
+                {balloon === 'history' ? 'History' : 'Current'}
+              </Text>
             </Box>
           </Box>
           <Box as="section" sx={{ mt: 4 }}>
@@ -330,4 +345,4 @@ const ChatAssistantExample: React.FC = () => {
   );
 };
 
-export default ChatAssistantExample;
+export default AssistantExample;

@@ -73,6 +73,7 @@ import {
   type BalloonToolLine,
 } from './assistant/toolLine';
 import { SpeechBalloon } from './assistant/SpeechBalloon';
+import type { BalloonExpandTarget } from './assistant/BalloonVisual';
 import {
   DEFAULT_ASSISTANT_CHARACTER,
   type AssistantCharacter,
@@ -80,6 +81,7 @@ import {
 import type { AssistantCharacterData } from './assistant/formats/types';
 import {
   assistantStateOf,
+  balloonHistoryOf,
   latestSaying,
   newestIsAnswer,
   keepAway,
@@ -88,6 +90,7 @@ import {
   type AssistantAway,
   type AssistantSaying,
   type BalloonApproval,
+  type BalloonHistoryMessage,
 } from './assistant/state';
 import {
   presenceState,
@@ -232,7 +235,7 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * How the floating assistant's balloon shows the conversation (LOOP
    * T-23; an Appspec's `interface.balloon`):
    * - 'history': every message, scrolled, under a header that counts them,
-   *   the composer last; closed, a peek of the newest words.
+   *   the composer last; closed, the balloon lists the messages too.
    * - 'current': only what it says or does now — the answer being written,
    *   or the tool it calls — in one compact balloon, *Now* on it; open, that
    *   line and the composer, nothing to scroll.
@@ -240,6 +243,13 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * @default 'history'
    */
   balloonDisplay?: BalloonDisplay;
+
+  /**
+   * Where a large visual the assistant's balloon carries (a notebook) is
+   * drawn when expanded: an element of the page, through a portal; unsaid,
+   * a large dialog over the page.
+   */
+  expandTarget?: BalloonExpandTarget;
 
   /**
    * The runtime the floating assistant asks typed decisions at — its
@@ -398,6 +408,7 @@ export function ChatFloating({
   launchingMessage,
   assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
   balloonDisplay = DEFAULT_BALLOON_DISPLAY,
+  expandTarget,
   conversation,
   decisions,
   voice,
@@ -481,6 +492,10 @@ export function ChatFloating({
   // The tool it calls now, and how many messages the history holds (T-23).
   const [ownTool, setOwnTool] = useState<BalloonToolLine | undefined>();
   const [messageCount, setMessageCount] = useState(0);
+  // The conversation's messages, listed in the closed `history` balloon.
+  const [ownHistory, setOwnHistory] = useState<
+    readonly BalloonHistoryMessage[]
+  >([]);
   /*
    * Its voice (VOICE.md V1): the answers said by the speech service, as
    * they are written (VO-20), the state following the sound (VO-22).
@@ -626,6 +641,15 @@ export function ChatFloating({
   // Current: what is said now — thinking until the answer's words arrive.
   const currentWords =
     atWork && !answering ? 'Thinking…' : saying?.text || undefined;
+  // History: the closed balloon lists the conversation, not its newest line.
+  const listedHistory =
+    !showsCurrent && !conversation && ownHistory.length > 0
+      ? ownHistory
+      : undefined;
+  const withHistory = <T extends object>(
+    said: T,
+  ): T & { history?: readonly BalloonHistoryMessage[] } =>
+    listedHistory ? { ...said, history: listedHistory } : said;
   const assistantBalloon =
     assistantState === 'paused'
       ? { text: ASSISTANT_WORDS.paused }
@@ -635,11 +659,18 @@ export function ChatFloating({
         : speakerState.refused
           ? { text: speakerState.refused }
           : balloonApproval
-            ? { text: ASSISTANT_WORDS.approval, approval: balloonApproval }
+            ? withHistory({
+                text: ASSISTANT_WORDS.approval,
+                approval: balloonApproval,
+              })
             : assistantState === 'waiting'
               ? { text: ASSISTANT_WORDS.waiting }
               : toolSaid
-                ? { text: toolLineText(toolSaid), tool: toolSaid, busy: atWork }
+                ? withHistory({
+                    text: toolLineText(toolSaid),
+                    tool: toolSaid,
+                    busy: atWork,
+                  })
                 : showsCurrent && (unheard || atWork)
                   ? // Current: the words as they are written, whole.
                     {
@@ -655,15 +686,16 @@ export function ChatFloating({
                         : undefined,
                     }
                   : unheard && saying
-                    ? {
-                        // A peek: the first words; the rest is in the conversation.
+                    ? withHistory({
+                        // A peek: the first words; the rest is in the
+                        // conversation, listed when there is one.
                         ...peekLine(saying.text),
                         onDismiss: () => {
                           setHeardId(saying.id);
                           setFreshSaying(false);
                         },
-                      }
-                    : { text: description };
+                      })
+                    : withHistory({ text: description });
   const balloonInsists =
     !!speakerState.sentence ||
     assistantState === 'greeting' ||
@@ -698,6 +730,17 @@ export function ChatFloating({
           : line,
       );
       setMessageCount(conversationCount(items));
+      const listed = balloonHistoryOf(items);
+      setOwnHistory(previous =>
+        previous.length === listed.length &&
+        previous.every(
+          (message, index) =>
+            message.id === listed[index].id &&
+            message.text === listed[index].text,
+        )
+          ? previous
+          : listed,
+      );
       setVoiceItems(items);
       const said = latestSaying(items);
       setSaying(previous =>
@@ -1685,6 +1728,7 @@ export function ChatFloating({
           onToggle={handleToggle}
           balloon={assistantBalloon}
           balloonDisplay={balloonDisplay}
+          expandTarget={expandTarget}
           insist={balloonInsists}
           onDismiss={dismissAssistant}
           ownRef={popupRef}

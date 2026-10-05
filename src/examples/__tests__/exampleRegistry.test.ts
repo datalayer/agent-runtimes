@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXAMPLES, getExampleEntries } from '../example-selector';
+import { EXAMPLE_GROUP_ORDER, getExampleGroup } from '../exampleGroups';
 
 describe('the example registry', () => {
   it('lists every example exactly once', () => {
@@ -53,5 +54,26 @@ describe('the A2UI Jupyter output example', () => {
   it('lands in the A2UI group, by the id the grouping reads', () => {
     // `getExampleGroup` in the shell keys off this prefix.
     expect(entry()?.id.startsWith('A2Ui')).toBe(true);
+  });
+});
+
+describe('the Assistant group', () => {
+  it('holds the assistant and its gallery, under their own names', () => {
+    const ids = getExampleEntries().map(entry => entry.id);
+    expect(ids).toContain('AssistantExample');
+    expect(ids).toContain('AssistantGalleryExample');
+    expect(ids.some(id => id.startsWith('ChatAssistant'))).toBe(false);
+    expect(getExampleGroup('AssistantExample')).toBe('Assistant');
+    expect(getExampleGroup('AssistantGalleryExample')).toBe('Assistant');
+    expect(
+      getExampleEntries().find(e => e.id === 'AssistantExample')?.title,
+    ).toBe('Assistant');
+  });
+
+  it('comes right before Chat', () => {
+    const at = EXAMPLE_GROUP_ORDER.indexOf('Assistant');
+    expect(at).toBeGreaterThan(-1);
+    expect(EXAMPLE_GROUP_ORDER[at + 1]).toBe('Chat');
+    expect(getExampleGroup('ChatExample')).toBe('Chat');
   });
 });

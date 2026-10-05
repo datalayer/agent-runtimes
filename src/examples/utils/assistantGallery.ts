@@ -20,9 +20,11 @@ import {
 } from '../../chat/assistant/toolLine';
 import {
   ASSISTANT_WORDS,
+  balloonHistoryOf,
   latestSaying,
   type AssistantState,
   type BalloonApproval,
+  type BalloonHistoryMessage,
 } from '../../chat/assistant/state';
 
 /** What the gallery poses a character in: a state, or stepped aside. */
@@ -109,6 +111,24 @@ export function sampleSaying(index: number): { text: string; more: boolean } {
   return { text: saying.text, more: saying.more };
 }
 
+/**
+ * The conversation so far, after `count` sample exchanges (wrapping), as the
+ * `history` balloon lists it: every message, the person's and the agent's,
+ * read by `balloonHistoryOf` as the floating assistant reads the chat.
+ */
+export function sampleHistory(count: number): BalloonHistoryMessage[] {
+  const items: unknown[] = [];
+  for (let turn = 0; turn < count; turn += 1) {
+    const conversation =
+      SAMPLE_CONVERSATIONS[turn % SAMPLE_CONVERSATIONS.length];
+    for (const item of conversation) {
+      const message = item as { id: string };
+      items.push({ ...message, id: `${turn}-${message.id}` });
+    }
+  }
+  return balloonHistoryOf(items);
+}
+
 /** The tool the gallery calls (T-23): Odoo's, as Accounting calls it. */
 export const SAMPLE_TOOL = 'list_invoices';
 
@@ -150,6 +170,14 @@ export const SAMPLE_NOTEBOOK = {
   ],
 };
 
+/** The sample notebook as a peer gives one: an A2A artifact. */
+export const SAMPLE_NOTEBOOK_ARTIFACT = {
+  mediaType: 'application/x-ipynb+json',
+  name: 'Open invoices',
+  filename: 'open-invoices.ipynb',
+  data: SAMPLE_NOTEBOOK,
+};
+
 /** What the gallery says with the notebook it was given. */
 export const SAMPLE_NOTEBOOK_SAYING =
   'Here is the notebook Accounting gave: the open invoices.';
@@ -180,6 +208,8 @@ export function balloonForPose(
     approval,
     tool,
     attachment,
+    history,
+    visual,
   }: {
     saying?: { text: string; more: boolean };
     approval: BalloonApproval;
@@ -187,10 +217,17 @@ export function balloonForPose(
     tool?: BalloonToolLine;
     /** What goes with the words in a `current` balloon: a notebook. */
     attachment?: NonNullable<AssistantStageProps['balloon']>['attachment'];
+    /** The conversation so far, listed in a `history` balloon. */
+    history?: readonly BalloonHistoryMessage[];
+    /** The large visual the attachment is the compact form of: expandable. */
+    visual?: NonNullable<AssistantStageProps['balloon']>['visual'];
   },
 ): AssistantStageProps['balloon'] {
+  const listed = history && history.length > 0 ? { history } : {};
+  // What goes with the words stays while a tool runs, in either display.
+  const given = attachment ? { attachment, ...(visual ? { visual } : {}) } : {};
   if (pose === 'waiting') {
-    return { text: ASSISTANT_WORDS.approval, approval };
+    return { text: ASSISTANT_WORDS.approval, approval, ...listed };
   }
   if (pose === 'paused') {
     return { text: ASSISTANT_WORDS.paused };
@@ -203,10 +240,9 @@ export function balloonForPose(
       text: toolLineText(tool),
       tool,
       busy: tool.phase === 'running',
+      ...listed,
+      ...given,
     };
   }
-  if (saying && attachment) {
-    return { ...saying, attachment };
-  }
-  return saying;
+  return saying ? { ...saying, ...listed, ...given } : undefined;
 }

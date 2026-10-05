@@ -62,7 +62,9 @@ import {
   type A2ATeamFlow,
 } from './a2aTeamFlow';
 import type { A2ATeamPersona } from './useA2ATeam';
-import { NotebookPreview, focusTeamNotebook } from './NotebookPreview';
+import { NotebookPreview } from './NotebookPreview';
+import { notebookBalloonVisual } from './TeamNotebook';
+import type { BalloonExpandTarget } from '../../chat/assistant/BalloonVisual';
 import { toolLineText } from '../../chat/assistant/toolLine';
 import type { BalloonDisplay } from '../../chat/assistant/toolLine';
 
@@ -89,10 +91,19 @@ export type A2ATeamGraphMember = {
    */
   balloonDisplay?: BalloonDisplay;
   /**
-   * The notebook in its balloon was clicked: by default, the page's
-   * `TeamNotebook` is scrolled to and focused.
+   * The notebook in its balloon was clicked: by default, it is expanded —
+   * into `expandTarget`, scrolled to and focused, or in a dialog.
    */
   onNotebookOpen?: () => void;
+  /**
+   * Where the notebook it was given runs (`TeamNotebook`, editable, on the
+   * browser sandbox): an element of the page — the area under the graph —
+   * where it is drawn as it arrives and when it is expanded; without one,
+   * *Expand* opens it in a dialog over the page.
+   */
+  expandTarget?: BalloonExpandTarget;
+  /** What its notebook is called: `Accounting's notebook`. */
+  notebookTitle?: string;
 };
 
 export type A2ATeamGraphProps = {
@@ -170,6 +181,26 @@ const MemberNode = memo(function MemberNode({
     return null;
   }
   const { persona } = member;
+  // A notebook it was given: read-only in its balloon, and its large visual
+  // the one that runs, editable — under the graph, or in a dialog.
+  const notebookTitle =
+    member.notebookTitle ?? (persona.notebook?.name || 'The notebook');
+  const given = persona.notebook
+    ? {
+        attachment: (
+          <NotebookPreview
+            notebook={persona.notebook.data}
+            title={notebookTitle}
+            maxHeight={NOTEBOOK_PREVIEW_HEIGHT}
+            onOpen={member.onNotebookOpen}
+            openLabel={
+              member.expandTarget ? 'Open it below to run it' : undefined
+            }
+          />
+        ),
+        visual: notebookBalloonVisual(persona.notebook, notebookTitle),
+      }
+    : {};
   return (
     <Box
       // React Flow lets the pointer through a node that is neither dragged
@@ -227,6 +258,7 @@ const MemberNode = memo(function MemberNode({
                     text: toolLineText(persona.tool),
                     tool: persona.tool,
                     busy: persona.state !== 'idle',
+                    ...given,
                   }
                 : persona.saying
                   ? {
@@ -237,19 +269,12 @@ const MemberNode = memo(function MemberNode({
                         persona.state === 'thinking' ||
                         persona.state === 'working' ||
                         persona.state === 'speaking',
-                      // A notebook it was given, read-only: the one that
-                      // runs is under the graph.
-                      attachment: persona.notebook ? (
-                        <NotebookPreview
-                          notebook={persona.notebook.data}
-                          title={persona.notebook.name || 'The notebook'}
-                          maxHeight={NOTEBOOK_PREVIEW_HEIGHT}
-                          onOpen={member.onNotebookOpen ?? focusTeamNotebook}
-                        />
-                      ) : undefined,
+                      ...given,
                     }
                   : undefined
             }
+            expandTarget={member.expandTarget}
+            expandOnArrival={!!member.expandTarget}
             insist={persona.insist}
             onDismiss={away => member.onAway?.(away !== 'none')}
             // A member of the graph: what is clicked around it is the graph.

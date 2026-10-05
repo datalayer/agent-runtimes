@@ -27,6 +27,13 @@ import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
 import { assistantCharacter, type AssistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
+import {
+  BalloonExpandContext,
+  ExpandedVisual,
+  focusExpanded,
+  type BalloonExpandTarget,
+  type BalloonVisual,
+} from './BalloonVisual';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
 import type { DecisionAsker } from './decisions';
@@ -39,6 +46,7 @@ import {
   type AssistantAway,
   type AssistantState,
   type BalloonApproval,
+  type BalloonHistoryMessage,
 } from './state';
 
 /** The motions, by the state the stage is in. */
@@ -280,11 +288,34 @@ export interface AssistantStageProps {
     busy?: boolean;
     /** What goes with the words (`current`): a notebook given, read-only. */
     attachment?: ReactNode;
+    /**
+     * The conversation's messages (`history`): the balloon lists them all,
+     * counted and scrolled, rather than the newest line alone.
+     */
+    history?: readonly BalloonHistoryMessage[];
+    /**
+     * The large visual `attachment` is the compact form of (a notebook):
+     * the balloon offers *Expand*, and draws it large — into
+     * `expandTarget`, or in a dialog over the page.
+     */
+    visual?: BalloonVisual;
   };
   /**
-   * How the balloon shows the conversation (LOOP T-23): a peek of it
-   * (`history`, the default — open, the conversation is the whole history),
-   * or the one thing being said or done now (`current`).
+   * Where a balloon's large visual is drawn when expanded: an element of
+   * the page (through a portal), such as the area under a team's graph;
+   * without one, a large dialog over the page.
+   */
+  expandTarget?: BalloonExpandTarget;
+  /**
+   * Draw a large visual into `expandTarget` as soon as it arrives, without
+   * waiting for *Expand*: a team's notebook, under its graph.
+   */
+  expandOnArrival?: boolean;
+  /**
+   * How the balloon shows the conversation (LOOP T-23): the conversation
+   * (`history`, the default — closed, the messages in `balloon.history`, or
+   * a peek of the newest when none are given; open, the whole history), or
+   * the one thing being said or done now (`current`).
    */
   balloonDisplay?: BalloonDisplay;
   /** Show the balloon without being hovered: something new to say. */
@@ -371,6 +402,8 @@ export function AssistantStage({
   mouthLevel,
   stayPut = false,
   balloonDisplay = 'history',
+  expandTarget,
+  expandOnArrival = false,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -396,6 +429,23 @@ export function AssistantStage({
   const [deciding, setDeciding] = useState(false);
   const showBalloon =
     !aside && !open && !!balloon && (hovered || insist || deciding);
+  // The large visual drawn now: kept while the balloon moves on to other
+  // words, until it is closed or another one is expanded.
+  const visual = balloon?.visual;
+  const [expanded, setExpanded] = useState<BalloonVisual | null>(null);
+  const expand = visual
+    ? () => {
+        setExpanded(visual);
+        if (expandTarget) {
+          requestAnimationFrame(() => focusExpanded(expandTarget));
+        }
+      }
+    : null;
+  useEffect(() => {
+    if (visual && expandOnArrival && expandTarget) {
+      setExpanded(visual);
+    }
+  }, [visual?.id, expandOnArrival, !!expandTarget]);
   return (
     <Box
       ref={stageRef}
@@ -506,26 +556,38 @@ export function AssistantStage({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {showBalloon && balloon && (
-        <SpeechBalloon
-          text={balloon.text}
-          more={balloon.more}
-          approval={balloon.approval}
-          onDismissPeek={balloon.onDismiss}
-          display={balloonDisplay}
-          tool={balloon.tool}
-          speaking={balloon.speaking}
-          busy={balloon.busy}
-          attachment={balloon.attachment}
-          decide={decide}
-          onDecisionActive={setDeciding}
-          wide={deciding}
-          onOpen={onToggle}
-          above={size + 8}
-          side={balloonSide(place).side}
-          align={balloonSide(place).align}
-          tailAt={size / 2}
+      {expanded && (
+        <ExpandedVisual
+          visual={expanded}
+          target={expandTarget}
+          onClose={() => setExpanded(null)}
         />
+      )}
+      {showBalloon && balloon && (
+        <BalloonExpandContext.Provider value={expand}>
+          <SpeechBalloon
+            text={balloon.text}
+            more={balloon.more}
+            approval={balloon.approval}
+            onDismissPeek={balloon.onDismiss}
+            display={balloonDisplay}
+            tool={balloon.tool}
+            speaking={balloon.speaking}
+            busy={balloon.busy}
+            attachment={balloon.attachment}
+            history={balloon.history}
+            onExpand={expand ?? undefined}
+            expandTitle={visual?.title}
+            decide={decide}
+            onDecisionActive={setDeciding}
+            wide={deciding}
+            onOpen={onToggle}
+            above={size + 8}
+            side={balloonSide(place).side}
+            align={balloonSide(place).align}
+            tailAt={size / 2}
+          />
+        </BalloonExpandContext.Provider>
       )}
       <Box
         as="button"

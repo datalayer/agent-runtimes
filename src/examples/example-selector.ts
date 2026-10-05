@@ -50,6 +50,7 @@ function inferTags(id: string): string[] {
   if (id.includes('Notebook')) tags.add('notebook');
   if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
+  if (id.startsWith('Assistant')) tags.add('assistant');
   if (id.includes('Sandbox')) tags.add('sandbox');
   if (id.includes('Monitoring') || id.includes('Otel'))
     tags.add('observability');
@@ -171,8 +172,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Simple cell example.',
   ),
   makeEntry(
-    'ChatAssistantExample',
-    () => import('./ChatAssistantExample'),
+    'AssistantExample',
+    () => import('./AssistantExample'),
     'The floating assistant: the chat as a character on the page.',
   ),
   makeEntry(
@@ -181,8 +182,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'A voice chat with the floating assistant: push-to-talk heard in the page, answers read aloud by the speech service, the mouth moving with the sound.',
   ),
   makeEntry(
-    'ChatAssistantGalleryExample',
-    () => import('./ChatAssistantGalleryExample'),
+    'AssistantGalleryExample',
+    () => import('./AssistantGalleryExample'),
     'Every representation of the floating assistant: each character in each state, its balloon, light and dark, still or moving, one at a time or as a grid.',
   ),
   makeEntry(

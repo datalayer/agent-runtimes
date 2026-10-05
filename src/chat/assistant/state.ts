@@ -131,6 +131,72 @@ export interface AssistantSaying {
 export const SAYING_LIMIT = 220;
 
 /**
+ * A message's content as plain words, for a balloon: its text parts joined,
+ * code blocks left out, links and Markdown read as plain words.
+ */
+export function plainWordsOf(content: unknown): string {
+  const raw =
+    typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+        ? content
+            .map(part =>
+              part &&
+              typeof part === 'object' &&
+              (part as { type?: unknown }).type === 'text'
+                ? String((part as { text?: unknown }).text ?? '')
+                : '',
+            )
+            .join(' ')
+        : '';
+  return raw
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`#>]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A message of the conversation, as the `history` balloon lists it. */
+export interface BalloonHistoryMessage {
+  id: string;
+  /** Who said it: the person, or the agent. */
+  role: 'user' | 'assistant';
+  /** Its words, plain. */
+  text: string;
+}
+
+/**
+ * The conversation as the `history` balloon lists it (T-23): the person's
+ * and the agent's messages with words, in order — not the tool calls, not
+ * an empty message — the same messages its header counts.
+ */
+export function balloonHistoryOf(
+  items: readonly unknown[],
+): BalloonHistoryMessage[] {
+  const history: BalloonHistoryMessage[] = [];
+  items.forEach((entry, index) => {
+    const item = entry as {
+      id?: unknown;
+      role?: unknown;
+      toolName?: unknown;
+      content?: unknown;
+    };
+    if (
+      (item.role !== 'user' && item.role !== 'assistant') ||
+      typeof item.toolName === 'string'
+    ) {
+      return;
+    }
+    const text = plainWordsOf(item.content);
+    if (text) {
+      history.push({ id: String(item.id ?? index), role: item.role, text });
+    }
+  });
+  return history;
+}
+
+/**
  * The newest thing the agent said, as the Office Assistant said it: in the
  * balloon, while the conversation is closed (T-23). Only its own messages
  * with text — not a tool call, not the person's words; markdown is read as
@@ -149,26 +215,7 @@ export function latestSaying(
     if (item.role !== 'assistant' || typeof item.toolName === 'string') {
       continue;
     }
-    const raw =
-      typeof item.content === 'string'
-        ? item.content
-        : Array.isArray(item.content)
-          ? item.content
-              .map(part =>
-                part &&
-                typeof part === 'object' &&
-                (part as { type?: unknown }).type === 'text'
-                  ? String((part as { text?: unknown }).text ?? '')
-                  : '',
-              )
-              .join(' ')
-          : '';
-    const plain = raw
-      .replace(/```[\s\S]*?```/g, ' ')
-      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-      .replace(/[*_`#>]+/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const plain = plainWordsOf(item.content);
     if (!plain) {
       continue;
     }

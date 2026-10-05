@@ -136,7 +136,7 @@ Appspec (`history` or `current`; the page's own when unsaid):
 
 | | `history` | `current` |
 | --- | --- | --- |
-| Closed | a peek of the newest words, cut to their first words | **Now**, then what is said or done now — the answer as it is written, whole (four lines at most, nothing to scroll), or the tool it calls |
+| Closed | every message of the conversation, the person's and the agent's, under *Conversation · 6*, scrolled to the newest (a peek of the newest words when the host gives no messages) | **Now**, then what is said or done now — the answer as it is written, whole (four lines at most, nothing to scroll), or the tool it calls |
 | Open | the whole conversation under *Conversation · 6*, scrolled, the composer last | that one line over the composer, 230px tall, no header, no history |
 | Looks | the plain balloon, the theme's border | a compact speech bubble edged with the theme's accent, *Now* with a dot that breathes while the agent works (still under reduced motion) |
 | Default for | the floating chat (`ChatFloating`), the LOOP workspace's assistant | a team's members (`A2ATeamGraph`) |
@@ -157,6 +157,43 @@ once they have all arrived (`aria-busy` while they stream), not at every
 token. An application embedded as an assistant takes `interface.balloon`;
 its conversation, drawn by the page that hosts it, opens as it is drawn
 there.
+
+### A large visual in the balloon
+
+What goes with the words — a notebook given today, a chart or a table later
+— shows **in either display, and while a tool line is up**: compact in the
+balloon (`balloon.attachment`, a notebook's read-only preview). When it is
+the compact form of **a large visual** (`balloon.visual`: an id, a title,
+and how it is drawn large), the balloon offers *Expand*, and a click on the
+compact form does the same:
+
+- with **`expandTarget`** (on `AssistantStage`, `ChatFloating` and a
+  team's members), a ref to an element of the page, the visual is drawn
+  there, through a portal, scrolled to and focused, with a close control;
+  `expandOnArrival` draws it there as soon as it arrives;
+- **without one**, it opens in a dialog over the page, about 80% of the
+  window wide and tall, in the theme's colours; the focus stays in it, and
+  Esc closes it.
+
+The expanded visual stays while the balloon moves on to other words, until
+it is closed or another is expanded. **A notebook's large view is the one
+that runs**: `notebookBalloonVisual(notebook, title)` draws `TeamNotebook`,
+editable, on the browser sandbox (a Pyodide kernel in the page), loaded only
+once it is expanded.
+
+```tsx
+const area = useRef<HTMLDivElement>(null);
+<AssistantStage
+  balloon={{
+    text: 'Here is the notebook.',
+    attachment: <NotebookPreview notebook={nb.data} title="The notebook" />,
+    visual: notebookBalloonVisual(nb, 'The notebook'),
+  }}
+  expandTarget={area}   // leave out for the dialog
+  …
+/>
+<div ref={area} />
+```
 
 ### Tool calls in the balloon
 
@@ -193,8 +230,11 @@ When Accounting gives a notebook, **Sales' balloon shows it read-only**:
 jupyter-react's `Notebook` with `readonly`, on `ServiceManagerLess` — no
 kernel, no Pyodide, nothing to run or edit — loaded only when a notebook
 arrives (`NotebookPreview`), scrolled within the balloon, with *Open it below
-to run it*. A click there scrolls to and focuses the notebook that runs,
-right under the team (`TeamNotebook`, on the browser sandbox).
+to run it* and *Expand*. The notebook that runs (`TeamNotebook`, on the
+browser sandbox) is the balloon's large visual, drawn into the area the page
+names under the graph (`expandTarget` on the member) as it arrives; a click
+in the balloon scrolls to it and focuses it. Without an area, *Expand* opens
+it in a dialog.
 
 ## Ask a decision
 
@@ -346,7 +386,7 @@ per mode (`assistant-gallery-light`, `assistant-gallery-dark`).
 
 ## The gallery
 
-The *Chat Assistant Gallery* example (`src/examples/ChatAssistantGalleryExample.tsx`,
+The *Assistant Gallery* example (`src/examples/AssistantGalleryExample.tsx`,
 in the examples' *Chat* group) shows every representation of the assistant,
 from static data — no agent, no server, no sign-in:
 
@@ -360,14 +400,17 @@ from static data — no agent, no server, no sign-in:
 - **one at a time**: pick a character and a state, *Say something* for the
   agent's latest saying in the balloon, drag the character, send it away
   (its own menu, or *Send it away*) and call it back;
-- **the two balloon displays**: *History* or *Current*; *Use a tool* steps a
-  tool line through *Using list_invoices…*, *Done: list_invoices* and
-  *list_invoices failed*; *Give a notebook* puts a small recorded notebook in
-  the current balloon, read-only, with jupyter-react's notebook (no kernel,
-  loaded only then);
+- **the two balloon displays**: a *History* toggle (on, the conversation so
+  far, every message, as *Say something* adds to it; off, *Current*); *Use a
+  tool* steps a tool line through *Using list_invoices…*, *Done:
+  list_invoices* and *list_invoices failed*; *Give a notebook* puts a small
+  recorded notebook in the balloon, read-only, with jupyter-react's notebook
+  (no kernel, loaded only then), and *Expand* draws it large and editable on
+  the browser sandbox — into the area under the stage, or, with the *Expand
+  into the page* toggle off, in an overlay;
 - **a grid**: all the characters by all the states, small, for a quick visual
   check (`AssistantGalleryGrid`, in `src/examples/utils/`), and under it the
-  balloon's displays for the chosen character — a history peek, a current
+  balloon's displays for the chosen character — the history listed, a current
   balloon with a tool line, and one with the same notebook
   (`GalleryBalloons`).
 
@@ -457,7 +500,7 @@ assistantCharactersOf(reactor).map(entry => entry.id); // paperclip, wizard, cat
 <ChatFloating defaultViewMode="assistant" assistantCharacter={assistantCharacterNamed(reactor, 'owl')} … />
 ```
 
-The *Chat Assistant* example does just this: its picker lists what the
+The *Assistant* example does just this: its picker lists what the
 enabled plugins contribute, the owl of `src/examples/utils/owlCharacterPlugin.tsx`
 among them, and draws the one chosen.
 
@@ -584,7 +627,7 @@ embedded application does — passes it as `conversation`:
 header, and the character acts `presence` and says `saying` as it would its
 own chat's.
 
-From the *Chat Assistant* example (`src/examples/ChatAssistantExample.tsx`),
+From the *Assistant* example (`src/examples/AssistantExample.tsx`),
 with a picker of Datalayer's characters and a file input for a character one
 brings (the example itself lists the contributed characters, as above):
 
@@ -658,8 +701,8 @@ export function Page() {
 }
 ```
 
-To try it, run the examples app (`npm run examples`) and open *Chat
-Assistant*. The character, its balloon and its motions need no account and
+To try it, run the examples app (`npm run examples`) and open
+*Assistant*. The character, its balloon and its motions need no account and
 no runtime; a conversation needs the local server on port 8765, and says so
 when there is none.
 
@@ -681,8 +724,8 @@ shows the welcome in its balloon, a drag moves it and the conversation opens
 above it where it was put down, and the wizard, the cat and the eyes draw.
 Each character's dark drawing and its contrast, light and dark, are tested
 (`assistant-characters-contrast.test.tsx`), and so is the stage drawing the
-chat's mode; a character contributed by a plugin is drawn in the *Chat
-Assistant* example and pictured (`character-owl-*.png`). The choice of a
+chat's mode; a character contributed by a plugin is drawn in the
+*Assistant* example and pictured (`character-owl-*.png`). The choice of a
 character — the application's over the person's over the paper clip, an
 unknown id said and not replaced — and the assistant in a LOOP workspace,
 drawn from a plugin's character and acting out the chat's turn, dozing while

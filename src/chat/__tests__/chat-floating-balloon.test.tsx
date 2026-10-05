@@ -123,6 +123,37 @@ describe('the floating assistant’s balloon, by display', () => {
     expect(stage().balloon.text).toBe('list_invoices failed');
   });
 
+  it('history, closed: the balloon lists every message of the conversation', async () => {
+    await render();
+    await turn(
+      [
+        asked,
+        call('complete'),
+        { id: 'a1', role: 'assistant', content: 'Two: Ada and Grace.' },
+        { id: 'u2', role: 'user', content: 'Since when?' },
+        { id: 'a2', role: 'assistant', content: 'March and April.' },
+      ],
+      false,
+    );
+    expect(
+      stage().balloon.history.map((m: { text: string }) => m.text),
+    ).toEqual([
+      'Open invoices?',
+      'Two: Ada and Grace.',
+      'Since when?',
+      'March and April.',
+    ]);
+  });
+
+  it('current, closed: no list, the one thing said', async () => {
+    await render({ balloonDisplay: 'current' });
+    await turn(
+      [asked, { id: 'a1', role: 'assistant', content: 'Two.' }],
+      false,
+    );
+    expect(stage().balloon.history).toBeUndefined();
+  });
+
   it('current: the words as they are written, whole, and Now', async () => {
     await render({ balloonDisplay: 'current' });
     expect(stage().balloonDisplay).toBe('current');

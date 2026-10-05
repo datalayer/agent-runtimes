@@ -8,8 +8,9 @@
  * says or does now (`current`) — "Asking Accounting…" for Sales' one tool,
  * "Using list_invoices…" while Accounting calls Odoo — and the notebook
  * Accounting gave shows in Sales' balloon read-only, drawn statically (no
- * kernel, no Pyodide), a click there taking the reader to the notebook that
- * runs, right under the team.
+ * kernel, no Pyodide); the notebook that runs is drawn right under the
+ * team, into the area the page names, as it arrives, and a click in the
+ * balloon takes the reader there.
  */
 
 // @vitest-environment jsdom
@@ -48,6 +49,13 @@ beforeAll(() => {
 });
 
 afterEach(() => cleanup());
+
+// The notebook that runs (JupyterLab, the sandbox, Pyodide), stood in for.
+vi.mock('../TeamNotebookView', () => ({
+  default: ({ fileName }: { fileName: string }) => (
+    <div data-testid="sandbox-notebook">{fileName}</div>
+  ),
+}));
 
 /**
  * jupyter-react, stood in for: what is checked is that the notebook is
@@ -175,7 +183,7 @@ describe('NotebookPreview, a notebook read-only', () => {
     const open = container.querySelector<HTMLElement>(
       '[data-notebook-preview-open]',
     );
-    expect(open?.textContent).toBe('Open it below to run it');
+    expect(open?.textContent).toBe('Open it to run it');
     act(() => open?.click());
     act(() => container.querySelector<HTMLElement>('[role="region"]')?.click());
     expect(onOpen).toHaveBeenCalledTimes(2);
@@ -216,13 +224,16 @@ function member(id: string, persona: A2ATeamPersona) {
 function Graph({
   sales,
   accounting,
+  under,
 }: {
   sales: A2ATeamPersona;
   accounting: A2ATeamPersona;
+  /** The area under the graph, where Sales' notebook runs. */
+  under?: React.RefObject<HTMLElement | null>;
 }) {
   return (
     <A2ATeamGraph
-      entry={member('sales', sales)}
+      entry={{ ...member('sales', sales), expandTarget: under }}
       peer={member('accounting', accounting)}
       flow="still"
       connected
@@ -278,14 +289,13 @@ describe("the team's balloons", () => {
     ).toBe('Using list_invoices…');
   });
 
-  it("show the notebook given in Sales' balloon, read-only, over the one that runs", async () => {
-    const section = document.createElement('section');
-    section.setAttribute('data-team-notebook', '');
-    section.tabIndex = -1;
-    section.scrollIntoView = vi.fn();
-    document.body.appendChild(section);
+  it("show the notebook given in Sales' balloon, read-only, the one that runs under the graph", async () => {
+    const area = document.createElement('div');
+    area.scrollIntoView = vi.fn();
+    document.body.appendChild(area);
     const { container } = render(
       <Graph
+        under={{ current: area }}
         sales={{
           ...AT_REST,
           state: 'speaking',
@@ -294,6 +304,7 @@ describe("the team's balloons", () => {
           notebook: {
             mediaType: 'application/x-ipynb+json',
             name: 'Open invoices',
+            filename: 'open-invoices.ipynb',
             data: NOTEBOOK,
           },
         }}
@@ -309,25 +320,67 @@ describe("the team's balloons", () => {
         preview?.querySelector('[data-testid="jupyter-notebook"]')?.textContent,
       ).toContain('print(total)'),
     );
+    // As it arrives, the one that runs is drawn under the graph.
+    await waitFor(() =>
+      expect(
+        area.querySelector(
+          '[data-team-notebook] [data-testid="sandbox-notebook"]',
+        )?.textContent,
+      ).toBe('open-invoices.ipynb'),
+    );
+    expect(
+      preview?.querySelector('[data-notebook-preview-open]')?.textContent,
+    ).toBe('Open it below to run it');
+    // A click in the balloon takes the reader there, focused.
     act(() =>
       preview
         ?.querySelector<HTMLElement>('[data-notebook-preview-open]')
         ?.click(),
     );
-    expect(section.scrollIntoView).toHaveBeenCalled();
-    expect(document.activeElement).toBe(section);
-    section.remove();
+    await waitFor(() => expect(area.scrollIntoView).toHaveBeenCalled());
+    expect(document.activeElement).toBe(
+      area.querySelector('[data-team-notebook]'),
+    );
+    area.remove();
+  });
+
+  it('keeps the notebook in the balloon while a tool runs, and offers Expand', () => {
+    const { container } = render(
+      <Graph
+        sales={{
+          ...AT_REST,
+          state: 'working',
+          insist: true,
+          tool: {
+            id: 'ask',
+            tool: 'ask_accounting',
+            name: 'ask_accounting',
+            phase: 'running',
+          },
+          notebook: {
+            mediaType: 'application/x-ipynb+json',
+            name: 'Open invoices',
+            data: NOTEBOOK,
+          },
+        }}
+        accounting={AT_REST}
+      />,
+    );
+    const sales = balloonOf(container, 'sales');
+    expect(sales?.querySelector('[data-notebook-preview]')).not.toBeNull();
+    expect(sales?.querySelector('[data-balloon-expand]')).not.toBeNull();
   });
 });
 
 describe('the team example', () => {
-  it('puts the notebook that runs right under the team, before the composer', () => {
+  it('names the area right under the team, before the composer, for the notebook that runs', () => {
     const graph = exampleSource.indexOf('<A2ATeamGraph');
-    const notebook = exampleSource.indexOf('<TeamNotebook');
+    const area = exampleSource.indexOf('ref={notebookArea}');
     const composer = exampleSource.indexOf('<Textarea');
     expect(graph).toBeGreaterThan(0);
-    expect(notebook).toBeGreaterThan(graph);
-    expect(notebook).toBeLessThan(composer);
-    expect(exampleSource.match(/<TeamNotebook/g)).toHaveLength(1);
+    expect(area).toBeGreaterThan(graph);
+    expect(area).toBeLessThan(composer);
+    expect(exampleSource).toContain('expandTarget: notebookArea');
+    expect(exampleSource).not.toMatch(/<TeamNotebook/);
   });
 });

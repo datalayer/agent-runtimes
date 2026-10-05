@@ -31,6 +31,7 @@ import {
   type BalloonToolLine,
 } from '../assistant/toolLine';
 import { conversationHeaderText } from '../assistant/BalloonParts';
+import { balloonHistoryOf } from '../assistant/state';
 
 const mounted: Array<() => void> = [];
 
@@ -290,5 +291,71 @@ describe('a tool call in the balloon', () => {
     expect(peek?.querySelector('[data-balloon-tool="running"]')).not.toBeNull();
     act(() => peek?.click());
     expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the history balloon lists the conversation', () => {
+  const conversation = [
+    { id: 'u1', role: 'user', content: 'Who wrote about late deliveries?' },
+    { id: 'a1', role: 'assistant', content: 'Ada, Grace and **Alan**.' },
+    { id: 't1', role: 'assistant', toolName: 'readCell', content: '' },
+    { id: 'u2', role: 'user', content: 'Is the notebook up to date?' },
+    { id: 'a2', role: 'assistant', content: 'Yes, it ran at 9:40.' },
+  ];
+  const history = balloonHistoryOf(conversation);
+  const messagesIn = (container: HTMLElement) =>
+    Array.from(
+      container.querySelectorAll('[data-balloon-history-message]'),
+    ).map(message => message.textContent);
+
+  it('reads the person’s and the agent’s messages, not the tool calls', () => {
+    expect(history).toEqual([
+      { id: 'u1', role: 'user', text: 'Who wrote about late deliveries?' },
+      { id: 'a1', role: 'assistant', text: 'Ada, Grace and Alan.' },
+      { id: 'u2', role: 'user', text: 'Is the notebook up to date?' },
+      { id: 'a2', role: 'assistant', text: 'Yes, it ran at 9:40.' },
+    ]);
+  });
+
+  it('history: every message, under a header that counts them, scrolled', async () => {
+    const { container } = await render({
+      balloon: { text: 'Yes, it ran at 9:40.', history },
+    });
+    expect(messagesIn(container)).toEqual(history.map(entry => entry.text));
+    expect(
+      container.querySelector('[data-balloon-history] [data-balloon-header]')
+        ?.textContent,
+    ).toBe('Conversation · 4');
+    const list = container.querySelector<HTMLElement>(
+      '[data-balloon-history-list]',
+    );
+    expect(getComputedStyle(list as Element).overflowY).toBe('auto');
+  });
+
+  it('history: the tool being called under the messages', async () => {
+    const { container } = await render({
+      balloon: {
+        text: 'Using list_invoices…',
+        tool: line('running'),
+        history,
+      },
+    });
+    expect(messagesIn(container)).toHaveLength(4);
+    expect(
+      container
+        .querySelector('[data-balloon-history-tool] [data-balloon-tool]')
+        ?.getAttribute('data-balloon-tool'),
+    ).toBe('running');
+  });
+
+  it('current: the one thing said now, not the list', async () => {
+    const { container } = await render({
+      balloonDisplay: 'current',
+      balloon: { text: 'Yes, it ran at 9:40.', history },
+    });
+    expect(messagesIn(container)).toHaveLength(0);
+    expect(
+      container.querySelector('[data-balloon-current-text]')?.textContent,
+    ).toBe('Yes, it ran at 9:40.');
   });
 });

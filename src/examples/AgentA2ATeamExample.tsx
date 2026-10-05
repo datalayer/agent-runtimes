@@ -29,8 +29,9 @@
  * Sales' balloon shows it read-only (`NotebookPreview`: no kernel), and it
  * opens right under the team, in place of the report, on the browser
  * sandbox — a Pyodide kernel in this page — to run, change and download
- * (`TeamNotebook`, loaded only then); a click on the one in the balloon
- * comes to it.
+ * (`TeamNotebook`, loaded only then): the graph draws it into the area
+ * under it (`expandTarget`), and a click on the one in the balloon, or its
+ * *Expand*, comes to it.
  *
  * Where Accounting is: `VITE_A2A_ACCOUNTING_URL`, else the examples' local
  * server (`…:8765/api/v1/a2a/agents/accounting`), which answers this machine
@@ -58,7 +59,6 @@ import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
   NOTEBOOK_AND_WORDS,
-  TeamNotebook,
   teamConnectionsOf,
   useA2ATeam,
 } from '../components/teams';
@@ -110,6 +110,8 @@ function AgentA2ATeam(): JSX.Element {
   const [peerError, setPeerError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const composer = useRef<HTMLTextAreaElement>(null);
+  // Under the graph: where the notebook Accounting gives runs.
+  const notebookArea = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let current = true;
@@ -236,6 +238,8 @@ function AgentA2ATeam(): JSX.Element {
             persona: team.entryPersona,
             onToggle: () => composer.current?.focus(),
             onAway: team.setEntryAway,
+            expandTarget: notebookArea,
+            notebookTitle: `${ACCOUNTING.name}\u2019s notebook`,
           }}
           peer={{
             id: ACCOUNTING.id,
@@ -255,16 +259,13 @@ function AgentA2ATeam(): JSX.Element {
       </Box>
 
       {/* The notebook Accounting gave, right under the team, to run and
-          edit here; Sales' balloon shows it read-only, and a click there
-          comes here. */}
-      {team.notebook && (
-        <Box sx={{ mb: 3 }} data-team-notebook-placement="under-graph">
-          <TeamNotebook
-            notebook={team.notebook}
-            title={`${ACCOUNTING.name}\u2019s notebook`}
-          />
-        </Box>
-      )}
+          edit here: the graph draws it into this area as it arrives, and
+          Sales' balloon shows it read-only, a click there coming here. */}
+      <Box
+        ref={notebookArea}
+        sx={{ mb: team.notebook ? 3 : 0 }}
+        data-team-notebook-placement="under-graph"
+      />
 
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         <Box sx={{ flex: '1 1 420px', minWidth: 0 }}>

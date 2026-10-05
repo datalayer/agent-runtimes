@@ -27,6 +27,7 @@ import {
   Heading,
   SegmentedControl,
   Text,
+  ToggleSwitch,
 } from '@primer/react';
 import {
   Box,
@@ -38,12 +39,14 @@ import { useExampleThemeStore } from './utils/themeStore';
 import { AssistantStage } from '../chat/assistant/AssistantStage';
 import { useViewportDrag } from '../chat/useViewportDrag';
 import type { AssistantAway, AssistantState } from '../chat/assistant/state';
+import type { BalloonExpandTarget } from '../chat/assistant/BalloonVisual';
 import type { BalloonDisplay, ToolLinePhase } from '../chat/assistant/toolLine';
 import {
   AssistantGalleryGrid,
   GalleryBalloons,
   GalleryNotebook,
   GalleryObstacle,
+  galleryNotebookVisual,
   Still,
   useGalleryCharacters,
   type GalleryCharacter,
@@ -54,6 +57,7 @@ import {
   SAMPLE_NOTEBOOK_SAYING,
   balloonForPose,
   sampleApproval,
+  sampleHistory,
   sampleSaying,
   sampleToolLine,
   stateOfPose,
@@ -70,7 +74,7 @@ type View = 'stage' | 'grid';
 type Presence = 'here' | 'leaving' | 'away' | 'arriving';
 
 const STAGE_SIZE = 96;
-const PANEL_HEIGHT = 520;
+const PANEL_HEIGHT = 640;
 const LEAVE_MS = 700;
 const ARRIVE_MS = 1900;
 
@@ -95,8 +99,11 @@ function ModePanel({
   away,
   replay,
   display,
+  expandTarget,
 }: {
   display: BalloonDisplay;
+  /** Where the balloon's notebook is expanded: the area under the stage, or none (a dialog). */
+  expandTarget?: BalloonExpandTarget;
   mode: 'light' | 'dark';
   character: GalleryCharacter;
   pose: GalleryPose;
@@ -190,6 +197,7 @@ function ModePanel({
           onToggle={onToggle}
           balloon={presence === 'here' ? balloon : undefined}
           balloonDisplay={display}
+          expandTarget={expandTarget}
           insist={insist}
           onDismiss={onDismiss}
         />
@@ -204,6 +212,45 @@ function ModePanel({
           }}
         />
       )}
+    </Box>
+  );
+}
+
+/** A two-way choice as a Primer toggle: its label, the switch, what is on. */
+function GalleryToggle({
+  id,
+  label,
+  on,
+  onChange,
+  state,
+  ...rest
+}: {
+  id: string;
+  label: string;
+  on: boolean;
+  onChange: (on: boolean) => void;
+  /** What is chosen, in words: `History` or `Current`. */
+  state: string;
+} & Record<`data-${string}`, string>): JSX.Element {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }} {...rest}>
+      <Text id={id} sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+        {label}
+      </Text>
+      <ToggleSwitch
+        aria-labelledby={id}
+        size="small"
+        checked={on}
+        // Controlled, Primer's switch flips only through its click.
+        onClick={() => onChange(!on)}
+      />
+      <Text
+        aria-live="polite"
+        data-toggle-state=""
+        sx={{ fontSize: 1, color: 'fg.muted' }}
+      >
+        {state}
+      </Text>
     </Box>
   );
 }
@@ -247,7 +294,7 @@ function InModes({
   );
 }
 
-const ChatAssistantGalleryExample: React.FC = () => {
+const AssistantGalleryExample: React.FC = () => {
   const { characters: ours, problem } = useGalleryCharacters();
   const [withClippyJs, setWithClippyJs] = useState(false);
   const clippyJs = useClippyJsCharacters(withClippyJs);
@@ -267,6 +314,9 @@ const ChatAssistantGalleryExample: React.FC = () => {
   const [display, setDisplay] = useState<BalloonDisplay>('current');
   const [toolPhase, setToolPhase] = useState<ToolLinePhase | undefined>();
   const [withNotebook, setWithNotebook] = useState(false);
+  // Where Expand draws the notebook: the area under the stage, or a dialog.
+  const [expandIntoPage, setExpandIntoPage] = useState(true);
+  const expandArea = useRef<HTMLDivElement>(null);
   const character =
     characters.find(entry => entry.id === characterId) ?? characters[0];
 
@@ -298,6 +348,22 @@ const ChatAssistantGalleryExample: React.FC = () => {
     () => setDecision('Approved: send_reply.'),
     () => setDecision('Denied: send_reply.'),
   );
+  // History: the conversation so far, every message, as the chat holds it.
+  const history =
+    display === 'history'
+      ? [
+          ...sampleHistory(saying === undefined ? said : saying + 1),
+          ...(withNotebook
+            ? [
+                {
+                  id: 'notebook',
+                  role: 'assistant' as const,
+                  text: SAMPLE_NOTEBOOK_SAYING,
+                },
+              ]
+            : []),
+        ]
+      : undefined;
   const balloon = balloonForPose(pose, {
     saying:
       saying === undefined
@@ -307,12 +373,9 @@ const ChatAssistantGalleryExample: React.FC = () => {
         : sampleSaying(saying),
     approval,
     tool: toolPhase ? sampleToolLine(toolPhase) : undefined,
-    attachment:
-      withNotebook && display === 'current' ? (
-        <GalleryNotebook
-          onOpen={() => setDecision('The notebook would open below to run.')}
-        />
-      ) : undefined,
+    attachment: withNotebook ? <GalleryNotebook /> : undefined,
+    visual: withNotebook ? galleryNotebookVisual() : undefined,
+    history,
   });
   const insist =
     saying !== undefined ||
@@ -333,7 +396,7 @@ const ChatAssistantGalleryExample: React.FC = () => {
       >
         <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
           <Heading as="h1" sx={{ mb: 2 }}>
-            Chat Assistant gallery
+            Assistant gallery
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
             Every character in every state the floating assistant acts, with its
@@ -478,18 +541,22 @@ const ChatAssistantGalleryExample: React.FC = () => {
                     alignItems: 'center',
                   }}
                 >
-                  <SegmentedControl aria-label="Balloon">
-                    {(['history', 'current'] as const).map(option => (
-                      <SegmentedControl.Button
-                        key={option}
-                        selected={display === option}
-                        onClick={() => setDisplay(option)}
-                        data-gallery-balloon={option}
-                      >
-                        {option === 'history' ? 'History' : 'Current'}
-                      </SegmentedControl.Button>
-                    ))}
-                  </SegmentedControl>
+                  <GalleryToggle
+                    id="gallery-balloon-history"
+                    label="History"
+                    on={display === 'history'}
+                    onChange={on => setDisplay(on ? 'history' : 'current')}
+                    state={display === 'history' ? 'History' : 'Current'}
+                    data-gallery-balloon-toggle=""
+                  />
+                  <GalleryToggle
+                    id="gallery-expand-into-page"
+                    label="Expand into the page"
+                    on={expandIntoPage}
+                    onChange={setExpandIntoPage}
+                    state={expandIntoPage ? 'The page area' : 'An overlay'}
+                    data-gallery-expand-toggle=""
+                  />
                   <Button onClick={say} data-gallery-say="">
                     Say something
                   </Button>
@@ -585,6 +652,7 @@ const ChatAssistantGalleryExample: React.FC = () => {
                     away={away}
                     replay={replay}
                     display={display}
+                    expandTarget={expandIntoPage ? expandArea : undefined}
                   />
                 )}
               </InModes>
@@ -613,10 +681,32 @@ const ChatAssistantGalleryExample: React.FC = () => {
               </InModes>
             )}
           </Still>
+
+          {view === 'stage' && expandIntoPage && (
+            <Box
+              as="section"
+              aria-label="Expanded here"
+              sx={{
+                mt: 4,
+                p: 3,
+                border: '1px dashed',
+                borderColor: 'border.default',
+                borderRadius: 2,
+              }}
+            >
+              <Text as="p" sx={{ m: 0, mb: 2, color: 'fg.muted', fontSize: 1 }}>
+                Expanded here: what the balloon&rsquo;s <em>Expand</em> draws
+                large when the page names an area for it — the notebook, to edit
+                and run on the browser sandbox. Without one, it opens in an
+                overlay.
+              </Text>
+              <Box ref={expandArea} data-gallery-expand-target="" />
+            </Box>
+          )}
         </Box>
       </Box>
     </ThemedProvider>
   );
 };
 
-export default ChatAssistantGalleryExample;
+export default AssistantGalleryExample;
