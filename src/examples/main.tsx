@@ -106,7 +106,7 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 
 const EXAMPLE_GROUP_ORDER = [
-  'Loop',
+  'Apps',
   'A2UI',
   'A2A',
   'AG-UI',
@@ -156,7 +156,7 @@ const getExampleGroup = (id: string): string => {
     id.startsWith('Loop') ||
     id === 'DecksAgent'
   ) {
-    return 'Loop';
+    return 'Apps';
   }
   if (id.startsWith('A2Ui')) return 'A2UI';
   // Agents reached over the A2A protocol: their own category, after A2UI.
@@ -1475,7 +1475,7 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Loop') {
+        if (groupName === 'Apps') {
           // The shells first, most naked first; then the strategy that drives a
           // notebook; then the library of specs behind them all.
           const LOOP_ORDER = [
