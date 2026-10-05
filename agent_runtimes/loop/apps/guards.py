@@ -360,6 +360,9 @@ def _judge(method: str) -> str:
 
 Ask = Callable[[str, Dict[str, Any], str], Awaitable[None]]
 
+#: Told that a person is asked: the tool, and why, in a sentence.
+Notify = Callable[[str, str], Awaitable[None]]
+
 
 @dataclass
 class AppChecksCapability(AbstractCapability[Any]):
@@ -377,6 +380,10 @@ class AppChecksCapability(AbstractCapability[Any]):
 
     record: Optional[Callable[[str, Verdict], None]] = None
     """Told of every verdict that does not let a step pass, by stage."""
+
+    notify: Optional[Notify] = None
+    """Told when a person is asked through the tool-approval path: the
+    application's channels (LOOP R-37)."""
 
     async def before_run(self, ctx: RunContext[Any]) -> None:
         for sentence in self.checks.unexecuted:
@@ -417,6 +424,8 @@ class AppChecksCapability(AbstractCapability[Any]):
             ToolApprovalManager,
         )
 
+        if self.notify is not None:
+            await self.notify(tool_name, sentence)
         config = ToolApprovalConfig.from_env()
         config.agent_id = self.agent_id or config.agent_id
         await ToolApprovalManager(config).request_and_wait(

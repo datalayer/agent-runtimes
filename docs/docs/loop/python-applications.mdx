@@ -260,6 +260,36 @@ A Preview, a test run and an agent no application runs keep the runtime's
 own inference token: they are a person trying something, not a deployment
 acting alone.
 
+### Its notifications
+
+An Appspec's `notifications` names where an approval reaches a person —
+`email`, `slack`, `teams` — and those are the channels the runtime sends
+through for the application's sessions (`agent_runtimes.loop.apps.notifications`).
+Its agent's own `notifications` are not used: an application's agent is
+given no `send_notification` tool.
+
+- **When.** Each time a rule (*Ask me first*, *Do it if I asked*) or a Gate
+  asks a person through the tool-approval path — where nobody may be
+  watching — before the question waits. A question asked in the session
+  itself (the terminal, `session.ask`) is not notified: the person is there.
+- **How.** The runtime asks ai-agents, once, with the channels the
+  catalogue offers (`POST /api/ai-agents/v1/apps/notifications`, event
+  `approval.requested`). ai-agents mails the account's own address through
+  Datalayer's mail, and posts to the Slack incoming webhook that account
+  keeps among its secrets as `SLACK_WEBHOOK_URL`.
+- **As whom.** A deployment asks with its principal's token, so what is sent
+  reaches the application's **owner**, in the owner's channels (the
+  principal may read that one secret of its owner's, by name, and no other).
+  A Preview asks with the person's token: it reaches the **person trying
+  it**, in their own channels, and nobody else.
+- **Never silent.** A channel Datalayer does not offer (Teams today) is
+  refused before anything is sent, in the sentence the Studio's setup states
+  say; an account with no address, no `SLACK_WEBHOOK_URL`, or a webhook that
+  refused comes back from ai-agents with its sentence. Every channel's
+  outcome — `sent`, `refused` or `failed` — is written to the record as a
+  `notification` entry, whatever `record.include` says, and logged when it
+  was not sent. Sending never stops the question it is about.
+
 ## `AppHost`
 
 `AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an
@@ -340,7 +370,9 @@ to the application's record and sends it at once. `kind` is `output`,
 `tool_call`, `decision`, `check`, `approval`, `feedback` or `turn`. It
 returns whether the application keeps entries of that kind: only those its
 Appspec's `record.include` names (`outputs`, `actions`, `decisions`,
-`checks`, `approvals`, `feedback`, `conversations`) are kept.
+`checks`, `approvals`, `feedback`, `conversations`) are kept. A session's
+start and what its channels were sent (`notification`, see *Its
+notifications*) are kept whatever it names.
 
 Each turn of a conversation that ends in an answer is kept by itself, as a
 `turn` entry, when `record.include` names `conversations`: what the person

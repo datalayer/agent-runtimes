@@ -44,7 +44,17 @@ import contextvars
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterable, Awaitable, Callable, Dict, List, Optional, Set
+from typing import (
+    Any,
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
@@ -77,6 +87,10 @@ INCLUDED_BY = {
     "turn": "conversations",
 }
 
+#: Kept whatever `record.include` says: a session's start, and what its
+#: channels were sent (LOOP R-37).
+ALWAYS_KEPT = frozenset({"session", "notification"})
+
 #: The session the current run belongs to.
 _SESSION: contextvars.ContextVar[str] = contextvars.ContextVar(
     "loop_app_session", default=""
@@ -96,6 +110,11 @@ COMMENT_LIMIT = 2000
 
 #: The longest question, and the longest answer, a turn keeps.
 TURN_LIMIT = 4000
+
+
+def current_session() -> str:
+    """The session the current run belongs to, or ``""``."""
+    return _SESSION.get()
 
 
 def recorder_of(session: str) -> Optional["AppRecorder"]:
@@ -135,6 +154,34 @@ class RecordNotSent(RuntimeError):
     """A record that did not reach ai-agents, and why, in a sentence."""
 
 
+def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
+    """The token an application's runtime writes to ai-agents with, or why there is none.
+
+    A deployment's is its application's principal's (LOOP I-03), and nobody
+    else's; anything else — a Preview, a test — writes as the person whose
+    request it is, else as the runtime's own token.
+    """
+    deployment = deployment_uid.strip()
+    if deployment:
+        from agent_runtimes.loop.apps.principal import (
+            principal_token,
+            principal_token_refusal,
+        )
+
+        token = principal_token(deployment)
+        if not token:
+            return None, str(principal_token_refusal(deployment))
+        return token, ""
+    try:
+        from agent_runtimes.context.identities import get_request_user_jwt
+
+        token = get_request_user_jwt()
+    except Exception:  # noqa: BLE001 - no request context: the runtime's token
+        token = None
+    token = token or os.environ.get("DATALAYER_USER_TOKEN")
+    return (token, "") if token else (None, "no token.")
+
+
 async def send_to_ai_agents(body: Dict[str, Any]) -> None:
     """Send a session's entries to ai-agents, with the token of the run.
 
@@ -147,32 +194,10 @@ async def send_to_ai_agents(body: Dict[str, Any]) -> None:
     """
     import httpx
 
-    deployment = str(body.get("deployment_uid") or "").strip()
-    if deployment:
-        # A deployment's record is written by its application's principal,
-        # into its owner's record, and by nobody else (LOOP I-03).
-        from agent_runtimes.loop.apps.principal import (
-            principal_token,
-            principal_token_refusal,
-        )
-
-        token = principal_token(deployment)
-        if not token:
-            raise RecordNotSent(
-                f"The record of {body.get('app_uid')} is not sent: "
-                f"{principal_token_refusal(deployment)}"
-            )
-    else:
-        try:
-            from agent_runtimes.context.identities import get_request_user_jwt
-
-            token = get_request_user_jwt()
-        except Exception:  # noqa: BLE001 - no request context: the runtime's token
-            token = None
-        token = token or os.environ.get("DATALAYER_USER_TOKEN")
+    token, refusal = token_for(str(body.get("deployment_uid") or ""))
     if not token:
         raise RecordNotSent(
-            f"The record of {body.get('app_uid')} is not sent: no token."
+            f"The record of {body.get('app_uid')} is not sent: {refusal}"
         )
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -222,7 +247,9 @@ class AppRecorder:
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
-        if kind == "session":
+        # What a channel was sent, or why it was not, is always kept: a
+        # notification that reached nobody is never silent (LOOP R-37).
+        if kind in ALWAYS_KEPT:
             return True
         wanted = INCLUDED_BY.get(kind)
         include = {
@@ -542,6 +569,7 @@ class AppRecordCapability(AbstractCapability[Any]):
 
 
 __all__ = [
+    "ALWAYS_KEPT",
     "AppRecordCapability",
     "AppRecorder",
     "COMMENT_LIMIT",
@@ -549,7 +577,9 @@ __all__ = [
     "RecordNotSent",
     "TURN_LIMIT",
     "agent_recorder",
+    "current_session",
     "keep_agent_recorder",
     "recorder_of",
     "send_to_ai_agents",
+    "token_for",
 ]

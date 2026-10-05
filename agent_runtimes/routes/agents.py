@@ -2343,14 +2343,23 @@ async def create_agent(
                     AppChecks,
                     AppChecksCapability,
                 )
+                from agent_runtimes.loop.apps.notifications import AppNotifier
                 from agent_runtimes.loop.apps.plugins import rules_for
                 from agent_runtimes.loop.apps.record import (
                     AppRecordCapability,
                     AppRecorder,
                     keep_agent_recorder,
                 )
+                from agent_runtimes.notifications import NotificationsCapability
 
                 capabilities = _without_approval_capabilities(capabilities)
+                # Its channels are the application's, not its agent's: the
+                # agent's own `notifications` give it no tools (LOOP R-37).
+                capabilities = [
+                    capability
+                    for capability in capabilities
+                    if not isinstance(capability, NotificationsCapability)
+                ]
                 serving = request.app_instance or {}
                 # What it did, session by session, kept by ai-agents (R-07).
                 recorder = AppRecorder(
@@ -2365,8 +2374,17 @@ async def create_agent(
                 )
                 # The session API writes a session's start to it (R-04).
                 keep_agent_recorder(agent_id, recorder)
+                # Who is asked before it acts is told through the channels
+                # it names, as its principal on a deployment (LOOP R-37).
+                notifier = AppNotifier(
+                    app=running_app,
+                    recorder=recorder,
+                    app_uid=recorder.app_uid,
+                    deployment_uid=recorder.deployment_uid,
+                )
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided
+                rules.notify = notifier.approval_asked
                 capabilities.insert(0, rules)
                 # And its checks, after its rules: a call the rules refuse
                 # is not checked, and a Guard reads what the rules decided
@@ -2378,6 +2396,7 @@ async def create_agent(
                         agent_id=agent_id,
                         decide=rules.decide,
                         record=recorder.checked,
+                        notify=notifier.approval_asked,
                     ),
                 )
                 capabilities.insert(2, AppRecordCapability(recorder=recorder))

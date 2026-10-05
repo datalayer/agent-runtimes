@@ -94,6 +94,9 @@ NO_SHELL = "no_shell"
 #: What the person is asked with: the tool, its arguments, the decision.
 Ask = Callable[[str, Dict[str, Any], Decision], Awaitable[Any]]
 
+#: Told that the person is asked: the tool, and why, in a sentence.
+Notify = Callable[[str, str], Awaitable[None]]
+
 #: What is told of every decision, before it is acted on.
 Record = Callable[["Enforced"], None]
 
@@ -162,6 +165,10 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     record: Optional[Record] = None
     """Told of every decision, before it is acted on."""
+
+    notify: Optional[Notify] = None
+    """Told when the person is asked through the tool-approval path: the
+    application's channels (LOOP R-37)."""
 
     extra_classes: Dict[str, List[str]] = field(default_factory=dict)
     """What tools the catalogue does not know do, by runtime name."""
@@ -349,6 +356,8 @@ class AppRulesCapability(AbstractCapability[Any]):
             ToolApprovalManager,
         )
 
+        if self.notify is not None:
+            await self.notify(tool_name, sentence_of(decision))
         config = ToolApprovalConfig.from_env()
         config.agent_id = self.agent_id or config.agent_id
         manager = ToolApprovalManager(config)
