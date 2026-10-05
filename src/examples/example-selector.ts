@@ -253,6 +253,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
   ),
   makeEntry(
+    'LoopAppComputerExample',
+    () => import('./LoopAppComputerExample'),
+    'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (LOOP R-23).',
+    ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
+  ),
+  makeEntry(
     'LoopShellExample',
     () => import('./LoopShellExample'),
     'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',

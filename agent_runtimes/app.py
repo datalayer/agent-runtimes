@@ -82,6 +82,7 @@ from .routes import (
     vercel_ai_router,
 )
 from .routes.agents import set_api_prefix
+from .routes.computer import router as computer_router
 from .specs.agents import get_agent_spec
 
 # Load environment variables from .env file
@@ -1499,6 +1500,8 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
+    # An application's computer, shown where the person is (LOOP R-23).
+    app.include_router(computer_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)

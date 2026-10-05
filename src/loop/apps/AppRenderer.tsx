@@ -34,9 +34,9 @@
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
  *   window, its title the application's face and name;
  * - its **sidebar**, when the host asks (`sidebar`, R-01b): its rules and
- *   the approvals waiting for the person (`app-rules`), and what it did
- *   (`app-activity`), beside its page — what its builder reads in the
- *   Studio's Preview.
+ *   the approvals waiting for the person (`app-rules`), what it did
+ *   (`app-activity`), and its computer, live (`app-computer`, R-23), beside
+ *   its page — what its builder reads in the Studio's Preview.
  *
  * Which plugins a kind needs, and how its workspace is laid out, is one
  * function: `appPreset`, the preset per kind, as `loopPlugins` is for the
@@ -66,6 +66,7 @@ import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
+import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
 import { defineAppFeedbackPlugin } from './AppFeedback';
@@ -110,6 +111,9 @@ export function defineAppPlugin(
     createPayload: {
       name: app.id,
       app_spec: dumpAppspec(app),
+      // Its shell is its code: Codemode's `execute_code`, only when it is on
+      // (LOOP R-23), as on Datalayer (`appDatalayerCreatePayload`).
+      enable_codemode: Boolean(app.permissions?.computer?.shell),
       ...(app.model ? { model: app.model } : {}),
     },
     suggestions: app.interface.starters.map(starter => ({
@@ -247,7 +251,8 @@ export type AppPreset = {
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
  *   comment on each answer when its record keeps feedback (V-18); with
- *   `sidebar`, its rules and approvals card and its activity feed (R-01b);
+ *   `sidebar`, its rules and approvals card, its activity feed and its
+ *   computer (R-01b, R-23);
  *   laid out as `interface.layout` says;
  * - a **decision**: the page its host draws (`page`), as the one view of a
  *   workspace without a conversation (R-02).
@@ -260,7 +265,7 @@ export function appPreset(
   options: {
     page?: ComponentType<AppHostPageProps>;
     pluginsOff?: readonly string[];
-    /** Its rules and approvals, and its activity, beside its page. */
+    /** Its rules and approvals, its activity and its computer, beside its page. */
     sidebar?: boolean;
     /** What its record is kept under: its activity's. */
     appUid?: string;
@@ -298,6 +303,8 @@ export function appPreset(
         ? [
             defineAppRulesPlugin(app),
             defineAppActivityPlugin(app, options.appUid),
+            // Its computer, live (R-23).
+            defineAppComputerPlugin(app),
           ]
         : []),
     ],

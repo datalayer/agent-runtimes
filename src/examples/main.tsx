@@ -127,6 +127,9 @@ const EXAMPLE_GROUP_ORDER = [
  */
 const ANONYMOUS_EXAMPLES = new Set([
   'LoopWorkspaceExample',
+  // An application beside its computer, on the local agent-runtimes server:
+  // nothing allocated on Datalayer, and the machine itself needs no token.
+  'LoopAppComputerExample',
   // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
   'LoopShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and

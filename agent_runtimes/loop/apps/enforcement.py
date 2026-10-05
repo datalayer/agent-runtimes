@@ -19,6 +19,7 @@ What a call is, before it is decided:
   computer: allowed only when its permissions turn the shell on, and then
   every MCP tool the code names is decided too — without its arguments,
   which code does not show, so for the worst that tool can do;
+- the tools of its files (`list_computer_files`…), which read or write;
 - a few tools of the runtime itself that only look (`search_tools`,
   `load_skill`…), which are reading.
 
@@ -27,7 +28,13 @@ session says what it does (`extra_classes`).
 
 Before that, the agent is given only the tools of its servers that the
 application's connections give, at their level (`prepare_tools`,
-`rules.gives`): a connection that only reads carries no tool that writes.
+`rules.gives`): a connection that only reads carries no tool that writes. And
+only the tools of the parts of its computer its permissions turn on — browse,
+files, shell, each off until it is turned on (`computer.computer_gives`, LOOP
+R-23): its shell off, it is shown no tool that runs code; its files off, none
+of its files; there is no browser tool at all yet. The tools of its files are
+given here (`get_toolset`), and while a person has taken its computer over,
+each call to a tool of its computer waits until they hand it back.
 
 Pure enough to test: the person is asked through `ask`, an awaitable the
 runtime gives (by default the tool-approval path that exists), and every
@@ -57,6 +64,14 @@ from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDefinition
 
 from agent_runtimes.guardrails.common import GuardrailBlockedError
+from agent_runtimes.loop.apps.computer import (
+    FILE_CLASSES,
+    SHELL_TOOLS,
+    computer_gives,
+    computer_toolset,
+    part_of,
+    wait_until_handed_back,
+)
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -86,7 +101,7 @@ READING_TOOLS: frozenset[str] = frozenset(
 )
 
 #: Tools that run code on the application's computer.
-CODE_TOOLS: frozenset[str] = frozenset({"execute_code", "run_skill_script"})
+CODE_TOOLS: frozenset[str] = SHELL_TOOLS
 
 #: Why a call was decided as it was, beside the reasons of `rules`.
 NO_SHELL = "no_shell"
@@ -267,6 +282,11 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=["read"])
             )
+        if tool_name in FILE_CLASSES:
+            classes = list(FILE_CLASSES[tool_name])
+            return Enforced(
+                tool_name, decision_for(self.app, tool_name, classes=classes)
+            )
         identities = self._catalogue_ids(tool_name)
         if identities:
             parts = tuple(
@@ -326,11 +346,14 @@ class AppRulesCapability(AbstractCapability[Any]):
 
         A tool of an MCP server is given by a connection, at its level: one
         that only reads gives only what only reads (`rules.gives`). A tool
-        whose server cannot be told is not given: it could never run. The
-        runtime's own tools, code and the catalogue's are given, and decided
-        when they are called.
+        whose server cannot be told is not given: it could never run. A tool
+        of its computer is given only when its part is on (LOOP R-23). The
+        runtime's own tools and the catalogue's are given, and decided when
+        they are called.
         """
-        if tool_name in CODE_TOOLS or tool_name in READING_TOOLS:
+        if not computer_gives(self.app, tool_name):
+            return False
+        if part_of(tool_name) is not None or tool_name in READING_TOOLS:
             return True
         if tool_name == "call_tool" or not self._is_mcp_tool(tool_name):
             return True
@@ -340,8 +363,12 @@ class AppRulesCapability(AbstractCapability[Any]):
     async def prepare_tools(
         self, ctx: RunContext[Any], tool_defs: list[ToolDefinition]
     ) -> list[ToolDefinition]:
-        """Give the agent only the tools the application's connections give."""
+        """Give the agent only the tools its connections and its computer give."""
         return [tool_def for tool_def in tool_defs if self.given(tool_def.name)]
+
+    def get_toolset(self) -> Any:
+        """The tools of its files, when its permissions turn its files on."""
+        return computer_toolset(self.app, self.agent_id)
 
     # --- acting ------------------------------------------------------------------
 
@@ -382,13 +409,20 @@ class AppRulesCapability(AbstractCapability[Any]):
             self.record(enforced)
         decision = enforced.decision
         if decision.behaviour == DO_IT:
+            await self._computer_free(call.tool_name)
             return args
         if decision.behaviour in (ASK_FIRST, IF_ASKED):
             # *Do it if I asked* rests on a grant the person gave in advance.
             # Until grants are recorded (LOOP U-25), it asks.
             await self._ask(call.tool_name, args, decision)
+            await self._computer_free(call.tool_name)
             return args
         raise AppRuleBlockedError(decision)
+
+    async def _computer_free(self, tool_name: str) -> None:
+        """A call to a tool of its computer waits while a person has it."""
+        if part_of(tool_name) is not None:
+            await wait_until_handed_back(self.agent_id)
 
 
 def _catalogue_server(name: str) -> str:

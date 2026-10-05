@@ -40,7 +40,7 @@ application's own, created under its id), and eight of its own:
 | `instance`   | What its record is kept under on Datalayer — `appUid`, `deploymentUid`, `version` — sent with the agent so that a runtime knows which deployment it serves; and `organizationUid`, the organization it belongs to, whose contexts the runtime gives its agent (see [The contexts it works under](./index.mdx#the-contexts-it-works-under)). |
 | `onPresence` | Told what the application is doing — idle, thinking, working, waiting for you — for a host that draws its face in a frame of its own. Read once, when the workspace is built: pass a stable function, such as a state setter. |
 | `onSaying`   | Told what the application last said (`{ saying, answering }`: its newest words, cut for a balloon, and whether its newest item is the answer) — for a host that says them outside the conversation, as the embed's floating window does in its balloon and its blink. Read once: pass a stable function. |
-| `sidebar`    | Draw its rules and the approvals waiting for the person, and its activity, beside its page: see [Beside its page](#beside-its-page-rules-approvals-activity). The Studio's Preview asks for it. |
+| `sidebar`    | Draw its rules and the approvals waiting for the person, its activity and its computer, beside its page: see [Beside its page](#beside-its-page-rules-approvals-activity-computer). The Studio's Preview asks for it. |
 | `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
 | `page`       | The page a host draws for a kind the workspace has no page for — a decision's. A component defined once, outside the host's render (a new one is a new plugin, and restarts the workspace); it is given `{ app, workspace }`. |
 | `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
@@ -127,9 +127,9 @@ block no enabled plugin contributes is not drawn; it says, in its place,
 *This page places Chart, which no enabled plugin contributes: it is drawn once
 the plugin that contributes it is on.*
 
-## Beside its page: rules, approvals, activity
+## Beside its page: rules, approvals, activity, computer
 
-Asked for its `sidebar`, `AppRenderer` adds two plugins to the workspace's
+Asked for its `sidebar`, `AppRenderer` adds three plugins to the workspace's
 sidebar (`LoopSlots.sidebar`), so that a builder trying the application reads
 beside it what it is allowed to do and what it did:
 
@@ -150,9 +150,58 @@ beside it what it is allowed to do and what it did:
   answer.*), opened on what it did step by step. Read again as each turn of
   the conversation ends. An application not saved on Datalayer has no record:
   the feed says it is recorded once it is.
+- **Computer** (`defineAppComputerPlugin`, `AppComputer`): the sandbox its
+  agent runs on, live — see [Its computer](#its-computer).
 
 The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 (`loop/apps/rules`), the record's reader `loop/apps/records`.
+
+## Its computer
+
+An application's computer is the sandbox its agent runs on (LOOP R-23). Its
+Appspec's `permissions.computer` turns on three parts, each off until it is
+turned on, and a part that is off gives its agent no tool — it is never shown
+one, where its connections' tools are filtered (`AppRulesCapability.prepare_tools`,
+`loop/apps/computer.py`):
+
+| Part     | The tools its agent is given                                                                   |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| `shell`  | `execute_code` (Codemode) and `run_skill_script`: code run on it                               |
+| `files`  | `list_computer_files`, `read_computer_file`, `write_computer_file`, in its working directory   |
+| `browse` | none: no sandbox Datalayer runs has a browser yet, so turning it on gives nothing               |
+
+The computer view (`app-computer`) shows, beside its page:
+
+- its parts, each *on* or *off*, and which are off — an application with
+  none says it has no computer, and asks the runtime nothing;
+- that no browser runs on it;
+- **What ran on it**: each call its agent made to a tool of its shell or of
+  its files, the code or the path, and what came back — streamed from the
+  conversation's tool calls (`LoopChatTurn`'s `conversation`);
+- **Files**: its working directory, read-only, one directory at a time, each
+  file to download; read again as each turn ends;
+- **Take over**: what runs on it is interrupted, and every call its agent
+  makes to a tool of its computer waits until the person hands it back;
+  meanwhile the person runs Python on it themselves. **Hand back**: its
+  agent's waiting calls go on.
+
+It reads the runtime its agent runs on (`sandbox.agentBaseUrl`, else
+`serverUrl`), with the person's token:
+
+| Route                                                  | What it does                                                                            |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `GET /api/v1/apps/agents/{agent}/computer`             | Its parts, whether it has started, who has taken it over, and whether that is the caller |
+| `GET …/computer/files?path=`                           | A directory of its working directory                                                    |
+| `GET …/computer/file?path=`                            | One of its files, to save (25 MB at most)                                                |
+| `POST …/computer/take-over`                            | Take it over: what runs is interrupted; refused while somebody else has it               |
+| `POST …/computer/run` `{code}`                         | Python run by the person who took it over: `stdout`, `stderr`, `error`                   |
+| `POST …/computer/hand-back`                            | Back to its agent                                                                        |
+
+A path that leaves its working directory — absolute, or with `..` — is
+refused. It is shown to whoever talks to it in a Preview: the person who
+opened a session on the agent, or the machine itself. A deployment's computer
+is shared by everyone who opens it and is shown to nobody (403); an
+application with no part on has nothing to show (409).
 
 ## The layouts
 
@@ -243,5 +292,11 @@ Feedback: what is offered, what is sent and what a refusal says
 (`test_apps_routes.py`, `test_apps_record.py`). Beside its page: the plugins
 mounted in the sidebar when asked, the rules in words, the approvals listed
 for the application's agent and answered over the approvals path, the record
-read and opened (`app-sidebar.test.tsx`). Not tested: no test renders `AppRenderer` and checks the header, the empty
+read and opened (`app-sidebar.test.tsx`); its computer — its parts, no
+browser, what ran on it from the tool calls, its files downloaded, taken over,
+code run and handed back, somebody else's hold, a refusal in its sentence
+(`app-computer.test.tsx`), and on the runtime each part off giving none of its
+tools to a model, its files' tools on its sandbox, a call waiting while it is
+taken over, and the routes shown only to whoever talks to it
+(`test_app_computer.py`). Not tested: no test renders `AppRenderer` and checks the header, the empty
 state or the line in a browser.

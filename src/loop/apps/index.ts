@@ -14,6 +14,7 @@ export * from './AppFeedback';
 export * from './AppRenderer';
 export * from './appspec';
 export * from './checks';
+export * from './computer';
 export * from './feedback';
 export * from './records';
 export * from './rules';

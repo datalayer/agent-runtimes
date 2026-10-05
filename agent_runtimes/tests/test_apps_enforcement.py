@@ -319,9 +319,9 @@ async def test_the_agent_is_given_only_what_its_connections_give() -> None:
         "runtime_echo",
     )
     given = await capability.prepare_tools(None, offered)
+    # Its shell is off: no tool that runs code is given (LOOP R-23).
     assert [tool.name for tool in given] == [
         "google-workspace__search_gmail_messages",
-        "execute_code",
         "call_tool",
         "search_tools",
         "runtime_echo",

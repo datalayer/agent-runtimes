@@ -264,6 +264,11 @@ export {
   defineAppActivityPlugin,
 } from './plugins/app-activity';
 export {
+  APP_COMPUTER_PLUGIN_NAME,
+  AppComputer,
+  defineAppComputerPlugin,
+} from './plugins/app-computer';
+export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,
   GRAPH_VIEW_TYPE,
