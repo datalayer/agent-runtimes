@@ -4,7 +4,7 @@
  */
 
 /**
- * AgentStrategyExample - Define and launch an agent reasoning *strategy*.
+ * LoopStrategyExample - Define and launch an agent reasoning *strategy*.
  *
  * This example demonstrates the control-loop paradigm (observe → think → act →
  * evaluate) instead of one-shot prompting. It is fully driven by the generic
@@ -24,7 +24,7 @@
  * 1. Start the agent-runtimes server.
  * 2. Select this example from the header dropdown (Agent group).
  *
- * @module examples/AgentStrategyExample
+ * @module examples/LoopStrategyExample
  */
 
 import { useMemo, useState } from 'react';
@@ -209,13 +209,13 @@ function StrategySummary({ strategy }: { strategy: StrategySpec }) {
   );
 }
 
-interface AgentStrategyExampleInnerProps {
+interface LoopStrategyExampleInnerProps {
   serviceManager?: ServiceManager.IManager;
 }
 
-export function AgentStrategyExampleInner({
+export function LoopStrategyExampleInner({
   serviceManager,
-}: AgentStrategyExampleInnerProps) {
+}: LoopStrategyExampleInnerProps) {
   // All available strategies come from the generated strategy catalogue.
   const strategies = useMemo(() => listStrategies(), []);
   const [selectedStrategyId, setSelectedStrategyId] =
@@ -242,9 +242,9 @@ export function AgentStrategyExampleInner({
     unavailableReason,
     createAttempted,
   } = useExampleJupyterAgent({
-    exampleId: 'AgentStrategyExample',
+    exampleId: 'LoopStrategyExample',
     agentName: DEFAULT_AGENT_ID,
-    description: `Strategy agent (${selectedStrategy.name}) for AgentStrategyExample`,
+    description: `Strategy agent (${selectedStrategy.name}) for LoopStrategyExample`,
     systemPrompt,
     serviceManager,
     frontendTools: tools,
@@ -334,7 +334,7 @@ export function AgentStrategyExampleInner({
             >
               <Box>
                 <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-                  {selectedStrategy.emoji} Agent Strategy Example
+                  {selectedStrategy.emoji} Loop Strategy Example
                 </h1>
                 <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
                   Define and launch an agent reasoning strategy — observe,
@@ -458,16 +458,16 @@ export function AgentStrategyExampleInner({
 /**
  * Main example component with Jupyter provider wrapper.
  */
-export function AgentStrategyExample({
+export function LoopStrategyExample({
   serviceManager,
 }: {
   serviceManager?: ServiceManager.IManager;
 }) {
   return (
     <ThemedProvider>
-      <AgentStrategyExampleInner serviceManager={serviceManager} />
+      <LoopStrategyExampleInner serviceManager={serviceManager} />
     </ThemedProvider>
   );
 }
 
-export default AgentStrategyExample;
+export default LoopStrategyExample;

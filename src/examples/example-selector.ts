@@ -278,8 +278,8 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
   ),
   makeEntry(
-    'AgentStrategyExample',
-    () => import('./AgentStrategyExample'),
+    'LoopStrategyExample',
+    () => import('./LoopStrategyExample'),
     'Define and launch an agent reasoning strategy (a control loop: observe/think/act/evaluate) over a live notebook, driven by generic strategy specs.',
     ['example', 'agent', 'strategy', 'notebook', 'agentspecs'],
   ),
