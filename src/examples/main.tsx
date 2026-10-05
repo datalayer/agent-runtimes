@@ -153,9 +153,7 @@ const ANONYMOUS_EXAMPLES = new Set([
 const getExampleGroup = (id: string): string => {
   if (
     id === 'AgentspecsExample' ||
-    id === 'LoopStrategyExample' ||
-    id === 'LoopWorkspaceExample' ||
-    id === 'LoopShellExample' ||
+    id.startsWith('Loop') ||
     id === 'DecksAgent'
   ) {
     return 'Loop';
@@ -1484,6 +1482,7 @@ const ExampleAppThemed: React.FC<{
             'LoopShellExample',
             'LoopWorkspaceExample',
             'LoopStrategyExample',
+            'LoopAppComputerExample',
             'AgentspecsExample',
           ];
           const loopOrder = (id: string) => {
