@@ -55,8 +55,10 @@ import {
   type KernelVariablesExecutor,
 } from '@datalayer/jupyter-react';
 import {
+  NO_SANDBOX_YET,
   SANDBOX_KIND_LABELS,
   displayUrl,
+  sandboxIsLive,
   sandboxExecuteOverHttp,
   timeLeft,
   type AssistantSandbox,
@@ -187,8 +189,9 @@ function useKernelConnection(
 ): Kernel.IKernelConnection | null {
   const [opened, setOpened] = useState<Kernel.IKernelConnection | null>(null);
   const { connection, url, token, kernelId, kind } = sandbox;
+  const live = sandboxIsLive(sandbox);
   useEffect(() => {
-    if (connection || !url || !kernelId || kind === 'browser') {
+    if (connection || !url || !kernelId || kind === 'browser' || !live) {
       return;
     }
     const base = url.replace(/\/+$/, '') + '/';
@@ -208,8 +211,8 @@ function useKernelConnection(
       setOpened(null);
       opening.dispose();
     };
-  }, [connection, url, token, kernelId, kind]);
-  return connection ?? opened;
+  }, [connection, url, token, kernelId, kind, live]);
+  return live ? (connection ?? opened) : null;
 }
 
 export function SandboxDetailsDialog({
@@ -284,7 +287,8 @@ export function SandboxDetailsDialog({
   // Without a connection, the agent's server runs the snippet in its sandbox.
   const execute = useMemo<KernelVariablesExecutor | undefined>(
     () =>
-      !connection && sandbox.serverUrl
+      // Not before the sandbox is up: the server would start one to answer.
+      !connection && sandbox.serverUrl && sandboxIsLive(sandbox)
         ? sandboxExecuteOverHttp(sandbox.serverUrl, sandbox.agentId)
         : undefined,
     [connection, sandbox.serverUrl, sandbox.agentId],
@@ -417,11 +421,21 @@ export function SandboxDetailsDialog({
           <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
             Variables
           </Heading>
-          <KernelVariables
-            connection={connection}
-            execute={execute}
-            maxHeight="calc(80vh - 360px)"
-          />
+          {sandboxIsLive(sandbox) ? (
+            <KernelVariables
+              connection={connection}
+              execute={execute}
+              maxHeight="calc(80vh - 360px)"
+            />
+          ) : (
+            <Text
+              as="p"
+              sx={{ color: 'fg.muted', fontSize: 1, m: 0 }}
+              data-sandbox-not-running=""
+            >
+              {NO_SANDBOX_YET}
+            </Text>
+          )}
         </Box>
       </Box>
     </Dialog>

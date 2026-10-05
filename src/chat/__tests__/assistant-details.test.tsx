@@ -253,6 +253,37 @@ describe('the team graph', () => {
     persona: AT_REST,
     about: { name },
   });
+  it('offers the entry’s sandbox before a notebook is open, and the peer none', async () => {
+    const { container } = render(
+      <ThemeProvider>
+        <A2ATeamGraph
+          entry={member('sales', 'Sales')}
+          peer={member('accounting', 'Accounting')}
+          flow="still"
+          connected
+        />
+      </ThemeProvider>,
+    );
+    await openMenu(
+      container.querySelector(
+        '[data-team-member="sales"] [data-assistant-figure]',
+      ),
+    );
+    expect(menuIds()).toContain('sandbox-details');
+    await choose('sandbox-details');
+    await vi.waitFor(
+      () =>
+        expect(
+          document.querySelector('[data-sandbox-not-running]'),
+        ).not.toBeNull(),
+      { timeout: 10000 },
+    );
+    expect(
+      document.querySelector('[data-sandbox-not-running]')?.textContent,
+    ).toContain('No sandbox is running yet');
+    expect(document.querySelector('[data-kernel-variables-stub]')).toBeNull();
+  });
+
   it('gives the entry the open notebook’s kernel as its sandbox, and the peer none', async () => {
     teamNotebookKernel.value = { id: 'k1' } as any;
     const { container } = render(

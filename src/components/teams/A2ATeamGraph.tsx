@@ -795,15 +795,19 @@ export function A2ATeamGraph({
   const notebookKernel = useSignalValue(teamNotebookKernel);
   const entryMember = useMemo<A2ATeamGraphMember>(
     () =>
-      entry.sandbox || !notebookKernel
+      entry.sandbox
         ? entry
         : {
             ...entry,
-            sandbox: {
-              kind: 'browser',
-              status: 'running',
-              connection: notebookKernel,
-            },
+            // The entry runs in the page: its sandbox is the Pyodide kernel
+            // of the notebook open under the graph, and none until one is.
+            sandbox: notebookKernel
+              ? {
+                  kind: 'browser',
+                  status: 'running',
+                  connection: notebookKernel,
+                }
+              : { kind: 'browser', status: 'not running' },
           },
     [entry, notebookKernel],
   );

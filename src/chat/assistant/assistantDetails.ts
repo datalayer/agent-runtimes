@@ -64,6 +64,18 @@ export type AssistantSandbox = {
   serverUrl?: string;
 };
 
+/** The statuses of a sandbox that has something to read. */
+const LIVE = new Set(['running', 'idle', 'busy', 'starting']);
+
+/** Whether a sandbox is up: one with no status is taken to be. */
+export function sandboxIsLive(sandbox: AssistantSandbox): boolean {
+  return sandbox.status === undefined || LIVE.has(sandbox.status);
+}
+
+/** What the dialog says of a sandbox that is not running yet. */
+export const NO_SANDBOX_YET =
+  'No sandbox is running yet: run a cell or ask the agent to execute code.';
+
 /** What each kind is called. */
 export const SANDBOX_KIND_LABELS: Record<AssistantSandboxKind, string> = {
   browser: 'Python in your browser (Pyodide)',

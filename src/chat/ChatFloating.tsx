@@ -1054,7 +1054,16 @@ export function ChatFloating({
         (codemodeStatus as { sandbox?: Record<string, unknown> | null } | null)
           ?.sandbox,
         { agentId: protocol?.agentId, serverUrl: runtimeBase },
-      ),
+      ) ??
+      // An agent on a runtime can always have one: offered before it runs.
+      (protocol?.agentId && runtimeBase
+        ? {
+            kind: 'runtime',
+            status: 'not running',
+            agentId: protocol.agentId,
+            serverUrl: runtimeBase,
+          }
+        : undefined),
     [sandbox, codemodeStatus, protocol?.agentId, runtimeBase],
   );
 

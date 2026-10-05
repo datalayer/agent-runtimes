@@ -292,13 +292,11 @@ export function LoopAssistant({
     ],
   );
   const agentSandbox = useMemo<AssistantSandbox | undefined>(() => {
-    if (
-      !sandboxService ||
-      !target ||
-      (snapshot.state !== 'running' && snapshot.state !== 'starting')
-    ) {
+    // Offered whenever the workspace has a sandbox, running or not yet.
+    if (!sandboxService || !target) {
       return undefined;
     }
+    const live = snapshot.state === 'running' || snapshot.state === 'starting';
     const kinds: Record<string, AssistantSandboxKind> = {
       browser: 'browser',
       local: 'local',
@@ -307,7 +305,7 @@ export function LoopAssistant({
     };
     return {
       kind: kinds[target] ?? 'runtime',
-      status: snapshot.state,
+      status: live ? snapshot.state : 'not running',
       variant: snapshot.variant,
       url: snapshot.jupyterUrl,
       token: snapshot.jupyterToken,
