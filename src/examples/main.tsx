@@ -110,10 +110,10 @@ const EXAMPLE_GROUP_ORDER = [
   'A2UI',
   'A2A',
   'AG-UI',
-  'Capabilities',
   'Chat',
   'Document',
   'Notebook',
+  'Capabilities',
   'Cell',
   'CopilotKit',
 ] as const;
