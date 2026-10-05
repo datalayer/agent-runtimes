@@ -70,10 +70,10 @@ describe('the Assistant group', () => {
     ).toBe('Assistant');
   });
 
-  it('comes right before Chat', () => {
+  it('comes right before A2UI', () => {
     const at = EXAMPLE_GROUP_ORDER.indexOf('Assistant');
     expect(at).toBeGreaterThan(-1);
-    expect(EXAMPLE_GROUP_ORDER[at + 1]).toBe('Chat');
+    expect(EXAMPLE_GROUP_ORDER[at + 1]).toBe('A2UI');
     expect(getExampleGroup('ChatExample')).toBe('Chat');
   });
 });

@@ -13,10 +13,10 @@
 
 export const EXAMPLE_GROUP_ORDER = [
   'Apps',
+  'Assistant',
   'A2UI',
   'A2A',
   'AG-UI',
-  'Assistant',
   'Chat',
   'Document',
   'Notebook',
