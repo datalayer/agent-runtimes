@@ -8,7 +8,11 @@ application asked is served here with fasta2a, through the runtime's own A2A
 route (`agent_runtimes.routes.a2a`): its agent, with its connections and its
 rules, answers at ``/api/v1/a2a/agents/<application id>/``. Its agent card is
 written from its Appspec: its name, its description, and one skill named for
-it, whose examples are its starters. A request and an answer are text.
+it, whose examples are its starters. A request is text; an answer is text
+and, when the caller accepts one (``acceptedOutputModes``), a format its
+Appspec says it gives besides (``interface.outputs``, the card's output
+modes) — a Jupyter notebook, as an artifact beside the text
+(`agent_runtimes.output.formats`).
 
 **Who it answers.** The machine itself, without a token: a developer's
 browser and a local server. Anybody else holds a key granted to this route
@@ -182,10 +186,14 @@ def card_of(app: Any, url: str) -> Any:
     -------
     A2AAgentCard
         Its name, description and version, and one skill named for it: what
-        it does, its tags, and its starters as examples. Text in, text out.
+        it does, its tags, and its starters as examples. Text in; out, the
+        formats its answers come in (``interface.outputs``), plain text when
+        it says none.
     """
+    from agent_runtimes.output.formats import card_output_modes
     from agent_runtimes.routes.a2a import A2AAgentCard
 
+    outputs = card_output_modes(app.interface.outputs)
     return A2AAgentCard(
         id=app.id,
         name=app.name,
@@ -200,11 +208,13 @@ def card_of(app: Any, url: str) -> Any:
                 "tags": list(app.tags),
                 "examples": [starter.message for starter in app.interface.starters],
                 "input_modes": ["text/plain"],
-                "output_modes": ["text/plain"],
+                "output_modes": outputs,
             }
         ],
         security_schemes=_SCHEMES,
         security_requirements=SECURITY_REQUIREMENTS,
+        default_input_modes=["text/plain"],
+        default_output_modes=outputs,
     )
 
 

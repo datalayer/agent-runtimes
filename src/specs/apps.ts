@@ -92,6 +92,7 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: ['text/markdown', 'application/x-ipynb+json'],
   },
   tests: {
     readyAt: 0.8,
@@ -236,6 +237,7 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -356,6 +358,7 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -521,6 +524,7 @@ export const DECIDE_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -679,6 +683,7 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.9,
@@ -820,6 +825,7 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -1158,6 +1164,7 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.9,
@@ -1458,6 +1465,7 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 1.0,
@@ -1697,6 +1705,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -1825,6 +1834,7 @@ export const SALES_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -1944,6 +1954,7 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -2122,6 +2133,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -2423,6 +2435,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -2567,6 +2580,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
+    outputs: [],
   },
   tests: {
     readyAt: 0.8,
@@ -2715,6 +2729,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       assistant: 'wizard',
+      outputs: ['text/markdown', 'application/x-ipynb+json'],
     },
     tests: {
       cases: [

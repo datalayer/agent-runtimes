@@ -56,7 +56,8 @@ address and the agent card, then waits until Ctrl-C.
 
 The agent card is written from the Appspec: its name, description and
 version, and one skill named for it whose examples are its starters. A
-request is text and an answer is text. fasta2a (2.1 and later) answers A2A
+request is text. An answer is text, and may come in other formats too — see
+[Output formats](#output-formats). fasta2a (2.1 and later) answers A2A
 1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`, `ROLE_*`) as its card
 says. The card also says that a bearer key is needed (`securitySchemes`).
 
@@ -136,6 +137,81 @@ live in the runtime's process: a restart starts them again. The visitor's
 own model calls (Sales, in the browser) are ai-inference's to limit: its
 anonymous rate and its ceiling for the day.
 
+## Output formats
+
+An application says the formats its answers come in, by media type, words
+first: the Appspec's `interface.outputs` (agentspecs 0.0.41). Accounting
+answers in Markdown and in a Jupyter notebook:
+
+```yaml
+interface:
+  outputs:
+    - text/markdown
+    - application/x-ipynb+json
+```
+
+**On the card.** They are its card's `defaultOutputModes` and its skill's
+`outputModes` (fasta2a 2.2 takes the card's modes from the application);
+plain text when the Appspec says none. `defaultInputModes` is `text/plain`.
+
+**Asked for.** A caller names the formats it accepts with each request, in
+its configuration: `acceptedOutputModes`. fasta2a hands them to the worker
+as the task's `accepted_output_modes`. The `A2AWorker` opens the run's
+outputs (`agent_runtimes.output.formats`): the formats both the card and the
+caller name, words left out, since words are the answer itself. A caller
+that names nothing is answered in words alone.
+
+**Composed.** What is not words is composed by the agent with a tool of its
+own, offered only in a run that accepts its format. For a notebook it is
+`write_notebook(title, cells)`, each cell `{kind: markdown | code, source}`,
+and the run's prompt then says how to write it: what it is in a markdown
+cell, the figures it read as a pandas `DataFrame` from literals, the analysis
+in code cells (pandas, and a matplotlib chart where one helps), and a
+markdown cell explaining each result. The runtime checks the notebook before
+it keeps it, and a refused one is written again (`ModelRetry`):
+
+- valid nbformat 4, its code cells not run;
+- it runs in the reader's browser offline: code imports only pandas, numpy,
+  matplotlib and Python's standard library, names no URL, calls neither
+  `open` nor `__import__`, and has no magics or shell commands;
+- it holds nothing that looks like a credential, a key or a token;
+- at most 60 cells and 200,000 characters.
+
+`write_notebook` touches nothing outside the run, so an application's rules
+decide it as reading. A visitor's run, which only reads, writes one too.
+
+**Carried.** The notebook is an A2A artifact beside the text: one data part,
+the nbformat document itself, `mediaType: application/x-ipynb+json`, with a
+file name. While the agent writes it, the `working` status of the tool call
+carries a note, `Writing a notebook…`, then `Notebook written`, and not the
+cells, which travel once, in the artifact.
+
+**Received.** In the browser, `askA2APeer(peer, request, { accept })` sends
+`acceptedOutputModes` and resolves to `{ answer, artifacts }`. Each artifact
+is `{ mediaType, name, filename?, data }`, whatever its format, and the
+`answered` event carries them too. `a2aPeerTool({ peer, accept })` describes
+the formats the peer gives that the page accepts, and takes an optional
+`formats` argument, so that the model asks for a notebook when the person
+wants one, or for words alone with `[]`. Left out, the page's `accept`
+applies. The model is told that a notebook came, not its content.
+
+`useA2ATeam({ …, accept: NOTEBOOK_AND_WORDS })` keeps the peer's `artifacts`
+with its last answer, and its latest `notebook` until another one comes.
+`TeamNotebook` draws it, titled, with *Download .ipynb*, on the browser
+sandbox: the loop notebook view's own `EphemeralNotebook` bound to
+`createBrowserSandboxService`, a JupyterLite Pyodide kernel in the page,
+where the reader runs cells, changes them and adds their own. The view,
+JupyterLab and Pyodide are loaded only once a notebook is drawn: a page that
+shows the team loads none of them before.
+
+```tsx
+import { NOTEBOOK_AND_WORDS, TeamNotebook, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+
+const team = useA2ATeam({ entry, peerApp, peer, inference, accept: NOTEBOOK_AND_WORDS });
+// …
+{team.notebook && <TeamNotebook notebook={team.notebook} title="Accounting's notebook" />}
+```
+
 ## The application asking: `@a2a-js/sdk` in the browser
 
 `runtimes/browser/a2aPeer` uses the A2A SDK's own client (`@a2a-js/sdk` 1.x),
@@ -153,7 +229,9 @@ const tools = { ask_accounting: a2aPeerTool({ peer, onEvent }) };
 `a2aPeerTool` is a Vercel AI SDK tool: one request in words in, the peer's
 answer in words out, with the description written from the card's skill.
 `onEvent` is told each step as it happens: `asked`, `working` (with the tool
-the peer calls), then `answered` or `failed`.
+the peer calls), then `answered` (with what it gave besides words) or
+`failed`. `accept` names the formats the page accepts
+([Output formats](#output-formats)).
 
 ## The team as a graph
 
@@ -236,7 +314,9 @@ characters (the floating assistant's `AssistantStage`), in the graph above:
 Sales is the paper clip and Accounting is the wizard. You ask Sales. Sales
 *asks* and the edge flows toward Accounting. Accounting *works* and then
 *answers*, and the edge flows back. Each is in its own state and balloon,
-and then the report appears.
+and then the report appears. Sales accepts a notebook: when Accounting gives
+one — ask for one, *open invoices as a notebook* — it opens under the
+conversation in place of the report, to run in the page.
 
 1. Start the examples: Vite on :3000 and the local agent-runtimes server on
    :8765 (`npm run examples`).

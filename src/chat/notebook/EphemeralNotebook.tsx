@@ -269,7 +269,16 @@ export function EphemeralNotebook({
   // deliberately NO fallback to "first running" or `runtimes[0]`: the ephemeral
   // notebook must bind to exactly the runtime assigned to this agent, or to
   // none at all (straight path).
-  const { runtimes, refetchRuntimes } = useAgentsRuntimes();
+  //
+  // Asked only when there is a pod to look up: a host that hands its own
+  // manager (a browser sandbox) or an endpoint has nothing to find there,
+  // and a page that never needs the runtimes list does not poll it.
+  const { runtimes, refetchRuntimes } = useAgentsRuntimes(undefined, {
+    enabled:
+      Boolean(String(runtimeName || '').trim()) &&
+      !externalServiceManager &&
+      !String(runtimeOverride?.baseUrl || '').trim(),
+  });
   const resolvedRuntime = useMemo(() => {
     const preferredRuntime = String(runtimeName || '').trim();
     if (!preferredRuntime) {

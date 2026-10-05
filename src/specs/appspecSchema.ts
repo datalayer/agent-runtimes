@@ -360,6 +360,17 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description:
             'Its voice: whether it listens and speaks, with which voice, in which language (off unless said)',
         },
+        outputs: {
+          description:
+            "The formats its answers come in, by media type, words first: `text/markdown`, then `application/x-ipynb+json` for a Jupyter notebook. Over A2A, its agent card's output modes; a caller asks for some of them (`acceptedOutputModes`). Plain text alone when unsaid",
+          items: {
+            pattern: '^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$',
+            type: 'string',
+          },
+          title: 'Outputs',
+          type: 'array',
+          uniqueItems: true,
+        },
       },
       title: 'AppInterface',
       type: 'object',

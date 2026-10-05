@@ -188,6 +188,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       starters: [],
       settings: [],
       components: [],
+      outputs: [],
     },
     tests: {
       readyAt: DEFAULT_READY_AT,
@@ -362,6 +363,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     settings: records(data.settings).map(parseSetting),
     components: texts(data.components),
     voice: parseVoice(data.voice),
+    outputs: texts(data.outputs),
   };
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
@@ -704,6 +706,8 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
         .value<string>('where', spec.voice.where, DEFAULT_VOICE.where).data,
     );
   }
+  // The formats its answers come in, words first, when it says any.
+  writer.list('outputs', spec.outputs ?? []);
   return writer.data;
 }
 

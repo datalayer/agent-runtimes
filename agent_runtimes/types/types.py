@@ -2286,6 +2286,15 @@ class AppInterfaceSpec(BaseModel):
         default_factory=AppVoiceSpec,
         description="Its voice: whether it listens and speaks, with which voice (VO-41)",
     )
+    outputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The formats its answers come in, by media type, words first "
+            "(`text/markdown`, then `application/x-ipynb+json` for a Jupyter "
+            "notebook): over A2A, its agent card's output modes; plain text "
+            "alone when empty"
+        ),
+    )
 
 
 class AppTestCaseSpec(BaseModel):

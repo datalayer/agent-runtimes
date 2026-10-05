@@ -197,7 +197,13 @@ class TestTheCard:
         [skill] = card["skills"]
         assert skill["id"] == "accounting"
         assert skill["examples"] == [s.message for s in accounting.interface.starters]
-        assert skill["inputModes"] == skill["outputModes"] == ["text/plain"]
+        assert skill["inputModes"] == card["defaultInputModes"] == ["text/plain"]
+        # Its answers in Markdown, and a notebook to a caller that accepts one.
+        assert (
+            skill["outputModes"]
+            == card["defaultOutputModes"]
+            == ["text/markdown", "application/x-ipynb+json"]
+        )
         assert card["capabilities"]["streaming"] is True
         assert card["securitySchemes"]["datalayer"]["httpAuthSecurityScheme"][
             "scheme"
@@ -687,3 +693,164 @@ class TestVisitors:
         assert ConfigureAppRequest(**sent).visitors is False
         keyed = ConfigureAppRequest(**sent, visitors=True, visitors_key=VISITORS_KEY)
         assert keyed.visitors_key == VISITORS_KEY
+
+
+NOTEBOOK = "application/x-ipynb+json"
+
+#: The notebook the scripted Accounting composes: the figures, then the total.
+CELLS = [
+    {"kind": "markdown", "source": "# Open invoices\n\nIn EUR."},
+    {
+        "kind": "code",
+        "source": (
+            "import pandas as pd\n"
+            "invoices = pd.DataFrame([{'number': 'INV/2026/0007', 'due': 1200.0}])\n"
+            "invoices['due'].sum()"
+        ),
+    },
+]
+
+
+def _accepting(text: str, modes: list[str] | None) -> dict[str, Any]:
+    request = _stream_request(text)
+    if modes is not None:
+        request["params"]["configuration"]["acceptedOutputModes"] = modes
+    return request
+
+
+class TestTheNotebook:
+    """Accounting answers Sales with a Jupyter notebook when Sales accepts one."""
+
+    @pytest.fixture
+    def composing(self, monkeypatch: Any) -> list[dict[str, Any]]:
+        """Accounting, scripted to write its notebook with its tool, as its model would."""
+        seen: list[dict[str, Any]] = []
+
+        async def stream(self: Any, prompt: str, context: Any) -> Any:
+            from agent_runtimes.output import formats
+
+            self.contexts.append(context)
+            call = {
+                "id": "c-9",
+                "name": "write_notebook",
+                "arguments": {"cells": CELLS},
+            }
+            yield StreamEvent(type="tool_call", data=call)
+            said = formats.write_notebook(
+                "Open invoices", [formats.NotebookCell(**cell) for cell in CELLS]
+            )
+            seen.append({"prompt": prompt, "said": said})
+            yield StreamEvent(
+                type="tool_result", data={**call, "result": said, "error": None}
+            )
+            yield StreamEvent(type="text", data=REPORT)
+
+        monkeypatch.setattr(Accounting, "stream", stream)
+        return seen
+
+    @staticmethod
+    def _results(body: str) -> list[dict[str, Any]]:
+        return [event["result"] for event in _events(body)]
+
+    @pytest.mark.asyncio
+    async def test_a_caller_that_accepts_one_gets_it_as_an_artifact_beside_the_text(
+        self, state: Any, composing: list[dict[str, Any]]
+    ) -> None:
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post(
+                "/", json=_accepting("Open invoices?", [NOTEBOOK, "text/markdown"])
+            )
+        results = self._results(response.text)
+        artifacts = [
+            r["artifactUpdate"]["artifact"] for r in results if "artifactUpdate" in r
+        ]
+        notebooks = [
+            part
+            for artifact in artifacts
+            for part in artifact["parts"]
+            if part.get("mediaType") == NOTEBOOK
+        ]
+        [part] = notebooks
+        assert part["filename"] == "open-invoices.ipynb"
+        notebook = part["data"]
+        import nbformat
+
+        nbformat.validate(nbformat.from_dict(notebook))
+        # Written as Jupyter writes it, each source a list of lines.
+        assert ["".join(cell["source"]) for cell in notebook["cells"]] == [
+            cell["source"] for cell in CELLS
+        ]
+        # The text is still the answer.
+        texts = [a for a in artifacts if a["parts"] == [{"text": REPORT}]]
+        assert texts
+        states = [
+            r["statusUpdate"]["status"]["state"] for r in results if "statusUpdate" in r
+        ]
+        assert states[-1] == "TASK_STATE_COMPLETED"
+        # Its agent was told it may write one.
+        [run] = composing
+        assert "write_notebook" in run["prompt"]
+        assert run["said"].startswith("Notebook written")
+
+    @pytest.mark.asyncio
+    async def test_while_it_writes_the_caller_reads_it_in_words(
+        self, state: Any, composing: list[dict[str, Any]]
+    ) -> None:
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post(
+                "/", json=_accepting("Open invoices?", [NOTEBOOK])
+            )
+        told = [
+            part["data"]
+            for r in self._results(response.text)
+            if "statusUpdate" in r
+            and r["statusUpdate"]["status"]["state"] == "TASK_STATE_WORKING"
+            and "message" in r["statusUpdate"]["status"]
+            for part in r["statusUpdate"]["status"]["message"]["parts"]
+            if "data" in part
+        ]
+        assert told[0]["tool_call"]["note"] == "Writing a notebook…"
+        # The cells travel once, in the artifact, not in the status.
+        assert told[0]["tool_call"]["arguments"] == {}
+        assert told[1]["tool_result"]["note"] == "Notebook written"
+
+    @pytest.mark.parametrize("modes", [None, ["text/markdown"], ["text/plain"]])
+    @pytest.mark.asyncio
+    async def test_a_caller_that_does_not_accept_one_gets_words_only(
+        self, state: Any, composing: list[dict[str, Any]], modes: list[str] | None
+    ) -> None:
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post("/", json=_accepting("Open invoices?", modes))
+        parts = [
+            part
+            for r in self._results(response.text)
+            if "artifactUpdate" in r
+            for part in r["artifactUpdate"]["artifact"]["parts"]
+        ]
+        assert all(part.get("mediaType") != NOTEBOOK for part in parts)
+        [run] = composing
+        assert "write_notebook" not in run["prompt"]
+        assert "does not accept a notebook" in run["said"]
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_gets_one_too_since_it_only_reads(
+        self, state: Any, composing: list[dict[str, Any]], inference: list[str]
+    ) -> None:
+        async with (
+            served(state, visitors=True) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            request = _accepting("Open invoices?", [NOTEBOOK])
+            response = await client.post(
+                "/",
+                json=request,
+                headers={"Authorization": f"Bearer {_visitor_token()}"},
+            )
+        assert response.status_code == 200
+        parts = [
+            part
+            for r in self._results(response.text)
+            if "artifactUpdate" in r
+            for part in r["artifactUpdate"]["artifact"]["parts"]
+        ]
+        assert any(part.get("mediaType") == NOTEBOOK for part in parts)

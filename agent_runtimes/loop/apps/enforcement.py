@@ -21,7 +21,10 @@ What a call is, before it is decided:
   which code does not show, so for the worst that tool can do;
 - the tools of its files (`list_computer_files`…), which read or write;
 - a few tools of the runtime itself that only look (`search_tools`,
-  `load_skill`…), which are reading.
+  `load_skill`…), which are reading;
+- the tools that compose an output besides words (`write_notebook`), which
+  touch nothing outside the run and are reading too — offered only in a run
+  whose caller accepts their format (`agent_runtimes.output.formats`).
 
 Anything else is unknown, and unknown is left to the person, unless the
 session says what it does (`extra_classes`).
@@ -86,7 +89,8 @@ from agent_runtimes.loop.apps.rules import (
     matches,
 )
 from agent_runtimes.loop.apps.visitors import visitor_refusal
-from agent_runtimes.specs.actions import SERVER_ACTIONS, BACKEND_TOOL_ACTIONS
+from agent_runtimes.output.formats import OUTPUT_TOOLS, outputs_toolset, tool_given
+from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
 from agent_runtimes.types import AppSpec
 
 #: Tools of the runtime itself that only look: discovering tools and skills.
@@ -294,7 +298,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             return self._decide_code(tool_name, args)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
-        if tool_name in READING_TOOLS:
+        if tool_name in READING_TOOLS or tool_name in OUTPUT_TOOLS:
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=["read"])
             )
@@ -369,6 +373,9 @@ class AppRulesCapability(AbstractCapability[Any]):
         """
         if not computer_gives(self.app, tool_name):
             return False
+        if tool_name in OUTPUT_TOOLS:
+            # Only in a run whose caller accepts what it composes.
+            return tool_given(tool_name)
         if part_of(tool_name) is not None or tool_name in READING_TOOLS:
             return True
         if tool_name == "call_tool" or not self._is_mcp_tool(tool_name):
@@ -383,8 +390,23 @@ class AppRulesCapability(AbstractCapability[Any]):
         return [tool_def for tool_def in tool_defs if self.given(tool_def.name)]
 
     def get_toolset(self) -> Any:
-        """The tools of its files, when its permissions turn its files on."""
-        return computer_toolset(self.app, self.agent_id)
+        """
+        The tools of its files, when its permissions turn its files on, and
+        those that compose the outputs it gives besides words.
+        """
+        toolsets = [
+            toolset
+            for toolset in (
+                computer_toolset(self.app, self.agent_id),
+                outputs_toolset(self.app.interface.outputs),
+            )
+            if toolset is not None
+        ]
+        if len(toolsets) <= 1:
+            return toolsets[0] if toolsets else None
+        from pydantic_ai.toolsets import CombinedToolset
+
+        return CombinedToolset(toolsets)
 
     # --- acting ------------------------------------------------------------------
 

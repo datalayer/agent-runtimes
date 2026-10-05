@@ -52,6 +52,11 @@ class A2AAgentCard:
     #: `SecurityScheme` and `SecurityRequirement`); checked by the mount's gate.
     security_schemes: dict[str, Any] | None = None
     security_requirements: list[dict[str, Any]] | None = None
+    #: The media types it is asked in and answers in, unless a skill says
+    #: otherwise; fasta2a's `application/json` when unsaid. A caller that
+    #: accepts an output mode besides words gets it as an artifact.
+    default_input_modes: list[str] | None = None
+    default_output_modes: list[str] | None = None
 
 
 @dataclass
@@ -239,6 +244,7 @@ def register_a2a_agent(
             agent=agent,
             # What a task spent is counted under the id the agent is served under.
             agent_id=agent_id,
+            output_modes=tuple(card.default_output_modes or ()),
             # So `/a2a/terminate` interrupts a running task, not the next one.
             cancellation=TaskCancellation(
                 register=register_task, unregister=unregister_task, cancel=cancel_task
@@ -284,6 +290,8 @@ def register_a2a_agent(
             ],
             security_schemes=card.security_schemes,
             security_requirements=card.security_requirements,
+            default_input_modes=card.default_input_modes,
+            default_output_modes=card.default_output_modes,
             lifespan=lifespan,
         )
 

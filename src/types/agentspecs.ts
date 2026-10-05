@@ -513,6 +513,12 @@ export interface AppInterfaceSpec {
   assistant?: AppAssistantCharacter;
   /** Its voice: off unless said (VO-41); absent from a spec made before voice. */
   voice?: AppVoiceSpec;
+  /**
+   * The formats its answers come in, by media type, words first:
+   * `text/markdown`, then `application/x-ipynb+json` for a Jupyter notebook.
+   * Over A2A, its agent card's output modes. Empty: plain text alone.
+   */
+  outputs: string[];
 }
 
 export interface AppTestCaseSpec {

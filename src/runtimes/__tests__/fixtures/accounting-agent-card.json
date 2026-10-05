@@ -16,7 +16,7 @@
       "description": "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
       "tags": ["example", "accounting", "finance", "odoo", "a2a", "team"],
       "inputModes": ["text/plain"],
-      "outputModes": ["text/plain"],
+      "outputModes": ["text/markdown", "application/x-ipynb+json"],
       "examples": [
         "List the customer invoices that are still open, with the total due.",
         "Give the aged receivables as of today, by customer.",
@@ -24,8 +24,8 @@
       ]
     }
   ],
-  "defaultInputModes": ["application/json"],
-  "defaultOutputModes": ["application/json"],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/markdown", "application/x-ipynb+json"],
   "capabilities": {
     "streaming": true,
     "pushNotifications": false,

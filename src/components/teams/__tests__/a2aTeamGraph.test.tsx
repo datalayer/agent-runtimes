@@ -70,7 +70,12 @@ describe('flowAfter', () => {
 
   it('flows back for a moment when the peer answers', () => {
     expect(
-      flowAfter({ phase: 'answered', taskId: 't', answer: '3 invoices' }),
+      flowAfter({
+        phase: 'answered',
+        taskId: 't',
+        answer: '3 invoices',
+        artifacts: [],
+      }),
     ).toEqual({ flow: 'answering', holdMs: ANSWER_SHOWN_MS });
   });
 
@@ -275,7 +280,7 @@ describe('callsAfter', () => {
     expect(
       callsAfter(
         started,
-        { phase: 'answered', taskId: 't', answer: 'done' },
+        { phase: 'answered', taskId: 't', answer: 'done', artifacts: [] },
         'accounting',
         [ODOO],
         2,

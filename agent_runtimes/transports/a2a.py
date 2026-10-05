@@ -20,6 +20,7 @@ from .base import BaseTransport
 if TYPE_CHECKING:
     from ..adapters.base import BaseAgent
     from ..context.usage import TurnSpend
+    from ..output.formats import RunOutputs
 
 logger = logging.getLogger(__name__)
 
@@ -306,32 +307,54 @@ def activated_extensions_of(params: Any) -> list[str]:
 
 def _tool_call_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("id"),
             "name": data.get("name"),
             "arguments": data.get("arguments") or data.get("args") or {},
         }
-    return {
-        "id": getattr(data, "id", None),
-        "name": getattr(data, "name", None),
-        "arguments": getattr(data, "arguments", None) or {},
-    }
+    else:
+        payload = {
+            "id": getattr(data, "id", None),
+            "name": getattr(data, "name", None),
+            "arguments": getattr(data, "arguments", None) or {},
+        }
+    return _with_output_note(payload, ended=False)
 
 
 def _tool_result_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("tool_call_id") or data.get("id"),
             "name": data.get("name"),
             "result": _short(data.get("result")),
             "error": data.get("error"),
         }
-    return {
-        "id": getattr(data, "tool_call_id", None),
-        "name": getattr(data, "name", None),
-        "result": _short(getattr(data, "result", None)),
-        "error": getattr(data, "error", None),
-    }
+    else:
+        payload = {
+            "id": getattr(data, "tool_call_id", None),
+            "name": getattr(data, "name", None),
+            "result": _short(getattr(data, "result", None)),
+            "error": getattr(data, "error", None),
+        }
+    return _with_output_note(payload, ended=True)
+
+
+def _with_output_note(payload: dict[str, Any], ended: bool) -> dict[str, Any]:
+    """A tool that composes an output says what it does in words: `Writing a notebook…`.
+
+    Its arguments are the output itself, which the caller receives as an
+    artifact: they are not told twice.
+    """
+    from ..output.formats import OUTPUT_TOOL_NOTES
+
+    notes = OUTPUT_TOOL_NOTES.get(str(payload.get("name") or ""))
+    if notes is None:
+        return payload
+    if not ended:
+        payload["arguments"] = {}
+    else:
+        payload["result"] = notes[1]
+    return {**payload, "note": notes[1] if ended else notes[0]}
 
 
 def _short(value: Any, limit: int = 2000) -> str:
@@ -365,6 +388,9 @@ class A2AWorker(_FastA2AWorker):
     #: The id the agent is served under, which its usage and cost are counted
     #: under: what a task spent is on the status that ends it (O2-10).
     agent_id: str | None = None
+    #: The media types its answers come in, as its card declares them: a
+    #: caller that accepts one besides words gets it as an artifact.
+    output_modes: tuple[str, ...] = ()
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
@@ -418,14 +444,29 @@ class A2AWorker(_FastA2AWorker):
             leave_visitor_run,
             visitor_of_a2a,
         )
+        from ..output.formats import (
+            RunOutputs,
+            accepted_formats,
+            enter_run_outputs,
+            leave_run_outputs,
+        )
 
         cancel = self.cancellation.register(task_id) if self.cancellation else None
         # A visitor's run, as the application's gate marked it: it only reads,
         # whatever its rules say (LOOP R-30).
         visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        # What it may give besides words: what its card declares and the
+        # caller accepts. Its output tools are offered for those only.
+        outputs = RunOutputs(
+            accepted=accepted_formats(
+                self.output_modes, params.get("accepted_output_modes")
+            )
+        )
+        composing = enter_run_outputs(outputs)
         try:
-            await self._stream_run(task_id, context_id, params, cancel, turn)
+            await self._stream_run(task_id, context_id, params, cancel, turn, outputs)
         finally:
+            leave_run_outputs(composing)
             leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
@@ -437,13 +478,18 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         cancel: "asyncio.Event | None",
         turn: "TurnSpend",
+        outputs: "RunOutputs",
     ) -> None:
+        from ..output.formats import artifacts_of, outputs_instructions
+
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
 
         history: A2AContext = list(await self.storage.load_context(context_id) or [])
         incoming = params["message"]
-        prompt = a2a_message_text(incoming)
+        # The request, and what this run may give besides words: the agent
+        # is told of a format only when its caller accepts it.
+        prompt = a2a_message_text(incoming) + outputs_instructions(outputs)
 
         from ..adapters.base import AgentContext
         from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
@@ -645,15 +691,19 @@ class A2AWorker(_FastA2AWorker):
         artifact = Artifact(
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
+        # What it composed besides words, each an artifact of its media type.
+        composed = artifacts_of(outputs)
         await self.storage.update_task(
             task_id,
             state="completed",
-            new_artifacts=[artifact],
+            new_artifacts=[artifact, *composed],
             new_messages=[reply],
         )
         # The whole result once more, as the last chunk: a client that does
         # not assemble chunks, or joined late, still gets the answer.
         await self.publish_artifact(task_id, context_id, artifact)
+        for extra in composed:
+            await self.publish_artifact(task_id, context_id, extra)
         # The `completed` status says what the run spent (O2-10), so it is sent
         # and the stream ended here rather than by the base, whose final status
         # carries no message.

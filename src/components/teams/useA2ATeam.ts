@@ -14,7 +14,10 @@
  * {@link a2aPeerTool}. What each of them does is kept as a persona — the
  * state its character acts and what its balloon says — and the exchange
  * between them as a log, the peer's last answer as the report, and the way
- * the link carries a message as the flow ({@link flowAfter}). The tools the
+ * the link carries a message as the flow ({@link flowAfter}). What the peer
+ * gives besides words — the formats the page accepts (`accept`), such as a
+ * Jupyter notebook — is kept as its artifacts, and its latest notebook kept
+ * until another one comes ({@link A2ATeam.notebook}). The tools the
  * peer calls on its connections (its MCP servers), told over A2A as it calls
  * them, are kept as the calls running now ({@link callsAfter}).
  *
@@ -32,7 +35,9 @@ import {
 } from '../../runtimes/browser/model';
 import {
   a2aPeerTool,
+  NOTEBOOK_MEDIA_TYPE,
   type A2APeer,
+  type A2APeerArtifact,
   type A2APeerEvent,
 } from '../../runtimes/browser/a2aPeer';
 import type { AppSpec } from '../../types/agentspecs';
@@ -66,6 +71,33 @@ export const AT_REST: A2ATeamPersona = {
 /** One turn of the conversation with the entry. */
 export type A2ATeamTurn = { role: 'user' | 'assistant'; text: string };
 
+/** What a page that shows notebooks accepts: a notebook, and words in Markdown. */
+export const NOTEBOOK_AND_WORDS: readonly string[] = [
+  NOTEBOOK_MEDIA_TYPE,
+  'text/markdown',
+];
+
+/** What an exchange line calls what the peer gave: its words, and each of its artifacts. */
+export function answeredLine(artifacts: A2APeerArtifact[]): string {
+  const besides = artifacts.map(artifact =>
+    artifact.mediaType === NOTEBOOK_MEDIA_TYPE
+      ? `a notebook, ${artifact.name}`
+      : artifact.name,
+  );
+  return besides.length ? `the report and ${besides.join(', ')}` : 'the report';
+}
+
+/** The latest notebook among what a peer gave, or none. */
+export function notebookAmong(
+  artifacts: A2APeerArtifact[],
+): A2APeerArtifact | null {
+  return (
+    [...artifacts]
+      .reverse()
+      .find(artifact => artifact.mediaType === NOTEBOOK_MEDIA_TYPE) ?? null
+  );
+}
+
 /** A line short enough for a balloon. */
 export function balloonLine(text: string, length = 120): string {
   const flat = text.replace(/\s+/g, ' ').trim();
@@ -87,6 +119,11 @@ export type UseA2ATeamOptions = {
   maxSteps?: number;
   /** The peer's connections (`teamConnectionsOf(peerApp)`): the calls to them are kept. */
   peerConnections?: A2ATeamConnection[];
+  /**
+   * The media types the page accepts from the peer (`acceptedOutputModes`):
+   * words, and the formats it can show, such as a notebook. Unsaid, words alone.
+   */
+  accept?: readonly string[];
 };
 
 export type A2ATeam = {
@@ -99,6 +136,10 @@ export type A2ATeam = {
   exchange: string[];
   /** The peer's last answer, as it gave it. */
   report: string | null;
+  /** What the peer gave besides words with its last answer, by media type. */
+  artifacts: A2APeerArtifact[];
+  /** The latest notebook the peer gave, kept until another one comes. */
+  notebook: A2APeerArtifact | null;
   /** Which way the link carries a message now. */
   flow: A2ATeamFlow;
   /** The tool calls the peer's connections are answering now. */
@@ -121,6 +162,13 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     maxSteps = 6,
     peerConnections = NO_CONNECTIONS,
   } = options;
+  // By what it names, so that a page passing a new array of the same media
+  // types does not make the agent again.
+  const acceptKey = options.accept?.join('\n');
+  const accept = useMemo(
+    () => (acceptKey ? acceptKey.split('\n') : undefined),
+    [acceptKey],
+  );
   const askTool = options.askTool ?? `ask_${peerApp.id.replace(/-/g, '_')}`;
   const [entryPersona, setEntryPersona] = useState<A2ATeamPersona>(() => ({
     ...AT_REST,
@@ -131,6 +179,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   const [peerPersona, setPeerPersona] = useState<A2ATeamPersona>(AT_REST);
   const [turns, setTurns] = useState<A2ATeamTurn[]>([]);
   const [report, setReport] = useState<string | null>(null);
+  const [artifacts, setArtifacts] = useState<A2APeerArtifact[]>([]);
+  const [notebook, setNotebook] = useState<A2APeerArtifact | null>(null);
   const [exchange, setExchange] = useState<string[]>([]);
   const [flow, setFlow] = useState<A2ATeamFlow>('still');
   const [calls, setCalls] = useState<A2ATeamCall[]>([]);
@@ -196,9 +246,14 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       } else if (event.phase === 'answered') {
         setExchange(prev => [
           ...prev,
-          `${peerApp.name} → ${entry.name}: the report`,
+          `${peerApp.name} → ${entry.name}: ${answeredLine(event.artifacts)}`,
         ]);
         setReport(event.answer);
+        setArtifacts(event.artifacts);
+        const given = notebookAmong(event.artifacts);
+        if (given) {
+          setNotebook(given);
+        }
         setPeerPersona(prev => ({
           ...prev,
           state: 'speaking',
@@ -232,10 +287,12 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         model: entry.model || undefined,
       }),
       instructions: entry.instructions,
-      tools: { [askTool]: a2aPeerTool({ peer, onEvent: onPeerEvent }) },
+      tools: {
+        [askTool]: a2aPeerTool({ peer, onEvent: onPeerEvent, accept }),
+      },
       stopWhen: stepCountIs(maxSteps),
     });
-  }, [peer, inference, onPeerEvent, entry, askTool, maxSteps]);
+  }, [peer, inference, onPeerEvent, entry, askTool, maxSteps, accept]);
 
   const send = useCallback(
     async (text: string) => {
@@ -245,6 +302,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       }
       setBusy(true);
       setReport(null);
+      setArtifacts([]);
       setExchange([]);
       setTurns(prev => [...prev, { role: 'user', text: asked }]);
       setEntryPersona({
@@ -359,6 +417,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     turns,
     exchange,
     report,
+    artifacts,
+    notebook,
     flow,
     calls,
     busy,

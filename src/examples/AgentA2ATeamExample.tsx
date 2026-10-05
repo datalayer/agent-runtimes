@@ -22,6 +22,12 @@
  * the tool's name on it. Then the report appears. The page's own state is `useA2ATeam`'s, which the landing's home
  * page runs too.
  *
+ * Sales accepts a Jupyter notebook from Accounting besides its words
+ * (`acceptedOutputModes`, `NOTEBOOK_AND_WORDS`). When Accounting gives one,
+ * it opens under the conversation in place of the report, on the browser
+ * sandbox — a Pyodide kernel in this page — to run, change and download
+ * (`TeamNotebook`, loaded only then).
+ *
  * Where Accounting is: `VITE_A2A_ACCOUNTING_URL`, else the examples' local
  * server (`…:8765/api/v1/a2a/agents/accounting`), which answers this machine
  * without a key. A cloud runtime needs a key granted to its route:
@@ -47,6 +53,8 @@ import {
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
+  NOTEBOOK_AND_WORDS,
+  TeamNotebook,
   teamConnectionsOf,
   useA2ATeam,
 } from '../components/teams';
@@ -124,6 +132,8 @@ function AgentA2ATeam(): JSX.Element {
     inference,
     askTool: 'ask_accounting',
     peerConnections: ACCOUNTING_CONNECTIONS,
+    // Its words, and a notebook to run here when it gives one.
+    accept: NOTEBOOK_AND_WORDS,
   });
   const send = (text: string) => {
     setDraft('');
@@ -319,29 +329,43 @@ function AgentA2ATeam(): JSX.Element {
               ))
             )}
           </Box>
-          <Heading as="h3" sx={{ fontSize: 2, mt: 3, mb: 2 }}>
-            The report
-          </Heading>
-          <Box
-            sx={{
-              p: 3,
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              minHeight: 120,
-            }}
-            data-team-report=""
-          >
-            {team.report ? (
-              <Streamdown>{team.report}</Streamdown>
-            ) : (
-              <Text sx={{ color: 'fg.muted' }}>
-                The report Accounting returns appears here, as it returned it.
-              </Text>
-            )}
-          </Box>
+          {/* The notebook, when Accounting gave one, takes the report's place. */}
+          {!team.notebook && (
+            <>
+              <Heading as="h3" sx={{ fontSize: 2, mt: 3, mb: 2 }}>
+                The report
+              </Heading>
+              <Box
+                sx={{
+                  p: 3,
+                  border: '1px solid',
+                  borderColor: 'border.default',
+                  borderRadius: 2,
+                  minHeight: 120,
+                }}
+                data-team-report=""
+              >
+                {team.report ? (
+                  <Streamdown>{team.report}</Streamdown>
+                ) : (
+                  <Text sx={{ color: 'fg.muted' }}>
+                    The report Accounting returns appears here, as it returned
+                    it, or as a notebook to run when it gives one.
+                  </Text>
+                )}
+              </Box>
+            </>
+          )}
         </Box>
       </Box>
+      {team.notebook && (
+        <Box sx={{ mt: 3 }}>
+          <TeamNotebook
+            notebook={team.notebook}
+            title={`${ACCOUNTING.name}\u2019s notebook`}
+          />
+        </Box>
+      )}
     </Box>
   );
 }

@@ -29,7 +29,7 @@ dependencies = [
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    "agentspecs>=0.0.39",
+    "agentspecs>=0.0.41",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -143,10 +143,12 @@ aws = [
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
     # 2.1 speaks A2A 1.0 JSON-RPC, which `@a2a-js/sdk` 1.x in the browser
-    # uses, and writes `security_schemes` on the agent card. The ceiling stays:
+    # uses, and writes `security_schemes` on the agent card; 2.2 takes the
+    # card's output modes and hands the worker the modes a request accepts
+    # (`accepted_output_modes`), which output formats rest on. The ceiling stays:
     # a fasta2a minor release has changed its API before (`A2AClient`'s
     # `base_url` became `agent`), so move it with the call sites.
-    "fasta2a>=2.1.0,<2.2",
+    "fasta2a>=2.2.0,<2.3",
 ]
 # The ACP client the orchestration adapter speaks, and the route serves.
 #

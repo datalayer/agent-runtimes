@@ -19,9 +19,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  NOTEBOOK_MEDIA_TYPE,
   a2aPeerTool,
   askA2APeer,
   connectA2APeer,
+  offeredFormats,
   peerToolDescription,
   type A2APeerEvent,
 } from '../browser/a2aPeer';
@@ -32,6 +34,12 @@ const KEY = 'a-key-granted-to-the-route';
 const REPORT = 'Open invoices: INV/2026/0007, 1,200.00 EUR due.';
 const CARD = readFileSync(join(FIXTURES, 'accounting-agent-card.json'), 'utf8');
 const STREAM = readFileSync(join(FIXTURES, 'accounting-stream.sse'), 'utf8');
+/** Accounting's answer to a request that accepts a notebook: the text, and the notebook. */
+const NOTEBOOK_STREAM = readFileSync(
+  join(FIXTURES, 'accounting-notebook-stream.sse'),
+  'utf8',
+);
+const ACCEPT = [NOTEBOOK_MEDIA_TYPE, 'text/markdown'];
 
 type Seen = { url: string; method: string; headers: Headers; body?: any };
 
@@ -94,10 +102,13 @@ describe('Sales asks Accounting over A2A', () => {
     const { fetch, seen } = accounting();
     const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
     const events: A2APeerEvent[] = [];
-    const answer = await askA2APeer(peer, 'Which invoices are open?', {
-      onEvent: event => events.push(event),
-    });
+    const { answer, artifacts } = await askA2APeer(
+      peer,
+      'Which invoices are open?',
+      { onEvent: event => events.push(event) },
+    );
     expect(answer).toBe(REPORT);
+    expect(artifacts).toEqual([]);
     const [request] = seen.filter(entry => entry.method === 'POST');
     expect(request.url).toBe(`${URL}/`);
     expect(request.headers.get('Authorization')).toBe(`Bearer ${KEY}`);
@@ -106,6 +117,10 @@ describe('Sales asks Accounting over A2A', () => {
     expect(request.body.params.message.parts).toEqual([
       { text: 'Which invoices are open?' },
     ]);
+    // Accepting nothing named, it is answered in words alone.
+    expect(
+      request.body.params.configuration?.acceptedOutputModes ?? [],
+    ).toEqual([]);
     expect(events[0]).toEqual({
       phase: 'asked',
       request: 'Which invoices are open?',
@@ -181,5 +196,112 @@ describe('Sales asks Accounting over A2A', () => {
       error: 'A request to Accounting says what it asks.',
     });
     expect(seen.filter(entry => entry.method === 'POST')).toEqual([]);
+  });
+
+  it('reads on the card the formats Accounting gives besides words', async () => {
+    const { fetch } = accounting();
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    expect(peer.skill.outputModes).toEqual([
+      'text/markdown',
+      NOTEBOOK_MEDIA_TYPE,
+    ]);
+    expect(offeredFormats(peer, ACCEPT)).toEqual([NOTEBOOK_MEDIA_TYPE]);
+    expect(offeredFormats(peer, ['text/markdown'])).toEqual([]);
+    expect(offeredFormats(peer, undefined)).toEqual([]);
+    expect(peerToolDescription(peer, ACCEPT)).toContain(
+      'It can also give a Jupyter notebook',
+    );
+    expect(peerToolDescription(peer)).not.toContain('Jupyter notebook');
+  });
+
+  it('accepts a notebook, and is answered with one beside the words', async () => {
+    const { fetch, seen } = accounting({ stream: NOTEBOOK_STREAM });
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    const events: A2APeerEvent[] = [];
+    const { answer, artifacts } = await askA2APeer(peer, 'Open invoices?', {
+      accept: ACCEPT,
+      onEvent: event => events.push(event),
+    });
+    const [request] = seen.filter(entry => entry.method === 'POST');
+    expect(request.body.params.configuration.acceptedOutputModes).toEqual(
+      ACCEPT,
+    );
+    // The words are the answer; the notebook is not in them.
+    expect(answer).toBe(REPORT);
+    expect(artifacts).toHaveLength(1);
+    const [notebook] = artifacts;
+    expect(notebook).toMatchObject({
+      mediaType: NOTEBOOK_MEDIA_TYPE,
+      name: 'Open invoices',
+      filename: 'open-invoices.ipynb',
+    });
+    const content = notebook.data as {
+      nbformat: number;
+      cells: { cell_type: string }[];
+    };
+    expect(content.nbformat).toBe(4);
+    expect(content.cells.map(cell => cell.cell_type)).toEqual([
+      'markdown',
+      'code',
+    ]);
+    expect(events[0]).toEqual({
+      phase: 'asked',
+      request: 'Open invoices?',
+      accept: ACCEPT,
+    });
+    // While it writes it, it says so in words.
+    const notes = events
+      .filter(event => event.phase === 'working')
+      .map(event => (event.phase === 'working' ? event.note : undefined))
+      .filter(Boolean);
+    expect(notes).toContain('Writing a notebook…');
+    expect(notes).toContain('Notebook written');
+    expect(events.at(-1)).toMatchObject({
+      phase: 'answered',
+      answer: REPORT,
+      artifacts: [{ mediaType: NOTEBOOK_MEDIA_TYPE }],
+    });
+  });
+
+  it('the tool tells the model a notebook came, not its content', async () => {
+    const { fetch, seen } = accounting({ stream: NOTEBOOK_STREAM });
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    const ask = a2aPeerTool({ peer, accept: ACCEPT });
+    const result = await ask.execute!(
+      {
+        request: 'Open invoices, as a notebook',
+        formats: [NOTEBOOK_MEDIA_TYPE],
+      },
+      { toolCallId: 'call-1', messages: [] },
+    );
+    expect(result).toEqual({
+      answer: REPORT,
+      attached: [
+        {
+          mediaType: NOTEBOOK_MEDIA_TYPE,
+          name: 'Open invoices',
+          shown: 'to the person, as it arrived',
+        },
+      ],
+    });
+    const [request] = seen.filter(entry => entry.method === 'POST');
+    expect(request.body.params.configuration.acceptedOutputModes).toEqual([
+      'text/markdown',
+      NOTEBOOK_MEDIA_TYPE,
+    ]);
+  });
+
+  it('the model may ask for words alone', async () => {
+    const { fetch, seen } = accounting();
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    const ask = a2aPeerTool({ peer, accept: ACCEPT });
+    await ask.execute!(
+      { request: 'Open invoices?', formats: [] },
+      { toolCallId: 'call-1', messages: [] },
+    );
+    const [request] = seen.filter(entry => entry.method === 'POST');
+    expect(request.body.params.configuration.acceptedOutputModes).toEqual([
+      'text/markdown',
+    ]);
   });
 });
