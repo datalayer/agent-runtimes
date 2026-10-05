@@ -176,6 +176,8 @@ export type LoopPresetOptions = {
   themeVariant?: string;
   /** Laid over that theme, by mode: an application's accent (LOOP T-05). */
   themeOverrides?: ThemeOverrides;
+  /** The mode the conversation is drawn in, when the host decides it; the person's unless said. */
+  colorMode?: 'light' | 'dark';
   /** Who is answering, as the person meets them (LOOP T-08). */
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
@@ -290,6 +292,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     targetFixed,
     themeVariant,
     themeOverrides,
+    colorMode,
     presence,
     showTokenUsage,
     floatingPrompt = false,
@@ -337,6 +340,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       fullScreenTopOffset,
       themeVariant,
       themeOverrides,
+      colorMode,
       presence,
       showTokenUsage,
     }),

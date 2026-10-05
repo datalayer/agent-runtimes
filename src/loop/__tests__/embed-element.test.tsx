@@ -6,9 +6,10 @@
 /**
  * `<datalayer-app>` and `AppEmbed` in the DOM (LOOP D-07, D-08, D-09, D-11,
  * T-13): the application drawn in the element's shadow root, in its mode, in
- * its theme; the floating modes as `ChatFloating`'s, the assistant with the
- * application's character; its agent created with its spec; a decision, or
- * an application named without a token, framed as before.
+ * its theme; the floating modes as `ChatFloating`'s chrome holding the
+ * application as `AppRenderer` draws it (R-01), the assistant with the
+ * application's character; a decision, or an application named without a
+ * token, framed as before.
  *
  * `ChatFloating`, `AppRenderer` and the runtime hook are stood in for: what
  * is tested is what the embed hands them.
@@ -103,6 +104,10 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
+/** What the floating window holds: the renderer's element, and its props. */
+const held = (): Record<string, any> =>
+  seen.floating.at(-1)!.conversation.body.props;
+
 async function render(element: React.ReactElement) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -125,10 +130,11 @@ describe('AppEmbed, the React component', () => {
     expect(props.assistantCharacter.id).toBe('wizard');
     expect(props.title).toBe('Support Desk');
     expect(props.description).toBe('Ask me about your order.');
-    expect(props.suggestions).toEqual([
-      { title: 'Where is it?', message: 'Where is my order?' },
-    ]);
-    expect(props.themeVariant).toBe('loop');
+    // The application itself, drawn by the renderer in the window: its
+    // starters, its theme and its preset are the renderer's.
+    expect(held().app).toBe(app);
+    expect(held().hideChatHeader).toBe(true);
+    expect(held().autoFocusPrompt).toBe(false);
     await act(async () => root.unmount());
   });
 
@@ -178,7 +184,7 @@ describe('AppEmbed, the React component', () => {
       a.interface.accent = 'rose';
     });
     const one = await render(<AppEmbed app={app} mode="bubble" />);
-    const floating = seen.floating.at(-1)!.themeOverrides;
+    const floating = held().themeOverrides;
     expect(floating.light).toEqual(loopAccentStyles('rose', 'light'));
     expect(floating.dark).toEqual(loopAccentStyles('rose', 'dark'));
     await act(async () => one.root.unmount());
@@ -196,6 +202,20 @@ describe('AppEmbed, the React component', () => {
     await act(async () => two.root.unmount());
   });
 
+  it('draws the conversation in the embed’s mode, not a Datalayer setting', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const one = await render(
+      <AppEmbed app={chatApp()} mode="bubble" colorMode="light" />,
+    );
+    expect(held().colorMode).toBe('light');
+    await act(async () => one.root.unmount());
+    const two = await render(
+      <AppEmbed app={chatApp()} mode="inline" colorMode="dark" />,
+    );
+    expect(seen.renderer.at(-1)!.colorMode).toBe('dark');
+    await act(async () => two.root.unmount());
+  });
+
   it('floats a bubble as the popup and a panel at the edge', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const one = await render(<AppEmbed app={chatApp()} mode="bubble" />);
@@ -206,23 +226,34 @@ describe('AppEmbed, the React component', () => {
     await act(async () => two.root.unmount());
   });
 
-  it('runs the agent on Datalayer with the application’s spec, and talks to it over AG-UI', async () => {
+  it('runs the application on Datalayer through the renderer, the workspace told to report what it does and says', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const app = chatApp();
-    const { root } = await render(<AppEmbed app={app} mode="bubble" />);
-    const options = seen.runtimes.at(-1)!;
-    expect(options.variant).toBe('cloud-pydanticai');
-    expect(options.agentConfig.createPayload).toMatchObject({
-      name: 'support-desk',
-      transport: 'ag-ui',
-      app_spec: dumpAppspec(app),
+    const instance = { appUid: 'app-1', deploymentUid: 'dep-1', version: 2 };
+    const { root } = await render(
+      <AppEmbed app={app} mode="bubble" instance={instance} />,
+    );
+    expect(held()).toMatchObject({ app, target: 'datalayer', instance });
+    // Its agent is the renderer's to launch and address (its session
+    // endpoint, R-04): the floating chrome launches nothing of its own.
+    expect(seen.runtimes).toHaveLength(0);
+    // What the workspace reports reaches the chrome: its balloon and blink.
+    const conversation = () => seen.floating.at(-1)!.conversation;
+    expect(conversation()).toMatchObject({
+      presence: 'idle',
+      answering: false,
     });
-    expect(seen.floating.at(-1)!.protocol).toEqual({
-      type: 'ag-ui',
-      endpoint:
-        'https://r1.example/agent-runtimes/pod/api/v1/apps/agents/support-desk/ag-ui/',
-      agentId: 'support-desk',
-      authToken: 'jwt',
+    await act(async () => {
+      held().onPresence('working');
+      held().onSaying({
+        saying: { id: 'm1', text: 'Your order left today.', more: false },
+        answering: true,
+      });
+    });
+    expect(conversation()).toMatchObject({
+      presence: 'working',
+      saying: { id: 'm1', text: 'Your order left today.' },
+      answering: true,
     });
     await act(async () => root.unmount());
   });
@@ -231,38 +262,27 @@ describe('AppEmbed, the React component', () => {
     const { root } = await render(
       <AppEmbed app={chatApp()} mode="assistant" />,
     );
-    const props = seen.floating.at(-1)!;
-    expect(props.disabled).toBe(true);
-    expect(props.disableReason).toMatch(/embed token \(LOOP D-14\)/);
-    expect(seen.runtimes.at(-1)!.autoStart).toBe(false);
+    const body = seen.floating.at(-1)!.conversation.body;
+    const host = document.createElement('div');
+    const shown = createRoot(host);
+    await act(async () => shown.render(body));
+    expect(host.textContent).toMatch(/embed token \(LOOP D-14\)/);
+    expect(seen.renderer).toHaveLength(0);
+    expect(seen.runtimes).toHaveLength(0);
+    await act(async () => shown.unmount());
     await act(async () => root.unmount());
   });
 
-  it('creates the agent on the host’s own agent-runtimes server, when it names one', async () => {
-    const calls: Array<[string, RequestInit | undefined]> = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, init?: RequestInit) => {
-        calls.push([url, init]);
-        return new Response('{}', {
-          status: init?.method === 'POST' ? 201 : 404,
-        });
-      }),
-    );
+  it('runs on the host’s own agent-runtimes server, when it names one', async () => {
     const app = chatApp();
     const { root } = await render(
       <AppEmbed app={app} mode="panel" serverUrl="http://localhost:8765/" />,
     );
-    expect(calls[0][0]).toBe(
-      'http://localhost:8765/api/v1/agents/support-desk',
-    );
-    expect(calls[1][0]).toBe('http://localhost:8765/api/v1/agents');
-    expect(JSON.parse(String(calls[1][1]?.body))).toMatchObject({
-      name: 'support-desk',
-      app_spec: dumpAppspec(app),
-    });
-    expect(seen.floating.at(-1)!.protocol).toMatchObject({
-      endpoint: 'http://localhost:8765/api/v1/apps/agents/support-desk/ag-ui/',
+    expect(seen.floating.at(-1)!.defaultViewMode).toBe('panel');
+    expect(held()).toMatchObject({
+      app,
+      target: 'local',
+      serverUrl: 'http://localhost:8765/',
     });
     await act(async () => root.unmount());
   });
@@ -368,7 +388,7 @@ deployment:
     });
     // The spec's accent inside the conversation, where the chat sets its
     // theme again.
-    expect(seen.floating.at(-1)!.themeOverrides.light).toEqual(
+    expect(held().themeOverrides.light).toEqual(
       loopAccentStyles('sun', 'light'),
     );
     // Nothing of it in the page's own tree, and nothing of its theme on the

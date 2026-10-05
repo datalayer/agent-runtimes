@@ -22,10 +22,12 @@
  *   the host's own plugins (T-24); an id nothing contributes is said, never
  *   replaced.
  *
- * The three floating modes are `ChatFloating`'s, given the application's
- * name, welcome, starters and accent, and its agent's endpoint — created
- * with the application's spec in its payload, so the runtime enforces its
- * rules there as it does inline.
+ * The three floating modes are `ChatFloating`'s chrome around the same
+ * `AppRenderer` (R-01): the application's preset per kind and its layout in
+ * the window, its agent created with its spec in its payload and spoken to
+ * at its session endpoint (R-04), so the runtime enforces its rules there as
+ * it does inline; the chrome told by the workspace what it is doing and
+ * what it last said, for the balloon and the blink.
  *
  * In the `loop` theme with the application's accent (T-12, T-05), which the
  * host may override with the face and the mode (D-11) — around the
@@ -37,26 +39,18 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, JSX, ReactNode } from 'react';
 import type { PluginRef } from '@datalayer/reactor';
-import { registerPortalRoot } from '@primer/react';
-import { DatalayerThemeProvider, loopTheme } from '@datalayer/primer-addons';
+import { Text, registerPortalRoot } from '@primer/react';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
+import { DatalayerThemeProvider, loopTheme } from '@datalayer/primer-addons';
 import type { AppAccent, AppEmbedMode, AppSpec } from '../../types/agentspecs';
-import type { ProtocolConfig } from '../../types/protocol';
 import type { ThemeOverrides } from '../../types/chat';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import { ChatFloating } from '../../chat/ChatFloating';
-import { useAgentRuntimes } from '../../hooks/useAgentRuntimes';
-import {
-  AppRenderer,
-  DATALAYER_BOOTSTRAP_AGENTSPEC,
-  appDatalayerCreatePayload,
-  defineAppPlugin,
-  type AppInstance,
-} from '../apps/AppRenderer';
-import { LoopAgentBlueprint } from '../core';
-import { ensureServerAgent } from '../plugins/agents/switchable';
+import type { PresenceState } from '../../chat/presence/presenceStatus';
+import { AppRenderer, type AppInstance } from '../apps/AppRenderer';
+import type { ChatSaid } from '../plugins/chat';
 import {
   AssistantCharactersPlugin,
   assistantCharacterFor,
@@ -120,117 +114,11 @@ export function embedAssistantCharacter(
   );
 }
 
-/** The application's agent as `ChatFloating` addresses it. */
-type AgentEndpoint = {
-  protocol?: ProtocolConfig;
-  /** Why there is none yet, or why there will be none. */
-  waiting?: string;
-  error?: string;
-};
+/** What a floating application says to a visitor Datalayer does not know. */
+export const signedOutSentence = (app: Pick<AppSpec, 'name'>): string =>
+  `${app.name} runs on Datalayer, which needs you signed in. An application embedded for visitors who are not needs its embed token (LOOP D-14), or an agent-runtimes server of the host's own (the "server" attribute).`;
 
-/** What the application's agent is created with on an agent-runtimes server. */
-function serverCreatePayload(app: AppSpec): Record<string, unknown> {
-  const blueprint = (defineAppPlugin(app).contributes ?? []).find(
-    (item: { point?: unknown }) => item.point === LoopAgentBlueprint,
-  ) as { value: { createPayload?: Record<string, unknown> } } | undefined;
-  return blueprint?.value.createPayload ?? { name: app.id };
-}
-
-/**
- * The application's agent on the host's agent-runtimes server: created
- * there with the application's spec unless it is there already, as the
- * workspace's Local target does.
- */
-function useServerAgent(app: AppSpec, serverUrl: string): AgentEndpoint {
-  const [state, setState] = useState<AgentEndpoint>({
-    waiting: 'Starting…',
-  });
-  const source = JSON.stringify(app);
-  useEffect(() => {
-    let cancelled = false;
-    const base = serverUrl.replace(/\/+$/, '');
-    setState({ waiting: 'Starting…' });
-    ensureServerAgent(base, app.id, serverCreatePayload(app)).then(
-      () => {
-        if (!cancelled) {
-          setState({
-            protocol: {
-              type: 'ag-ui',
-              // Its session API: each thread a session (LOOP R-04).
-              endpoint: `${base}/api/v1/apps/agents/${encodeURIComponent(app.id)}/ag-ui/`,
-              agentId: app.id,
-            },
-          });
-        }
-      },
-      (error: unknown) => {
-        if (!cancelled) {
-          setState({
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverUrl, source]);
-  return state;
-}
-
-/**
- * The application's agent on a Datalayer runtime: allocated with a plain
- * agentspec, the agent created there with the application's spec — the
- * runtime `AppRenderer` launches inline (R-03, R-05).
- */
-function useDatalayerAgent(
-  app: AppSpec,
-  instance?: AppInstance,
-): AgentEndpoint {
-  const token = useIAMStore(state => state.token);
-  const source = JSON.stringify(app);
-  const agentConfig = useMemo(
-    () => ({
-      name: app.id,
-      protocol: 'ag-ui' as const,
-      agentSpecId: DATALAYER_BOOTSTRAP_AGENTSPEC,
-      createPayload: appDatalayerCreatePayload(app, instance),
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, instance?.appUid, instance?.deploymentUid, instance?.version],
-  );
-  const { runtime, error } = useAgentRuntimes({
-    agentSpecId: DATALAYER_BOOTSTRAP_AGENTSPEC,
-    agentConfig,
-    variant: 'cloud-pydanticai',
-    // Only for a visitor Datalayer knows: a runtime is somebody's to pay for.
-    autoStart: Boolean(token),
-    autoCreateAgent: Boolean(token),
-  });
-  if (!token) {
-    return {
-      error: `${app.name} runs on Datalayer, which needs you signed in. An application embedded for visitors who are not needs its embed token (LOOP D-14), or an agent-runtimes server of the host's own (the "server" attribute).`,
-    };
-  }
-  if (error) {
-    return { error };
-  }
-  if (!runtime?.agentBaseUrl) {
-    return { waiting: 'Starting…' };
-  }
-  return {
-    protocol: {
-      type: 'ag-ui',
-      // Its session API: each thread a session (LOOP R-04).
-      endpoint: `${runtime.agentBaseUrl}/api/v1/apps/agents/${encodeURIComponent(app.id)}/ag-ui/`,
-      agentId: app.id,
-      authToken: token,
-    },
-  };
-}
-
-/** The application's face, as the floating chat's button and header draw it. */
+/** The application's face, as the floating window's button and header draw it. */
 function Face({ emoji }: { emoji: string }): JSX.Element {
   // In Fluent Emoji, at a line's size (T-19, T-20).
   return <FluentEmoji emoji={emoji} size={20} label="" />;
@@ -244,67 +132,75 @@ type FloatingProps = {
   themeOverrides: ThemeOverrides;
   /** The assistant's character, in the assistant mode. */
   character?: AssistantCharacter | AssistantCharacterData;
+  /** The host's agent-runtimes server, when it names one. */
+  serverUrl?: string;
+  instance?: AppInstance;
 };
 
-/** The bubble, the panel and the assistant: `ChatFloating` in that mode. */
-function FloatingChat({
+/**
+ * The bubble, the panel and the assistant: `ChatFloating`'s chrome in that
+ * mode — the button, its blink and its balloon, the panel at the edge, the
+ * character dragged about and sent away — holding the application as
+ * `AppRenderer` draws it inline (R-01): its kind's preset, its layout, its
+ * agent created with its spec and spoken to at its session endpoint (R-04).
+ * The workspace tells the chrome what the application is doing and what it
+ * last said (`onPresence`, `onSaying`).
+ */
+function FloatingApp({
   app,
   view,
   colorMode,
   themeOverrides,
   character,
-  agent,
-}: FloatingProps & { agent: AgentEndpoint }): JSX.Element {
+  serverUrl,
+  instance,
+}: FloatingProps): JSX.Element {
+  const [presence, setPresence] = useState<PresenceState>('idle');
+  const [said, setSaid] = useState<ChatSaid>({ answering: false });
   const welcome = app.interface.welcome || app.description;
+  // A runtime is somebody's to pay for: on Datalayer, only for a visitor
+  // Datalayer knows — said, and nothing launched, for one it does not.
+  const token = useIAMStore(state => state.token);
+  const signedOut = !serverUrl && !token;
   return (
     <ChatFloating
-      // A new agent is a new conversation.
-      key={agent.protocol?.endpoint ?? 'waiting'}
       defaultViewMode={view}
       {...(character ? { assistantCharacter: character } : {})}
-      protocol={agent.protocol}
-      authToken={agent.protocol?.authToken}
       title={app.name}
       description={welcome}
       brandIcon={<Face emoji={app.emoji} />}
       buttonIcon={<Face emoji={app.emoji} />}
       buttonTooltip={`Talk to ${app.name}`}
-      suggestions={app.interface.starters.map(starter => ({
-        title: starter.label,
-        message: starter.message,
-      }))}
-      themeVariant="loop"
-      themeOverrides={themeOverrides}
       colorMode={colorMode}
-      showTokenUsage={false}
-      showSettingsButton={false}
-      showPoweredBy={false}
       useStore={false}
-      launching={!agent.protocol && !agent.error}
-      launchingMessage={agent.waiting}
-      disabled={Boolean(agent.error)}
-      disableReason={agent.error}
+      conversation={{
+        body: signedOut ? (
+          <Text as="p" role="status" sx={{ p: 3, m: 0, fontSize: 1 }}>
+            {signedOutSentence(app)}
+          </Text>
+        ) : (
+          <AppRenderer
+            app={app}
+            target={serverUrl ? 'local' : 'datalayer'}
+            {...(serverUrl ? { serverUrl } : {})}
+            instance={instance}
+            // The host's accent and face over the application's own, inside
+            // its conversation too, in the embed's mode.
+            themeOverrides={themeOverrides}
+            colorMode={colorMode}
+            // The window draws its face, its name and close.
+            hideChatHeader
+            // Mounted closed: the caret goes in when the window opens.
+            autoFocusPrompt={false}
+            onPresence={setPresence}
+            onSaying={setSaid}
+          />
+        ),
+        presence,
+        saying: said.saying,
+        answering: said.answering,
+      }}
     />
-  );
-}
-
-/** Floating, its agent on the host's agent-runtimes server. */
-function ServerFloating({
-  serverUrl,
-  ...props
-}: FloatingProps & { serverUrl: string }): JSX.Element {
-  return (
-    <FloatingChat {...props} agent={useServerAgent(props.app, serverUrl)} />
-  );
-}
-
-/** Floating, its agent on a Datalayer runtime. */
-function DatalayerFloating({
-  instance,
-  ...props
-}: FloatingProps & { instance?: AppInstance }): JSX.Element {
-  return (
-    <FloatingChat {...props} agent={useDatalayerAgent(props.app, instance)} />
   );
 }
 
@@ -429,19 +325,11 @@ export function AppEmbed({
       }
     >
       {ownPortal ? <OwnPortalRoot /> : null}
-      {view && serverUrl ? (
-        <ServerFloating
+      {view ? (
+        <FloatingApp
           app={app}
           view={view}
           serverUrl={serverUrl}
-          colorMode={resolvedMode}
-          themeOverrides={themeOverrides}
-          character={character}
-        />
-      ) : view ? (
-        <DatalayerFloating
-          app={app}
-          view={view}
           instance={instance}
           colorMode={resolvedMode}
           themeOverrides={themeOverrides}
@@ -454,8 +342,10 @@ export function AppEmbed({
           {...(serverUrl ? { serverUrl } : {})}
           instance={instance}
           // The host's accent and face over the application's own, inside
-          // its conversation too.
+          // its conversation too, in the embed's mode: the host's or its
+          // visitor's system's, not a Datalayer setting.
           themeOverrides={themeOverrides}
+          colorMode={resolvedMode}
         />
       )}
     </EmbedThemed>

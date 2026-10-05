@@ -252,6 +252,18 @@ export {
   type AppPagePath,
 } from './plugins/app-page';
 export {
+  APP_RULES_PLUGIN_NAME,
+  APP_RULES_WORDS,
+  AppRulesCard,
+  defineAppRulesPlugin,
+} from './plugins/app-rules';
+export {
+  APP_ACTIVITY_PLUGIN_NAME,
+  APP_ACTIVITY_WORDS,
+  AppActivity,
+  defineAppActivityPlugin,
+} from './plugins/app-activity';
+export {
   GraphViewPlugin,
   GRAPH_PLUGIN_NAME,
   GRAPH_VIEW_TYPE,

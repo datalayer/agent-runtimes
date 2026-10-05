@@ -402,3 +402,46 @@ export function toolEscalations(
   }
   return escalations;
 }
+
+// --- in words ----------------------------------------------------------------------
+
+/**
+ * The four behaviours, as a person reads them: what the Studio's rules card
+ * and an application's own rules and approvals card (R-01b) say. The same
+ * words as the Studio's vocabulary.
+ */
+export const BEHAVIOUR_WORDS: Record<
+  AppBehaviour,
+  { says: string; means: string }
+> = {
+  do_it: { says: 'Do it', means: 'It does it without asking.' },
+  if_asked: {
+    says: 'Do it if I asked',
+    means: 'Only what you approved in advance.',
+  },
+  ask_first: { says: 'Ask me first', means: 'It waits for your yes.' },
+  leave_to_me: {
+    says: 'Leave it to me',
+    means: 'It never does it, and hands it to you.',
+  },
+};
+
+/** What a class of action is, as a person reads it. */
+export const ACTION_WORDS: Record<ActionClass, string> = {
+  read: 'Read',
+  write: 'Create or change',
+  send: 'Send',
+  buy: 'Buy',
+  delete: 'Delete',
+  publish: 'Share or publish',
+};
+
+/** What a rule's target is, in words: a class of action, or a tool by its name. */
+export function coverOf(target: string): string {
+  const words = own(ACTION_WORDS as Record<string, string>, target);
+  if (words) {
+    return words;
+  }
+  const [server, name] = splitRef(target);
+  return server ? `${name} (${server})` : name;
+}

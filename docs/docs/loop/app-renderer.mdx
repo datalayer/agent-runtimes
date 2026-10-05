@@ -32,13 +32,15 @@ export function WebResearch() {
 ## Its props
 
 `AppRenderer` takes every prop of `LoopEmbed` but `agentId` (the agent is the
-application's own, created under its id), and six of its own:
+application's own, created under its id), and eight of its own:
 
 | Prop         | What it says                                                                                                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `app`        | The application, as an `AppSpec`.                                                                                                                                                                            |
 | `instance`   | What its record is kept under on Datalayer — `appUid`, `deploymentUid`, `version` — sent with the agent so that a runtime knows which deployment it serves.                                                    |
 | `onPresence` | Told what the application is doing — idle, thinking, working, waiting for you — for a host that draws its face in a frame of its own. Read once, when the workspace is built: pass a stable function, such as a state setter. |
+| `onSaying`   | Told what the application last said (`{ saying, answering }`: its newest words, cut for a balloon, and whether its newest item is the answer) — for a host that says them outside the conversation, as the embed's floating window does in its balloon and its blink. Read once: pass a stable function. |
+| `sidebar`    | Draw its rules and the approvals waiting for the person, and its activity, beside its page: see [Beside its page](#beside-its-page-rules-approvals-activity). The Studio's Preview asks for it. |
 | `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
 | `page`       | The page a host draws for a kind the workspace has no page for — a decision's. A component defined once, outside the host's render (a new one is a new plugin, and restarts the workspace); it is given `{ app, workspace }`. |
 | `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
@@ -47,7 +49,7 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 
 | `LoopEmbed` prop                                   | Set to                                                                                                                       |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `presence`                                         | `{ name, face, welcome, onPresence }`: the application's name, its emoji, its welcome (or its description), and `onPresence`. See [An application's presence](../chat/presence.mdx). |
+| `presence`                                         | `{ name, face, welcome, onPresence, onSaying }`: the application's name, its emoji, its welcome (or its description), `onPresence` and `onSaying`. See [An application's presence](../chat/presence.mdx). |
 | `showTokenUsage`                                   | `false`: no counters under the prompt — a person using an application is not asking about tokens.                           |
 | `themeVariant`                                     | `"loop"`: the conversation wears the `loop` theme.                                                                           |
 | `targetFixed`                                      | `true`: where the application runs is its host's to decide, not offered to its user.                                         |
@@ -72,13 +74,13 @@ application's).
 ## The preset per kind
 
 Which plugins an application's kind needs, and how its workspace is laid
-out, is one function, `appPreset(app, { page })` — the preset per kind, as
+out, is one function, `appPreset(app, { page, pluginsOff, sidebar, appUid })` — the preset per kind, as
 `loopPlugins` is for the examples. `AppRenderer` mounts what it returns, then
 the host's own `plugins`.
 
 | Kind                     | Plugins                                                                                                                                                                                                          | Workspace                                         |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it              | as its layout says (`appLayoutOptions`)          |
+| chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it; with `sidebar`, the `app-rules` and `app-activity` plugins | as its layout says (`appLayoutOptions`)          |
 | decision                 | the host's page as the workspace's one view (`defineAppHostPagePlugin`, a `loop.viewType` contribution)                                                                                                           | `conversation: false`: no chat, no composer, no agent |
 
 What cannot be drawn is said in a sentence where it would have been: a
@@ -124,6 +126,33 @@ off its Canvas's palette. A page that places a
 block no enabled plugin contributes is not drawn; it says, in its place,
 *This page places Chart, which no enabled plugin contributes: it is drawn once
 the plugin that contributes it is on.*
+
+## Beside its page: rules, approvals, activity
+
+Asked for its `sidebar`, `AppRenderer` adds two plugins to the workspace's
+sidebar (`LoopSlots.sidebar`), so that a builder trying the application reads
+beside it what it is allowed to do and what it did:
+
+- **Rules and approvals** (`defineAppRulesPlugin`, `AppRulesCard`): each of
+  its rules in words — the action, what it covers (*Send, send_message
+  (gmail)*) and what it does about it (*Ask me first*) — and what it does
+  with no rule: *reading is done, anything else waits for you.* Under them,
+  *Waiting for you*: the approvals its agent asked for and that wait for the
+  person, each with the rule it was asked under, answered with *Approve* or
+  *Reject*. They come through the existing tool-approvals path — the ai-agents
+  `/ws` stream the Tool Approvals page reads (`useToolApprovalsQuery` with the
+  application's id as the agent, `useApproveToolRequest`,
+  `useRejectToolRequest`) — so an approval answered here is answered there
+  too. Signed out, it says where its approvals reach the person.
+- **Activity** (`defineAppActivityPlugin`, `AppActivity`): its sessions,
+  newest first, read from its record in ai-agents (`/api/ai-agents/v1/apps/sessions`,
+  kept under `instance.appUid`), each in a sentence (*2 tool calls, 1
+  answer.*), opened on what it did step by step. Read again as each turn of
+  the conversation ends. An application not saved on Datalayer has no record:
+  the feed says it is recorded once it is.
+
+The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
+(`loop/apps/rules`), the record's reader `loop/apps/records`.
 
 ## The layouts
 
@@ -202,5 +231,8 @@ the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 Feedback: what is offered, what is sent and what a refusal says
 (`app-feedback.test.ts`), and the runtime's route and recorder
-(`test_apps_routes.py`, `test_apps_record.py`). Not tested: no test renders `AppRenderer` and checks the header, the empty
+(`test_apps_routes.py`, `test_apps_record.py`). Beside its page: the plugins
+mounted in the sidebar when asked, the rules in words, the approvals listed
+for the application's agent and answered over the approvals path, the record
+read and opened (`app-sidebar.test.tsx`). Not tested: no test renders `AppRenderer` and checks the header, the empty
 state or the line in a browser.

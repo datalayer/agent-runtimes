@@ -32,7 +32,11 @@
  *   page its host draws (`page`, R-02) — the Studio's run page, at its
  *   address and embedded;
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
- *   window, its title the application's face and name.
+ *   window, its title the application's face and name;
+ * - its **sidebar**, when the host asks (`sidebar`, R-01b): its rules and
+ *   the approvals waiting for the person (`app-rules`), and what it did
+ *   (`app-activity`), beside its page — what its builder reads in the
+ *   Studio's Preview.
  *
  * Which plugins a kind needs, and how its workspace is laid out, is one
  * function: `appPreset`, the preset per kind, as `loopPlugins` is for the
@@ -61,6 +65,9 @@ import {
 import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
+import { defineAppActivityPlugin } from '../plugins/app-activity';
+import { defineAppRulesPlugin } from '../plugins/app-rules';
+import type { ChatSaid } from '../plugins/chat';
 import { defineAppFeedbackPlugin } from './AppFeedback';
 import { keepsFeedback } from './feedback';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
@@ -138,6 +145,20 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * stable function, such as a state setter.
    */
   onPresence?: (state: PresenceState) => void;
+  /**
+   * Told what the application last said, and whether its newest words are
+   * an answer — for a host that says them outside the conversation: the
+   * embed's floating chrome, its balloon and its blink (R-01). A stable
+   * function, such as a state setter.
+   */
+  onSaying?: (said: ChatSaid) => void;
+  /**
+   * Draw its rules and the approvals waiting for the person, and its
+   * activity, beside its page (R-01b): what its builder reads in the
+   * Studio's Preview. The activity is read from its record, kept under
+   * `instance.appUid`.
+   */
+  sidebar?: boolean;
   /**
    * Draw the application in a window (the `window-frame` plugin), its title
    * the application's face and name. A host's own `frameTitle` wins.
@@ -219,8 +240,9 @@ export type AppPreset = {
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
- *   comment on each answer when its record keeps feedback (V-18); laid out
- *   as `interface.layout` says;
+ *   comment on each answer when its record keeps feedback (V-18); with
+ *   `sidebar`, its rules and approvals card and its activity feed (R-01b);
+ *   laid out as `interface.layout` says;
  * - a **decision**: the page its host draws (`page`), as the one view of a
  *   workspace without a conversation (R-02).
  *
@@ -232,6 +254,10 @@ export function appPreset(
   options: {
     page?: ComponentType<AppHostPageProps>;
     pluginsOff?: readonly string[];
+    /** Its rules and approvals, and its activity, beside its page. */
+    sidebar?: boolean;
+    /** What its record is kept under: its activity's. */
+    appUid?: string;
   } = {},
 ): AppPreset {
   if (app.kind === 'decision') {
@@ -260,6 +286,14 @@ export function appPreset(
       // A thumb and a comment on each answer, kept in its record (LOOP
       // V-18): only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
+      // What its builder reads beside its page (R-01b): its rules and the
+      // approvals waiting, and what it did.
+      ...(options.sidebar
+        ? [
+            defineAppRulesPlugin(app),
+            defineAppActivityPlugin(app, options.appUid),
+          ]
+        : []),
     ],
     workspace: appLayoutOptions(app),
   };
@@ -270,8 +304,8 @@ export function appPreset(
  * the application's id, over AG-UI, with the application's own document —
  * so that the runtime registers it and decides every tool call by its rules
  * (LOOP R-03, R-05), as `loop apps run --cloud` does. One payload for every
- * place it runs: the workspace (`AppRenderer`) and the embed's floating
- * modes (`AppEmbed`).
+ * place it runs, all of them the workspace (`AppRenderer`): the Studio's
+ * Preview, the hosted page, and the embed inline and floating.
  */
 export function appDatalayerCreatePayload(
   app: AppSpec,
@@ -333,6 +367,8 @@ export function AppRenderer({
   plugins = NO_PLUGINS,
   instance,
   onPresence,
+  onSaying,
+  sidebar = false,
   frame = false,
   page,
   pluginsOff,
@@ -349,7 +385,12 @@ export function AppRenderer({
   const preset = useMemo(
     (): AppPreset | { problem: string } => {
       try {
-        return appPreset(app, { page, pluginsOff });
+        return appPreset(app, {
+          page,
+          pluginsOff,
+          sidebar,
+          appUid: instance?.appUid,
+        });
       } catch (error) {
         return {
           problem: error instanceof Error ? error.message : String(error),
@@ -357,7 +398,7 @@ export function AppRenderer({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, page, off],
+    [source, page, off, sidebar, instance?.appUid],
   );
   const allPlugins = useMemo(
     () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
@@ -428,6 +469,7 @@ export function AppRenderer({
         face: app.emoji,
         welcome: app.interface.welcome || app.description,
         onPresence,
+        onSaying,
       }}
       showTokenUsage={false}
       datalayerCreatePayload={datalayerCreatePayload}

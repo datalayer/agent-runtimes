@@ -33,6 +33,7 @@ import {
 } from '../../core';
 import { createTurnFeed, feedWriters } from './turnState';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
+import type { AssistantSaying } from '../../../chat/assistant/state';
 import type { ThemeOverrides } from '../../../types/chat';
 
 /**
@@ -84,7 +85,23 @@ export interface ChatPresence {
    * a state setter.
    */
   onPresence?: (state: PresenceState) => void;
+  /**
+   * Told what it last said, and whether its newest words are an answer, as
+   * they change — for a host that says them outside the conversation, as the
+   * embed's floating chrome does in its balloon and its blink (LOOP R-01).
+   * Read once, when the workspace is built: pass a stable function, such as
+   * a state setter.
+   */
+  onSaying?: (said: ChatSaid) => void;
 }
+
+/** What the chat last said, as `onSaying` tells it. */
+export type ChatSaid = {
+  /** The newest words of the agent, cut for a balloon. */
+  saying?: AssistantSaying;
+  /** Whether the newest item of the conversation is the agent's answer. */
+  answering: boolean;
+};
 
 export type ChatPluginConfig = {
   /**
@@ -98,6 +115,13 @@ export type ChatPluginConfig = {
    * that its bubbles and its one button wear its colour and not the theme's.
    */
   themeOverrides?: ThemeOverrides;
+  /**
+   * The mode the conversation is drawn in, when its host decides it — an
+   * embed in another product's page, whose mode is the host's or its
+   * visitor's system's, not the person's Datalayer setting. The person's
+   * unless said.
+   */
+  colorMode?: 'light' | 'dark';
   /**
    * Who is answering, as the person meets them (LOOP T-08): a name, a face
    * and a welcome, in place of the agent's id and a generic icon. An

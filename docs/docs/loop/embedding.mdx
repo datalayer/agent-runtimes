@@ -26,14 +26,29 @@ different one with the `mode` attribute.
 | Mode        | What the visitor sees                                                                                                                                                                                 |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `inline`    | The application where the element is. If it has a page, the page is drawn beside the conversation (`AppRenderer`). This is the default.                                                                |
-| `bubble`    | A round button in the corner, showing the application's face, that opens the conversation in a popup: the copilot pattern.                                                                           |
-| `panel`     | The conversation at the right edge of the page, at full height.                                                                                                                                       |
+| `bubble`    | A round button in the corner, showing the application's face, that opens the application in a popup: the copilot pattern.                                                                            |
+| `panel`     | The application at the right edge of the page, at full height.                                                                                                                                        |
 | `assistant` | The application's character on the page, speaking in a balloon ([the floating assistant](../chat/floating-assistant)). The character is the one the Appspec names in `interface.assistant`, the paper clip when it names none, looked up among the characters contributed: Datalayer's four, and in React whatever the host's `plugins` contribute. An id nothing contributes is said in place of the application. |
 
-The three floating modes are `ChatFloating`'s (`floating-small`, `panel`,
-`assistant`). Each takes the application's name, welcome, starters and face.
-A floating mode takes no room in the page, because everything it draws is
-fixed to the viewport.
+Every mode draws the application with the same renderer, `AppRenderer`: its
+kind's preset, its layout, its page, its starters and its agent. The three
+floating modes put it in `ChatFloating`'s window (`floating-small`, `panel`,
+`assistant`), which keeps its chrome around the workspace:
+
+- the window's header: the application's face, its name and *Close*;
+- the bubble's button, which blinks and rings while the application has said
+  something not yet read, and shows those words in a balloon when hovered;
+- the panel at the right edge;
+- the assistant's character, which acts what the application is doing
+  (thinking, working, waiting for you), says its newest words in its balloon
+  while the window is closed, and is dragged about and sent away (for the
+  page, the session or for good).
+
+The workspace tells the window what the application is doing and what it last
+said (`AppRenderer`'s `onPresence` and `onSaying`). The conversation is mounted
+once, when the element is drawn, and kept while the window is closed. A
+floating mode takes no room in the page, because everything it draws is fixed
+to the viewport.
 
 ## Where the application comes from
 
@@ -146,10 +161,15 @@ apply.
   agent is created there with the application's spec in its payload, so the
   runtime enforces the application's rules on every tool call. It needs a
   visitor Datalayer knows: the launch uses the signed-in user's credentials.
+  A floating mode says so to a visitor who is not signed in, and launches
+  nothing.
 - **On the host's own agent-runtimes server** (`server="…"`). The agent is
   created there with the application's spec unless it already exists, as the
-  workspace's Local target does. The floating modes talk to it over AG-UI at
-  `<server>/api/v1/ag-ui/<id>/`.
+  workspace's Local target does.
+
+In every mode the conversation talks to the application's agent through its
+[session API](./session-api.mdx), over AG-UI at
+`<runtime>/api/v1/apps/agents/<id>/ag-ui/`: each thread is a session.
 
 ## Private applications
 
@@ -236,8 +256,13 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
   clip, or one a host plugin contributes, or the sentence saying none does),
   the accent and the face inside the conversation, a public `app`
   framed, a decision framed, a lapsed token reported;
-- the agent: created with the application's spec on Datalayer or on the
-  host's server, and addressed over AG-UI.
+- the floating modes: `AppRenderer` in the window, on Datalayer or on the
+  host's server, told to report what it does and says; the sentence for a
+  visitor who is not signed in, with nothing launched;
+- the window around a host's conversation (`chat-floating-conversation.test.tsx`):
+  the conversation under the window's header, opened and closed with the
+  conversation kept, the balloon on the bubble while words are unread, and
+  the assistant acting the reported state and saying the reported words.
 
 Not done yet:
 

@@ -153,6 +153,11 @@ import {
   presenceToolOf,
   type PresenceTool,
 } from '../../../chat/presence/presenceStatus';
+import {
+  latestSaying,
+  newestIsAnswer,
+  type AssistantSaying,
+} from '../../../chat/assistant/state';
 
 type ChatControls = {
   send: (message: string, forwardedProps?: Record<string, unknown>) => void;
@@ -341,6 +346,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   useEffect(() => {
     onPresence?.(presenceNow);
   }, [onPresence, presenceNow]);
+  // What it last said, for a host that says it outside the conversation —
+  // the embed's floating chrome (LOOP R-01): its balloon and its blink.
+  // Through a ref: the handler below is made once.
+  const onSayingRef = useRef(config?.presence?.onSaying);
+  onSayingRef.current = config?.presence?.onSaying;
+  const saidRef = useRef<{ saying?: AssistantSaying; answering: boolean }>({
+    answering: false,
+  });
 
   const handleSendReady = useCallback((controls: ChatControls | null) => {
     controlsRef.current = controls;
@@ -364,6 +377,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           ? previous
           : { open, pendingApproval },
       );
+      const said = {
+        saying: latestSaying(items),
+        answering: newestIsAnswer(items),
+      };
+      const before = saidRef.current;
+      if (
+        before.saying?.id !== said.saying?.id ||
+        before.saying?.text !== said.saying?.text ||
+        before.answering !== said.answering
+      ) {
+        saidRef.current = said;
+        onSayingRef.current?.(said);
+      }
       const feed = turnFeedRef.current;
       if (!feed) {
         return;
@@ -1877,6 +1903,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // The theme it wears, when the host names one (an application's).
             themeVariant={config?.themeVariant}
             themeOverrides={config?.themeOverrides}
+            colorMode={config?.colorMode}
             // The header says why, beside the title, for the same reason the
             // placeholder does: a dead control with no explanation is worse
             // than an absent one.

@@ -15,5 +15,6 @@ export * from './AppRenderer';
 export * from './appspec';
 export * from './checks';
 export * from './feedback';
+export * from './records';
 export * from './rules';
 export * from './yaml';

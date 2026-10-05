@@ -123,6 +123,7 @@ export function LoopEmbed({
       preset.themeVariant,
       // By its content, as the payload below.
       JSON.stringify(preset.themeOverrides ?? null),
+      preset.colorMode,
       preset.presence?.name,
       preset.presence?.face,
       preset.presence?.welcome,

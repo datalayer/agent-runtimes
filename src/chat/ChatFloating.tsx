@@ -13,6 +13,10 @@
  * 1. AG-UI mode: When `endpoint` is provided
  * 2. Store mode: When `useStore` is true
  * 3. Any protocol supported by ChatBase (AG-UI, A2A, ACP, Vercel AI)
+ * 4. A conversation its host draws (`conversation`): the LOOP workspace,
+ *    which the embed's bubble, panel and assistant hold (LOOP R-01) — the
+ *    floating chrome around it, told by the host what it is doing and what
+ *    it last said
  *
  * @module chat/ChatFloating
  */
@@ -57,6 +61,7 @@ import {
 import {
   presenceState,
   presenceToolOf,
+  type PresenceState,
   type PresenceTool,
 } from './presence/presenceStatus';
 import {
@@ -74,6 +79,24 @@ import type {
   ProtocolConfig,
   ThemeOverrides,
 } from '../types';
+
+/**
+ * A conversation the host draws in the floating window, in place of the
+ * chat: the LOOP workspace (LOOP R-01). The window keeps its chrome — the
+ * button, its blink and its balloon, the panel, the assistant, dragging and
+ * dismissing — and is told by the host what the conversation is doing and
+ * what it last said, which it would otherwise read from its own chat.
+ */
+export type FloatingConversation = {
+  /** What the window holds, under its header (the face, the title, close). */
+  body: React.ReactNode;
+  /** What it is doing: idle, thinking, working, waiting for the person. */
+  presence: PresenceState;
+  /** Its newest words, said in the balloon until heard. */
+  saying?: AssistantSaying;
+  /** Whether its newest item is the answer being written. */
+  answering: boolean;
+};
 
 /**
  * ChatFloating props — extends ChatCommonProps with floating/popup-specific configuration.
@@ -197,6 +220,13 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * @default false
    */
   showPanelBackdrop?: boolean;
+
+  /**
+   * A conversation the host draws in the window instead of the chat — the
+   * LOOP workspace, as the embed's floating modes do (LOOP R-01). The chat's
+   * own props (`protocol`, `suggestions`, …) are then not read.
+   */
+  conversation?: FloatingConversation;
 }
 
 /**
@@ -305,6 +335,7 @@ export function ChatFloating({
   launching = false,
   launchingMessage,
   assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
+  conversation,
 }: ChatFloatingProps) {
   // Store-based state
   const storeIsOpen = useChatOpen();
@@ -381,7 +412,7 @@ export function ChatFloating({
     open: false,
     pendingApproval: false,
   });
-  const [answering, setAnswering] = useState(false);
+  const [ownAnswering, setAnswering] = useState(false);
   const [arriving, setArriving] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [assistantAway, setAssistantAway] = useState<AssistantAway>(keptAway);
@@ -390,8 +421,13 @@ export function ChatFloating({
     keepAway('none');
     setAssistantAway('none');
   }, []);
-  /* The agent's newest words, said in the balloon until heard (T-23). */
-  const [saying, setSaying] = useState<AssistantSaying | undefined>();
+  /*
+   * The agent's newest words, said in the balloon until heard (T-23): the
+   * chat's own, or what the host's conversation says it said.
+   */
+  const [ownSaying, setSaying] = useState<AssistantSaying | undefined>();
+  const saying = conversation ? conversation.saying : ownSaying;
+  const answering = conversation ? conversation.answering : ownAnswering;
   const [heardId, setHeardId] = useState<string | undefined>();
   const [freshSaying, setFreshSaying] = useState(false);
   useEffect(() => {
@@ -406,7 +442,7 @@ export function ChatFloating({
     if (isOpen && saying) {
       setHeardId(saying.id);
     }
-  }, [isOpen, saying]);
+  }, [isOpen, saying?.id]);
   const stageRef = useRef<HTMLDivElement>(null);
   const stageDrag = useViewportDrag(stageRef, { whole: true });
   useEffect(() => {
@@ -417,11 +453,14 @@ export function ChatFloating({
     const timer = setTimeout(() => setArriving(false), 1800);
     return () => clearTimeout(timer);
   }, [assistantShown]);
-  const assistantState = assistantStateOf(presenceState(chatBusy, chatTool), {
-    arriving,
-    leaving,
-    speaking: answering,
-  });
+  const assistantState = assistantStateOf(
+    conversation ? conversation.presence : presenceState(chatBusy, chatTool),
+    {
+      arriving,
+      leaving,
+      speaking: answering,
+    },
+  );
   const unheard = !!saying && saying.id !== heardId;
   const assistantBalloon =
     assistantState === 'waiting'
@@ -553,11 +592,17 @@ export function ChatFloating({
     const measure = () => {
       const rect = host.getBoundingClientRect();
       setPanelHostRect(prev => {
-        const next = {
-          top: rect.top,
-          height: rect.height,
-          right: Math.max(0, window.innerWidth - rect.right),
-        };
+        // A host that holds nothing of the page — an embed's own element,
+        // everything in it fixed to the viewport — has no height to align
+        // to: the panel is then the viewport's right edge, at full height.
+        const next =
+          rect.height < 1
+            ? { top: 0, height: window.innerHeight, right: 0 }
+            : {
+                top: rect.top,
+                height: rect.height,
+                right: Math.max(0, window.innerWidth - rect.right),
+              };
         if (
           prev &&
           Math.abs(prev.top - next.top) < 1 &&
@@ -774,6 +819,25 @@ export function ChatFloating({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [escapeToClose, isOpen, handleToggle]);
+
+  /*
+   * A host's conversation takes the caret when the window opens, as the
+   * chat's own does (`autoFocus`): its composer, once the window shows.
+   */
+  const hostsConversation = Boolean(conversation);
+  useEffect(() => {
+    if (!hostsConversation || !isOpen) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      popupRef.current
+        ?.querySelector<HTMLElement>(
+          '[data-chat-composer] textarea, [data-chat-composer] [contenteditable="true"], textarea',
+        )
+        ?.focus();
+    }, animationDuration);
+    return () => clearTimeout(timer);
+  }, [hostsConversation, isOpen, animationDuration, focusTrigger]);
 
   // Click outside to close
   useEffect(() => {
@@ -1061,78 +1125,119 @@ export function ChatFloating({
           <GrabberIcon size={16} />
         </Box>
       )}
-      <ChatBase
-        title={title}
-        showHeader={showHeader}
-        useStore={useStoreMode}
-        protocol={protocol}
-        themeVariant={themeVariant}
-        themeOverrides={themeOverrides}
-        colorMode={colorMode}
-        autoFocus={isOpen}
-        focusTrigger={focusTrigger}
-        launching={launching}
-        launchingMessage={launchingMessage}
-        brandIcon={brandIcon || <AiAgentIcon colored size={20} />}
-        headerButtons={{
-          showNewChat: showNewChatButton,
-          showClear: showClearButton && messages.length > 0,
-          showSettings: showSettingsButton && !!onSettingsClick,
-          onNewChat: handleNewChat,
-          onClear: handleClear,
-          onSettings: onSettingsClick,
-        }}
-        headerActions={<>{closeButton}</>}
-        chatViewMode={chatViewMode}
-        onChatViewModeChange={handleChatViewModeChange}
-        disabledViewModes={disabledViewModes}
-        showPoweredBy={showPoweredBy}
-        // Forwarded, so a host can ask for the Lexical editor — and with it
-        // the `@` menu — without giving up the floating chat to get one.
-        promptVariant={promptVariant}
-        mentionableAgents={mentionableAgents}
-        poweredByProps={{
-          brandName: 'Datalayer',
-          brandUrl: 'https://datalayer.ai',
-          ...poweredByProps,
-        }}
-        renderToolResult={renderToolResult}
-        description={description}
-        onStateUpdate={onStateUpdate}
-        onNewChat={onNewChat}
-        suggestions={suggestions}
-        submitOnSuggestionClick={submitOnSuggestionClick}
-        hideMessagesAfterToolUI={hideMessagesAfterToolUI}
-        avatarConfig={{
-          showAvatars: true,
-        }}
-        placeholder="Type a message..."
-        backgroundColor="canvas.subtle"
-        frontendTools={frontendTools}
-        showModelSelector={showModelSelector}
-        availableModels={availableModels}
-        showToolsMenu={showToolsMenu}
-        showSkillsMenu={showSkillsMenu}
-        showTokenUsage={showTokenUsage}
-        showContextRing={showContextRing}
-        runtimeId={runtimeId}
-        historyEndpoint={historyEndpoint}
-        historyAuthToken={historyAuthToken}
-        pendingPrompt={pendingPrompt}
-        showInformation={showInformation}
-        onInformationClick={onInformationClick}
-        onToolCallStart={onToolCallStart}
-        onToolCallComplete={onToolCallComplete}
-        showToolApprovalBanner={showToolApprovalBanner}
-        pendingApprovals={pendingApprovals}
-        onApproveApproval={onApproveApproval}
-        onRejectApproval={onRejectApproval}
-        {...panelProps}
-        onLoadingChange={handleLoadingChange}
-        onDisplayItemsChange={handleDisplayItemsChange}
-      >
-        {children}
-      </ChatBase>
+      {conversation ? (
+        <>
+          {/* The window's own header: the face, the title, close. */}
+          {showHeader ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                flexShrink: 0,
+                px: 3,
+                py: 2,
+                borderBottom: '1px solid',
+                borderColor: 'border.default',
+              }}
+            >
+              {brandIcon || <AiAgentIcon colored size={20} />}
+              <Text
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontWeight: 'semibold',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {title}
+              </Text>
+              {closeButton}
+            </Box>
+          ) : null}
+          <Box
+            data-floating-conversation
+            sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}
+          >
+            {conversation.body}
+          </Box>
+        </>
+      ) : (
+        <ChatBase
+          title={title}
+          showHeader={showHeader}
+          useStore={useStoreMode}
+          protocol={protocol}
+          themeVariant={themeVariant}
+          themeOverrides={themeOverrides}
+          colorMode={colorMode}
+          autoFocus={isOpen}
+          focusTrigger={focusTrigger}
+          launching={launching}
+          launchingMessage={launchingMessage}
+          brandIcon={brandIcon || <AiAgentIcon colored size={20} />}
+          headerButtons={{
+            showNewChat: showNewChatButton,
+            showClear: showClearButton && messages.length > 0,
+            showSettings: showSettingsButton && !!onSettingsClick,
+            onNewChat: handleNewChat,
+            onClear: handleClear,
+            onSettings: onSettingsClick,
+          }}
+          headerActions={<>{closeButton}</>}
+          chatViewMode={chatViewMode}
+          onChatViewModeChange={handleChatViewModeChange}
+          disabledViewModes={disabledViewModes}
+          showPoweredBy={showPoweredBy}
+          // Forwarded, so a host can ask for the Lexical editor — and with it
+          // the `@` menu — without giving up the floating chat to get one.
+          promptVariant={promptVariant}
+          mentionableAgents={mentionableAgents}
+          poweredByProps={{
+            brandName: 'Datalayer',
+            brandUrl: 'https://datalayer.ai',
+            ...poweredByProps,
+          }}
+          renderToolResult={renderToolResult}
+          description={description}
+          onStateUpdate={onStateUpdate}
+          onNewChat={onNewChat}
+          suggestions={suggestions}
+          submitOnSuggestionClick={submitOnSuggestionClick}
+          hideMessagesAfterToolUI={hideMessagesAfterToolUI}
+          avatarConfig={{
+            showAvatars: true,
+          }}
+          placeholder="Type a message..."
+          backgroundColor="canvas.subtle"
+          frontendTools={frontendTools}
+          showModelSelector={showModelSelector}
+          availableModels={availableModels}
+          showToolsMenu={showToolsMenu}
+          showSkillsMenu={showSkillsMenu}
+          showTokenUsage={showTokenUsage}
+          showContextRing={showContextRing}
+          runtimeId={runtimeId}
+          historyEndpoint={historyEndpoint}
+          historyAuthToken={historyAuthToken}
+          pendingPrompt={pendingPrompt}
+          showInformation={showInformation}
+          onInformationClick={onInformationClick}
+          onToolCallStart={onToolCallStart}
+          onToolCallComplete={onToolCallComplete}
+          showToolApprovalBanner={showToolApprovalBanner}
+          pendingApprovals={pendingApprovals}
+          onApproveApproval={onApproveApproval}
+          onRejectApproval={onRejectApproval}
+          {...panelProps}
+          onLoadingChange={handleLoadingChange}
+          onDisplayItemsChange={handleDisplayItemsChange}
+        >
+          {children}
+        </ChatBase>
+      )}
     </Box>
   );
 

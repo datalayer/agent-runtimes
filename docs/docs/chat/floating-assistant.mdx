@@ -342,6 +342,12 @@ animations live in separate `.aca` files, is refused for now: load the
 The chat's `description` is what the character says on a hover before
 anything else has been said.
 
+A host that draws the conversation itself — the Loop workspace, as an
+embedded application does — passes it as `conversation`:
+`{ body, presence, saying, answering }`. The window holds `body` under its own
+header, and the character acts `presence` and says `saying` as it would its
+own chat's.
+
 From the *Chat Assistant* example (`src/examples/ChatAssistantExample.tsx`),
 with a picker of Datalayer's characters and a file input for a character one
 brings (the example itself lists the contributed characters, as above):
