@@ -3,18 +3,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Generate Python and TypeScript code from YAML loop specifications.
+Generate Python and TypeScript code from YAML strategy specifications.
 
-A *loop* describes how an agent progresses from one decision to the next: the
-control cycle (observe/think/act/evaluate), the objective it works toward, the
-constraints and success criteria that bound it, where state lives between
-iterations, how the human participates, and when the loop terminates.
+A *strategy* is the control loop an agent reasons with: how it progresses from
+one decision to the next (observe/think/act/evaluate), the objective it works
+toward, the constraints and success criteria that bound it, where state lives
+between iterations, how the human participates, and when it terminates.
 
 Usage:
-    python generate_loops.py \\
-      --specs-dir agentspecs/agentspecs/loops \\
-      --python-output agent_runtimes/specs/loops.py \\
-      --typescript-output src/specs/loops.ts
+    python generate_strategies.py \\
+      --specs-dir agentspecs/agentspecs/strategies \\
+      --python-output agent_runtimes/specs/strategies.py \\
+      --typescript-output src/specs/strategies.ts
 """
 
 import argparse
@@ -26,14 +26,14 @@ import yaml
 from versioning import ensure_spec_version, version_suffix
 
 
-def _make_const_name(loop_id: str) -> str:
-    """Convert a loop ID to a constant name (e.g., 'ooda' -> 'OODA_LOOP')."""
-    return f"{loop_id.upper().replace('-', '_')}_LOOP"
+def _make_const_name(strategy_id: str) -> str:
+    """Convert a strategy ID to a constant name (e.g., 'ooda' -> 'OODA_STRATEGY')."""
+    return f"{strategy_id.upper().replace('-', '_')}_STRATEGY"
 
 
-def _make_enum_name(loop_id: str) -> str:
-    """Convert a loop ID to an enum member name (e.g., 'data-analysis' -> 'DATA_ANALYSIS')."""
-    return loop_id.upper().replace("-", "_")
+def _make_enum_name(strategy_id: str) -> str:
+    """Convert a strategy ID to an enum member name (e.g., 'data-analysis' -> 'DATA_ANALYSIS')."""
+    return strategy_id.upper().replace("-", "_")
 
 
 def _clean(text: str) -> str:
@@ -65,8 +65,8 @@ def _ts_list(items: list) -> str:
     return "[" + ", ".join(_ts_str(item) for item in items) + "]"
 
 
-def load_loop_specs(specs_dir: Path) -> list[dict[str, Any]]:
-    """Load all loop YAML specifications from a directory."""
+def load_strategy_specs(specs_dir: Path) -> list[dict[str, Any]]:
+    """Load all strategy YAML specifications from a directory."""
     specs = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
@@ -77,14 +77,14 @@ def load_loop_specs(specs_dir: Path) -> list[dict[str, Any]]:
 
 
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
-    """Generate Python code from loop specifications."""
+    """Generate Python code from strategy specifications."""
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
         "# Distributed under the terms of the Modified BSD License.",
         '"""',
-        "Loop Catalog.",
+        "Strategy Catalog.",
         "",
-        "Predefined agent execution-loop specifications that can be used by agents.",
+        "Predefined agent reasoning strategies (control loops) that agents can use.",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -93,16 +93,16 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "from enum import Enum",
         "from typing import Optional",
         "",
-        "from agent_runtimes.types import LoopHuman, LoopSpec, LoopTermination",
+        "from agent_runtimes.types import StrategyHuman, StrategySpec, StrategyTermination",
         "",
         "",
         "# " + "=" * 76,
-        "# Loops Enum",
+        "# Strategies Enum",
         "# " + "=" * 76,
         "",
         "",
-        "class Loops(str, Enum):",
-        '    """Enumeration of available agent execution loops."""',
+        "class Strategies(str, Enum):",
+        '    """Enumeration of available agent reasoning strategies."""',
         "",
     ]
 
@@ -114,7 +114,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "",
             "# " + "=" * 76,
-            "# Loop Definitions",
+            "# Strategy Definitions",
             "# " + "=" * 76,
             "",
         ]
@@ -124,7 +124,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = _make_const_name(spec["id"]) + version_suffix(version)
 
-        lines.append(f"{const_name} = LoopSpec(")
+        lines.append(f"{const_name} = StrategySpec(")
         lines.append(f'    id="{spec["id"]}",')
         lines.append(f'    version="{version}",')
         lines.append(f'    name="{spec["name"]}",')
@@ -138,7 +138,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         term = spec.get("termination")
         if term:
-            lines.append("    termination=LoopTermination(")
+            lines.append("    termination=StrategyTermination(")
             lines.append(
                 f"        max_iterations={int(term.get('max_iterations', 10))},"
             )
@@ -155,7 +155,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
         human = spec.get("human")
         if human:
-            lines.append("    human=LoopHuman(")
+            lines.append("    human=StrategyHuman(")
             lines.append(f"        mode={_py_str(human.get('mode', 'initiate'))},")
             lines.append(
                 f"        approval_required={bool(human.get('approval_required', False))},"
@@ -179,10 +179,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         [
             "",
             "# " + "=" * 76,
-            "# Loop Catalog",
+            "# Strategy Catalog",
             "# " + "=" * 76,
             "",
-            "LOOP_CATALOGUE: dict[str, LoopSpec] = {",
+            "STRATEGY_CATALOGUE: dict[str, StrategySpec] = {",
         ]
     )
 
@@ -195,46 +195,46 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "}",
             "",
             "",
-            'DEFAULT_LOOP: str = "data-analysis"',
+            'DEFAULT_STRATEGY: str = "data-analysis"',
             "",
             "",
-            "def get_loop(loop_id: str) -> Optional[LoopSpec]:",
+            "def get_strategy(strategy_id: str) -> Optional[StrategySpec]:",
             '    """',
-            "    Get a loop specification by ID (accepts both bare and versioned refs).",
+            "    Get a strategy specification by ID (accepts both bare and versioned refs).",
             "",
             "    Args:",
-            "        loop_id: The unique identifier of the loop.",
+            "        strategy_id: The unique identifier of the strategy.",
             "",
             "    Returns:",
-            "        The LoopSpec, or None if not found.",
+            "        The StrategySpec, or None if not found.",
             '    """',
-            "    loop = LOOP_CATALOGUE.get(loop_id)",
-            "    if loop is not None:",
-            "        return loop",
-            "    base, _, ver = loop_id.rpartition(':')",
+            "    strategy = STRATEGY_CATALOGUE.get(strategy_id)",
+            "    if strategy is not None:",
+            "        return strategy",
+            "    base, _, ver = strategy_id.rpartition(':')",
             "    if base and '.' in ver:",
-            "        return LOOP_CATALOGUE.get(base)",
+            "        return STRATEGY_CATALOGUE.get(base)",
             "    return None",
             "",
             "",
-            "def get_default_loop() -> Optional[LoopSpec]:",
+            "def get_default_strategy() -> Optional[StrategySpec]:",
             '    """',
-            "    Get the default loop.",
+            "    Get the default strategy.",
             "",
             "    Returns:",
-            "        The default LoopSpec, or None if no default is set.",
+            "        The default StrategySpec, or None if no default is set.",
             '    """',
-            "    return LOOP_CATALOGUE.get(DEFAULT_LOOP)",
+            "    return STRATEGY_CATALOGUE.get(DEFAULT_STRATEGY)",
             "",
             "",
-            "def list_loops() -> list[LoopSpec]:",
+            "def list_strategies() -> list[StrategySpec]:",
             '    """',
-            "    List all available loops.",
+            "    List all available strategies.",
             "",
             "    Returns:",
-            "        List of all LoopSpec specifications.",
+            "        List of all StrategySpec specifications.",
             '    """',
-            "    return list(LOOP_CATALOGUE.values())",
+            "    return list(STRATEGY_CATALOGUE.values())",
             "",
         ]
     )
@@ -243,7 +243,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
-    """Generate TypeScript code from loop specifications."""
+    """Generate TypeScript code from strategy specifications."""
     lines = [
         "/*",
         " * Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -251,21 +251,21 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " */",
         "",
         "/**",
-        " * Loop Catalog",
+        " * Strategy Catalog",
         " *",
-        " * Predefined agent execution-loop specifications.",
+        " * Predefined agent reasoning strategies (control loops).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { LoopSpec } from '../types';",
+        "import type { StrategySpec } from '../types';",
         "",
         "// " + "=" * 76,
-        "// Loops Enum",
+        "// Strategies Enum",
         "// " + "=" * 76,
         "",
-        "export const Loops = {",
+        "export const Strategies = {",
     ]
 
     for spec in specs:
@@ -275,10 +275,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         [
             "} as const;",
             "",
-            "export type LoopId = (typeof Loops)[keyof typeof Loops];",
+            "export type StrategyId = (typeof Strategies)[keyof typeof Strategies];",
             "",
             "// " + "=" * 76,
-            "// Loop Definitions",
+            "// Strategy Definitions",
             "// " + "=" * 76,
             "",
         ]
@@ -288,7 +288,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         version = spec["version"]
         const_name = _make_const_name(spec["id"]) + version_suffix(version)
 
-        lines.append(f"export const {const_name}: LoopSpec = {{")
+        lines.append(f"export const {const_name}: StrategySpec = {{")
         lines.append(f"  id: '{spec['id']}',")
         lines.append(f"  version: '{version}',")
         lines.append(f"  name: {_ts_str(spec['name'])},")
@@ -336,10 +336,10 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     lines.extend(
         [
             "// " + "=" * 76,
-            "// Loop Catalog",
+            "// Strategy Catalog",
             "// " + "=" * 76,
             "",
-            "export const LOOP_CATALOGUE: Record<string, LoopSpec> = {",
+            "export const STRATEGY_CATALOGUE: Record<string, StrategySpec> = {",
         ]
     )
 
@@ -351,37 +351,37 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         [
             "};",
             "",
-            "export const DEFAULT_LOOP: LoopId = Loops.DATA_ANALYSIS;",
+            "export const DEFAULT_STRATEGY: StrategyId = Strategies.DATA_ANALYSIS;",
             "",
-            "function resolveLoopId(loopId: string): string {",
-            "  if (loopId in LOOP_CATALOGUE) return loopId;",
-            "  const idx = loopId.lastIndexOf(':');",
+            "function resolveStrategyId(strategyId: string): string {",
+            "  if (strategyId in STRATEGY_CATALOGUE) return strategyId;",
+            "  const idx = strategyId.lastIndexOf(':');",
             "  if (idx > 0) {",
-            "    const base = loopId.slice(0, idx);",
-            "    if (base in LOOP_CATALOGUE) return base;",
+            "    const base = strategyId.slice(0, idx);",
+            "    if (base in STRATEGY_CATALOGUE) return base;",
             "  }",
-            "  return loopId;",
+            "  return strategyId;",
             "}",
             "",
             "/**",
-            " * Get a loop specification by ID.",
+            " * Get a strategy specification by ID.",
             " */",
-            "export function getLoop(loopId: string): LoopSpec | undefined {",
-            "  return LOOP_CATALOGUE[resolveLoopId(loopId)];",
+            "export function getStrategy(strategyId: string): StrategySpec | undefined {",
+            "  return STRATEGY_CATALOGUE[resolveStrategyId(strategyId)];",
             "}",
             "",
             "/**",
-            " * Get the default loop.",
+            " * Get the default strategy.",
             " */",
-            "export function getDefaultLoop(): LoopSpec | undefined {",
-            "  return LOOP_CATALOGUE[DEFAULT_LOOP];",
+            "export function getDefaultStrategy(): StrategySpec | undefined {",
+            "  return STRATEGY_CATALOGUE[DEFAULT_STRATEGY];",
             "}",
             "",
             "/**",
-            " * List all available loops.",
+            " * List all available strategies.",
             " */",
-            "export function listLoops(): LoopSpec[] {",
-            "  return Object.values(LOOP_CATALOGUE);",
+            "export function listStrategies(): StrategySpec[] {",
+            "  return Object.values(STRATEGY_CATALOGUE);",
             "}",
             "",
         ]
@@ -393,13 +393,13 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Generate Python and TypeScript code from YAML loop specifications"
+        description="Generate Python and TypeScript code from YAML strategy specifications"
     )
     parser.add_argument(
         "--specs-dir",
         type=Path,
         required=True,
-        help="Directory containing YAML loop specification files",
+        help="Directory containing YAML strategy specification files",
     )
     parser.add_argument(
         "--python-output",
@@ -420,9 +420,9 @@ def main():
         print(f"Error: Specs directory does not exist: {args.specs_dir}")
         sys.exit(1)
 
-    print(f"Loading loop specs from {args.specs_dir}...")
-    specs = load_loop_specs(args.specs_dir)
-    print(f"Loaded {len(specs)} loop specifications")
+    print(f"Loading strategy specs from {args.specs_dir}...")
+    specs = load_strategy_specs(args.specs_dir)
+    print(f"Loaded {len(specs)} strategy specifications")
 
     print("Generating Python code...")
     python_code = generate_python_code(specs)
@@ -436,7 +436,7 @@ def main():
     args.typescript_output.write_text(typescript_code)
     print(f"✓ Generated {args.typescript_output}")
 
-    print(f"\n✓ Successfully generated code from {len(specs)} loop specs")
+    print(f"\n✓ Successfully generated code from {len(specs)} strategy specs")
 
 
 if __name__ == "__main__":

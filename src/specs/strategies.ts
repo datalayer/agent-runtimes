@@ -4,34 +4,34 @@
  */
 
 /**
- * Loop Catalog
+ * Strategy Catalog
  *
- * Predefined agent execution-loop specifications.
+ * Predefined agent reasoning strategies (control loops).
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { LoopSpec } from '../types';
+import type { StrategySpec } from '../types';
 
 // ============================================================================
-// Loops Enum
+// Strategies Enum
 // ============================================================================
 
-export const Loops = {
+export const Strategies = {
   DATA_ANALYSIS: 'data-analysis',
   HUMAN_IN_THE_LOOP: 'human-in-the-loop',
   OODA: 'ooda',
   PLAN_EXECUTE_CRITIC: 'plan-execute-critic',
 } as const;
 
-export type LoopId = (typeof Loops)[keyof typeof Loops];
+export type StrategyId = (typeof Strategies)[keyof typeof Strategies];
 
 // ============================================================================
-// Loop Definitions
+// Strategy Definitions
 // ============================================================================
 
-export const DATA_ANALYSIS_LOOP_0_0_1: LoopSpec = {
+export const DATA_ANALYSIS_STRATEGY_0_0_1: StrategySpec = {
   id: 'data-analysis',
   version: '0.0.1',
   name: 'Data Analysis Loop',
@@ -68,7 +68,7 @@ export const DATA_ANALYSIS_LOOP_0_0_1: LoopSpec = {
   emoji: '📊',
 };
 
-export const HUMAN_IN_THE_LOOP_LOOP_0_0_1: LoopSpec = {
+export const HUMAN_IN_THE_LOOP_STRATEGY_0_0_1: StrategySpec = {
   id: 'human-in-the-loop',
   version: '0.0.1',
   name: 'Human-in-the-Loop',
@@ -108,7 +108,7 @@ export const HUMAN_IN_THE_LOOP_LOOP_0_0_1: LoopSpec = {
   emoji: '🙋',
 };
 
-export const OODA_LOOP_0_0_1: LoopSpec = {
+export const OODA_STRATEGY_0_0_1: StrategySpec = {
   id: 'ooda',
   version: '0.0.1',
   name: 'OODA Loop',
@@ -141,7 +141,7 @@ export const OODA_LOOP_0_0_1: LoopSpec = {
   emoji: '🔄',
 };
 
-export const PLAN_EXECUTE_CRITIC_LOOP_0_0_1: LoopSpec = {
+export const PLAN_EXECUTE_CRITIC_STRATEGY_0_0_1: StrategySpec = {
   id: 'plan-execute-critic',
   version: '0.0.1',
   name: 'Plan / Execute / Critic Loop',
@@ -181,45 +181,45 @@ export const PLAN_EXECUTE_CRITIC_LOOP_0_0_1: LoopSpec = {
 };
 
 // ============================================================================
-// Loop Catalog
+// Strategy Catalog
 // ============================================================================
 
-export const LOOP_CATALOGUE: Record<string, LoopSpec> = {
-  'data-analysis': DATA_ANALYSIS_LOOP_0_0_1,
-  'human-in-the-loop': HUMAN_IN_THE_LOOP_LOOP_0_0_1,
-  ooda: OODA_LOOP_0_0_1,
-  'plan-execute-critic': PLAN_EXECUTE_CRITIC_LOOP_0_0_1,
+export const STRATEGY_CATALOGUE: Record<string, StrategySpec> = {
+  'data-analysis': DATA_ANALYSIS_STRATEGY_0_0_1,
+  'human-in-the-loop': HUMAN_IN_THE_LOOP_STRATEGY_0_0_1,
+  ooda: OODA_STRATEGY_0_0_1,
+  'plan-execute-critic': PLAN_EXECUTE_CRITIC_STRATEGY_0_0_1,
 };
 
-export const DEFAULT_LOOP: LoopId = Loops.DATA_ANALYSIS;
+export const DEFAULT_STRATEGY: StrategyId = Strategies.DATA_ANALYSIS;
 
-function resolveLoopId(loopId: string): string {
-  if (loopId in LOOP_CATALOGUE) return loopId;
-  const idx = loopId.lastIndexOf(':');
+function resolveStrategyId(strategyId: string): string {
+  if (strategyId in STRATEGY_CATALOGUE) return strategyId;
+  const idx = strategyId.lastIndexOf(':');
   if (idx > 0) {
-    const base = loopId.slice(0, idx);
-    if (base in LOOP_CATALOGUE) return base;
+    const base = strategyId.slice(0, idx);
+    if (base in STRATEGY_CATALOGUE) return base;
   }
-  return loopId;
+  return strategyId;
 }
 
 /**
- * Get a loop specification by ID.
+ * Get a strategy specification by ID.
  */
-export function getLoop(loopId: string): LoopSpec | undefined {
-  return LOOP_CATALOGUE[resolveLoopId(loopId)];
+export function getStrategy(strategyId: string): StrategySpec | undefined {
+  return STRATEGY_CATALOGUE[resolveStrategyId(strategyId)];
 }
 
 /**
- * Get the default loop.
+ * Get the default strategy.
  */
-export function getDefaultLoop(): LoopSpec | undefined {
-  return LOOP_CATALOGUE[DEFAULT_LOOP];
+export function getDefaultStrategy(): StrategySpec | undefined {
+  return STRATEGY_CATALOGUE[DEFAULT_STRATEGY];
 }
 
 /**
- * List all available loops.
+ * List all available strategies.
  */
-export function listLoops(): LoopSpec[] {
-  return Object.values(LOOP_CATALOGUE);
+export function listStrategies(): StrategySpec[] {
+  return Object.values(STRATEGY_CATALOGUE);
 }

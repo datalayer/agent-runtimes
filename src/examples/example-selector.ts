@@ -267,10 +267,10 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
   ),
   makeEntry(
-    'AgentLoopExample',
-    () => import('./AgentLoopExample'),
-    'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',
-    ['example', 'agent', 'loop', 'notebook', 'agentspecs'],
+    'AgentStrategyExample',
+    () => import('./AgentStrategyExample'),
+    'Define and launch an agent reasoning strategy (a control loop: observe/think/act/evaluate) over a live notebook, driven by generic strategy specs.',
+    ['example', 'agent', 'strategy', 'notebook', 'agentspecs'],
   ),
   makeEntry(
     'AgentToolApprovalsExample',

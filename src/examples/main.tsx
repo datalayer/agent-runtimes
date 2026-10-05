@@ -148,7 +148,7 @@ const ANONYMOUS_EXAMPLES = new Set([
 const getExampleGroup = (id: string): string => {
   if (
     id === 'AgentspecsExample' ||
-    id === 'AgentLoopExample' ||
+    id === 'AgentStrategyExample' ||
     id === 'LoopWorkspaceExample' ||
     id === 'LoopShellExample' ||
     id === 'DecksAgent'
@@ -1473,12 +1473,12 @@ const ExampleAppThemed: React.FC<{
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
         if (groupName === 'Loop') {
-          // The shells first, most naked first; then the loop that drives a
+          // The shells first, most naked first; then the strategy that drives a
           // notebook; then the library of specs behind them all.
           const LOOP_ORDER = [
             'LoopShellExample',
             'LoopWorkspaceExample',
-            'AgentLoopExample',
+            'AgentStrategyExample',
             'AgentspecsExample',
           ];
           const loopOrder = (id: string) => {

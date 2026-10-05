@@ -25,7 +25,7 @@ export * from './execution';
 export * from './uiPlugins';
 export * from './guardrails';
 export * from './inference';
-export * from './loops';
+export * from './strategies';
 export * from './mcp';
 export * from './memory';
 export * from './messages';

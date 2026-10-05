@@ -1,9 +1,9 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 """
-Loop Catalog.
+Strategy Catalog.
 
-Predefined agent execution-loop specifications that can be used by agents.
+Predefined agent reasoning strategies (control loops) that agents can use.
 
 This file is AUTO-GENERATED from YAML specifications.
 DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -12,15 +12,15 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 from enum import Enum
 from typing import Optional
 
-from agent_runtimes.types import LoopHuman, LoopSpec, LoopTermination
+from agent_runtimes.types import StrategyHuman, StrategySpec, StrategyTermination
 
 # ============================================================================
-# Loops Enum
+# Strategies Enum
 # ============================================================================
 
 
-class Loops(str, Enum):
-    """Enumeration of available agent execution loops."""
+class Strategies(str, Enum):
+    """Enumeration of available agent reasoning strategies."""
 
     DATA_ANALYSIS = "data-analysis"
     HUMAN_IN_THE_LOOP = "human-in-the-loop"
@@ -29,10 +29,10 @@ class Loops(str, Enum):
 
 
 # ============================================================================
-# Loop Definitions
+# Strategy Definitions
 # ============================================================================
 
-DATA_ANALYSIS_LOOP_0_0_1 = LoopSpec(
+DATA_ANALYSIS_STRATEGY_0_0_1 = StrategySpec(
     id="data-analysis",
     version="0.0.1",
     name="Data Analysis Loop",
@@ -45,7 +45,7 @@ DATA_ANALYSIS_LOOP_0_0_1 = LoopSpec(
         "Prefer reproducible, incremental code cells",
         "Read only the summary of intermediate results, not full datasets",
     ],
-    termination=LoopTermination(
+    termination=StrategyTermination(
         max_iterations=15,
         success_criteria=[
             "The objective is met and a final summary has been produced",
@@ -54,7 +54,7 @@ DATA_ANALYSIS_LOOP_0_0_1 = LoopSpec(
         failure_criteria=["The dataset cannot be loaded after repeated attempts"],
         on_blocked="ask-human",
     ),
-    human=LoopHuman(
+    human=StrategyHuman(
         mode="initiate",
         approval_required=False,
         approval_for=[],
@@ -66,7 +66,7 @@ DATA_ANALYSIS_LOOP_0_0_1 = LoopSpec(
     emoji="📊",
 )
 
-HUMAN_IN_THE_LOOP_LOOP_0_0_1 = LoopSpec(
+HUMAN_IN_THE_LOOP_STRATEGY_0_0_1 = StrategySpec(
     id="human-in-the-loop",
     version="0.0.1",
     name="Human-in-the-Loop",
@@ -78,7 +78,7 @@ HUMAN_IN_THE_LOOP_LOOP_0_0_1 = LoopSpec(
         "Never perform an approval-gated action without explicit human sign-off",
         "Surface a clear summary of the pending action when requesting approval",
     ],
-    termination=LoopTermination(
+    termination=StrategyTermination(
         max_iterations=12,
         success_criteria=["The task is complete and all approvals were obtained"],
         failure_criteria=[
@@ -86,7 +86,7 @@ HUMAN_IN_THE_LOOP_LOOP_0_0_1 = LoopSpec(
         ],
         on_blocked="ask-human",
     ),
-    human=LoopHuman(
+    human=StrategyHuman(
         mode="approve",
         approval_required=True,
         approval_for=["delete-data", "send-email", "spend-money", "deploy-production"],
@@ -98,7 +98,7 @@ HUMAN_IN_THE_LOOP_LOOP_0_0_1 = LoopSpec(
     emoji="🙋",
 )
 
-OODA_LOOP_0_0_1 = LoopSpec(
+OODA_STRATEGY_0_0_1 = StrategySpec(
     id="ooda",
     version="0.0.1",
     name="OODA Loop",
@@ -110,13 +110,13 @@ OODA_LOOP_0_0_1 = LoopSpec(
         "Re-observe fresh state at the start of every iteration",
         "Keep each decision small and reversible when possible",
     ],
-    termination=LoopTermination(
+    termination=StrategyTermination(
         max_iterations=20,
         success_criteria=["The goal condition is satisfied"],
         failure_criteria=["A hard stop condition or budget limit is reached"],
         on_blocked="retry",
     ),
-    human=LoopHuman(
+    human=StrategyHuman(
         mode="none",
         approval_required=False,
         approval_for=[],
@@ -128,7 +128,7 @@ OODA_LOOP_0_0_1 = LoopSpec(
     emoji="🔄",
 )
 
-PLAN_EXECUTE_CRITIC_LOOP_0_0_1 = LoopSpec(
+PLAN_EXECUTE_CRITIC_STRATEGY_0_0_1 = StrategySpec(
     id="plan-execute-critic",
     version="0.0.1",
     name="Plan / Execute / Critic Loop",
@@ -141,7 +141,7 @@ PLAN_EXECUTE_CRITIC_LOOP_0_0_1 = LoopSpec(
         "Each step must build on validated intermediate results",
         "Stop refining once the critic reports no material issues",
     ],
-    termination=LoopTermination(
+    termination=StrategyTermination(
         max_iterations=8,
         success_criteria=[
             "The critic reports no material issues with the latest result",
@@ -152,7 +152,7 @@ PLAN_EXECUTE_CRITIC_LOOP_0_0_1 = LoopSpec(
         ],
         on_blocked="ask-human",
     ),
-    human=LoopHuman(
+    human=StrategyHuman(
         mode="feedback",
         approval_required=False,
         approval_for=[],
@@ -166,54 +166,54 @@ PLAN_EXECUTE_CRITIC_LOOP_0_0_1 = LoopSpec(
 
 
 # ============================================================================
-# Loop Catalog
+# Strategy Catalog
 # ============================================================================
 
-LOOP_CATALOGUE: dict[str, LoopSpec] = {
-    "data-analysis": DATA_ANALYSIS_LOOP_0_0_1,
-    "human-in-the-loop": HUMAN_IN_THE_LOOP_LOOP_0_0_1,
-    "ooda": OODA_LOOP_0_0_1,
-    "plan-execute-critic": PLAN_EXECUTE_CRITIC_LOOP_0_0_1,
+STRATEGY_CATALOGUE: dict[str, StrategySpec] = {
+    "data-analysis": DATA_ANALYSIS_STRATEGY_0_0_1,
+    "human-in-the-loop": HUMAN_IN_THE_LOOP_STRATEGY_0_0_1,
+    "ooda": OODA_STRATEGY_0_0_1,
+    "plan-execute-critic": PLAN_EXECUTE_CRITIC_STRATEGY_0_0_1,
 }
 
 
-DEFAULT_LOOP: str = "data-analysis"
+DEFAULT_STRATEGY: str = "data-analysis"
 
 
-def get_loop(loop_id: str) -> Optional[LoopSpec]:
+def get_strategy(strategy_id: str) -> Optional[StrategySpec]:
     """
-    Get a loop specification by ID (accepts both bare and versioned refs).
+    Get a strategy specification by ID (accepts both bare and versioned refs).
 
     Args:
-        loop_id: The unique identifier of the loop.
+        strategy_id: The unique identifier of the strategy.
 
     Returns:
-        The LoopSpec, or None if not found.
+        The StrategySpec, or None if not found.
     """
-    loop = LOOP_CATALOGUE.get(loop_id)
-    if loop is not None:
-        return loop
-    base, _, ver = loop_id.rpartition(":")
+    strategy = STRATEGY_CATALOGUE.get(strategy_id)
+    if strategy is not None:
+        return strategy
+    base, _, ver = strategy_id.rpartition(":")
     if base and "." in ver:
-        return LOOP_CATALOGUE.get(base)
+        return STRATEGY_CATALOGUE.get(base)
     return None
 
 
-def get_default_loop() -> Optional[LoopSpec]:
+def get_default_strategy() -> Optional[StrategySpec]:
     """
-    Get the default loop.
+    Get the default strategy.
 
     Returns:
-        The default LoopSpec, or None if no default is set.
+        The default StrategySpec, or None if no default is set.
     """
-    return LOOP_CATALOGUE.get(DEFAULT_LOOP)
+    return STRATEGY_CATALOGUE.get(DEFAULT_STRATEGY)
 
 
-def list_loops() -> list[LoopSpec]:
+def list_strategies() -> list[StrategySpec]:
     """
-    List all available loops.
+    List all available strategies.
 
     Returns:
-        List of all LoopSpec specifications.
+        List of all StrategySpec specifications.
     """
-    return list(LOOP_CATALOGUE.values())
+    return list(STRATEGY_CATALOGUE.values())

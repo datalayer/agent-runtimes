@@ -4,27 +4,27 @@
  */
 
 /**
- * AgentLoopExample - Define and launch an agent execution *loop*.
+ * AgentStrategyExample - Define and launch an agent reasoning *strategy*.
  *
- * This example demonstrates the "loop" paradigm (observe → think → act →
+ * This example demonstrates the control-loop paradigm (observe → think → act →
  * evaluate) instead of one-shot prompting. It is fully driven by the generic
- * loop specifications defined in agentspecs (`src/specs/loops.ts`):
+ * strategy specifications defined in agentspecs (`src/specs/strategies.ts`):
  *
- * - Pick any loop spec (Data Analysis, Plan/Execute/Critic, OODA,
- *   Human-in-the-Loop). The list is read from the loop catalogue, so adding a
- *   new YAML loop spec automatically makes it available here.
- * - The agent's system prompt is composed generically from the selected loop's
+ * - Pick any strategy spec (Data Analysis, Plan/Execute/Critic, OODA,
+ *   Human-in-the-Loop). The list is read from the strategy catalogue, so adding a
+ *   new YAML strategy spec automatically makes it available here.
+ * - The agent's system prompt is composed generically from the selected strategy's
  *   objective, phases, constraints, termination policy and human settings — no
- *   loop-specific code.
- * - The agent then runs the loop against a live Jupyter notebook, where the
- *   loop state (dataframes, charts, intermediate results) lives outside the
+ *   strategy-specific code.
+ * - The agent then runs the strategy against a live Jupyter notebook, where the
+ *   strategy state (dataframes, charts, intermediate results) lives outside the
  *   model so each iteration stays small and focused.
  *
  * To run this example:
  * 1. Start the agent-runtimes server.
  * 2. Select this example from the header dropdown (Agent group).
  *
- * @module examples/AgentLoopExample
+ * @module examples/AgentStrategyExample
  */
 
 import { useMemo, useState } from 'react';
@@ -34,53 +34,53 @@ import { Notebook } from '@datalayer/jupyter-react';
 import { useNotebookTools } from '../tools/adapters/agent-runtimes/notebookHooks';
 import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { ChatSidebar } from '../chat';
-import type { LoopSpec } from '../types';
-import { listLoops, getLoop, DEFAULT_LOOP } from '../specs';
+import type { StrategySpec } from '../types';
+import { listStrategies, getStrategy, DEFAULT_STRATEGY } from '../specs';
 import { useExampleJupyterAgent } from './hooks/useExampleJupyterAgent';
 
 import MatplotlibNotebook from './utils/notebooks/Matplotlib.ipynb.json';
 import { ExampleNotebookToolbar } from './utils/notebookToolbarItems';
 
 // Fixed notebook ID
-const NOTEBOOK_ID = 'agent-loop-example';
+const NOTEBOOK_ID = 'agent-strategy-example';
 
-// Use the imported Matplotlib notebook as the working surface for the loop.
+// Use the imported Matplotlib notebook as the working surface for the strategy.
 const NOTEBOOK_CONTENT = MatplotlibNotebook;
 
 // Default configuration
 const DEFAULT_AGENT_ID =
-  import.meta.env.VITE_AGENT_ID || 'loop-agent-runtime-example';
+  import.meta.env.VITE_AGENT_ID || 'strategy-agent-runtime-example';
 
 /**
- * Compose an agent system prompt generically from a loop specification.
+ * Compose an agent system prompt generically from a strategy specification.
  *
- * This is intentionally spec-driven: every field comes from the loop YAML, so
- * the same code drives any loop (data analysis, plan/execute/critic, OODA, ...).
+ * This is intentionally spec-driven: every field comes from the strategy YAML, so
+ * the same code drives any strategy (data analysis, plan/execute/critic, OODA, ...).
  */
-function buildLoopSystemPrompt(loop: LoopSpec): string {
+function buildStrategySystemPrompt(strategy: StrategySpec): string {
   const lines: string[] = [];
   lines.push(
-    `You are an agent that operates as a control LOOP rather than answering in a single prompt.`,
+    `You are an agent that operates as a control loop rather than answering in a single prompt.`,
   );
-  lines.push(`Loop: ${loop.name} (${loop.strategy}).`);
-  if (loop.objective) {
-    lines.push(`Objective: ${loop.objective}`);
+  lines.push(`Strategy: ${strategy.name} (${strategy.strategy}).`);
+  if (strategy.objective) {
+    lines.push(`Objective: ${strategy.objective}`);
   }
-  if (loop.phases?.length) {
+  if (strategy.phases?.length) {
     lines.push(
-      `Each iteration, execute these phases in order: ${loop.phases.join(' → ')}. ` +
+      `Each iteration, execute these phases in order: ${strategy.phases.join(' → ')}. ` +
         `Decide the single best next action each iteration; do not try to solve everything at once.`,
     );
   }
-  if (loop.constraints?.length) {
+  if (strategy.constraints?.length) {
     lines.push(
-      `Constraints you must respect:\n${loop.constraints
+      `Constraints you must respect:\n${strategy.constraints
         .map(c => `- ${c}`)
         .join('\n')}`,
     );
   }
-  if (loop.termination) {
-    const t = loop.termination;
+  if (strategy.termination) {
+    const t = strategy.termination;
     lines.push(
       `Termination: stop after at most ${t.maxIterations} iterations, or when the goal is reached.`,
     );
@@ -93,16 +93,16 @@ function buildLoopSystemPrompt(loop: LoopSpec): string {
       lines.push(`If blocked: ${t.onBlocked}.`);
     }
   }
-  if (loop.human && loop.human.mode !== 'none') {
+  if (strategy.human && strategy.human.mode !== 'none') {
     lines.push(
-      `Human-in-the-loop: mode "${loop.human.mode}"` +
-        (loop.human.approvalRequired
-          ? `; request explicit approval before: ${loop.human.approvalFor.join(', ') || 'sensitive actions'}.`
+      `Human-in-the-loop: mode "${strategy.human.mode}"` +
+        (strategy.human.approvalRequired
+          ? `; request explicit approval before: ${strategy.human.approvalFor.join(', ') || 'sensitive actions'}.`
           : '.'),
     );
   }
   lines.push(
-    `Keep loop state (dataframes, charts, intermediate results) in the notebook/runtime, not in the prompt. ` +
+    `Keep strategy state (dataframes, charts, intermediate results) in the notebook/runtime, not in the prompt. ` +
       `For notebook operations, always use the notebook frontend tools (runCell, readAllCells, readCell, insertCell, updateCell, deleteCells) so actions happen in the live notebook UI. ` +
       `Use executeCodeInNotebook only for temporary inspection code that should not modify notebook cells.`,
   );
@@ -159,9 +159,9 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
 }
 
 /**
- * A compact, read-only summary of the selected loop specification.
+ * A compact, read-only summary of the selected strategy specification.
  */
-function LoopSummary({ loop }: { loop: LoopSpec }) {
+function StrategySummary({ strategy }: { strategy: StrategySpec }) {
   return (
     <Box
       sx={{
@@ -175,7 +175,7 @@ function LoopSummary({ loop }: { loop: LoopSpec }) {
       }}
     >
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 1 }}>
-        {loop.phases.map((phase, index) => (
+        {strategy.phases.map((phase, index) => (
           <Box
             key={phase}
             sx={{
@@ -194,43 +194,44 @@ function LoopSummary({ loop }: { loop: LoopSpec }) {
           </Box>
         ))}
       </Box>
-      {loop.objective && (
+      {strategy.objective && (
         <Box sx={{ color: 'fg.muted' }}>
-          <strong>Objective:</strong> {loop.objective}
+          <strong>Objective:</strong> {strategy.objective}
         </Box>
       )}
-      {loop.termination && (
+      {strategy.termination && (
         <Box sx={{ color: 'fg.muted', mt: 1 }}>
-          <strong>Max iterations:</strong> {loop.termination.maxIterations} ·{' '}
-          <strong>On blocked:</strong> {loop.termination.onBlocked}
+          <strong>Max iterations:</strong> {strategy.termination.maxIterations}{' '}
+          · <strong>On blocked:</strong> {strategy.termination.onBlocked}
         </Box>
       )}
     </Box>
   );
 }
 
-interface AgentLoopExampleInnerProps {
+interface AgentStrategyExampleInnerProps {
   serviceManager?: ServiceManager.IManager;
 }
 
-export function AgentLoopExampleInner({
+export function AgentStrategyExampleInner({
   serviceManager,
-}: AgentLoopExampleInnerProps) {
-  // All available loops come from the generated loop catalogue.
-  const loops = useMemo(() => listLoops(), []);
-  const [selectedLoopId, setSelectedLoopId] = useState<string>(DEFAULT_LOOP);
-  const selectedLoop = useMemo(
-    () => getLoop(selectedLoopId) ?? loops[0],
-    [selectedLoopId, loops],
+}: AgentStrategyExampleInnerProps) {
+  // All available strategies come from the generated strategy catalogue.
+  const strategies = useMemo(() => listStrategies(), []);
+  const [selectedStrategyId, setSelectedStrategyId] =
+    useState<string>(DEFAULT_STRATEGY);
+  const selectedStrategy = useMemo(
+    () => getStrategy(selectedStrategyId) ?? strategies[0],
+    [selectedStrategyId, strategies],
   );
 
   const systemPrompt = useMemo(
-    () => buildLoopSystemPrompt(selectedLoop),
-    [selectedLoop],
+    () => buildStrategySystemPrompt(selectedStrategy),
+    [selectedStrategy],
   );
 
   // The tools. Which of the chat and the harness runs them depends on
-  // where the loop turns, and the hook decides that.
+  // where the strategy turns, and the hook decides that.
   const tools = useNotebookTools(NOTEBOOK_ID);
 
   const {
@@ -241,9 +242,9 @@ export function AgentLoopExampleInner({
     unavailableReason,
     createAttempted,
   } = useExampleJupyterAgent({
-    exampleId: 'AgentLoopExample',
+    exampleId: 'AgentStrategyExample',
     agentName: DEFAULT_AGENT_ID,
-    description: `Loop agent (${selectedLoop.name}) for AgentLoopExample`,
+    description: `Strategy agent (${selectedStrategy.name}) for AgentStrategyExample`,
     systemPrompt,
     serviceManager,
     frontendTools: tools,
@@ -254,20 +255,20 @@ export function AgentLoopExampleInner({
   // The example's own agent, not merely the runtime: on the cloud target the
   // runtime is ready before this agent has been registered on it.
   const effectiveReady = agentReady;
-  const isLoopSelectorDisabled = createAttempted;
+  const isStrategySelectorDisabled = createAttempted;
 
   // Get notebook tools for ChatSidebar
 
   // Build Vercel AI protocol config
 
-  // Chat suggestions derived from the selected loop.
+  // Chat suggestions derived from the selected strategy.
   const suggestions = useMemo(
     () => [
       {
-        title: `${selectedLoop.emoji} Run the loop`,
-        message: selectedLoop.objective
-          ? `Run the ${selectedLoop.name}. ${selectedLoop.objective}`
-          : `Run the ${selectedLoop.name} against the data in this notebook.`,
+        title: `${selectedStrategy.emoji} Run the strategy`,
+        message: selectedStrategy.objective
+          ? `Run the ${selectedStrategy.name}. ${selectedStrategy.objective}`
+          : `Run the ${selectedStrategy.name} against the data in this notebook.`,
       },
       {
         title: '🔁 Next iteration',
@@ -285,7 +286,7 @@ export function AgentLoopExampleInner({
           'Summarize the key findings and produce a final, decision-oriented report.',
       },
     ],
-    [selectedLoop],
+    [selectedStrategy],
   );
 
   return (
@@ -333,34 +334,34 @@ export function AgentLoopExampleInner({
             >
               <Box>
                 <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
-                  {selectedLoop.emoji} Agent Loop Example
+                  {selectedStrategy.emoji} Agent Strategy Example
                 </h1>
                 <p style={{ margin: '8px 0 0', color: 'var(--fgColor-muted)' }}>
-                  Define and launch an agent execution loop — observe, think,
-                  act, evaluate — over a live notebook.
+                  Define and launch an agent reasoning strategy — observe,
+                  think, act, evaluate — over a live notebook.
                 </p>
               </Box>
 
-              {/* Loop selector (generic, driven by the loop catalogue) */}
+              {/* Strategy selector (generic, driven by the strategy catalogue) */}
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
                 title={
-                  isLoopSelectorDisabled
-                    ? 'Loop selector is temporarily disabled while launching the agent'
-                    : 'Choose a loop'
+                  isStrategySelectorDisabled
+                    ? 'Strategy selector is temporarily disabled while launching the agent'
+                    : 'Choose a strategy'
                 }
               >
                 <Box as="label" sx={{ fontSize: 1, fontWeight: 'bold' }}>
-                  Loop
+                  Strategy
                 </Box>
                 <Box
                   as="select"
-                  value={selectedLoopId}
+                  value={selectedStrategyId}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setSelectedLoopId(e.target.value)
+                    setSelectedStrategyId(e.target.value)
                   }
-                  disabled={isLoopSelectorDisabled}
-                  aria-label="Loop specification"
+                  disabled={isStrategySelectorDisabled}
+                  aria-label="Strategy specification"
                   sx={{
                     px: 2,
                     py: '6px',
@@ -372,16 +373,16 @@ export function AgentLoopExampleInner({
                     color: 'fg.default',
                   }}
                 >
-                  {loops.map(loop => (
-                    <option key={loop.id} value={loop.id}>
-                      {loop.emoji} {loop.name}
+                  {strategies.map(strategy => (
+                    <option key={strategy.id} value={strategy.id}>
+                      {strategy.emoji} {strategy.name}
                     </option>
                   ))}
                 </Box>
               </Box>
             </Box>
 
-            <LoopSummary loop={selectedLoop} />
+            <StrategySummary strategy={selectedStrategy} />
           </Box>
 
           {/* Notebook */}
@@ -411,7 +412,7 @@ export function AgentLoopExampleInner({
         {/* Chat sidebar */}
         {effectiveReady && (
           <ChatSidebar
-            title={`${selectedLoop.emoji} ${selectedLoop.name}`}
+            title={`${selectedStrategy.emoji} ${selectedStrategy.name}`}
             protocol={protocolConfig}
             position="right"
             width={400}
@@ -457,16 +458,16 @@ export function AgentLoopExampleInner({
 /**
  * Main example component with Jupyter provider wrapper.
  */
-export function AgentLoopExample({
+export function AgentStrategyExample({
   serviceManager,
 }: {
   serviceManager?: ServiceManager.IManager;
 }) {
   return (
     <ThemedProvider>
-      <AgentLoopExampleInner serviceManager={serviceManager} />
+      <AgentStrategyExampleInner serviceManager={serviceManager} />
     </ThemedProvider>
   );
 }
 
-export default AgentLoopExample;
+export default AgentStrategyExample;

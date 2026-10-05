@@ -4,12 +4,12 @@
  */
 
 /**
- * How the human participates in (or around) an agent execution loop.
+ * How the human participates in (or around) an agent reasoning strategy.
  */
-export interface LoopHuman {
+export interface StrategyHuman {
   /** Human interaction pattern: none, initiate, approve, feedback, or tool */
   mode: string;
-  /** Whether the loop pauses for human approval before sensitive actions */
+  /** Whether the strategy pauses for human approval before sensitive actions */
   approvalRequired: boolean;
   /** Actions that require explicit human approval */
   approvalFor: string[];
@@ -18,49 +18,49 @@ export interface LoopHuman {
 }
 
 /**
- * When and how an agent execution loop stops iterating.
+ * When and how an agent reasoning strategy stops iterating.
  */
-export interface LoopTermination {
-  /** Maximum iterations before the loop is stopped */
+export interface StrategyTermination {
+  /** Maximum iterations before the strategy is stopped */
   maxIterations: number;
   /** Conditions that mark the goal as reached */
   successCriteria: string[];
-  /** Conditions that mark the loop as failed */
+  /** Conditions that mark the strategy as failed */
   failureCriteria: string[];
   /** What to do when blocked: ask-human, retry, or abort */
   onBlocked: string;
 }
 
 /**
- * Specification for an agent execution loop.
+ * Specification for an agent reasoning strategy (a control loop).
  *
  * A framework-agnostic description of how an agent progresses from one
  * decision to the next: the control cycle (observe/think/act/evaluate), the
  * objective, constraints, where state lives, human participation, and the
  * termination policy.
  */
-export interface LoopSpec {
-  /** Unique loop identifier (e.g., 'data-analysis') */
+export interface StrategySpec {
+  /** Unique strategy identifier (e.g., 'data-analysis') */
   id: string;
   /** Version */
   version: string;
-  /** Display name for the loop */
+  /** Display name for the strategy */
   name: string;
-  /** Loop description */
+  /** Strategy description */
   description: string;
-  /** Default goal/objective the loop works toward */
+  /** Default goal/objective the strategy works toward */
   objective: string;
-  /** Loop strategy family */
+  /** Strategy family */
   strategy: string;
   /** Ordered phase names that make up one iteration */
   phases: string[];
   /** Boundaries the agent must respect */
   constraints: string[];
   /** Termination policy */
-  termination?: LoopTermination;
+  termination?: StrategyTermination;
   /** Human-in-the-loop participation settings */
-  human?: LoopHuman;
-  /** Where loop state lives between iterations */
+  human?: StrategyHuman;
+  /** Where strategy state lives between iterations */
   stateBackends: string[];
   /** Categorization tags */
   tags: string[];
