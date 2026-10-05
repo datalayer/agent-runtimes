@@ -25,6 +25,7 @@ import {
   type A2ATeamConnection,
 } from '../a2aTeamFlow';
 import { ReactFlowProvider } from '@xyflow/react';
+import { ThemeProvider } from '@primer/react';
 import {
   A2ATeamGraph,
   CallEdge,
@@ -497,5 +498,129 @@ describe('A2ATeamGraph: a click on a member', () => {
       />,
     );
     expect(balloonOf(container, 'accounting')).not.toBeNull();
+  });
+});
+
+describe('A2ATeamGraph: moving a member', () => {
+  function Team() {
+    return (
+      <A2ATeamGraph
+        entry={member('sales', 'Sales', {
+          ...AT_REST,
+          saying: 'Hi',
+          insist: true,
+        })}
+        peer={member('accounting', 'Accounting', AT_REST)}
+        flow="still"
+        connected
+      />
+    );
+  }
+  const figure = (container: HTMLElement, id: string) =>
+    container.querySelector<HTMLElement>(
+      `[data-team-member="${id}"] [data-assistant-figure]`,
+    )!;
+  const moved = (container: HTMLElement, id: string) =>
+    container
+      .querySelector(`[data-team-member="${id}"]`)
+      ?.getAttribute('data-member-moved') ?? null;
+  const pointer = (target: EventTarget, type: string, x: number, y: number) =>
+    act(() => {
+      target.dispatchEvent(
+        new MouseEvent(type, {
+          bubbles: true,
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    });
+  const drag = (
+    container: HTMLElement,
+    id: string,
+    to: { x: number; y: number },
+  ) => {
+    pointer(figure(container, id), 'pointerdown', 100, 100);
+    pointer(window, 'pointermove', 100 + to.x / 2, 100 + to.y / 2);
+    pointer(window, 'pointermove', 100 + to.x, 100 + to.y);
+    pointer(window, 'pointerup', 100 + to.x, 100 + to.y);
+    act(() => {
+      figure(container, id).dispatchEvent(
+        new MouseEvent('click', {
+          bubbles: true,
+          clientX: 100 + to.x,
+          clientY: 100 + to.y,
+        }),
+      );
+    });
+  };
+
+  it('drags it within the graph’s box, and its balloon stays as it was', () => {
+    const { container } = render(<Team />);
+    // Up into the room above the members; never below the box.
+    drag(container, 'sales', { x: 60, y: -30 });
+    expect(moved(container, 'sales')).toBe('60,-30');
+    drag(container, 'sales', { x: 0, y: 500 });
+    expect(moved(container, 'sales')).toBe('60,0');
+    drag(container, 'sales', { x: 0, y: -30 });
+    expect(moved(container, 'sales')).toBe('60,-30');
+    // The click that ends a drag is not a click on it.
+    expect(
+      container
+        .querySelector('[data-team-member="sales"]')
+        ?.getAttribute('data-member-balloon'),
+    ).toBe('auto');
+    // Never out of the box: Sales stands at the left edge already.
+    drag(container, 'sales', { x: -500, y: 0 });
+    expect(moved(container, 'sales')).toBe('0,-30');
+    drag(container, 'accounting', { x: 5000, y: 0 });
+    expect(moved(container, 'accounting')).toBeNull();
+    // The arrow keys move it too.
+    act(() => {
+      figure(container, 'sales').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+      );
+    });
+    expect(moved(container, 'sales')).toBe('10,-30');
+  });
+
+  it('keeps a click without a move a click: it toggles the balloon', () => {
+    const { container } = render(<Team />);
+    pointer(figure(container, 'accounting'), 'pointerdown', 50, 50);
+    pointer(window, 'pointermove', 52, 51);
+    pointer(window, 'pointerup', 52, 51);
+    act(() => {
+      figure(container, 'accounting').dispatchEvent(
+        new MouseEvent('click', { bubbles: true, clientX: 52, clientY: 51 }),
+      );
+    });
+    expect(
+      container
+        .querySelector('[data-team-member="accounting"]')
+        ?.getAttribute('data-member-balloon'),
+    ).toBe('shown');
+  });
+
+  it('remembers the move on the page, and Reset position puts it back', async () => {
+    const { container } = render(
+      <ThemeProvider>
+        <Team />
+      </ThemeProvider>,
+    );
+    // Moved in the test before, kept for the session.
+    expect(moved(container, 'sales')).toBe('10,-30');
+    await act(async () => {
+      figure(container, 'sales').dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+      );
+    });
+    await act(async () => {
+      document
+        .querySelector<HTMLElement>(
+          '[data-assistant-menu-item="reset-position"]',
+        )!
+        .click();
+    });
+    expect(moved(container, 'sales')).toBeNull();
   });
 });

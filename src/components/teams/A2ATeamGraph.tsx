@@ -219,6 +219,58 @@ const Members = createContext<Record<string, A2ATeamGraphMember>>({});
 /** The connections being called now, by node id: read by their nodes, as the members are. */
 const Busy = createContext<Record<string, string>>({});
 
+/** How far a member was moved from its place, in the graph's coordinates. */
+export type MemberOffset = { dx: number; dy: number };
+
+const AT_PLACE: MemberOffset = { dx: 0, dy: 0 };
+
+/** How far a member may move: its node stays inside the graph's box. */
+export type MemberBounds = {
+  minDx: number;
+  maxDx: number;
+  minDy: number;
+  maxDy: number;
+};
+
+/** An offset kept inside its bounds. */
+export function clampOffset(
+  offset: MemberOffset,
+  bounds: MemberBounds,
+): MemberOffset {
+  return {
+    dx: Math.min(bounds.maxDx, Math.max(bounds.minDx, offset.dx)),
+    dy: Math.min(bounds.maxDy, Math.max(bounds.minDy, offset.dy)),
+  };
+}
+
+/**
+ * Where the members were moved, by page and member: kept for the session,
+ * in memory, so a graph drawn again on the page keeps them where they were.
+ */
+const MOVED = new Map<string, MemberOffset>();
+const movedKey = (id: string) =>
+  `${typeof location === 'undefined' ? '' : location.pathname}#${id}`;
+
+/** How far a press moves before it is a drag, not a click, in pixels. */
+const DRAG_THRESHOLD = 4;
+
+/** How far an arrow key moves a member; with Shift, more. */
+const NUDGE = 10;
+const NUDGE_FAR = 40;
+
+/** The members' moves, read by their nodes. */
+const Moving = createContext<{
+  zoom: number;
+  offsetOf: (id: string) => MemberOffset;
+  move: (id: string, offset: MemberOffset) => void;
+  reset: (id: string) => void;
+}>({
+  zoom: 1,
+  offsetOf: () => AT_PLACE,
+  move: () => undefined,
+  reset: () => undefined,
+});
+
 /** A connection's node id: under its member. */
 const connectionNodeId = (member: string, connection: string) =>
   `${member}/${connection}`;
@@ -228,6 +280,8 @@ const MemberNode = memo(function MemberNode({
 }: NodeProps<Node<MemberData>>): JSX.Element | null {
   const { id, side, size } = data;
   const member = useContext(Members)[id];
+  const moving = useContext(Moving);
+  const offset = moving.offsetOf(id);
   const stageRef = useRef<HTMLDivElement>(null);
   // Its balloon's display, as its menu changes it.
   const [display, setDisplay] = useState<BalloonDisplay | undefined>();
@@ -319,6 +373,11 @@ const MemberNode = memo(function MemberNode({
       }}
       data-team-member={member.id}
       data-member-balloon={shown}
+      data-member-moved={
+        offset.dx || offset.dy
+          ? `${Math.round(offset.dx)},${Math.round(offset.dy)}`
+          : undefined
+      }
       data-member-state={persona.state}
     >
       <Handle
@@ -349,7 +408,57 @@ const MemberNode = memo(function MemberNode({
                 : { position: 'absolute', right: 'auto' }
             }
             stageRef={stageRef}
-            onDragStart={() => undefined}
+            // Dragged within the graph's box: a press that moves more than
+            // a few pixels is a drag; one that does not is a click, and the
+            // stage ignores the click that ends a drag.
+            onDragStart={event => {
+              if (event.button !== 0) {
+                return;
+              }
+              const start = { x: event.clientX, y: event.clientY };
+              const from = offset;
+              let dragging = false;
+              const onMove = (next: PointerEvent) => {
+                const dx = next.clientX - start.x;
+                const dy = next.clientY - start.y;
+                if (!dragging && Math.hypot(dx, dy) <= DRAG_THRESHOLD) {
+                  return;
+                }
+                dragging = true;
+                moving.move(id, {
+                  dx: from.dx + dx / moving.zoom,
+                  dy: from.dy + dy / moving.zoom,
+                });
+              };
+              const onUp = () => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+              };
+              window.addEventListener('pointermove', onMove);
+              window.addEventListener('pointerup', onUp);
+              window.addEventListener('pointercancel', onUp);
+            }}
+            onCharacterKeyDown={event => {
+              const step = event.shiftKey ? NUDGE_FAR : NUDGE;
+              const by: Record<string, MemberOffset> = {
+                ArrowLeft: { dx: -step, dy: 0 },
+                ArrowRight: { dx: step, dy: 0 },
+                ArrowUp: { dx: 0, dy: -step },
+                ArrowDown: { dx: 0, dy: step },
+              };
+              const nudge = by[event.key];
+              if (nudge) {
+                event.preventDefault();
+                moving.move(id, {
+                  dx: offset.dx + nudge.dx,
+                  dy: offset.dy + nudge.dy,
+                });
+              }
+            }}
+            onResetPosition={
+              offset.dx || offset.dy ? () => moving.reset(id) : undefined
+            }
             open={false}
             onToggle={member.onToggle ?? (() => undefined)}
             // A click shows and hides its balloon; the menu's *Ask Sales*
@@ -731,12 +840,51 @@ export function A2ATeamGraph({
       viewport.zoom,
   );
 
+  // Where the members were moved, kept inside the graph's box.
+  const total =
+    room +
+    memberHeight +
+    (hasConnections ? CONNECTION_GAP + connectionHeight : 0);
+  const boundsOf = (id: string): MemberBounds => {
+    const layoutX = id === entry.id ? 0 : NODE_WIDTH + GAP;
+    const below = placed.find(({ member }) => member === id)?.connections.length
+      ? CONNECTION_GAP + connectionHeight
+      : 0;
+    return {
+      minDx: -layoutX,
+      maxDx: WIDTH - NODE_WIDTH - layoutX,
+      minDy: -room,
+      maxDy: total - room - memberHeight - below,
+    };
+  };
+  const [moved, setMoved] = useState<Record<string, MemberOffset>>(() => ({
+    [entry.id]: MOVED.get(movedKey(entry.id)) ?? AT_PLACE,
+    [peer.id]: MOVED.get(movedKey(peer.id)) ?? AT_PLACE,
+  }));
+  const offsetOf = (id: string): MemberOffset =>
+    clampOffset(moved[id] ?? AT_PLACE, boundsOf(id));
+  const entryOffset = offsetOf(entry.id);
+  const peerOffset = offsetOf(peer.id);
+  const movingValue = {
+    zoom: viewport.zoom,
+    offsetOf,
+    move: (id: string, offset: MemberOffset) => {
+      const next = clampOffset(offset, boundsOf(id));
+      MOVED.set(movedKey(id), next);
+      setMoved(current => ({ ...current, [id]: next }));
+    },
+    reset: (id: string) => {
+      MOVED.delete(movedKey(id));
+      setMoved(current => ({ ...current, [id]: AT_PLACE }));
+    },
+  };
+
   const nodes = useMemo<Node<MemberData | ConnectionData>[]>(
     () => [
       {
         id: entry.id,
         type: 'member',
-        position: { x: 0, y: room },
+        position: { x: entryOffset.dx, y: room + entryOffset.dy },
         width: NODE_WIDTH,
         height: memberHeight,
         draggable: false,
@@ -748,7 +896,10 @@ export function A2ATeamGraph({
       {
         id: peer.id,
         type: 'member',
-        position: { x: NODE_WIDTH + GAP, y: room },
+        position: {
+          x: NODE_WIDTH + GAP + peerOffset.dx,
+          y: room + peerOffset.dy,
+        },
         width: NODE_WIDTH,
         height: memberHeight,
         draggable: false,
@@ -758,8 +909,10 @@ export function A2ATeamGraph({
       },
       ...(JSON.parse(placedKey) as typeof placed).flatMap(
         ({ member, connections }, side) => {
+          // A member's connections move with it.
+          const moveBy = side === 0 ? entryOffset : peerOffset;
           const xs = connectionsX(
-            side === 0 ? 0 : NODE_WIDTH + GAP,
+            (side === 0 ? 0 : NODE_WIDTH + GAP) + moveBy.dx,
             connections.length,
           );
           return connections.map((connection, at) => ({
@@ -767,7 +920,7 @@ export function A2ATeamGraph({
             type: 'connection',
             position: {
               x: xs[at],
-              y: room + memberHeight + CONNECTION_GAP,
+              y: room + memberHeight + CONNECTION_GAP + moveBy.dy,
             },
             width: CONNECTION_WIDTH,
             height: connectionHeight,
@@ -788,6 +941,10 @@ export function A2ATeamGraph({
       placedKey,
       connectionSize,
       connectionHeight,
+      entryOffset.dx,
+      entryOffset.dy,
+      peerOffset.dx,
+      peerOffset.dy,
     ],
   );
   // The notebook open under the graph runs on a Pyodide kernel in the page:
@@ -917,6 +1074,11 @@ export function A2ATeamGraph({
           overflow: 'visible',
         },
         '& .react-flow__node': { cursor: 'default' },
+        // A member is moved by dragging its character.
+        '& [data-team-member] [data-assistant-figure]': { cursor: 'grab' },
+        '& [data-team-member] [data-assistant-figure]:active': {
+          cursor: 'grabbing',
+        },
       }}
     >
       {/* What a screen reader hears of the exchange as it happens. */}
@@ -934,35 +1096,37 @@ export function A2ATeamGraph({
       >
         {heard}
       </Box>
-      <Members.Provider value={members}>
-        <Busy.Provider value={busy.byNode}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={NODE_TYPES}
-            edgeTypes={EDGE_TYPES}
-            viewport={viewport}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            nodesFocusable={false}
-            edgesFocusable={false}
-            elementsSelectable={false}
-            deleteKeyCode={null}
-            selectionKeyCode={null}
-            multiSelectionKeyCode={null}
-            panOnDrag={false}
-            panOnScroll={false}
-            zoomOnScroll={false}
-            zoomOnPinch={false}
-            zoomOnDoubleClick={false}
-            preventScrolling={false}
-            style={{ overflow: 'visible', background: 'transparent' }}
-            // The library is MIT: its credit is not required on the page.
-            proOptions={{ hideAttribution: true }}
-            aria-label={`${entry.name} and ${peer.name}, over A2A`}
-          />
-        </Busy.Provider>
-      </Members.Provider>
+      <Moving.Provider value={movingValue}>
+        <Members.Provider value={members}>
+          <Busy.Provider value={busy.byNode}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={NODE_TYPES}
+              edgeTypes={EDGE_TYPES}
+              viewport={viewport}
+              nodesDraggable={false}
+              nodesConnectable={false}
+              nodesFocusable={false}
+              edgesFocusable={false}
+              elementsSelectable={false}
+              deleteKeyCode={null}
+              selectionKeyCode={null}
+              multiSelectionKeyCode={null}
+              panOnDrag={false}
+              panOnScroll={false}
+              zoomOnScroll={false}
+              zoomOnPinch={false}
+              zoomOnDoubleClick={false}
+              preventScrolling={false}
+              style={{ overflow: 'visible', background: 'transparent' }}
+              // The library is MIT: its credit is not required on the page.
+              proOptions={{ hideAttribution: true }}
+              aria-label={`${entry.name} and ${peer.name}, over A2A`}
+            />
+          </Busy.Provider>
+        </Members.Provider>
+      </Moving.Provider>
     </Box>
   );
 }

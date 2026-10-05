@@ -523,6 +523,11 @@ export interface AssistantStageProps {
    */
   onCharacterClick?: () => void;
   /**
+   * A key pressed on the focused character, after its own (the menu's):
+   * a team's member moves with the arrow keys.
+   */
+  onCharacterKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
+  /**
    * The peek while the conversation is closed: one short line — the agent's
    * newest words, as the Office Assistant said them (T-23), or a welcome —
    * that opens the conversation when clicked; `more` says it was cut;
@@ -691,6 +696,7 @@ export function AssistantStage({
   open,
   onToggle,
   onCharacterClick,
+  onCharacterKeyDown,
   balloon,
   insist = false,
   onDismiss,
@@ -1009,7 +1015,9 @@ export function AssistantStage({
             event.preventDefault();
             const box = event.currentTarget.getBoundingClientRect();
             setMenuAt({ x: box.left + box.width / 2, y: box.bottom });
+            return;
           }
+          onCharacterKeyDown?.(event);
         }}
         onPointerUp={() => clearTimeout(longPress.current)}
         onPointerCancel={() => clearTimeout(longPress.current)}
