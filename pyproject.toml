@@ -74,22 +74,22 @@ dependencies = [
     "fastmcp-slim[client]>=4.0.0b3,<5",
     # OTEL: floors, and no ceiling below the next major.
     #
-    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.44.0`
-    # requires `opentelemetry-api == 1.44.0` and
-    # `opentelemetry-semantic-conventions == 0.65b0`, and each exporter
+    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.45.0`
+    # requires `opentelemetry-api == 1.45.0` and
+    # `opentelemetry-semantic-conventions == 0.66b0`, and each exporter
     # requires `opentelemetry-sdk ~= its own version`. So a ceiling here does
     # not narrow a range, it selects one release of the whole stack, and
     # anything else in the environment with an opinion about OTEL then has
     # nowhere to go. `<0.66` on the two 0.x packages was doing exactly that.
-    "opentelemetry-api>=1.44.0,<2.0.0",
-    "opentelemetry-sdk>=1.44.0,<2.0.0",
-    "opentelemetry-semantic-conventions>=0.65b0,<1.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
-    "opentelemetry-instrumentation>=0.65b0,<1.0",
+    "opentelemetry-api>=1.45.0,<2.0.0",
+    "opentelemetry-sdk>=1.45.0,<2.0.0",
+    "opentelemetry-semantic-conventions>=0.66b0,<1.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.0,<2.0.0",
+    "opentelemetry-instrumentation>=0.66b0,<1.0",
     # `instrument_worker_transports` patches httpx through it, so the A2A
     # relay and the ACP client carry the trace out to the worker.
-    "opentelemetry-instrumentation-httpx>=0.65b0,<1.0",
+    "opentelemetry-instrumentation-httpx>=0.66b0,<1.0",
     # The agent-memories PostgreSQL a runtime on Kubernetes keeps its A2A
     # tasks and ACP sessions in (`protocol_state`); the runtime image installs
     # only these dependencies.
@@ -177,9 +177,9 @@ ui = [
 # Nothing in the runtime needs it: the converter took one versioned
 # specification URL from it, which `agent_runtimes/a2ui/executions.py` now
 # carries as a literal it verifies against the SDK wherever the SDK is present.
-# What is left is the examples, which is what this extra is for. The OTEL
-# ceiling is restated here so that installing it resolves in seconds instead of
-# discovering the same cap through sixty google-adk releases.
+# What is left is the examples (and the A2UI routes and backend tool that load
+# them), which is what this extra is for. Against the OTEL floor above it does
+# not resolve at all: install `a2ui-agent-sdk` with `--no-deps` to run them.
 a2ui = [
     "a2ui-agent-sdk>=0.7.0",
 ]
@@ -190,9 +190,12 @@ durable = [
     "dbos",
     "pydantic-ai-slim[dbos]>=2.35.0,<3",
 ]
+# Opt-in and out of `all`: every logfire release up to 5.1.1 caps
+# `opentelemetry-sdk<1.45`, so this extra cannot resolve against the OTEL floor
+# above until one lifts it. Install it with `--no-deps` (it runs on 1.45) or wait.
 logfire = [
-    "logfire>=4.32.1",
-    "logfire-api>=4.33.0",
+    "logfire>=5.1.1",
+    "logfire-api>=5.1.1",
 ]
 docs = [
     "npdoc_to_md>=2.0.1",
@@ -231,7 +234,7 @@ agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
 all = [
-    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
+    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
@@ -254,6 +257,7 @@ test = [
     "datalayer_reactor>=1.0.4",
     # The build hook's own test imports it (test_agent_pages).
     "hatchling",
+    # The word error rate of the voice checks (VOICE.md VO-51).
 ]
 
 [project.scripts]

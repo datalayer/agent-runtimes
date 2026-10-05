@@ -470,12 +470,6 @@ const AGENT_LIBRARIES: {
     description: 'LangChain agent implementations and tools',
     disabled: true,
   },
-  {
-    value: 'google-adk',
-    label: 'Google ADK',
-    description: 'Google’s Agent Development Kit',
-    disabled: true,
-  },
 ];
 
 const TRANSPORTS: { value: Protocol; label: string; description: string }[] = [
