@@ -447,9 +447,12 @@ async def _acts_as(
 ) -> Dict[str, str]:
     """In whose name a session runs: a deployment's principal, else the person (I-03).
 
-    A deployment's principal's token is asked for again with the caller's
-    token when it runs out, as every request of the session may.
+    A deployment's caller is let in by its level first (D-02,
+    `loop.apps.opening`), on every request of the session. Its principal's
+    token is asked for again with the caller's token when it runs out, as
+    every request of the session may.
     """
+    from agent_runtimes.loop.apps.opening import NotLetIn, ensure_may_open
     from agent_runtimes.loop.apps.principal import (
         PrincipalTokenMissing,
         deployment_of,
@@ -461,6 +464,12 @@ async def _acts_as(
     deployment = deployment_of(instance)
     if not deployment:
         return {"kind": "person", "uid": caller.uid}
+    # Who may open it (D-02), before its principal acts for them: the token
+    # held for the deployment is no reason to let anybody else talk to it.
+    try:
+        await ensure_may_open(deployment, caller, bearer)
+    except NotLetIn as refused:
+        raise HTTPException(status_code=refused.status, detail=refused.reason) from None
     try:
         await ensure_principal_token(deployment, bearer or None)
     except PrincipalTokenMissing as missing:

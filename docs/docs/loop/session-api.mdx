@@ -46,6 +46,22 @@ route does: a person's token, an embed token for the application, nobody for a
 public one, or the machine itself. A session answers only the caller who
 opened it (and the machine itself); somebody else's is *not found*.
 
+## Who may open a deployment
+
+A hosted deployment says who may open it — only its owner, the people they
+invite, their organization, anyone with the link, everyone — and ai-agents
+decides. Before a session of a deployment is opened, and on each request of
+one, the runtime asks ai-agents with the caller's own token
+(`GET /api/ai-agents/v1/apps/deployments/{uid}/opens`) and refuses whoever it
+does not let in, in its sentence (`403`, or `404` for a deployment only its
+owner opens): the principal's token the runtime already holds for the
+deployment is no reason to let anybody else talk to it. An answer is kept a
+minute per deployment and caller. A caller with no token holds no session of a
+deployment, whatever its level (`401`, *needs a Datalayer account*):
+conversations without an account are not built yet. A visitor let in acts, as
+the owner does, through the application's principal, whose token ai-agents
+gets them from IAM.
+
 ## The routes
 
 All under `/api/v1/apps`. Every route that runs something answers

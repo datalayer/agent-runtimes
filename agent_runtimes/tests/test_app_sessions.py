@@ -14,7 +14,7 @@ application's code reacting, and asking for a file the page gives.
 import base64
 import json
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterator, List
+from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple
 
 import pytest
 import yaml
@@ -24,7 +24,7 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, UserProm
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from reactor import ContributionRegistry
 
-from agent_runtimes.loop.apps import plugins, principal, sessions
+from agent_runtimes.loop.apps import opening, plugins, principal, sessions
 from agent_runtimes.loop.apps.agent import app_capabilities
 from agent_runtimes.loop.apps.callers import Caller, CallerRefused
 from agent_runtimes.loop.apps.loading import load_app
@@ -190,6 +190,8 @@ def runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Runtime
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
     monkeypatch.setattr(routes, "VERIFIER", Verifier())
+    # Everybody may open every deployment, unless a test says otherwise (D-02).
+    opening.use_opener(_lets_everybody_in)
     made = Runtime()
     yield made
     for agent_id in list(made.models):
@@ -199,6 +201,11 @@ def runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Runtime
     sessions.forget_sessions()
     sessions.use_record_reader(None)
     principal.use_asker(None)
+    opening.use_opener(None)
+
+
+async def _lets_everybody_in(deployment: str, bearer: str) -> Tuple[int, str]:
+    return 200, ""
 
 
 @pytest.fixture()
@@ -343,6 +350,107 @@ def test_a_deployments_session_acts_as_its_principal_and_a_preview_is_not_it(
     assert said["preview"] is False
     assert asked == ["ada"]
     principal.forget_principal_token("dep-1")
+
+
+def test_a_deployments_session_is_held_only_by_whom_its_level_lets_in(
+    runtime: Runtime, remote: TestClient
+) -> None:
+    """D-02: the runtime asks ai-agents, with each caller's token, whether they
+    may open the deployment — the principal's token it holds is no reason to
+    let anybody else in — and refuses in ai-agents' sentence."""
+    asked: List[Tuple[str, str]] = []
+
+    async def opens(deployment: str, bearer: str) -> Tuple[int, str]:
+        asked.append((deployment, bearer))
+        if bearer == "bob":
+            return 200, ""
+        return (
+            403,
+            "Only the people its owner invited may open it, and you are not one of them.",
+        )
+
+    async def token(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {"access_token": "p-token", "expires_in": 3600, "principal_uid": "p-7"}
+
+    opening.use_opener(opens)
+    principal.use_asker(token)
+    principal.forget_principal_token("dep-1")
+    runtime.make(
+        "notes-assistant",
+        ASSISTANT,
+        {"app_uid": "app-1", "deployment_uid": "dep-1", "version": 2},
+    )
+    start = {
+        "agent": "notes-assistant",
+        "deployment_uid": "dep-1",
+        "session": "session-bob1",
+    }
+    started = events_of(
+        remote.post("/api/v1/apps/sessions", headers=as_("bob"), json=start)
+    )
+    assert started[0]["value"]["acts_as"]["uid"] == "p-7"
+    # The principal's token is held now: carol is refused all the same.
+    refused = remote.post(
+        "/api/v1/apps/sessions",
+        headers=as_("carol"),
+        json={**start, "session": "session-carol"},
+    )
+    assert refused.status_code == 403
+    assert refused.json()["detail"].startswith("Only the people its owner invited")
+    run = {
+        "threadId": "thread-carol",
+        "runId": "run-1",
+        "state": None,
+        "messages": [{"id": "m1", "role": "user", "content": "Hi"}],
+        "tools": [],
+        "context": [],
+    }
+    assert (
+        remote.post(
+            "/api/v1/apps/agents/notes-assistant/ag-ui/", headers=as_("carol"), json=run
+        ).status_code
+        == 403
+    )
+    # Asked once per caller and deployment, then remembered.
+    events_of(
+        remote.post(
+            "/api/v1/apps/sessions/session-bob1/messages",
+            headers=as_("bob"),
+            json={"text": "Again"},
+        )
+    )
+    assert asked.count(("dep-1", "bob")) == 1
+    principal.forget_principal_token("dep-1")
+
+
+def test_nobody_signed_out_holds_a_session_of_a_deployment(
+    runtime: Runtime, remote: TestClient
+) -> None:
+    """R-30 is not built: whatever the level, a caller with no token is told
+    a conversation needs an account, and ai-agents is not asked."""
+    asked: List[str] = []
+
+    async def opens(deployment: str, bearer: str) -> Tuple[int, str]:
+        asked.append(bearer)
+        return 200, ""
+
+    opening.use_opener(opens)
+    public = {
+        **ASSISTANT,
+        "deployment": {"hosted": {"visibility": "public", "slug": "notes"}},
+    }
+    runtime.make(
+        "notes-assistant",
+        public,
+        {"app_uid": "app-1", "deployment_uid": "dep-1", "version": 2},
+    )
+    refused = remote.post(
+        "/api/v1/apps/sessions",
+        json={"agent": "notes-assistant", "deployment_uid": "dep-1"},
+    )
+    assert refused.status_code == 401
+    assert "needs a Datalayer account" in refused.json()["detail"]
+    assert asked == []
 
 
 def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
