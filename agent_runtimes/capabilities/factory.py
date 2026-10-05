@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic_ai import UsageLimits
 
@@ -36,6 +36,9 @@ from ..monitoring import (
     MonitoringCapability,
     OTelHooksCapability,
 )
+
+if TYPE_CHECKING:
+    from ..memory.capability import MemoryCapability
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -417,6 +420,7 @@ def build_capabilities_from_agent_spec(
                 filtered_config.pop("memory_agent_id", None)
                 memory_config = filtered_config
 
+        memory_capability: MemoryCapability | None
         if app_memory_key:
             from ..loop.apps.memory import app_memory_capability
 

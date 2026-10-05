@@ -262,6 +262,8 @@ test = [
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
     "datalayer_reactor>=1.0.4",
+    # The build hook's own test imports it (test_agent_pages).
+    "hatchling",
 ]
 
 [project.scripts]
