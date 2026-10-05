@@ -29,8 +29,8 @@ import { useMemo } from 'react';
 import { Box } from '@primer/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor } from '@datalayer/reactor/react';
-import { registerDecks } from '@datalayer/decks';
-import { exampleDecks } from '@datalayer/decks/examples';
+import { registerDeckComponents, registerDecks } from '@datalayer/decks';
+import { exampleDeckComponents, exampleDecks } from '@datalayer/decks/examples';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
 import { DeckViewPlugin, LoopDecksPlugin } from '../loop/plugins/decks';
 import { loopPlugins } from '../loop/presets';
@@ -46,6 +46,8 @@ const FRONT_DOOR = 'jupyter-data-analyst';
 // The package's example decks, so the Decks member has something to open and
 // change before it has made one. Once, at module load.
 registerDecks(exampleDecks);
+// And the components their slides name (AgentsHero, LiveAppearance…).
+registerDeckComponents(exampleDeckComponents);
 
 export type LoopShellExampleProps = {
   /** Server backing the session. Defaults to this page's origin. */
