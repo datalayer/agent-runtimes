@@ -13,8 +13,11 @@ for the deployment is no reason to let anybody else talk to it.
 
 An answer is remembered for a minute, per deployment and caller, so a
 conversation costs one call and a level narrowed reaches a session within a
-minute. A caller not signed in holds no session of a deployment: signed-out
-sessions are R-30's, and not built. The machine itself is not asked about.
+minute. A visitor without an account (R-30, on the visitors' runtime) is
+asked about with no token: ai-agents lets them talk to an application anyone
+with the link or everyone may open when it needs nothing a visitor nobody
+knows may not be given, and says why not otherwise. A caller with no token
+who is not a visitor holds no session. The machine itself is not asked about.
 """
 
 from __future__ import annotations
@@ -34,10 +37,9 @@ __all__ = [
 #: How long an answer is trusted.
 REMEMBERED_SECONDS = 60.0
 
-#: Said to a caller with no account, whatever the level (R-30 is not built).
+#: Said to a caller who sent no token.
 SIGNED_OUT = (
-    "A conversation with it needs a Datalayer account for now: sign in to use it. "
-    "Conversations without an account are not built yet."
+    "Who is calling is not said: sign in, or open it as a visitor from its page."
 )
 
 
@@ -72,7 +74,8 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> Tuple[int, str]:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
                 f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/opens",
-                headers={"Authorization": f"Bearer {bearer}"},
+                # A visitor is asked about as nobody: ai-agents does not take their token.
+                headers={"Authorization": f"Bearer {bearer}"} if bearer else {},
             )
     except httpx.HTTPError as error:
         return 503, f"ai-agents could not be asked who may open it: {error}."
@@ -120,9 +123,15 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
     kind = getattr(caller, "kind", "")
     if kind == "local":
         return
-    if kind == "anonymous" or not bearer:
+    if kind == "visitor":
+        # Every visitor nobody knows is let in, or not, alike (R-30).
+        bearer = ""
+    elif not bearer:
         raise NotLetIn(401, SIGNED_OUT)
-    key = (deployment_uid, str(getattr(caller, "uid", "") or bearer))
+    key = (
+        deployment_uid,
+        "" if kind == "visitor" else str(getattr(caller, "uid", "") or bearer),
+    )
     remembered = _ANSWERS.get(key)
     if remembered and remembered[1] > time.monotonic():
         if remembered[0] is not None:

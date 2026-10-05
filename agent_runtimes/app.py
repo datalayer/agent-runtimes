@@ -28,7 +28,7 @@ from typing import Any, AsyncGenerator
 
 from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -1380,7 +1380,20 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         else:
             logger.info("Agent Node mode disabled (use --node to enable)")
 
+        # The visitors' runtime (LOOP R-30): the examples it keeps warm, their
+        # agents made through its own API once it listens.
+        from .loop.apps.visitors import loopback_url, visitors_runtime, warm
+
+        _visitors_task = (
+            asyncio.create_task(warm(loopback_url()), name="loop-visitors-warm")
+            if visitors_runtime()
+            else None
+        )
+
         yield
+
+        if _visitors_task is not None and not _visitors_task.done():
+            _visitors_task.cancel()
 
         if _node_enabled:
             _agent_node_stop_event.set()
@@ -1479,6 +1492,26 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         allow_headers=["*"],  # Allow all headers
         expose_headers=["*"],  # Expose all headers to the client
     )
+
+    # The visitors' runtime answers anybody but itself only on the
+    # application routes and the chat's reads of its models (LOOP R-30).
+    from .loop.apps.visitors import path_answered, visitors_runtime
+
+    if visitors_runtime():
+        from fastapi.responses import JSONResponse
+
+        from .loop.apps.callers import is_loopback
+
+        @app.middleware("http")
+        async def _visitors_reach(request: Request, call_next: Any) -> Any:
+            if path_answered(request.method, request.url.path) or is_loopback(
+                request.client.host if request.client else None
+            ):
+                return await call_next(request)
+            return JSONResponse(
+                {"detail": "This route of the visitors' runtime is its own."},
+                status_code=404,
+            )
 
     # Include routers
     app.include_router(health_router)

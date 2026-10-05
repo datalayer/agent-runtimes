@@ -1682,8 +1682,13 @@ async def create_agent(
                 ensure_principal_token,
             )
 
+            from agent_runtimes.loop.apps.visitors import visitors_runtime
+
             serving_deployment = deployment_of(request.app_instance)
-            if serving_deployment:
+            # On the visitors' runtime nobody's principal acts: a visitor's
+            # own token calls its models, and it reaches nothing of its
+            # owner's (LOOP R-30).
+            if serving_deployment and not visitors_runtime():
                 creator = http_request.headers.get("Authorization", "")
                 try:
                     await ensure_principal_token(

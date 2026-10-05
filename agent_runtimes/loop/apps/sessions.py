@@ -530,11 +530,14 @@ class LiveSession:
         run_id: str = "",
         wraps_run: bool,
         head: str = "",
+        counts: bool = True,
     ) -> AsyncIterator[str]:
         """Run ``work`` as the session's turn, and stream it.
 
         ``wraps_run``: the turn is framed by ``RUN_STARTED`` and ``RUN_FINISHED``
-        here — the code's turns; an agent's run frames its own.
+        here — the code's turns; an agent's run frames its own. ``counts``: it
+        is one of a visitor's turns (LOOP R-30) — opening with nothing to
+        say is not.
         """
         from ag_ui.core import RunErrorEvent, RunFinishedEvent, RunStartedEvent
 
@@ -549,6 +552,13 @@ class LiveSession:
                 + ("answering" if self.state == "running" else "waiting for an answer")
                 + ": wait, or stop it.",
             )
+        visitor = self.opened_by.kind == "visitor"
+        if visitor and counts:
+            from agent_runtimes.loop.apps.visitors import admit_turn
+
+            refusal = admit_turn(self.opened_by.uid, self.started_at)
+            if refusal:
+                raise SessionRefused(429, refusal)
         queue = self._open_stream(run_id)
         self.state = "running"
         # The caller's token, set by the route: what they allow is read with it.
@@ -557,10 +567,14 @@ class LiveSession:
         async def runner() -> None:
             """The turn, framed, its failure said on the stream."""
             from agent_runtimes.loop.apps.memory import remember_for
+            from agent_runtimes.loop.apps.visitors import use_turn_token
 
             # It remembers for whoever opened the session, each person apart,
             # a visitor not signed in nothing (LOOP R-18, R-36).
             remember_for(self.opened_by, token)
+            # A visitor's turn calls its models with their own token, and
+            # reads only (LOOP R-30); anybody else's with what it always did.
+            use_turn_token(token if visitor else "")
             try:
                 if wraps_run:
                     self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))
@@ -704,7 +718,9 @@ class LiveSession:
             said = f"{opener}\n\n{words}" if words else opener
             await self._run_agent(self._with_turn(said), bearer=bearer)
 
-        return self._start_turn(work, wraps_run=self.host is not None, head=head)
+        return self._start_turn(
+            work, wraps_run=self.host is not None, head=head, counts=bool(opener)
+        )
 
     def _with_turn(self, text: str) -> List[Dict[str, Any]]:
         """The conversation with the person's next message."""

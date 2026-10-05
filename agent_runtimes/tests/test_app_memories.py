@@ -235,7 +235,10 @@ def test_it_remembers_each_person_apart_and_never_a_visitor_as_its_owner(
     # A visitor signed in, under their own identity (LOOP R-36).
     assert _in_a_turn_opened_by(Caller(kind="person", uid="bob")) == ("bob", "")
     # Nobody known: nothing remembered, said — never the owner's.
-    assert _in_a_turn_opened_by(Caller(kind="anonymous")) == ("", NOT_SIGNED_IN)
+    assert _in_a_turn_opened_by(Caller(kind="visitor", uid="tab-0001-visitor")) == (
+        "",
+        NOT_SIGNED_IN,
+    )
     assert _in_a_turn_opened_by(Caller(kind="person", uid="")) == ("", NOT_SIGNED_IN)
     assert _in_a_turn_opened_by(Caller(kind="embed", uid="ada", app_uid="app-1")) == (
         "",
@@ -593,14 +596,17 @@ def test_a_visitor_nobody_knows_has_nothing_remembered_nor_read(
             await tools["remember"].function("Likes tea"),
         )
 
-    assert asyncio.run(turn(Caller(kind="anonymous"))) == (NOT_SIGNED_IN, NOT_SIGNED_IN)
+    assert asyncio.run(turn(Caller(kind="visitor", uid="tab-0001-visitor"))) == (
+        NOT_SIGNED_IN,
+        NOT_SIGNED_IN,
+    )
     assert asyncio.run(turn(Caller(kind="embed", uid="ada", app_uid="app-1"))) == (
         EMBEDDED,
         EMBEDDED,
     )
     # Never its owner's in their place.
     with pytest.raises(app_memories.MemoryNotKept):
-        found_by(Caller(kind="anonymous"))
+        found_by(Caller(kind="visitor", uid="tab-0001-visitor"))
 
 
 @pytest.fixture()

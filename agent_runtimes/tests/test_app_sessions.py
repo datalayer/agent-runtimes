@@ -426,8 +426,9 @@ def test_a_deployments_session_is_held_only_by_whom_its_level_lets_in(
 def test_nobody_signed_out_holds_a_session_of_a_deployment(
     runtime: Runtime, remote: TestClient
 ) -> None:
-    """R-30 is not built: whatever the level, a caller with no token is told
-    a conversation needs an account, and ai-agents is not asked."""
+    """Whatever the level, a caller with no token holds no session on a
+    person's runtime, and ai-agents is not asked: a visitor without an
+    account talks to it on the visitors' runtime (R-30)."""
     asked: List[str] = []
 
     async def opens(deployment: str, bearer: str) -> Tuple[int, str]:
@@ -449,7 +450,7 @@ def test_nobody_signed_out_holds_a_session_of_a_deployment(
         json={"agent": "notes-assistant", "deployment_uid": "dep-1"},
     )
     assert refused.status_code == 401
-    assert "needs a Datalayer account" in refused.json()["detail"]
+    assert refused.json()["detail"] == "Who is calling is not said: send a token."
     assert asked == []
 
 

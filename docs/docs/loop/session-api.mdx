@@ -42,9 +42,10 @@ refused when the agent runs something else: a Preview is never run by a
 deployment's agent, and a deployment's session never by a Preview's.
 
 Every route checks who is calling before anything else, as every application
-route does: a person's token, an embed token for the application, nobody for a
-public one, or the machine itself. A session answers only the caller who
-opened it (and the machine itself); somebody else's is *not found*.
+route does: a person's token, an embed token for the application, or the
+machine itself — and, on the visitors' runtime only, a visitor's token (see
+below). A session answers only the caller who opened it (and the machine
+itself); somebody else's is *not found*.
 
 ## Who may open a deployment
 
@@ -57,10 +58,54 @@ does not let in, in its sentence (`403`, or `404` for a deployment only its
 owner opens): the principal's token the runtime already holds for the
 deployment is no reason to let anybody else talk to it. An answer is kept a
 minute per deployment and caller. A caller with no token holds no session of a
-deployment, whatever its level (`401`, *needs a Datalayer account*):
-conversations without an account are not built yet. A visitor let in acts, as
-the owner does, through the application's principal, whose token ai-agents
-gets them from IAM.
+deployment, whatever its level (`401`). A visitor let in acts, as the owner
+does, through the application's principal, whose token ai-agents gets them
+from IAM. A visitor without an account talks to it on the visitors' runtime,
+below, where ai-agents is asked with no token.
+
+## Visitors without an account
+
+A visitor who is not signed in talks to an application on **the visitors'
+runtime** (LOOP R-30): the runtime image the pools run, kept running for
+everybody without an account, started with `AGENT_RUNTIMES_VISITORS` — the
+examples it keeps warm, each one's agent made through its own API as it
+starts, under the example's id. No sandbox, no user, nobody's token. Every
+other runtime refuses a visitor (`403`, *A visitor's token is answered by the
+visitors' runtime only.*), and this one refuses anybody signed in.
+
+- **The token.** The page asks ai-inference for a visitor's token
+  (`POST /api/ai-inference/v1/anonymous/token` with `{visitor, app}`): the id
+  the tab keeps for its visitor, and the application — an example's id, or
+  `at:<slug>` for an application at its address. The runtime asks ai-inference
+  who it is for (`GET /anonymous/whoami`); the caller is then
+  `{kind: visitor, uid: <visitor>}`. A token reaches the one application it
+  names (`403` otherwise).
+- **A session is its own.** A visitor's session answers that visitor only, on
+  the same runtime and the same agent as everybody else's: another visitor
+  reads, drives, lists, stops nothing of it, and is told it does not exist.
+- **Its models** are called through ai-inference with the visitor's own token,
+  read as each call is made and never another key: ai-inference's anonymous
+  rate (per visitor) and its ceiling for the day apply, and no account pays.
+- **It only reads.** In a visitor's turn a tool whose action class is not
+  *read*, or one its rules would ask about, is not run, whatever the rules
+  say: *Without an account it only reads: `send_mail` would do more than
+  read, so it asked nobody and did nothing.*
+- **Nothing is kept.** Nothing is remembered of a visitor, no record is sent,
+  feedback is refused, and a session the runtime no longer holds is not
+  resumed.
+- **Limits.** `AGENT_RUNTIMES_VISITOR_TURNS` turns a day per visitor (10),
+  `AGENT_RUNTIMES_VISITOR_SESSION_MINUTES` minutes per session from its start
+  (15), each refused with a sentence (`429`).
+- **An application at its address** (`at:<slug>`) is made here as it is first
+  talked to, from what ai-agents shows somebody not signed in
+  (`/apps/deployments/at/{slug}`), and made again when its owner moves it to
+  another version. ai-agents lets a visitor talk to one that anyone with the
+  link or everyone may open, when it is a chat or a widget naming no
+  connection and no documents — which its principal reaches with its owner's
+  grant; otherwise its sentence says why.
+- **Reach.** Only `/api/v1/apps/…`, the chat's `GET /api/v1/configure` and
+  `/configure/models`, and `/health` answer anybody but the pod: every other
+  route of a runtime is its own (`404`).
 
 ## The routes
 
@@ -216,6 +261,13 @@ stop and resume; resume from the record after the sessions are forgotten;
 given, and refusing a PDF. The page side is tested with vitest
 (`app-page`, `app-page-blocks`, `embed-element`).
 
+Visitors (`agent_runtimes/tests/test_app_visitors.py`): one visitor never
+reaches another's session on the same runtime; a token reaches its own
+application only; a person refused on the visitors' runtime and a visitor
+everywhere else; the turns of a day and a session's minutes; only reading;
+the visitor's token for the models; nothing remembered or recorded; an
+application at its address made once and again on a new version.
+
 **Not verified.** No session has run on a cloud runtime yet: it needs the
-runtime image rebuilt on this release. Anonymous visitors of a public
-application are told apart only by being anonymous (R-30).
+runtime image rebuilt on this release. The visitors' runtime has warmed its
+examples locally, and not run on a cluster.

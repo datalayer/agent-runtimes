@@ -247,6 +247,11 @@ class AppRecorder:
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
+        # Nothing is kept of a conversation without an account (LOOP R-30).
+        from agent_runtimes.loop.apps.visitors import visitors_runtime
+
+        if visitors_runtime():
+            return False
         # What a channel was sent, or why it was not, is always kept: a
         # notification that reached nobody is never silent (LOOP R-37).
         if kind in ALWAYS_KEPT:

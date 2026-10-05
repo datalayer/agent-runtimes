@@ -478,12 +478,22 @@ def resolve_model_for_inference_provider(
     # with another key. A deployment's agent calls with its application's
     # principal's token, and only with it (LOOP I-03).
     from agent_runtimes.loop.apps.principal import api_key_for, deployment_of
+    from agent_runtimes.loop.apps.visitors import turn_api_key, visitors_runtime
 
     deployment = deployment_of(app_instance)
+    # On the visitors' runtime, every call is a visitor's, with their token
+    # and nothing else (LOOP R-30).
+    api_key = (
+        turn_api_key
+        if visitors_runtime()
+        else api_key_for(deployment)
+        if deployment
+        else inference_api_key
+    )
     provider = OpenAIProvider(
         openai_client=AsyncOpenAI(
             base_url=base_url,
-            api_key=api_key_for(deployment) if deployment else inference_api_key,
+            api_key=api_key,
             http_client=_create_inference_http_client(
                 http_timeout,
                 source="datalayer-ai-inference",

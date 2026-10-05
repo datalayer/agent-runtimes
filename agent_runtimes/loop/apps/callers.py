@@ -15,6 +15,12 @@ embed token is what Spacer accepts for the application it names. A verified
 token is remembered until it expires, for five minutes at most, so that a
 conversation costs one call and a revoked token stops within minutes.
 
+A visitor without an account holds a token ai-inference minted for them,
+naming the visitor and the one application it is for: it is what
+ai-inference's ``/anonymous/whoami`` accepts, and only the visitors' runtime
+answers it (LOOP R-30, `agent_runtimes.loop.apps.visitors`), which in turn
+answers nobody signed in.
+
 A call from the machine itself — a developer's ``localhost``, the companion
 beside the runtime — needs no token. Every other call that cannot be verified
 is refused: a runtime that does not know where IAM is refuses, rather than
@@ -48,15 +54,18 @@ TIMEOUT_SECONDS = 5.0
 
 @dataclass(frozen=True)
 class Caller:
-    """Who called: a person, an embed of one application, or the machine itself."""
+    """Who called: a person, an embed of one application, a visitor, or the machine itself.
 
-    kind: str  # "person" | "embed" | "local" | "anonymous"
+    A visitor's ``app_uid`` is what their token is for: an example's id, or
+    ``at:<slug>`` for an application at its address (R-30).
+    """
+
+    kind: str  # "person" | "embed" | "visitor" | "local"
     uid: str = ""
     app_uid: str = ""
 
 
 LOCAL = Caller(kind="local")
-ANONYMOUS = Caller(kind="anonymous")
 
 
 class CallerRefused(Exception):
@@ -137,9 +146,21 @@ class CallerVerifier:
 
     async def verify(self, token: str, app_uid: str = "") -> Caller:
         """The caller a token is, or `CallerRefused`."""
+        from agent_runtimes.loop.apps.visitors import (
+            NOT_HERE,
+            ONLY_VISITORS,
+            is_anonymous_audience,
+            visitors_runtime,
+        )
+
         claims = _unverified_claims(token)
         if not claims:
             raise CallerRefused(401, "The token is not one this platform issues.")
+        visitor = is_anonymous_audience(claims)
+        if visitor != visitors_runtime():
+            raise CallerRefused(403, NOT_HERE if visitor else ONLY_VISITORS)
+        if visitor:
+            return await self._visitor(token)
         embed = is_embed_token(claims)
         if embed and not app_uid:
             raise CallerRefused(
@@ -188,6 +209,53 @@ class CallerVerifier:
         lifetime = CACHE_SECONDS
         if isinstance(expires, (int, float)):
             lifetime = min(lifetime, max(0.0, expires - self._now()))
+        self._remember(key, caller, self._clock() + lifetime)
+        return caller
+
+    async def _visitor(self, token: str) -> Caller:
+        """A visitor's token, asked of ai-inference, which minted it (R-30).
+
+        Remembered as long as ai-inference says it lives, at most
+        :data:`CACHE_SECONDS`: a token is worth a few minutes.
+        """
+        key = (hashlib.sha256(token.encode()).hexdigest(), "visitor")
+        remembered = self._verified.get(key)
+        if remembered and remembered[1] > self._clock():
+            return remembered[0]
+        inference = _platform_url("DATALAYER_AI_INFERENCE_URL")
+        if not inference:
+            raise CallerRefused(
+                503,
+                "This runtime does not know where ai-inference is, so it cannot verify a visitor.",
+            )
+        from agent_runtimes.models.models import _normalize_ai_inference_base_url
+
+        url = f"{_normalize_ai_inference_base_url(inference)}/anonymous/whoami"
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+                response = await client.get(
+                    url, headers={"Authorization": f"Bearer {token}"}
+                )
+        except httpx.HTTPError as error:
+            raise CallerRefused(
+                503,
+                f"ai-inference could not be reached to verify the visitor ({type(error).__name__}).",
+            ) from None
+        if response.status_code in (401, 403, 404):
+            raise CallerRefused(
+                401, "Your visitor's token has run out: reload the page to go on."
+            )
+        if response.status_code != 200:
+            raise CallerRefused(
+                503,
+                f"ai-inference could not verify the visitor ({response.status_code}).",
+            )
+        said = response.json()
+        visitor = str(said.get("visitor") or "")
+        if not visitor:
+            raise CallerRefused(401, "The token names no visitor.")
+        caller = Caller(kind="visitor", uid=visitor, app_uid=str(said.get("app") or ""))
+        lifetime = min(CACHE_SECONDS, max(0.0, float(said.get("expires_in") or 0)))
         self._remember(key, caller, self._clock() + lifetime)
         return caller
 

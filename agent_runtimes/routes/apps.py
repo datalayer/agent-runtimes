@@ -22,9 +22,11 @@ confirmed how many (LOOP R-18).
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
-others, a person, an embed token for the application, or nobody when the
-application is public — and a browser only from the origins its deployment
-allows. A call from the machine itself needs no token.
+others, a person or an embed token for the application — and a browser only
+from the origins its deployment allows. A call from the machine itself needs
+no token. On the visitors' runtime (LOOP R-30,
+`agent_runtimes.loop.apps.visitors`) a visitor without an account, and only
+one, holding a token for the one application they talk to.
 
 An application is a Reactor plugin here as in the page (LOOP §5.4): the
 runtime reads applications from the ``loop.app`` contribution point, and
@@ -46,7 +48,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from agent_runtimes.loop.apps.callers import (
-    ANONYMOUS,
     LOCAL,
     VERIFIER,
     Caller,
@@ -151,12 +152,13 @@ async def _authorize(
         return Authorized(LOCAL, app)
     token = bearer_of(request.headers.get("authorization"))
     if not token:
-        hosted = app.deployment.hosted if app and app.deployment else None
-        if not person_only and hosted is not None and hosted.visibility == "public":
-            return Authorized(ANONYMOUS, app)
+        from agent_runtimes.loop.apps.visitors import NO_TOKEN, visitors_runtime
+
         raise HTTPException(
             status_code=401,
-            detail="Who is calling is not said: send a token.",
+            detail=NO_TOKEN
+            if visitors_runtime()
+            else "Who is calling is not said: send a token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
@@ -169,6 +171,49 @@ async def _authorize(
             detail="Only a person configures the application a runtime runs.",
         )
     return Authorized(caller, app)
+
+
+def _reaches(caller: Caller, agent: str) -> None:
+    """A visitor's token reaches the one application it names, and no other (R-30)."""
+    if caller.kind != "visitor":
+        return
+    from agent_runtimes.loop.apps.visitors import OTHER_APPLICATION, agent_of
+
+    try:
+        named = agent_of(caller.app_uid) if caller.app_uid else ""
+    except ValueError:
+        named = ""
+    if named != agent:
+        raise HTTPException(status_code=403, detail=OTHER_APPLICATION)
+
+
+async def _visitors_agent(agent: str, request: Request) -> None:
+    """On the visitors' runtime, the agent a visitor's new session is opened on.
+
+    The visitor's token names it; an application at its address has its
+    agent made here as it is first talked to, from what ai-agents shows
+    somebody not signed in (R-30, D-02).
+    """
+    from agent_runtimes.loop.apps.visitors import (
+        AT_PREFIX,
+        AddressRefused,
+        ensure_address_agent,
+        visitors_runtime,
+    )
+
+    if not visitors_runtime():
+        return
+    caller = (await _authorize(request, False)).caller
+    if caller.kind != "visitor":
+        return
+    _reaches(caller, agent)
+    if caller.app_uid.startswith(AT_PREFIX):
+        try:
+            await ensure_address_agent(caller.app_uid)
+        except AddressRefused as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
 
 
 async def a_person(request: Request) -> Authorized:
@@ -327,6 +372,10 @@ async def feedback(
     body: FeedbackRequest, authorized: Authorized = Depends(a_caller)
 ) -> Dict[str, Any]:
     """Keep a person's word on a conversation in the application's record (V-18)."""
+    if authorized.caller.kind == "visitor":
+        from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+
+        raise HTTPException(status_code=409, detail=NOTHING_KEPT)
     app = authorized.app
     if app is None:
         raise HTTPException(status_code=404, detail="This runtime runs no application.")
@@ -462,6 +511,22 @@ async def _acts_as(
     from agent_runtimes.loop.apps.sessions import SessionRefused
 
     deployment = deployment_of(instance)
+    if caller.kind == "visitor":
+        # A visitor nobody knows (R-30): their own token calls the models,
+        # and no principal acts for them — an application at its address is
+        # opened to them by ai-agents, asked as nobody.
+        if deployment:
+            try:
+                await ensure_may_open(deployment, caller, bearer)
+            except NotLetIn as refused:
+                raise HTTPException(
+                    status_code=refused.status, detail=refused.reason
+                ) from None
+        return {
+            "kind": "visitor",
+            "uid": caller.uid,
+            **({"deployment_uid": deployment} if deployment else {}),
+        }
     if not deployment:
         return {"kind": "person", "uid": caller.uid}
     # Who may open it (D-02), before its principal acts for them: the token
@@ -541,6 +606,7 @@ async def _held(uid: str, request: Request) -> Tuple[Any, str]:
     if not live.answers_to(authorized.caller):
         # Somebody else's is not said to exist.
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
+    _reaches(authorized.caller, live.agent_id)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     live.acts_as = await _acts_as(live.instance, authorized.caller, bearer)
@@ -553,11 +619,13 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps.sessions import SessionRefused, agent_app, new_session
 
+    await _visitors_agent(body.agent, request)
     try:
         app, instance = agent_app(body.agent)
     except SessionRefused as refused:
         raise _refused(refused) from None
     authorized = await _authorize(request, False, app)
+    _reaches(authorized.caller, body.agent)
     _check_instance(body, app, instance)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
@@ -691,6 +759,10 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
             )
         app, instance = agent_app(body.agent)
         authorized = await _authorize(request, False, app)
+        if authorized.caller.kind == "visitor":
+            from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
+
+            raise SessionRefused(404, NOTHING_KEPT)
         bearer = bearer_of(request.headers.get("authorization"))
         set_request_user_jwt(bearer or None)
         acts_as = await _acts_as(instance, authorized.caller, bearer)
@@ -729,16 +801,19 @@ async def session_agui(agent: str, request: Request) -> Any:
     )
 
     try:
-        app, instance = agent_app(agent)
-    except SessionRefused as refused:
-        raise _refused(refused) from None
-    authorized = await _authorize(request, False, app)
-    try:
         body = await request.json()
     except ValueError:
         raise HTTPException(status_code=422, detail="An AG-UI run is JSON.") from None
     if not isinstance(body, dict):
         raise HTTPException(status_code=422, detail="An AG-UI run is a JSON object.")
+    if session_of(str(body.get("threadId") or "")) is None:
+        await _visitors_agent(agent, request)
+    try:
+        app, instance = agent_app(agent)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    authorized = await _authorize(request, False, app)
+    _reaches(authorized.caller, agent)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     thread = str(body.get("threadId") or "")

@@ -277,9 +277,11 @@ def test_an_application_configured_while_a_token_is_checked_is_not_answered_for(
     )
 
 
-def test_a_public_application_answers_anybody_from_the_origins_it_allows(
+def test_a_public_application_answers_nobody_without_a_token(
     remote: Any,
 ) -> None:
+    """Signed out, a visitor talks to it on the visitors' runtime, with a
+    visitor's token (R-30): no runtime answers a caller who says nobody."""
     run(
         {
             **WEB_RESEARCH,
@@ -289,20 +291,15 @@ def test_a_public_application_answers_anybody_from_the_origins_it_allows(
             },
         }
     )
-    assert remote.get("/api/v1/apps/current").status_code == 200
-    assert (
-        remote.get(
-            "/api/v1/apps/current", headers={"Origin": "https://shop.example"}
-        ).status_code
-        == 200
-    )
+    refused = remote.get("/api/v1/apps/current")
+    assert refused.status_code == 401
+    assert refused.json()["detail"] == "Who is calling is not said: send a token."
     assert (
         remote.get(
             "/api/v1/apps/current", headers={"Origin": "https://evil.example"}
         ).status_code
         == 403
     )
-    # Public is for using it, never for configuring the runtime.
     assert (
         remote.post("/api/v1/apps/configure", json={"app": WEB_RESEARCH}).status_code
         == 401

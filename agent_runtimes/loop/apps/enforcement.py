@@ -85,6 +85,7 @@ from agent_runtimes.loop.apps.rules import (
     gives,
     matches,
 )
+from agent_runtimes.loop.apps.visitors import visitor_refusal
 from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
 from agent_runtimes.types import AppSpec
 
@@ -107,6 +108,9 @@ CODE_TOOLS: frozenset[str] = SHELL_TOOLS
 #: Why a call was decided as it was, beside the reasons of `rules`.
 NO_SHELL = "no_shell"
 
+#: A visitor without an account's turn, which only reads (LOOP R-30).
+SIGNED_OUT = "signed_out"
+
 #: What the person is asked with: the tool, its arguments, the decision.
 Ask = Callable[[str, Dict[str, Any], Decision], Awaitable[Any]]
 
@@ -120,9 +124,9 @@ Record = Callable[["Enforced"], None]
 class AppRuleBlockedError(GuardrailBlockedError):
     """A tool call the application's rules leave to the person."""
 
-    def __init__(self, decision: Decision):
+    def __init__(self, decision: Decision, sentence: str = ""):
         self.decision = decision
-        super().__init__(sentence_of(decision))
+        super().__init__(sentence or sentence_of(decision))
 
 
 def sentence_of(decision: Decision) -> str:
@@ -418,6 +422,17 @@ class AppRulesCapability(AbstractCapability[Any]):
     ) -> dict[str, Any]:
         enforced = self.decide(call.tool_name, args)
         decision = enforced.decision
+        # A visitor without an account only reads, and nobody is asked for
+        # them: whatever the rules say, anything else is not done (LOOP R-30).
+        refusal = visitor_refusal(call.tool_name, decision.classes, decision.behaviour)
+        for part in enforced.parts:
+            refusal = refusal or visitor_refusal(
+                part.tool, part.classes, part.behaviour
+            )
+        if refusal:
+            raise AppRuleBlockedError(
+                replace(decision, behaviour=LEAVE_TO_ME, because=SIGNED_OUT), refusal
+            )
         if decision.behaviour == IF_ASKED and self.granted is not None:
             # *Do it if I asked* rests on what the person approved in advance
             # (LOOP U-25), never on a reading of the conversation.
