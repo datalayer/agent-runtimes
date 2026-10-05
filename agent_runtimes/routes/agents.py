@@ -2413,6 +2413,22 @@ async def create_agent(
                     ),
                 )
                 capabilities.insert(2, AppRecordCapability(recorder=recorder))
+                # What it knows: the documents it was given, searched on
+                # Contents as its principal, or as the person in a Preview
+                # (LOOP U-24, R-29).
+                from agent_runtimes.loop.apps.documents import (
+                    AppDocumentsCapability,
+                    knows_documents,
+                )
+
+                if knows_documents(running_app):
+                    capabilities.append(
+                        AppDocumentsCapability(
+                            app=running_app,
+                            app_uid=recorder.app_uid,
+                            deployment_uid=recorder.deployment_uid,
+                        )
+                    )
                 logger.info(
                     "Application %s on agent %s: its rules, checks and record attached.",
                     running_app.id,

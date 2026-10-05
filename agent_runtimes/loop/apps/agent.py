@@ -28,6 +28,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.run import AgentRunResultEvent
 from reactor import ContributionRegistry
 
+from agent_runtimes.loop.apps.documents import AppDocumentsCapability, knows_documents
 from agent_runtimes.loop.apps.enforcement import Ask as RuleAsk
 from agent_runtimes.loop.apps.frames import (
     NO_ORGANIZATION,
@@ -75,7 +76,8 @@ def app_capabilities(
     -------
     list
         Its rules first, then its checks — a call the rules refuse is not
-        checked, and a Guard reads what the rules decided — then its record.
+        checked, and a Guard reads what the rules decided — then its record,
+        and the tool that searches its documents when it names some.
     """
     rules = rules_for(app, agent_id=agent_id, registry=registry)
     rules.record = recorder.decided
@@ -88,7 +90,18 @@ def app_capabilities(
         decide=rules.decide,
         record=recorder.checked,
     )
-    return [rules, checks, AppRecordCapability(recorder=recorder)]
+    capabilities: List[Any] = [rules, checks, AppRecordCapability(recorder=recorder)]
+    # What it knows: the tool that searches its documents (LOOP R-29). Run
+    # from a file, nothing was read for it on Datalayer, and the tool says so.
+    if knows_documents(app):
+        capabilities.append(
+            AppDocumentsCapability(
+                app=app,
+                app_uid=recorder.app_uid,
+                deployment_uid=recorder.deployment_uid,
+            )
+        )
+    return capabilities
 
 
 def _agent_spec(reference: str) -> Optional[Agentspec]:

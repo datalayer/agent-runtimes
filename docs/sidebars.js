@@ -38,6 +38,7 @@ const sidebars = {
         'loop/session-api',
         'loop/embedding',
         'loop/memory',
+        'loop/documents',
       ],
     },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },

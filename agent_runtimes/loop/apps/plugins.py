@@ -73,7 +73,16 @@ def manifest_of(app: AppSpec) -> PluginManifest:
 
 
 def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
-    return AppRulesCapability(app=app, agent_id=agent_id)
+    # The tool that searches its documents only reads (LOOP R-29): classed
+    # here, as the runtime's own, for every place its rules are read.
+    from agent_runtimes.loop.apps.documents import DOCUMENT_CLASSES, knows_documents
+
+    extra = (
+        {name: list(classes) for name, classes in DOCUMENT_CLASSES.items()}
+        if knows_documents(app)
+        else {}
+    )
+    return AppRulesCapability(app=app, agent_id=agent_id, extra_classes=extra)
 
 
 def _contribute(contributions: PluginContributions, app: AppSpec) -> None:
