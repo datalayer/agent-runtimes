@@ -345,9 +345,11 @@ def unregister_a2a_agent(agent_id: str) -> None:
         # Remove mount from running app
         if _app is not None:
             mount_path = f"{_api_prefix}/a2a/agents/{agent_id}"
-            _app.routes = [
+            # `FastAPI.routes` is a read-only property over the router's list:
+            # filter that list in place.
+            _app.router.routes[:] = [
                 r
-                for r in _app.routes
+                for r in _app.router.routes
                 if not (hasattr(r, "path") and r.path == mount_path)
             ]
             logger.info(f"Dynamically removed A2A route: {mount_path}/")
