@@ -16,7 +16,7 @@ text stays on screen.
   composer for the person to read, edit and send. The sound never leaves the
   page, and is forgotten once heard.
 - **Spoken answers.** The answer is cut into sentences as it is written. Each
-  sentence is said by **Datalayer's speech service** (Kokoro, on ai-agents) and
+  sentence is said by **Datalayer's speech service**, `datalayer-speech` on r1 (Kokoro, from ai-agents' code) and
   played as it arrives, so the first words are heard before the answer is
   finished. The floating assistant's mouth moves with the sound, and while the
   conversation is closed its balloon shows the sentence being said. `Esc`, or
@@ -95,7 +95,7 @@ import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
       transformers: () => import('@huggingface/transformers'),
       vad: () => import('@ricky0123/vad-web'),
     },
-    // ai-agents' speech service, and the token to ask it with.
+    // Datalayer's speech service (datalayer-speech, on r1), and the token to ask it with.
     speechUrl: 'https://r1.datalayer.run',
     token,
   }}
@@ -128,7 +128,10 @@ instead.
    ```
 
    (`?voiceModelsUrl=`).
-3. **The speech service** of ai-agents, on the same store:
+3. **The speech service**: Datalayer's, `datalayer-speech` on r1
+   (`https://r1.datalayer.run`, the default). It checks the caller's
+   Datalayer token, so sign in to the examples. To run it on this machine
+   instead, against the same store:
 
    ```bash
    cd services/ai-agents && pip install -e '.[speech]'
@@ -136,8 +139,7 @@ instead.
      uvicorn datalayer_ai_agents.speech.main:app --port 4401
    ```
 
-   (`?speechUrl=`). It checks the caller's Datalayer token, so sign in to the
-   examples.
+   and open the example with `?speechUrl=http://127.0.0.1:4401`.
 
 ## Measured
 

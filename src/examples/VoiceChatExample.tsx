@@ -18,7 +18,8 @@
  *   agent (http://127.0.0.1:8765);
  * - `?voiceModelsUrl=` — the browser's models, as pinned
  *   (`scripts/voice/serve_store.py`, http://127.0.0.1:8770);
- * - `?speechUrl=` — ai-agents' speech service (http://127.0.0.1:4401).
+ * - `?speechUrl=` — Datalayer's speech service, datalayer-speech on r1
+ *   (https://r1.datalayer.run), asked with the signed-in person's token.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -40,7 +41,7 @@ function fromAddress(name: string, otherwise: string): string {
 
 const SERVER = fromAddress('agentRuntimesUrl', 'http://127.0.0.1:8765');
 const MODELS = fromAddress('voiceModelsUrl', 'http://127.0.0.1:8770');
-const SPEECH = fromAddress('speechUrl', 'http://127.0.0.1:4401');
+const SPEECH = fromAddress('speechUrl', 'https://r1.datalayer.run');
 
 /** The packages that hear, loaded the first time the microphone is used. */
 const ENGINES: VoiceEngines = {
