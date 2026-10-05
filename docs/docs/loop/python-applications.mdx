@@ -290,6 +290,42 @@ given no `send_notification` tool.
   `notification` entry, whatever `record.include` says, and logged when it
   was not sent. Sending never stops the question it is about.
 
+### Approved in advance
+
+A rule that says `if_asked` — *Do it if I asked* — acts only on what the
+person approved before, and asks otherwise
+(`agent_runtimes.loop.apps.grants`). Never from a model's reading of the
+conversation.
+
+- **What an approval is.** Given by the person in the Studio — *send replies
+  to my team, until Friday* — and kept by IAM as a grant of theirs: the
+  application, one action (`send`, `buy`, `delete`, `publish`, `write`),
+  whom it reaches (addresses, `@domain`s, `#channel`s; none for anyone),
+  their words, and an end at most 90 days away. They read it back and
+  revoke it there; it mints no token.
+- **What it covers.** A call of that application whose classes are that
+  action, or that action and reading — an approval to send never covers a
+  tool that sends and deletes — and, when it names recipients, every
+  recipient the call's arguments name (`to`, `cc`, `bcc`, `recipients`,
+  `attendees`, `channel`…) is one of them. A call naming nobody is not
+  covered by an approval that names somebody.
+- **Where it is read.** At the tool call, before the person would be asked,
+  from `GET /api/iam/v1/oauth/task-grants/approvals/standing?app_uid=`, with
+  the token the application acts with: a deployment's principal's (IAM
+  answers its owner's approvals, for that application only), else the
+  person's whose Preview it is. Answers are kept ten seconds, so a revoke is
+  honoured within them. Approvals that cannot be read are none: the person
+  is asked, and the record says why.
+- **What is recorded.** The `decision` entry of a call done because of an
+  approval names it (`approved_in_advance`, `approved_words`).
+- An application the platform does not know (no `app_uid`, a local run)
+  has no approvals: `if_asked` asks, as `ask_first` does.
+
+Every approval the runtime asks for carries, beside the call's arguments,
+the rule or Gate it was asked under (`_rule`, `_check`) and the application
+(`_app`, and `_app_uid` when the platform knows it), so its own page, the
+Tool Approvals page and its channels say whose it is.
+
 ## `AppHost`
 
 `AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an

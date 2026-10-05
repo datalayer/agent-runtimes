@@ -245,7 +245,7 @@ async def test_what_the_session_says_of_a_tool_cannot_grant_a_connection() -> No
 
 
 @pytest.mark.asyncio
-async def test_do_it_if_asked_asks_until_grants_are_recorded() -> None:
+async def test_do_it_if_asked_asks_without_an_approval_given_in_advance() -> None:
     granted = app(
         rules=[{"action": "Send", "applies_to": ["send"], "behaviour": "if_asked"}]
     )

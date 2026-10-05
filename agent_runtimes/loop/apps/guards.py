@@ -372,6 +372,9 @@ class AppChecksCapability(AbstractCapability[Any]):
 
     agent_id: Optional[str] = None
 
+    app_uid: str = ""
+    """The application as the platform knows it, when it does (LOOP U-19)."""
+
     ask: Optional[Ask] = None
     """How a person is asked, when a Gate says so: the tool-approval path when unsaid."""
 
@@ -432,7 +435,8 @@ class AppChecksCapability(AbstractCapability[Any]):
             tool_name=tool_name,
             tool_args={
                 **{key: str(value)[:500] for key, value in args.items()},
-                "_check": sentence,
+                # Whose, and why: a Gate asks as a rule does (LOOP U-19).
+                **_marks_of(self.checks.app.id, self.app_uid, sentence),
             },
         )
 
@@ -534,3 +538,12 @@ __all__ = [
     "redact",
     "holds",
 ]
+
+
+def _marks_of(app_id: str, app_uid: str, sentence: str) -> Dict[str, str]:
+    """A Gate's approval marked as a rule's is, with `_check` for its sentence."""
+    from agent_runtimes.loop.apps.enforcement import approval_marks
+
+    marks = approval_marks(app_id, app_uid, sentence)
+    marks["_check"] = marks.pop("_rule")
+    return marks

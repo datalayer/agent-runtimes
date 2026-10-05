@@ -55,5 +55,6 @@ export {
   APP_RULES_WORDS,
   ruleInWords,
   ruleOfApproval,
+  approvalsOfApp,
 } from './AppRulesCard';
 export default defineAppRulesPlugin;

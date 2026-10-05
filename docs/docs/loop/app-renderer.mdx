@@ -138,12 +138,16 @@ beside it what it is allowed to do and what it did:
   (gmail)*) and what it does about it (*Ask me first*) — and what it does
   with no rule: *reading is done, anything else waits for you.* Under them,
   *Waiting for you*: the approvals its agent asked for and that wait for the
-  person, each with the rule it was asked under, answered with *Approve* or
-  *Reject*. They come through the existing tool-approvals path — the ai-agents
-  `/ws` stream the Tool Approvals page reads (`useToolApprovalsQuery` with the
-  application's id as the agent, `useApproveToolRequest`,
-  `useRejectToolRequest`) — so an approval answered here is answered there
-  too. Signed out, it says where its approvals reach the person.
+  person, each with the rule or Gate it was asked under, answered with
+  *Approve* or *Reject*. They come through the existing tool-approvals path —
+  the ai-agents `/ws` stream the Tool Approvals page reads
+  (`useToolApprovalsQuery`, `useApproveToolRequest`, `useRejectToolRequest`)
+  — and are the application's when its agent asked under its id or the
+  runtime marked them as its own (`_app`: a deployment's agent, a Gate, a
+  review its drift asked; `approvalsOfApp`). Every decision is broadcast to
+  all the person's pages, so an approval answered here leaves the Tool
+  Approvals page, and the Studio's page, at once. Signed out, it says where
+  its approvals reach the person.
 - **Activity** (`defineAppActivityPlugin`, `AppActivity`): its sessions,
   newest first, read from its record in ai-agents (`/api/ai-agents/v1/apps/sessions`,
   kept under `instance.appUid`), each in a sentence (*2 tool calls, 1

@@ -396,15 +396,26 @@ class AppRecorder:
 
     def decided(self, enforced: Any) -> None:
         decision = getattr(enforced, "decision", enforced)
+        detail = {
+            "tool": getattr(decision, "tool", ""),
+            "behaviour": getattr(decision, "behaviour", ""),
+            "because": getattr(decision, "because", ""),
+        }
+        # Done without asking because the person approved it in advance (U-25).
+        approved = getattr(enforced, "approved", None)
+        if approved is not None:
+            detail["approved_in_advance"] = approved.uid
+            detail["approved_words"] = approved.words
         self.add(
             "decision",
-            f"{getattr(decision, 'tool', '?')}: {getattr(decision, 'behaviour', '?')}",
-            {
-                "tool": getattr(decision, "tool", ""),
-                "behaviour": getattr(decision, "behaviour", ""),
-                "because": getattr(decision, "because", ""),
-            },
+            f"{getattr(decision, 'tool', '?')}: {getattr(decision, 'behaviour', '?')}"
+            + (f" (approved in advance: {approved.words})" if approved else ""),
+            detail,
         )
+
+    def approvals_unread(self, why: str) -> None:
+        """What the person approved in advance could not be read: they are asked."""
+        self.add("decision", why, {"approvals_unread": why})
 
     def checked(self, stage: str, verdict: Any) -> None:
         self.add(

@@ -9,8 +9,8 @@ sends through for its sessions, not the ones its agent's own spec names
 (which an application's agent is not given).
 
 **The event.** An application notifies when it asks a person before it acts:
-a rule that says *Ask me first* (or *Do it if I asked*, until grants are
-recorded), or a Gate that asks — each time the question goes through the
+a rule that says *Ask me first* (or *Do it if I asked*, on a call nothing
+the person approved in advance covers, LOOP U-25), or a Gate that asks — each time the question goes through the
 tool-approval path, where nobody may be watching. A question asked in the
 terminal the person is typing in is not notified: they are already there.
 

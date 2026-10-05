@@ -2385,6 +2385,18 @@ async def create_agent(
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided
                 rules.notify = notifier.approval_asked
+                rules.app_uid = recorder.app_uid
+                # *Do it if I asked* decided from what the person approved
+                # in advance, read from IAM as it acts (LOOP U-25); an
+                # application the platform does not know has none.
+                if recorder.app_uid:
+                    from agent_runtimes.loop.apps.grants import StandingApprovals
+
+                    rules.granted = StandingApprovals(
+                        app_uid=recorder.app_uid,
+                        deployment_uid=recorder.deployment_uid,
+                        unread=recorder.approvals_unread,
+                    ).granted
                 capabilities.insert(0, rules)
                 # And its checks, after its rules: a call the rules refuse
                 # is not checked, and a Guard reads what the rules decided
@@ -2394,6 +2406,7 @@ async def create_agent(
                     AppChecksCapability(
                         checks=AppChecks.of(running_app),
                         agent_id=agent_id,
+                        app_uid=recorder.app_uid,
                         decide=rules.decide,
                         record=recorder.checked,
                         notify=notifier.approval_asked,

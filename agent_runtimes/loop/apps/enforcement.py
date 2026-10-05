@@ -43,7 +43,7 @@ decision is handed to `record` before it is acted on.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     Awaitable,
@@ -72,6 +72,7 @@ from agent_runtimes.loop.apps.computer import (
     part_of,
     wait_until_handed_back,
 )
+from agent_runtimes.loop.apps.grants import Approval, Granted
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -147,6 +148,9 @@ class Enforced:
     parts: Tuple[Decision, ...] = ()
     """For code, `call_tool` and the like: what each tool it reaches was decided."""
 
+    approved: Optional[Approval] = None
+    """For *Do it if I asked*: the approval given in advance that covers it (U-25)."""
+
 
 def _id_of(ref: str) -> str:
     base, _, version = str(ref).rpartition(":")
@@ -175,6 +179,10 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     agent_id: Optional[str] = None
 
+    app_uid: str = ""
+    """The application as the platform knows it, when it does: what its
+    approvals are asked under, beside its id (LOOP U-19)."""
+
     ask: Optional[Ask] = None
     """How the person is asked; the tool-approval path when unsaid."""
 
@@ -184,6 +192,10 @@ class AppRulesCapability(AbstractCapability[Any]):
     notify: Optional[Notify] = None
     """Told when the person is asked through the tool-approval path: the
     application's channels (LOOP R-37)."""
+
+    granted: Optional[Granted] = None
+    """What the person approved in advance, read before *Do it if I asked*
+    asks them (LOOP U-25); with none, it asks."""
 
     extra_classes: Dict[str, List[str]] = field(default_factory=dict)
     """What tools the catalogue does not know do, by runtime name."""
@@ -392,7 +404,7 @@ class AppRulesCapability(AbstractCapability[Any]):
             tool_name=tool_name,
             tool_args={
                 **{key: str(value)[:500] for key, value in args.items()},
-                "_rule": sentence_of(decision),
+                **approval_marks(self.app.id, self.app_uid, sentence_of(decision)),
             },
         )
 
@@ -405,15 +417,20 @@ class AppRulesCapability(AbstractCapability[Any]):
         args: dict[str, Any],
     ) -> dict[str, Any]:
         enforced = self.decide(call.tool_name, args)
+        decision = enforced.decision
+        if decision.behaviour == IF_ASKED and self.granted is not None:
+            # *Do it if I asked* rests on what the person approved in advance
+            # (LOOP U-25), never on a reading of the conversation.
+            approved = await self.granted(call.tool_name, args, decision)
+            if approved is not None:
+                enforced = replace(enforced, approved=approved)
         if self.record is not None:
             self.record(enforced)
-        decision = enforced.decision
-        if decision.behaviour == DO_IT:
+        if decision.behaviour == DO_IT or enforced.approved is not None:
             await self._computer_free(call.tool_name)
             return args
         if decision.behaviour in (ASK_FIRST, IF_ASKED):
-            # *Do it if I asked* rests on a grant the person gave in advance.
-            # Until grants are recorded (LOOP U-25), it asks.
+            # Not approved in advance: the person is asked.
             await self._ask(call.tool_name, args, decision)
             await self._computer_free(call.tool_name)
             return args
@@ -423,6 +440,20 @@ class AppRulesCapability(AbstractCapability[Any]):
         """A call to a tool of its computer waits while a person has it."""
         if part_of(tool_name) is not None:
             await wait_until_handed_back(self.agent_id)
+
+
+def approval_marks(app_id: str, app_uid: str, sentence: str) -> Dict[str, str]:
+    """
+    What an approval of an application carries beside the call's arguments.
+
+    The rule or Gate it was asked under, and the application, by its id and,
+    when the platform knows it, its uid — so its own page, the Tool Approvals
+    page and its channels say whose it is (LOOP U-19).
+    """
+    marks = {"_rule": sentence, "_app": app_id}
+    if app_uid:
+        marks["_app_uid"] = app_uid
+    return marks
 
 
 def _catalogue_server(name: str) -> str:

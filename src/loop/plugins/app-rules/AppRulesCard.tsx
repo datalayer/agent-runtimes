@@ -62,20 +62,42 @@ export function ruleInWords(rule: AppRuleSpec): {
   };
 }
 
-/** The rule an approval was asked under, as the runtime wrote it in its arguments. */
-export const ruleOfApproval = (approval: ApprovalRecord): string =>
-  typeof approval.tool_args?._rule === 'string' ? approval.tool_args._rule : '';
+/**
+ * The rule or Gate an approval was asked under, as the runtime wrote it in
+ * its arguments: `_rule` for a rule, `_check` for a Gate (LOOP U-19).
+ */
+export const ruleOfApproval = (approval: ApprovalRecord): string => {
+  const said = approval.tool_args?._rule ?? approval.tool_args?._check;
+  return typeof said === 'string' ? said : '';
+};
+
+/**
+ * The approvals of one application: those its agent asked under its id, and
+ * those the runtime marked as its own (`_app`) — a deployment's agent, a
+ * Gate's, or a review its drift asked (LOOP U-19). Answered anywhere, an
+ * approval leaves every list at once: each decision is broadcast to all the
+ * person's pages over the same `/ws`.
+ */
+export function approvalsOfApp(
+  approvals: ApprovalRecord[],
+  appId: string,
+): ApprovalRecord[] {
+  return approvals.filter(
+    approval =>
+      approval.agent_id === appId || approval.tool_args?._app === appId,
+  );
+}
+
+const PENDING = { status: 'pending' as const };
 
 function Approvals({ app }: { app: AppSpec }): JSX.Element {
-  // Its agent is created under the application's id: what it asks is under it.
-  const filters = useMemo(
-    () => ({ agentId: app.id, status: 'pending' as const }),
-    [app.id],
-  );
-  const query = useToolApprovalsQuery(filters);
+  const query = useToolApprovalsQuery(PENDING);
   const approve = useApproveToolRequest();
   const reject = useRejectToolRequest();
-  const waiting = query.data?.approvals ?? [];
+  const waiting = useMemo(
+    () => approvalsOfApp(query.data?.approvals ?? [], app.id),
+    [query.data, app.id],
+  );
   return (
     <Box data-testid="app-approvals">
       <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 1 }}>

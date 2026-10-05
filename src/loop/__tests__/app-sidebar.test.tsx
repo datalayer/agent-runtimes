@@ -150,19 +150,37 @@ describe('the rules and approvals card', () => {
 
   it('lists the approvals its agent waits on, and answers them over the approvals path', async () => {
     iamStore.setState({ token: 'jwt' } as never);
-    seen.waiting.push({
-      id: 'appr-1',
-      tool_name: 'send_message',
-      tool_args: { _rule: 'Email a customer: ask me first.' },
-      status: 'pending',
-    });
+    seen.waiting.push(
+      {
+        id: 'appr-1',
+        agent_id: 'web-research',
+        tool_name: 'send_message',
+        tool_args: { _rule: 'Email a customer: ask me first.' },
+        status: 'pending',
+      },
+      // A Gate of its deployment's agent, marked as its own.
+      {
+        id: 'appr-2',
+        agent_id: 'web-research-dep-1',
+        tool_name: 'publish_page',
+        tool_args: { _check: 'A review is asked.', _app: 'web-research' },
+        status: 'pending',
+      },
+      // Another application's: not here.
+      {
+        id: 'appr-3',
+        agent_id: 'desk',
+        tool_name: 'delete_file',
+        tool_args: { _rule: 'Delete: ask me first.', _app: 'desk' },
+        status: 'pending',
+      },
+    );
     const { container } = await render(<AppRulesCard app={app()} />);
-    expect(seen.filters.at(-1)).toEqual({
-      agentId: 'web-research',
-      status: 'pending',
-    });
+    expect(seen.filters.at(-1)).toEqual({ status: 'pending' });
     expect(container.textContent).toContain('send_message');
     expect(container.textContent).toContain('Email a customer: ask me first.');
+    expect(container.textContent).toContain('A review is asked.');
+    expect(container.textContent).not.toContain('delete_file');
     const button = (label: string) =>
       [...container.querySelectorAll('button')].find(
         each => each.textContent === label,
