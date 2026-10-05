@@ -423,3 +423,79 @@ describe('The edge to a connection', () => {
     expect(container.querySelector('[data-mcp-edge-call]')).toBeNull();
   });
 });
+
+describe('A2ATeamGraph: a click on a member', () => {
+  const said = (persona: Partial<A2ATeamPersona>) => ({
+    ...AT_REST,
+    ...persona,
+  });
+  function Team({
+    sales,
+    accounting,
+    onToggle,
+  }: {
+    sales: Partial<A2ATeamPersona>;
+    accounting: Partial<A2ATeamPersona>;
+    onToggle?: () => void;
+  }) {
+    return (
+      <A2ATeamGraph
+        entry={{ ...member('sales', 'Sales', said(sales)), onToggle }}
+        peer={member('accounting', 'Accounting', said(accounting))}
+        flow="still"
+        connected
+      />
+    );
+  }
+  const balloonOf = (container: HTMLElement, id: string) =>
+    container.querySelector(`[data-team-member="${id}"] [data-speech-balloon]`);
+  const click = (container: HTMLElement, id: string) =>
+    act(() => {
+      container
+        .querySelector<HTMLElement>(
+          `[data-team-member="${id}"] [data-assistant-figure]`,
+        )!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+  it('hides its balloon, and a second shows it again, member by member', () => {
+    const onToggle = vi.fn();
+    const { container } = render(
+      <Team
+        sales={{ saying: 'Hello!', insist: true }}
+        accounting={{ saying: 'Ready.', insist: true }}
+        onToggle={onToggle}
+      />,
+    );
+    expect(balloonOf(container, 'sales')).not.toBeNull();
+    expect(balloonOf(container, 'accounting')).not.toBeNull();
+    click(container, 'sales');
+    expect(balloonOf(container, 'sales')).toBeNull();
+    // The other member's is its own.
+    expect(balloonOf(container, 'accounting')).not.toBeNull();
+    click(container, 'sales');
+    expect(balloonOf(container, 'sales')).not.toBeNull();
+    click(container, 'accounting');
+    expect(balloonOf(container, 'accounting')).toBeNull();
+    // The click is the balloon's, not the composer's.
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('shows a balloon that was not up, and a hidden one comes back with news', () => {
+    const { container, rerender } = render(
+      <Team sales={{}} accounting={{ saying: 'Ready.', insist: true }} />,
+    );
+    expect(balloonOf(container, 'sales')).toBeNull();
+    click(container, 'sales');
+    expect(balloonOf(container, 'sales')).not.toBeNull();
+    click(container, 'accounting');
+    expect(balloonOf(container, 'accounting')).toBeNull();
+    rerender(
+      <Team
+        sales={{}}
+        accounting={{ saying: 'Here are the open invoices.', insist: true }}
+      />,
+    );
+    expect(balloonOf(container, 'accounting')).not.toBeNull();
+  });
+});

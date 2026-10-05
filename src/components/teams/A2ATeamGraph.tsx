@@ -231,10 +231,26 @@ const MemberNode = memo(function MemberNode({
   const stageRef = useRef<HTMLDivElement>(null);
   // Its balloon's display, as its menu changes it.
   const [display, setDisplay] = useState<BalloonDisplay | undefined>();
-  if (!member) {
+  // Its balloon as a click on it left it: shown, hidden, or as the team
+  // says (`auto`: what it is doing, and on hover).
+  const [shown, setShown] = useState<'auto' | 'shown' | 'hidden'>('auto');
+  // What it says or does now: something new reopens a hidden balloon.
+  const persona = member?.persona;
+  const news = [
+    persona?.saying,
+    persona?.tool ? toolLineText(persona.tool) : '',
+    persona?.notebook?.name,
+  ].join('\u0000');
+  const seen = useRef(news);
+  useEffect(() => {
+    if (news !== seen.current) {
+      seen.current = news;
+      setShown(current => (current === 'hidden' ? 'auto' : current));
+    }
+  }, [news]);
+  if (!member || !persona) {
     return null;
   }
-  const { persona } = member;
   const shownDisplay = display ?? member.balloonDisplay ?? 'current';
   // History: what it said and did, listed.
   const listed =
@@ -261,6 +277,30 @@ const MemberNode = memo(function MemberNode({
         visual: notebookBalloonVisual(persona.notebook, notebookTitle),
       }
     : {};
+  const balloonNow = persona.tool
+    ? {
+        text: toolLineText(persona.tool),
+        tool: persona.tool,
+        busy: persona.state !== 'idle',
+        ...given,
+        ...listed,
+      }
+    : persona.saying
+      ? {
+          text: persona.saying,
+          ...(persona.full ? { fullText: persona.full } : {}),
+          more: persona.saying.endsWith('…'),
+          speaking: persona.state === 'speaking',
+          busy:
+            persona.state === 'thinking' ||
+            persona.state === 'working' ||
+            persona.state === 'speaking',
+          ...given,
+          ...listed,
+        }
+      : 'history' in listed
+        ? { text: '', ...listed }
+        : undefined;
   return (
     <Box
       // React Flow lets the pointer through a node that is neither dragged
@@ -278,6 +318,7 @@ const MemberNode = memo(function MemberNode({
         pointerEvents: 'all',
       }}
       data-team-member={member.id}
+      data-member-balloon={shown}
       data-member-state={persona.state}
     >
       <Handle
@@ -311,6 +352,17 @@ const MemberNode = memo(function MemberNode({
             onDragStart={() => undefined}
             open={false}
             onToggle={member.onToggle ?? (() => undefined)}
+            // A click shows and hides its balloon; the menu's *Ask Sales*
+            // still takes the reader to the composer.
+            onCharacterClick={() =>
+              setShown(current =>
+                current === 'shown' ||
+                (current === 'auto' &&
+                  (persona.insist || display === 'history'))
+                  ? 'hidden'
+                  : 'shown',
+              )
+            }
             balloonDisplay={shownDisplay}
             onBalloonDisplayChange={next => {
               setDisplay(next);
@@ -320,35 +372,25 @@ const MemberNode = memo(function MemberNode({
               member.onToggle ? (member.conversationLabel ?? undefined) : false
             }
             balloon={
-              persona.tool
-                ? {
-                    text: toolLineText(persona.tool),
-                    tool: persona.tool,
-                    busy: persona.state !== 'idle',
-                    ...given,
-                    ...listed,
-                  }
-                : persona.saying
-                  ? {
-                      text: persona.saying,
-                      ...(persona.full ? { fullText: persona.full } : {}),
-                      more: persona.saying.endsWith('…'),
-                      speaking: persona.state === 'speaking',
-                      busy:
-                        persona.state === 'thinking' ||
-                        persona.state === 'working' ||
-                        persona.state === 'speaking',
-                      ...given,
-                      ...listed,
-                    }
-                  : 'history' in listed
-                    ? { text: '', ...listed }
-                    : undefined
+              shown === 'hidden'
+                ? undefined
+                : (balloonNow ??
+                  (shown === 'shown'
+                    ? {
+                        text: `${member.name}, ${member.where ?? ''}`.replace(
+                          /, $/,
+                          '',
+                        ),
+                      }
+                    : undefined))
             }
             expandTarget={member.expandTarget}
             expandOnArrival={!!member.expandTarget}
             // History, chosen in its menu: shown until Current is.
-            insist={persona.insist || display === 'history'}
+            insist={
+              shown === 'shown' ||
+              (shown === 'auto' && (persona.insist || display === 'history'))
+            }
             onDismiss={away => member.onAway?.(away !== 'none')}
             suggestions={member.suggestions}
             onSuggestion={member.onSuggestion}

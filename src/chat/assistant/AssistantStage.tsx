@@ -517,6 +517,12 @@ export interface AssistantStageProps {
   /** Open or close the conversation. */
   onToggle: () => void;
   /**
+   * What a click on the character does, when it is not `onToggle`: a team's
+   * member shows and hides its balloon, and its menu's conversation entry
+   * (*Ask Sales*) still does `onToggle`.
+   */
+  onCharacterClick?: () => void;
+  /**
    * The peek while the conversation is closed: one short line — the agent's
    * newest words, as the Office Assistant said them (T-23), or a welcome —
    * that opens the conversation when clicked; `more` says it was cut;
@@ -684,6 +690,7 @@ export function AssistantStage({
   onDragStart,
   open,
   onToggle,
+  onCharacterClick,
   balloon,
   insist = false,
   onDismiss,
@@ -1037,7 +1044,7 @@ export function AssistantStage({
           ) {
             return;
           }
-          onToggle();
+          (onCharacterClick ?? onToggle)();
         }}
         sx={{
           display: 'block',
