@@ -44,6 +44,25 @@ logger = logging.getLogger(__name__)
 SUPPORTED_OPERATIONS: frozenset[str] = frozenset(LIFECYCLE_OPERATIONS) - {"execute"}
 
 
+#: The environment variable holding the platform's magic key. Set, every
+#: runtime this client creates is sent it, and the platform starts the runtime
+#: unmetered: it consumes no credits and never expires.
+MAGIC_API_KEY_ENV = "DATALAYER_MAGIC_API_KEY"
+#: The ``POST /runtimes`` field the magic key travels in.
+MAGIC_API_KEY_FIELD = "magic_api_key"
+
+
+def magic_api_key() -> Optional[str]:
+    """The platform's magic key from the environment, or None when it is not set."""
+    value = os.environ.get(MAGIC_API_KEY_ENV, "").strip()
+    return value or None
+
+
+def unmetered_launch() -> bool:
+    """Whether the runtimes this process creates are unmetered: the magic key is set."""
+    return magic_api_key() is not None
+
+
 def _is_transient_runtime_create_error(message: str) -> bool:
     """Return True when the error looks transient and safe to retry."""
     lower = message.lower()
@@ -276,6 +295,11 @@ class RuntimesClient:
                 sorted(body.keys()),
             )
             logger.debug("Runtime create payload: %s", body)
+            # After the payload is logged, so the key never is.
+            magic = magic_api_key()
+            if magic is not None:
+                body[MAGIC_API_KEY_FIELD] = magic
+                logger.debug("Runtime create is unmetered: the magic key is sent.")
 
             response: _Response | None = None
             max_attempts = 4

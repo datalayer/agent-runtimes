@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Optional
 
+from agent_runtimes.runtimes.client import unmetered_launch
+
 LOCAL = "local"
 CLOUD = "cloud"
 
@@ -939,12 +941,24 @@ def launch_cloud(
             f"The runtime's agent is {agent_id}, the agent loop starts with: "
             "a runtime is configured from an agentspec. -a <agentspec> for another."
         )
-    reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
-    check_credits(offer.credits, chosen, reserved)
-    status(
-        f"Launching {label or agent_id} on Datalayer ({chosen.name}, {reserved} min, "
-        f"at most {credits_for(chosen, reserved):.2f} credits)…"
-    )
+    unmetered = unmetered_launch()
+    if unmetered:
+        # DATALAYER_MAGIC_API_KEY is set: the runtime is sent it, consumes no
+        # credits and never expires, so no time is asked and no credit is
+        # checked. A --minutes given is still validated, and sent: the
+        # platform ignores it for an unmetered runtime.
+        reserved = choose_minutes(chosen, minutes=minutes, can_ask=False)
+        status(
+            f"Launching {label or agent_id} on Datalayer ({chosen.name}, unmetered: "
+            "no credits, never expires)…"
+        )
+    else:
+        reserved = choose_minutes(chosen, minutes=minutes, can_ask=asking)
+        check_credits(offer.credits, chosen, reserved)
+        status(
+            f"Launching {label or agent_id} on Datalayer ({chosen.name}, {reserved} min, "
+            f"at most {credits_for(chosen, reserved):.2f} credits)…"
+        )
     try:
         created = client.create_runtime(
             environment=chosen.name, time_reservation=reserved, agent_spec_id=agent_id
@@ -962,7 +976,7 @@ def launch_cloud(
         relay=relay,
         client=client,
         jupyter_token=str(created.jupyter_token),
-        credits=credits_for(chosen, reserved),
+        credits=0.0 if unmetered else credits_for(chosen, reserved),
         agent_spec_id=agent_id,
     )
     status(f"Waiting for runtime {launch.runtime_name}…")

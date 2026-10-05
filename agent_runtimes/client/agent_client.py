@@ -1057,6 +1057,7 @@ class AgentClient(
             burning_rate=runtime_data.get("burning_rate"),
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
+            unmetered=bool(runtime_data.get("unmetered", False)),
         )
         return runtime
 
@@ -1104,6 +1105,7 @@ class AgentClient(
                     iam_url=self._urls.iam_url,
                     started_at=runtime["started_at"],
                     expired_at=runtime["expired_at"],
+                    unmetered=bool(runtime.get("unmetered", False)),
                 )
             )
         return runtime_services
@@ -1288,6 +1290,7 @@ class AgentClient(
             iam_url=self._urls.iam_url,
             started_at=runtime_data.get("started_at"),
             expired_at=runtime_data.get("expired_at"),
+            unmetered=bool(runtime_data.get("unmetered", False)),
         )
 
     def update_runtime(
