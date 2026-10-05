@@ -186,7 +186,6 @@ const WIZARD = {
     brim: '#4A3C9E',
     robe: '#5B4BB7',
     face: '#F2D3B3',
-    faceEdge: '#A0694A',
     beard: '#F4F4F6',
     beardEdge: '#7A808A',
     star: '#F8D469',
@@ -197,7 +196,6 @@ const WIZARD = {
     brim: '#7B67DB',
     robe: '#8F7CE8',
     face: '#E8C4A0',
-    faceEdge: '#E8C4A0',
     beard: '#E4E4EA',
     beardEdge: loopColors.grayDark,
     star: '#F8D469',
@@ -324,37 +322,51 @@ function Wizard({
       data-assistant-mode={mode}
     >
       <g className="assistant-body">
-        <path d="M24 92 Q48 58 72 92 Z" fill={c.robe} />
-        <circle
-          cx={48}
-          cy={48}
-          r={17}
-          fill={c.face}
-          stroke={c.faceEdge}
-          strokeWidth={1.5}
-        />
+        {/* The robe, one shape from the shoulders down, its hem trimmed. */}
         <path
-          d="M31 50 Q48 92 65 50 Q57 60 48 60 Q39 60 31 50 Z"
+          d="M34 58 Q48 52 62 58 Q70 74 76 92 Q48 98 20 92 Q26 74 34 58 Z"
+          fill={c.robe}
+        />
+        <path d="M21 90 Q48 96 75 90 L76 92 Q48 98 20 92 Z" fill={c.brim} />
+        <circle cx={30} cy={82} r={1.6} fill={c.star} />
+        <circle cx={67} cy={78} r={1.3} fill={c.star} />
+        {/* The face, framed by the brim and the beard. */}
+        <ellipse cx={48} cy={46} rx={13} ry={12} fill={c.face} />
+        {/* The beard, from the temples down over the robe; the moustache over
+            the mouth. */}
+        <path
+          d="M33 38 Q31 66 40 77 Q48 89 56 77 Q65 66 63 38 Q61 50 56 53 Q48 58 40 53 Q35 50 33 38 Z"
           fill={c.beard}
           stroke={c.beardEdge}
-          strokeWidth={1.2}
+          strokeWidth={1}
+          strokeLinejoin="round"
         />
-        <path d="M22 36 L48 2 L74 36 Q48 30 22 36 Z" fill={c.hat} />
-        <path d="M20 37 Q48 29 76 37 Q48 43 20 37 Z" fill={c.brim} />
-        <path
-          d="M52 14 l2 4 4 1 -3 3 1 4 -4 -2 -4 2 1 -4 -3 -3 4 -1 Z"
-          fill={c.star}
-        />
-        <circle cx={40} cy={26} r={1.8} fill={c.star} />
-        <Eyes cx={48} cy={46} gap={13} r={5} colours={c.eye} />
         <path
           className="assistant-mouth"
-          d="M44 58 Q48 61 52 58"
+          d="M44 59 Q48 62 52 59"
           stroke={INK}
-          strokeWidth={2}
+          strokeWidth={1.8}
           fill="none"
           strokeLinecap="round"
         />
+        <path
+          d="M39 55 Q44 51 48 54 Q52 51 57 55 Q52 57 48 56 Q44 57 39 55 Z"
+          fill={c.beard}
+          stroke={c.beardEdge}
+          strokeWidth={0.8}
+        />
+        {/* The hat, its tip curled over, a star on it. */}
+        <path
+          d="M25 36 Q35 26 39 14 Q43 2 58 3 Q50 8 53 18 Q58 30 71 36 Q48 30 25 36 Z"
+          fill={c.hat}
+        />
+        <path d="M18 37 Q48 27 78 37 Q48 45 18 37 Z" fill={c.brim} />
+        <path
+          d="M47 17 l1.8 3.6 4 .6 -2.9 2.8 .7 4 -3.6 -1.9 -3.6 1.9 .7 -4 -2.9 -2.8 4 -.6 Z"
+          fill={c.star}
+        />
+        <circle cx={56} cy={28} r={1.4} fill={c.star} />
+        <Eyes cx={48} cy={46} gap={11} r={4} colours={c.eye} />
       </g>
     </svg>
   );
@@ -516,7 +528,6 @@ export const ASSISTANT_CHARACTERS: readonly AssistantCharacter[] = [
           WIZARD.light.hat,
           WIZARD.light.brim,
           WIZARD.light.robe,
-          WIZARD.light.faceEdge,
           WIZARD.light.beardEdge,
         ],
         eye: eyeOf(WIZARD.light.eye, WIZARD.light.face),
@@ -526,7 +537,6 @@ export const ASSISTANT_CHARACTERS: readonly AssistantCharacter[] = [
           WIZARD.dark.hat,
           WIZARD.dark.brim,
           WIZARD.dark.robe,
-          WIZARD.dark.faceEdge,
           WIZARD.dark.beardEdge,
         ],
         eye: eyeOf(WIZARD.dark.eye, WIZARD.dark.face),
