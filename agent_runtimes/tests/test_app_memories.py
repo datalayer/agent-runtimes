@@ -1,13 +1,15 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""What an application remembers (LOOP R-18), and forgetting it.
+"""What an application remembers (LOOP R-18), forgetting it, and correcting
+it in place (LOOP R-34).
 
 On a real mem0, its store a FAISS index in a temporary directory: the
 memories are put in its vector store as mem0 keeps them — what it learned,
 whose, of which agent, and when — since learning one asks a model. Then
-read, and forgotten one by one or all at once, through `Mem0Backend` and
-the runtime's routes, as the application's owner.
+read, corrected, and forgotten one by one or all at once, through
+`Mem0Backend` and the runtime's routes, as the application's owner. A
+correction is embedded again: the embedder answers a fixed vector here.
 """
 
 import asyncio
@@ -313,6 +315,48 @@ def test_forgetting_everything_counts_and_keeps_the_rest(
     assert what(asyncio.run(bobs.list_all())) == ["Bob reads in French"]
 
 
+CORRECTED_VECTOR = [0.4, 0.3, 0.2, 0.1]
+
+
+def embeds_corrections(backend: Mem0Backend) -> List[str]:
+    """Answer a fixed vector for what mem0 embeds again; the words it was asked for."""
+    asked: List[str] = []
+    memory = backend._ensure_initialized()
+
+    def embed(text: str, action: Any = None) -> List[float]:
+        asked.append(text)
+        return CORRECTED_VECTOR
+
+    memory.embedding_model.embed = embed
+    return asked
+
+
+def test_correcting_one_changes_its_words_and_keeps_who_and_when(
+    remembered: Dict[str, str],
+) -> None:
+    backend = app_memory(key_of("app-1"))
+    asked = embeds_corrections(backend)
+    # Bob's, and another application's, are not found by their id.
+    assert asyncio.run(backend.correct(remembered["bob"], "x", "ada")) is None
+    assert asyncio.run(backend.correct(remembered["other_app"], "x", "ada")) is None
+    corrected = asyncio.run(
+        backend.correct(remembered["boss"], "Mail from Alan is urgent", "ada")
+    )
+    assert corrected is not None
+    assert corrected["content"] == "Mail from Alan is urgent"
+    assert corrected["metadata"]["corrected_by"] == "ada"
+    assert corrected["metadata"]["corrected_at"]
+    # When it was learned stays; its words are embedded again.
+    assert corrected["created_at"] == "2026-10-03T09:00:00+00:00"
+    assert "Mail from Alan is urgent" in asked
+    stored = backend._ensure_initialized().vector_store.get(remembered["boss"])
+    assert stored.payload["agent_id"] == "app:app-1"
+    assert what(asyncio.run(backend.list_all())) == [
+        "Mail from Alan is urgent",
+        "Prefers short replies",
+    ]
+
+
 # --- The routes, as its owner -------------------------------------------------------
 
 
@@ -351,6 +395,8 @@ def test_its_owner_reads_what_it_remembers(
         "memory": "Mail from Grace is urgent",
         "created_at": "2026-10-03T09:00:00+00:00",
         "updated_at": None,
+        "corrected_by": None,
+        "corrected_at": None,
     }
 
 
@@ -411,3 +457,40 @@ def test_forgetting_everything_forgets_no_more_than_was_confirmed(
         remote.get("/api/v1/apps/memories/app-2", headers=as_("ada")).json()["count"]
         == 1
     )
+
+
+def test_its_owner_corrects_one_thing_and_nobody_else_does(
+    remote: TestClient, remembered: Dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mem0.embeddings.openai import OpenAIEmbedding
+
+    # Each request reaches the store with a mem0 of its own: its embedder answers.
+    monkeypatch.setattr(
+        OpenAIEmbedding, "embed", lambda self, text, action=None: CORRECTED_VECTOR
+    )
+    url = f"/api/v1/apps/memories/app-1/{remembered['tone']}"
+    assert (
+        remote.patch(url, json={"memory": "x"}, headers=as_("bob")).status_code == 403
+    )
+    empty = remote.patch(url, json={"memory": "  "}, headers=as_("ada"))
+    assert empty.status_code == 422
+    assert "it is empty" in empty.json()["detail"]
+    other = remote.patch(
+        f"/api/v1/apps/memories/app-1/{remembered['other_app']}",
+        json={"memory": "x"},
+        headers=as_("ada"),
+    )
+    assert other.status_code == 404
+    done = remote.patch(
+        url, json={"memory": " Prefers  long replies "}, headers=as_("ada")
+    )
+    assert done.status_code == 200, done.text
+    body = done.json()
+    assert body["corrected"] == 1
+    assert body["memory"]["memory"] == "Prefers long replies"
+    assert body["memory"]["corrected_by"] == "ada"
+    listed = remote.get("/api/v1/apps/memories/app-1", headers=as_("ada")).json()
+    [tone] = [
+        entry for entry in listed["memories"] if entry["id"] == remembered["tone"]
+    ]
+    assert (tone["memory"], tone["corrected_by"]) == ("Prefers long replies", "ada")

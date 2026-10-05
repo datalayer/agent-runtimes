@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from .base import BaseMemoryBackend
@@ -137,6 +138,30 @@ class Mem0Backend(BaseMemoryBackend):
             return False
         await asyncio.to_thread(memory.delete, memory_id)
         return True
+
+    async def correct(
+        self, memory_id: str, text: str, corrected_by: str
+    ) -> dict[str, Any] | None:
+        """Correct one memory of the user and agent in its words; None when it is not theirs.
+
+        mem0 updates it — its words, their embedding and the entities they
+        name — keeping what else it was kept with, and the correction is
+        kept beside it: who made it and when (``corrected_by``,
+        ``corrected_at``). Somebody else's, or another agent's, is not found.
+        """
+        memory = self._ensure_initialized()
+        found = await asyncio.to_thread(memory.get, memory_id)
+        if not isinstance(found, dict) or any(
+            found.get(key) != value for key, value in self._scope().items()
+        ):
+            return None
+        metadata = {
+            **(found.get("metadata") or {}),
+            "corrected_by": corrected_by,
+            "corrected_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await asyncio.to_thread(memory.update, memory_id, text, metadata=metadata)
+        return _normalized(await asyncio.to_thread(memory.get, memory_id))
 
     async def forget_all(self, batch: int = 500) -> int:
         """Delete every memory of the user and agent; answers how many."""

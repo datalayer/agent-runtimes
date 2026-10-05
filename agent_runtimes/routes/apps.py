@@ -750,8 +750,8 @@ async def session_agui(agent: str, request: Request) -> Any:
 # --- What an application remembers (LOOP R-18) -------------------------------
 
 
-async def _owner(request: Request) -> None:
-    """The person whose memories this runtime keeps, or the machine itself.
+async def _owner(request: Request) -> str:
+    """The person whose memories this runtime keeps, or the machine itself: their uid.
 
     An application's memories are kept per person and application, under the
     runtime's owner (`agent_runtimes.loop.apps.memory`): its owner reads and
@@ -762,14 +762,16 @@ async def _owner(request: Request) -> None:
 
     authorized = await _authorize(request, person_only=True, for_app=None)
     caller = authorized.caller
+    identity = resolve_memory_identity()
     if caller.kind == "local":
-        return
-    if caller.uid != resolve_memory_identity().user_uid:
+        return identity.user_uid or identity.user_id
+    if caller.uid != identity.user_uid:
         raise HTTPException(
             status_code=403,
             detail="What an application remembers is shown to its owner: "
             "this runtime keeps the memories of the person it runs for.",
         )
+    return caller.uid
 
 
 def _memory_of(app: str) -> Any:
@@ -791,6 +793,8 @@ def _remembered(entry: Dict[str, Any]) -> Dict[str, Any]:
         "memory": entry["content"],
         "created_at": entry["created_at"],
         "updated_at": entry["updated_at"],
+        "corrected_by": entry["metadata"].get("corrected_by"),
+        "corrected_at": entry["metadata"].get("corrected_at"),
     }
 
 
@@ -822,6 +826,46 @@ async def forget_memory(app: str, memory_id: str, request: Request) -> Dict[str,
             status_code=404, detail=f"{app} remembers nothing as {memory_id}."
         )
     return {"forgotten": 1}
+
+
+#: The longest correction kept, in characters — as the runtimes service keeps it.
+CORRECTION_LIMIT = 2000
+
+
+class Correction(BaseModel):
+    """What a memory should say instead."""
+
+    memory: str
+
+
+@router.patch("/memories/{app}/{memory_id}")
+async def correct_memory(
+    app: str, memory_id: str, correction: Correction, request: Request
+) -> Dict[str, Any]:
+    """Correct one thing an application remembers, in place (LOOP R-34).
+
+    Its words change — mem0 embeds them again — and the correction is kept
+    with who made it and when. Somebody else's is not found.
+    """
+    owner = await _owner(request)
+    words = " ".join(correction.memory.split())
+    if not words:
+        raise HTTPException(
+            status_code=422,
+            detail="A correction says what it should remember: it is empty.",
+        )
+    if len(words) > CORRECTION_LIMIT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"A correction is at most {CORRECTION_LIMIT} characters, not {len(words)}.",
+        )
+    memory = _memory_of(app)
+    corrected = await memory.correct(memory_id, words, corrected_by=owner)
+    if corrected is None:
+        raise HTTPException(
+            status_code=404, detail=f"{app} remembers nothing as {memory_id}."
+        )
+    return {"corrected": 1, "memory": _remembered(corrected)}
 
 
 @router.delete("/memories/{app}")

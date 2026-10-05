@@ -48,7 +48,8 @@ runtime's owner, or the machine itself); anybody else is refused (403).
 
 | Route | What it does |
 | --- | --- |
-| `GET /memories/{app}` | What it remembers, newest first: `{app, count, memories: [{id, memory, created_at, updated_at}]}`. `?limit=` up to 1000. |
+| `GET /memories/{app}` | What it remembers, newest first: `{app, count, memories: [{id, memory, created_at, updated_at, corrected_by, corrected_at}]}`. `?limit=` up to 1000. |
+| `PATCH /memories/{app}/{memory_id}` | **Correct**: one thing in place, with `{memory}` the words it should remember. mem0 embeds them again; the correction is kept with who made it and when (`corrected_by`, `corrected_at`); when it was learned stays. Empty words, or more than 2000 characters, are refused (422); another application's, or somebody else's, is not found (404). Answers `{corrected, memory}`. |
 | `DELETE /memories/{app}/{memory_id}` | **Forget this**: one thing. Another application's, or somebody else's, is not found (404). |
 | `DELETE /memories/{app}?count=N` | **Forget everything**, no more than the `N` its owner was shown and confirmed: when it remembers more now, nothing is forgotten (409). Answers `{forgotten}`. |
 
@@ -63,10 +64,11 @@ application's page shows what it remembers whether or not a runtime is running:
 | Route of the runtimes service | What it does |
 | --- | --- |
 | `GET /api/runtimes/v1/memories?agent_id=app:<uid>` | The caller's memories of the application. |
+| `PATCH /api/runtimes/v1/memories/{memory_id}` | Correct one of the caller's own in place, `{memory}` its new words, kept with `corrected_by` and `corrected_at`; somebody else's is not found. The service has no embedder: the memory keeps the vector of its old words, and is found by meaning as it was until it is learned again. Its words, and the words it is found by keyword, are the new ones. |
 | `DELETE /api/runtimes/v1/memories/{memory_id}` | Forget one of the caller's own; somebody else's is not found. |
 | `DELETE /api/runtimes/v1/memories?agent_id=app:<uid>&count=N` | Forget everything the application remembers of the caller, no more than `N` (409 otherwise). |
 
 The TypeScript client has them as `listRuntimeMemories`,
-`forgetRuntimeMemory` and `forgetRuntimeMemories`
+`correctRuntimeMemory`, `forgetRuntimeMemory` and `forgetRuntimeMemories`
 (`@datalayer/agent-runtimes/lib/api/runtimes/runtimes`), and on
 `AgentRuntimesClient`.

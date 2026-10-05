@@ -18,7 +18,8 @@ opened — at its address, embedded — reads nothing of what it remembers and
 writes nothing to it (`withhold_for`), since what it keeps is its owner's.
 A run outside a session — the scheduler's tick, as its owner — remembers.
 
-Its owner reads them and forgets them, one or all, here
+Its owner reads them, corrects one in place (LOOP R-34) and forgets them,
+one or all, here
 (`agent_runtimes.routes.apps`, ``/api/v1/apps/memories/{app}``), on a
 runtime of theirs — the store is the same from every runtime of the person.
 """

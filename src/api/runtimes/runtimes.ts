@@ -366,6 +366,10 @@ export interface RuntimeMemory {
   scope?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  /** Who corrected it, when it was corrected in place (LOOP R-34). */
+  corrected_by?: string | null;
+  /** When it was corrected (ISO). */
+  corrected_at?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -510,6 +514,46 @@ export const forgetRuntimeMemory = async (
   return {
     success: Boolean(response?.success),
     forgotten: Number(response?.forgotten ?? 0),
+  };
+};
+
+/**
+ * What a correction answers: the memory as it is now kept.
+ */
+export interface CorrectRuntimeMemoryResponse {
+  success: boolean;
+  memory: RuntimeMemory;
+}
+
+/**
+ * Correct one of the caller's own persisted memories in place (LOOP R-34):
+ * its words become `text`, kept with who corrected it and when.
+ *
+ * Somebody else's is not found (404), whoever asks; empty words, more than
+ * the service keeps, or the words it already has are refused (422).
+ */
+export const correctRuntimeMemory = async (
+  token: string,
+  memoryId: string,
+  text: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<CorrectRuntimeMemoryResponse> => {
+  validateToken(token);
+  validateRequiredString(memoryId, 'Memory id');
+  validateRequiredString(text, 'What it should remember');
+
+  const response = await requestDatalayerAPI<
+    Partial<CorrectRuntimeMemoryResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories/${encodeURIComponent(memoryId)}`,
+    method: 'PATCH',
+    body: { memory: text },
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    memory: response?.memory as RuntimeMemory,
   };
 };
 

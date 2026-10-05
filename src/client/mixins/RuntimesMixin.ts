@@ -282,6 +282,25 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
+     * Correct one of the caller's own memories in place (LOOP R-34): its
+     * words become `text`, kept with who corrected it and when.
+     */
+    async correctRuntimeMemory(
+      memoryId: string,
+      text: string,
+    ): Promise<RuntimeMemory> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.correctRuntimeMemory(
+        token,
+        memoryId,
+        text,
+        runtimesUrl,
+      );
+      return response.memory;
+    }
+
+    /**
      * Forget everything an agent or application (`app:<uid>`) remembers of
      * the caller, no more than the `count` confirmed.
      */

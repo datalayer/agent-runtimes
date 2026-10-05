@@ -71,6 +71,32 @@ describe('Runtimes API', () => {
     expect(result).toEqual({ success: true, forgotten: 1 });
   });
 
+  it('corrects one memory in place, with the words it should remember', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      memory: {
+        id: 'm 1',
+        memory: 'Prefers long replies',
+        corrected_by: 'ada',
+      },
+    });
+
+    const result = await runtimes.correctRuntimeMemory(
+      MOCK_JWT_TOKEN,
+      'm 1',
+      'Prefers long replies',
+    );
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('PATCH');
+    expect(String(call.url)).toMatch(/\/api\/runtimes\/v1\/memories\/m%201$/);
+    expect(call.body).toEqual({ memory: 'Prefers long replies' });
+    expect(result.memory.corrected_by).toBe('ada');
+    await expect(
+      runtimes.correctRuntimeMemory(MOCK_JWT_TOKEN, 'm 1', ' '),
+    ).rejects.toThrow();
+  });
+
   it('forgets everything an application remembers, no more than confirmed', async () => {
     vi.mocked(requestDatalayerAPI).mockResolvedValue({
       success: true,
