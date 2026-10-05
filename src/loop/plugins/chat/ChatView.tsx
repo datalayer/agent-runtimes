@@ -143,7 +143,11 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import type { ToolCallMessage } from '../../../types/chat';
-import { PresenceFace, PresenceLine } from '../../../chat/presence/Presence';
+import {
+  FaceDrawing,
+  PresenceFace,
+  PresenceLine,
+} from '../../../chat/presence/Presence';
 import {
   presenceState,
   presenceToolOf,
@@ -1934,7 +1938,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                   aria-hidden
                   style={{ fontSize: FACE_LARGE, lineHeight: 1 }}
                 >
-                  {presence.face}
+                  <FaceDrawing face={presence.face} size={FACE_LARGE} />
                 </span>
               ) : (
                 <BrandIcon size={48} />

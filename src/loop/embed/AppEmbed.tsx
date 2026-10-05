@@ -40,6 +40,7 @@ import type { PluginRef } from '@datalayer/reactor';
 import { registerPortalRoot } from '@primer/react';
 import { DatalayerThemeProvider, loopTheme } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
+import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
 import type { AppAccent, AppEmbedMode, AppSpec } from '../../types/agentspecs';
 import type { ProtocolConfig } from '../../types/protocol';
 import type { ThemeOverrides } from '../../types/chat';
@@ -231,11 +232,8 @@ function useDatalayerAgent(
 
 /** The application's face, as the floating chat's button and header draw it. */
 function Face({ emoji }: { emoji: string }): JSX.Element {
-  return (
-    <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
-      {emoji}
-    </span>
-  );
+  // In Fluent Emoji, at a line's size (T-19, T-20).
+  return <FluentEmoji emoji={emoji} size={20} label="" />;
 }
 
 type FloatingProps = {

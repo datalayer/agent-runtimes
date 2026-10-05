@@ -29,6 +29,20 @@ Appspec. In its chat:
 An application without a face of its own shows the product's mark in its
 place.
 
+### The same drawing on every platform
+
+A face given as an emoji is drawn in Fluent Emoji (Microsoft, MIT, Flat
+style), not by the system's emoji font, so it is the same face on every
+device: `FaceDrawing` (in `chat/presence/Presence.tsx`) hands the string to
+`FluentEmoji` from `@datalayer/core/lib/components/emoji`, at the size asked
+— 20px in the header, 72px in the empty state, 20px on the embed's floating
+button. Each drawing is a module of its own in core's bundle, fetched the
+first time it is drawn: no request leaves for a third party. Core ships a
+drawing of every emoji in `FACE_EMOJIS` (the eyes, every example's, and the
+ones an application is offered); any other emoji is drawn by the system, as
+text. A host that passes its own drawing as the face (a React node) keeps
+it.
+
 ## The line of status
 
 One line beside the face says what the application is doing, in plain words

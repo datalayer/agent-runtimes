@@ -15,9 +15,23 @@
 
 import type { ReactNode } from 'react';
 import { Box, Text } from '@primer/react';
+import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
 import { PRESENCE_LINES, type PresenceState } from './presenceStatus';
 
 const ACCENT = 'var(--loop-accent, var(--fgColor-accent))';
+
+/**
+ * A face at `size`: an emoji drawn in Fluent Emoji, the same on every
+ * platform (LOOP T-20) — the system's, as text, only for one Datalayer ships
+ * no drawing of — or a host's own drawing, left as it is.
+ */
+export function FaceDrawing({ face, size }: { face: ReactNode; size: number }) {
+  return typeof face === 'string' ? (
+    <FluentEmoji emoji={face} size={size} label="" />
+  ) : (
+    <>{face}</>
+  );
+}
 
 export function PresenceFace({
   face,
@@ -72,7 +86,7 @@ export function PresenceFace({
           },
         }}
       />
-      {face}
+      <FaceDrawing face={face} size={size} />
     </Box>
   );
 }
