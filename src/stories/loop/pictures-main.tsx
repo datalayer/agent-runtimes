@@ -8,7 +8,8 @@
  * one state of the floating assistant, in one theme and one mode, chosen by
  * the address — `html/pictures.html?screen=approval&theme=loop&mode=dark`,
  * or `?assistant=thinking&mode=light`, or a character idle,
- * `?character=wizard&mode=dark` (Datalayer's, or the owl a plugin contributes).
+ * `?character=wizard&mode=dark` (Datalayer's, or the owl a plugin contributes),
+ * or the gallery's grid of every character in every pose, `?gallery=grid`.
  *
  * It sets `data-pictures-ready` on the document once the fonts are in — Inter
  * in its two weights, served by this page (T-04) — and two frames have
@@ -25,6 +26,7 @@ if (globals['__webpack_public_path__'] === undefined) {
 import { useEffect } from 'react';
 import type { JSX } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Box } from '@datalayer/primer-addons';
 import type { ThemeVariant } from '@datalayer/primer-addons';
 import {
   ASSISTANT_PICTURES,
@@ -40,6 +42,10 @@ import {
   type ReferenceMode,
   type ReferenceScreen,
 } from './ReferenceScreens';
+import {
+  AssistantGalleryGrid,
+  useGalleryCharacters,
+} from '../../examples/utils/AssistantGalleryGrid';
 
 import '../../../style/primer-primitives.css';
 // The `loop` theme's face (LOOP T-04): Inter and its metric-matched fallback,
@@ -56,6 +62,7 @@ const mode: ReferenceMode = params.get('mode') === 'dark' ? 'dark' : 'light';
 const screen = params.get('screen') as ReferenceScreen | null;
 const assistant = params.get('assistant') as AssistantPicture | null;
 const character = params.get('character') as CharacterPicture | null;
+const gallery = params.get('gallery') === 'grid';
 
 function Ready(): null {
   useEffect(() => {
@@ -83,7 +90,28 @@ function Ready(): null {
   return null;
 }
 
+/**
+ * The floating assistant's gallery as a grid: every character — the test
+ * sprite read in the page included — in every pose; ready once it is read.
+ */
+function GalleryScreen(): JSX.Element {
+  const { characters, ready } = useGalleryCharacters();
+  return (
+    <Box sx={{ flex: 1, bg: 'canvas.default', p: 2, overflow: 'hidden' }}>
+      <AssistantGalleryGrid characters={characters} />
+      {ready && <Ready />}
+    </Box>
+  );
+}
+
 function Page(): JSX.Element {
+  if (gallery) {
+    return (
+      <ReferenceTheme theme={theme} mode={mode}>
+        <GalleryScreen />
+      </ReferenceTheme>
+    );
+  }
   if (character && CHARACTER_PICTURES.includes(character)) {
     return (
       <ReferenceTheme theme={theme} mode={mode}>

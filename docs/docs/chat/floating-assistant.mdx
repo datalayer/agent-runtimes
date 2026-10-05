@@ -163,6 +163,30 @@ difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the
 wizard, the cat, the L👀P eyes and a character contributed by a plugin (the
 owl below), each idle in its light and its dark drawing:
 `npm run test:pictures -- -g "assistant|character"` takes only these.
+And the gallery's grid below, every character in every state, is one picture
+per mode (`assistant-gallery-light`, `assistant-gallery-dark`).
+
+## The gallery
+
+The *Chat Assistant Gallery* example (`src/examples/ChatAssistantGalleryExample.tsx`,
+in the examples' *Chat* group) shows every representation of the assistant,
+from static data — no agent, no server, no sign-in:
+
+- **every character**: Datalayer's four, the owl the example plugin
+  contributes to `loop.assistant.character`, and *Pixel*, a small test sprite
+  of our own read through the clippy.js reader (`readClippyCharacter`);
+- **every state**: idle, greeting, thinking, working, waiting (the approval in
+  its balloon, with *Approve* and *Deny*), speaking, paused, stepped aside (a
+  composer laid over it) and goodbye;
+- **light and dark**, one or side by side, and **reduced motion**;
+- **one at a time**: pick a character and a state, *Say something* for the
+  agent's latest saying in the balloon, drag the character, send it away
+  (its own menu, or *Send it away*) and call it back;
+- **a grid**: all the characters by all the states, small, for a quick visual
+  check (`AssistantGalleryGrid`, in `src/examples/utils/`).
+
+Every cell is the real `AssistantStage`; nothing in the gallery is drawn for
+it.
 
 ## Datalayer's characters
 

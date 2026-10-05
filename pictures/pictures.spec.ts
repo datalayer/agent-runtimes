@@ -158,8 +158,10 @@ for (const mode of MODES) {
       await show(page, `gallery=grid&theme=loop&mode=${mode}`);
       await expect(page.locator('[data-gallery-cell]')).toHaveCount(6 * 9);
       await expect(
-        page.locator('[data-gallery-cell="sprite-idle"] [data-sprite-animation]'),
-      ).toHaveAttribute('data-sprite-animation', 'RestPose');
+        page.locator(
+          '[data-gallery-cell="sprite-idle"] [data-sprite-animation]',
+        ),
+      ).toHaveAttribute('data-sprite-animation', 'Idle1_1');
       await expect(
         page.locator('[data-gallery-cell$="-aside"] [data-assistant-aside]'),
       ).toHaveCount(6);

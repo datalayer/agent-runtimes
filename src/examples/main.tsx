@@ -143,6 +143,8 @@ const ANONYMOUS_EXAMPLES = new Set([
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
   'ChatAssistantExample',
+  // Every character in every state, from static data: no agent at all.
+  'ChatAssistantGalleryExample',
 ]);
 
 const getExampleGroup = (id: string): string => {
