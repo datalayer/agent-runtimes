@@ -91,6 +91,12 @@ def app_capabilities(
         record=recorder.checked,
     )
     capabilities: List[Any] = [rules, checks, AppRecordCapability(recorder=recorder)]
+    # Answers that may be heard are written for the ear too (VOICE.md VO-44).
+    from agent_runtimes.voice import voice_capability
+
+    voicing = voice_capability(app)
+    if voicing is not None:
+        capabilities.append(voicing)
     # What it knows: the tool that searches its documents (LOOP R-29). Run
     # from a file, nothing was read for it on Datalayer, and the tool says so.
     if knows_documents(app):

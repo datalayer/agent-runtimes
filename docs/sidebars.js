@@ -23,7 +23,7 @@ const sidebars = {
       type: 'category',
       label: 'Chat',
       link: { type: 'doc', id: 'chat/index' },
-      items: ['chat/floating-assistant', 'chat/presence'],
+      items: ['chat/floating-assistant', 'chat/presence', 'chat/voice'],
     },
     { type: 'doc', id: 'programmatic-tools/index', label: 'Programmatic Tools' },
     { type: 'doc', id: 'subagents/index', label: 'Subagents' },

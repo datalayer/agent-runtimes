@@ -46,6 +46,9 @@ import { AssistantStage } from './assistant/AssistantStage';
 import { decisionsAskerAt } from './assistant/decisions';
 import { DecisionAsk } from './assistant/DecisionAsk';
 import type { ChatBaseProps } from '../types/chat';
+import { ServerSpeaker, type SpeakerState } from '../voice/speaker';
+import { useSpokenAnswers } from '../voice/useSpokenAnswers';
+import type { ChatVoice } from '../voice';
 import {
   BalloonApprovalMessage,
   CONVERSATION_BALLOON_WIDTH,
@@ -250,6 +253,14 @@ export interface ChatFloatingProps extends ChatCommonProps {
    * own props (`protocol`, `suggestions`, …) are then not read.
    */
   conversation?: FloatingConversation;
+
+  /**
+   * Its voice (VOICE.md V1): push-to-talk in the composer, heard on the
+   * device; with `output: 'always'`, its answers said by Datalayer's speech
+   * service as they are written, the assistant's mouth moving with the sound
+   * and its balloon showing the sentence being said.
+   */
+  voice?: ChatVoice;
 }
 
 /**
@@ -360,6 +371,7 @@ export function ChatFloating({
   assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
   conversation,
   decisions,
+  voice,
 }: ChatFloatingProps) {
   // Store-based state
   const storeIsOpen = useChatOpen();
@@ -437,6 +449,54 @@ export function ChatFloating({
     pendingApproval: false,
   });
   const [ownAnswering, setAnswering] = useState(false);
+  /*
+   * Its voice (VOICE.md V1): the answers said by the speech service, as
+   * they are written (VO-20), the state following the sound (VO-22).
+   */
+  const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);
+  const [speakerState, setSpeakerState] = useState<SpeakerState>({
+    speaking: false,
+  });
+  const speaker = useMemo(
+    () =>
+      voice && voice.output === 'always' && voice.speechUrl
+        ? new ServerSpeaker({
+            speechUrl: voice.speechUrl,
+            voice: voice.voice,
+            language: voice.language,
+            token: voice.token,
+            onState: setSpeakerState,
+          })
+        : undefined,
+    [voice?.output, voice?.speechUrl],
+  );
+  useEffect(() => {
+    speaker?.update({
+      voice: voice?.voice,
+      language: voice?.language,
+      token: voice?.token,
+    });
+  }, [speaker, voice?.voice, voice?.language, voice?.token]);
+  useEffect(() => () => speaker?.close(), [speaker]);
+  // A browser plays only what a gesture allowed: the first one does.
+  useEffect(() => {
+    if (!speaker) {
+      return;
+    }
+    const unlock = () => speaker.unlock();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [speaker]);
+  useSpokenAnswers(voiceItems, chatBusy, !!speaker, speaker);
+  const stopSpeaking = useCallback(() => speaker?.stop(), [speaker]);
+  const mouthLevel = useMemo(
+    () => (speaker ? () => speaker.level() : undefined),
+    [speaker],
+  );
   const [arriving, setArriving] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [assistantAway, setAssistantAway] = useState<AssistantAway>(keptAway);
@@ -483,6 +543,7 @@ export function ChatFloating({
       arriving,
       leaving,
       speaking: answering,
+      voicing: speakerState.speaking,
     },
   );
   const unheard = !!saying && saying.id !== heardId;
@@ -523,21 +584,27 @@ export function ChatFloating({
   const assistantBalloon =
     assistantState === 'paused'
       ? { text: ASSISTANT_WORDS.paused }
-      : balloonApproval
-        ? { text: ASSISTANT_WORDS.approval, approval: balloonApproval }
-        : assistantState === 'waiting'
-          ? { text: ASSISTANT_WORDS.waiting }
-          : unheard && saying
-            ? {
-                // A peek: the first words; the rest is in the conversation.
-                ...peekLine(saying.text),
-                onDismiss: () => {
-                  setHeardId(saying.id);
-                  setFreshSaying(false);
-                },
-              }
-            : { text: description };
+      : speakerState.sentence
+        ? // Heard: the sentence being said is the one in the balloon (VO-26).
+          { text: speakerState.sentence }
+        : speakerState.refused
+          ? { text: speakerState.refused }
+          : balloonApproval
+            ? { text: ASSISTANT_WORDS.approval, approval: balloonApproval }
+            : assistantState === 'waiting'
+              ? { text: ASSISTANT_WORDS.waiting }
+              : unheard && saying
+                ? {
+                    // A peek: the first words; the rest is in the conversation.
+                    ...peekLine(saying.text),
+                    onDismiss: () => {
+                      setHeardId(saying.id);
+                      setFreshSaying(false);
+                    },
+                  }
+                : { text: description };
   const balloonInsists =
+    !!speakerState.sentence ||
     assistantState === 'greeting' ||
     assistantState === 'waiting' ||
     !!balloonApproval ||
@@ -561,6 +628,7 @@ export function ChatFloating({
           : tool,
       );
       setAnswering(newestIsAnswer(items));
+      setVoiceItems(items);
       const said = latestSaying(items);
       setSaying(previous =>
         previous?.id === said?.id && previous?.text === said?.text
@@ -1433,6 +1501,9 @@ export function ChatFloating({
           pendingApprovals={pendingApprovals}
           onApproveApproval={onApproveApproval}
           onRejectApproval={onRejectApproval}
+          voice={voice}
+          voiceSpeaking={speakerState.speaking}
+          onStopSpeaking={speaker ? stopSpeaking : undefined}
           {...panelProps}
           {...assistantChat}
           onLoadingChange={handleLoadingChange}
@@ -1524,6 +1595,7 @@ export function ChatFloating({
           insist={balloonInsists}
           onDismiss={dismissAssistant}
           ownRef={popupRef}
+          mouthLevel={mouthLevel}
         />
       )}
 

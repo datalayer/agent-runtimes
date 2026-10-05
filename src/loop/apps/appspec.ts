@@ -39,6 +39,7 @@ import type {
   AppDecisionSpec,
   AppDeploymentSpec,
   AppInterfaceSpec,
+  AppVoiceSpec,
   AppKind,
   AppLayout,
   AppRuleSpec,
@@ -311,6 +312,40 @@ function parseSurface(data: Data): AppSurfaceSpec {
   };
 }
 
+/** An application's voice (VOICE.md VO-41): off unless said. */
+export const DEFAULT_VOICE: AppVoiceSpec = {
+  enabled: false,
+  input: 'push_to_talk',
+  output: 'on_request',
+  voice: '',
+  language: '',
+  where: 'auto',
+};
+
+function parseVoice(data: unknown): AppVoiceSpec {
+  const voice = isData(data) ? data : {};
+  return {
+    enabled: voice.enabled === true,
+    input: oneOf(
+      voice.input,
+      ['off', 'push_to_talk', 'hands_free'] as const,
+      DEFAULT_VOICE.input,
+    ),
+    output: oneOf(
+      voice.output,
+      ['off', 'on_request', 'always'] as const,
+      DEFAULT_VOICE.output,
+    ),
+    voice: text(voice.voice),
+    language: text(voice.language),
+    where: oneOf(
+      voice.where,
+      ['auto', 'device', 'server'] as const,
+      DEFAULT_VOICE.where,
+    ),
+  };
+}
+
 function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   const parsed: AppInterfaceSpec = {
     layout: oneOf(
@@ -326,6 +361,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     })),
     settings: records(data.settings).map(parseSetting),
     components: texts(data.components),
+    voice: parseVoice(data.voice),
   };
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
@@ -654,6 +690,19 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   }
   if (spec.assistant) {
     writer.data.assistant = spec.assistant;
+  }
+  // Its voice, when it says one (VO-41): a spec made before voice has none.
+  if (spec.voice) {
+    writer.part(
+      'voice',
+      new Writer()
+        .value('enabled', spec.voice.enabled, DEFAULT_VOICE.enabled)
+        .value<string>('input', spec.voice.input, DEFAULT_VOICE.input)
+        .value<string>('output', spec.voice.output, DEFAULT_VOICE.output)
+        .text('voice', spec.voice.voice)
+        .text('language', spec.voice.language)
+        .value<string>('where', spec.voice.where, DEFAULT_VOICE.where).data,
+    );
   }
   return writer.data;
 }

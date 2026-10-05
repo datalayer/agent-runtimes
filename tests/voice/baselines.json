@@ -1,0 +1,14 @@
+{
+  "about": "The word error rates measured once on the fixtures (VOICE.md VO-51), 2026-10-05, by scripts/voice/measure.py: a check fails at more than two points above them. stt: each device model by language, on the recorded fixtures; round_trip: each voice saying its sample and the product's sentences, heard by the device model of its language (moonshine-tiny-en, whisper-base).",
+  "measured_on": "2026-10-05",
+  "stt": {
+    "moonshine-tiny-en": {"en": 0.033},
+    "moonshine-base-en": {"en": 0.049},
+    "whisper-base": {"en": 0.041, "fr": 0.341}
+  },
+  "round_trip": {
+    "kokoro-af-heart": 0.189,
+    "kokoro-bf-emma": 0.162,
+    "kokoro-ff-siwis": 0.136
+  }
+}

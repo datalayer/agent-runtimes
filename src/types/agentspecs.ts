@@ -481,6 +481,21 @@ export interface AppSurfaceSpec {
   composedAt: string;
 }
 
+/**
+ * An application's voice (VOICE.md VO-41), off unless said: whether a person
+ * may talk to it, whether its answers are heard, with which voice of the
+ * catalogue (`specs/voices`), in which language (BCP 47) and where its
+ * speech runs.
+ */
+export interface AppVoiceSpec {
+  enabled: boolean;
+  input: 'off' | 'push_to_talk' | 'hands_free';
+  output: 'off' | 'on_request' | 'always';
+  voice: string;
+  language: string;
+  where: 'auto' | 'device' | 'server';
+}
+
 /** What the user of an application sees. */
 export interface AppInterfaceSpec {
   layout: AppLayout;
@@ -496,6 +511,8 @@ export interface AppInterfaceSpec {
    * Said, it wins over the one the person chose in their settings.
    */
   assistant?: AppAssistantCharacter;
+  /** Its voice: off unless said (VO-41); absent from a spec made before voice. */
+  voice?: AppVoiceSpec;
 }
 
 export interface AppTestCaseSpec {

@@ -33,6 +33,11 @@ export interface AssistantMoment {
   leaving?: boolean;
   /** The answer is arriving: words are being written. */
   speaking?: boolean;
+  /**
+   * Its answer is being heard: sound is playing (VOICE.md VO-22). It speaks
+   * while the audio plays, even after the text has ended.
+   */
+  voicing?: boolean;
 }
 
 /**
@@ -41,7 +46,8 @@ export interface AssistantMoment {
  * Leaving wins, being short; then paused — a paused application neither
  * greets nor speaks, it dozes; then arriving; then waiting for the person,
  * which must never be missed; then speaking over thinking, since words
- * arriving are what the person watches; then the presence as it is.
+ * arriving are what the person watches — and while its voice is heard, even
+ * once the words have all arrived; then the presence as it is.
  */
 export function assistantStateOf(
   presence: PresenceState,
@@ -59,7 +65,7 @@ export function assistantStateOf(
   if (presence === 'waiting') {
     return 'waiting';
   }
-  if (moment.speaking && presence !== 'idle') {
+  if ((moment.speaking && presence !== 'idle') || moment.voicing) {
     return 'speaking';
   }
   return presence;

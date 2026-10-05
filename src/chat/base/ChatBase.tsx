@@ -108,6 +108,9 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
+import { DeviceHearing } from '../../voice/hearing';
+import { VoiceInput } from '../../voice/VoiceInput';
+import type { SpokenMetadata, Transcript } from '../../voice/types';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
@@ -845,6 +848,9 @@ function ChatBaseInner({
   footerContent,
   welcome,
   trailingContent,
+  voice,
+  voiceSpeaking = false,
+  onStopSpeaking,
   showInformation = false,
   onInformationClick,
   headerContent,
@@ -3791,12 +3797,23 @@ function ChatBaseInner({
   // ========================================================================
   // handleSend
   // ========================================================================
+  // Voice (VOICE.md V1): what was said and put in the composer, until sent.
+  const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
+  const hearing = useMemo(
+    () =>
+      voice && voice.input !== 'off'
+        ? new DeviceHearing(voice.modelsUrl, voice.engines)
+        : undefined,
+    [voice?.input, voice?.modelsUrl, voice?.engines],
+  );
   const handleSend = useCallback(
     async (
       messageOverride?: string,
       // AG-UI's: what goes with the run besides the conversation — an
       // application's page says there what it did (LOOP R-04).
-      forwardedProps?: Record<string, unknown>,
+      forwardedPropsGiven?: Record<string, unknown>,
+      // How the message was heard, when it was said (VOICE.md VO-27).
+      spokenGiven?: SpokenMetadata,
     ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
@@ -3804,8 +3821,20 @@ function ChatBaseInner({
       stoppedRef.current = false;
       suppressAssistantTextForToolOnlyRef.current =
         isToolCallOnlyPrompt(messageContent);
+      // Said, then sent: by the microphone at once, or from the composer it
+      // was put in — the words may have been edited, it was still said.
+      const spoken =
+        spokenGiven ??
+        (messageOverride === undefined ? spokenRef.current : undefined);
+      spokenRef.current = undefined;
+      const forwardedProps = spoken
+        ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
+        : forwardedPropsGiven;
 
-      const userMessage = createUserMessage(messageContent);
+      const userMessage = createUserMessage(
+        messageContent,
+        spoken ? { ...spoken } : undefined,
+      );
       const currentMessages = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
@@ -4646,8 +4675,35 @@ function ChatBaseInner({
     </Box>
   );
 
+  // The microphone, in the composer's footer (VO-10).
+  const voiceControl =
+    hearing && voice ? (
+      <VoiceInput
+        hearing={hearing}
+        language={voice.language}
+        consentKey={voice.consentKey ?? 'chat'}
+        disabled={disabled || launching}
+        speaking={voiceSpeaking}
+        onStopSpeaking={onStopSpeaking}
+        onListen={onStopSpeaking}
+        onTranscript={(transcript: Transcript) => {
+          if (voice.sendWhatISay) {
+            void handleSend(transcript.text, undefined, transcript.metadata);
+            return;
+          }
+          spokenRef.current = transcript.metadata;
+          setInput(
+            input.trim()
+              ? `${input.trim()} ${transcript.text}`
+              : transcript.text,
+          );
+        }}
+      />
+    ) : undefined;
+
   const inputToolbar = showInput ? (
     <InputPrompt
+      footerExtras={voiceControl}
       input={input}
       setInput={setInput}
       isLoading={isLoading}

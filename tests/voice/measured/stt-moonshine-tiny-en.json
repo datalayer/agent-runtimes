@@ -1,0 +1,71 @@
+{
+  "model": "moonshine-tiny-en",
+  "runtime": "transformers.js 4.3.0 on onnxruntime-node, CPU",
+  "languages": {
+    "en": {
+      "load_ms": 528,
+      "clips": [
+        {
+          "id": "en-6930-75918-0000",
+          "heard": "Concord returned to its place amidst the tents.",
+          "ms": 133,
+          "audio_s": 3.51
+        },
+        {
+          "id": "en-6930-75918-0002",
+          "heard": "Congratulations were poured in upon the princess everywhere during her journey.",
+          "ms": 147,
+          "audio_s": 5.03
+        },
+        {
+          "id": "en-6930-75918-0006",
+          "heard": "This has indeed been a harassing day, continued the young man, his eyes fixed upon his friend.",
+          "ms": 193,
+          "audio_s": 5.85
+        },
+        {
+          "id": "en-6930-75918-0007",
+          "heard": "You will be frank with me, I always am.",
+          "ms": 109,
+          "audio_s": 3.32
+        },
+        {
+          "id": "en-6930-75918-0008",
+          "heard": "Can you imagine my buckingham has been so violent? I suspect.",
+          "ms": 125,
+          "audio_s": 4.79
+        },
+        {
+          "id": "en-6930-75918-0009",
+          "heard": "It is you who are mistaken, Raoul. I have read his distress in his eyes, in his every gesture and action the whole day.",
+          "ms": 284,
+          "audio_s": 7.28
+        },
+        {
+          "id": "en-6930-75918-0010",
+          "heard": "I can perceive love clearly enough.",
+          "ms": 95,
+          "audio_s": 3.04
+        },
+        {
+          "id": "en-6930-75918-0011",
+          "heard": "I am convinced of what I say, said the count.",
+          "ms": 117,
+          "audio_s": 3.2
+        },
+        {
+          "id": "en-6930-75918-0013",
+          "heard": "In those very terms, I even added more.",
+          "ms": 108,
+          "audio_s": 2.94
+        },
+        {
+          "id": "en-6930-75918-0015",
+          "heard": "Thus it is that the honor of three is saved, our country, our masters, and our own.",
+          "ms": 242,
+          "audio_s": 6.38
+        }
+      ]
+    }
+  }
+}

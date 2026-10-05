@@ -67,6 +67,7 @@ from agent_runtimes.loop.apps.plugins import (
 )
 from agent_runtimes.loop.apps.record import COMMENT_LIMIT, RecordNotSent, recorder_of
 from agent_runtimes.types import AppSpec
+from agent_runtimes.voice import hear, spoken_of, voice_settings
 
 router = APIRouter(prefix="/apps", tags=["apps"])
 
@@ -331,6 +332,8 @@ async def configure_app(
             "emoji": app.emoji,
         },
         "setup": app.setup,
+        # Its voice, so that the page knows it before the first answer (VO-45).
+        "voice": voice_settings(app),
         "plugins_off_says": plugins_off.says,
         **({"a2a": a2a} if a2a else {}),
     }
@@ -366,6 +369,7 @@ async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, A
         "emoji": app.emoji,
         "kind": app.kind,
         "setup": app.setup,
+        "voice": voice_settings(app),
     }
 
 
@@ -849,6 +853,9 @@ async def session_agui(agent: str, request: Request) -> Any:
     thread = str(body.get("threadId") or "")
     forwarded = body.get("forwardedProps")
     loop = forwarded.get("loop") if isinstance(forwarded, dict) else None
+    # A message the person said: its transcript is the message, and the
+    # record keeps it marked spoken (VOICE.md VO-27, VO-29).
+    hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
     try:
         live = session_of(thread)
         if live is None:

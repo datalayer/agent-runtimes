@@ -77,6 +77,14 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": "wizard",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -203,6 +211,14 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": "cat",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -306,6 +322,14 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             ],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -443,6 +467,14 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": "wizard",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -582,6 +614,14 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.9,
@@ -707,6 +747,14 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -987,6 +1035,14 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "assistant": "eyes",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.9,
@@ -1235,6 +1291,14 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 1.0,
@@ -1420,6 +1484,14 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "assistant": "wizard",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -1524,6 +1596,14 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": "paperclip",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -1626,6 +1706,14 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             ],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -1788,6 +1876,14 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             ],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -2037,6 +2133,14 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "composed_at": "",
             },
             "assistant": "paperclip",
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,
@@ -2152,6 +2256,14 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             "components": [],
             "surface": None,
             "assistant": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
         },
         "tests": {
             "ready_at": 0.8,

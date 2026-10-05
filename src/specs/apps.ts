@@ -84,6 +84,14 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     settings: [],
     components: [],
     assistant: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -220,6 +228,14 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     ],
     components: [],
     assistant: 'cat',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -332,6 +348,14 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -489,6 +513,14 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     settings: [],
     components: [],
     assistant: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -639,6 +671,14 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     ],
     settings: [],
     components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.9,
@@ -772,6 +812,14 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -1102,6 +1150,14 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
       composedAt: '',
     },
     assistant: 'eyes',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.9,
@@ -1394,6 +1450,14 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
       composedBy: 'template',
       composedAt: '',
     },
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 1.0,
@@ -1625,6 +1689,14 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
       composedAt: '',
     },
     assistant: 'wizard',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -1745,6 +1817,14 @@ export const SALES_APP_0_0_1: AppSpec = {
     settings: [],
     components: [],
     assistant: 'paperclip',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -1856,6 +1936,14 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -2026,6 +2114,14 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -2319,6 +2415,14 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
       composedAt: '',
     },
     assistant: 'paperclip',
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,
@@ -2455,6 +2559,14 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
       },
     ],
     components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
   },
   tests: {
     readyAt: 0.8,

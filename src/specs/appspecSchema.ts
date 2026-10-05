@@ -355,6 +355,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             "The character its floating assistant shows, by the id a plugin contributes it under (lowercase letters and digits, words joined by a hyphen): Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The paper clip when unsaid; an id no enabled plugin contributes is refused where the plugins are known, the runtime and the page. Said here, it wins over a person's own choice in their settings",
           title: 'Assistant',
         },
+        voice: {
+          $ref: '#/$defs/AppVoice',
+          description:
+            'Its voice: whether it listens and speaks, with which voice, in which language (off unless said)',
+        },
       },
       title: 'AppInterface',
       type: 'object',
@@ -759,6 +764,54 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppVerified',
       type: 'object',
     },
+    AppVoice: {
+      additionalProperties: false,
+      description:
+        'Its voice (VOICE.md VO-41): whether it listens, whether it speaks, with which voice, in which language.\n\nOff unless said. What is said becomes a message, and what is heard is the\nanswer the conversation shows: the text stays the truth.',
+      properties: {
+        enabled: {
+          default: false,
+          description: 'Whether it has a voice at all; off unless said',
+          title: 'Enabled',
+          type: 'boolean',
+        },
+        input: {
+          $ref: '#/$defs/VoiceInput',
+          default: 'push_to_talk',
+          description:
+            '`off`, `push_to_talk` (hold a key or the microphone, speak, let go) or `hands_free`',
+        },
+        output: {
+          $ref: '#/$defs/VoiceOutput',
+          default: 'on_request',
+          description:
+            'When its answers are heard: `off`, `on_request` (a Read aloud on each answer) or `always`',
+        },
+        voice: {
+          default: '',
+          description:
+            "The voice it speaks with, an id of the voice catalogue (`kokoro-af-heart`); the language's first when unsaid",
+          title: 'Voice',
+          type: 'string',
+        },
+        language: {
+          default: '',
+          description:
+            "The language it listens and speaks in, BCP 47 (`en-US`, `fr-FR`); the person's when unsaid",
+          pattern: '^(?:[a-z]{2,3}(?:-[A-Z]{2})?)?$',
+          title: 'Language',
+          type: 'string',
+        },
+        where: {
+          $ref: '#/$defs/VoiceWhere',
+          default: 'auto',
+          description:
+            "Where its speech runs: `auto`, `device` (the person's browser) or `server` (Datalayer's)",
+        },
+      },
+      title: 'AppVoice',
+      type: 'object',
+    },
     Behaviour: {
       description:
         'What an application does when it meets an action: the four a person chooses from.',
@@ -835,6 +888,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'sources',
         'outputs',
         'feedback',
+        'audio',
       ],
       title: 'RecordItem',
       type: 'string',
@@ -855,6 +909,26 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       description: 'Who can open a hosted application.',
       enum: ['private', 'invited', 'organization', 'link', 'public'],
       title: 'Visibility',
+      type: 'string',
+    },
+    VoiceInput: {
+      description:
+        'How a person talks to the application (VOICE.md VO-10, VO-12).',
+      enum: ['off', 'push_to_talk', 'hands_free'],
+      title: 'VoiceInput',
+      type: 'string',
+    },
+    VoiceOutput: {
+      description: 'When its answers are heard (VO-21).',
+      enum: ['off', 'on_request', 'always'],
+      title: 'VoiceOutput',
+      type: 'string',
+    },
+    VoiceWhere: {
+      description:
+        "Where its speech runs: in the person's browser, on Datalayer's servers, or the better of the two (§5).",
+      enum: ['auto', 'device', 'server'],
+      title: 'VoiceWhere',
       type: 'string',
     },
   },

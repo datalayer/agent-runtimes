@@ -286,6 +286,51 @@ export interface AssistantStageProps {
    * decision*, and stays while its form or its answer is on screen.
    */
   decide?: DecisionAsker;
+  /**
+   * How loud its voice is now, between 0 and 1, while it is heard (VOICE.md
+   * VO-23): the mouth opens with the sound, in three openings, instead of
+   * the talking loop. Still, for a reader who asks for reduced motion.
+   */
+  mouthLevel?: () => number;
+}
+
+/** The openings of the mouth, by level: shut, a little, half, wide. */
+export function mouthOpening(level: number): 0 | 1 | 2 | 3 {
+  return level < 0.08 ? 0 : level < 0.3 ? 1 : level < 0.6 ? 2 : 3;
+}
+
+/**
+ * Moves the mouth with the voice: the opening is written on the stage as
+ * `data-assistant-mouth`, each frame, without drawing the character again.
+ */
+export function useMouth(
+  stageRef: RefObject<HTMLElement | null>,
+  mouthLevel: (() => number) | undefined,
+  speaking: boolean,
+): void {
+  useEffect(() => {
+    const stage = stageRef.current;
+    const still =
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!stage || !mouthLevel || !speaking || still) {
+      stage?.removeAttribute('data-assistant-mouth');
+      return;
+    }
+    let frame = 0;
+    const move = () => {
+      stage.setAttribute(
+        'data-assistant-mouth',
+        String(mouthOpening(mouthLevel())),
+      );
+      frame = requestAnimationFrame(move);
+    };
+    frame = requestAnimationFrame(move);
+    return () => {
+      cancelAnimationFrame(frame);
+      stage.removeAttribute('data-assistant-mouth');
+    };
+  }, [stageRef, mouthLevel, speaking]);
 }
 
 export function AssistantStage({
@@ -302,6 +347,7 @@ export function AssistantStage({
   onDismiss,
   ownRef,
   decide,
+  mouthLevel,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -322,6 +368,7 @@ export function AssistantStage({
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const aside = useKeepClear(stageRef, ownRef, menuOpen);
+  useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);
   const showBalloon =
@@ -390,6 +437,23 @@ export function AssistantStage({
         },
         '&[data-assistant-state="speaking"] .assistant-body': {
           animation: 'assistantFloat 1.6s ease-in-out infinite',
+        },
+        // Heard (VO-23): the mouth opens with the sound, not on a loop.
+        '&[data-assistant-mouth] .assistant-mouth': {
+          animation: 'none',
+          transition: 'transform 60ms linear',
+        },
+        '&[data-assistant-mouth="0"] .assistant-mouth': {
+          transform: 'scaleY(1)',
+        },
+        '&[data-assistant-mouth="1"] .assistant-mouth': {
+          transform: 'scaleY(1.5)',
+        },
+        '&[data-assistant-mouth="2"] .assistant-mouth': {
+          transform: 'scaleY(2.1)',
+        },
+        '&[data-assistant-mouth="3"] .assistant-mouth': {
+          transform: 'scaleY(2.8)',
         },
         // Paused (R-17): it dozes — its eyes shut, its breath slow, a little
         // greyed — and, still, it is asleep: the shut eyes are not a motion.

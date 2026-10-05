@@ -176,6 +176,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'The floating assistant: the chat as a character on the page.',
   ),
   makeEntry(
+    'VoiceChatExample',
+    () => import('./VoiceChatExample'),
+    'A voice chat with the floating assistant: push-to-talk heard in the page, answers read aloud by the speech service, the mouth moving with the sound.',
+  ),
+  makeEntry(
     'ChatAssistantGalleryExample',
     () => import('./ChatAssistantGalleryExample'),
     'Every representation of the floating assistant: each character in each state, its balloon, light and dark, still or moving, one at a time or as a grid.',

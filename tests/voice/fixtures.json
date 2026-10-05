@@ -1,0 +1,189 @@
+{
+  "about": "Recorded fixtures of the voice checks (VOICE.md VO-50): 16 kHz mono FLAC, with what was said. LibriSpeech test-clean and Multilingual LibriSpeech (French test), both CC BY 4.0: attribution in `sources`. Phrases recorded by the team, with consent, are not here yet: they need people.",
+  "sources": {
+    "librispeech": "LibriSpeech ASR corpus, test-clean — Vassil Panayotov, Guoguo Chen, Daniel Povey, Sanjeev Khudanpur (2015), https://www.openslr.org/12, CC BY 4.0. Read speech from LibriVox audiobooks.",
+    "mls": "Multilingual LibriSpeech, French test — Vineel Pratap, Qiantong Xu, Anuroop Sriram, Gabriel Synnaeve, Ronan Collobert (2020), https://www.openslr.org/94, CC BY 4.0. Read speech from LibriVox audiobooks."
+  },
+  "clips": [
+    {
+      "id": "en-6930-75918-0000",
+      "file": "en-6930-75918-0000.flac",
+      "language": "en",
+      "text": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+      "duration_s": 3.5,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0002",
+      "file": "en-6930-75918-0002.flac",
+      "language": "en",
+      "text": "CONGRATULATIONS WERE POURED IN UPON THE PRINCESS EVERYWHERE DURING HER JOURNEY",
+      "duration_s": 5.03,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0006",
+      "file": "en-6930-75918-0006.flac",
+      "language": "en",
+      "text": "THIS HAS INDEED BEEN A HARASSING DAY CONTINUED THE YOUNG MAN HIS EYES FIXED UPON HIS FRIEND",
+      "duration_s": 5.85,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0007",
+      "file": "en-6930-75918-0007.flac",
+      "language": "en",
+      "text": "YOU WILL BE FRANK WITH ME I ALWAYS AM",
+      "duration_s": 3.31,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0008",
+      "file": "en-6930-75918-0008.flac",
+      "language": "en",
+      "text": "CAN YOU IMAGINE WHY BUCKINGHAM HAS BEEN SO VIOLENT I SUSPECT",
+      "duration_s": 4.79,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0009",
+      "file": "en-6930-75918-0009.flac",
+      "language": "en",
+      "text": "IT IS YOU WHO ARE MISTAKEN RAOUL I HAVE READ HIS DISTRESS IN HIS EYES IN HIS EVERY GESTURE AND ACTION THE WHOLE DAY",
+      "duration_s": 7.28,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0010",
+      "file": "en-6930-75918-0010.flac",
+      "language": "en",
+      "text": "I CAN PERCEIVE LOVE CLEARLY ENOUGH",
+      "duration_s": 3.04,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0011",
+      "file": "en-6930-75918-0011.flac",
+      "language": "en",
+      "text": "I AM CONVINCED OF WHAT I SAY SAID THE COUNT",
+      "duration_s": 3.19,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0013",
+      "file": "en-6930-75918-0013.flac",
+      "language": "en",
+      "text": "IN THOSE VERY TERMS I EVEN ADDED MORE",
+      "duration_s": 2.94,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "en-6930-75918-0015",
+      "file": "en-6930-75918-0015.flac",
+      "language": "en",
+      "text": "THUS IT IS THAT THE HONOR OF THREE IS SAVED OUR COUNTRY'S OUR MASTER'S AND OUR OWN",
+      "duration_s": 6.38,
+      "source": "librispeech",
+      "speaker": "6930"
+    },
+    {
+      "id": "fr-1406_1028_000002",
+      "file": "fr-1406_1028_000002.flac",
+      "language": "fr",
+      "text": "la nuit suivante appela sa soeur quand il en fut temps si vous ne dormez pas ma soeur lui dit-elle je vous prie en attendant le jour qui paraîtra bientôt de continuer le conte du pêcheur",
+      "duration_s": 12.66,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000003",
+      "file": "fr-1406_1028_000003.flac",
+      "language": "fr",
+      "text": "à l'aspect d'un monstre d'une grandeur si démesurée le pêcheur voulut prendre la fuite mais il se trouva si troublé et si effrayé qu'il ne put marcher salomon",
+      "duration_s": 10.67,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000010",
+      "file": "fr-1406_1028_000010.flac",
+      "language": "fr",
+      "text": "je te dis repartit le génie de me parler plus civilement avant que je te tue hé pourquoi me tueriez-vous répliqua le pêcheur je viens de vous mettre en liberté l'avez-vous déjà oublié",
+      "duration_s": 12.78,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000013",
+      "file": "fr-1406_1028_000013.flac",
+      "language": "fr",
+      "text": "ce discours affligea fort le pêcheur je suis bien malheureux s'écria-t-il d'être venu en cet endroit rendre un si grand service à un ingrat",
+      "duration_s": 10.27,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000014",
+      "file": "fr-1406_1028_000014.flac",
+      "language": "fr",
+      "text": "le sultan de son côté témoigna de l'impatience d'apprendre quel démêlé le génie avait eu avec salomon c'est pourquoi scheherazade poursuivit ainsi le conte du pêcheur",
+      "duration_s": 11.1,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000016",
+      "file": "fr-1406_1028_000016.flac",
+      "language": "fr",
+      "text": "sire il y avait autrefois un pêcheur fort âgé et si pauvre qu'à peine pouvait-il gagner de quoi faire subsister sa femme et trois enfants dont sa famille était composée",
+      "duration_s": 11.8,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000019",
+      "file": "fr-1406_1028_000019.flac",
+      "language": "fr",
+      "text": "schahriar y consentit et scheherazade reprenant son discours poursuivit de cette manière histoire du pêcheur",
+      "duration_s": 10.0,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000020",
+      "file": "fr-1406_1028_000020.flac",
+      "language": "fr",
+      "text": "sire le pêcheur n'eut pas sitôt entendu les paroles que le génie avait prononcées qu'il se rassura et lui dit esprit superbe que dites-vous",
+      "duration_s": 10.11,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000022",
+      "file": "fr-1406_1028_000022.flac",
+      "language": "fr",
+      "text": "tu prends plaisir à maltraiter les honnêtes gens et à laisser de grands hommes dans l'obscurité tandis que tu favorises les méchants et que tu élèves ceux qui n'ont aucune vertu qui les rende recommandables",
+      "duration_s": 11.5,
+      "source": "mls",
+      "speaker": "1406"
+    },
+    {
+      "id": "fr-1406_1028_000025",
+      "file": "fr-1406_1028_000025.flac",
+      "language": "fr",
+      "text": "le pêcheur ayant fini cette prière jeta ses filets pour la quatrième fois quand il jugea qu'il devait y avoir du poisson il les tira comme auparavant avec assez de peine",
+      "duration_s": 12.5,
+      "source": "mls",
+      "speaker": "1406"
+    }
+  ]
+}

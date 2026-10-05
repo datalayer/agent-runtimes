@@ -2236,6 +2236,31 @@ class AppSurfaceSpec(BaseModel):
     composed_at: str = Field(default="")
 
 
+class AppVoiceSpec(BaseModel):
+    """An application's voice (VOICE.md VO-41): off unless said.
+
+    What is said becomes a message and what is heard is the answer the
+    conversation shows; `voice` is an id of the voice catalogue
+    (`agent_runtimes.specs.voices`), `language` BCP 47.
+    """
+
+    enabled: bool = False
+    input: str = Field(
+        default="push_to_talk", description="`off`, `push_to_talk` or `hands_free`"
+    )
+    output: str = Field(
+        default="on_request", description="`off`, `on_request` or `always`"
+    )
+    voice: str = Field(default="", description="A voice of the voice catalogue")
+    language: str = Field(default="", description="BCP 47; the person's when unsaid")
+    where: str = Field(default="auto", description="`auto`, `device` or `server`")
+
+    @property
+    def speaks(self) -> bool:
+        """Whether its answers may be heard."""
+        return self.enabled and self.output != "off"
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -2256,6 +2281,10 @@ class AppInterfaceSpec(BaseModel):
             "contributes it under (`paperclip`, `wizard`, `cat`, `eyes` are "
             "Datalayer's); the paper clip when unsaid"
         ),
+    )
+    voice: AppVoiceSpec = Field(
+        default_factory=AppVoiceSpec,
+        description="Its voice: whether it listens and speaks, with which voice (VO-41)",
     )
 
 

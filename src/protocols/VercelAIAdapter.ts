@@ -255,6 +255,7 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
         id: string;
         role: string;
         parts: Array<Record<string, unknown>>;
+        metadata?: Record<string, unknown>;
       }>;
 
       if (options?._vercelMessages) {
@@ -299,6 +300,11 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
             id: msg.id,
             role: msg.role,
             parts,
+            // How a message was heard, when it was said (VOICE.md VO-27):
+            // the runtime keeps the turn marked spoken.
+            ...(msg.role === 'user' && msg.metadata?.input === 'voice'
+              ? { metadata: msg.metadata }
+              : {}),
           };
         });
 

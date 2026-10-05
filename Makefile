@@ -169,6 +169,7 @@ BEDROCK_ENV = \
 	AWS_DEFAULT_REGION=$${DATALAYER_BEDROCK_AWS_DEFAULT_REGION:-$${AWS_DEFAULT_REGION}}
 
 RUFF_TARGETS = \
+	agent_runtimes/specs/voices.py \
 	agent_runtimes/specs/agents/ \
 	agent_runtimes/specs/teams/ \
 	agent_runtimes/specs/skills.py \
@@ -604,6 +605,10 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/notifications \
 	  --python-output agent_runtimes/specs/notifications.py \
 	  --typescript-output src/specs/notifications.ts
+	$(call step,Generating the voice catalogue)
+	python scripts/codegen/generate_voices.py \
+	  --python-output agent_runtimes/specs/voices.py \
+	  --typescript-output src/specs/voices.ts
 	$(call step,Generating persona specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/personas" ]; then \
 	  python scripts/codegen/generate_personas.py \

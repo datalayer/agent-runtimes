@@ -29,7 +29,7 @@ dependencies = [
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    "agentspecs>=0.0.28",
+    "agentspecs>=0.0.39",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -258,6 +258,7 @@ test = [
     # The build hook's own test imports it (test_agent_pages).
     "hatchling",
     # The word error rate of the voice checks (VOICE.md VO-51).
+    "jiwer>=4.0.0",
 ]
 
 [project.scripts]

@@ -1043,6 +1043,12 @@ class VercelAITransport(BaseTransport):
             # Extract SDK version when present (newer AI SDK clients).
             sdk_version = body.get("sdkVersion") or body.get("sdk_version")
 
+            # A message the person said: its transcript is the message, its
+            # UI message's metadata says how it was heard (VOICE.md VO-27).
+            from ..voice import hear, spoken_of_vercel_body
+
+            hear(spoken_of_vercel_body(body))
+
             # Extract frontend tools from request body
             frontend_tools_from_request = body.get("tools")
             if frontend_tools_from_request:

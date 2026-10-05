@@ -10,6 +10,7 @@
  * @module chat/messages/MessageList
  */
 
+import { MicrophoneIcon } from '@datalayer/icons-react';
 import {
   Fragment,
   type ReactNode,
@@ -1252,6 +1253,23 @@ export function ChatMessageList({
                         wordBreak: 'break-word',
                       }}
                     >
+                      {/* Said aloud: a small microphone, and its name (VOICE.md VO-27). */}
+                      {message.metadata?.input === 'voice' ? (
+                        <Box
+                          as="span"
+                          data-spoken=""
+                          title="Said aloud"
+                          aria-label="Said aloud:"
+                          sx={{
+                            display: 'inline-flex',
+                            verticalAlign: 'text-bottom',
+                            mr: 1,
+                            opacity: 0.85,
+                          }}
+                        >
+                          <MicrophoneIcon size={14} aria-hidden="true" />
+                        </Box>
+                      ) : null}
                       {text}
                     </Text>
                   );

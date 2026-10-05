@@ -36,6 +36,7 @@ import type { FrontendToolDefinition } from './tools';
 import type { PoweredByTagProps } from '../chat/display/PoweredByTag';
 import type { EphemeralRuntimeOverride } from '../chat/notebook/EphemeralNotebook';
 import type { EphemeralDocumentCollaboration } from '../chat/document/EphemeralDocument';
+import type { ChatVoice } from '../voice';
 
 // ---------------------------------------------------------------------------
 // Tool invocation hooks
@@ -1245,6 +1246,19 @@ export interface ChatBaseProps {
    * with *Approve* and *Deny* (T-23).
    */
   trailingContent?: ReactNode;
+
+  /**
+   * Its voice (VOICE.md V1): a microphone in the composer, push-to-talk,
+   * what is said heard on the device and put in the composer — or sent, with
+   * *Send what I say* — marked as spoken (VO-27).
+   */
+  voice?: ChatVoice;
+
+  /** The agent is speaking: the composer offers *Stop speaking* (`Esc`). */
+  voiceSpeaking?: boolean;
+
+  /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening (VO-13). */
+  onStopSpeaking?: () => void;
 
   /**
    * Show the information icon in the header.

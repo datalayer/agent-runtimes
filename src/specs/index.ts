@@ -20,6 +20,7 @@ export * from './memory';
 export * from './models';
 export * from './modelProviders';
 export * from './notifications';
+export * from './voices';
 export * from './outputs';
 export * from './skills';
 export * from './backendTools';

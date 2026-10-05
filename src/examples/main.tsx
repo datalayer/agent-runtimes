@@ -130,6 +130,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   // An application beside its computer, on the local agent-runtimes server:
   // nothing allocated on Datalayer, and the machine itself needs no token.
   'LoopAppComputerExample',
+  // The Sales and Accounting team: Sales in the page on a visitor's trial
+  // key, Accounting on the local server, which answers the machine itself.
+  'AgentA2ATeamExample',
   // Decide, on the local agent-runtimes server as above: Jev is asked
   // through the server's ai-inference, with the server's own key.
   'AgentDecideExample',
@@ -148,6 +151,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   'ChatAssistantExample',
   // Every character in every state, from static data: no agent at all.
   'ChatAssistantGalleryExample',
+  // Voice: heard in the page, the agent on the local server, the speech
+  // service named in the address.
+  'VoiceChatExample',
 ]);
 
 const getExampleGroup = (id: string): string => {
@@ -166,7 +172,7 @@ const getExampleGroup = (id: string): string => {
   // Each remaining Agent* example demonstrates one capability of the
   // runtime: checkpoints, hooks, memory, guardrails…
   if (id.startsWith('Agent')) return 'Capabilities';
-  if (id.startsWith('Chat')) return 'Chat';
+  if (id.startsWith('Chat') || id === 'VoiceChatExample') return 'Chat';
   // The document examples: the ones on the Lexical editor, and the page
   // with a document on it.
   if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';

@@ -378,11 +378,15 @@ class AppRecorder:
         await self.send(self._body(session, [entry]))
         return entry
 
-    def turned(self, asked: str, answered: str) -> None:
+    def turned(
+        self, asked: str, answered: str, spoken: Optional[Dict[str, str]] = None
+    ) -> None:
         """Keep a turn of the conversation: what was asked, what it answered.
 
         Kept under ``conversations``; it says whether the application let its
-        conversations suggest tests then (``record.suggest_tests``).
+        conversations suggest tests then (``record.suggest_tests``). A turn
+        the person said aloud is kept as its transcript, marked ``spoken``
+        with how it was heard — never the sound (VOICE.md VO-29).
         """
         asked = redact(asked.strip())[:TURN_LIMIT]
         if not asked:
@@ -394,6 +398,7 @@ class AppRecorder:
                 "asked": asked,
                 "answered": redact(answered.strip())[:TURN_LIMIT],
                 "suggest_tests": bool(self.app.record.suggest_tests),
+                **({"spoken": spoken} if spoken else {}),
             },
         )
 
@@ -448,6 +453,9 @@ class AppRecordCapability(AbstractCapability[Any]):
 
     _sessions: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
     _answers: Dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _spoken: Dict[str, Dict[str, str]] = field(
+        default_factory=dict, init=False, repr=False
+    )
     _sending: Set[Any] = field(default_factory=set, init=False, repr=False)
 
     def _key(self, ctx: RunContext[Any]) -> str:
@@ -473,6 +481,12 @@ class AppRecordCapability(AbstractCapability[Any]):
         session = str(ctx.conversation_id or ctx.run_id or "run")
         logger.info("Recording %s, session %s.", self.recorder.app.id, session)
         self._sessions[self._key(ctx)] = session
+        # Said rather than typed: how its words were heard (VO-29).
+        from agent_runtimes.voice import heard
+
+        spoken = heard()
+        if spoken is not None:
+            self._spoken[self._key(ctx)] = spoken.as_payload()
         self.recorder.start(session)
 
     async def after_tool_execute(
@@ -509,11 +523,12 @@ class AppRecordCapability(AbstractCapability[Any]):
         """
         session = self._sessions.pop(self._key(ctx), None)
         self._answers.pop(self._key(ctx), None)
+        spoken = self._spoken.pop(self._key(ctx), None)
         if session is None:
             return
         _SESSION.set(session)
         if answered is not None and self.recorder.kept("turn"):
-            self.recorder.turned(self._asked(ctx), answered)
+            self.recorder.turned(self._asked(ctx), answered, spoken)
         self.recorder.add("output", summary, payload)
         await self.recorder.flush(session)
 
