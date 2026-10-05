@@ -463,8 +463,9 @@ order; `messages` the whole messages; `questions` everything asked; and
 
 ## From the command line
 
-`loop apps init` starts one: a folder named by its id, with an `app.py` and
-the spec it builds, blank or from an example of the catalogue:
+`loop apps init` starts one: a folder named by its id, with an `app.py`, the
+spec it builds and `tests/test_app.py` — its CI's checks, the build among
+them — blank or from an example of the catalogue:
 
 ```bash
 loop apps init my-app --python

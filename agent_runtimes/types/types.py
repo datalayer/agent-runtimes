@@ -2247,6 +2247,18 @@ class AppTestCaseSpec(BaseModel):
     expect: str
 
 
+class AppVerifiedSpec(BaseModel):
+    """What was verified, and how, each in a sentence (LOOP E-14)."""
+
+    live: List[str] = Field(default_factory=list, description="What was tried live")
+    recorded: List[str] = Field(
+        default_factory=list, description="What runs on recorded data"
+    )
+    unverified: List[str] = Field(
+        default_factory=list, description="What is not verified yet"
+    )
+
+
 class AppTestsSpec(BaseModel):
     """How an application is verified."""
 
@@ -2255,6 +2267,7 @@ class AppTestsSpec(BaseModel):
     )
     evalset: str = Field(default="")
     cases: List[AppTestCaseSpec] = Field(default_factory=list)
+    verified: AppVerifiedSpec = Field(default_factory=AppVerifiedSpec)
 
 
 class AppRecordSpec(BaseModel):

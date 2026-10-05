@@ -256,8 +256,10 @@ loop apps init --examples                          # the examples to start from
 
 A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`example-simple`). A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `report-from-a-file`), with the new id. What is written passes the checks `loop apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
 
+Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests`: the spec passes the instant checks, each of its test conversations (`tests.cases`) says what it is asked and what it should do, and, in Python, the `app.py` still builds the `app.yaml` committed beside it. A starting repository, then: commit the folder and its checks pass from the first push. The test conversations themselves are asked of a model by a validation run — push it (`loop apps push app.yaml`), then *Run its tests* on its Validate tab — and the safety set every application answers with `loop apps validate app.yaml --safety --local`.
+
 ```text
-✓ desk written to ./desk from the support-desk example: app.yaml.
+✓ desk written to ./desk from the support-desk example: app.yaml, tests/test_app.py.
 Next: cd desk && loop apps run app.yaml
 ```
 

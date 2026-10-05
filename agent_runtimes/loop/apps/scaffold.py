@@ -16,6 +16,13 @@ it built from it (`loop apps build`, P-07), so the two agree from the start:
   ``python``, an example written as a spec gets an ``app.py`` holding that spec,
   ready for code.
 
+Beside them, ``tests/test_app.py``: what the folder's CI runs with
+``pytest`` (LOOP E-13) — the spec passes the instant checks, each of its
+test conversations says what it is asked and what it should do, and, written
+in Python, the ``app.py`` still builds the spec committed beside it (E-02).
+Its test conversations themselves are asked of a model by a validation run,
+on the Validate tab once the application is pushed.
+
 Every folder written is checked as `loop apps validate` checks a file: a
 scaffold that would not validate is refused, never written.
 """
@@ -43,6 +50,7 @@ BLANK_KINDS = ("chat", "widget")
 
 SPEC_FILE = "app.yaml"
 PYTHON_FILE = "app.py"
+TESTS_FILE = "tests/test_app.py"
 
 _TOP_ID = re.compile(r"^id: (?P<id>\S+)$", re.MULTILINE)
 
@@ -140,6 +148,54 @@ SPEC = """\\
 
 app = Application.from_spec(yaml.safe_load(SPEC))
 '''
+
+
+def _tests(app_id: str, python: bool) -> str:
+    """The folder's ``tests/test_app.py``: what its CI runs with ``pytest``."""
+    built = (
+        f'''
+
+def test_app_py_builds_the_spec_committed_beside_it() -> None:
+    # The app.py is the source: after a change, `loop apps build app.py --out app.yaml`.
+    assert build(FOLDER / "{PYTHON_FILE}").text == SPEC.read_text()
+'''
+        if python
+        else ""
+    )
+    imports = "\nfrom agent_runtimes.loop.apps.build import build\n" if python else ""
+    return f'''"""{app_id}: the checks its CI runs, `pytest tests` (written by `loop apps init`).
+
+The instant checks of its spec, and that each of its test conversations says
+what it is asked and what it should do. The conversations themselves are
+asked of a model by a validation run: `loop apps push {SPEC_FILE}`, then
+*Run its tests* on its Validate tab. The safety set every application
+answers: `loop apps validate {SPEC_FILE} --safety --local`.
+"""
+
+from pathlib import Path
+
+import yaml
+from agentspecs.apps import app_problems, parse_app
+{imports}
+FOLDER = Path(__file__).resolve().parent.parent
+SPEC = FOLDER / "{SPEC_FILE}"
+
+
+def test_the_spec_passes_the_instant_checks() -> None:
+    assert app_problems(parse_app(yaml.safe_load(SPEC.read_text()))) == []
+
+
+def test_each_test_conversation_says_what_it_is_asked_and_what_it_should_do() -> None:
+    for case in parse_app(yaml.safe_load(SPEC.read_text())).tests.cases:
+        assert case.ask.strip() and case.expect.strip(), case
+{built}'''
+
+
+def _with_tests(folder: Path, app_id: str, files: List[str]) -> List[str]:
+    """The files written, and the folder's tests beside them."""
+    (folder / TESTS_FILE).parent.mkdir()
+    (folder / TESTS_FILE).write_text(_tests(app_id, PYTHON_FILE in files))
+    return [*files, TESTS_FILE]
 
 
 def _renamed(text: str, old: str, new: str, said: str) -> str:
@@ -259,6 +315,7 @@ def init(
             )
         except AppNotRunnable as refused:
             raise InitRefused(" ".join(refused.problems)) from None
+        files = _with_tests(staged, app_id, files)
         problems = spec_problems(staged / SPEC_FILE)
         if problems:
             raise InitRefused(" ".join(problems))

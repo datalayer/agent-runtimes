@@ -188,7 +188,12 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       settings: [],
       components: [],
     },
-    tests: { readyAt: DEFAULT_READY_AT, evalset: '', cases: [] },
+    tests: {
+      readyAt: DEFAULT_READY_AT,
+      evalset: '',
+      cases: [],
+      verified: { live: [], recorded: [], unverified: [] },
+    },
     record: {
       keepFor: DEFAULT_KEEP_FOR,
       retentionDays: retentionDays(DEFAULT_KEEP_FOR),
@@ -448,6 +453,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   const permissions = isData(data.permissions) ? data.permissions : {};
   const computer = isData(permissions.computer) ? permissions.computer : {};
   const tests = isData(data.tests) ? data.tests : {};
+  const verified = isData(tests.verified) ? tests.verified : {};
   const record = isData(data.record) ? data.record : {};
   const checks = isData(data.checks) ? data.checks : {};
   const keepFor = text(record.keep_for, DEFAULT_KEEP_FOR);
@@ -500,6 +506,11 @@ export function parseAppspec(document: unknown): ParsedAppspec {
         ask: text(testCase.ask),
         expect: text(testCase.expect),
       })),
+      verified: {
+        live: texts(verified.live),
+        recorded: texts(verified.recorded),
+        unverified: texts(verified.unverified),
+      },
     },
     record: {
       keepFor,
@@ -759,6 +770,13 @@ export function dumpAppspec(app: AppSpec): Data {
             ask: testCase.ask,
             expect: testCase.expect,
           })),
+        )
+        .part(
+          'verified',
+          new Writer()
+            .list('live', app.tests.verified.live)
+            .list('recorded', app.tests.verified.recorded)
+            .list('unverified', app.tests.verified.unverified).data,
         ).data,
     )
     .part(

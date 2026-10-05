@@ -4,6 +4,8 @@
 """`loop apps init`: a new application's folder (LOOP P-01)."""
 
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +36,7 @@ def _spec(folder: Path) -> Any:
 
 def test_a_blank_chat_is_a_spec_that_passes_the_instant_checks(tmp_path: Path) -> None:
     written = init("my-app", tmp_path)
-    assert written.files == ["app.yaml"]
+    assert written.files == ["app.yaml", "tests/test_app.py"]
     assert written.folder == tmp_path / "my-app"
     spec = _spec(written.folder)
     assert (spec["id"], spec["kind"], spec["agent"]) == ("my-app", "chat", BLANK_AGENT)
@@ -45,7 +47,7 @@ def test_a_blank_python_application_builds_its_spec_and_answers_through_its_agen
     tmp_path: Path,
 ) -> None:
     written = init("my-widget", tmp_path, kind="widget", python=True)
-    assert written.files == ["app.py", "app.yaml"]
+    assert written.files == ["app.py", "app.yaml", "tests/test_app.py"]
     text = (written.folder / "app.yaml").read_text()
     assert text == build(written.folder / "app.py").text
     assert [mark.moment for mark in read_code_marks(text)] == ["message"]
@@ -132,3 +134,24 @@ def test_the_command_writes_the_folder_and_lists_the_examples(tmp_path: Path) ->
     listed = runner.invoke(app, ["init", "--examples"])
     assert listed.exit_code == 0
     assert listed.output.split() == examples()
+
+
+@pytest.mark.parametrize(
+    ("example", "python", "checks"),
+    [(None, False, 2), ("support-desk", False, 2), ("report-from-a-file", False, 3)],
+)
+def test_the_folder_s_own_tests_pass_as_written(
+    tmp_path: Path, example: Any, python: bool, checks: int
+) -> None:
+    # LOOP E-13: a starting repository, its CI's checks passing from the start.
+    written = init("mine", tmp_path, example=example, python=python)
+    assert "tests/test_app.py" in written.files
+    ran = subprocess.run(  # noqa: S603  # nosec B603 - this interpreter, a fixed command
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"],
+        cwd=written.folder,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert ran.returncode == 0, ran.stdout + ran.stderr
+    assert f"{checks} passed" in ran.stdout

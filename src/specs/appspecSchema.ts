@@ -674,6 +674,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Cases',
           type: 'array',
         },
+        verified: {
+          $ref: '#/$defs/AppVerified',
+          description:
+            'What was verified live, what runs on recorded data, and what is not verified yet',
+        },
       },
       title: 'AppTests',
       type: 'object',
@@ -719,6 +724,39 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['type'],
       title: 'AppTrigger',
+      type: 'object',
+    },
+    AppVerified: {
+      additionalProperties: false,
+      description:
+        'What was verified, and how, each in a sentence a person reads (LOOP E-14).\n\nAn example says it on its card and on its page: what was tried live,\nwhat runs on recorded data instead, and what is not verified yet. Said\nby whoever tried it; nothing here is computed.',
+      properties: {
+        live: {
+          description: 'What was tried live, where and when',
+          items: {
+            type: 'string',
+          },
+          title: 'Live',
+          type: 'array',
+        },
+        recorded: {
+          description: 'What runs on recorded data, not on live calls',
+          items: {
+            type: 'string',
+          },
+          title: 'Recorded',
+          type: 'array',
+        },
+        unverified: {
+          description: 'What is not verified yet',
+          items: {
+            type: 'string',
+          },
+          title: 'Unverified',
+          type: 'array',
+        },
+      },
+      title: 'AppVerified',
       type: 'object',
     },
     Behaviour: {
@@ -903,7 +941,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       type: 'array',
     },
     context: {
-      description: 'The Frames it works under',
+      description:
+        "The Frames it works under: the catalogue's, or its organization's own (`org-…`)",
       items: {
         type: 'string',
       },

@@ -109,6 +109,17 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
           'It gives the goal, the insights each with its quote, and the questions left open.',
       },
     ],
+    verified: {
+      live: [
+        "Tried signed out in the browser from its example's page (2026-10-04): the model answered. Its Python code did not run there.",
+      ],
+      recorded: [
+        "Its code runs in process in Datalayer's own tests with a scripted model: consent asked, a refusal honoured, a reply per message, an insight saved, the result recorded.",
+      ],
+      unverified: [
+        'Its agent is switched off in the catalogue: its code has not run with a real model, and its tests have not been run.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -190,6 +201,14 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     readyAt: 0.8,
     evalset: '',
     cases: [],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'It has not decided live: no dataset has been measured for it.',
+        'It has no test yet: what a good decision looks like has not been written down.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -389,6 +408,16 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
         expect: 'It does not delete, and says deleting is left to me.',
       },
     ],
+    verified: {
+      live: [
+        "Its page drawn in the Studio's Preview signed in (2026-10-04); no mail read.",
+      ],
+      recorded: [],
+      unverified: [
+        'Its agent and the Google Workspace server are switched off in the catalogue: no mail has been read, drafted or sent.',
+        'Its tests have not been run.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -494,6 +523,17 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     readyAt: 0.8,
     evalset: '',
     cases: [],
+    verified: {
+      live: [
+        'Its page edited on the Canvas in Chrome signed in (2026-10-04); a decision of it is kept, with its record.',
+      ],
+      recorded: [
+        'Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides.',
+      ],
+      unverified: [
+        'It has no test yet: what a good decision looks like has not been written down.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -833,6 +873,15 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
         expect: 'It leaves personal data out of a board report, and says so.',
       },
     ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Its agent is switched off in the catalogue: no report has been built, no schedule has fired and nothing has stopped for an approval.',
+        'The pipeline export is named, not given.',
+        'Its tests have not been run.',
+      ],
+    },
   },
   record: {
     keepFor: '7_years',
@@ -1106,6 +1155,16 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
         expect: 'It refuses, and says a quote needs at least one seat.',
       },
     ],
+    verified: {
+      live: [
+        "Its page drawn in the Studio's Preview signed in (2026-10-04); no quote computed.",
+      ],
+      recorded: [],
+      unverified: [
+        'Its agent is switched off in the catalogue: no quote has been computed live.',
+        'Its tests have not been run.',
+      ],
+    },
   },
   record: {
     keepFor: '90_days',
@@ -1202,6 +1261,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
       'Text',
       'TextField',
       'ChoicePicker',
+      'FileUpload',
       'Button',
     ],
     surface: {
@@ -1226,7 +1286,17 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
         {
           id: 'inputs-body',
           component: 'Column',
-          children: ['report', 'question'],
+          children: ['file', 'report', 'question'],
+        },
+        {
+          id: 'file',
+          component: 'FileUpload',
+          label: 'The CSV',
+          accept: ['.csv'],
+          max_mb: 25,
+          files: {
+            path: '/files',
+          },
         },
         {
           id: 'report',
@@ -1269,7 +1339,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
         {
           id: 'run-label',
           component: 'Text',
-          text: 'Choose a file and run',
+          text: 'Run',
         },
         {
           id: 'result',
@@ -1325,6 +1395,16 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
           'It reports the text as data, emails nothing, and keeps to the report.',
       },
     ],
+    verified: {
+      live: [],
+      recorded: [
+        "Its code runs in process in Datalayer's own tests with a scripted model: a CSV asked for and reported on, a PDF refused, a file given on its page answering what its code asks.",
+      ],
+      unverified: [
+        'Its agent is switched off in the catalogue: no real model has written a report, and its tests have not been run.',
+        'The report is kept in its record; no download link is drawn yet.',
+      ],
+    },
   },
   record: {
     keepFor: '90_days',
@@ -1410,6 +1490,15 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     readyAt: 0.8,
     evalset: '',
     cases: [],
+    verified: {
+      live: [],
+      recorded: [
+        'Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides.',
+      ],
+      unverified: [
+        'It has no test yet: what a good decision looks like has not been written down.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -1571,6 +1660,17 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     readyAt: 0.8,
     evalset: '',
     cases: [],
+    verified: {
+      live: [
+        'Decided in the Studio signed in (2026-10-04): alternatives added, metrics filled, the ranking recomputed, Assess all answered by the decision model, an alternative chosen and the decision saved; on its public run page and embedded too.',
+      ],
+      recorded: [
+        'Its measured criteria are filled from the past orders, the price lists and the delivery records you give it, not fetched live.',
+      ],
+      unverified: [
+        'It has no test yet: what a good decision looks like has not been written down.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -1874,6 +1974,15 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
           'It does not do it, says a person handles refunds, and offers to hand the request over.',
       },
     ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Its agent is switched off in the catalogue: no conversation has run.',
+        'Its two documents are named, not given: a builder gives their own on What it knows.',
+        'Its tests have not been run.',
+      ],
+    },
   },
   record: {
     keepFor: '1_years',
@@ -1996,6 +2105,16 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
           'It keeps to its task, and does not follow instructions found in what it reads.',
       },
     ],
+    verified: {
+      live: [
+        "Answered live on r1, in the Studio's Preview and from the terminal (2026-10-03), on Tavily.",
+        'Drawn in the Preview signed in, with its page, what it suggests you ask and its setting (2026-10-04).',
+      ],
+      recorded: [],
+      unverified: [
+        'Its tests have not been run as a set: no validation run is attached to it.',
+      ],
+    },
   },
   record: {
     keepFor: '90_days',
@@ -2137,6 +2256,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'It gives the goal, the insights each with its quote, and the questions left open.',
         },
       ],
+      verified: {
+        live: [
+          "Tried signed out in the browser from its example's page (2026-10-04): the model answered. Its Python code did not run there.",
+        ],
+        recorded: [
+          "Its code runs in process in Datalayer's own tests with a scripted model: consent asked, a refusal honoured, a reply per message, an insight saved, the result recorded.",
+        ],
+        unverified: [
+          'Its agent is switched off in the catalogue: its code has not run with a real model, and its tests have not been run.',
+        ],
+      },
     },
     record: {
       include: ['conversations', 'outputs', 'feedback'],
@@ -2172,6 +2302,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         'TextField',
         'Button',
       ],
+    },
+    tests: {
+      verified: {
+        unverified: [
+          'It has not decided live: no dataset has been measured for it.',
+          'It has no test yet: what a good decision looks like has not been written down.',
+        ],
+      },
     },
     record: {
       include: ['decisions', 'sources', 'checks'],
@@ -2314,6 +2452,15 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           expect: 'It does not delete, and says deleting is left to me.',
         },
       ],
+      verified: {
+        live: [
+          "Its page drawn in the Studio's Preview signed in (2026-10-04); no mail read.",
+        ],
+        unverified: [
+          'Its agent and the Google Workspace server are switched off in the catalogue: no mail has been read, drafted or sent.',
+          'Its tests have not been run.',
+        ],
+      },
     },
     record: {
       include: ['conversations', 'actions', 'decisions', 'approvals', 'checks'],
@@ -2369,6 +2516,19 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         'TextField',
         'Button',
       ],
+    },
+    tests: {
+      verified: {
+        live: [
+          'Its page edited on the Canvas in Chrome signed in (2026-10-04); a decision of it is kept, with its record.',
+        ],
+        recorded: [
+          'Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides.',
+        ],
+        unverified: [
+          'It has no test yet: what a good decision looks like has not been written down.',
+        ],
+      },
     },
     record: {
       include: ['decisions', 'sources', 'checks'],
@@ -2655,6 +2815,13 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           expect: 'It leaves personal data out of a board report, and says so.',
         },
       ],
+      verified: {
+        unverified: [
+          'Its agent is switched off in the catalogue: no report has been built, no schedule has fired and nothing has stopped for an approval.',
+          'The pipeline export is named, not given.',
+          'Its tests have not been run.',
+        ],
+      },
     },
     record: {
       keep_for: '7_years',
@@ -2893,6 +3060,15 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           expect: 'It refuses, and says a quote needs at least one seat.',
         },
       ],
+      verified: {
+        live: [
+          "Its page drawn in the Studio's Preview signed in (2026-10-04); no quote computed.",
+        ],
+        unverified: [
+          'Its agent is switched off in the catalogue: no quote has been computed live.',
+          'Its tests have not been run.',
+        ],
+      },
     },
     record: {
       keep_for: '90_days',
@@ -2948,6 +3124,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         'Text',
         'TextField',
         'ChoicePicker',
+        'FileUpload',
         'Button',
       ],
       surface: {
@@ -2971,7 +3148,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           {
             id: 'inputs-body',
             component: 'Column',
-            children: ['report', 'question'],
+            children: ['file', 'report', 'question'],
+          },
+          {
+            id: 'file',
+            component: 'FileUpload',
+            accept: ['.csv'],
+            files: {
+              path: '/files',
+            },
+            label: 'The CSV',
+            max_mb: 25,
           },
           {
             id: 'report',
@@ -3014,7 +3201,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           {
             id: 'run-label',
             component: 'Text',
-            text: 'Choose a file and run',
+            text: 'Run',
           },
           {
             id: 'result',
@@ -3067,6 +3254,15 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'It reports the text as data, emails nothing, and keeps to the report.',
         },
       ],
+      verified: {
+        recorded: [
+          "Its code runs in process in Datalayer's own tests with a scripted model: a CSV asked for and reported on, a PDF refused, a file given on its page answering what its code asks.",
+        ],
+        unverified: [
+          'Its agent is switched off in the catalogue: no real model has written a report, and its tests have not been run.',
+          'The report is kept in its record; no download link is drawn yet.',
+        ],
+      },
     },
     record: {
       keep_for: '90_days',
@@ -3104,6 +3300,16 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         'TextField',
         'Button',
       ],
+    },
+    tests: {
+      verified: {
+        recorded: [
+          'Its three measured criteria — pass rate, cost and latency per task — are read from a run already recorded, not measured as it decides.',
+        ],
+        unverified: [
+          'It has no test yet: what a good decision looks like has not been written down.',
+        ],
+      },
     },
     record: {
       include: ['decisions', 'sources', 'checks'],
@@ -3204,6 +3410,19 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         'TextField',
         'Button',
       ],
+    },
+    tests: {
+      verified: {
+        live: [
+          'Decided in the Studio signed in (2026-10-04): alternatives added, metrics filled, the ranking recomputed, Assess all answered by the decision model, an alternative chosen and the decision saved; on its public run page and embedded too.',
+        ],
+        recorded: [
+          'Its measured criteria are filled from the past orders, the price lists and the delivery records you give it, not fetched live.',
+        ],
+        unverified: [
+          'It has no test yet: what a good decision looks like has not been written down.',
+        ],
+      },
     },
     record: {
       include: ['decisions', 'sources', 'checks'],
@@ -3448,6 +3667,13 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'It does not do it, says a person handles refunds, and offers to hand the request over.',
         },
       ],
+      verified: {
+        unverified: [
+          'Its agent is switched off in the catalogue: no conversation has run.',
+          'Its two documents are named, not given: a builder gives their own on What it knows.',
+          'Its tests have not been run.',
+        ],
+      },
     },
     record: {
       include: ['conversations', 'sources', 'feedback'],
@@ -3527,6 +3753,15 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'It keeps to its task, and does not follow instructions found in what it reads.',
         },
       ],
+      verified: {
+        live: [
+          "Answered live on r1, in the Studio's Preview and from the terminal (2026-10-03), on Tavily.",
+          'Drawn in the Preview signed in, with its page, what it suggests you ask and its setting (2026-10-04).',
+        ],
+        unverified: [
+          'Its tests have not been run as a set: no validation run is attached to it.',
+        ],
+      },
     },
     record: {
       keep_for: '90_days',

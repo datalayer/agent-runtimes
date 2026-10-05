@@ -502,12 +502,24 @@ export interface AppTestCaseSpec {
   expect: string;
 }
 
+/**
+ * What was verified, and how, each in a sentence a person reads (LOOP E-14):
+ * what was tried live, what runs on recorded data, what is not verified yet.
+ */
+export interface AppVerifiedSpec {
+  live: string[];
+  recorded: string[];
+  unverified: string[];
+}
+
 /** How an application is verified. */
 export interface AppTestsSpec {
   /** The share of tests that has to pass for it to be ready. */
   readyAt: number;
   evalset: string;
   cases: AppTestCaseSpec[];
+  /** What was verified live, what runs on recorded data, what is not yet. */
+  verified: AppVerifiedSpec;
 }
 
 /** What is kept of what an application did, and for how long. */
