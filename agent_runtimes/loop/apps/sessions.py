@@ -553,6 +553,11 @@ class LiveSession:
 
         async def runner() -> None:
             """The turn, framed, its failure said on the stream."""
+            from agent_runtimes.loop.apps.memory import withhold_for
+
+            # What it remembers is its owner's: nobody else's turn reads or
+            # writes it (LOOP R-18).
+            withhold_for(self.opened_by)
             try:
                 if wraps_run:
                     self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))

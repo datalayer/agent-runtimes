@@ -391,11 +391,17 @@ def build_capabilities_from_agent_spec(
         identity = resolve_memory_identity()
         memory_config = getattr(agent_spec, "memory_config", None)
         effective_memory_agent_id = agent_id
+        memory_gate = None
         if isinstance(memory_config, dict):
             override: Any = None
             datalayer_overrides = memory_config.get("datalayer")
             if isinstance(datalayer_overrides, dict):
                 override = datalayer_overrides.get("memory_agent_id")
+                # An application's memory is its owner's (LOOP R-18).
+                if datalayer_overrides.get("owner_only"):
+                    from ..loop.apps.memory import remembering
+
+                    memory_gate = remembering
             if override is None:
                 override = memory_config.get("memory_agent_id")
             if isinstance(override, str) and override.strip():
@@ -413,6 +419,7 @@ def build_capabilities_from_agent_spec(
             user_id=identity.user_id,
             agent_id=effective_memory_agent_id,
             config=memory_config,
+            gate=memory_gate,
         )
         if memory_capability is not None:
             capabilities.append(memory_capability)

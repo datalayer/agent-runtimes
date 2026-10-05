@@ -268,6 +268,39 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
     }
 
     /**
+     * Forget one of the caller's own memories; answers how many were forgotten.
+     */
+    async forgetRuntimeMemory(memoryId: string): Promise<number> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.forgetRuntimeMemory(
+        token,
+        memoryId,
+        runtimesUrl,
+      );
+      return response.forgotten;
+    }
+
+    /**
+     * Forget everything an agent or application (`app:<uid>`) remembers of
+     * the caller, no more than the `count` confirmed.
+     */
+    async forgetRuntimeMemories(
+      agentId: string,
+      count: number,
+    ): Promise<number> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.forgetRuntimeMemories(
+        token,
+        agentId,
+        count,
+        runtimesUrl,
+      );
+      return response.forgotten;
+    }
+
+    /**
      * Terminate all runtimes.
      * Lists all runtimes and deletes them in parallel.
      * @returns Array of results for each deletion (fulfilled or rejected)

@@ -84,6 +84,8 @@ export interface AgentRuntimesClient extends DatalayerCoreClient {
     options?: ListRuntimeMemoriesOptions,
   ): Promise<RuntimeMemory[]>;
   getRuntimeMemory(memoryId: string): Promise<RuntimeMemory>;
+  forgetRuntimeMemory(memoryId: string): Promise<number>;
+  forgetRuntimeMemories(agentId: string, count: number): Promise<number>;
   getRuntime(runtimeName: string): Promise<RuntimeDTO>;
   deleteRuntime(runtimeName: string): Promise<void>;
   terminateAllRuntimes(): Promise<PromiseSettledResult<void>[]>;

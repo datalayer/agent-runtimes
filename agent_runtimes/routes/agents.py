@@ -1703,6 +1703,14 @@ async def create_agent(
                 for server in connected_server_ids(running_app)
             ]
             request.selected_mcp_servers = selected_mcp_servers
+            # It remembers what its Appspec says, never what its agent's spec
+            # does: per person and application, its Preview and its
+            # deployments together (LOOP R-18).
+            from agent_runtimes.loop.apps.memory import agent_memory
+
+            request.memory, request.memory_config = agent_memory(
+                running_app, request.app_instance
+            )
 
         # When codemode is NOT enabled, we start the servers explicitly here
         # When codemode IS enabled, the servers are started via _build_codemode_toolset

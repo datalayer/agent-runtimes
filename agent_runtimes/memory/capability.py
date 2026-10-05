@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
@@ -36,6 +36,9 @@ if TYPE_CHECKING:
     from pydantic_ai.run import AgentRunResult
 
 logger = logging.getLogger(__name__)
+
+#: What the memory tools answer in a conversation memory is withheld from.
+WITHHELD = "Nothing is remembered in this conversation: it is not its owner's."
 
 
 def _prompt_text(ctx: RunContext[Any]) -> str:
@@ -65,6 +68,10 @@ class MemoryCapability(AbstractCapability[Any]):
         save via the ``remember`` tool, instead of verbatim conversation turns.
     expose_tools : bool
         When True, expose ``search_memory`` and ``remember`` tools to the model.
+    gate : Callable[[], bool] | None
+        When given, asked at each run and each tool call: False, nothing is
+        read from memory or written to it — an application's memory in a
+        conversation its owner did not open (LOOP R-18).
     """
 
     backend: BaseMemoryBackend = field(default_factory=EphemeralMemory)
@@ -72,6 +79,7 @@ class MemoryCapability(AbstractCapability[Any]):
     max_memories: int = 5
     auto_store: bool = False
     expose_tools: bool = True
+    gate: Optional[Callable[[], bool]] = None
     _context_by_run: dict[str, str] = field(
         default_factory=dict, init=False, repr=False
     )
@@ -84,9 +92,13 @@ class MemoryCapability(AbstractCapability[Any]):
     def _run_key(ctx: RunContext[Any]) -> str:
         return ctx.run_id or "default"
 
+    def _open(self) -> bool:
+        """Whether this run may read and write memory."""
+        return self.gate is None or self.gate()
+
     async def before_run(self, ctx: RunContext[Any]) -> None:
         query = _prompt_text(ctx)
-        if not query:
+        if not query or not self._open():
             return
         try:
             context = await self.backend.get_relevant_context(query)
@@ -106,7 +118,7 @@ class MemoryCapability(AbstractCapability[Any]):
         self, ctx: RunContext[Any], *, result: AgentRunResult[Any]
     ) -> AgentRunResult[Any]:
         self._context_by_run.pop(self._run_key(ctx), None)
-        if not self.auto_store:
+        if not self.auto_store or not self._open():
             return result
 
         messages: list[dict[str, str]] = []
@@ -138,6 +150,8 @@ class MemoryCapability(AbstractCapability[Any]):
             query : str
                 The text to search stored memories for.
             """
+            if not self._open():
+                return WITHHELD
             try:
                 results = await self.backend.search(query, limit=self.max_memories)
             except Exception as exc:  # noqa: BLE001 - degrade gracefully
@@ -160,6 +174,8 @@ class MemoryCapability(AbstractCapability[Any]):
             content : str
                 The fact or preference to remember.
             """
+            if not self._open():
+                return WITHHELD
             try:
                 await self.backend.add([{"role": "user", "content": content}])
             except Exception as exc:  # noqa: BLE001 - degrade gracefully
@@ -177,6 +193,7 @@ def build_memory_capability(
     user_id: str = "default",
     agent_id: str | None = None,
     config: dict[str, Any] | None = None,
+    gate: Callable[[], bool] | None = None,
 ) -> MemoryCapability | None:
     """Build a ``MemoryCapability`` from an Agentspec ``memory`` field.
 
@@ -187,6 +204,7 @@ def build_memory_capability(
     owner (see ``memory.identity.resolve_memory_identity``). Memories are
     persisted under the composite ``(user_id, agent_id)`` key: the user is
     the ownership boundary and the agent uid namespaces memories per agent.
+    ``gate``, when given, is asked at each run whether memory may be used.
     """
     if not memory_type or memory_type == "ephemeral":
         return None
@@ -196,4 +214,4 @@ def build_memory_capability(
         agent_id=agent_id,
         config=config,
     )
-    return MemoryCapability(backend=backend, agent_id=agent_id)
+    return MemoryCapability(backend=backend, agent_id=agent_id, gate=gate)

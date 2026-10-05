@@ -478,6 +478,78 @@ export const getRuntimeMemory = async (
 };
 
 /**
+ * What forgetting answers: how many memories were forgotten.
+ */
+export interface ForgetRuntimeMemoriesResponse {
+  success: boolean;
+  forgotten: number;
+}
+
+/**
+ * Forget one of the caller's own persisted memories (LOOP R-18).
+ *
+ * Somebody else's is not found (404), whoever asks: forgetting is the
+ * person's own.
+ */
+export const forgetRuntimeMemory = async (
+  token: string,
+  memoryId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<ForgetRuntimeMemoriesResponse> => {
+  validateToken(token);
+  validateRequiredString(memoryId, 'Memory id');
+
+  const response = await requestDatalayerAPI<
+    Partial<ForgetRuntimeMemoriesResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories/${encodeURIComponent(memoryId)}`,
+    method: 'DELETE',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    forgotten: Number(response?.forgotten ?? 0),
+  };
+};
+
+/**
+ * Forget everything one agent — an application, by its key `app:<uid>` —
+ * remembers of the caller, no more than `count`: the number the person was
+ * shown and confirmed. When it remembers more now, nothing is forgotten and
+ * the service refuses (409) in a sentence (LOOP R-18).
+ */
+export const forgetRuntimeMemories = async (
+  token: string,
+  agentId: string,
+  count: number,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<ForgetRuntimeMemoriesResponse> => {
+  validateToken(token);
+  validateRequiredString(agentId, 'Agent id');
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(`Forgetting needs the count confirmed, not ${count}.`);
+  }
+
+  const query = new URLSearchParams({
+    agent_id: agentId.trim(),
+    count: String(count),
+  });
+  const response = await requestDatalayerAPI<
+    Partial<ForgetRuntimeMemoriesResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories?${query.toString()}`,
+    method: 'DELETE',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    forgotten: Number(response?.forgotten ?? 0),
+  };
+};
+
+/**
  * Resume a paused runtime by restoring from a checkpoint (async).
  *
  * Returns immediately with a 202 Accepted response.  The actual restore

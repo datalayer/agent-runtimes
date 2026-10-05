@@ -1,0 +1,72 @@
+---
+sidebar_position: 5
+title: What an application remembers
+---
+
+# What an application remembers
+
+An application remembers when its Appspec says so:
+
+```yaml
+memory: mem0
+```
+
+`mem0` is the memory of the catalogue enabled today. Any other is not enabled,
+and the application's setup notes say so; without `memory`, it remembers
+nothing between conversations. Its **agent's** memory setting does not apply:
+an application has what its Appspec names.
+
+## Per person and application
+
+What it learns is kept in mem0 under two keys:
+
+- **the person**: the runtime's owner, the trusted identity the runtime is
+  launched with (`DATALAYER_USER_UID`), never anything a caller sends;
+- **the application**: `app:<its uid>`, the `app` item the platform keeps it
+  as — or `app:<its id>` for an application run from its file, which has none.
+
+Its Preview and every deployment of it remember together: a **deployment has
+no memories of its own**. That is why a deployment's *Reset* leaves them, and
+says where they are forgotten.
+
+On Datalayer the store is the shared pgvector database every runtime of the
+person reaches; on a laptop, a FAISS index on disk
+(`AGENT_RUNTIMES_MEM0_DIR`).
+
+## Only in its owner's conversations
+
+What it keeps is its owner's. A session somebody else opened — at its address,
+embedded in a product, by a visitor of a public application — reads nothing of
+it and writes nothing to it: the memory tools answer *Nothing is remembered in
+this conversation*. A run outside a session — the scheduler waking a worker,
+as its owner — remembers.
+
+## The routes
+
+On the runtime, under `/api/v1/apps`, for its owner (a person whose uid is the
+runtime's owner, or the machine itself); anybody else is refused (403).
+
+| Route | What it does |
+| --- | --- |
+| `GET /memories/{app}` | What it remembers, newest first: `{app, count, memories: [{id, memory, created_at, updated_at}]}`. `?limit=` up to 1000. |
+| `DELETE /memories/{app}/{memory_id}` | **Forget this**: one thing. Another application's, or somebody else's, is not found (404). |
+| `DELETE /memories/{app}?count=N` | **Forget everything**, no more than the `N` its owner was shown and confirmed: when it remembers more now, nothing is forgotten (409). Answers `{forgotten}`. |
+
+`{app}` is its uid, or its id when it runs from its file. A runtime without
+mem0 installed answers 503 in a sentence.
+
+## Without a runtime
+
+On Datalayer, the runtimes service reads the same store for the person, so an
+application's page shows what it remembers whether or not a runtime is running:
+
+| Route of the runtimes service | What it does |
+| --- | --- |
+| `GET /api/runtimes/v1/memories?agent_id=app:<uid>` | The caller's memories of the application. |
+| `DELETE /api/runtimes/v1/memories/{memory_id}` | Forget one of the caller's own; somebody else's is not found. |
+| `DELETE /api/runtimes/v1/memories?agent_id=app:<uid>&count=N` | Forget everything the application remembers of the caller, no more than `N` (409 otherwise). |
+
+The TypeScript client has them as `listRuntimeMemories`,
+`forgetRuntimeMemory` and `forgetRuntimeMemories`
+(`@datalayer/agent-runtimes/lib/api/runtimes/runtimes`), and on
+`AgentRuntimesClient`.

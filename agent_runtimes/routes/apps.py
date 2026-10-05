@@ -15,7 +15,9 @@ other at launch.
 interface shows before it is made. `GET /api/v1/apps` lists the applications
 the runtime knows. `POST /api/v1/apps/feedback` keeps what a person says of a
 conversation — a thumb up or down, and a comment — in the application's
-record (LOOP V-18).
+record (LOOP V-18). `GET /api/v1/apps/memories/{app}` is what an
+application remembers of its owner, and `DELETE` forgets one thing of it, or
+everything once its owner confirmed how many (LOOP R-18).
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
@@ -39,7 +41,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from agent_runtimes.loop.apps.callers import (
@@ -743,3 +745,100 @@ async def session_agui(agent: str, request: Request) -> Any:
         return _stream(live.run_agui(body, loop=loop or {}, bearer=bearer))
     except SessionRefused as refused:
         raise _refused(refused) from None
+
+
+# --- What an application remembers (LOOP R-18) -------------------------------
+
+
+async def _owner(request: Request) -> None:
+    """The person whose memories this runtime keeps, or the machine itself.
+
+    An application's memories are kept per person and application, under the
+    runtime's owner (`agent_runtimes.loop.apps.memory`): its owner reads and
+    forgets them, as the person, for its Preview and its deployments alike —
+    a deployment has no memories of its own, and its principal reaches none.
+    """
+    from agent_runtimes.memory.identity import resolve_memory_identity
+
+    authorized = await _authorize(request, person_only=True, for_app=None)
+    caller = authorized.caller
+    if caller.kind == "local":
+        return
+    if caller.uid != resolve_memory_identity().user_uid:
+        raise HTTPException(
+            status_code=403,
+            detail="What an application remembers is shown to its owner: "
+            "this runtime keeps the memories of the person it runs for.",
+        )
+
+
+def _memory_of(app: str) -> Any:
+    """The memories of an application of the runtime's owner, or a refusal."""
+    from agent_runtimes.loop.apps.memory import MemoryNotKept, app_memory, key_of
+
+    try:
+        return app_memory(key_of(app))
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    except MemoryNotKept as missing:
+        raise HTTPException(status_code=503, detail=str(missing)) from None
+
+
+def _remembered(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """One memory as an application's page shows it: what, and when it was learned."""
+    return {
+        "id": entry["id"],
+        "memory": entry["content"],
+        "created_at": entry["created_at"],
+        "updated_at": entry["updated_at"],
+    }
+
+
+@router.get("/memories/{app}")
+async def app_memories(
+    app: str, request: Request, limit: int = Query(500, ge=1, le=1000)
+) -> Dict[str, Any]:
+    """What an application remembers of its owner, newest first.
+
+    ``app`` is its uid — the `app` item it is kept as — or, for an
+    application run from its file, its id.
+    """
+    await _owner(request)
+    memory = _memory_of(app)
+    listed = await memory.list_all(limit=limit)
+    return {
+        "app": app,
+        "count": len(listed),
+        "memories": [_remembered(entry) for entry in listed],
+    }
+
+
+@router.delete("/memories/{app}/{memory_id}")
+async def forget_memory(app: str, memory_id: str, request: Request) -> Dict[str, Any]:
+    """Forget one thing an application remembers; somebody else's is not found."""
+    await _owner(request)
+    if not await _memory_of(app).forget(memory_id):
+        raise HTTPException(
+            status_code=404, detail=f"{app} remembers nothing as {memory_id}."
+        )
+    return {"forgotten": 1}
+
+
+@router.delete("/memories/{app}")
+async def forget_everything(
+    app: str, request: Request, count: int = Query(..., ge=0)
+) -> Dict[str, Any]:
+    """Forget everything an application remembers — no more than ``count``.
+
+    ``count`` is what its owner was shown and confirmed: when it remembers
+    more now, nothing is forgotten (409).
+    """
+    await _owner(request)
+    memory = _memory_of(app)
+    if len(await memory.list_all(limit=count + 1)) > count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"It remembers more than the {count} you confirmed now. "
+            "Nothing was forgotten.",
+        )
+    return {"forgotten": await memory.forget_all()}

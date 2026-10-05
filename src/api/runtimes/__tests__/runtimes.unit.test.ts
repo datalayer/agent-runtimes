@@ -56,4 +56,41 @@ describe('Runtimes API', () => {
     expect(String(call?.url || '')).toContain('agent_id=agent-1');
     expect(result.memories).toHaveLength(1);
   });
+
+  it('forgets one memory of the caller by its id', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      forgotten: 1,
+    });
+
+    const result = await runtimes.forgetRuntimeMemory(MOCK_JWT_TOKEN, 'm 1');
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('DELETE');
+    expect(String(call.url)).toMatch(/\/api\/runtimes\/v1\/memories\/m%201$/);
+    expect(result).toEqual({ success: true, forgotten: 1 });
+  });
+
+  it('forgets everything an application remembers, no more than confirmed', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      forgotten: 7,
+    });
+
+    const result = await runtimes.forgetRuntimeMemories(
+      MOCK_JWT_TOKEN,
+      'app:01ABC',
+      7,
+    );
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('DELETE');
+    expect(String(call.url)).toContain(
+      '/api/runtimes/v1/memories?agent_id=app%3A01ABC&count=7',
+    );
+    expect(result.forgotten).toBe(7);
+    await expect(
+      runtimes.forgetRuntimeMemories(MOCK_JWT_TOKEN, 'app:01ABC', -1),
+    ).rejects.toThrow('the count confirmed');
+  });
 });
