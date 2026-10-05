@@ -1,0 +1,180 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The Sales side of the team `sales-and-accounting`: `@a2a-js/sdk`'s client
+ * asking Accounting over A2A, against a faked endpoint.
+ *
+ * The endpoint answers with what the runtime serves: the agent card is
+ * `fixtures/accounting-agent-card.json` and the stream
+ * `fixtures/accounting-stream.sse`, both recorded from Accounting served with
+ * fasta2a in process (`agent_runtimes/tests/test_apps_a2a.py`, which also
+ * fails when the card drifts from the fixture).
+ */
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+import {
+  a2aPeerTool,
+  askA2APeer,
+  connectA2APeer,
+  peerToolDescription,
+  type A2APeerEvent,
+} from '../browser/a2aPeer';
+
+const FIXTURES = join(__dirname, 'fixtures');
+const URL = 'http://runtime.test/api/v1/a2a/agents/accounting';
+const KEY = 'a-key-granted-to-the-route';
+const REPORT = 'Open invoices: INV/2026/0007, 1,200.00 EUR due.';
+const CARD = readFileSync(join(FIXTURES, 'accounting-agent-card.json'), 'utf8');
+const STREAM = readFileSync(join(FIXTURES, 'accounting-stream.sse'), 'utf8');
+
+type Seen = { url: string; method: string; headers: Headers; body?: any };
+
+/** Accounting, as the runtime serves it, and what it was sent. */
+function accounting(options: { refuse?: number; stream?: string } = {}): {
+  fetch: typeof globalThis.fetch;
+  seen: Seen[];
+} {
+  const seen: Seen[] = [];
+  const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    const headers = new Headers(init?.headers);
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    seen.push({ url, method: init?.method ?? 'GET', headers, body });
+    if (url === `${URL}/.well-known/agent-card.json`) {
+      return new Response(CARD, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (url === `${URL}/` && init?.method === 'POST') {
+      if (options.refuse) {
+        return new Response(
+          JSON.stringify({
+            detail:
+              'accounting answers a key granted to its A2A route, and this token was not granted to it.',
+          }),
+          {
+            status: options.refuse,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      return new Response(options.stream ?? STREAM, {
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    }
+    return new Response('Not Found', { status: 404 });
+  }) as typeof globalThis.fetch;
+  return { fetch, seen };
+}
+
+describe('Sales asks Accounting over A2A', () => {
+  it('reads the card: one skill, text in and out, a key asked for', async () => {
+    const { fetch, seen } = accounting();
+    const peer = await connectA2APeer({ url: `${URL}/`, key: KEY, fetch });
+    expect(peer.card.name).toBe('Accounting');
+    expect(peer.skill.id).toBe('accounting');
+    expect(peer.skill.inputModes).toEqual(['text/plain']);
+    expect(peer.skill.examples).toContain(
+      'List the customer invoices that are still open, with the total due.',
+    );
+    expect(Object.keys(peer.card.securitySchemes)).toEqual(['datalayer']);
+    expect(seen[0].headers.get('Authorization')).toBe(`Bearer ${KEY}`);
+    const description = peerToolDescription(peer);
+    expect(description).toContain('Ask Accounting, over A2A');
+    expect(description).toContain('Give the trial balance for last month.');
+  });
+
+  it('asks in A2A 1.0, with the key, and tells each step', async () => {
+    const { fetch, seen } = accounting();
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    const events: A2APeerEvent[] = [];
+    const answer = await askA2APeer(peer, 'Which invoices are open?', {
+      onEvent: event => events.push(event),
+    });
+    expect(answer).toBe(REPORT);
+    const [request] = seen.filter(entry => entry.method === 'POST');
+    expect(request.url).toBe(`${URL}/`);
+    expect(request.headers.get('Authorization')).toBe(`Bearer ${KEY}`);
+    expect(request.body.method).toBe('SendStreamingMessage');
+    expect(request.body.params.message.role).toBe('ROLE_USER');
+    expect(request.body.params.message.parts).toEqual([
+      { text: 'Which invoices are open?' },
+    ]);
+    expect(events[0]).toEqual({
+      phase: 'asked',
+      request: 'Which invoices are open?',
+    });
+    const working = events.filter(event => event.phase === 'working');
+    expect(working.map(event => event.note).filter(Boolean)).toEqual([
+      'Calling odoo_accounting_list_invoices',
+      'Read odoo_accounting_list_invoices',
+    ]);
+    expect(events.at(-1)).toMatchObject({ phase: 'answered', answer: REPORT });
+  });
+
+  it('says why when the runtime refuses the key, and the tool returns it', async () => {
+    const { fetch } = accounting({ refuse: 403 });
+    const peer = await connectA2APeer({ url: URL, key: 'another-key', fetch });
+    const events: A2APeerEvent[] = [];
+    const ask = a2aPeerTool({ peer, onEvent: event => events.push(event) });
+    const result = await ask.execute!(
+      { request: 'Which invoices are open?' },
+      { toolCallId: 'call-1', messages: [] },
+    );
+    expect(result).toMatchObject({ error: expect.stringContaining('403') });
+    expect(events.map(event => event.phase)).toEqual(['asked', 'failed']);
+  });
+
+  it('a task that fails is not an answer', async () => {
+    const failed = STREAM.split('\n\n')
+      .filter(Boolean)
+      .slice(0, 1)
+      .concat(
+        `data: ${JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          result: {
+            statusUpdate: {
+              taskId: 't',
+              contextId: 'c',
+              status: {
+                state: 'TASK_STATE_FAILED',
+                message: {
+                  role: 'ROLE_AGENT',
+                  parts: [{ text: 'The odoo tools were refused.' }],
+                  messageId: 'm',
+                },
+              },
+            },
+          },
+        })}`,
+      )
+      .join('\n\n')
+      .concat('\n\n');
+    const { fetch } = accounting({ stream: failed });
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    await expect(askA2APeer(peer, 'Open invoices?')).rejects.toThrow(
+      'Accounting failed: The odoo tools were refused.',
+    );
+  });
+
+  it('a request that says nothing is not sent', async () => {
+    const { fetch, seen } = accounting();
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    const ask = a2aPeerTool({ peer });
+    const result = await ask.execute!(
+      { request: '  ' },
+      { toolCallId: 'call-1', messages: [] },
+    );
+    expect(result).toEqual({
+      error: 'A request to Accounting says what it asks.',
+    });
+    expect(seen.filter(entry => entry.method === 'POST')).toEqual([]);
+  });
+});

@@ -37,6 +37,7 @@ export { default as AgentCompactionExample } from './AgentCompactionExample';
 export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentCodeSandboxesExample } from './AgentCodeSandboxesExample';
 export { default as AgentDecideExample } from './AgentDecideExample';
+export { default as AgentA2ATeamExample } from './AgentA2ATeamExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';
 export { default as AgentHooksExample } from './AgentHooksExample';

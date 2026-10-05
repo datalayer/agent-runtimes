@@ -20,7 +20,34 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentCard, Task, TextPart } from '@a2a-js/sdk';
+
+/**
+ * The A2A objects this hook reads, as the JSON it receives (the 0.3 wire it
+ * was written against). Not the SDK's types: `@a2a-js/sdk` 1.x types are the
+ * 1.0 protobuf shapes, which `runtimes/browser/a2aPeer` uses with the SDK's
+ * own client.
+ */
+export interface A2AWireTextPart {
+  kind: 'text';
+  text: string;
+}
+export type A2AWirePart = A2AWireTextPart | { kind: string; text?: string };
+export interface A2AWireTask {
+  id: string;
+  contextId: string;
+  status: { state: string; message?: { parts?: A2AWirePart[] } };
+  artifacts?: { parts?: A2AWirePart[] }[];
+}
+export interface A2AWireAgentCard {
+  name: string;
+  description?: string;
+  capabilities?: { streaming?: boolean };
+  [key: string]: unknown;
+}
+
+type AgentCard = A2AWireAgentCard;
+type Task = A2AWireTask;
+type TextPart = A2AWireTextPart;
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';

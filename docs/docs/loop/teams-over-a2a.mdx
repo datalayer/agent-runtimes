@@ -1,0 +1,140 @@
+---
+sidebar_position: 8
+title: A team of applications over A2A
+---
+
+# A team of applications over A2A
+
+Two applications can work as a team. One asks the other while it works,
+over the [A2A protocol](../protocols/index.mdx#a2a-agent-to-agent-protocol).
+The team says who asks whom, in agentspecs' teams catalogue
+([Teams of applications](https://agentspecs.datalayer.tech/agent-teams/applications)):
+
+```yaml
+id: sales-and-accounting
+entry: sales
+supervisor: { name: Sales, app: sales:0.0.1 }
+agents:
+  - id: sales
+    app: sales:0.0.1
+    runs_in: browser
+    talks_to: [{ member: accounting, over: a2a }]
+  - id: accounting
+    app: accounting:0.0.1
+    runs_in: runtime
+```
+
+- **Sales** (`apps/sales.yaml`) is a chat that runs in the person's browser.
+  A person asks it for a financial report. It asks Accounting with one tool,
+  `ask_accounting`, and hands over what Accounting answered. It never invents
+  a figure.
+- **Accounting** (`apps/accounting.yaml`) runs on a runtime. It reads the Odoo
+  books through the `odoo-accounting` toolset of the Datalayer MCP gateway at
+  *Can read*. Its rules read without asking and ask first before anything
+  that would change the books. A connection that only reads reaches no tool
+  that writes.
+
+## The application asked: fasta2a on the runtime
+
+A runtime serves an application over A2A when it is configured with `a2a`:
+
+```bash
+# On Datalayer: a new cloud runtime, or a running one with -r <uid>.
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
+# On a runtime that is already running, such as the examples' server on :8765.
+python examples/sales-accounting-a2a/serve_accounting.py --url http://127.0.0.1:8765
+```
+
+`POST /api/v1/apps/configure` with `"a2a": true` (and `public_url`, the
+address callers reach) makes the runtime's agent the application's agent,
+with its connections and its rules. It also mounts the agent with fasta2a at
+`/api/v1/a2a/agents/<application id>/`, through the runtime's A2A route
+(`register_a2a_agent`): its task store and broker are the runtime's protocol
+state store, and its worker is the runtime's `A2AWorker`. `loop` prints the
+address and the agent card, then waits until Ctrl-C.
+
+The agent card is written from the Appspec: its name, description and
+version, and one skill named for it whose examples are its starters. A
+request is text and an answer is text. fasta2a (2.1 and later) answers A2A
+1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`, `ROLE_*`) as its card
+says. The card also says that a bearer key is needed (`securitySchemes`).
+
+**Who it answers** (`agent_runtimes.loop.apps.a2a.A2AGate`):
+
+- the machine itself, without a token. This covers a developer's browser and
+  the local server;
+- a key granted to this route: a token exchanged from an IAM task grant whose
+  task begins with `a2a:<runtime uid>:<application id>:`, checked with IAM.
+
+Without a token the answer is 401. A person's own token, or a key granted to
+another route, gets 403. The agent card is open to anyone.
+
+**As whom it runs.** A remote caller's run acts with the caller's key and
+never with the runtime's own: the key becomes the run's delegated credential
+(`datalayer.credential`). The run then reaches the gateway with that key
+(`toolsets_for_the_run`). This also applies to a catalogue server that is the
+gateway with some of its toolsets, such as `odoo-accounting`, which keeps its
+`only=` query.
+
+## The application asking: `@a2a-js/sdk` in the browser
+
+`runtimes/browser/a2aPeer` uses the A2A SDK's own client (`@a2a-js/sdk` 1.x),
+with no wrapper between them:
+
+```ts
+import { connectA2APeer, a2aPeerTool } from '@datalayer/agent-runtimes/lib/runtimes/browser/a2aPeer'; // not in the barrel
+
+const peer = await connectA2APeer({ url, key }); // reads the agent card
+const tools = { ask_accounting: a2aPeerTool({ peer, onEvent }) };
+```
+
+`connectA2APeer` reads the card and makes a client from it (`ClientFactory`,
+`JsonRpcTransportFactory`). The key goes as a bearer token on every request.
+`a2aPeerTool` is a Vercel AI SDK tool: one request in words in, the peer's
+answer in words out, with the description written from the card's skill.
+`onEvent` is told each step as it happens: `asked`, `working` (with the tool
+the peer calls), then `answered` or `failed`.
+
+## The example
+
+`AgentA2ATeamExample` puts both applications on screen as Office Assistant
+characters (the floating assistant's `AssistantStage`): Sales is the paper
+clip and Accounting is the wizard. You ask Sales. Sales *asks*, Accounting
+*works* and then *answers*, each in its own state and balloon, and then the
+report appears.
+
+1. Start the examples: Vite on :3000 and the local agent-runtimes server on
+   :8765 (`npm run examples`).
+2. Serve Accounting:
+   - **Locally**, on :8765, for development:
+     `python examples/sales-accounting-a2a/serve_accounting.py`. From this
+     machine it needs no key. The runtime reaches Odoo with its own
+     `DATALAYER_API_KEY`.
+   - **On Datalayer**: `loop apps run …/accounting.yaml --cloud --a2a --keep`,
+     then mint a key for that runtime's route (next section) and put the A2A
+     address in `.env.local` as `VITE_A2A_ACCOUNTING_URL`.
+3. Open `http://localhost:3000/` and choose *Agent A2A Team* in the A2A group.
+
+The example finds Accounting at `VITE_A2A_ACCOUNTING_URL`, or by default at
+the examples' local server (`http://localhost:8765/api/v1/a2a/agents/accounting`).
+Sales asks its model through the Datalayer inference service, as the
+signed-in person or with a visitor's trial key.
+
+## A temporary key
+
+`examples/sales-accounting-a2a/make_temp_key.py --runtime <uid> --url <A2A url>`
+mints a key with IAM's task grants and writes it to `.env.local` as
+`VITE_A2A_ACCOUNTING_KEY`. That file is ignored by git, and the key is never
+printed. The key reaches:
+
+- that one runtime's Accounting A2A route (its task
+  `a2a:<runtime uid>:accounting:<nonce>`);
+- the Datalayer MCP gateway in the owner's name, read only, through the
+  `odoo_accounting_*` tools whose classes are all `read` (one
+  `datalayer_connection` detail, scope `data:read`);
+- for `--hours` (four by default, at most 24).
+
+It reaches nothing else. The script shows the grant and waits for a yes. It
+needs a platform service key to mint, and `--revoke <grant uid>` ends the
+key early.

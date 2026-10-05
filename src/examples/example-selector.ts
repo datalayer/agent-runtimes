@@ -329,6 +329,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Delegation to separate agents over the A2A protocol, launched locally or on Datalayer runtimes.',
   ),
   makeEntry(
+    'AgentA2ATeamExample',
+    () => import('./AgentA2ATeamExample'),
+    'Two applications as a team over A2A: Sales in the browser (@a2a-js/sdk) asks Accounting on a runtime (fasta2a, Odoo read only), each an Office Assistant character.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',
