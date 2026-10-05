@@ -28,6 +28,8 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flash, Heading, Label, Text, Textarea } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
+import { AnonymousKeyTimer } from '@datalayer/core/lib/components/anonymous/AnonymousKeyTimer';
 import { stepCountIs, ToolLoopAgent, type ModelMessage } from 'ai';
 import { Streamdown } from 'streamdown';
 import { ThemedProvider } from './utils/themedProvider';
@@ -36,6 +38,11 @@ import { AssistantStage } from '../chat/assistant/AssistantStage';
 import type { AssistantState } from '../chat/assistant/state';
 import { useBrowserInference } from '../hooks/useBrowserInference';
 import { createBrowserModel } from '../runtimes/browser/model';
+import {
+  readJwtClaims,
+  tokenLifetimeMs,
+  useAnonymousSessionStore,
+} from '../runtimes/browser/anonymousToken';
 import {
   a2aPeerTool,
   connectA2APeer,
@@ -166,7 +173,20 @@ function AgentA2ATeam(): JSX.Element {
     import.meta.env.VITE_A2A_ACCOUNTING_URL ||
     `${runtimeUrl}/api/v1/a2a/agents/${ACCOUNTING.id}`;
   const accountingKey = import.meta.env.VITE_A2A_ACCOUNTING_KEY || undefined;
-  const { inference, needsSignIn } = useBrowserInference(true);
+  const { inference, needsSignIn, anonymous } = useBrowserInference(true);
+  // The temporary key's own clock, read out of it: when it ends and how long
+  // it was signed for, as core's countdown draws them.
+  const accountingKeyClock = useMemo(() => {
+    const exp = accountingKey ? readJwtClaims(accountingKey)?.exp : undefined;
+    return accountingKey && exp
+      ? { expiresAt: exp * 1000, grantedMs: tokenLifetimeMs(accountingKey) }
+      : undefined;
+  }, [accountingKey]);
+  const [accountingKeyEnded, setAccountingKeyEnded] = useState(
+    () =>
+      accountingKeyClock !== undefined &&
+      accountingKeyClock.expiresAt <= Date.now(),
+  );
 
   const [peer, setPeer] = useState<A2APeer | null>(null);
   const [peerError, setPeerError] = useState<string | null>(null);
@@ -359,6 +379,45 @@ function AgentA2ATeam(): JSX.Element {
       <Text as="p" sx={{ color: 'fg.muted', mt: 0 }}>
         {TEAM.description}
       </Text>
+      {((anonymous.status === 'active' && anonymous.expiresAt) ||
+        (accountingKeyClock && !accountingKeyEnded)) && (
+        <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', mb: 3 }}>
+          {anonymous.status === 'active' && anonymous.expiresAt && (
+            <AnonymousKeyTimer
+              expiresAt={anonymous.expiresAt}
+              grantedMs={anonymous.grantedMs}
+              label={`${SALES.name}'s trial key`}
+              onExpire={() => useAnonymousSessionStore.getState().expire()}
+            />
+          )}
+          {accountingKeyClock && !accountingKeyEnded && (
+            <AnonymousKeyTimer
+              expiresAt={accountingKeyClock.expiresAt}
+              grantedMs={accountingKeyClock.grantedMs}
+              label={`${ACCOUNTING.name}'s temporary key`}
+              onExpire={() => setAccountingKeyEnded(true)}
+            />
+          )}
+        </Box>
+      )}
+      {anonymous.status === 'expired' && (
+        <Box sx={{ mb: 3 }}>
+          <AnonymousKeyExpired
+            agentName={SALES.name}
+            // Sales runs in this page: what ended is its model's key, and
+            // signing in gives it the person's own.
+            onSignedIn={() => useAnonymousSessionStore.getState().clear()}
+          />
+        </Box>
+      )}
+      {accountingKeyEnded && (
+        <Flash variant="danger" sx={{ mb: 3 }}>
+          {ACCOUNTING.name}&rsquo;s temporary key has ended: it no longer
+          answers. Make a new one with{' '}
+          <code>examples/sales-accounting-a2a/make_temp_key.py</code> and
+          reload.
+        </Flash>
+      )}
       {needsSignIn && (
         <Flash variant="warning" sx={{ mb: 3 }}>
           Sales asks its model through the Datalayer inference service: sign in,
