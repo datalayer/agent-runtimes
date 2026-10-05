@@ -1183,7 +1183,9 @@ class CreateAgentRequest(BaseModel):
             "and `purpose` `test` with its `launch_uid` when the session tests it "
             "(the Evals engine's runs), and `woken_by` when nobody opened the "
             "session — `{kind: schedule, ...}` (LOOP R-14). What its record is "
-            "kept under (LOOP R-07)."
+            "kept under (LOOP R-07). `organization_uid`, the organization it "
+            "belongs to: its agent keeps to that organization's contexts, read "
+            "from IAM with the caller's token (LOOP U-31)."
         ),
     )
     subagents: SubAgentsConfig | None = Field(
@@ -1655,6 +1657,7 @@ async def create_agent(
         # An application reaches nothing it does not name: its connections,
         # in place of the servers its agent would bring.
         running_app = None
+        app_frames_section = ""
         if request.app_spec is not None:
             from agent_runtimes.loop.apps.loading import (
                 AppNotRunnable,
@@ -1691,6 +1694,42 @@ async def create_agent(
                     )
                 except PrincipalTokenMissing as missing:
                     raise HTTPException(status_code=422, detail=str(missing)) from None
+            # The contexts it works under, as the organization it belongs
+            # to reads them: its version in place of the catalogue's, and
+            # its own (LOOP U-31, U-32), read from IAM with the caller's
+            # token; what cannot be read stops it.
+            if running_app.context:
+                from datalayer_core.utils.urls import DatalayerURLs
+
+                from agent_runtimes.loop.apps.callers import bearer_of
+                from agent_runtimes.loop.apps.frames import (
+                    FramesUnread,
+                    frames_instructions,
+                    read_organization_frames,
+                )
+
+                organization_uid = str(
+                    (request.app_instance or {}).get("organization_uid") or ""
+                ).strip()
+                try:
+                    organization_frames = await asyncio.to_thread(
+                        read_organization_frames,
+                        organization_uid or None,
+                        iam_url=DatalayerURLs.from_environment().iam_url,
+                        token=bearer_of(http_request.headers.get("authorization"))
+                        or os.environ.get("DATALAYER_USER_TOKEN"),
+                    )
+                    app_frames_section = frames_instructions(
+                        running_app.context, organization_frames
+                    )
+                except FramesUnread as unread:
+                    raise HTTPException(
+                        status_code=422, detail={"problems": [str(unread)]}
+                    ) from None
+                except AppNotRunnable as refused:
+                    raise HTTPException(
+                        status_code=422, detail={"problems": refused.problems}
+                    ) from None
             # The application runs as a Reactor plugin of its own (LOOP F-13).
             register_app(running_app)
             # Code Mode calls every tool through `execute_code`, which an
@@ -2211,7 +2250,10 @@ async def create_agent(
         # installed skills, their scripts, parameters, and usage.
         if skills_prompt_section:
             final_system_prompt = final_system_prompt + "\n\n" + skills_prompt_section
-        # What the application tells its agent, on top of the agent's own.
+        # The contexts the application works under, then what it tells its
+        # agent, on top of the agent's own.
+        if app_frames_section:
+            final_system_prompt = final_system_prompt + "\n\n" + app_frames_section
         if running_app is not None and running_app.instructions.strip():
             final_system_prompt = (
                 final_system_prompt + "\n\n" + running_app.instructions.strip()

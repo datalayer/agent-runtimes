@@ -29,6 +29,11 @@ from pydantic_ai.run import AgentRunResultEvent
 from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.enforcement import Ask as RuleAsk
+from agent_runtimes.loop.apps.frames import (
+    NO_ORGANIZATION,
+    OrganizationFrames,
+    frames_instructions,
+)
 from agent_runtimes.loop.apps.guards import AppChecks, AppChecksCapability
 from agent_runtimes.loop.apps.guards import Ask as CheckAsk
 from agent_runtimes.loop.apps.loading import AppNotRunnable
@@ -98,11 +103,14 @@ def _agent_spec(reference: str) -> Optional[Agentspec]:
     return cog.spec if cog is not None else None
 
 
-def local_agent(app: AppSpec) -> Agent:
+def local_agent(
+    app: AppSpec, organization: Optional[OrganizationFrames] = None
+) -> Agent:
     """The agent of an application, built in this process from its spec.
 
     Its model is the application's, else its agent's; its instructions are its
-    agent's prompt followed by the application's own, as on a runtime. What
+    agent's prompt, the contexts it works under as its organization reads them
+    (LOOP U-31), then the application's own, as on a runtime. What
     only a runtime brings — connections to MCP servers, skills, tools, a team —
     is refused rather than left out: an application that would run without
     what it names is not that application.
@@ -111,6 +119,9 @@ def local_agent(app: AppSpec) -> Agent:
     ----------
     app : AppSpec
         The application.
+    organization : OrganizationFrames, optional
+        The contexts of the organization it belongs to
+        (`read_organization_frames`); the catalogue's when unsaid.
 
     Returns
     -------
@@ -120,7 +131,8 @@ def local_agent(app: AppSpec) -> Agent:
     Raises
     ------
     AppNotRunnable
-        When the application needs a runtime, or names no model.
+        When the application needs a runtime, names no model, or names a
+        context its organization does not have.
     """
     from agent_runtimes.models.models import resolve_model_for_inference_provider
 
@@ -152,9 +164,10 @@ def local_agent(app: AppSpec) -> Agent:
         problems.append(f"{app.id} names no model, nor does its agent.")
     if problems:
         raise AppNotRunnable(problems)
-    # As the runtime's create route and the browser build it: the agent's own
-    # prompt (a Cog's, its Frames included), then the application's.
-    parts = [spec.system_prompt if spec else "", app.instructions or ""]
+    # As the runtime's create route builds it: the agent's own prompt (a
+    # Cog's, its Frames included), its contexts, then the application's.
+    frames = frames_instructions(app.context, organization or NO_ORGANIZATION)
+    parts = [spec.system_prompt if spec else "", frames, app.instructions or ""]
     instructions = "\n\n".join(part for part in parts if part) or None
     provider = spec.inference_provider if spec is not None else None
     return Agent(

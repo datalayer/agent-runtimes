@@ -179,8 +179,22 @@ function shapeProblems(app: AppSpec): string[] {
   return problems;
 }
 
-/** Every reference that does not resolve, in sentences. */
-function referenceProblems(app: AppSpec): string[] {
+/** How an organization's own context is named: never a catalogue id (agentspecs' `ORGANIZATION_FRAME_PREFIX`). */
+export const ORGANIZATION_FRAME_PREFIX = 'org-';
+
+/** Whether a reference names an organization's own context rather than the catalogue's (LOOP U-32). */
+export const isOrganizationFrame = (ref: string): boolean =>
+  idOf(ref).startsWith(ORGANIZATION_FRAME_PREFIX);
+
+/**
+ * Every reference that does not resolve, in sentences. A context of an
+ * organization's own resolves among `organizationFrames`, the contexts of the
+ * organization the application belongs to; with none known, it is refused.
+ */
+function referenceProblems(
+  app: AppSpec,
+  organizationFrames: readonly string[] | undefined,
+): string[] {
   const problems: string[] = [];
   const missing = (what: string, ref: string) =>
     problems.push(`There is no ${what} named “${ref}”.`);
@@ -191,7 +205,15 @@ function referenceProblems(app: AppSpec): string[] {
     missing('team', app.team);
   }
   for (const ref of app.context) {
-    if (!getFrame(idOf(ref))) missing('Frame', ref);
+    if (!isOrganizationFrame(ref)) {
+      if (!getFrame(idOf(ref))) missing('Frame', ref);
+    } else if (organizationFrames === undefined) {
+      problems.push(
+        `“${ref}” is a context of an organization’s own: it is checked with the organization the application belongs to, which was not said.`,
+      );
+    } else if (!organizationFrames.includes(idOf(ref))) {
+      problems.push(`Its organization has no context named “${ref}”.`);
+    }
   }
   for (const connection of app.connections) {
     if (!own(MCP_SERVER_LIBRARY, idOf(connection.server))) {
@@ -408,10 +430,14 @@ function setupNotes(app: AppSpec): string[] {
 /**
  * Where an application is checked: the plugins its organization has turned
  * off (catalogue ids, `plugins_off` in IAM), none when it has decided nothing
- * or the checks run with no organization.
+ * or the checks run with no organization; and the ids of its organization's
+ * contexts (`frames` in IAM: its versions and its own, LOOP U-32), unsaid
+ * when no organization is known — a context of an organization's own is then
+ * refused.
  */
 export interface CheckContext {
   pluginsOff: readonly string[];
+  organizationFrames?: readonly string[];
 }
 
 const NO_ORGANIZATION: CheckContext = { pluginsOff: [] };
@@ -422,7 +448,11 @@ export function checkApp(
   read: string[] = [],
   context: CheckContext = NO_ORGANIZATION,
 ): AppCheck {
-  const problems = [...read, ...shapeProblems(app), ...referenceProblems(app)];
+  const problems = [
+    ...read,
+    ...shapeProblems(app),
+    ...referenceProblems(app, context.organizationFrames),
+  ];
   // A block its page uses from a plugin its organization turned off is said
   // with the rest of what is not enabled today (C-12).
   const setup = [

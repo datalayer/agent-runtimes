@@ -244,7 +244,9 @@ def local_server(monkeypatch) -> List[Any]:
     monkeypatch.setattr(
         commands,
         "configure_on",
-        lambda url, document: _kept(calls, ("configure", url, document), {}),
+        lambda url, document, organization=None: _kept(
+            calls, ("configure", url, document), {}
+        ),
     )
 
     async def run_app_tux(application: Any, **kwargs: Any) -> None:

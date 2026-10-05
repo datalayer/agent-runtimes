@@ -370,7 +370,9 @@ a `ChoiceQuestion` with *Allow* and *Refuse* — and a refusal raises
 
 The host builds the agent. `local_agent`, the default, builds it in this
 process from the Appspec: the application's model and instructions, else its
-agent's. What only a runtime brings — connections, skills, tools, a team —
+agent's, with the contexts it works under between its agent's prompt and its
+instructions — `local_agent(app, read_organization_frames(...))` for its
+organization's, the catalogue's otherwise. What only a runtime brings — connections, skills, tools, a team —
 is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.

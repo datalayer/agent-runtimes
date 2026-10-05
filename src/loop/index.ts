@@ -381,6 +381,8 @@ export {
   AppRenderer,
   checkApp,
   checkAppspec,
+  isOrganizationFrame,
+  ORGANIZATION_FRAME_PREFIX,
   type AppCheck,
   type CheckContext,
   defineAppPlugin,

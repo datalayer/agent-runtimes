@@ -132,6 +132,12 @@ export type AppInstance = {
   deploymentUid?: string;
   /** The version that runs. */
   version?: number;
+  /**
+   * The organization it belongs to: its agent keeps to that organization's
+   * contexts, read by the runtime from IAM (LOOP U-31); unsaid for an
+   * application of nobody's organization.
+   */
+  organizationUid?: string;
 };
 
 export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
@@ -328,6 +334,9 @@ export function appDatalayerCreatePayload(
             app_uid: instance.appUid ?? '',
             deployment_uid: instance.deploymentUid ?? '',
             version: instance.version ?? 0,
+            ...(instance.organizationUid
+              ? { organization_uid: instance.organizationUid }
+              : {}),
           },
         }
       : {}),

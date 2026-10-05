@@ -14,7 +14,10 @@ call — the instant checks of the Studio — in a terminal and in CI:
 - **setup**: what it names that is not enabled today — a block of its page
   from a UI plugin its organization has turned off among it, with
   ``--organization`` (LOOP C-12: read from IAM with the caller's token; with
-  no organization, or offline, none is off and the run says so).
+  no organization, or offline, none is off and the run says so);
+- **its contexts**: a context of its organization's own (``org-…``) is checked
+  against the organization's, read from IAM with ``--organization`` (LOOP
+  U-32); without one, or when they cannot be read, it is not ready.
 
 Its verdict is said in the Studio's words. *Not ready* when the spec is
 wrong; *Needs attention* when a safety check has something to say; otherwise
@@ -40,6 +43,7 @@ import typer
 from rich.console import Console
 
 if TYPE_CHECKING:
+    from agent_runtimes.loop.apps.frames import FramesUnread, OrganizationFrames
     from agent_runtimes.loop.apps.plugins_off import PluginsOff
 
 app = typer.Typer(
@@ -88,12 +92,12 @@ def _require_agentspecs() -> Any:
         from agentspecs import apps as module
     except ImportError as error:  # pragma: no cover - agentspecs is a dependency
         raise typer.BadParameter(
-            "Validating an application needs agentspecs 0.0.16 or later."
+            "Validating an application needs agentspecs 0.0.28 or later."
         ) from error
     version = tuple(int(part) for part in agentspecs.__version__.split(".")[:3])
-    if version < (0, 0, 16):
+    if version < (0, 0, 28):
         raise typer.BadParameter(
-            f"Validating an application needs agentspecs 0.0.16 or later; "
+            f"Validating an application needs agentspecs 0.0.28 or later; "
             f"{agentspecs.__version__} is installed."
         )
     return module
@@ -175,7 +179,11 @@ def read_document(path: Path) -> Dict[str, Any]:
     return yaml.safe_load(path.read_text()) or {}
 
 
-def validate_file(path: Path, plugins_off: Optional[PluginsOff] = None) -> Report:
+def validate_file(
+    path: Path,
+    plugins_off: Optional[PluginsOff] = None,
+    frames: "Optional[OrganizationFrames | FramesUnread]" = None,
+) -> Report:
     """The instant checks of one Appspec file, or of the spec an ``app.py`` builds.
 
     Parameters
@@ -184,6 +192,9 @@ def validate_file(path: Path, plugins_off: Optional[PluginsOff] = None) -> Repor
         The Appspec, or the ``app.py`` that builds one.
     plugins_off : PluginsOff or None
         The plugins its organization has turned off; none when not given.
+    frames : OrganizationFrames, FramesUnread or None
+        Its organization's contexts, or why they were not read; with none, a
+        context of an organization's own is refused (LOOP U-32).
 
     Returns
     -------
@@ -214,7 +225,15 @@ def validate_file(path: Path, plugins_off: Optional[PluginsOff] = None) -> Repor
         application = module.parse_app(data)
     except module.AppError as error:
         return Report(str(path), NOT_READY, problems=[str(error)])
-    problems = module.app_problems(application)
+    from agent_runtimes.loop.apps.frames import FramesUnread
+
+    if isinstance(frames, FramesUnread):
+        problems = module.app_problems(application)
+        if application.context:
+            problems.append(str(frames))
+    else:
+        known = list(frames.versions) if frames and frames.organization_uid else None
+        problems = module.app_problems(application, known)
     setup = [
         *module.app_setup(application),
         *plugins_off_setup_notes(application.interface, off),
@@ -281,7 +300,7 @@ def apps_validate(
     organization: str = typer.Option(
         None,
         "--organization",
-        help="The organization's uid: its turned-off plugins, read from IAM, are said in the setup notes.",
+        help="The organization's uid: its turned-off plugins and its contexts, read from IAM.",
     ),
 ) -> None:
     """Run the instant checks of one or more applications, and its safety set.
@@ -305,7 +324,8 @@ def apps_validate(
             "On Datalayer the engine runs a saved application: name it with --app."
         )
     plugins_off = organization_plugins_off(organization)
-    reports = [validate_file(path, plugins_off) for path in paths]
+    frames = organization_frames(organization)
+    reports = [validate_file(path, plugins_off, frames) for path in paths]
     unjudged = False
     if safety:
         for path, report in zip(paths, reports):
@@ -712,13 +732,26 @@ def _application_of(path: Path) -> Any:
 BOOTSTRAP_AGENT_SPEC_ID = "example-simple"
 
 
-def configure_on(base_url: str, document: Dict[str, Any]) -> Dict[str, Any]:
-    """Configure a runtime with an application; its refusal said in sentences."""
+def configure_on(
+    base_url: str, document: Dict[str, Any], organization: Optional[str] = None
+) -> Dict[str, Any]:
+    """Configure a runtime with an application; its refusal said in sentences.
+
+    With ``organization``, the runtime reads the plugins it turned off and the
+    contexts its agent keeps to (LOOP C-12, U-31) with the caller's token.
+    """
     import httpx
 
-    response = httpx.post(
-        f"{base_url}/api/v1/apps/configure", json={"app": document}, timeout=120.0
-    )
+    body: Dict[str, Any] = {"app": document}
+    if organization:
+        from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+        body["organization_uid"] = organization
+        try:
+            body["user_token"] = make_client()[1]
+        except NotSignedIn:
+            pass
+    response = httpx.post(f"{base_url}/api/v1/apps/configure", json=body, timeout=120.0)
     if response.status_code == 422:
         detail = response.json().get("detail") or {}
         problems = detail.get("problems") if isinstance(detail, dict) else [str(detail)]
@@ -770,7 +803,7 @@ def apps_run(
     organization: str = typer.Option(
         None,
         "--organization",
-        help="The organization's uid: its turned-off plugins, read from IAM, are said in the setup notes.",
+        help="The organization's uid: its turned-off plugins and its contexts, read from IAM.",
     ),
 ) -> None:
     """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
@@ -851,7 +884,7 @@ def apps_run(
         base_url = f"http://127.0.0.1:{port}"
 
     try:
-        configured = configure_on(base_url, document)
+        configured = configure_on(base_url, document, organization)
         if not speak_ag_ui(base_url):
             raise RuntimeError("The application's agent did not come up.")
         from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
@@ -994,6 +1027,39 @@ def apps_deploy(
         markup=False,
         highlight=False,
     )
+
+
+def organization_frames(
+    organization: Optional[str],
+) -> "OrganizationFrames | FramesUnread":
+    """An organization's contexts, read from IAM with the caller's token, or why not (LOOP U-32).
+
+    Parameters
+    ----------
+    organization : str or None
+        The organization's uid; none is read without one.
+
+    Returns
+    -------
+    OrganizationFrames or FramesUnread
+        Its contexts — none with no organization — or the sentence saying why
+        they were not read.
+    """
+    from agent_runtimes.loop.apps.frames import FramesUnread, read_organization_frames
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+
+    try:
+        if not organization:
+            return read_organization_frames(None, iam_url="", token=None)
+        try:
+            client, token = make_client()
+        except NotSignedIn:
+            return read_organization_frames(organization, iam_url="", token=None)
+        return read_organization_frames(
+            organization, iam_url=client.urls.iam_url, token=token
+        )
+    except FramesUnread as unread:
+        return unread
 
 
 def organization_plugins_off(organization: Optional[str]) -> PluginsOff:

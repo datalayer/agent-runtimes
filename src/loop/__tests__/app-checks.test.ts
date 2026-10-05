@@ -17,6 +17,7 @@ import {
   PASSES,
   checkAppspec,
   componentNamed,
+  isOrganizationFrame,
 } from '../apps/checks';
 
 const BASE = {
@@ -296,5 +297,23 @@ describe('the instant checks', () => {
     ).toContain(
       'deployment.embedded.mode: is one of inline, bubble, panel, assistant.',
     );
+  });
+
+  it('checks a context of an organization’s own against the organization’s (LOOP U-32)', () => {
+    const own = { ...BASE, context: ['org-house-style'] };
+    expect(
+      checkAppspec(own, {
+        pluginsOff: [],
+        organizationFrames: ['board-reporting', 'org-house-style'],
+      }).problems,
+    ).toEqual([]);
+    expect(
+      checkAppspec(own, { pluginsOff: [], organizationFrames: [] }).problems,
+    ).toEqual(['Its organization has no context named “org-house-style”.']);
+    expect(checkAppspec(own).problems).toEqual([
+      '“org-house-style” is a context of an organization’s own: it is checked with the organization the application belongs to, which was not said.',
+    ]);
+    expect(isOrganizationFrame('org-house-style:0.0.1')).toBe(true);
+    expect(isOrganizationFrame('board-reporting')).toBe(false);
   });
 });

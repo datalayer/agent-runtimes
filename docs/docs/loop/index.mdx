@@ -421,6 +421,37 @@ names one, else its agent's (`resolveAgentspec`, `agentInstructions` in
 `loop/apps`). An application whose agent resolves to nothing is not run: the
 chat says so in a sentence instead.
 
+### The contexts it works under
+
+An application names its contexts — the [Frames](https://agentspecs.datalayer.tech/frames)
+of the catalogue, and its organization's own, whose ids start with `org-` — in
+its `context`. A runtime tells its agent them after the agent's own prompt and
+before the application's `instructions`, as the organization it belongs to
+reads them (LOOP U-31, U-32):
+
+- the version the organization's owners saved of a catalogue Frame — its
+  rules, words and voice — in place of the catalogue's, the rest of the Frame
+  staying the catalogue's;
+- the organization's own contexts, beside them;
+- the catalogue's, for an organization that changed nothing, and for an
+  application of nobody's organization.
+
+The organization is said with the agent: `app_instance.organization_uid` in
+`POST /api/v1/agents` (`AppInstance.organizationUid` for `AppRenderer`), or
+`organization_uid` in `POST /api/v1/apps/configure`. Its contexts are read
+from Datalayer IAM (`GET /api/iam/v1/organizations/{uid}/frames`) with the
+caller's token. Nothing falls back to the catalogue's: when they cannot be
+read — nobody signed in, IAM unreachable or refusing — the agent is not made,
+and the answer (422) says why; so is an application naming a context of an
+organization's own that its organization does not have, or one with no
+organization said. `loop apps validate --organization <uid>` checks an
+`org-…` context against the organization's; without it, the application is
+*Not ready*. The instant checks in a page do the same with
+`checkApp(app, [], { pluginsOff, organizationFrames })`.
+
+The `browser` target does not tell its agent the contexts yet: an application
+that keeps to them runs on a runtime.
+
 ### An application's layout
 
 `interface.layout` says how the application is drawn, and `AppRenderer` draws

@@ -15,6 +15,7 @@ import { APP_CATALOGUE } from '../../specs/apps';
 import { loopAccentStyles } from '@datalayer/primer-addons';
 import {
   agentIdOf,
+  appDatalayerCreatePayload,
   appThemeOverrides,
   defineAppPlugin,
 } from '../apps/AppRenderer';
@@ -40,6 +41,23 @@ describe('the application plugin', () => {
       dumpAppspec(research),
     );
     expect(blueprint.value.createPayload.agent_library).toBe('pydantic-ai');
+  });
+
+  it('says the organization it belongs to on a Datalayer runtime, whose contexts its agent keeps to (LOOP U-31)', () => {
+    expect(
+      appDatalayerCreatePayload(research, {
+        appUid: 'app-1',
+        organizationUid: '01ORG',
+      }).app_instance,
+    ).toEqual({
+      app_uid: 'app-1',
+      deployment_uid: '',
+      version: 0,
+      organization_uid: '01ORG',
+    });
+    expect(
+      appDatalayerCreatePayload(research, { appUid: 'app-1' }).app_instance,
+    ).not.toHaveProperty('organization_uid');
   });
 
   it('offers the application’s starters on the empty chat', () => {

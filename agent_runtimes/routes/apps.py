@@ -83,7 +83,10 @@ class ConfigureAppRequest(BaseModel):
     mcp_proxy_url: Optional[str] = None
     organization_uid: Optional[str] = Field(
         None,
-        description="The organization it runs for: the plugins it has turned off are read from IAM (LOOP C-12)",
+        description=(
+            "The organization it runs for: the plugins it has turned off are read "
+            "from IAM (LOOP C-12), and its contexts, which the agent keeps to (U-31)"
+        ),
     )
 
 
@@ -188,7 +191,8 @@ async def configure_app(
     The plugins its organization has turned off are read from IAM with the
     person's token, and a block of its page from one of them is said in its
     setup notes; ``plugins_off_says`` says where the list came from, or why
-    none is off.
+    none is off. Its agent keeps to the organization's contexts (LOOP U-31),
+    read when it is made: one that cannot be read refuses it.
     """
     from datalayer_core.utils.urls import DatalayerURLs
 
@@ -229,6 +233,11 @@ async def configure_app(
             jupyter_sandbox=body.jupyter_sandbox,
             mcp_proxy_url=body.mcp_proxy_url,
             app_spec=body.app,
+            app_instance=(
+                {"organization_uid": body.organization_uid}
+                if body.organization_uid
+                else None
+            ),
             model=app.model or None,
             # An application is spoken to over AG-UI — by its page and by the
             # terminal — whatever the runtime started its default agent on.
