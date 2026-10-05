@@ -121,7 +121,7 @@ export interface AssistantSaying {
   more: boolean;
 }
 
-/** How much of a message the balloon says before *Open the conversation*. */
+/** How much of a message is kept as the agent's saying before it is cut. */
 export const SAYING_LIMIT = 220;
 
 /**

@@ -43,6 +43,15 @@ import {
   ASSISTANT_WORDS,
   type AssistantState,
 } from '../../chat/assistant/state';
+import {
+  CONVERSATION_BALLOON_WIDTH,
+  ConversationBalloonClose,
+  balloonTailAt,
+  conversationBalloonHeight,
+  conversationBalloonSx,
+  peekLine,
+} from '../../chat/assistant/ConversationBalloon';
+import { DecisionAsk } from '../../chat/assistant/DecisionAsk';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import {
   AssistantCharactersPlugin,
@@ -61,7 +70,11 @@ export const REFERENCE_SCREENS = [
 ] as const;
 export type ReferenceScreen = (typeof REFERENCE_SCREENS)[number];
 
-/** The floating assistant's pictures (T-27): its states, and stepped aside. */
+/**
+ * The floating assistant's pictures (T-27): its states — closed, a peek
+ * where it has something to say — stepped aside, and open, the conversation
+ * as its balloon (T-23).
+ */
 export const ASSISTANT_PICTURES = [
   'idle',
   'thinking',
@@ -70,6 +83,7 @@ export const ASSISTANT_PICTURES = [
   'paused',
   'speaking',
   'aside',
+  'open',
 ] as const;
 export type AssistantPicture = (typeof ASSISTANT_PICTURES)[number];
 
@@ -536,9 +550,12 @@ export const REFERENCE_SCREEN_COMPONENTS: Record<
 const BALLOONS: Partial<
   Record<AssistantPicture, AssistantStageProps['balloon']>
 > = {
+  // A new message, peeked by its first words (T-23).
   speaking: {
-    text: 'Three customers wrote about late deliveries this week: Ada, Grace and Alan.',
-    more: true,
+    ...peekLine(
+      'Three customers wrote about late deliveries this week: Ada, Grace and Alan.',
+    ),
+    onDismiss: () => undefined,
   },
   // An approval it waits on, answered in the balloon (T-23).
   waiting: {
@@ -566,10 +583,12 @@ export function AssistantScreen({
   picture: AssistantPicture;
 }): JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null);
-  const state: AssistantState = picture === 'aside' ? 'idle' : picture;
+  const state: AssistantState =
+    picture === 'aside' || picture === 'open' ? 'idle' : picture;
   const balloon = BALLOONS[picture];
   return (
     <Box sx={{ flex: 1, position: 'relative' }}>
+      {picture === 'open' && <OpenConversation />}
       {picture === 'aside' && (
         <Box
           role="dialog"
@@ -601,12 +620,121 @@ export function AssistantScreen({
         place={{ right: 48, bottom: 48 }}
         stageRef={stageRef}
         onDragStart={() => undefined}
-        open={false}
+        open={picture === 'open'}
         onToggle={() => undefined}
         balloon={balloon}
         insist={!!balloon}
         onDismiss={() => undefined}
       />
+    </Box>
+  );
+}
+
+/** What the open picture's conversation holds. */
+const OPEN_CONVERSATION: DisplayItem[] = [
+  said('w', 'assistant', 'Hello! Ask me anything about this page.'),
+  said('o1', 'user', 'Which customers wrote about late deliveries this week?'),
+  said(
+    'o2',
+    'assistant',
+    'Three of them: **Ada**, **Grace** and **Alan**. Ada’s parcel is two days late; the other two are waiting for a reply.',
+  ),
+];
+
+/**
+ * The conversation open, as the assistant's balloon (T-23): over the
+ * character in the page's corner, its tail toward it, the history with the
+ * welcome first, *Ask a decision* beside the composer, the Lexical composer
+ * last, and its close in the corner — no header, no footer.
+ */
+function OpenConversation(): JSX.Element {
+  const endRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState('');
+  const height = conversationBalloonHeight(window.innerHeight);
+  const left = window.innerWidth - 48 - CONVERSATION_BALLOON_WIDTH;
+  return (
+    <Box
+      data-conversation-balloon=""
+      sx={{
+        position: 'fixed',
+        right: '48px',
+        bottom: `${48 + 88 + 16}px`,
+        width: `${CONVERSATION_BALLOON_WIDTH}px`,
+        height: `${height}px`,
+        zIndex: 1001,
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'canvas.default',
+        border: '1px solid',
+        borderColor: 'border.default',
+        boxShadow: 'shadow.extra-large',
+        ...conversationBalloonSx(
+          {
+            edge: 'bottom',
+            at: balloonTailAt(window.innerWidth - 48 - 44, left),
+          },
+          'canvas.subtle',
+        ),
+      }}
+    >
+      <ConversationBalloonClose onClose={() => undefined} />
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: 'var(--theme-radius-bubble, 16px)',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <ChatMessageList
+            displayItems={OPEN_CONVERSATION}
+            isLoading={false}
+            isStreaming={false}
+            showLoadingIndicator={false}
+            hideMessagesAfterToolUI={false}
+            avatarConfig={{ ...AVATARS, showAvatars: true }}
+            padding={2}
+            emptyContent={null}
+            messagesEndRef={endRef as never}
+            onRespond={async () => undefined}
+          />
+        </Box>
+        <Box
+          sx={{
+            px: 3,
+            pb: 1,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            fontSize: 0,
+          }}
+        >
+          <DecisionAsk ask={async () => ({})} />
+        </Box>
+        <InputPrompt
+          input={input}
+          setInput={setInput}
+          isLoading={false}
+          connectionConfirmed
+          placeholder="Type a message..."
+          autoFocus={false}
+          padding={2}
+          promptVariant="lexical"
+          onSend={() => undefined}
+          onStop={() => undefined}
+          showTokenUsage={false}
+          showModelSelector={false}
+          showToolsMenu={false}
+          showSkillsMenu={false}
+          showAgentsMenu={false}
+          codemodeEnabled={false}
+          hasConfigData={false}
+          hasSkillsData={false}
+          isA2AProtocol={false}
+        />
+      </Box>
     </Box>
   );
 }

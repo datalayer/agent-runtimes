@@ -700,6 +700,9 @@ function parseApprovedMcpToolsByServer(
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
 
+/** When the welcome is said: it has no time of its own. */
+const WELCOME_AT = new Date(0);
+
 /**
  * ChatBase component — Universal chat panel supporting store, protocol, and custom modes.
  */
@@ -840,6 +843,8 @@ function ChatBaseInner({
   showTurnFooter = true,
   notebookToolSurfacesId,
   footerContent,
+  welcome,
+  trailingContent,
   showInformation = false,
   onInformationClick,
   headerContent,
@@ -4568,6 +4573,23 @@ function ChatBaseInner({
             .filter(item => item.message)
         : undefined;
 
+  /*
+   * The welcome, as the first message: drawn as the agent's own words are,
+   * never sent nor kept. With it, the history is never empty, so the empty
+   * state gives way to it.
+   */
+  const welcomedItems: DisplayItem[] = welcome
+    ? [
+        {
+          id: '__welcome__',
+          role: 'assistant',
+          content: welcome,
+          createdAt: WELCOME_AT,
+        } as DisplayItem,
+        ...displayItems,
+      ]
+    : displayItems;
+
   const messagesContent = children ? (
     children
   ) : (
@@ -4591,7 +4613,7 @@ function ChatBaseInner({
       }}
     >
       <ChatMessageList
-        displayItems={displayItems}
+        displayItems={welcomedItems}
         isLoading={isLoading}
         isStreaming={isStreaming}
         showLoadingIndicator={showLoadingIndicator}
@@ -4620,6 +4642,7 @@ function ChatBaseInner({
           )
         }
       />
+      {trailingContent}
     </Box>
   );
 

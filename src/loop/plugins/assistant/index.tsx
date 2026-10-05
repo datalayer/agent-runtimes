@@ -38,6 +38,7 @@ import {
 } from '@datalayer/primer-addons/lib/reactor';
 import { AssistantStage } from '../../../chat/assistant/AssistantStage';
 import { decisionsAskerAt } from '../../../chat/assistant/decisions';
+import { peekLine } from '../../../chat/assistant/ConversationBalloon';
 import {
   ASSISTANT_WORDS,
   assistantStateOf,
@@ -266,7 +267,14 @@ export function LoopAssistant({
         : presence === 'waiting'
           ? { text: ASSISTANT_WORDS.waiting }
           : unheard && saying
-            ? { text: saying.text, more: saying.more }
+            ? {
+                // A peek: the first words; the rest is in the conversation.
+                ...peekLine(saying.text),
+                onDismiss: () => {
+                  setHeardId(saying.id);
+                  setFresh(false);
+                },
+              }
             : { text: 'Click me to open the conversation.' };
   const insist =
     state === 'greeting' ||

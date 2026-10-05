@@ -339,7 +339,7 @@ describe('an approval waits in the balloon (T-23)', () => {
     expect(balloon.getAttribute('data-balloon-approval')).toBe('ap-1');
     expect(balloon.textContent).toContain('send_email');
     expect(balloon.textContent).toContain('Send anything: ask me first');
-    expect(balloon.textContent).toContain('1 more waiting.');
+    expect(balloon.textContent).toContain('1 more');
     const button = (label: string) =>
       Array.from(balloon.querySelectorAll('button')).find(
         b => b.textContent === label,

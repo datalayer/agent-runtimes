@@ -23,13 +23,20 @@ import { ASSISTANT_WORDS } from '../assistant/state';
 
 const seen = vi.hoisted(() => ({
   chatBase: 0,
+  chatProps: [] as Array<Record<string, any>>,
   stage: [] as Array<Record<string, any>>,
 }));
 
 vi.mock('../base/ChatBase', () => ({
-  ChatBase: () => {
+  ChatBase: (props: Record<string, any>) => {
     seen.chatBase += 1;
-    return <div data-testid="chat-base" />;
+    seen.chatProps.push(props);
+    return (
+      <div data-testid="chat-base">
+        {props.trailingContent}
+        {props.footerContent}
+      </div>
+    );
   },
 }));
 
@@ -57,6 +64,7 @@ afterEach(() => {
   mounted.splice(0).forEach(unmount => unmount());
   document.body.innerHTML = '';
   seen.chatBase = 0;
+  seen.chatProps.length = 0;
   seen.stage.length = 0;
   localStorage.clear();
   sessionStorage.clear();
@@ -214,7 +222,11 @@ describe('ChatFloating, holding its host’s conversation', () => {
       }),
     });
     const props = seen.stage.at(-1)!;
-    expect(props.balloon).toEqual({ text: 'It left today.', more: false });
+    expect(props.balloon).toMatchObject({
+      text: 'It left today.',
+      more: false,
+    });
+    expect(typeof props.balloon.onDismiss).toBe('function');
     expect(props.insist).toBe(true);
     expect(typeof props.onDismiss).toBe('function');
     expect(typeof props.onDragStart).toBe('function');
@@ -277,5 +289,149 @@ describe('ChatFloating, holding its host’s conversation', () => {
     await act(async () => balloon.approval.onDeny());
     expect(onApproveApproval).toHaveBeenCalledWith('ap-1');
     expect(onRejectApproval).toHaveBeenCalledWith('ap-1');
+  });
+});
+
+describe('the assistant’s conversation, as its balloon', () => {
+  const pendingApprovals = [
+    {
+      id: 'ap-1',
+      toolName: 'send_email',
+      args: {},
+      agentId: 'a',
+      requestedAt: '2026-10-05T00:00:00Z',
+    },
+  ];
+
+  it('is toggled by the character, closes from its corner, and keeps the conversation', async () => {
+    const { container } = await render({
+      defaultViewMode: 'assistant',
+      conversation: conversation(),
+    });
+    const balloon = () =>
+      container.querySelector('[data-conversation-balloon]') as HTMLElement;
+    expect(getComputedStyle(balloon()).visibility).toBe('hidden');
+    await act(async () => seen.stage.at(-1)!.onToggle());
+    expect(getComputedStyle(balloon()).visibility).toBe('visible');
+    expect(seen.stage.at(-1)!.open).toBe(true);
+    // No header: the window's title is not drawn, its own close is.
+    expect(container.textContent).not.toContain('Support Desk');
+    expect(container.querySelector('button[aria-label="Close"]')).toBeNull();
+    const close = container.querySelector(
+      '[data-conversation-balloon-close] button',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      close.click();
+      await new Promise(resolve => setTimeout(resolve, 250));
+    });
+    expect(getComputedStyle(balloon()).visibility).toBe('hidden');
+    expect(container.querySelector('[data-testid="workspace"]')).not.toBeNull();
+    // A click on the character opens it again, and another closes it.
+    await act(async () => seen.stage.at(-1)!.onToggle());
+    expect(getComputedStyle(balloon()).visibility).toBe('visible');
+    await act(async () => {
+      seen.stage.at(-1)!.onToggle();
+      await new Promise(resolve => setTimeout(resolve, 250));
+    });
+    expect(getComputedStyle(balloon()).visibility).toBe('hidden');
+  });
+
+  it('holds the chat bare: the history with the welcome first, the Lexical composer, no header nor footer', async () => {
+    await render({
+      defaultViewMode: 'assistant',
+      decisions: { serverUrl: 'http://localhost:8765' },
+    });
+    const props = seen.chatProps.at(-1)!;
+    expect(props).toMatchObject({
+      showHeader: false,
+      showPoweredBy: false,
+      promptVariant: 'lexical',
+      showModelSelector: false,
+      showToolsMenu: false,
+      showSkillsMenu: false,
+      showTokenUsage: false,
+      showAgentsMenu: false,
+      showTurnFooter: false,
+      showToolApprovalBanner: false,
+      welcome: 'Ask me about your order.',
+    });
+    // Ask a decision, beside the composer.
+    expect(
+      document.querySelector(
+        '[data-balloon-decisions] [data-balloon-ask-decision]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it('holds an approval as a message of the history, with Approve and Deny', async () => {
+    const onApproveApproval = vi.fn();
+    await render({
+      defaultViewMode: 'assistant',
+      pendingApprovals,
+      onApproveApproval,
+      onRejectApproval: vi.fn(),
+    });
+    const held = document.querySelector(
+      '[data-testid="chat-base"] [data-balloon-approval="ap-1"]',
+    );
+    expect(held?.textContent).toContain('send_email');
+    const approve = Array.from(held!.querySelectorAll('button')).find(
+      button => button.textContent === ASSISTANT_WORDS.approve,
+    )!;
+    await act(async () => approve.click());
+    expect(onApproveApproval).toHaveBeenCalledWith('ap-1');
+  });
+
+  it('peeks a new message by its first words, and lets it be dismissed', async () => {
+    const { draw } = await render({
+      defaultViewMode: 'assistant',
+      conversation: conversation(),
+    });
+    // Past its greeting, which insists of its own.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1900));
+    });
+    const long =
+      'Your order left the warehouse this morning and should reach you on Thursday, by noon.';
+    await draw({
+      defaultViewMode: 'assistant',
+      conversation: conversation({
+        presence: 'idle',
+        saying: { id: 'm3', text: long, more: false },
+      }),
+    });
+    let props = seen.stage.at(-1)!;
+    expect(props.balloon.text.endsWith('…')).toBe(true);
+    expect(props.balloon.text.length).toBeLessThan(long.length);
+    expect(props.balloon.more).toBe(true);
+    expect(props.insist).toBe(true);
+    await act(async () => props.balloon.onDismiss());
+    props = seen.stage.at(-1)!;
+    expect(props.insist).toBe(false);
+    expect(props.balloon).toEqual({ text: 'Ask me about your order.' });
+  });
+
+  it('keeps an approval’s peek until it is answered: it cannot be dismissed', async () => {
+    const { draw } = await render({
+      defaultViewMode: 'assistant',
+      conversation: conversation({ presence: 'waiting' }),
+      pendingApprovals,
+      onApproveApproval: vi.fn(),
+      onRejectApproval: vi.fn(),
+    });
+    let props = seen.stage.at(-1)!;
+    expect(props.balloon.approval.asks).toBe('send_email');
+    expect(props.balloon.onDismiss).toBeUndefined();
+    expect(props.insist).toBe(true);
+    // Answered elsewhere: the peek goes.
+    await draw({
+      defaultViewMode: 'assistant',
+      conversation: conversation({ presence: 'idle' }),
+      pendingApprovals: [],
+      onApproveApproval: vi.fn(),
+      onRejectApproval: vi.fn(),
+    });
+    props = seen.stage.at(-1)!;
+    expect(props.balloon.approval).toBeUndefined();
   });
 });

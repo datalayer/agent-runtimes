@@ -260,12 +260,18 @@ export interface AssistantStageProps {
   /** Open or close the conversation. */
   onToggle: () => void;
   /**
-   * What the balloon says while the conversation is closed: the agent's
-   * newest words, as the Office Assistant said them (T-23), or a welcome.
-   * `more` adds *Open the conversation* for the rest; `approval`, an
-   * approval to answer there, with *Approve* and *Deny*.
+   * The peek while the conversation is closed: one short line — the agent's
+   * newest words, as the Office Assistant said them (T-23), or a welcome —
+   * that opens the conversation when clicked; `more` says it was cut;
+   * `approval`, an approval to answer there, with *Approve* and *Deny*.
    */
-  balloon?: { text: string; more?: boolean; approval?: BalloonApproval };
+  balloon?: {
+    text: string;
+    more?: boolean;
+    approval?: BalloonApproval;
+    /** Puts the peek away (a × beside its line); never an approval's. */
+    onDismiss?: () => void;
+  };
   /** Show the balloon without being hovered: something new to say. */
   insist?: boolean;
   /** Send it away (T-27): for the page, for the session, or for good. */
@@ -412,6 +418,7 @@ export function AssistantStage({
           text={balloon.text}
           more={balloon.more}
           approval={balloon.approval}
+          onDismissPeek={balloon.onDismiss}
           decide={decide}
           onDecisionActive={setDeciding}
           wide={deciding}

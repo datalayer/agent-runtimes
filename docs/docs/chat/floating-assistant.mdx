@@ -66,21 +66,26 @@ animation when it has one (`IdleSnooze`, `Sleep`, `Rest`…), else idles.
 
 ## The speech balloon
 
-While the conversation is closed, **the agent's newest words appear in a
-balloon over the character**, as the Office Assistant said them
-(`latestSaying`):
+**A click on the character toggles the conversation**: closed, it opens; open,
+it closes. A press that moves is a drag, not a click.
 
-- only the agent's own messages with text — not the person's words, not a
-  tool call;
-- Markdown read as plain words (code blocks dropped, links reduced to their
-  text);
-- cut at a word after 220 characters, with *Open the conversation* for the
-  rest;
-- shown while the words arrive and for 12 seconds after, and on a hover until
-  the conversation has been opened — opening it counts the words as read;
-- while an approval is asked, **the balloon holds it and it is answered
-  there**: *Waiting for you*, what it asks to do, the rule it was asked
-  under, **Approve** and **Deny**, and how many more wait. The answer goes
+### Closed: a peek
+
+While the conversation is closed, **what the agent has to say peeks from a
+small balloon over the character**, without opening the conversation: one
+short line and the actions it needs. A click on the line opens the
+conversation, where it is.
+
+- **A new message**: the agent's newest words, as the Office Assistant said
+  them (`latestSaying`) — only its own messages with text, not the person's
+  words nor a tool call, Markdown read as plain words — cut to their first
+  words (60 characters, at a word, `peekLine`). It shows while the words
+  arrive and for 12 seconds after, and on a hover until the conversation has
+  been opened — opening it counts the words as read; its × puts it away.
+- **An approval** the agent waits on is answered in the peek (T-23):
+  *Waiting for you*, what it asks to do, the rule it was asked under,
+  **Approve** and **Deny**, and how many more wait (*2 more*). It has no ×:
+  it stays until it is answered, there or in the conversation. The answer goes
   where every approval of the application is answered (the Tool Approvals
   page, its rules card, its page, the channels): over the ai-agents `/ws`,
   where each decision is broadcast, so an approval answered in the balloon
@@ -90,23 +95,41 @@ balloon over the character**, as the Office Assistant said them
   `pendingApprovals`, `onApproveApproval` and `onRejectApproval`. Without
   them, the balloon says *Waiting for you — open the conversation to
   answer.*;
-- while its deployment is paused, the balloon says *Paused — it answers
-  again once it is resumed.*
+- **A notification**: while its deployment is paused, the peek says
+  *Paused — it answers again once it is resumed.*
 
 With nothing new to say, a hover shows the chat's `description` — its
-welcome. The balloon stays inside the window: it opens toward the middle of
+welcome. The peek stays inside the window: it opens toward the middle of
 the page from whichever half the character stands in, and below the
 character when it stands near the top (`balloonSide`).
 
-Open, the balloon is the conversation itself: the chat and its composer,
-above the character, wherever it was put down.
+### Open: the conversation as a balloon
+
+Open, **the balloon is the conversation itself**, over the character
+wherever it was put down, its tail toward it — above it, below it near the
+top of the window, beside it when the window is too short for either:
+
+- the history, drawn as the chat draws its messages, **the welcome first**
+  (the chat's `description`, never sent nor kept), and an approval waiting
+  as a message with **Approve** and **Deny**;
+- **the composer last**, its Lexical variant;
+- **no header and no footer**: no title bar, none of the session's controls
+  (agents, model, tools, skills, context), no turn footers, no *Powered by*;
+- **a close control** in its corner (×) — closing keeps the conversation,
+  and Escape closes it too;
+- 380px wide and **60% of the window tall, 560px at most**: the history
+  scrolls inside it, kept on the newest message, and the composer stays in
+  sight at the bottom;
+- *Ask a decision* beside the composer, when it is given a runtime to ask
+  (below).
 
 ## Ask a decision
 
 Given a runtime to ask, **the balloon offers *Ask a decision***: a typed
 decision asked of Jev, the typed-decision model
-(`cloudflare:wrk/typesafe/jev`), without going through the agent. It opens a
-small form in the balloon:
+(`cloudflare:wrk/typesafe/jev`), without going through the agent — beside the
+composer in the open conversation; in a LOOP workspace, whose conversation
+is the workspace's own, in the character's peek. It opens a small form:
 
 - **Situation**: the text the question is about — a ticket, a message, a
   review;
@@ -232,9 +255,11 @@ and its own menu, open, puts nothing aside. The page is looked over every
 ## Pictured
 
 Each state of the paper clip — idle, thinking, working, waiting for you (an
-approval in its balloon, with *Approve* and *Deny*), paused (with its
-balloon), speaking (with its balloon) — and the paper clip stepped aside for a dialog
-are pictures, in the light and the dark mode, that `npm run test:pictures`
+approval peeking, with *Approve* and *Deny* and *1 more*), paused (its
+notification peeking), speaking (a new message peeking by its first words) —
+the paper clip stepped aside for a dialog, and the conversation open as its
+balloon (`assistant-open`: the welcome first, the Lexical composer last, no
+header nor footer) are pictures, in the light and the dark mode, that `npm run test:pictures`
 takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
 change in how the assistant is drawn fails that run with a picture of the
 difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the

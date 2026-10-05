@@ -1233,6 +1233,20 @@ export interface ChatBaseProps {
   footerContent?: ReactNode;
 
   /**
+   * The agent's welcome, said as the first message of the history: drawn as
+   * the chat draws the agent's messages, and never sent nor kept. The floating
+   * assistant's balloon opens on it (LOOP T-23).
+   */
+  welcome?: string;
+
+  /**
+   * What follows the last message, inside the history and scrolled with it:
+   * the floating assistant's balloon holds an approval there, as a message
+   * with *Approve* and *Deny* (T-23).
+   */
+  trailingContent?: ReactNode;
+
+  /**
    * Show the information icon in the header.
    * When clicked, fires onInformationClick.
    * @default false

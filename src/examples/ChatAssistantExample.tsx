@@ -32,6 +32,18 @@ import {
   type AssistantCharacterData,
 } from '../chat/assistant/formats';
 
+/**
+ * The agent-runtimes server the assistant talks to: `?agentRuntimesUrl=`
+ * when given, else this machine's on port 8765. It serves the `assistant`
+ * agent, and asks Jev the decisions asked from the balloon.
+ */
+const SERVER = (
+  (typeof window === 'undefined'
+    ? null
+    : new URLSearchParams(window.location.search).get('agentRuntimesUrl')) ||
+  'http://127.0.0.1:8765'
+).replace(/\/+$/, '');
+
 /** The plugins this page enables: Datalayer's characters and the owl's. */
 const reactor = buildReactorFromPlugins([
   AssistantCharactersPlugin,
@@ -156,11 +168,13 @@ const ChatAssistantExample: React.FC = () => {
           defaultViewMode="assistant"
           assistantCharacter={drawn}
           protocol="vercel-ai"
-          endpoint="http://127.0.0.1:8765/api/v1/vercel-ai/assistant"
+          endpoint={`${SERVER}/api/v1/vercel-ai/assistant`}
           title="Assistant"
           description="Hello! Ask me anything about this page."
           position="bottom-right"
           useStore={false}
+          // Ask a decision beside the composer: Jev, through this server.
+          decisions={{ serverUrl: SERVER }}
         />
       </Box>
     </ThemedProvider>

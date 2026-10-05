@@ -127,6 +127,23 @@ for (const mode of MODES) {
   });
 }
 
+// The conversation open, as the assistant's balloon (T-23): the history, the
+// welcome first, the Lexical composer last, no header nor footer; a window
+// tall enough for its 60%.
+for (const mode of MODES) {
+  test.describe(`assistant open · ${mode}`, () => {
+    test.use({ colorScheme: mode, viewport: { width: 560, height: 720 } });
+    test('open', async ({ page }) => {
+      await show(page, `assistant=open&theme=loop&mode=${mode}`);
+      await expect(page.locator('[data-conversation-balloon]')).toBeVisible();
+      await expect(
+        page.locator('[data-conversation-balloon] [contenteditable="true"]'),
+      ).toBeVisible();
+      await expect(page).toHaveScreenshot(`assistant-open-${mode}.png`);
+    });
+  });
+}
+
 // Datalayer's characters, each in its own drawing for the mode (T-25), and a
 // character a plugin contributes (T-24), idle in the theme of applications.
 for (const mode of MODES) {

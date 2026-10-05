@@ -78,7 +78,63 @@ describe('the floating assistant', () => {
       insist: true,
     });
     expect(balloon(container)?.textContent).toContain('Brussels.');
-    expect(balloon(container)?.textContent).toContain('Open the conversation');
+  });
+
+  it('peeks a new message in one line that opens the conversation, and can be dismissed', async () => {
+    const onDismissPeek = vi.fn();
+    const { container, onToggle } = await render({
+      balloon: {
+        text: 'Your order left the warehouse this…',
+        more: true,
+        onDismiss: onDismissPeek,
+      },
+      insist: true,
+    });
+    const peek = container.querySelector(
+      '[data-balloon-peek]',
+    ) as HTMLButtonElement;
+    expect(peek.hasAttribute('data-balloon-more')).toBe(true);
+    await act(async () => peek.click());
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    await act(async () =>
+      (
+        container.querySelector('[data-balloon-dismiss]') as HTMLButtonElement
+      ).click(),
+    );
+    expect(onDismissPeek).toHaveBeenCalledTimes(1);
+  });
+
+  it('peeks a notification as its line', async () => {
+    const { container } = await render({
+      state: 'paused',
+      balloon: { text: ASSISTANT_WORDS.paused },
+      insist: true,
+    });
+    expect(container.querySelector('[data-balloon-peek]')?.textContent).toBe(
+      ASSISTANT_WORDS.paused,
+    );
+    expect(container.querySelector('[data-balloon-dismiss]')).toBeNull();
+  });
+
+  it('peeks an approval with Approve and Deny and how many more wait, never dismissed', async () => {
+    const { container } = await render({
+      state: 'waiting',
+      balloon: {
+        text: ASSISTANT_WORDS.approval,
+        onDismiss: () => undefined,
+        approval: {
+          id: 'ap-2',
+          asks: 'send_email',
+          others: 2,
+          onApprove: () => undefined,
+          onDeny: () => undefined,
+        },
+      },
+      insist: true,
+    });
+    const held = container.querySelector('[data-balloon-approval="ap-2"]');
+    expect(held?.textContent).toContain('2 more');
+    expect(container.querySelector('[data-balloon-dismiss]')).toBeNull();
   });
 
   it('keeps the balloon for a hover when there is nothing new, and never over the open conversation', async () => {
@@ -127,7 +183,7 @@ describe('the floating assistant', () => {
     const held = container.querySelector('[data-balloon-approval="ap-1"]');
     expect(held?.textContent).toContain('send_email');
     expect(held?.textContent).toContain('Send anything: ask me first');
-    expect(held?.textContent).not.toContain('more waiting');
+    expect(held?.textContent).not.toContain('more');
     const button = (label: string) =>
       Array.from(held?.querySelectorAll('button') ?? []).find(
         b => b.textContent === label,

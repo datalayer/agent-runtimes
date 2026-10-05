@@ -44,6 +44,18 @@ import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
 import { decisionsAskerAt } from './assistant/decisions';
+import { DecisionAsk } from './assistant/DecisionAsk';
+import type { ChatBaseProps } from '../types/chat';
+import {
+  BalloonApprovalMessage,
+  CONVERSATION_BALLOON_WIDTH,
+  ConversationBalloonClose,
+  balloonTailAt,
+  conversationBalloonHeight,
+  conversationBalloonSx,
+  peekLine,
+  type BalloonTail,
+} from './assistant/ConversationBalloon';
 import { SpeechBalloon } from './assistant/SpeechBalloon';
 import {
   DEFAULT_ASSISTANT_CHARACTER,
@@ -516,7 +528,14 @@ export function ChatFloating({
         : assistantState === 'waiting'
           ? { text: ASSISTANT_WORDS.waiting }
           : unheard && saying
-            ? { text: saying.text, more: saying.more }
+            ? {
+                // A peek: the first words; the rest is in the conversation.
+                ...peekLine(saying.text),
+                onDismiss: () => {
+                  setHeardId(saying.id);
+                  setFreshSaying(false);
+                },
+              }
             : { text: description };
   const balloonInsists =
     assistantState === 'greeting' ||
@@ -793,19 +812,28 @@ export function ChatFloating({
 
   /*
    * The conversation as the assistant's balloon: above the character, its
-   * right edge on the character's, and never off the screen.
+   * edge on the character's, never off the screen, and its tail toward the
+   * character — none when it stands beside it.
    */
-  const balloonPlace = (): React.CSSProperties => {
-    const widthPx = typeof width === 'number' ? width : 400;
-    const heightPx = typeof height === 'number' ? height : 550;
+  const viewportWidth =
+    typeof window === 'undefined' ? 1280 : window.innerWidth;
+  const viewportHeight =
+    typeof window === 'undefined' ? 800 : window.innerHeight;
+  const conversationHeight = conversationBalloonHeight(viewportHeight);
+  const balloonGeometry = (): {
+    place: React.CSSProperties;
+    tail: BalloonTail;
+  } => {
+    const widthPx = CONVERSATION_BALLOON_WIDTH;
+    const heightPx = conversationHeight;
     if (stageDrag.position) {
       // Toward the page's inside: above the character, below it, or beside
       // it when the window is too short for either.
       const { left, top } = stageDrag.position;
-      const onLeft = left + ASSISTANT_SIZE / 2 < window.innerWidth / 2;
+      const onLeft = left + ASSISTANT_SIZE / 2 < viewportWidth / 2;
       const above = top - heightPx - 16;
       const below = top + ASSISTANT_SIZE + 16;
-      const beside = above < 8 && below + heightPx > window.innerHeight - 8;
+      const beside = above < 8 && below + heightPx > viewportHeight - 8;
       const x = beside
         ? onLeft
           ? left + ASSISTANT_SIZE + 16
@@ -818,17 +846,38 @@ export function ChatFloating({
         : above >= 8
           ? above
           : below;
+      const placedX = clamp(x, viewportWidth - widthPx - 8);
       return {
-        left: px(clamp(x, window.innerWidth - widthPx - 8)),
-        top: px(clamp(y, window.innerHeight - heightPx - 8)),
-        right: 'auto',
-        bottom: 'auto',
+        place: {
+          left: px(placedX),
+          top: px(clamp(y, viewportHeight - heightPx - 8)),
+          right: 'auto',
+          bottom: 'auto',
+        },
+        tail: beside
+          ? { edge: 'none' }
+          : {
+              edge: above >= 8 ? 'bottom' : 'top',
+              at: balloonTailAt(left + ASSISTANT_SIZE / 2, placedX),
+            },
       };
     }
+    const onRight = position.endsWith('right');
+    const characterMiddle = onRight
+      ? viewportWidth - offset - ASSISTANT_SIZE / 2
+      : offset + ASSISTANT_SIZE / 2;
+    const balloonLeft = onRight ? viewportWidth - offset - widthPx : offset;
+    const tail: BalloonTail = {
+      edge: position.startsWith('bottom') ? 'bottom' : 'top',
+      at: balloonTailAt(characterMiddle, balloonLeft),
+    };
     const corner = getPositionStyles();
-    return position.startsWith('bottom')
-      ? { ...corner, bottom: offset + ASSISTANT_SIZE + 16 }
-      : { ...corner, top: offset + ASSISTANT_SIZE + 16 };
+    return {
+      place: position.startsWith('bottom')
+        ? { ...corner, bottom: px(offset + ASSISTANT_SIZE + 16) }
+        : { ...corner, top: px(offset + ASSISTANT_SIZE + 16) },
+      tail,
+    };
   };
 
   // Handle new chat
@@ -986,8 +1035,19 @@ export function ChatFloating({
     : undefined;
 
   // Responsive dimensions
-  const popupWidth = isMobile ? '100%' : width;
-  const popupHeight = isMobile ? '100%' : height;
+  const conversationBalloon = assistantShown ? balloonGeometry() : undefined;
+
+  // The assistant's conversation is a balloon of its own size (T-23).
+  const popupWidth = isMobile
+    ? '100%'
+    : conversationBalloon
+      ? CONVERSATION_BALLOON_WIDTH
+      : width;
+  const popupHeight = isMobile
+    ? '100%'
+    : conversationBalloon
+      ? conversationHeight
+      : height;
 
   // Mobile full-screen styles
   const mobileStyles: React.CSSProperties = isMobile
@@ -1015,6 +1075,54 @@ export function ChatFloating({
       />
     </Tooltip>
   );
+
+  /*
+   * The chat as the assistant's balloon holds it (T-23): the history and the
+   * composer, its Lexical variant, and nothing else — no header, no footer,
+   * none of the session's controls; the welcome as the first message, an
+   * approval as a message with Approve and Deny, and *Ask a decision* beside
+   * the composer when there is a runtime to ask.
+   */
+  const assistantChat: Partial<ChatBaseProps> | undefined = conversationBalloon
+    ? {
+        showHeader: false,
+        showPoweredBy: false,
+        promptVariant: 'lexical' as const,
+        showModelSelector: false,
+        showToolsMenu: false,
+        showSkillsMenu: false,
+        showTokenUsage: false,
+        showContextRing: false,
+        showInformation: false,
+        showToolApprovalBanner: false,
+        showAgentsMenu: false,
+        showTurnFooter: false,
+        compact: true,
+        welcome: description,
+        backgroundColor: 'canvas.default',
+        borderRadius: 'var(--theme-radius-bubble, 16px)',
+        trailingContent: balloonApproval ? (
+          <BalloonApprovalMessage approval={balloonApproval} />
+        ) : undefined,
+        footerContent: assistantDecide ? (
+          <Box
+            data-balloon-decisions=""
+            sx={{
+              px: 3,
+              pb: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              fontSize: 0,
+              '& form': { alignSelf: 'stretch' },
+              '& [data-balloon-decision="answered"]': { alignSelf: 'stretch' },
+            }}
+          >
+            <DecisionAsk ask={assistantDecide} />
+          </Box>
+        ) : undefined,
+      }
+    : undefined;
 
   /* The window itself; where it goes is decided below. */
   const chatWindow = (
@@ -1051,8 +1159,8 @@ export function ChatFloating({
               }
             : getPositionStyles()
           : {}),
-        ...(assistantShown
-          ? balloonPlace()
+        ...(conversationBalloon
+          ? conversationBalloon.place
           : assistantMode && !isMobile
             ? getPositionStyles()
             : {}),
@@ -1151,8 +1259,23 @@ export function ChatFloating({
         visibility: isOpen || isAnimating ? 'visible' : 'hidden',
         pointerEvents: isOpen ? 'auto' : 'none',
         ...mobileStyles,
+        // The assistant's balloon: its shape and its tail toward the
+        // character, which the window's own clipping would cut off.
+        ...(conversationBalloon
+          ? conversationBalloonSx(
+              conversationBalloon.tail,
+              // Out of the composer's band, or of the history's top.
+              conversationBalloon.tail.edge === 'bottom'
+                ? 'canvas.subtle'
+                : 'canvas.default',
+            )
+          : {}),
       }}
+      data-conversation-balloon={conversationBalloon ? '' : undefined}
     >
+      {conversationBalloon ? (
+        <ConversationBalloonClose onClose={handleToggle} />
+      ) : null}
       {/* The handle "Floating draggable" is moved by. */}
       {viewMode === 'floating-draggable' && !isMobile && (
         <Box
@@ -1178,8 +1301,9 @@ export function ChatFloating({
       )}
       {conversation ? (
         <>
-          {/* The window's own header: the face, the title, close. */}
-          {showHeader ? (
+          {/* The window's own header: the face, the title, close. None in
+              the assistant's balloon, which closes from its corner. */}
+          {showHeader && !conversationBalloon ? (
             <Box
               sx={{
                 display: 'flex',
@@ -1210,7 +1334,17 @@ export function ChatFloating({
           ) : null}
           <Box
             data-floating-conversation
-            sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}
+            sx={{
+              flex: '1 1 auto',
+              minHeight: 0,
+              display: 'flex',
+              ...(conversationBalloon
+                ? {
+                    borderRadius: 'var(--theme-radius-bubble, 16px)',
+                    overflow: 'hidden',
+                  }
+                : {}),
+            }}
           >
             {conversation.body}
           </Box>
@@ -1283,6 +1417,7 @@ export function ChatFloating({
           onApproveApproval={onApproveApproval}
           onRejectApproval={onRejectApproval}
           {...panelProps}
+          {...assistantChat}
           onLoadingChange={handleLoadingChange}
           onDisplayItemsChange={handleDisplayItemsChange}
         >
@@ -1372,7 +1507,6 @@ export function ChatFloating({
           insist={balloonInsists}
           onDismiss={dismissAssistant}
           ownRef={popupRef}
-          decide={assistantDecide}
         />
       )}
 

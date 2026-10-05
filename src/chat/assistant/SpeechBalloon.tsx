@@ -6,19 +6,23 @@
 /**
  * A speech balloon over something that stands for the agent — the floating
  * assistant's character, or the floating popup's button while the chat is
- * closed: the agent's newest words, as the Office Assistant said them
- * (LOOP T-23), with *Open the conversation* when there is more — and an
- * approval it waits on, answered there with *Approve* or *Deny* — and, where
- * the runtime can be asked, *Ask a decision*: a typed decision asked of Jev,
- * its answer said back in the balloon.
+ * closed: a peek, one short line — the agent's newest words, as the Office
+ * Assistant said them (LOOP T-23), cut to their first words, or a
+ * notification — that opens the conversation when clicked, and can be
+ * dismissed; an approval it waits on, answered there with *Approve* or
+ * *Deny*, and how many more wait; and, where the runtime can be asked and
+ * the conversation is elsewhere (the LOOP workspace), *Ask a decision*: a
+ * typed decision asked of Jev, its answer said back in the balloon.
  *
  * @module chat/assistant/SpeechBalloon
  */
 
 import type { JSX } from 'react';
-import { Button, Text } from '@primer/react';
+import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { XIcon } from '@primer/octicons-react';
 import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import { moreWaiting } from './ConversationBalloon';
 import { DecisionAsk } from './DecisionAsk';
 import type { DecisionAsker } from './decisions';
 
@@ -44,6 +48,8 @@ export interface SpeechBalloonProps {
   onDecisionActive?: (active: boolean) => void;
   /** Wider, for the decision's form. */
   wide?: boolean;
+  /** Puts the peek away: a × beside its line. Never for an approval. */
+  onDismissPeek?: () => void;
 }
 
 export function SpeechBalloon({
@@ -58,6 +64,7 @@ export function SpeechBalloon({
   decide,
   onDecisionActive,
   wide = false,
+  onDismissPeek,
 }: SpeechBalloonProps): JSX.Element {
   return (
     <Box
@@ -100,9 +107,41 @@ export function SpeechBalloon({
         },
       }}
     >
-      <Text as="p" sx={{ m: 0 }}>
-        {text}
-      </Text>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <Box
+          as="button"
+          type="button"
+          data-balloon-peek=""
+          data-balloon-more={more ? '' : undefined}
+          onClick={onOpen}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            m: 0,
+            p: 0,
+            border: 0,
+            bg: 'transparent',
+            color: 'inherit',
+            font: 'inherit',
+            textAlign: 'left',
+            cursor: 'pointer',
+            '&:hover': { textDecoration: 'underline' },
+          }}
+        >
+          {text}
+        </Box>
+        {onDismissPeek && !approval ? (
+          <IconButton
+            icon={XIcon}
+            size="small"
+            variant="invisible"
+            aria-label="Dismiss"
+            data-balloon-dismiss=""
+            onClick={onDismissPeek}
+            sx={{ mt: '-4px', mr: '-8px', flexShrink: 0 }}
+          />
+        ) : null}
+      </Box>
       {approval && (
         <Box data-balloon-approval={approval.id} sx={{ mt: 1 }}>
           <Text as="p" sx={{ m: 0, fontWeight: 'semibold' }}>
@@ -132,31 +171,12 @@ export function SpeechBalloon({
           </Box>
           {approval.others > 0 ? (
             <Text as="p" sx={{ m: 0, mt: 1, color: 'fg.muted', fontSize: 0 }}>
-              {`${approval.others} more waiting.`}
+              {moreWaiting(approval.others)}
             </Text>
           ) : null}
         </Box>
       )}
       {decide && <DecisionAsk ask={decide} onActiveChange={onDecisionActive} />}
-      {more && (
-        <Box
-          as="button"
-          type="button"
-          onClick={onOpen}
-          sx={{
-            mt: 1,
-            p: 0,
-            border: 0,
-            bg: 'transparent',
-            color: 'accent.fg',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            fontSize: 1,
-          }}
-        >
-          Open the conversation
-        </Box>
-      )}
     </Box>
   );
 }
