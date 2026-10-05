@@ -6,8 +6,9 @@
 /**
  * Every representation of the floating assistant, as a gallery (LOOP T-21
  * to T-27): each character — Datalayer's four, the owl an example plugin
- * contributes to `loop.assistant.character`, and a test sprite read through
- * the clippy.js reader — in each state it acts, stepped aside, with its
+ * contributes to `loop.assistant.character`, a test sprite read through
+ * the clippy.js reader, and, when asked, the characters clippy.js publishes,
+ * fetched from jsDelivr — in each state it acts, stepped aside, with its
  * balloon, in light and dark, moving or still.
  *
  * Static data, no agent: it opens without a server or an account.
@@ -49,6 +50,10 @@ import {
   stateOfPose,
   type GalleryPose,
 } from './utils/assistantGallery';
+import {
+  CLIPPY_JS_VERSION,
+  useClippyJsCharacters,
+} from './utils/clippyJsCharacters';
 
 type Modes = 'light' | 'dark' | 'both';
 type View = 'stage' | 'grid';
@@ -231,7 +236,10 @@ function InModes({
 }
 
 const ChatAssistantGalleryExample: React.FC = () => {
-  const { characters, problem } = useGalleryCharacters();
+  const { characters: ours, problem } = useGalleryCharacters();
+  const [withClippyJs, setWithClippyJs] = useState(false);
+  const clippyJs = useClippyJsCharacters(withClippyJs);
+  const characters = [...ours, ...clippyJs.characters];
   const [characterId, setCharacterId] = useState('paperclip');
   const [pose, setPose] = useState<GalleryPose>('idle');
   const [view, setView] = useState<View>('stage');
@@ -303,6 +311,14 @@ const ChatAssistantGalleryExample: React.FC = () => {
             own, read through the clippy.js reader. No agent is behind it: the
             words are a sample conversation.
           </Text>
+          <Text as="p" sx={{ color: 'fg.muted', mb: 3, maxWidth: 760 }}>
+            The characters clippy.js publishes — Clippy, Merlin, Links, Rover
+            and the others — are loaded on request from the{' '}
+            <code>clippyjs@{CLIPPY_JS_VERSION}</code> package on jsDelivr (about
+            15 MB) and read by the same reader. They are not in this repository:
+            clippy.js&rsquo;s licence covers its code only, and the characters
+            are Microsoft&rsquo;s.
+          </Text>
 
           <Box
             as="section"
@@ -362,6 +378,17 @@ const ChatAssistantGalleryExample: React.FC = () => {
                   onChange={event => setStill(event.target.checked)}
                 />
                 <FormControl.Label>Reduced motion</FormControl.Label>
+              </FormControl>
+              <FormControl>
+                <Checkbox
+                  checked={withClippyJs}
+                  onChange={event => setWithClippyJs(event.target.checked)}
+                  data-gallery-clippy-js=""
+                />
+                <FormControl.Label>
+                  clippy.js characters
+                  {clippyJs.loading ? ' (loading…)' : ''}
+                </FormControl.Label>
               </FormControl>
               <Button onClick={() => setReplay(replay + 1)}>
                 Replay the motions
@@ -458,6 +485,11 @@ const ChatAssistantGalleryExample: React.FC = () => {
           {problem && (
             <Text as="p" role="alert" sx={{ color: 'danger.fg', mb: 3 }}>
               The test sprite could not be read: {problem}
+            </Text>
+          )}
+          {clippyJs.problem && (
+            <Text as="p" role="alert" sx={{ color: 'danger.fg', mb: 3 }}>
+              A clippy.js character could not be read: {clippyJs.problem}
             </Text>
           )}
 
