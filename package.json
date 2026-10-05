@@ -145,7 +145,7 @@
         "@ai-sdk/react": "4.0.93",
         "@anthropic-ai/sdk": "^0.52.0",
         "@datalayer/agent-teams": "^1.0.0",
-        "@datalayer/core": "^1.2.12",
+        "@datalayer/core": "^1.2.14",
         "@datalayer/decks": "^1.0.4",
         "@datalayer/icons-react": "^1.0.14",
         "@datalayer/jupyter-lexical": "^2.0.18",
