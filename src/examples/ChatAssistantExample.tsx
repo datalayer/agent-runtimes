@@ -11,10 +11,11 @@
  * The characters offered are what the enabled plugins contribute to
  * `loop.assistant.character` (T-24): Datalayer's four, and an owl from a
  * small example plugin (`utils/owlCharacterPlugin`). Pixel, the test sprite,
- * is read through the clippy.js reader, as a character a person brings is.
+ * is read through the clippy.js reader, as a character a person brings is,
+ * and so are the characters clippy.js publishes, fetched when picked.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { Button, Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -28,6 +29,12 @@ import {
 } from '../loop/plugins/assistant-characters';
 import { OwlCharacterPlugin } from './utils/owlCharacterPlugin';
 import { readTestSpriteCharacter } from './utils/testSpriteCharacter';
+import {
+  CLIPPY_JS_CHARACTERS,
+  CLIPPY_JS_VERSION,
+  readClippyJsCharacter,
+  type ClippyJsCharacterName,
+} from './utils/clippyJsCharacters';
 import {
   readAcsCharacter,
   readClippyCharacter,
@@ -122,6 +129,43 @@ const ChatAssistantExample: React.FC = () => {
     },
     [pixel],
   );
+  // The clippy.js characters, each fetched the first time it is picked.
+  const [clippyJs, setClippyJs] = useState<
+    Partial<Record<ClippyJsCharacterName, AssistantCharacterData>>
+  >({});
+  const [fetching, setFetching] = useState<ClippyJsCharacterName>();
+  const fetched = useRef<AssistantCharacterData[]>([]);
+  useEffect(
+    () => () => {
+      for (const read of fetched.current) {
+        URL.revokeObjectURL(read.sprite);
+      }
+    },
+    [],
+  );
+  const pickClippyJs = async (name: ClippyJsCharacterName) => {
+    const known = clippyJs[name];
+    if (known) {
+      setCharacter(known);
+      setLoadError(undefined);
+      return;
+    }
+    setFetching(name);
+    try {
+      const read = await readClippyJsCharacter(name);
+      fetched.current.push(read);
+      setClippyJs(previous => ({ ...previous, [name]: read }));
+      setCharacter(read);
+      setLoadError(undefined);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setFetching(undefined);
+    }
+  };
+  const isClippyJs =
+    typeof character !== 'string' &&
+    Object.values(clippyJs).includes(character);
   return (
     <ThemedProvider>
       <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
@@ -166,6 +210,36 @@ const ChatAssistantExample: React.FC = () => {
           </Box>
           <Box as="section" sx={{ mt: 4 }}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
+              The clippy.js characters
+            </Heading>
+            <Text as="p" sx={{ color: 'fg.muted', mb: 2 }}>
+              Fetched when picked from the{' '}
+              <code>clippyjs@{CLIPPY_JS_VERSION}</code> package on jsDelivr and
+              read as data by the same reader. They are not in this repository:
+              clippy.js&rsquo;s licence covers its code only, and the characters
+              are Microsoft&rsquo;s.
+            </Text>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {CLIPPY_JS_CHARACTERS.map(name => {
+                const picked =
+                  clippyJs[name] !== undefined && character === clippyJs[name];
+                return (
+                  <Button
+                    key={name}
+                    variant={picked ? 'primary' : 'default'}
+                    onClick={() => void pickClippyJs(name)}
+                    disabled={fetching !== undefined}
+                    aria-pressed={picked}
+                    data-assistant-character={`clippy-js-${name.toLowerCase()}`}
+                  >
+                    {fetching === name ? `${name}…` : name}
+                  </Button>
+                );
+              })}
+            </Box>
+          </Box>
+          <Box as="section" sx={{ mt: 4 }}>
+            <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
               A character you bring
             </Heading>
             <Text as="p" sx={{ color: 'fg.muted', mb: 2 }}>
@@ -200,11 +274,13 @@ const ChatAssistantExample: React.FC = () => {
                 {loadError}
               </Text>
             )}
-            {typeof character !== 'string' && character !== pixel && (
-              <Text as="p" sx={{ mt: 2 }}>
-                Playing {character.name}.
-              </Text>
-            )}
+            {typeof character !== 'string' &&
+              character !== pixel &&
+              !isClippyJs && (
+                <Text as="p" sx={{ mt: 2 }}>
+                  Playing {character.name}.
+                </Text>
+              )}
           </Box>
         </Box>
         <ChatFloating
