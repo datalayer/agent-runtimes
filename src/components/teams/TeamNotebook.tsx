@@ -38,6 +38,8 @@ export type TeamNotebookProps = {
   title: string;
   /** How tall the notebook is, in pixels. */
   height?: number;
+  /** Leave the heading out: the dialog it is drawn in shows the title. */
+  hideTitle?: boolean;
 };
 
 /** The file a notebook is saved as: the peer's name for it, else its name. */
@@ -58,6 +60,7 @@ export function TeamNotebook({
   notebook,
   title,
   height = 560,
+  hideTitle = false,
 }: TeamNotebookProps): JSX.Element {
   return (
     <Box
@@ -81,9 +84,11 @@ export function TeamNotebook({
         },
       }}
     >
-      <Heading as="h3" sx={{ fontSize: 2, m: 0 }}>
-        {title}
-      </Heading>
+      {!hideTitle && (
+        <Heading as="h3" sx={{ fontSize: 2, m: 0 }}>
+          {title}
+        </Heading>
+      )}
       <Suspense
         fallback={
           <Text as="p" sx={{ color: 'fg.muted', fontSize: 1, m: 0 }}>
@@ -114,8 +119,13 @@ export function notebookBalloonVisual(
   return {
     id: `notebook:${notebook.filename ?? notebook.name}`,
     title,
-    render: () => (
-      <TeamNotebook notebook={notebook} title={title} height={height} />
+    render: place => (
+      <TeamNotebook
+        notebook={notebook}
+        title={title}
+        height={height}
+        hideTitle={place === 'overlay'}
+      />
     ),
   };
 }

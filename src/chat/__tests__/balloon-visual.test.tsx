@@ -79,7 +79,11 @@ async function render(
 const chart: BalloonVisual = {
   id: 'chart',
   title: 'The chart',
-  render: () => <div data-testid="large">the chart, large</div>,
+  render: place => (
+    <div data-testid="large" data-place={place}>
+      the chart, large
+    </div>
+  ),
 };
 const small = <div data-testid="small">the chart, small</div>;
 const expandButton = () =>
@@ -143,10 +147,10 @@ describe('a large visual', () => {
     });
     await act(async () => expandButton()?.click());
     expect(
-      target.querySelector(
-        '[data-balloon-expanded="target"] [data-testid="large"]',
-      ),
-    ).not.toBeNull();
+      target
+        .querySelector('[data-balloon-expanded="target"] [data-testid="large"]')
+        ?.getAttribute('data-place'),
+    ).toBe('target');
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     // Closed from its corner.
     await act(async () =>
@@ -166,10 +170,12 @@ describe('a large visual', () => {
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
     expect(dialog).not.toBeNull();
     expect(
-      dialog?.querySelector(
-        '[data-balloon-expanded="overlay"] [data-testid="large"]',
-      ),
-    ).not.toBeNull();
+      dialog
+        ?.querySelector(
+          '[data-balloon-expanded="overlay"] [data-testid="large"]',
+        )
+        ?.getAttribute('data-place'),
+    ).toBe('overlay');
     await act(async () => {
       document.activeElement?.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
@@ -216,6 +222,33 @@ describe("a notebook's large view", () => {
           '[role="dialog"] [data-team-notebook] [data-testid="sandbox-notebook"]',
         )?.textContent,
       ).toBe('open-invoices.ipynb'),
+    );
+    // The dialog shows the title: the notebook does not show it again.
+    expect(
+      document.querySelector('[role="dialog"] [data-team-notebook] h3'),
+    ).toBeNull();
+  });
+
+  it('keeps its title when drawn into the page', async () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    const visual = notebookBalloonVisual(
+      {
+        mediaType: 'application/x-ipynb+json',
+        name: 'Open invoices',
+        filename: 'open-invoices.ipynb',
+        data: { cells: [] },
+      },
+      'Accounting’s notebook',
+    );
+    await render({
+      balloonDisplay: 'current',
+      expandTarget: { current: target },
+      balloon: { text: 'Here it is.', attachment: small, visual },
+    });
+    await act(async () => expandButton()?.click());
+    expect(target.querySelector('[data-team-notebook] h3')?.textContent).toBe(
+      'Accounting’s notebook',
     );
   });
 });

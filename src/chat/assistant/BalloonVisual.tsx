@@ -31,8 +31,11 @@ export interface BalloonVisual {
   id: string;
   /** What it is: `Accounting's notebook`; the dialog's title. */
   title: string;
-  /** The visual, large: drawn only once it is expanded. */
-  render: () => ReactNode;
+  /**
+   * The visual, large: drawn only once it is expanded — in the page's
+   * target, or in a dialog, which already shows `title`.
+   */
+  render: (place: 'target' | 'overlay') => ReactNode;
 }
 
 /** Where an expanded visual goes: an element of the page, or none (a dialog). */
@@ -109,7 +112,7 @@ export function ExpandedVisual({
             onClick={onClose}
           />
         </Box>
-        {visual.render()}
+        {visual.render('target')}
       </Box>,
       element,
     );
@@ -130,7 +133,7 @@ export function ExpandedVisual({
         data-balloon-visual={visual.id}
         sx={{ minWidth: 0 }}
       >
-        {visual.render()}
+        {visual.render('overlay')}
       </Box>
     </Dialog>
   );

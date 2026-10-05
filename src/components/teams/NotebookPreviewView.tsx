@@ -16,7 +16,7 @@
  * @module components/teams/NotebookPreviewView
  */
 
-import type { JSX } from 'react';
+import type { CSSProperties, JSX } from 'react';
 import { useMemo } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { useTheme } from '@primer/react';
@@ -27,6 +27,10 @@ import {
   ServiceManagerLess,
 } from '@datalayer/jupyter-react';
 import type { NotebookDocument } from './NotebookPreview';
+import {
+  JUPYTER_DARK_VARIABLES,
+  JUPYTER_LIGHT_VARIABLES,
+} from './jupyterThemeVariables';
 
 export type NotebookPreviewViewProps = {
   nbformat: NotebookDocument;
@@ -54,8 +58,20 @@ export function NotebookPreviewView({
     [nbformat],
   );
   const { colorScheme } = useTheme();
+  const mode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
   return (
-    <Box data-notebook-preview-theme="" sx={{ height }}>
+    <Box
+      data-notebook-preview-theme={mode}
+      sx={{ height }}
+      // JupyterLab writes its theme for the whole page, so two previews in
+      // two modes would share the last one written: each carries its own
+      // mode's variables on its own subtree.
+      style={
+        (mode === 'dark'
+          ? JUPYTER_DARK_VARIABLES
+          : JUPYTER_LIGHT_VARIABLES) as CSSProperties
+      }
+    >
       {/*
         A theme's mark (jupyter-react marks each JupyterReactTheme so): the
         theme below takes itself for a nested one, and styles its own subtree
@@ -63,9 +79,7 @@ export function NotebookPreviewView({
         in two modes side by side would write it in turn, forever.
       */}
       <span data-jupyter-react-theme-root="notebook-preview" hidden />
-      <JupyterReactTheme
-        colormode={colorScheme?.startsWith('dark') ? 'dark' : 'light'}
-      >
+      <JupyterReactTheme colormode={mode}>
         <Box
           data-notebook-preview-view={id}
           sx={{
