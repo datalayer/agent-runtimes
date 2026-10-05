@@ -22,7 +22,15 @@
  */
 
 import type { JSX } from 'react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -92,16 +100,28 @@ const HANDLE = (size: number) => ({
 });
 
 type MemberData = {
-  member: A2ATeamGraphMember;
+  id: string;
   side: 'left' | 'right';
   size: number;
 };
 
+/**
+ * The members as they are now, by id. Not in the nodes' data: a node whose
+ * object changes is taken by React Flow for a new one, measured again, and
+ * the edge is dropped until it is — the line vanished as the characters
+ * moved. The nodes stay the same objects; what they show is read from here.
+ */
+const Members = createContext<Record<string, A2ATeamGraphMember>>({});
+
 const MemberNode = memo(function MemberNode({
   data,
-}: NodeProps<Node<MemberData>>): JSX.Element {
-  const { member, side, size } = data;
+}: NodeProps<Node<MemberData>>): JSX.Element | null {
+  const { id, side, size } = data;
+  const member = useContext(Members)[id];
   const stageRef = useRef<HTMLDivElement>(null);
+  if (!member) {
+    return null;
+  }
   const { persona } = member;
   return (
     <Box
@@ -313,7 +333,7 @@ export function A2ATeamGraph({
         selectable: false,
         // Above the edge and its label: a balloon overflows its node.
         zIndex: 10,
-        data: { member: entry, side: 'left', size },
+        data: { id: entry.id, side: 'left', size },
       },
       {
         id: peer.id,
@@ -324,10 +344,14 @@ export function A2ATeamGraph({
         draggable: false,
         selectable: false,
         zIndex: 10,
-        data: { member: peer, side: 'right', size },
+        data: { id: peer.id, side: 'right', size },
       },
     ],
-    [entry, peer, size, memberHeight],
+    [entry.id, peer.id, size, memberHeight],
+  );
+  const members = useMemo(
+    () => ({ [entry.id]: entry, [peer.id]: peer }),
+    [entry, peer],
   );
   const words = flowWords(flow, entry.name, peer.name);
   const edges = useMemo<Edge<LinkData>[]>(
@@ -396,29 +420,31 @@ export function A2ATeamGraph({
       >
         {words}
       </Box>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={NODE_TYPES}
-        edgeTypes={EDGE_TYPES}
-        viewport={viewport}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        nodesFocusable={false}
-        edgesFocusable={false}
-        elementsSelectable={false}
-        deleteKeyCode={null}
-        selectionKeyCode={null}
-        multiSelectionKeyCode={null}
-        panOnDrag={false}
-        panOnScroll={false}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        zoomOnDoubleClick={false}
-        preventScrolling={false}
-        style={{ overflow: 'visible', background: 'transparent' }}
-        aria-label={`${entry.name} and ${peer.name}, over A2A`}
-      />
+      <Members.Provider value={members}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
+          viewport={viewport}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          nodesFocusable={false}
+          edgesFocusable={false}
+          elementsSelectable={false}
+          deleteKeyCode={null}
+          selectionKeyCode={null}
+          multiSelectionKeyCode={null}
+          panOnDrag={false}
+          panOnScroll={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          preventScrolling={false}
+          style={{ overflow: 'visible', background: 'transparent' }}
+          aria-label={`${entry.name} and ${peer.name}, over A2A`}
+        />
+      </Members.Provider>
     </Box>
   );
 }

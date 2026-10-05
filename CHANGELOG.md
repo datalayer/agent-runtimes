@@ -7,6 +7,10 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.66
+
+- **The team's edge stays drawn** (LOOP H-28). `A2ATeamGraph` keeps its nodes as the same objects and reads each member from a context. Before, a node whose data changed with its character's state was measured again, and the edge vanished, or stayed out of place, until it was.
+
 ## 1.3.65
 
 - **The team as a graph** (LOOP H-28) ([A team of applications over A2A](https://agent-runtimes.datalayer.tech/docs/loop/teams-over-a2a)).
