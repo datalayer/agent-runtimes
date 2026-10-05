@@ -50,6 +50,7 @@ import {
   useSlotComponents,
 } from '@datalayer/reactor/react';
 import { ChatBase } from '../../../chat/base/ChatBase';
+import { useChatAvailability } from '../../../chat/base/ChatAvailability';
 import {
   offeredModels as offeredModelsFor,
   readServerCatalogue,
@@ -1245,12 +1246,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * for something that was never theirs.
    */
   const expiredKeyIsTemporary = !signedInUser;
-  const chatDisabled = gateBlocked || keyExpired || Boolean(inPageRefusal);
+  /*
+   * What its host said of whether there is anything to talk to
+   * (`ChatAvailabilityProvider`): an application whose model is not offered
+   * or not served (LOOP R-27) is switched off with the reason, by the
+   * Studio's Preview and the hosted page, rather than left unanswered.
+   */
+  const ambient = useChatAvailability();
+  const chatDisabled =
+    gateBlocked || keyExpired || Boolean(inPageRefusal) || ambient.disabled;
   const disabledReason = keyExpired
     ? expiredKeyIsTemporary
       ? 'This demo runs on a shared key, and its time is up. Sign in to keep going.'
       : 'Your key has expired. Sign in to keep going.'
-    : (inPageRefusal ?? gateReason);
+    : (inPageRefusal ??
+      gateReason ??
+      (ambient.disabled ? ambient.disableReason : undefined));
 
   /*
    * The prompt's text, held here rather than inside `InputPrompt`.

@@ -42,4 +42,14 @@ describe('an application in the chat', () => {
       expect(chat).toContain(`${control}: !presence,`);
     }
   });
+
+  it('is switched off, with the reason, when its host says there is nothing to talk to (LOOP R-27)', () => {
+    expect(chat).toContain('const ambient = useChatAvailability();');
+    expect(chat).toMatch(
+      /const chatDisabled =\s+gateBlocked \|\| keyExpired \|\| Boolean\(inPageRefusal\) \|\| ambient\.disabled;/,
+    );
+    expect(chat).toContain(
+      '(ambient.disabled ? ambient.disableReason : undefined)',
+    );
+  });
 });

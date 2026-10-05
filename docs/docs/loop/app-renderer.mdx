@@ -162,6 +162,15 @@ The words are `BEHAVIOUR_WORDS`, `ACTION_WORDS` and `coverOf`
 The table is under [An application's layout](./index.mdx#an-applications-layout),
 and an application's page under [An application's page](./index.mdx#an-applications-page).
 
+## When it cannot answer
+
+A host that knows the application cannot answer — its model is not offered,
+or not served today (LOOP R-27) — wraps it in `ChatAvailabilityProvider`
+(`chat/base/ChatAvailability`) with `disabled` and the reason in a sentence.
+The workspace's chat honours it as it honours a sandbox's gate: the composer
+is switched off and says the reason, instead of sending a question nothing
+will answer. The Studio's Preview and the hosted page do this.
+
 ## On the light home page
 
 The home page of datalayer.ai, while it is a preview at `/preview/home`, is
