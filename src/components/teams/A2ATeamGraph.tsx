@@ -53,7 +53,13 @@ import {
 import '@xyflow/react/dist/base.css';
 import { Button, Label, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { AssistantStage } from '../../chat/assistant/AssistantStage';
+import {
+  AssistantStage,
+  type AssistantAbout,
+} from '../../chat/assistant/AssistantStage';
+import type { BalloonSuggestion } from '../../chat/assistant/SpeechBalloon';
+import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMenu';
+import type { AgentInspectorSink } from '../inspector/agentInspector';
 import { SpecMark } from '../../chat/marks/SpecMark';
 import {
   toolWords,
@@ -104,6 +110,23 @@ export type A2ATeamGraphMember = {
   expandTarget?: BalloonExpandTarget;
   /** What its notebook is called: `Accounting's notebook`. */
   notebookTitle?: string;
+  /**
+   * What the person may ask it: chips in its balloon while it waits for a
+   * question, and a group of its menu; one chosen is sent (`onSuggestion`).
+   */
+  suggestions?: readonly BalloonSuggestion[];
+  onSuggestion?: (suggestion: BalloonSuggestion) => void;
+  /**
+   * The team's Agent Inspector: its menu offers *Inspect the agent…*, its
+   * own record (what it did, and the A2A messages it sent or received).
+   */
+  inspector?: AgentInspectorSink | null;
+  /** Stops its turn, from its menu, while it works. */
+  onStop?: () => void;
+  /** What its menu's *About* says. */
+  about?: AssistantAbout;
+  /** The host's own entries of its menu. */
+  contextMenu?: readonly AssistantMenuItem[];
 };
 
 export type A2ATeamGraphProps = {
@@ -277,6 +300,13 @@ const MemberNode = memo(function MemberNode({
             expandOnArrival={!!member.expandTarget}
             insist={persona.insist}
             onDismiss={away => member.onAway?.(away !== 'none')}
+            suggestions={member.suggestions}
+            onSuggestion={member.onSuggestion}
+            inspector={member.inspector}
+            inspectAgent={member.name}
+            onStop={member.onStop}
+            about={member.about}
+            contextMenu={member.contextMenu}
             // A member of the graph: what is clicked around it is the graph.
             stayPut
           />

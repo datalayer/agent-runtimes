@@ -657,6 +657,26 @@ export const LoopAssistantCharacter =
     'loop.assistant.character',
   );
 
+/**
+ * An entry of the floating assistant's own menu (right-click, Shift+F10, a
+ * long press): a plugin's, beside what the assistant offers itself. Its
+ * `group` is the heading it is listed under; `checked` makes it one of a
+ * choice.
+ */
+export type AssistantMenuContribution = {
+  /** Stable id, for the registry and the graph. */
+  id: string;
+  label: string;
+  description?: string;
+  onSelect: () => void;
+  checked?: boolean;
+  disabled?: boolean;
+  group?: string;
+};
+
+export const LoopAssistantMenu =
+  defineContributionPoint<AssistantMenuContribution>('loop.assistant.menu');
+
 // A block the Canvas may place (LOOP C-12), in a module of its own so that
 // the palette is read without the rest of the contracts.
 export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';

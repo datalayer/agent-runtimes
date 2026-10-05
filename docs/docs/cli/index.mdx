@@ -626,7 +626,7 @@ agent-runtimes serve [OPTIONS]
 | `--no-config-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | Skip starting config MCP servers from `~/.datalayer/mcp.json` |
 | `--no-catalog-mcp-servers` | - | `false` | `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | Skip starting catalog MCP servers defined in the agent spec (requires `--agent-id`) |
 | `--mcp-servers` | `-m` | - | `AGENT_RUNTIMES_MCP_SERVERS` | Comma-separated list of MCP server IDs from the catalog to start |
-| `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset |
+| `--codemode` | `-c` | `false` | `AGENT_RUNTIMES_CODEMODE` | Enable Codemode: MCP servers become programmatic tools via CodemodeToolset |
 | `--skills` | `-s` | - | `AGENT_RUNTIMES_SKILLS` | Comma-separated list of skills to enable (requires `--codemode`) |
 | `--jupyter-sandbox` | `-j` | - | `AGENT_RUNTIMES_JUPYTER_SANDBOX` | Jupyter sandbox URL with token for code execution (e.g., `http://localhost:8888?token=xxx`) |
 | `--find-free-port` | `-f` | `false` | `AGENT_RUNTIMES_FIND_FREE_PORT` | If the port is in use, find the next available port |
@@ -717,28 +717,28 @@ curl -X DELETE http://localhost:8000/api/v1/mcp/servers/catalog/tavily/disable
 See the [MCP Servers API documentation](/endpoints#mcp-servers) for more details.
 :::
 
-### Code Mode
+### Codemode
 
-Code Mode transforms MCP servers into programmatic tools that can be composed through code execution. When enabled, the agent uses `CodemodeToolset` instead of directly adding MCP toolsets.
+Codemode transforms MCP servers into programmatic tools that can be composed through code execution. When enabled, the agent uses `CodemodeToolset` instead of directly adding MCP toolsets.
 
 ```bash
-# Start with Code Mode enabled (uses config MCP servers)
+# Start with Codemode enabled (uses config MCP servers)
 agent-runtimes serve --codemode
 
-# Start with Code Mode and specific MCP servers
+# Start with Codemode and specific MCP servers
 agent-runtimes serve --codemode --mcp-servers tavily,github
 
-# Start with Code Mode and an agent spec
+# Start with Codemode and an agent spec
 agent-runtimes serve --agent-id crawler --codemode
 
-# Start with Code Mode and skills
+# Start with Codemode and skills
 agent-runtimes serve --agent-id crawler --codemode --skills web_search,github_lookup
 
 # Using short options
 agent-runtimes serve -a crawler -c -s web_search,github_lookup
 ```
 
-:::info How Code Mode Works
+:::info How Codemode Works
 When `--codemode` is enabled:
 1. MCP servers from the agent spec are converted to programmatic tools
 2. The `CodemodeToolset` is used to expose tools via code execution
@@ -750,7 +750,7 @@ This allows the agent to compose multiple tool calls within a single code execut
 
 #### Jupyter Sandbox
 
-By default, Code Mode uses a local Python `exec()` sandbox for code execution. You can connect to an external Jupyter server instead, which provides:
+By default, Codemode uses a local Python `exec()` sandbox for code execution. You can connect to an external Jupyter server instead, which provides:
 
 - **Persistent kernel state** across executions
 - **Rich output support** (plots, dataframes, etc.)
@@ -758,7 +758,7 @@ By default, Code Mode uses a local Python `exec()` sandbox for code execution. Y
 - **Isolation** from the agent server process
 
 ```bash
-# Start with Code Mode using a Jupyter sandbox
+# Start with Codemode using a Jupyter sandbox
 agent-runtimes serve --codemode --jupyter-sandbox "http://localhost:8888?token=my-token"
 
 # Combine with MCP servers and skills
@@ -784,9 +784,9 @@ jupyter lab --port 8888 --IdentityProvider.token=my-token
 The sandbox will connect to the kernel and persist state between code executions.
 :::
 
-#### Code Mode vs Standard Mode
+#### Codemode vs Standard Mode
 
-| Feature | Standard Mode | Code Mode |
+| Feature | Standard Mode | Codemode |
 |---------|--------------|-----------|
 | MCP tool invocation | Direct tool calls | Via code execution |
 | Tool composition | One tool per LLM call | Multiple tools in single code block |
@@ -796,7 +796,7 @@ The sandbox will connect to the kernel and persist state between code executions
 
 ### Skills
 
-Skills are reusable agent capabilities that extend Code Mode functionality. They provide pre-built workflows that combine multiple tools.
+Skills are reusable agent capabilities that extend Codemode functionality. They provide pre-built workflows that combine multiple tools.
 
 ```bash
 # Start with a single skill
@@ -809,8 +809,8 @@ agent-runtimes serve --codemode --skills web_search,github_lookup,file_operation
 agent-runtimes serve --agent-id crawler --codemode --skills web_search,data_analysis
 ```
 
-:::note Skills Require Code Mode
-The `--skills` option requires `--codemode` to be enabled. Skills are implemented as code-based workflows that run within the Code Mode sandbox.
+:::note Skills Require Codemode
+The `--skills` option requires `--codemode` to be enabled. Skills are implemented as code-based workflows that run within the Codemode sandbox.
 :::
 
 ### Transport Protocols
@@ -1518,7 +1518,7 @@ agent-runtimes serve  # Production-ready configuration
 | `AGENT_RUNTIMES_NO_CONFIG_MCP_SERVERS` | `--no-config-mcp-servers` | Skip config MCP servers (`true`/`false`) |
 | `AGENT_RUNTIMES_NO_CATALOG_MCP_SERVERS` | `--no-catalog-mcp-servers` | Skip catalog MCP servers from agent spec (`true`/`false`) |
 | `AGENT_RUNTIMES_MCP_SERVERS` | `--mcp-servers` | Comma-separated list of MCP server IDs |
-| `AGENT_RUNTIMES_CODEMODE` | `--codemode` | Enable Code Mode (`true`/`false`) |
+| `AGENT_RUNTIMES_CODEMODE` | `--codemode` | Enable Codemode (`true`/`false`) |
 | `AGENT_RUNTIMES_SKILLS` | `--skills` | Comma-separated list of skills |
 | `AGENT_RUNTIMES_FIND_FREE_PORT` | `--find-free-port` | Find free port if taken (`true`/`false`) |
 

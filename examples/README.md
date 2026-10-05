@@ -85,16 +85,16 @@ See [Next.js + Datalayer Notebook](./nextjs/README.md).
 
 ## Key Concepts
 
-### Code Mode
+### Codemode
 
-Instead of calling tools one-by-one through LLM inference, Code Mode allows agents to write Python code that orchestrates multiple tool calls. Benefits include:
+Instead of calling tools one-by-one through LLM inference, Codemode allows agents to write Python code that orchestrates multiple tool calls. Benefits include:
 
 - Reduced LLM calls for multi-step operations
 - Better error handling with try/except
 - Parallel execution with asyncio.gather
 - Complex logic with loops and conditionals
 
-Based on [Cloudflare's Code Mode](https://blog.cloudflare.com/introducing-code-mode).
+Based on [Cloudflare's Codemode](https://blog.cloudflare.com/introducing-code-mode).
 
 ### Skills
 

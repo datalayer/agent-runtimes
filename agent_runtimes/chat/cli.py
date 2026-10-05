@@ -1543,7 +1543,7 @@ def main_callback(
                 if str(_sandbox_variant or "").lower() == "jupyter-server":
                     _summary_parts.append("Jupyter sandbox")
                 if _codemode_on and not codemode_disabled:
-                    _summary_parts.append("Code Mode")
+                    _summary_parts.append("Codemode")
                 _summary_line = (
                     f" {GRAY}({' • '.join(_summary_parts)}){RESET}"
                     if _summary_parts

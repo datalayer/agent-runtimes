@@ -66,7 +66,10 @@ export type ConnectA2APeerOptions = {
   url: string;
   /** A key granted to the peer's route, sent as a bearer token. */
   key?: string;
-  /** The fetch to use, for tests and hosts that wrap the network. */
+  /**
+   * The fetch to use, for tests and hosts that wrap the network — such as
+   * the Agent Inspector's `inspectA2AFetch`, which records the traffic.
+   */
   fetch?: typeof globalThis.fetch;
 };
 

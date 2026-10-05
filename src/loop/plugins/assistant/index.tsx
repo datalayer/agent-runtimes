@@ -65,6 +65,7 @@ import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import { useViewportDrag } from '../../../chat/useViewportDrag';
 import {
   LoopAssistantCharacter,
+  LoopAssistantMenu,
   LoopChatLayout,
   LoopChatTurn,
   LoopSlots,
@@ -191,6 +192,10 @@ export function LoopAssistant({
     entry => entry.value,
   );
   const chosen = assistantCharacterFor(contributed, { app, person });
+  // What the enabled plugins add to its menu.
+  const menuContributions = useContributions(LoopAssistantMenu).map(
+    entry => entry.value,
+  );
   const turnEntries = useContributions(LoopChatTurn);
   const turn = useSignalValue(turnEntries[0]?.value.turn ?? NO_TURN);
   const presence = useSignalValue(
@@ -362,6 +367,9 @@ export function LoopAssistant({
         insist={insist}
         onDismiss={onDismiss}
         decide={decide}
+        onResetPosition={drag.position ? drag.reset : undefined}
+        about={appId ? { name: appId, spec: appId } : undefined}
+        contextMenu={menuContributions}
       />
     </>
   );

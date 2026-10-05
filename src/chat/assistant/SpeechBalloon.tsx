@@ -18,6 +18,9 @@
  * them all — the person's and the agent's, under a header that counts them,
  * scrolled to the newest — rather than the newest line alone.
  *
+ * Given suggestions while the agent waits for a question, it offers them as
+ * chips under its words: one clicked is sent as the person's prompt.
+ *
  * Shown `current` (LOOP T-23), it is the one thing being said or done now:
  * *Now*, then the words as they are written, or the tool being called
  * ("Using **list_invoices**…"), cut to a few lines, and what goes with them
@@ -29,7 +32,7 @@
  */
 
 import type { JSX, ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
@@ -49,6 +52,42 @@ import {
 } from './BalloonParts';
 import type { BalloonDisplay, BalloonToolLine } from './toolLine';
 import { BalloonExpandButton } from './BalloonVisual';
+import { TypingDots } from '../indicators/TypingDots';
+
+/** A suggestion the balloon offers: its label, and the prompt it sends. */
+export type BalloonSuggestion = { label: string; prompt: string };
+
+/** The suggestions, as chips: each sends its prompt. */
+export function BalloonSuggestions({
+  suggestions,
+  onSuggestion,
+}: {
+  suggestions: readonly BalloonSuggestion[];
+  onSuggestion: (suggestion: BalloonSuggestion) => void;
+}): JSX.Element {
+  return (
+    <Box
+      role="group"
+      aria-label="Suggestions"
+      data-balloon-suggestions=""
+      sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}
+    >
+      {suggestions.map(suggestion => (
+        <Button
+          key={suggestion.label}
+          size="small"
+          data-balloon-suggestion={suggestion.label}
+          aria-label={`Ask: ${suggestion.prompt}`}
+          title={suggestion.prompt}
+          onClick={() => onSuggestion(suggestion)}
+          sx={{ borderRadius: 999 }}
+        >
+          {suggestion.label}
+        </Button>
+      ))}
+    </Box>
+  );
+}
 
 export interface SpeechBalloonProps {
   text: string;
@@ -99,6 +138,22 @@ export interface SpeechBalloonProps {
   onExpand?: () => void;
   /** What the large visual is, for the *Expand* button: `Accounting's notebook`. */
   expandTitle?: string;
+  /**
+   * What the person may ask, as chips under the words: one clicked is sent
+   * as the prompt (`onSuggestion`), as if typed and asked.
+   */
+  suggestions?: readonly BalloonSuggestion[];
+  onSuggestion?: (suggestion: BalloonSuggestion) => void;
+  /**
+   * At work with nothing written yet: the chat's three dots — after the
+   * current line, or last in the history — until words arrive.
+   */
+  waiting?: boolean;
+  /**
+   * The words uncut, when `text` was cut to fit: *more* shows them whole,
+   * in the balloon, *less* folds them back.
+   */
+  fullText?: string;
 }
 
 /** How tall the listed conversation grows before it scrolls, in pixels. */
@@ -214,7 +269,25 @@ export function SpeechBalloon({
   history,
   onExpand,
   expandTitle,
+  suggestions,
+  onSuggestion,
+  waiting = false,
+  fullText,
 }: SpeechBalloonProps): JSX.Element {
+  // *more*: the words whole, when they were cut or overflow their lines.
+  const [whole, setWhole] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const cut =
+    (!!fullText && fullText !== text) || (!!more && text.endsWith('…'));
+  const wholeText = fullText ?? text;
+  // Other words, folded again.
+  useEffect(() => {
+    setWhole(false);
+  }, [wholeText.slice(0, 40)]);
+  const offered =
+    suggestions && suggestions.length > 0 && onSuggestion && !approval
+      ? suggestions
+      : null;
   const current = display === 'current';
   // History with messages to list: all of them, not the newest line alone.
   const listed = !current && history && history.length > 0 ? history : null;
@@ -231,8 +304,15 @@ export function SpeechBalloon({
           : { top: `${above}px` }),
         [align]: 0,
         maxWidth:
-          wide || listed || (current && attachment) ? 300 : current ? 260 : 280,
-        width: wide || listed || (current && attachment) ? 300 : 'max-content',
+          wide || listed || offered || whole || (current && attachment)
+            ? 300
+            : current
+              ? 260
+              : 280,
+        width:
+          wide || listed || offered || whole || (current && attachment)
+            ? 300
+            : 'max-content',
         px: 3,
         py: 2,
         bg: 'canvas.default',
@@ -285,6 +365,10 @@ export function SpeechBalloon({
               tool={tool}
               busy={busy}
               speaking={speaking}
+              waiting={waiting}
+              whole={whole}
+              fullText={wholeText}
+              onOverflow={setOverflowing}
             />
           </Box>
         ) : listed ? (
@@ -339,9 +423,38 @@ export function SpeechBalloon({
           />
         ) : null}
       </Box>
+      {current && !approval && !tool && (cut || overflowing || whole) ? (
+        <Box
+          as="button"
+          type="button"
+          aria-expanded={whole}
+          data-balloon-whole={whole ? 'less' : 'more'}
+          onClick={() => setWhole(!whole)}
+          sx={{
+            m: 0,
+            mt: 1,
+            p: 0,
+            border: 0,
+            bg: 'transparent',
+            color: 'accent.fg',
+            font: 'inherit',
+            fontSize: 0,
+            cursor: 'pointer',
+            '&:hover': { textDecoration: 'underline' },
+          }}
+        >
+          {whole ? 'less' : 'more'}
+        </Box>
+      ) : null}
       {listed && tool ? (
         <Box data-balloon-history-tool="" sx={{ mt: 1 }}>
           <BalloonToolLineView line={tool} />
+        </Box>
+      ) : null}
+      {/* History: last, while the turn runs and nothing is written yet. */}
+      {!current && waiting ? (
+        <Box data-balloon-waiting="" sx={{ mt: 1 }}>
+          <TypingDots size={6} />
         </Box>
       ) : null}
       {approval && (
@@ -378,6 +491,9 @@ export function SpeechBalloon({
           ) : null}
         </Box>
       )}
+      {offered && onSuggestion ? (
+        <BalloonSuggestions suggestions={offered} onSuggestion={onSuggestion} />
+      ) : null}
       {/* What goes with the words, in either display, a tool line or not. */}
       {attachment ? (
         <Box

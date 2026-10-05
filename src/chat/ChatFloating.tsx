@@ -107,6 +107,10 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
+import type { AgentInspectorSink } from '../components/inspector/agentInspector';
+import type { AssistantMenuItem } from './assistant/AssistantContextMenu';
+import type { AssistantAbout } from './assistant/AssistantStage';
+import type { BalloonSuggestion } from './assistant/SpeechBalloon';
 import type {
   ChatCommonProps,
   ChatViewMode,
@@ -293,6 +297,20 @@ export interface ChatFloatingProps extends ChatCommonProps {
   conversation?: FloatingConversation;
 
   /**
+   * The Agent Inspector's sink: the chat records its agent's turns and tool
+   * calls there, and the assistant's menu offers *Inspect the agent…*.
+   */
+  inspector?: AgentInspectorSink | null;
+  /** The balloon's display, changed from the assistant's menu. */
+  onBalloonDisplayChange?: (display: BalloonDisplay) => void;
+  /** Opens the host's character picker, from the assistant's menu. */
+  onChangeCharacter?: () => void;
+  /** What the assistant's menu's *About* says. */
+  about?: AssistantAbout;
+  /** The host's own entries of the assistant's menu. */
+  contextMenu?: readonly AssistantMenuItem[];
+
+  /**
    * Its voice (VOICE.md V1): push-to-talk in the composer, heard on the
    * device; with `output: 'always'`, its answers said by Datalayer's speech
    * service as they are written, the assistant's mouth moving with the sound
@@ -412,7 +430,21 @@ export function ChatFloating({
   conversation,
   decisions,
   voice,
+  inspector,
+  onBalloonDisplayChange,
+  onChangeCharacter,
+  about,
+  contextMenu,
 }: ChatFloatingProps) {
+  // The chat's own send, once it can: what a suggestion in the balloon sends.
+  const chatControls = useRef<{
+    send: (message: string) => void;
+    stop: () => void;
+  } | null>(null);
+  const [suggestionPrompt, setSuggestionPrompt] = useState<
+    string | undefined
+  >();
+  const [speechMuted, setSpeechMuted] = useState(false);
   // Store-based state
   const storeIsOpen = useChatOpen();
   const storeMessages = useChatMessages();
@@ -538,7 +570,7 @@ export function ChatFloating({
       window.removeEventListener('keydown', unlock);
     };
   }, [speaker]);
-  useSpokenAnswers(voiceItems, chatBusy, !!speaker, speaker);
+  useSpokenAnswers(voiceItems, chatBusy, !!speaker && !speechMuted, speaker);
   const stopSpeaking = useCallback(() => speaker?.stop(), [speaker]);
   const mouthLevel = useMemo(
     () => (speaker ? () => speaker.level() : undefined),
@@ -704,6 +736,36 @@ export function ChatFloating({
     !!toolSaid ||
     (showsCurrent && atWork) ||
     (unheard && (assistantState === 'speaking' || freshSaying));
+  // The chat's suggestions, in the balloon while it waits for a question:
+  // one clicked is sent as the prompt, as if typed.
+  const balloonSuggestions = useMemo<BalloonSuggestion[] | undefined>(
+    () =>
+      conversation || !suggestions?.length
+        ? undefined
+        : suggestions.map(suggestion => ({
+            label: suggestion.title,
+            prompt: suggestion.message,
+          })),
+    [conversation, suggestions],
+  );
+  const sendSuggestion = useCallback((suggestion: BalloonSuggestion) => {
+    if (chatControls.current) {
+      chatControls.current.send(suggestion.prompt);
+    } else {
+      // Not able to send yet: sent once it is.
+      setSuggestionPrompt(suggestion.prompt);
+    }
+  }, []);
+  const panelOnSendReady = panelProps?.onSendReady;
+  const handleSendReady = useCallback<
+    NonNullable<ChatBaseProps['onSendReady']>
+  >(
+    controls => {
+      chatControls.current = controls;
+      panelOnSendReady?.(controls);
+    },
+    [panelOnSendReady],
+  );
   const panelOnLoadingChange = panelProps?.onLoadingChange;
   const panelOnDisplayItemsChange = panelProps?.onDisplayItemsChange;
   const handleLoadingChange = useCallback(
@@ -1615,7 +1677,8 @@ export function ChatFloating({
           runtimeId={runtimeId}
           historyEndpoint={historyEndpoint}
           historyAuthToken={historyAuthToken}
-          pendingPrompt={pendingPrompt}
+          pendingPrompt={pendingPrompt ?? suggestionPrompt}
+          inspector={inspector}
           showInformation={showInformation}
           onInformationClick={onInformationClick}
           onToolCallStart={onToolCallStart}
@@ -1631,6 +1694,7 @@ export function ChatFloating({
           {...assistantChat}
           onLoadingChange={handleLoadingChange}
           onDisplayItemsChange={handleDisplayItemsChange}
+          onSendReady={handleSendReady}
         >
           {conversationBalloon && currentOpen ? (
             // Current: the one thing said or done now, over the composer.
@@ -1640,6 +1704,7 @@ export function ChatFloating({
                 tool={toolSaid}
                 busy={atWork}
                 speaking={answering && atWork}
+                waiting={atWork && !answering}
               />
             </Box>
           ) : (
@@ -1733,6 +1798,36 @@ export function ChatFloating({
           onDismiss={dismissAssistant}
           ownRef={popupRef}
           mouthLevel={mouthLevel}
+          suggestions={balloonSuggestions}
+          onSuggestion={sendSuggestion}
+          inspector={inspector}
+          onBalloonDisplayChange={onBalloonDisplayChange}
+          onStop={
+            chatBusy && chatControls.current
+              ? () => chatControls.current?.stop()
+              : undefined
+          }
+          onNewChat={
+            !conversation && showNewChatButton ? handleNewChat : undefined
+          }
+          onClear={!conversation && useStoreMode ? handleClear : undefined}
+          onChangeCharacter={onChangeCharacter}
+          speech={
+            speaker
+              ? {
+                  muted: speechMuted,
+                  onToggle: () => {
+                    if (!speechMuted) {
+                      speaker.stop();
+                    }
+                    setSpeechMuted(!speechMuted);
+                  },
+                }
+              : undefined
+          }
+          onResetPosition={stageDrag.position ? stageDrag.reset : undefined}
+          about={about}
+          contextMenu={contextMenu}
         />
       )}
 

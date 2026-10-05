@@ -411,7 +411,7 @@ class TestShortOptions:
 
 
 class TestCodeModeOptions:
-    """Tests for Code Mode CLI options."""
+    """Tests for Codemode CLI options."""
 
     def test_codemode_flag_sets_env_var(self) -> None:
         """Test that --codemode sets the environment variable."""

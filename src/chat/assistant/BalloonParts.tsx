@@ -13,11 +13,12 @@
  */
 
 import type { JSX, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CheckIcon, ToolsIcon, XIcon } from '@primer/octicons-react';
 import { SpecMark, hasMark, marksOfToolCall } from '../marks';
+import { TypingDots } from '../indicators/TypingDots';
 import {
   toolAnnouncement,
   toolLineParts,
@@ -236,14 +237,40 @@ export function CurrentBalloonBody({
   busy = false,
   speaking = false,
   attachment,
+  waiting = false,
+  whole = false,
+  fullText,
+  onOverflow,
 }: {
+  /**
+   * Shown whole: the full text (`fullText`, else `text`), unclamped, in a
+   * taller box that scrolls.
+   */
+  whole?: boolean;
+  /** The text uncut, when `text` was cut to fit (`…`). */
+  fullText?: string;
+  /** Whether the clamped text overflows its lines: *more* has more to show. */
+  onOverflow?: (overflowing: boolean) => void;
   text?: string;
   tool?: BalloonToolLine;
   busy?: boolean;
+  /**
+   * At work with nothing written yet (thinking, working, waiting): the
+   * chat's three dots follow the line, or stand alone.
+   */
+  waiting?: boolean;
   /** Words are arriving: read out once they have. */
   speaking?: boolean;
   attachment?: ReactNode;
 }): JSX.Element {
+  const textRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const element = textRef.current;
+    if (!element || whole || !onOverflow) {
+      return;
+    }
+    onOverflow(element.scrollHeight > element.clientHeight + 1);
+  }, [text, whole, onOverflow]);
   return (
     <Box
       data-balloon-current=""
@@ -251,22 +278,43 @@ export function CurrentBalloonBody({
     >
       <BalloonNow busy={busy} />
       {tool ? (
-        <BalloonToolLineView line={tool} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <BalloonToolLineView line={tool} />
+          {waiting && <TypingDots size={5} />}
+        </Box>
       ) : text ? (
         <Box
           aria-live="polite"
           aria-busy={speaking}
-          data-balloon-current-text=""
-          sx={{
-            display: '-webkit-box',
-            WebkitLineClamp: 4,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            overflowWrap: 'anywhere',
-          }}
+          ref={textRef}
+          data-balloon-current-text={whole ? 'whole' : ''}
+          sx={
+            whole
+              ? {
+                  maxHeight: 240,
+                  overflowY: 'auto',
+                  overflowWrap: 'anywhere',
+                  whiteSpace: 'pre-wrap',
+                  pr: 1,
+                }
+              : {
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  overflowWrap: 'anywhere',
+                }
+          }
         >
-          {text}
+          {whole ? (fullText ?? text) : text}
+          {waiting && (
+            <Box as="span" sx={{ ml: 2, display: 'inline-flex' }}>
+              <TypingDots size={5} />
+            </Box>
+          )}
         </Box>
+      ) : waiting ? (
+        <TypingDots size={6} />
       ) : null}
       {attachment}
       <ToolLineAnnouncer line={tool} />

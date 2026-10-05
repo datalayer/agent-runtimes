@@ -643,7 +643,7 @@ def serve(
             "--codemode",
             "-c",
             envvar="AGENT_RUNTIMES_CODEMODE",
-            help="Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset",
+            help="Enable Codemode: MCP servers become programmatic tools via CodemodeToolset",
         ),
     ] = False,
     skills: Annotated[
@@ -775,10 +775,10 @@ def serve(
         # Start with specific MCP servers from the catalog
         agent-runtimes serve --mcp-servers tavily,github
 
-        # Start with Code Mode (MCP servers become programmatic tools)
+        # Start with Codemode (MCP servers become programmatic tools)
         agent-runtimes serve --codemode --mcp-servers tavily,github
 
-        # Start with Code Mode and skills
+        # Start with Codemode and skills
         agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
         # Start with a Jupyter sandbox for code execution (connects to existing Jupyter server)

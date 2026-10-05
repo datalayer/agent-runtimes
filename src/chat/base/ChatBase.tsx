@@ -133,6 +133,11 @@ const EphemeralDocument = React.lazy(() =>
 );
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
+import { useAgentInspectorSink } from '../../components/inspector/agentInspector';
+import {
+  chatInspectorRecorder,
+  type ChatInspectorRecorder,
+} from '../../components/inspector/chatInspect';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -892,6 +897,7 @@ function ChatBaseInner({
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
+  inspector: inspectorGiven,
   // Identity/Authorization props
   onAuthorizationRequired: _onAuthorizationRequired,
   connectedIdentities,
@@ -2245,6 +2251,32 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
+  // The Agent Inspector: the turns and tool calls, recorded as they happen.
+  const inspectorFromContext = useAgentInspectorSink();
+  const inspectorSink = inspectorGiven ?? inspectorFromContext;
+  const inspectorActorRef = useRef('Agent');
+  inspectorActorRef.current =
+    (typeof title === 'string' && title) || activeAgentId || 'Agent';
+  const recorderRef = useRef<{
+    sink: unknown;
+    recorder: ChatInspectorRecorder;
+  } | null>(null);
+  if (inspectorSink && recorderRef.current?.sink !== inspectorSink) {
+    recorderRef.current = {
+      sink: inspectorSink,
+      recorder: chatInspectorRecorder(
+        inspectorSink,
+        () => inspectorActorRef.current,
+        {
+          frontendTools: () =>
+            (frontendToolsRef.current ?? []).map(tool => tool.name),
+        },
+      ),
+    };
+  } else if (!inspectorSink) {
+    recorderRef.current = null;
+  }
+  const inspectAnswerRef = useRef('');
   const handleRespondRef = useRef<
     ((toolCallId: string, result: unknown) => Promise<void>) | null
   >(null);
@@ -3286,6 +3318,9 @@ function ChatBaseInner({
                 typeof rawContent === 'string'
                   ? sanitizeAssistantContent(rawContent)
                   : (rawContent ?? '');
+              if (typeof sanitizedContent === 'string' && sanitizedContent) {
+                inspectAnswerRef.current = sanitizedContent;
+              }
               setDisplayItems(prev => {
                 const newItems = [...prev];
                 const idx = newItems.findIndex(
@@ -3406,6 +3441,11 @@ function ChatBaseInner({
                 toolCallId,
                 args,
               });
+              recorderRef.current?.recorder.toolStarted({
+                id: toolCallId,
+                name: toolName,
+                args,
+              });
 
               const frontendTool = frontendToolsRef.current?.find(
                 t => t.name === toolName,
@@ -3513,6 +3553,14 @@ function ChatBaseInner({
                   ),
                 );
 
+                recorderRef.current?.recorder.toolEnded(toolCallId, {
+                  result: event.toolResult.result,
+                  error:
+                    event.toolResult.error ??
+                    (updatedToolCall.status === 'error'
+                      ? (executionError ?? 'failed')
+                      : undefined),
+                });
                 // Fire post-hook for tool results
                 onToolCallCompleteRef.current?.({
                   toolName: existingToolCall.toolName,
@@ -3581,6 +3629,11 @@ function ChatBaseInner({
            * The bar and its ring simply never appeared for a browser agent.
            */
           {
+            recorderRef.current?.recorder.turnEnded({
+              text: inspectAnswerRef.current || undefined,
+              usage: event.usage,
+            });
+            inspectAnswerRef.current = '';
             const turnInput = event.usage?.promptTokens ?? 0;
             const turnOutput = event.usage?.completionTokens ?? 0;
             // The parts sum to the total when the harness did not send one:
@@ -3653,6 +3706,9 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          recorderRef.current?.recorder.turnEnded({
+            error: event.error?.message ?? 'error',
+          });
           if (
             event.error?.message &&
             /exceeded maximum retries/i.test(event.error.message) &&
@@ -3745,6 +3801,7 @@ function ChatBaseInner({
           result,
           status: 'complete',
         };
+        recorderRef.current?.recorder.toolEnded(toolCallId, { result });
         toolCallsRef.current.set(toolCallId, completedToolCall);
         setDisplayItems(prev =>
           prev.map(item =>
@@ -3760,6 +3817,9 @@ function ChatBaseInner({
           status: 'error',
           error: (err as Error).message,
         };
+        recorderRef.current?.recorder.toolEnded(toolCallId, {
+          error: (err as Error).message,
+        });
         toolCallsRef.current.set(toolCallId, errorToolCall);
         setDisplayItems(prev =>
           prev.map(item =>
@@ -3819,6 +3879,11 @@ function ChatBaseInner({
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
       stoppedRef.current = false;
+      inspectAnswerRef.current = '';
+      recorderRef.current?.recorder.turnStarted(
+        messageContent,
+        selectedModel || undefined,
+      );
       suppressAssistantTextForToolOnlyRef.current =
         isToolCallOnlyPrompt(messageContent);
       // Said, then sent: by the microphone at once, or from the composer it

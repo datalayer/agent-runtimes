@@ -40,6 +40,7 @@ import {
 } from '../styles/streamdownStyles';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
 import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
+import { TypingDots } from '../indicators/TypingDots';
 import { TurnFooter } from './TurnFooter';
 import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { parseFormSubmission } from './formSubmission';
@@ -193,31 +194,6 @@ function toneColorsOf(tone: string | undefined): {
     muted: `${tone}.muted`,
     fg: `${tone}.fg`,
   };
-}
-
-/** Three pulsing dots: a speaker is still writing and has not settled yet. */
-function TypingDots({ size = 8 }: { size?: number }): React.ReactElement {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      {[0, 0.2, 0.4].map((delay, index) => (
-        <Box
-          key={index}
-          sx={{
-            width: size,
-            height: size,
-            borderRadius: '50%',
-            bg: 'fg.muted',
-            animation: 'typingPulse 1.4s ease-in-out infinite',
-            animationDelay: `${delay}s`,
-            '@keyframes typingPulse': {
-              '0%, 60%, 100%': { transform: 'scale(0.6)', opacity: 0.4 },
-              '30%': { transform: 'scale(1)', opacity: 1 },
-            },
-          }}
-        />
-      ))}
-    </Box>
-  );
 }
 
 // ---------------------------------------------------------------------------

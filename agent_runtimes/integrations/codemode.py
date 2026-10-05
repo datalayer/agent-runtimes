@@ -10,7 +10,7 @@ This module provides integration between:
 - agent-skills: Reusable agent skill management
 
 It allows agents running on agent-runtimes to:
-- Use Code Mode for efficient tool composition
+- Use Codemode for efficient tool composition
 - Access and execute skills
 - Discover tools progressively
 """
@@ -166,7 +166,7 @@ class CodemodeIntegration:
             return None
 
     # =========================================================================
-    # Code Mode Operations
+    # Codemode Operations
     # =========================================================================
 
     async def execute_code(

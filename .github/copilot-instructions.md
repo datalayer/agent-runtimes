@@ -95,5 +95,5 @@ const { launchRuntime, isReady, endpoint } = useAgentRuntime({ autoCreateAgent: 
 - **TypeScript**: Use strict types, export from index files
 - **Python**: Follow Pydantic patterns, use dataclasses for internal types
 - **Protocols**: New protocols need both a transport (`transports/`) and route (`routes/`)
-- **Tools**: Include `output_schema` and `input_examples` for Code Mode compatibility
+- **Tools**: Include `output_schema` and `input_examples` for Codemode compatibility
 - **Copyrights**: BSD 3-Clause, 2025-2026 Datalayer, Inc.

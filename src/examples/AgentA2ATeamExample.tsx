@@ -24,6 +24,19 @@
  * list_invoices…" while Accounting calls Odoo. Then the report appears. The
  * page's own state is `useA2ATeam`'s, which the landing's home page runs too.
  *
+ * Under the graph, each member has its own Agent Inspector: Sales' — its
+ * model turns, its `ask_accounting` call, the A2A messages it sends and
+ * receives — and Accounting's — what it received over A2A, its Odoo MCP
+ * calls, `write_notebook`, its status updates and artifacts, as the A2A
+ * stream tells them. Both read one record (`useAgentInspector`), fed by the
+ * team (`useA2ATeam`'s `inspector`) and by the fetch the A2A client sends
+ * with (`inspectA2AFetch`); an A2A message shows in both, sent in one and
+ * received in the other. Right-click a member for its menu: *Inspect the
+ * agent…* opens its inspector over the page.
+ *
+ * Sales' suggestions — its Appspec's starters — are chips in its balloon
+ * while it waits for a question: one clicked is asked, as if typed.
+ *
  * Sales accepts a Jupyter notebook from Accounting besides its words
  * (`acceptedOutputModes`, `NOTEBOOK_AND_WORDS`). When Accounting gives one,
  * Sales' balloon shows it read-only (`NotebookPreview`: no kernel), and it
@@ -60,9 +73,16 @@ import {
   A2ATeamGraph,
   NOTEBOOK_AND_WORDS,
   teamConnectionsOf,
+  teamToolClassifier,
   useA2ATeam,
 } from '../components/teams';
 import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_1 } from '../specs/apps';
+import {
+  AgentInspector,
+  classifyToolCall,
+  inspectA2AFetch,
+  useAgentInspector,
+} from '../components/inspector';
 import { SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 } from '../specs/teams/teams';
 
 const TEAM = SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1;
@@ -106,6 +126,8 @@ function AgentA2ATeam(): JSX.Element {
       accountingKeyClock.expiresAt <= Date.now(),
   );
 
+  // One record of what both members do, each inspector showing its own.
+  const { sink: inspector } = useAgentInspector();
   const [peer, setPeer] = useState<A2APeer | null>(null);
   const [peerError, setPeerError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -117,7 +139,20 @@ function AgentA2ATeam(): JSX.Element {
     let current = true;
     setPeer(null);
     setPeerError(null);
-    connectA2APeer({ url: accountingUrl, key: accountingKey })
+    connectA2APeer({
+      url: accountingUrl,
+      key: accountingKey,
+      // The A2A traffic, recorded: Sales sends, Accounting answers.
+      fetch: inspectA2AFetch(globalThis.fetch.bind(globalThis), {
+        sink: inspector,
+        asker: SALES.name,
+        peer: ACCOUNTING.name,
+        classifyTool: teamToolClassifier(
+          ACCOUNTING_CONNECTIONS,
+          classifyToolCall,
+        ),
+      }),
+    })
       .then(found => current && setPeer(found))
       .catch(
         error =>
@@ -127,7 +162,7 @@ function AgentA2ATeam(): JSX.Element {
     return () => {
       current = false;
     };
-  }, [accountingUrl, accountingKey]);
+  }, [accountingUrl, accountingKey, inspector]);
 
   // Sales runs here and asks Accounting over A2A: the conversation, the
   // exchange, the report and the way the link carries a message.
@@ -140,7 +175,17 @@ function AgentA2ATeam(): JSX.Element {
     peerConnections: ACCOUNTING_CONNECTIONS,
     // Its words, and a notebook to run here when it gives one.
     accept: NOTEBOOK_AND_WORDS,
+    inspector,
   });
+  // Sales' starters, in its balloon while it waits for a question.
+  const suggestions = useMemo(
+    () =>
+      (SALES.interface.starters ?? []).map(starter => ({
+        label: starter.label,
+        prompt: starter.message,
+      })),
+    [],
+  );
   const send = (text: string) => {
     setDraft('');
     void team.send(text);
@@ -240,6 +285,16 @@ function AgentA2ATeam(): JSX.Element {
             onAway: team.setEntryAway,
             expandTarget: notebookArea,
             notebookTitle: `${ACCOUNTING.name}\u2019s notebook`,
+            suggestions: team.ready && !team.busy ? suggestions : undefined,
+            onSuggestion: suggestion => send(suggestion.prompt),
+            inspector,
+            onStop: team.busy ? team.stop : undefined,
+            about: {
+              name: SALES.name,
+              spec: `${SALES.id}:${SALES.version}`,
+              model: SALES.model || undefined,
+              where: 'in your browser',
+            },
           }}
           peer={{
             id: ACCOUNTING.id,
@@ -250,6 +305,13 @@ function AgentA2ATeam(): JSX.Element {
             persona: team.peerPersona,
             onAway: team.setPeerAway,
             connections: ACCOUNTING_CONNECTIONS,
+            inspector,
+            about: {
+              name: ACCOUNTING.name,
+              spec: `${ACCOUNTING.id}:${ACCOUNTING.version}`,
+              model: ACCOUNTING.model || undefined,
+              where: accountingWhere,
+            },
           }}
           flow={team.flow}
           calls={team.calls}
@@ -267,23 +329,48 @@ function AgentA2ATeam(): JSX.Element {
         data-team-notebook-placement="under-graph"
       />
 
+      {/* Each member's Agent Inspector, under it: Sales on the left. */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: ['1fr', '1fr', '1fr 1fr'],
+          gap: 3,
+          mb: 3,
+        }}
+        data-team-inspectors=""
+      >
+        {[SALES, ACCOUNTING].map(member => (
+          <Box
+            key={member.id}
+            sx={{ minWidth: 0 }}
+            data-team-inspector={member.id}
+          >
+            <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
+              {member.emoji} {member.name}&rsquo;s Agent Inspector
+            </Heading>
+            <AgentInspector
+              sink={inspector}
+              agent={member.name}
+              maxHeight={360}
+              exportName={`agent-inspector-${member.id}`}
+              emptyText={
+                member === SALES
+                  ? 'Its model turns, its call to Accounting and the A2A messages it sends and receives show here.'
+                  : 'What it receives over A2A, its Odoo MCP calls and what it sends back show here.'
+              }
+            />
+          </Box>
+        ))}
+      </Box>
+
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         <Box sx={{ flex: '1 1 420px', minWidth: 0 }}>
           <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
             Ask {SALES.name}
           </Heading>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-            {(SALES.interface.starters ?? []).map(starter => (
-              <Button
-                key={starter.label}
-                size="small"
-                disabled={!team.ready || team.busy}
-                onClick={() => send(starter.message)}
-              >
-                {starter.label}
-              </Button>
-            ))}
-          </Box>
+          <Text as="p" sx={{ color: 'fg.muted', fontSize: 1, mt: 0 }}>
+            Or choose one of {SALES.name}&rsquo;s suggestions in its balloon.
+          </Text>
           <Textarea
             ref={composer}
             block
@@ -328,28 +415,10 @@ function AgentA2ATeam(): JSX.Element {
           </Box>
         </Box>
         <Box sx={{ flex: '1 1 360px', minWidth: 0 }}>
-          <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
-            The exchange
-          </Heading>
-          <Box
-            as="ol"
-            sx={{ pl: 3, color: 'fg.muted', fontSize: 1 }}
-            data-team-exchange=""
-          >
-            {team.exchange.length === 0 ? (
-              <Text as="li">Nothing asked yet.</Text>
-            ) : (
-              team.exchange.map((step, index) => (
-                <Text as="li" key={index}>
-                  {step}
-                </Text>
-              ))
-            )}
-          </Box>
           {/* The notebook, when Accounting gave one, takes the report's place. */}
           {!team.notebook && (
             <>
-              <Heading as="h3" sx={{ fontSize: 2, mt: 3, mb: 2 }}>
+              <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
                 The report
               </Heading>
               <Box

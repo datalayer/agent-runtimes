@@ -149,7 +149,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
         if sandbox_variant == "jupyter-server":
             summary_parts.append("Jupyter sandbox")
         if codemode_on:
-            summary_parts.append("Code Mode")
+            summary_parts.append("Codemode")
 
         summary_text = f" ({' • '.join(summary_parts)})" if summary_parts else ""
 

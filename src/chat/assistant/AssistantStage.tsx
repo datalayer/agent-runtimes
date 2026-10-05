@@ -13,6 +13,17 @@
  * working: it steps aside — out of sight and out of the pointer's way — until
  * the place is clear again.
  *
+ * Right-clicked — or Shift+F10 or the ContextMenu key while it has the
+ * focus, or a long press — it opens its own menu where the pointer is
+ * (`AssistantContextMenu`): what the host passes applies — *Inspect the
+ * agent…* (the Agent Inspector, in a dialog loaded then), the conversation,
+ * the balloon's display, the suggestions, *Stop*, a new conversation,
+ * another character, its voice, send it away, its place, about it — and
+ * what a host or a plugin adds (`contextMenu`).
+ *
+ * Given suggestions, its balloon offers them while it waits for a question
+ * (idle, or greeting): one clicked is sent as the prompt (`onSuggestion`).
+ *
  * Its motions are one set for every character, by the parts each drawing
  * names (`assistant-body`, `-pupils`, `-lids`, `-mouth`), and nothing moves
  * for a reader who asks the system for reduced motion.
@@ -21,12 +32,39 @@
  */
 
 import type { JSX, ReactNode, RefObject } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { ActionList, ActionMenu, IconButton, useTheme } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { XIcon } from '@primer/octicons-react';
+import {
+  CommentDiscussionIcon,
+  InfoIcon,
+  MuteIcon,
+  PencilIcon,
+  PlusIcon,
+  PulseIcon,
+  ScreenNormalIcon,
+  SquareFillIcon,
+  TrashIcon,
+  UnmuteIcon,
+  XIcon,
+} from '@primer/octicons-react';
+import { Dialog, Text } from '@primer/react';
 import { assistantCharacter, type AssistantCharacter } from './characters';
-import { SpeechBalloon } from './SpeechBalloon';
+import { SpeechBalloon, type BalloonSuggestion } from './SpeechBalloon';
+import {
+  AssistantContextMenu,
+  LONG_PRESS_MS,
+  opensContextMenu,
+  type AssistantMenuItem,
+} from './AssistantContextMenu';
+import type { AgentInspectorSink } from '../../components/inspector/agentInspector';
 import {
   BalloonExpandContext,
   ExpandedVisual,
@@ -101,6 +139,169 @@ const AWAY_CHOICES: { away: AssistantAway; label: string }[] = [
   { away: 'session', label: 'Hide for this session' },
   { away: 'always', label: 'Don\u2019t show again' },
 ];
+
+/** The Agent Inspector's dialog: loaded when it is first asked for. */
+const AgentInspectorDialog = lazy(
+  () => import('../../components/inspector/AgentInspectorDialog'),
+);
+
+/** What the assistant's *About* says. */
+export type AssistantAbout = {
+  /** The agent's name, or its application's. */
+  name?: string;
+  /** Its spec or application id, with its version. */
+  spec?: string;
+  /** Its model. */
+  model?: string;
+  /** Where it runs: `in your browser`, `on a runtime`. */
+  where?: string;
+};
+
+/**
+ * The entries of the assistant's menu, composed from what the host passes:
+ * each shows when what it does is there to do.
+ */
+export function assistantMenuItems(options: {
+  name: string;
+  open: boolean;
+  onToggle: () => void;
+  onDismiss: (away: AssistantAway) => void;
+  /** The conversation entry's label; `false` leaves it out. */
+  conversationLabel?: string | false;
+  inspect?: () => void;
+  balloonDisplay?: BalloonDisplay;
+  onBalloonDisplayChange?: (display: BalloonDisplay) => void;
+  suggestions?: readonly BalloonSuggestion[];
+  onSuggestion?: (suggestion: BalloonSuggestion) => void;
+  busy?: boolean;
+  onStop?: () => void;
+  onNewChat?: () => void;
+  onClear?: () => void;
+  onChangeCharacter?: () => void;
+  speech?: { muted: boolean; onToggle: () => void };
+  onResetPosition?: () => void;
+  about?: () => void;
+  extra?: readonly AssistantMenuItem[];
+}): AssistantMenuItem[] {
+  const items: AssistantMenuItem[] = [];
+  if (options.inspect) {
+    items.push({
+      id: 'inspect',
+      label: 'Inspect the agent…',
+      icon: PulseIcon,
+      onSelect: options.inspect,
+    });
+  }
+  if (options.conversationLabel !== false) {
+    items.push({
+      id: 'conversation',
+      label:
+        options.conversationLabel ??
+        (options.open ? 'Close the conversation' : 'Open the conversation'),
+      icon: CommentDiscussionIcon,
+      onSelect: options.onToggle,
+    });
+  }
+  if (options.busy && options.onStop) {
+    items.push({
+      id: 'stop',
+      label: 'Stop the turn',
+      icon: SquareFillIcon,
+      onSelect: options.onStop,
+    });
+  }
+  if (options.onNewChat) {
+    items.push({
+      id: 'new-chat',
+      label: 'New conversation',
+      icon: PlusIcon,
+      onSelect: options.onNewChat,
+    });
+  }
+  if (options.onClear) {
+    items.push({
+      id: 'clear',
+      label: 'Clear the conversation',
+      icon: TrashIcon,
+      onSelect: options.onClear,
+    });
+  }
+  if (options.suggestions?.length && options.onSuggestion) {
+    const send = options.onSuggestion;
+    for (const suggestion of options.suggestions) {
+      items.push({
+        id: `suggestion:${suggestion.label}`,
+        label: suggestion.label,
+        description: suggestion.prompt,
+        group: 'Suggestions',
+        disabled: options.busy,
+        onSelect: () => send(suggestion),
+      });
+    }
+  }
+  if (options.onBalloonDisplayChange) {
+    const change = options.onBalloonDisplayChange;
+    items.push(
+      {
+        id: 'balloon-history',
+        label: 'History',
+        group: 'Balloon',
+        checked: options.balloonDisplay !== 'current',
+        onSelect: () => change('history'),
+      },
+      {
+        id: 'balloon-current',
+        label: 'Current',
+        group: 'Balloon',
+        checked: options.balloonDisplay === 'current',
+        onSelect: () => change('current'),
+      },
+    );
+  }
+  if (options.onChangeCharacter) {
+    items.push({
+      id: 'character',
+      label: 'Change character…',
+      icon: PencilIcon,
+      onSelect: options.onChangeCharacter,
+    });
+  }
+  if (options.speech) {
+    items.push({
+      id: 'speech',
+      label: options.speech.muted ? 'Unmute speech' : 'Mute speech',
+      icon: options.speech.muted ? UnmuteIcon : MuteIcon,
+      onSelect: options.speech.onToggle,
+    });
+  }
+  if (options.onResetPosition) {
+    items.push({
+      id: 'reset-position',
+      label: 'Reset position',
+      icon: ScreenNormalIcon,
+      onSelect: options.onResetPosition,
+    });
+  }
+  if (options.about) {
+    items.push({
+      id: 'about',
+      label: `About ${options.name}`,
+      icon: InfoIcon,
+      onSelect: options.about,
+    });
+  }
+  items.push(...(options.extra ?? []));
+  for (const choice of AWAY_CHOICES) {
+    items.push({
+      id: `away:${choice.away}`,
+      label: choice.label,
+      group: 'Send away',
+      icon: XIcon,
+      onSelect: () => options.onDismiss(choice.away),
+    });
+  }
+  return items;
+}
 
 /** Room the balloon needs above the character before it goes below. */
 const BALLOON_ROOM = 200;
@@ -276,6 +477,8 @@ export interface AssistantStageProps {
    */
   balloon?: {
     text: string;
+    /** The words uncut, when `text` was cut to fit: *more* shows them. */
+    fullText?: string;
     more?: boolean;
     approval?: BalloonApproval;
     /** Puts the peek away (a × beside its line); never an approval's. */
@@ -320,6 +523,41 @@ export interface AssistantStageProps {
   balloonDisplay?: BalloonDisplay;
   /** Show the balloon without being hovered: something new to say. */
   insist?: boolean;
+  /**
+   * What the person may ask: chips in the balloon while it waits for a
+   * question (idle or greeting), and a group of its menu. One chosen is sent
+   * as the prompt with `onSuggestion`.
+   */
+  suggestions?: readonly BalloonSuggestion[];
+  onSuggestion?: (suggestion: BalloonSuggestion) => void;
+  /** The Agent Inspector's sink: its menu offers *Inspect the agent…*. */
+  inspector?: AgentInspectorSink | null;
+  /** The agent whose own record the inspector shows, of a shared sink (a team's member). */
+  inspectAgent?: string;
+  /**
+   * What its menu calls the conversation's entry, which does `onToggle`;
+   * `false` leaves it out, where there is no conversation to open (a team's
+   * member that is asked by another). Unsaid: *Open / Close the conversation*.
+   */
+  conversationLabel?: string | false;
+  /** The balloon's display changes from its menu: *Balloon: History / Current*. */
+  onBalloonDisplayChange?: (display: BalloonDisplay) => void;
+  /** Stops the turn: offered in its menu while it is at work. */
+  onStop?: () => void;
+  /** Starts a new conversation, from its menu. */
+  onNewChat?: () => void;
+  /** Clears the conversation, from its menu. */
+  onClear?: () => void;
+  /** Opens the host's character picker, from its menu. */
+  onChangeCharacter?: () => void;
+  /** Its voice, muted or not, from its menu. */
+  speech?: { muted: boolean; onToggle: () => void };
+  /** Puts it back where it started, after a drag: offered in its menu. */
+  onResetPosition?: () => void;
+  /** What its menu's *About* says. */
+  about?: AssistantAbout;
+  /** The host's or a plugin's own entries of its menu. */
+  contextMenu?: readonly AssistantMenuItem[];
   /** Send it away (T-27): for the page, for the session, or for good. */
   onDismiss: (away: AssistantAway) => void;
   /**
@@ -404,6 +642,20 @@ export function AssistantStage({
   balloonDisplay = 'history',
   expandTarget,
   expandOnArrival = false,
+  suggestions,
+  onSuggestion,
+  inspector,
+  inspectAgent,
+  conversationLabel,
+  onBalloonDisplayChange,
+  onStop,
+  onNewChat,
+  onClear,
+  onChangeCharacter,
+  speech,
+  onResetPosition,
+  about,
+  contextMenu,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -421,14 +673,57 @@ export function AssistantStage({
   const colorMode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Its own menu, where it was opened; the inspector and *About* it opens.
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [inspecting, setInspecting] = useState(false);
+  const [telling, setTelling] = useState(false);
+  const characterRef = useRef<HTMLElement>(null);
+  const longPress = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const closeMenu = useCallback(() => setMenuAt(null), []);
+  useEffect(() => () => clearTimeout(longPress.current), []);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
-  const aside = useKeepClear(stageRef, ownRef, menuOpen || stayPut);
+  const aside = useKeepClear(
+    stageRef,
+    ownRef,
+    menuOpen || menuAt !== null || inspecting || telling || stayPut,
+  );
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);
   const showBalloon =
     !aside && !open && !!balloon && (hovered || insist || deciding);
+  // Suggestions while it waits for a question.
+  const waitsForQuestion =
+    (state === 'idle' || state === 'greeting') &&
+    !balloon?.tool &&
+    !balloon?.approval &&
+    !balloon?.busy;
+  const busy =
+    state === 'thinking' || state === 'working' || state === 'speaking';
+  const menuItems = assistantMenuItems({
+    name,
+    open,
+    onToggle,
+    onDismiss,
+    conversationLabel,
+    inspect: inspector ? () => setInspecting(true) : undefined,
+    balloonDisplay,
+    onBalloonDisplayChange,
+    suggestions,
+    onSuggestion,
+    busy,
+    onStop,
+    onNewChat,
+    onClear,
+    onChangeCharacter,
+    speech,
+    onResetPosition,
+    about: about ? () => setTelling(true) : undefined,
+    extra: contextMenu,
+  });
   // The large visual drawn now: kept while the balloon moves on to other
   // words, until it is closed or another one is expanded.
   const visual = balloon?.visual;
@@ -578,6 +873,15 @@ export function AssistantStage({
             history={balloon.history}
             onExpand={expand ?? undefined}
             expandTitle={visual?.title}
+            suggestions={waitsForQuestion ? suggestions : undefined}
+            fullText={balloon.fullText}
+            waiting={
+              (state === 'thinking' ||
+                state === 'working' ||
+                state === 'waiting') &&
+              !balloon.speaking
+            }
+            onSuggestion={onSuggestion}
             decide={decide}
             onDecisionActive={setDeciding}
             wide={deciding}
@@ -596,8 +900,43 @@ export function AssistantStage({
           open ? `Close the conversation with ${name}` : `Talk to ${name}`
         }
         aria-expanded={open}
+        aria-haspopup="menu"
+        ref={characterRef}
+        data-assistant-character=""
+        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+          event.preventDefault();
+          clearTimeout(longPress.current);
+          setMenuAt({ x: event.clientX, y: event.clientY });
+        }}
+        onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => {
+          if (opensContextMenu(event)) {
+            event.preventDefault();
+            const box = event.currentTarget.getBoundingClientRect();
+            setMenuAt({ x: box.left + box.width / 2, y: box.bottom });
+          }
+        }}
+        onPointerUp={() => clearTimeout(longPress.current)}
+        onPointerCancel={() => clearTimeout(longPress.current)}
+        onPointerMove={(event: React.PointerEvent<HTMLElement>) => {
+          const from = pressedAt.current;
+          if (
+            from &&
+            Math.hypot(event.clientX - from.x, event.clientY - from.y) > 8
+          ) {
+            clearTimeout(longPress.current);
+          }
+        }}
         onPointerDown={(event: React.PointerEvent<HTMLElement>) => {
           pressedAt.current = { x: event.clientX, y: event.clientY };
+          if (event.pointerType === 'touch') {
+            const at = { x: event.clientX, y: event.clientY };
+            clearTimeout(longPress.current);
+            longPress.current = setTimeout(() => {
+              // Held, not tapped: the menu, and no click after it.
+              pressedAt.current = { x: -1e6, y: -1e6 };
+              setMenuAt(at);
+            }, LONG_PRESS_MS);
+          }
           onDragStart(event);
         }}
         onClick={(event: React.MouseEvent<HTMLElement>) => {
@@ -672,6 +1011,51 @@ export function AssistantStage({
             </ActionMenu.Overlay>
           </ActionMenu>
         </Box>
+      )}
+      <AssistantContextMenu
+        at={menuAt}
+        items={menuItems}
+        onClose={closeMenu}
+        returnFocusRef={characterRef}
+        label={`${name}\u2019s menu`}
+      />
+      {inspecting && (
+        <Suspense fallback={null}>
+          <AgentInspectorDialog
+            sink={inspector ?? null}
+            agent={inspectAgent}
+            title={`${about?.name ?? name} \u00b7 Agent Inspector`}
+            onClose={() => {
+              setInspecting(false);
+              characterRef.current?.focus();
+            }}
+          />
+        </Suspense>
+      )}
+      {telling && about && (
+        <Dialog
+          title={`About ${about.name ?? name}`}
+          onClose={() => {
+            setTelling(false);
+            characterRef.current?.focus();
+          }}
+          data-assistant-about=""
+        >
+          {[
+            ['Agent', about.name],
+            ['Spec', about.spec],
+            ['Model', about.model],
+            ['Runs', about.where],
+            ['Character', name],
+          ]
+            .filter(([, value]) => value)
+            .map(([key, value]) => (
+              <Text as="p" key={key} sx={{ m: 0, mb: 1 }}>
+                <Text sx={{ color: 'fg.muted' }}>{key}: </Text>
+                {value}
+              </Text>
+            ))}
+        </Dialog>
       )}
     </Box>
   );
