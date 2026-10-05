@@ -632,6 +632,66 @@ def _safety_in_cloud(
     return any(result.state == _safety.NOT_JUDGED for result in reading.results)
 
 
+@app.command(name="init")
+def apps_init(
+    app_id: Optional[str] = typer.Argument(
+        None, help="The application's id, and the folder written for it."
+    ),
+    example: str = typer.Option(
+        None, "--from", help="An example of the catalogue to start from."
+    ),
+    python: bool = typer.Option(
+        False, "--python", help="Written in Python: an app.py beside its spec."
+    ),
+    kind: str = typer.Option(
+        "chat", "--kind", help="A blank application's kind: chat or widget."
+    ),
+    where: Path = typer.Option(
+        Path("."), "--dir", file_okay=False, help="Where its folder is written."
+    ),
+    list_examples: bool = typer.Option(
+        False, "--examples", help="List the examples to start from, and write nothing."
+    ),
+) -> None:
+    """Write a new application's folder: its spec and, in Python, its app.py (LOOP P-01).
+
+    Blank, or from an example of the catalogue with --from. What is written
+    passes the checks `validate` makes of a spec; a folder that is there is
+    never overwritten.
+    """
+    from agent_runtimes.loop.apps.scaffold import (
+        PYTHON_FILE,
+        InitRefused,
+        examples,
+        init,
+    )
+
+    _require_agentspecs()
+    if list_examples:
+        for name in examples():
+            typer.echo(name)
+        return
+    if not app_id:
+        console.print("[red]✗[/red] Name the application: loop apps init <id>.")
+        raise typer.Exit(1)
+    try:
+        written = init(app_id, where, kind=kind, example=example, python=python)
+    except InitRefused as refused:
+        console.print(f"[red]✗[/red] {refused}", highlight=False)
+        raise typer.Exit(1)
+    origin = f" from the {written.example} example" if written.example else ""
+    console.print(
+        f"[green]✓[/green] {app_id} written to {written.folder}{origin}: "
+        + ", ".join(written.files)
+        + ".",
+        highlight=False,
+    )
+    source = PYTHON_FILE if PYTHON_FILE in written.files else "app.yaml"
+    console.print(
+        f"Next: cd {written.folder} && loop apps run {source}", highlight=False
+    )
+
+
 @app.command(name="build")
 def apps_build(
     path: Path = typer.Argument(

@@ -1,0 +1,266 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""A new application's folder: what ``loop apps init`` writes (LOOP P-01, E-13).
+
+A folder named by the application's id, holding its Appspec, ``app.yaml``,
+and — written in Python — the ``app.py`` that is its source, the spec beside
+it built from it (`loop apps build`, P-07), so the two agree from the start:
+
+- **blank**: a chat or a widget, its agent the one a blank application starts
+  with in the Studio (``example-simple``); a worker or a decision says more
+  than a name (what starts its work, what it decides), so it starts from an
+  example;
+- **from an example** of the catalogue (``--from support-desk``): its spec,
+  and its ``app.py`` when it was written in Python, under the new id. With
+  ``python``, an example written as a spec gets an ``app.py`` holding that spec,
+  ready for code.
+
+Every folder written is checked as `loop apps validate` checks a file: a
+scaffold that would not validate is refused, never written.
+"""
+
+from __future__ import annotations
+
+import re
+import shutil
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
+
+import yaml
+
+from agent_runtimes.loop.apps.application import Application
+from agent_runtimes.loop.apps.build import build
+from agent_runtimes.loop.apps.loading import AppNotRunnable
+
+#: The agentspec a blank application starts with, as in the Studio.
+BLANK_AGENT = "example-simple:0.0.1"
+
+#: The kinds a blank application can be: the others say more than a name.
+BLANK_KINDS = ("chat", "widget")
+
+SPEC_FILE = "app.yaml"
+PYTHON_FILE = "app.py"
+
+_TOP_ID = re.compile(r"^id: (?P<id>\S+)$", re.MULTILINE)
+
+
+class InitRefused(ValueError):
+    """Why a folder was not written, in a sentence."""
+
+
+@dataclass(frozen=True)
+class Scaffold:
+    """What `init` wrote."""
+
+    folder: Path
+    files: List[str]
+    example: Optional[str] = None
+
+
+def catalogue() -> Path:
+    """The folder of agentspecs' application examples."""
+    from agentspecs import apps as module
+
+    return Path(module.__file__).parent
+
+
+def examples() -> List[str]:
+    """The ids of the catalogue's examples, sorted."""
+    return sorted(
+        path.stem
+        for path in catalogue().glob("*.yaml")
+        if _TOP_ID.search(path.read_text())
+    )
+
+
+def spec_problems(path: Path) -> List[str]:
+    """What the schema and the catalogue refuse in an Appspec file, as `validate` says it."""
+    from agentspecs import apps as module
+
+    try:
+        return list(
+            module.app_problems(module.parse_app(yaml.safe_load(path.read_text())))
+        )
+    except module.AppError as error:
+        return [str(error)]
+
+
+def _blank_python(app_id: str, kind: str) -> str:
+    """The ``app.py`` of a blank application: its agent answers each message."""
+    return f'''"""{app_id}: an application written in Python.
+
+Written by `loop apps init`. This file is the application's source:
+
+    loop apps run app.py --watch            # here, rebuilt on every change
+    loop apps build app.py --out app.yaml   # its Appspec, after a change
+    loop apps validate app.py               # the instant checks
+"""
+
+from agent_runtimes.loop.apps import Application, Session
+
+app = Application(id="{app_id}", kind="{kind}", agent="{BLANK_AGENT}")
+app.starter("Say hello", "Hello! What can you do?")
+
+
+@app.message
+async def reply(session: Session, text: str) -> None:
+    async with session.step("Answering", kind="model", input=text) as step:
+        answer = await session.agent.run(text)
+        step.output = answer.text
+    await session.send(answer.text)
+'''
+
+
+def _python_of_spec(text: str, app_id: str, example: str) -> str:
+    """An ``app.py`` holding an example written as a spec, ready for code."""
+    if '"""' in text or "\\" in text:
+        raise InitRefused(
+            f"The `{example}` example cannot be held in an app.py as it is written."
+        )
+    return f'''"""{app_id}: an application written in Python.
+
+Written by `loop apps init` from the `{example}` example, written as a spec:
+its spec is held below, ready for code; with no reaction of its own, its agent
+answers. This file is the application's source:
+
+    loop apps run app.py --watch            # here, rebuilt on every change
+    loop apps build app.py --out app.yaml   # its Appspec, after a change
+    loop apps validate app.py               # the instant checks
+"""
+
+import yaml
+
+from agent_runtimes.loop.apps import Application
+
+SPEC = """\\
+{text}"""
+
+app = Application.from_spec(yaml.safe_load(SPEC))
+'''
+
+
+def _renamed(text: str, old: str, new: str, said: str) -> str:
+    """The text with the example's id, said once as ``said`` says it, renamed."""
+    renamed, count = re.subn(re.escape(said.format(old)), said.format(new), text)
+    if count != 1:
+        raise InitRefused(
+            f"The `{old}` example does not say its id once; it cannot be renamed."
+        )
+    return renamed
+
+
+def _write_python(folder: Path, source: str) -> List[str]:
+    """Write an ``app.py`` and the Appspec it builds beside it."""
+    (folder / PYTHON_FILE).write_text(source)
+    built = build(folder / PYTHON_FILE)
+    (folder / SPEC_FILE).write_text(built.text)
+    return [PYTHON_FILE, SPEC_FILE]
+
+
+def _blank(folder: Path, app_id: str, kind: str, python: bool) -> List[str]:
+    """Write a blank chat or widget; refuse a kind that says more than a name."""
+    if kind not in BLANK_KINDS:
+        raise InitRefused(
+            f"A {kind} says more than a name — "
+            + (
+                "what starts its work and its goal"
+                if kind == "worker"
+                else "what it decides"
+            )
+            + ": start from an example with --from."
+        )
+    if python:
+        return _write_python(folder, _blank_python(app_id, kind))
+    application = Application(id=app_id, kind=kind, agent=BLANK_AGENT)
+    application.starter("Say hello", "Hello! What can you do?")
+    body = yaml.safe_dump(
+        application.document,
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    )
+    (folder / SPEC_FILE).write_text(
+        "# Written by `loop apps init`: its Appspec, reviewed like code.\n" + body
+    )
+    return [SPEC_FILE]
+
+
+def _from_example(folder: Path, app_id: str, example: str, python: bool) -> List[str]:
+    """Write an example of the catalogue under the new id."""
+    if example not in examples():
+        raise InitRefused(
+            f"There is no example `{example}`; the examples are "
+            + ", ".join(examples())
+            + "."
+        )
+    spec = catalogue() / f"{example}.yaml"
+    code = catalogue() / example / PYTHON_FILE
+    if code.is_file():
+        return _write_python(
+            folder, _renamed(code.read_text(), example, app_id, '"id": "{}"')
+        )
+    text = _renamed(spec.read_text(), example, app_id, "\nid: {}\n")
+    if python:
+        return _write_python(folder, _python_of_spec(text, app_id, example))
+    (folder / SPEC_FILE).write_text(
+        f"# Written by `loop apps init` from the `{example}` example.\n" + text
+    )
+    return [SPEC_FILE]
+
+
+def init(
+    app_id: str,
+    where: Path,
+    *,
+    kind: str = "chat",
+    example: Optional[str] = None,
+    python: bool = False,
+) -> Scaffold:
+    """Write a new application's folder, ``where / app_id``.
+
+    Parameters
+    ----------
+    app_id : str
+        The application's id, and its folder's name.
+    where : Path
+        The folder it is written in.
+    kind : str
+        A blank application's kind: ``chat`` or ``widget``.
+    example : str or None
+        The example of the catalogue it starts from.
+    python : bool
+        Written in Python: an ``app.py`` beside its spec.
+
+    Returns
+    -------
+    Scaffold
+        The folder and the files written.
+
+    Raises
+    ------
+    InitRefused
+        When the folder is there, the kind needs an example, the example is
+        not known, or what would be written does not validate.
+    """
+    folder = where / app_id
+    if folder.exists():
+        raise InitRefused(f"{folder} is there already: init writes a new folder.")
+    with tempfile.TemporaryDirectory() as scratch:
+        staged = Path(scratch) / app_id
+        staged.mkdir()
+        try:
+            files = (
+                _from_example(staged, app_id, example, python)
+                if example
+                else _blank(staged, app_id, kind, python)
+            )
+        except AppNotRunnable as refused:
+            raise InitRefused(" ".join(refused.problems)) from None
+        problems = spec_problems(staged / SPEC_FILE)
+        if problems:
+            raise InitRefused(" ".join(problems))
+        shutil.copytree(staged, folder)
+    return Scaffold(folder, files, example)

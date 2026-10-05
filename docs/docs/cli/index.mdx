@@ -241,6 +241,26 @@ grep -qi "ready" answers.txt
 
 Datalayer needs your credentials in the job: set `DATALAYER_API_KEY`. On this machine the same lines run against a local server, for example `loop --local -a example-simple -q "/models"`.
 
+### A new application
+
+`loop apps init <id>` writes a new application's folder, named by its id: its Appspec, `app.yaml`, and, with `--python`, the `app.py` that is its source, the spec beside it built from it (`loop apps build`), so the two agree from the start.
+
+```bash
+loop apps init my-app                              # a chat: app.yaml
+loop apps init my-app --python                     # app.py, and the app.yaml it builds
+loop apps init my-app --kind widget                # a widget
+loop apps init desk --from support-desk            # an example of the catalogue, under the new id
+loop apps init desk --from support-desk --python   # its spec held in an app.py, ready for code
+loop apps init --examples                          # the examples to start from
+```
+
+A blank application is a chat or a widget, its agent the one a blank application starts with in the Studio (`example-simple`). A worker says what starts its work and its goal, and a decision what it decides, so they start from an example. From an example, the folder holds its spec, and its `app.py` when it was written in Python (`customer-interview`, `report-from-a-file`), with the new id. What is written passes the checks `loop apps validate` makes of a spec, or nothing is written. A folder that is there is never overwritten. `--dir` says where the folder goes.
+
+```text
+✓ desk written to ./desk from the support-desk example: app.yaml.
+Next: cd desk && loop apps run app.yaml
+```
+
 ### An application's safety set
 
 `loop apps validate <file>` runs the instant checks of an application: no model is called, so it is quick and free in CI. Add `--safety` and it also takes the **safety set** every application runs, the same tests the Studio asks with every *Run its tests*:

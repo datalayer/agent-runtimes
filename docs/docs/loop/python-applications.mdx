@@ -35,9 +35,6 @@ What does **not** exist yet:
   [Session API](./session-api) — its channel the session, what it shows
   streamed as AG-UI events, what it asks answered from the page — and an
   `app.py` saved elsewhere runs as the spec it builds, answered by its agent.
-- **`loop apps init`**, which scaffolds an `app.py` from an example.
-  `loop apps build` and `loop apps run app.py` exist: see
-  [From the command line](#from-the-command-line).
 - **An agent with tools in process.** An application whose agent needs
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
@@ -465,6 +462,16 @@ order; `messages` the whole messages; `questions` everything asked; and
 `reply(answer)` answers the question being asked, or the next one.
 
 ## From the command line
+
+`loop apps init` starts one: a folder named by its id, with an `app.py` and
+the spec it builds, blank or from an example of the catalogue:
+
+```bash
+loop apps init my-app --python
+loop apps init interview --from customer-interview
+```
+
+See [A new application](/cli#a-new-application) for every option.
 
 `loop apps build` writes the Appspec an `app.py` amounts to — its
 `Application.spec`, as YAML — printed, or to a file with `--out`
