@@ -118,7 +118,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
       protocol: 'ag-ui',
       agentSpecId: AGENTSPEC_ID,
       enableSkills: true,
-      tools: [],
+      backendTools: [],
     },
   });
 

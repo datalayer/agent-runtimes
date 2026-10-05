@@ -197,7 +197,7 @@ def test_the_tool_is_a_reader_and_the_simple_agent_has_it() -> None:
     assert spec.runtime.package == "agent_runtimes.tools.decisions"
     assert BACKEND_TOOL_ACTIONS["decide"] == ["read"]
     simple = get_agent_spec("example-simple")
-    assert simple is not None and "decide:0.0.1" in simple.tools
+    assert simple is not None and "decide:0.0.1" in simple.backend_tools
     assert any("urgent" in s.text for s in simple.suggestions)
 
 

@@ -202,7 +202,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       protocol: 'ag-ui',
       agentSpecId: AGENTSPEC_ID,
       enableSkills: true,
-      tools: [],
+      backendTools: [],
     },
   });
   const chatAuthToken: string | undefined = token === null ? undefined : token;

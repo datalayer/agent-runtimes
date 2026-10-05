@@ -223,7 +223,7 @@ function referenceProblems(
   for (const ref of app.skills) {
     if (!getSkillSpec(idOf(ref))) missing('skill', ref);
   }
-  for (const ref of app.tools) {
+  for (const ref of app.backendTools) {
     if (!getBackendToolSpec(idOf(ref))) missing('tool', ref);
   }
   for (const ref of app.checks.guards) {
@@ -415,7 +415,8 @@ function setupNotes(app: AppSpec): string[] {
     );
   }
   for (const ref of app.skills) note('skill', ref, getSkillSpec(idOf(ref)));
-  for (const ref of app.tools) note('tool', ref, getBackendToolSpec(idOf(ref)));
+  for (const ref of app.backendTools)
+    note('tool', ref, getBackendToolSpec(idOf(ref)));
   for (const ref of app.checks.guards)
     note('Guard', ref, own(GUARD_CATALOGUE, idOf(ref)));
   for (const ref of app.checks.gates) note('Gate', ref, getGate(ref));

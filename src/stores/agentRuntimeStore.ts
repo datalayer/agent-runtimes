@@ -402,8 +402,8 @@ async function createAgentOnRuntime(
   if (typeof config.enableSkills === 'boolean') {
     payload.enable_skills = config.enableSkills;
   }
-  if (Array.isArray(config.tools)) {
-    payload.tools = config.tools;
+  if (Array.isArray(config.backendTools)) {
+    payload.backend_tools = config.backendTools;
   }
   if (config.inferenceProvider) {
     payload.inferenceProvider = config.inferenceProvider;

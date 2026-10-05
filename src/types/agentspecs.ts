@@ -186,7 +186,8 @@ export interface FrameSpec {
   architecture: string;
   prompts: FramePromptSpec[];
   skills: string[];
-  tools: string[];
+  /** Backend tools (agentspecs/backend-tools), `id:version`. */
+  backendTools: string[];
   mcpServers: string[];
   guards: FrameGuardSpec[];
 }
@@ -607,7 +608,8 @@ export interface AppSpec {
   instructions: string;
   model: string;
   skills: string[];
-  tools: string[];
+  /** Backend tools (agentspecs/backend-tools) it adds to its agent's. */
+  backendTools: string[];
   /** The Frames it works under. */
   context: string[];
   /** The documents and datasets it answers from. */
@@ -674,8 +676,8 @@ export interface Agentspec {
   mcpServers: MCPServer[];
   /** Skills available to this agent */
   skills: SkillSpec[];
-  /** Runtime tools available to this agent */
-  tools?: BackendToolSpec[];
+  /** Backend tools available to this agent: they run on the runtime */
+  backendTools?: BackendToolSpec[];
   /** Disable tool approvals for this spec (default: false). */
   disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */

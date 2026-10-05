@@ -30,9 +30,18 @@ This command:
 - Clones the agentspecs repository into ./agentspecs, or fetches it and
   fast-forwards it, on `AGENTSPECS_BRANCH` (`feat/apps-next` unless said)
 - Generates Python and TypeScript catalogs for agents, MCP servers, skills,
-  tools, frontend tools and env vars
+  backend tools, frontend tools and env vars
 
-The MCP server, skill, tool and frontend tool generators check the marks of
+**Backend tools and frontend tools.** `agentspecs/backend-tools` holds the tools
+that run on the runtime, in Python (`agent_runtimes/specs/backend_tools.py`,
+`src/specs/backendTools.ts`: `BackendToolSpec`, `BACKEND_TOOL_CATALOG`);
+`agentspecs/frontend-tools` the sets of tools the page runs. An agent, an
+application and a Frame name the first under `backend_tools` (`backendTools`),
+the second under `frontend_tools`, and so does a request creating an agent
+(`backend_tools` / `backendTools` on `POST /api/v1/agents`). The old `tools`
+field is refused wherever a spec or a request is read, never read as the new one.
+
+The MCP server, skill, backend tool and frontend tool generators check the marks of
 each entry first, by `agentspecs.marks` imported from the clone: an icon that
 does not say its package (`<package>:<name>`, the package
 `@datalayer/icons-react` or `@primer/octicons-react`) or a missing emoji stops

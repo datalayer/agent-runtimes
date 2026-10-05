@@ -96,7 +96,7 @@ A tool call in the chat (`ToolCallDisplay`, and `ToolPart` for message parts)
 leads with the mark of whoever the tool belongs to: its **MCP server** (found
 by the tools the server says it serves), its **skill** (`run_skill_script`,
 `load_skill` and `read_skill_resource` name it in their arguments), its
-**frontend tool set** (by the names in the set's `toolset`) or its **runtime
+**frontend tool set** (by the names in the set's `toolset`) or its **backend
 tool** spec (by `runtime.method`, the name the runtime registers it under).
 The mark is the entry's icon, else its emoji, else nothing (`marksOfToolCall`,
 `SpecMark`, in `chat/marks`).
@@ -110,7 +110,7 @@ meanwhile. A malformed reference, or a name the package does not have, throws:
 a test holds every catalogue entry to one its package has.
 
 The composer's menus draw the same marks: the **Tools** menu names the
-runtime's tools and, under their own heading, the **Frontend tools** — the ones
+runtime's backend tools and, under their own heading, the **Frontend tools** — the ones
 the page runs — each with its mark, and each MCP server's row with the
 server's; the **Skills** menu each skill with its own.
 

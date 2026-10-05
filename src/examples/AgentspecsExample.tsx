@@ -914,7 +914,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
     setGoal(spec.goal || '');
     setSystemPrompt(spec.systemPrompt || spec.goal || DEFAULT_SYSTEM_PROMPT);
     setSystemPromptCodemodeAddons(spec.systemPromptCodemodeAddons || '');
-    setTools(spec.tools || []);
+    setTools(spec.backendTools || []);
     setSandboxVariant(spec.sandboxVariant || '');
     if (spec.model) {
       setModel(spec.model);
@@ -983,7 +983,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
       protocol: normalizedProtocol,
       systemPrompt: systemPrompt || undefined,
       systemPromptCodemodeAddons: systemPromptCodemodeAddons || undefined,
-      tools,
+      backendTools: tools,
       sandboxVariant: sandboxVariant || undefined,
       skills: selectedSkills,
       mcpServers: selectedMcpServers.map(server => ({
@@ -1133,7 +1133,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
         model: model,
         system_prompt: systemPrompt || DEFAULT_SYSTEM_PROMPT,
         system_prompt_codemode_addons: systemPromptCodemodeAddons || undefined,
-        tools: tools,
+        backend_tools: tools,
         sandbox_variant: sandboxVariant || undefined,
         enable_skills: enableSkills,
         enable_codemode: enableCodemode,

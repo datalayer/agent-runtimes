@@ -171,7 +171,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     instructions: '',
     model: '',
     skills: [],
-    tools: [],
+    backendTools: [],
     context: [],
     contents: [],
     connections: [],
@@ -231,7 +231,7 @@ const KNOWN_KEYS = [
   'instructions',
   'model',
   'skills',
-  'tools',
+  'backend_tools',
   'context',
   'contents',
   'connections',
@@ -476,7 +476,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     instructions: text(data.instructions),
     model: text(data.model),
     skills: texts(data.skills),
-    tools: texts(data.tools),
+    backendTools: texts(data.backend_tools),
     context: texts(data.context),
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
@@ -717,7 +717,7 @@ export function dumpAppspec(app: AppSpec): Data {
     .text('instructions', app.instructions)
     .text('model', app.model)
     .list('skills', app.skills)
-    .list('tools', app.tools)
+    .list('backend_tools', app.backendTools)
     .list('context', app.context)
     .list('contents', app.contents)
     .list(

@@ -50,8 +50,8 @@ export interface AgentConfig {
   protocol?: Protocol;
   /** Optional agent spec ID for server-side spec-based creation. */
   agentSpecId?: string;
-  /** Optional custom tools payload. */
-  tools?: unknown[];
+  /** Backend tool ids (agentspecs/backend-tools) to enable: they run on the runtime. */
+  backendTools?: unknown[];
   /** Enable skills for this agent. */
   enableSkills?: boolean;
   /** Optional inference provider override (e.g. local, datalayer). */

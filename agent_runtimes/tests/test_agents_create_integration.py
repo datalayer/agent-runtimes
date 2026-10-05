@@ -130,7 +130,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         goal="Spec goal",
         system_prompt_codemode_addons="Use codemode tools.",
         skills=["python-analyzer"],
-        tools=["fetch_webpage", "run_in_terminal"],
+        backend_tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
         sandbox_variant="jupyter-server",
@@ -210,7 +210,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
             "description": "Forwarded description",
             "model": forwarded_model,
             "systemPrompt": "Forwarded prompt",
-            "tools": ["fetch_webpage"],
+            "backendTools": ["fetch_webpage"],
             "protocol": "vercel-ai",
             "mcpServers": [{"id": "github", "origin": "catalog"}],
         },
@@ -264,7 +264,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             system_prompt="Strict prompt",
             system_prompt_codemode_addons=None,
             skills=[],
-            tools=["fetch_webpage"],
+            backend_tools=["fetch_webpage"],
             sandbox_variant="eval",
             protocol="vercel-ai",
             codemode=None,
@@ -282,7 +282,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
         agent_spec_id="demo/spec",
         model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt="Strict prompt",
-        tools=["fetch_webpage"],
+        backend_tools=["fetch_webpage"],
         transport="vercel-ai",
     )
 
@@ -358,7 +358,7 @@ async def test_create_agent_disable_tool_approvals_request_override(
 
     request = CreateAgentRequest(
         name="No Approval Agent",
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         disableToolApprovals=True,
     )
 
@@ -380,7 +380,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         goal=None,
         system_prompt_codemode_addons=None,
         skills=[],
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         description="Spec description",
         model=None,
         sandbox_variant=None,
@@ -425,7 +425,7 @@ async def test_create_agent_disable_tool_approvals_runtime_default(
         env_ctx.setenv("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "true")
         request = CreateAgentRequest(
             name="Env No Approval Agent",
-            tools=["runtime-sensitive-echo"],
+            backend_tools=["runtime-sensitive-echo"],
         )
         response = await create_agent(request, _DummyRequest())
 

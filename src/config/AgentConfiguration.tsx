@@ -54,7 +54,8 @@ export interface LibraryAgentspec {
   icon?: string | null;
   color?: string | null;
   skills: string[];
-  tools?: string[];
+  /** Backend tools (agentspecs/backend-tools), as the runtime serves them. */
+  backendTools?: string[];
   systemPrompt?: string | null;
   systemPromptCodemodeAddons?: string | null;
   suggestions: string[];
@@ -964,11 +965,11 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
   }, [selectedMcpServers, catalogServerIdSet]);
 
   const resolvedSpecTools = useMemo(() => {
-    if (!activeSpec || !Array.isArray(activeSpec.tools)) {
+    if (!activeSpec || !Array.isArray(activeSpec.backendTools)) {
       return [] as string[];
     }
 
-    return activeSpec.tools
+    return activeSpec.backendTools
       .map(tool => normalizeToolLabel(tool))
       .filter((tool): tool is string => !!tool);
   }, [activeSpec]);
