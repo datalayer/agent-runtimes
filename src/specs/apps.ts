@@ -294,6 +294,124 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   setup: ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
 };
 
+export const DECIDE_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'decide',
+  version: '0.0.1',
+  name: 'Decide',
+  kind: 'chat',
+  description:
+    'Answers a question about a text — a ticket, a message, a review — by asking Jev a typed decision: yes or no, one of named options, or a score, each with its confidence.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'example-simple:0.0.1',
+  team: '',
+  instructions:
+    'Answer every question about a text by asking a typed decision with the decide tool: the text as it was given is the state, and the question is one of noul (does a statement hold: yes or no), choice (which of the options named) or score (which step of a scale, lowest first). Then say the answer in plain words with its probability or its confidence, for example "Urgent: yes (0.87)". When the question names no options for a choice or no scale for a score, ask for them rather than inventing them. When nothing was decided, say why in a sentence.',
+  model: '',
+  skills: [],
+  tools: ['decide:0.0.1'],
+  context: [],
+  contents: [],
+  connections: [],
+  rules: [
+    {
+      action: 'Ask a decision',
+      appliesTo: ['decide'],
+      behaviour: 'do_it',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'Give me a text and a question about it. I ask Jev a typed decision — yes or no, a choice, or a score — and tell you the answer with its confidence.',
+    starters: [
+      {
+        label: 'Is it urgent?',
+        message:
+          "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+      },
+      {
+        label: 'Which team?',
+        message:
+          "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+      },
+      {
+        label: 'Score a review',
+        message:
+          "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
+      },
+    ],
+    settings: [],
+    components: [],
+    assistant: 'wizard',
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+        expect:
+          'It calls decide with a noul question and answers yes, with its probability.',
+      },
+      {
+        ask: "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+        expect:
+          'It calls decide with a choice among the three and answers Billing, with its confidence.',
+      },
+      {
+        ask: 'Score this review.',
+        expect:
+          'It asks for the review and the scale rather than inventing them.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Its tests have not been run as a set: no validation run is attached to it.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '30_days',
+    include: ['conversations', 'decisions'],
+    suggestTests: false,
+    retentionDays: 30,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  enabled: true,
+  tags: ['example', 'decisions', 'jev'],
+  icon: 'law',
+  emoji: '⚖️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'inbox-triage',
@@ -2149,6 +2267,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
 export const APP_CATALOGUE: Record<string, AppSpec> = {
   'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_1,
   'data-quality': DATA_QUALITY_APP_0_0_1,
+  decide: DECIDE_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
   'model-choice': MODEL_CHOICE_APP_0_0_1,
   'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
@@ -2357,6 +2476,83 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'decision', 'data-quality'],
     icon: 'filter',
     emoji: '🧹',
+  },
+  decide: {
+    schema: 'loop.app/v1',
+    id: 'decide',
+    name: 'Decide',
+    kind: 'chat',
+    description:
+      'Answers a question about a text — a ticket, a message, a review — by asking Jev a typed decision: yes or no, one of named options, or a score, each with its confidence.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'example-simple:0.0.1',
+    instructions:
+      'Answer every question about a text by asking a typed decision with the decide tool: the text as it was given is the state, and the question is one of noul (does a statement hold: yes or no), choice (which of the options named) or score (which step of a scale, lowest first). Then say the answer in plain words with its probability or its confidence, for example "Urgent: yes (0.87)". When the question names no options for a choice or no scale for a score, ask for them rather than inventing them. When nothing was decided, say why in a sentence.',
+    tools: ['decide:0.0.1'],
+    rules: [
+      {
+        action: 'Ask a decision',
+        applies_to: ['decide'],
+        behaviour: 'do_it',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'Give me a text and a question about it. I ask Jev a typed decision — yes or no, a choice, or a score — and tell you the answer with its confidence.',
+      starters: [
+        {
+          label: 'Is it urgent?',
+          message:
+            "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+        },
+        {
+          label: 'Which team?',
+          message:
+            "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+        },
+        {
+          label: 'Score a review',
+          message:
+            "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
+        },
+      ],
+      assistant: 'wizard',
+    },
+    tests: {
+      cases: [
+        {
+          ask: "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+          expect:
+            'It calls decide with a noul question and answers yes, with its probability.',
+        },
+        {
+          ask: "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+          expect:
+            'It calls decide with a choice among the three and answers Billing, with its confidence.',
+        },
+        {
+          ask: 'Score this review.',
+          expect:
+            'It asks for the review and the scale rather than inventing them.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'Its tests have not been run as a set: no validation run is attached to it.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '30_days',
+      include: ['conversations', 'decisions'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    tags: ['example', 'decisions', 'jev'],
+    icon: 'law',
+    emoji: '⚖️',
   },
   'inbox-triage': {
     schema: 'loop.app/v1',
@@ -3783,6 +3979,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
 export const APP_BUILT: Record<string, AppBuilt> = {
   'customer-interview': 'python',
   'data-quality': 'written',
+  decide: 'written',
   'inbox-triage': 'written',
   'model-choice': 'written',
   'pipeline-report': 'written',

@@ -111,6 +111,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     assert set(reports) == {
         "customer-interview",
         "data-quality",
+        "decide",
         "inbox-triage",
         "model-choice",
         "pipeline-report",
@@ -123,6 +124,7 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []
+    assert reports["decide"].setup == []
     assert any("not enabled" in line for line in reports["inbox-triage"].setup)
 
 

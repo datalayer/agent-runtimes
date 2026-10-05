@@ -582,6 +582,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
 APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "customer-interview": {},
     "data-quality": {},
+    "decide": {},
     "inbox-triage": {
         "google-workspace.append_table_rows": "leave_to_me",
         "google-workspace.batch_modify_gmail_message_labels": "do_it",
@@ -725,6 +726,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
 APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "customer-interview": {},
     "data-quality": {},
+    "decide": {},
     "inbox-triage": {
         "google-workspace.batch_modify_gmail_message_labels": [
             {

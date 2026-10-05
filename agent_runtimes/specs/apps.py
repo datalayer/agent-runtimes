@@ -277,6 +277,105 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+DECIDE_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "decide",
+        "version": "0.0.1",
+        "name": "Decide",
+        "kind": "chat",
+        "description": "Answers a question about a text — a ticket, a message, a review — by asking Jev a typed decision: yes or no, one of named options, or a score, each with its confidence.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "example-simple:0.0.1",
+        "team": "",
+        "instructions": 'Answer every question about a text by asking a typed decision with the decide tool: the text as it was given is the state, and the question is one of noul (does a statement hold: yes or no), choice (which of the options named) or score (which step of a scale, lowest first). Then say the answer in plain words with its probability or its confidence, for example "Urgent: yes (0.87)". When the question names no options for a choice or no scale for a score, ask for them rather than inventing them. When nothing was decided, say why in a sentence.',
+        "model": "",
+        "skills": [],
+        "tools": ["decide:0.0.1"],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "rules": [
+            {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "welcome": "Give me a text and a question about it. I ask Jev a typed decision — yes or no, a choice, or a score — and tell you the answer with its confidence.",
+            "starters": [
+                {
+                    "label": "Is it urgent?",
+                    "message": "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+                },
+                {
+                    "label": "Which team?",
+                    "message": "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+                },
+                {
+                    "label": "Score a review",
+                    "message": "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
+                },
+            ],
+            "settings": [],
+            "components": [],
+            "surface": None,
+            "assistant": "wizard",
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Is this ticket urgent? 'Help! My payouts have been failing for 3 days.'",
+                    "expect": "It calls decide with a noul question and answers yes, with its probability.",
+                },
+                {
+                    "ask": "Which team should handle this: 'I was charged twice this month'? Billing, Tech or Sales.",
+                    "expect": "It calls decide with a choice among the three and answers Billing, with its confidence.",
+                },
+                {
+                    "ask": "Score this review.",
+                    "expect": "It asks for the review and the scale rather than inventing them.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its tests have not been run as a set: no validation run is attached to it."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations", "decisions"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": ""},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "tags": ["example", "decisions", "jev"],
+        "icon": "law",
+        "emoji": "⚖️",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -1893,6 +1992,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
 APP_CATALOGUE: Dict[str, AppSpec] = {
     "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_1,
     "data-quality": DATA_QUALITY_APP_0_0_1,
+    "decide": DECIDE_APP_0_0_1,
     "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
     "model-choice": MODEL_CHOICE_APP_0_0_1,
     "pipeline-report": PIPELINE_REPORT_APP_0_0_1,
@@ -1909,6 +2009,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
 APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "customer-interview": "python",
     "data-quality": "written",
+    "decide": "written",
     "inbox-triage": "written",
     "model-choice": "written",
     "pipeline-report": "written",

@@ -665,6 +665,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
 export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'customer-interview': {},
   'data-quality': {},
+  decide: {},
   'inbox-triage': {
     'google-workspace.append_table_rows': 'leave_to_me',
     'google-workspace.batch_modify_gmail_message_labels': 'do_it',
@@ -813,6 +814,7 @@ export const APP_ESCALATIONS: Record<
 > = {
   'customer-interview': {},
   'data-quality': {},
+  decide: {},
   'inbox-triage': {
     'google-workspace.batch_modify_gmail_message_labels': [
       {
