@@ -939,6 +939,23 @@ export function ChatFloating({
     return () => clearTimeout(timer);
   }, [hostsConversation, isOpen, animationDuration, focusTrigger]);
 
+  /*
+   * The assistant's balloon opens on the newest message: the history may
+   * have grown — or arrived — while it was closed.
+   */
+  useEffect(() => {
+    if (!assistantShown || !isOpen) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      const history = popupRef.current?.querySelector<HTMLElement>(
+        '[data-chat-history]',
+      );
+      history?.scrollTo?.({ top: history.scrollHeight });
+    }, animationDuration);
+    return () => clearTimeout(timer);
+  }, [assistantShown, isOpen, animationDuration]);
+
   // Click outside to close
   useEffect(() => {
     if (!clickOutsideToClose || !isOpen) return;

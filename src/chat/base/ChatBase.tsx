@@ -5059,6 +5059,7 @@ function ChatBaseInner({
         <>
           <Box
             ref={messagesContainerRef}
+            data-chat-history=""
             sx={{
               flex: 1,
               flexGrow: 1,
