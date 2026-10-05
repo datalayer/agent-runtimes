@@ -23,6 +23,8 @@ import { parseIconRef, type IconPackage, type IconRef } from './iconRef';
 export type MarkIcon = React.ComponentType<{
   size?: number;
   'aria-hidden'?: boolean | 'true' | 'false';
+  /** The Datalayer icons' own colours: a brand drawn as itself. */
+  colored?: boolean;
 }>;
 
 type IconModule = Record<string, unknown>;
@@ -111,7 +113,13 @@ export function SpecMark({ icon, emoji, size = 16 }: SpecMarkProps) {
         data-mark={icon}
         style={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}
       >
-        <Icon size={size} aria-hidden="true" />
+        <Icon
+          size={size}
+          aria-hidden="true"
+          {...(icon.startsWith('@datalayer/icons-react:')
+            ? { colored: true }
+            : {})}
+        />
       </span>
     ) : (
       <span

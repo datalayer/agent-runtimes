@@ -51,12 +51,13 @@ import {
 import { OwlCharacterPlugin } from '../../examples/utils/owlCharacterPlugin';
 import type { DisplayItem } from '../../types/chat';
 
-/** The four screens, by the name a picture and a story take. */
+/** The screens, by the name a picture and a story take. */
 export const REFERENCE_SCREENS = [
   'conversation',
   'beside-work',
   'worker-activity',
   'approval',
+  'tool-marks',
 ] as const;
 export type ReferenceScreen = (typeof REFERENCE_SCREENS)[number];
 
@@ -249,6 +250,46 @@ const APPROVAL: DisplayItem[] = [
   ),
 ];
 
+/*
+ * Whose tools: an MCP server's (the Odoo accounting server's, its icon the
+ * Datalayer icons' Odoo), a skill's and a frontend tool set's, each call led
+ * by its mark.
+ */
+const TOOL_MARKS: DisplayItem[] = [
+  said(
+    't1',
+    'user',
+    'What is still open on the books, and does my notebook agree?',
+  ),
+  tool(
+    't2',
+    'odoo_accounting_list_open_balances',
+    { account: '400000' },
+    'complete',
+    { partners: 7 },
+  ),
+  tool(
+    't3',
+    'run_skill_script',
+    { skill_name: 'accounting', script: 'variance' },
+    'complete',
+    { variance: 0 },
+  ),
+  tool('t4', 'readCell', { index: 3 }, 'complete', { source: 'balances' }),
+  said(
+    't5',
+    'assistant',
+    'Seven customers owe you, and your notebook says the same total.',
+  ),
+];
+
+const TOOL_MARKS_SERVERS = [
+  {
+    id: 'odoo-accounting',
+    tools: [{ name: 'odoo_accounting_list_open_balances' }],
+  },
+];
+
 // ---------------------------------------------------------------------------
 // The conversation
 // ---------------------------------------------------------------------------
@@ -269,12 +310,14 @@ function Conversation({
   presence,
   items,
   composer = true,
+  mcpServers,
 }: {
   name: string;
   face: string;
   presence: PresenceState;
   items: DisplayItem[];
   composer?: boolean;
+  mcpServers?: { id: string; tools: { name: string }[] }[];
 }): JSX.Element {
   const endRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState('');
@@ -309,6 +352,7 @@ function Conversation({
           emptyContent={null}
           messagesEndRef={endRef as never}
           onRespond={async () => undefined}
+          mcpServers={mcpServers}
         />
       </Box>
       {composer && (
@@ -454,6 +498,26 @@ export function ApprovalScreen(): JSX.Element {
   );
 }
 
+/** Tool calls, each led by the mark of whoever the tool belongs to. */
+export function ToolMarksScreen(): JSX.Element {
+  return (
+    <Frame>
+      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ width: '100%', maxWidth: 680, display: 'flex' }}>
+          <Conversation
+            name="Bookkeeper"
+            face="🧮"
+            presence="idle"
+            items={TOOL_MARKS}
+            composer={false}
+            mcpServers={TOOL_MARKS_SERVERS}
+          />
+        </Box>
+      </Box>
+    </Frame>
+  );
+}
+
 export const REFERENCE_SCREEN_COMPONENTS: Record<
   ReferenceScreen,
   () => JSX.Element
@@ -462,6 +526,7 @@ export const REFERENCE_SCREEN_COMPONENTS: Record<
   'beside-work': BesideWorkScreen,
   'worker-activity': WorkerActivityScreen,
   approval: ApprovalScreen,
+  'tool-marks': ToolMarksScreen,
 };
 
 // ---------------------------------------------------------------------------

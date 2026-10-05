@@ -20,6 +20,7 @@ import {
   ConversationScreen,
   REFERENCE_THEMES,
   ReferenceTheme,
+  ToolMarksScreen,
   WorkerActivityScreen,
   type AssistantPicture,
   type ReferenceMode,
@@ -69,6 +70,9 @@ export const WorkerActivity: Story = story(WorkerActivityScreen);
 
 /** An approval. */
 export const Approval: Story = story(ApprovalScreen);
+
+/** Tool calls, each led by the mark of whoever the tool belongs to. */
+export const ToolMarks: Story = story(ToolMarksScreen);
 
 /** The floating assistant, in each of its states or stepped aside. */
 export const Assistant: Story = {
