@@ -14,7 +14,9 @@
  * while the conversation is out of sight, holds there the approval it waits
  * on, answered with *Approve* or *Deny* on the path every approval of it is
  * answered on (T-23, U-19), opens the conversation when clicked, and is
- * dragged about and sent away as the chat's own assistant is (T-27).
+ * dragged about and sent away as the chat's own assistant is (T-27). Given
+ * the runtime to ask (`decisions`), its balloon offers *Ask a decision*: a
+ * typed decision asked of Jev through the runtime, answered there.
  *
  * The workspace's chat is the conversation: on a page layout, its side panel
  * is opened and closed; where the conversation is always on screen, a click
@@ -35,6 +37,7 @@ import {
   togglePagePanel,
 } from '@datalayer/primer-addons/lib/reactor';
 import { AssistantStage } from '../../../chat/assistant/AssistantStage';
+import { decisionsAskerAt } from '../../../chat/assistant/decisions';
 import {
   ASSISTANT_WORDS,
   assistantStateOf,
@@ -75,6 +78,13 @@ export type LoopAssistantConfig = {
    * the balloon says an approval waits and the conversation answers it.
    */
   appId?: string;
+  /**
+   * The runtime decisions are asked at — its
+   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — and
+   * the token to ask with, if it needs one: the balloon offers *Ask a
+   * decision*. Without it, it does not.
+   */
+  decisions?: { serverUrl: string; token?: string };
 };
 
 /** The character's size, in pixels, as the chat's own assistant. */
@@ -157,6 +167,7 @@ export function LoopAssistant({
   app,
   person,
   appId,
+  decisions,
 }: LoopAssistantConfig): JSX.Element | null {
   const contributed = useContributions(LoopAssistantCharacter).map(
     entry => entry.value,
@@ -209,6 +220,13 @@ export function LoopAssistant({
 
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useViewportDrag(stageRef, { whole: true });
+  const decide = useMemo(
+    () =>
+      decisions?.serverUrl
+        ? decisionsAskerAt(decisions.serverUrl, decisions.token)
+        : undefined,
+    [decisions?.serverUrl, decisions?.token],
+  );
 
   if (away !== 'none') {
     return null;
@@ -291,6 +309,7 @@ export function LoopAssistant({
         balloon={balloon}
         insist={insist}
         onDismiss={onDismiss}
+        decide={decide}
       />
     </>
   );
@@ -298,7 +317,12 @@ export function LoopAssistant({
 
 export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
   name: LOOP_ASSISTANT_PLUGIN_NAME,
-  config: { app: undefined, person: undefined, appId: undefined },
+  config: {
+    app: undefined,
+    person: undefined,
+    appId: undefined,
+    decisions: undefined,
+  },
   displayName: 'Floating assistant',
   description:
     'The chat as a character on the page: the application’s own, or the one the person chose, from the characters the enabled plugins contribute.',
@@ -309,6 +333,7 @@ export const LoopAssistantPlugin = definePlugin<LoopAssistantConfig>({
         app={config.app}
         person={config.person}
         appId={config.appId}
+        decisions={config.decisions}
       />
     );
     return {

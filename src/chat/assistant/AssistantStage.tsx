@@ -29,6 +29,7 @@ import { assistantCharacter, type AssistantCharacter } from './characters';
 import { SpeechBalloon } from './SpeechBalloon';
 import { SpriteCharacter } from './SpriteCharacter';
 import type { AssistantCharacterData } from './formats/types';
+import type { DecisionAsker } from './decisions';
 import {
   ASSISTANT_OBSTACLES,
   POINTER_CALM_MS,
@@ -274,6 +275,11 @@ export interface AssistantStageProps {
    * steps aside for, nor is the pointer working there (T-27).
    */
   ownRef?: RefObject<HTMLElement | null>;
+  /**
+   * Asks a typed decision of the runtime: the balloon offers *Ask a
+   * decision*, and stays while its form or its answer is on screen.
+   */
+  decide?: DecisionAsker;
 }
 
 export function AssistantStage({
@@ -289,6 +295,7 @@ export function AssistantStage({
   insist = false,
   onDismiss,
   ownRef,
+  decide,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -309,7 +316,10 @@ export function AssistantStage({
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
   const aside = useKeepClear(stageRef, ownRef, menuOpen);
-  const showBalloon = !aside && !open && !!balloon && (hovered || insist);
+  // A decision being asked, or its answer, keeps the balloon up.
+  const [deciding, setDeciding] = useState(false);
+  const showBalloon =
+    !aside && !open && !!balloon && (hovered || insist || deciding);
   return (
     <Box
       ref={stageRef}
@@ -402,6 +412,9 @@ export function AssistantStage({
           text={balloon.text}
           more={balloon.more}
           approval={balloon.approval}
+          decide={decide}
+          onDecisionActive={setDeciding}
+          wide={deciding}
           onOpen={onToggle}
           above={size + 8}
           side={balloonSide(place).side}

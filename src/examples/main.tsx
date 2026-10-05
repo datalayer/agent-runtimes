@@ -130,6 +130,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   // An application beside its computer, on the local agent-runtimes server:
   // nothing allocated on Datalayer, and the machine itself needs no token.
   'LoopAppComputerExample',
+  // Decide, on the local agent-runtimes server as above: Jev is asked
+  // through the server's ai-inference, with the server's own key.
+  'AgentDecideExample',
   // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
   'LoopShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and

@@ -228,6 +228,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'sandbox', 'codemode'],
   ),
   makeEntry(
+    'AgentDecideExample',
+    () => import('./AgentDecideExample'),
+    'Decide: typed decisions asked of Jev — yes or no, a choice, a score — from the chat, where the agent calls decide, and from the floating assistant’s Ask a decision.',
+    ['example', 'agent', 'loop', 'app', 'decisions', 'jev', 'assistant'],
+  ),
+  makeEntry(
     'AgentEvalsExample',
     () => import('./AgentEvalsExample'),
     'Evaluation workflows for agent outputs.',

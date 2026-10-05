@@ -8,7 +8,9 @@
  * assistant's character, or the floating popup's button while the chat is
  * closed: the agent's newest words, as the Office Assistant said them
  * (LOOP T-23), with *Open the conversation* when there is more — and an
- * approval it waits on, answered there with *Approve* or *Deny*.
+ * approval it waits on, answered there with *Approve* or *Deny* — and, where
+ * the runtime can be asked, *Ask a decision*: a typed decision asked of Jev,
+ * its answer said back in the balloon.
  *
  * @module chat/assistant/SpeechBalloon
  */
@@ -17,6 +19,8 @@ import type { JSX } from 'react';
 import { Button, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import { DecisionAsk } from './DecisionAsk';
+import type { DecisionAsker } from './decisions';
 
 export interface SpeechBalloonProps {
   text: string;
@@ -34,6 +38,12 @@ export interface SpeechBalloonProps {
   tailAt: number;
   /** An approval it waits on: what is asked, and the two answers. */
   approval?: BalloonApproval;
+  /** Asks a typed decision of the runtime: offers *Ask a decision*. */
+  decide?: DecisionAsker;
+  /** The decision's form or answer is on screen: it stays, and is wider. */
+  onDecisionActive?: (active: boolean) => void;
+  /** Wider, for the decision's form. */
+  wide?: boolean;
 }
 
 export function SpeechBalloon({
@@ -45,6 +55,9 @@ export function SpeechBalloon({
   align,
   tailAt,
   approval,
+  decide,
+  onDecisionActive,
+  wide = false,
 }: SpeechBalloonProps): JSX.Element {
   return (
     <Box
@@ -59,8 +72,8 @@ export function SpeechBalloon({
           ? { bottom: `${above}px` }
           : { top: `${above}px` }),
         [align]: 0,
-        maxWidth: 280,
-        width: 'max-content',
+        maxWidth: wide ? 300 : 280,
+        width: wide ? 300 : 'max-content',
         px: 3,
         py: 2,
         bg: 'canvas.default',
@@ -124,6 +137,7 @@ export function SpeechBalloon({
           ) : null}
         </Box>
       )}
+      {decide && <DecisionAsk ask={decide} onActiveChange={onDecisionActive} />}
       {more && (
         <Box
           as="button"

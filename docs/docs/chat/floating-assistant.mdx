@@ -101,6 +101,84 @@ character when it stands near the top (`balloonSide`).
 Open, the balloon is the conversation itself: the chat and its composer,
 above the character, wherever it was put down.
 
+## Ask a decision
+
+Given a runtime to ask, **the balloon offers *Ask a decision***: a typed
+decision asked of Jev, the typed-decision model
+(`cloudflare:wrk/typesafe/jev`), without going through the agent. It opens a
+small form in the balloon:
+
+- **Situation**: the text the question is about — a ticket, a message, a
+  review;
+- **Question**: a statement to hold or not, or a question;
+- **Type**: *Yes or no*; *A choice*, with its options listed one per line (at
+  least two); *A score*, with its range, from 1 to 5 by default;
+- **Name**: what the answer is said under (*Answer* when left empty).
+
+*Ask* sends it to the runtime's `POST /api/v1/configure/inference/decisions`,
+the route that asks as the agent's `decide` tool does, through ai-inference,
+with the token the runtime calls its models with — so the token path is the
+same as the tool's. The answer comes back in the balloon, in plain words with
+its confidence:
+
+| Type | Answer |
+| --- | --- |
+| Yes or no | `Urgent: yes (0.87)` — a *no* is said with the probability that the statement does not hold |
+| A choice | `Team: Billing (0.94)` |
+| A score | `Score: 4 of 5 (0.5)` on a range of numbers; `Severity: blocking (0.7)` on a rubric of words |
+
+When nothing was decided, the runtime's sentence is said instead (*Nothing was
+decided: …*). While the form or its answer is on screen, the balloon stays,
+hovered or not; *Cancel* (or Escape) puts it away, *Ask another* clears the
+answer.
+
+The floating assistant of a chat takes the runtime as `decisions`; in a LOOP
+workspace, `LoopAssistantPlugin` takes it in its config. Without it, the
+balloon does not offer to ask:
+
+```tsx
+<ChatFloating
+  defaultViewMode="assistant"
+  decisions={{ serverUrl: 'http://localhost:8765' }}
+  {...chatProps}
+/>
+
+configurePlugin(LoopAssistantPlugin, {
+  app: app.interface.assistant,
+  decisions: { serverUrl: runtimeUrl, token },
+});
+```
+
+`token` is sent as a bearer when the runtime needs one; the machine's own
+server does not. See [The decide tool](../cli#the-decide-tool) for
+`/decisions`, the same route from the terminal.
+
+### The Decide example
+
+`AgentDecideExample` (`src/examples/AgentDecideExample.tsx`) draws the
+*Decide* application of the catalogue (agentspecs `apps/decide.yaml`: the
+agent `example-simple` with the `decide` tool, instructions to answer by
+asking a typed decision, decision questions as its starters, and one rule —
+deciding is a read, done without asking) in the LOOP workspace on the Local
+target, with the floating assistant beside it. Ask in the chat (*Is this
+ticket urgent? 'Help! My payouts have been failing for 3 days.'*) and the agent
+calls `decide`; or hover the character and *Ask a decision* from its balloon.
+
+It needs a local agent-runtimes server that reaches ai-inference. Start it
+with the key of your Datalayer account, never printed nor committed:
+
+```bash
+AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
+DATALAYER_AI_INFERENCE_URL=https://r1.datalayer.run \
+DATALAYER_AI_INFERENCE_API_KEY="$DATALAYER_API_KEY" \
+  python -m agent_runtimes serve --port 8765
+```
+
+then the examples (`npm run examples:vite`, on port 3000), and pick
+*AgentDecideExample* in their selector; it needs no sign-in. A server on
+another port is named in the page's address:
+`http://localhost:3000/?agentRuntimesUrl=http://localhost:<port>`.
+
 ## The floating popup speaks too
 
 The same reading of the agent's words serves the plain *Floating popup*.
@@ -387,6 +465,7 @@ animations live in separate `.aca` files, is refused for now: load the
 | --- | --- | --- | --- |
 | `defaultViewMode` | `'floating' \| 'floating-small' \| 'floating-draggable' \| 'assistant' \| 'panel'` | `'floating'` | `'assistant'` opens on the character. |
 | `assistantCharacter` | `string \| AssistantCharacter \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, a contributed drawing, or one read from a file. |
+| `decisions` | `{ serverUrl: string; token?: string }` | — | The runtime its balloon asks typed decisions at: offers *Ask a decision* (see [Ask a decision](#ask-a-decision)). |
 
 The chat's `description` is what the character says on a hover before
 anything else has been said.

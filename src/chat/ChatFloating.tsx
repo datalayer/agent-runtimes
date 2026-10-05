@@ -43,6 +43,7 @@ import { ButtonGlow } from './display/ButtonGlow';
 import { useViewportDrag } from './useViewportDrag';
 import { disabledChatViewModes, resolveMountPoint } from './viewModes';
 import { AssistantStage } from './assistant/AssistantStage';
+import { decisionsAskerAt } from './assistant/decisions';
 import { SpeechBalloon } from './assistant/SpeechBalloon';
 import {
   DEFAULT_ASSISTANT_CHARACTER,
@@ -198,6 +199,14 @@ export interface ChatFloatingProps extends ChatCommonProps {
   assistantCharacter?: string | AssistantCharacter | AssistantCharacterData;
 
   /**
+   * The runtime the floating assistant asks typed decisions at — its
+   * `/api/v1/configure/inference/decisions`, as the `decide` tool asks — and
+   * the token to ask with, if it needs one: its balloon offers *Ask a
+   * decision*, answered there in plain words with its confidence.
+   */
+  decisions?: { serverUrl: string; token?: string };
+
+  /**
    * Callback when the user switches view mode via the header toggle.
    * The parent component receives the new ChatViewMode value.
    * When the user selects 'sidebar', the parent should switch to rendering
@@ -338,6 +347,7 @@ export function ChatFloating({
   launchingMessage,
   assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
   conversation,
+  decisions,
 }: ChatFloatingProps) {
   // Store-based state
   const storeIsOpen = useChatOpen();
@@ -491,6 +501,13 @@ export function ChatFloating({
           },
         }
       : undefined;
+  const assistantDecide = useMemo(
+    () =>
+      decisions?.serverUrl
+        ? decisionsAskerAt(decisions.serverUrl, decisions.token)
+        : undefined,
+    [decisions?.serverUrl, decisions?.token],
+  );
   const assistantBalloon =
     assistantState === 'paused'
       ? { text: ASSISTANT_WORDS.paused }
@@ -1355,6 +1372,7 @@ export function ChatFloating({
           insist={balloonInsists}
           onDismiss={dismissAssistant}
           ownRef={popupRef}
+          decide={assistantDecide}
         />
       )}
 
