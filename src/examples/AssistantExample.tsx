@@ -54,6 +54,41 @@ const SERVER = (
   'http://127.0.0.1:8765'
 ).replace(/\/+$/, '');
 
+/** The agent the assistant talks to on that server. */
+const AGENT_ID = 'assistant';
+
+/**
+ * Make sure the server has the assistant's agent: `npm run examples` starts
+ * the server with none, so the page creates it from the
+ * `example-agentic-chat` spec the first time, over AG-UI, the spec's own
+ * protocol.
+ */
+async function ensureAssistantAgent(): Promise<void> {
+  const found = await fetch(`${SERVER}/api/v1/agents/${AGENT_ID}`);
+  if (found.ok) {
+    return;
+  }
+  if (found.status !== 404) {
+    throw new Error(
+      `The server could not say whether the ${AGENT_ID} agent exists (${found.status}).`,
+    );
+  }
+  const created = await fetch(`${SERVER}/api/v1/agents`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: AGENT_ID,
+      agent_spec_id: 'example-agentic-chat',
+      transport: 'ag-ui',
+    }),
+  });
+  if (!created.ok && created.status !== 409) {
+    throw new Error(
+      `The server could not create the ${AGENT_ID} agent (${created.status}).`,
+    );
+  }
+}
+
 /** The plugins this page enables: Datalayer's characters and the owl's. */
 const reactor = buildReactorFromPlugins([
   AssistantCharactersPlugin,
@@ -101,6 +136,23 @@ const AssistantExample: React.FC = () => {
       ? assistantCharacterNamed(reactor, character)
       : character;
   const [loadError, setLoadError] = useState<string | undefined>();
+  // The agent on the server, made if it is not there yet.
+  const [agentReady, setAgentReady] = useState(false);
+  const [agentError, setAgentError] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    ensureAssistantAgent().then(
+      () => !cancelled && setAgentReady(true),
+      error =>
+        !cancelled &&
+        setAgentError(
+          `${error instanceof Error ? error.message : String(error)} The assistant talks to an agent-runtimes server at ${SERVER}.`,
+        ),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   // How the balloon shows the conversation (T-23): history, or current.
   const [balloon, setBalloon] = useState<BalloonDisplay>('history');
   // Pixel, the test sprite, read once through the clippy.js reader.
@@ -326,20 +378,29 @@ const AssistantExample: React.FC = () => {
               )}
           </Box>
         </Box>
-        <ChatFloating
-          key={typeof character === 'string' ? character : character.sprite}
-          defaultViewMode="assistant"
-          assistantCharacter={drawn}
-          balloonDisplay={balloon}
-          protocol="vercel-ai"
-          endpoint={`${SERVER}/api/v1/vercel-ai/assistant`}
-          title="Assistant"
-          description="Hello! Ask me anything about this page."
-          position="bottom-right"
-          useStore={false}
-          // Ask a decision beside the composer: Jev, through this server.
-          decisions={{ serverUrl: SERVER }}
-        />
+        {agentError && (
+          <Box sx={{ maxWidth: 720, mx: 'auto', mt: 3 }}>
+            <Text as="p" role="alert" sx={{ color: 'danger.fg' }}>
+              {agentError}
+            </Text>
+          </Box>
+        )}
+        {agentReady && (
+          <ChatFloating
+            key={typeof character === 'string' ? character : character.sprite}
+            defaultViewMode="assistant"
+            assistantCharacter={drawn}
+            balloonDisplay={balloon}
+            protocol="ag-ui"
+            endpoint={`${SERVER}/api/v1/ag-ui/${AGENT_ID}/`}
+            title="Assistant"
+            description="Hello! Ask me anything about this page."
+            position="bottom-right"
+            useStore={false}
+            // Ask a decision beside the composer: Jev, through this server.
+            decisions={{ serverUrl: SERVER }}
+          />
+        )}
       </Box>
     </ThemedProvider>
   );
