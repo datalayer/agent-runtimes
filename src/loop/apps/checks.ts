@@ -578,7 +578,7 @@ export function documentShapeProblems(document: unknown): string[] {
   }
   for (const key of [
     'skills',
-    'tools',
+    'backend_tools',
     'context',
     'contents',
     'notifications',

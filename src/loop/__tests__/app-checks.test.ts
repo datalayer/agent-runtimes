@@ -212,6 +212,7 @@ describe('the instant checks', () => {
       triggers: 'daily',
       deployment: { embedded: { origins: ['https://example.com/path'] } },
       permissions: { computer: { shell: 'yes' } },
+      backend_tools: 'decide:0.0.1',
     });
     expect(check.verdict).toBe(NOT_READY);
     expect(check.problems).toEqual(
@@ -225,6 +226,7 @@ describe('the instant checks', () => {
         'triggers: is a list.',
         'deployment.embedded.origins.0: is an origin: https://example.com, without a path.',
         'permissions.computer.shell: is true or false.',
+        'backend_tools: is a list of words.',
       ]),
     );
   });
