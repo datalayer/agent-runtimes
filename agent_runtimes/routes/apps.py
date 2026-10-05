@@ -105,6 +105,23 @@ class ConfigureAppRequest(BaseModel):
             "a cloud runtime's ingress; the request's own address when unsaid"
         ),
     )
+    visitors: bool = Field(
+        False,
+        description=(
+            "Served over A2A (a2a), also open to visitors without an account (LOOP "
+            "R-30): a visitor's token from ai-inference naming this application is "
+            "answered; their runs only read and are counted, a few a day each"
+        ),
+    )
+    visitors_key: Optional[str] = Field(
+        None,
+        description=(
+            "The owner's key visitors' runs act with: a token from a task grant whose "
+            "task is this application's A2A route on this runtime, reaching its "
+            "connections read only. Unsaid, they keep the runtime's own credential. "
+            "Never the visitor's own token"
+        ),
+    )
 
 
 class DecideRequest(BaseModel):
@@ -280,6 +297,21 @@ async def configure_app(
                 ]
             },
         )
+    if body.visitors or body.visitors_key:
+        # Open to visitors: over A2A, with the owner's key for their runs if given.
+        from agent_runtimes.loop.apps.a2a import visitors_key_problem
+
+        problem = (
+            "visitors is a way of serving it over A2A: set a2a too."
+            if not body.a2a
+            else "visitors_key is for an application open to visitors: set visitors."
+            if not body.visitors
+            else visitors_key_problem(body.visitors_key, app.id)
+            if body.visitors_key
+            else ""
+        )
+        if problem:
+            raise HTTPException(status_code=422, detail={"problems": [problem]})
     from agent_runtimes.routes.agents import (
         ConfigureFromSpecRequest,
         configure_from_spec_endpoint,
@@ -312,14 +344,18 @@ async def configure_app(
     # is not answered for, whichever application it ran.
     from agent_runtimes.loop.apps.a2a import serve_app_over_a2a, stop_serving_apps
 
-    a2a: Optional[Dict[str, str]] = None
+    a2a: Optional[Dict[str, Any]] = None
     if body.a2a:
         from agent_runtimes.routes.a2a import _api_prefix
         from agent_runtimes.routes.acp import _agents
 
         base = (body.public_url or str(http_request.base_url)).rstrip("/")
         a2a = serve_app_over_a2a(
-            app, _agents["default"][0], f"{base}{_api_prefix}/a2a/agents/{app.id}"
+            app,
+            _agents["default"][0],
+            f"{base}{_api_prefix}/a2a/agents/{app.id}",
+            visitors=body.visitors,
+            visitors_key=body.visitors_key,
         )
     else:
         stop_serving_apps()

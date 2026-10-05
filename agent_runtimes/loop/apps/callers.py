@@ -212,6 +212,26 @@ class CallerVerifier:
         self._remember(key, caller, self._clock() + lifetime)
         return caller
 
+    async def verify_visitor(self, token: str) -> Caller:
+        """The visitor a token is, on any runtime, or `CallerRefused`.
+
+        Only for a route that answers visitors although the runtime is not the
+        visitors' one: an application its owner served over A2A open to
+        visitors (`agent_runtimes.loop.apps.a2a`). Everything else goes
+        through :meth:`verify`, which refuses a visitor off that runtime.
+        """
+        from agent_runtimes.loop.apps.visitors import is_anonymous_audience
+
+        claims = _unverified_claims(token)
+        if not claims or not is_anonymous_audience(claims):
+            raise CallerRefused(401, "The token is not a visitor's.")
+        expires = claims.get("exp")
+        if isinstance(expires, (int, float)) and expires <= self._now():
+            raise CallerRefused(
+                401, "Your visitor's token has run out: reload the page to go on."
+            )
+        return await self._visitor(token)
+
     async def _visitor(self, token: str) -> Caller:
         """A visitor's token, asked of ai-inference, which minted it (R-30).
 

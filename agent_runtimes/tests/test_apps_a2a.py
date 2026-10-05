@@ -87,12 +87,17 @@ class Accounting(BaseAgent):
 
     def __init__(self) -> None:
         self.contexts: list[Any] = []
+        #: Whether each run was a visitor's, as its tools would read it.
+        self.visiting: list[bool] = []
 
     async def run(self, prompt: str, context: Any) -> Any:  # pragma: no cover
         raise NotImplementedError
 
     async def stream(self, prompt: str, context: Any) -> AsyncIterator[StreamEvent]:
+        from agent_runtimes.loop.apps.visitors import in_visitor_turn
+
         self.contexts.append(context)
+        self.visiting.append(in_visitor_turn())
         yield StreamEvent(type="text", data="Open invoices: ")
         yield StreamEvent(type="text", data=REPORT[len("Open invoices: ") :])
 
@@ -113,16 +118,25 @@ class Accounting(BaseAgent):
 
 
 @asynccontextmanager
-async def served(state: Any) -> AsyncIterator[tuple[Any, Accounting]]:
+async def served(
+    state: Any, visitors: bool = False, visitors_key: str | None = None
+) -> AsyncIterator[tuple[Any, Accounting]]:
     """The application's route, mounted and running, as the runtime serves it."""
     agent = Accounting()
     a2a_routes._a2a_mounts.clear()
-    said = apps_a2a.serve_app_over_a2a(APP_CATALOGUE["accounting"], agent, URL)
-    assert said == {
+    said = apps_a2a.serve_app_over_a2a(
+        APP_CATALOGUE["accounting"],
+        agent,
+        URL,
+        visitors=visitors,
+        visitors_key=visitors_key,
+    )
+    assert {key: said[key] for key in ("url", "card", "task")} == {
         "url": f"{URL}/",
         "card": f"{URL}/.well-known/agent-card.json",
         "task": "a2a:local:accounting:",
     }
+    assert ("visitors" in said) == visitors
     registration = a2a_routes.get_a2a_agents()["accounting"]
     [mount] = [m for m in a2a_routes.get_a2a_mounts() if m.path == "/accounting"]
     lifespan = registration.app.router.lifespan_context(registration.app)
@@ -383,3 +397,251 @@ class TestLoopServesIt:
         }
         configure_on("http://127.0.0.1:9999", document)
         assert sent["body"] == {"app": document}
+
+
+#: The owner's key for visitors: granted to the route, reaching Odoo read only.
+VISITORS_KEY = _token(task_grant_uid="grant-v", task_uid="a2a:local:accounting:v1")
+
+
+def _visitor_token(visitor: str = "tab-ada-0001", app: str = "accounting") -> str:
+    """A visitor's token, as ai-inference mints it (its audience is what is read)."""
+    return jwt.encode(
+        {
+            "aud": "datalayer:ai-inference:anonymous",
+            "sub": visitor,
+            "visitor": visitor,
+            "app": app,
+            "exp": int(time.time()) + 300,
+        },
+        "ai-inferences-own-secret",
+        algorithm="HS256",
+    )
+
+
+@pytest.fixture
+def inference(monkeypatch: Any) -> list[str]:
+    """ai-inference, as the verifier asks it who a visitor is."""
+    asked: list[str] = []
+
+    async def verify_visitor(token: str) -> Caller:
+        asked.append(token)
+        claims = jwt.decode(token, options={"verify_signature": False})
+        if claims["visitor"].startswith("spent"):
+            raise CallerRefused(401, "Your visitor's token has run out.")
+        return Caller(kind="visitor", uid=claims["visitor"], app_uid=claims["app"])
+
+    monkeypatch.setattr(VERIFIER, "verify_visitor", verify_visitor)
+    monkeypatch.delenv(apps_a2a.VISITOR_TURNS_ENV, raising=False)
+    monkeypatch.delenv(apps_a2a.VISITORS_DAY_ENV, raising=False)
+    return asked
+
+
+async def _ask_as(client: httpx.AsyncClient, token: str) -> httpx.Response:
+    return await client.post(
+        "/",
+        json=_stream_request("Open invoices?"),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+
+class TestVisitors:
+    """Open to visitors (LOOP R-30 for a route served over A2A): the landing's Sales asks Accounting."""
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_is_refused_where_its_owner_did_not_open_it(
+        self, state: Any, platform: list[str], inference: list[str]
+    ) -> None:
+        async with served(state) as (app, agent), _client(app, REMOTE) as client:
+            response = await _ask_as(client, _visitor_token())
+        assert response.status_code == 403
+        assert "not open to visitors" in response.json()["detail"]
+        # Neither IAM nor ai-inference was asked, and nothing ran.
+        assert platform == [] and inference == [] and agent.contexts == []
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_is_answered_and_the_run_acts_with_the_owners_key(
+        self, state: Any, platform: list[str], inference: list[str]
+    ) -> None:
+        token = _visitor_token()
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            response = await _ask_as(client, token)
+        assert response.status_code == 200
+        events = _events(response.text)
+        assert events[-1]["result"]["statusUpdate"]["status"]["state"] == (
+            "TASK_STATE_COMPLETED"
+        )
+        assert inference == [token] and platform == []
+        # The owner's key for visitors, never the visitor's own token; and
+        # the run is a visitor's: its tools only read.
+        assert agent.contexts[0].metadata["user_token"] == VISITORS_KEY
+        assert agent.visiting == [True]
+
+    @pytest.mark.asyncio
+    async def test_without_a_key_for_visitors_the_run_keeps_the_runtimes_own(
+        self, state: Any, platform: list[str], inference: list[str]
+    ) -> None:
+        """What `agent-teams demo deploy` asks: `visitors: true`, and no key."""
+        request = _stream_request("Open invoices?")
+        # A visitor neither picks the identity nor unmarks the run.
+        request["params"]["message"]["metadata"] = {
+            "datalayer": {"credential": "somebody-elses", "visitor": ""}
+        }
+        async with served(state, True) as (app, agent), _client(app, REMOTE) as client:
+            response = await client.post(
+                "/",
+                json=request,
+                headers={"Authorization": f"Bearer {_visitor_token()}"},
+            )
+        assert response.status_code == 200
+        assert "user_token" not in agent.contexts[0].metadata
+        assert agent.visiting == [True]
+
+    @pytest.mark.asyncio
+    async def test_a_run_is_not_a_visitors_unless_the_gate_says_so(
+        self, state: Any, platform: list[str]
+    ) -> None:
+        async with (
+            served(state, True) as (app, agent),
+            _client(app, REMOTE) as client,
+            _client(app) as local,
+        ):
+            await client.post(
+                "/",
+                json=_stream_request("Open invoices?"),
+                headers={"Authorization": f"Bearer {KEY}"},
+            )
+            # The machine itself, with no token.
+            await local.post("/", json=_stream_request("Again?"))
+        assert agent.visiting == [False, False]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("token", "status", "says"),
+        [
+            (_visitor_token(app="sales"), 403, "another application"),
+            (_visitor_token(app="at:accounting"), 403, "another application"),
+            (_visitor_token("spent-tab-0003"), 401, "run out"),
+        ],
+    )
+    async def test_a_visitors_token_for_another_application_or_spent_is_refused(
+        self,
+        state: Any,
+        platform: list[str],
+        inference: list[str],
+        token: str,
+        status: int,
+        says: str,
+    ) -> None:
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            response = await _ask_as(client, token)
+        assert response.status_code == status
+        assert says in response.json()["detail"]
+        assert agent.contexts == []
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_has_so_many_runs_a_day(
+        self, state: Any, platform: list[str], inference: list[str], monkeypatch: Any
+    ) -> None:
+        monkeypatch.setenv(apps_a2a.VISITOR_TURNS_ENV, "1")
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            first = await _ask_as(client, _visitor_token())
+            again = await _ask_as(client, _visitor_token())
+            other = await _ask_as(client, _visitor_token("tab-bob-0002"))
+            # Reading a task is not a run: it is not counted, nor refused.
+            task_id = _events(first.text)[0]["result"]["task"]["id"]
+            read = await client.post(
+                "/",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "GetTask",
+                    "params": {"id": task_id},
+                },
+                headers={"Authorization": f"Bearer {_visitor_token()}"},
+            )
+        assert first.status_code == 200 and other.status_code == 200
+        assert again.status_code == 429
+        assert "1 times today without an account" in again.json()["detail"]
+        assert read.status_code == 200
+        assert len(agent.contexts) == 2
+
+    @pytest.mark.asyncio
+    async def test_all_visitors_together_have_a_ceiling_a_day(
+        self, state: Any, platform: list[str], inference: list[str], monkeypatch: Any
+    ) -> None:
+        monkeypatch.setenv(apps_a2a.VISITORS_DAY_ENV, "1")
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            first = await _ask_as(client, _visitor_token())
+            other = await _ask_as(client, _visitor_token("tab-bob-0002"))
+        assert first.status_code == 200
+        assert other.status_code == 429
+        assert "1 visitors' requests for today" in other.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_a_key_granted_to_the_route_is_still_answered(
+        self, state: Any, platform: list[str], inference: list[str]
+    ) -> None:
+        async with (
+            served(state, True, VISITORS_KEY) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            response = await _ask_as(client, KEY)
+        assert response.status_code == 200
+        assert agent.contexts[0].metadata["user_token"] == KEY
+
+    @pytest.mark.parametrize(
+        ("key", "says"),
+        [
+            ("not-a-token", "not a token"),
+            (_visitor_token(), "a visitor's token"),
+            (_token(), "not a key granted to a route"),
+            (
+                _token(task_grant_uid="g", task_uid="a2a:local:sales:k"),
+                "another route",
+            ),
+        ],
+    )
+    def test_the_key_for_visitors_is_the_owners_key_granted_to_the_route(
+        self, key: str, says: str, monkeypatch: Any
+    ) -> None:
+        monkeypatch.delenv("DATALAYER_RUNTIME_ID", raising=False)
+        assert says in apps_a2a.visitors_key_problem(key, "accounting")
+        with pytest.raises(ValueError, match=says):
+            apps_a2a.serve_app_over_a2a(
+                APP_CATALOGUE["accounting"],
+                Accounting(),
+                URL,
+                visitors=True,
+                visitors_key=key,
+            )
+        assert apps_a2a.visitors_key_problem(VISITORS_KEY, "accounting") == ""
+        with pytest.raises(ValueError, match="open to visitors"):
+            apps_a2a.serve_app_over_a2a(
+                APP_CATALOGUE["accounting"],
+                Accounting(),
+                URL,
+                visitors_key=VISITORS_KEY,
+            )
+
+    def test_configure_names_the_flag_and_the_key(self) -> None:
+        """The contract with `agent-teams` 1.1.0 (`VISITORS_FIELD = "visitors"`)."""
+        from agent_runtimes.routes.apps import ConfigureAppRequest
+
+        sent = {"app": {"id": "accounting"}, "a2a": True, "public_url": "u"}
+        request = ConfigureAppRequest(**sent, visitors=True)
+        assert request.visitors is True and request.visitors_key is None
+        assert ConfigureAppRequest(**sent).visitors is False
+        keyed = ConfigureAppRequest(**sent, visitors=True, visitors_key=VISITORS_KEY)
+        assert keyed.visitors_key == VISITORS_KEY

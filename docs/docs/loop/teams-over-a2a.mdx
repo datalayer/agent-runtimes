@@ -67,6 +67,9 @@ says. The card also says that a bearer key is needed (`securitySchemes`).
 - a key granted to this route: a token exchanged from an IAM task grant whose
   task begins with `a2a:<runtime uid>:<application id>:`, checked with IAM.
 
+- a visitor without an account, when the owner opened the application to
+  visitors (next section).
+
 Without a token the answer is 401. A person's own token, or a key granted to
 another route, gets 403. The agent card is open to anyone.
 
@@ -76,6 +79,62 @@ never with the runtime's own: the key becomes the run's delegated credential
 (`toolsets_for_the_run`). This also applies to a catalogue server that is the
 gateway with some of its toolsets, such as `odoo-accounting`, which keeps its
 `only=` query.
+
+## Open to visitors
+
+A signed-out visitor holds no key of the owner's. An application served over
+A2A can also answer visitors, the way LOOP's visitors' runtime (R-30) answers
+an `at:<slug>` address. Its owner says so when it is configured, as
+`agent-teams demo deploy` does:
+
+```json
+POST /api/v1/apps/configure
+{
+  "app": { "...": "the Appspec" },
+  "a2a": true,
+  "public_url": "https://<the runtime's ingress>",
+  "visitors": true
+}
+```
+
+| Field | What it is |
+| --- | --- |
+| `visitors` | Served over A2A (`a2a` is required too), it also answers visitors. |
+| `visitors_key` | Optional. The owner's key visitors' runs act with: a token from an IAM task grant whose task begins with `a2a:<runtime uid>:<application id>:`, reaching the owner's connections read only (the shape `make_temp_key.py` mints). Unsaid, visitors' runs keep the runtime's own credential. Refused with 422 when it is anything else, or without `visitors`. |
+
+The answer's `a2a` then says `visitors`: the runs a visitor has a day, all
+of them together, and what the runs act with.
+
+**Who a visitor is.** A visitor's token from ai-inference
+(`POST /anonymous/token {"app": "<application id>", "visitor": "<id>"}`),
+which names the visitor and this application by its id. The gate asks
+ai-inference who it is (`GET /anonymous/whoami`), so the runtime needs
+`DATALAYER_AI_INFERENCE_URL`. A token for another application gets 403, a
+spent one 401, and a visitor's token on an application not open to visitors
+gets 403.
+
+**What a visitor's run does.** It never acts with the visitor's token. The
+gate marks the run a visitor's (`datalayer.visitor` in the message's
+metadata, whatever the message said), and the run then only reads, as on the
+visitors' runtime: a tool that does more than read, or that the
+application's rules would ask about, is refused before it runs. It acts with
+`visitors_key` when one was given, else with the runtime's own credential,
+the owner's. Either way the application's connection reads only:
+Accounting's `odoo-accounting` is at *Can read*. Its model calls are the
+runtime's, metered to the owner.
+
+**Limits.** The owner pays for these runs, so the gate counts them. Only a
+request that starts a run is counted; reading a task is not.
+
+| Variable | Default | What it limits |
+| --- | --- | --- |
+| `AGENT_RUNTIMES_A2A_VISITOR_TURNS` | 3 | Runs one visitor starts in a day (UTC). |
+| `AGENT_RUNTIMES_A2A_VISITORS_TURNS_A_DAY` | 100 | Runs all visitors start in a day, together. |
+
+Past either, the answer is 429 with a sentence that says which. The counts
+live in the runtime's process: a restart starts them again. The visitor's
+own model calls (Sales, in the browser) are ai-inference's to limit: its
+anonymous rate and its ceiling for the day.
 
 ## The application asking: `@a2a-js/sdk` in the browser
 
@@ -96,13 +155,55 @@ answer in words out, with the description written from the card's skill.
 `onEvent` is told each step as it happens: `asked`, `working` (with the tool
 the peer calls), then `answered` or `failed`.
 
+## The team as a graph
+
+`components/teams` draws a team of two and runs it in a page. It is not in
+the components barrel, because it brings React Flow:
+
+```tsx
+import { A2ATeamGraph, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+
+const team = useA2ATeam({ entry: SALES, peerApp: ACCOUNTING, peer, inference });
+
+<A2ATeamGraph
+  entry={{ id: 'sales', name: 'Sales', character: 'paperclip', where: 'in your browser', persona: team.entryPersona }}
+  peer={{ id: 'accounting', name: 'Accounting', character: 'wizard', where: 'on a runtime', persona: team.peerPersona }}
+  flow={team.flow}
+  connected={peer !== null}
+  label={`A2A · ${peer.skill.name}`}
+/>;
+team.send('Which invoices are still open?');
+```
+
+- **`A2ATeamGraph`** is a React Flow graph of two nodes and one edge. Each
+  node is the member's character (`AssistantStage`), with its name and where
+  it runs. The edge is still until a message travels on it. It flows from
+  Sales to Accounting while Sales asks, and from Accounting to Sales while
+  Accounting answers. An arrow points at the receiving end, and the edge
+  says *Sales asks Accounting* or *Accounting answers Sales*. With reduced
+  motion the edge does not move, but the arrow and the words stay. The graph
+  is a picture: nothing is dragged, panned or zoomed, and it scales to its
+  box, down to a phone's width.
+- **`useA2ATeam`** runs the entry's loop in the page (the Vercel AI SDK's
+  `ToolLoopAgent`, its model through ai-inference) with its one tool to the
+  peer. It keeps each member's persona (its state and its balloon), the
+  conversation, the exchange, the last report, and the flow.
+- **`flowAfter`** turns an `A2APeerEvent` into the flow. `asked` and
+  `working` give `asking`. `answered` gives `answering` for
+  `ANSWER_SHOWN_MS` (1.8 s). `failed` gives `still`.
+
+Datalayer's home page runs the same team for signed-out visitors: Sales in
+their browser with their trial key, Accounting on a cloud runtime open to
+visitors.
+
 ## The example
 
 `AgentA2ATeamExample` puts both applications on screen as Office Assistant
-characters (the floating assistant's `AssistantStage`): Sales is the paper
-clip and Accounting is the wizard. You ask Sales. Sales *asks*, Accounting
-*works* and then *answers*, each in its own state and balloon, and then the
-report appears.
+characters (the floating assistant's `AssistantStage`), in the graph above:
+Sales is the paper clip and Accounting is the wizard. You ask Sales. Sales
+*asks* and the edge flows toward Accounting. Accounting *works* and then
+*answers*, and the edge flows back. Each is in its own state and balloon,
+and then the report appears.
 
 1. Start the examples: Vite on :3000 and the local agent-runtimes server on
    :8765 (`npm run examples`).

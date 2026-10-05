@@ -1,0 +1,313 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * A team of two applications over A2A, as a page runs it: the entry's loop
+ * turns in the page and asks its peer over A2A with one tool.
+ *
+ * The entry (Sales) talks to the person: its instructions and its model run
+ * here (the Vercel AI SDK's loop), its model reached through ai-inference
+ * with whatever `inference` holds — a signed-in person's token, or a
+ * visitor's trial key. Its one tool asks the peer (Accounting) with
+ * {@link a2aPeerTool}. What each of them does is kept as a persona — the
+ * state its character acts and what its balloon says — and the exchange
+ * between them as a log, the peer's last answer as the report, and the way
+ * the link carries a message as the flow ({@link flowAfter}).
+ *
+ * What `A2ATeamGraph` draws, and what a page's composer sends.
+ *
+ * @module components/teams/useA2ATeam
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { stepCountIs, ToolLoopAgent, type ModelMessage } from 'ai';
+import type { AssistantState } from '../../chat/assistant/state';
+import {
+  createBrowserModel,
+  type BrowserModelOptions,
+} from '../../runtimes/browser/model';
+import {
+  a2aPeerTool,
+  type A2APeer,
+  type A2APeerEvent,
+} from '../../runtimes/browser/a2aPeer';
+import type { AppSpec } from '../../types/agentspecs';
+import { flowAfter, type A2ATeamFlow } from './a2aTeamFlow';
+
+/** What one member's character does: its state, its balloon, and whether it was sent away. */
+export type A2ATeamPersona = {
+  state: AssistantState;
+  /** What its balloon says. */
+  saying?: string;
+  /** Whether the balloon shows without the pointer over it. */
+  insist: boolean;
+  away: boolean;
+};
+
+export const AT_REST: A2ATeamPersona = {
+  state: 'idle',
+  insist: false,
+  away: false,
+};
+
+/** One turn of the conversation with the entry. */
+export type A2ATeamTurn = { role: 'user' | 'assistant'; text: string };
+
+/** A line short enough for a balloon. */
+export function balloonLine(text: string, length = 120): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
+}
+
+export type UseA2ATeamOptions = {
+  /** The member that talks to the person and asks: it runs in this page. */
+  entry: AppSpec;
+  /** The member it asks over A2A. */
+  peerApp: AppSpec;
+  /** The peer, once its card is read; `null` until then. */
+  peer: A2APeer | null;
+  /** Where the entry's model is asked, and with whose token. */
+  inference: Omit<BrowserModelOptions, 'model'>;
+  /** The name of the entry's tool, as its instructions call it: `ask_<peer id>`. */
+  askTool?: string;
+  /** The most steps of one turn. */
+  maxSteps?: number;
+};
+
+export type A2ATeam = {
+  entryPersona: A2ATeamPersona;
+  peerPersona: A2ATeamPersona;
+  setEntryAway: (away: boolean) => void;
+  setPeerAway: (away: boolean) => void;
+  turns: A2ATeamTurn[];
+  /** The exchange between the two, a line a step. */
+  exchange: string[];
+  /** The peer's last answer, as it gave it. */
+  report: string | null;
+  /** Which way the link carries a message now. */
+  flow: A2ATeamFlow;
+  /** Whether a turn is under way. */
+  busy: boolean;
+  /** Whether the entry can be asked: its peer is connected. */
+  ready: boolean;
+  send: (text: string) => Promise<void>;
+  stop: () => void;
+};
+
+/** Run a team of two over A2A in the page. */
+export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
+  const { entry, peerApp, peer, inference, maxSteps = 6 } = options;
+  const askTool = options.askTool ?? `ask_${peerApp.id.replace(/-/g, '_')}`;
+  const [entryPersona, setEntryPersona] = useState<A2ATeamPersona>(() => ({
+    ...AT_REST,
+    state: 'greeting',
+    saying: balloonLine(entry.interface.welcome ?? ''),
+    insist: Boolean(entry.interface.welcome),
+  }));
+  const [peerPersona, setPeerPersona] = useState<A2ATeamPersona>(AT_REST);
+  const [turns, setTurns] = useState<A2ATeamTurn[]>([]);
+  const [report, setReport] = useState<string | null>(null);
+  const [exchange, setExchange] = useState<string[]>([]);
+  const [flow, setFlow] = useState<A2ATeamFlow>('still');
+  const [busy, setBusy] = useState(false);
+  const history = useRef<ModelMessage[]>([]);
+  const abort = useRef<AbortController | null>(null);
+  const flowTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  // What the peer does, as it does it: its own state and balloon, and the link.
+  const onPeerEvent = useCallback(
+    (event: A2APeerEvent) => {
+      const next = flowAfter(event);
+      clearTimeout(flowTimer.current);
+      setFlow(next.flow);
+      if (next.holdMs) {
+        flowTimer.current = setTimeout(() => setFlow('still'), next.holdMs);
+      }
+      if (event.phase === 'asked') {
+        setExchange(prev => [
+          ...prev,
+          `${entry.name} → ${peerApp.name}: ${event.request}`,
+        ]);
+        setPeerPersona(prev => ({
+          ...prev,
+          state: 'greeting',
+          saying: 'On it. Let me read the books.',
+          insist: true,
+        }));
+      } else if (event.phase === 'working') {
+        if (event.note) {
+          setExchange(prev => [...prev, `${peerApp.name}: ${event.note}`]);
+        }
+        setPeerPersona(prev => ({
+          ...prev,
+          state: 'working',
+          saying: event.note ? balloonLine(event.note) : prev.saying,
+          insist: Boolean(event.note) || prev.insist,
+        }));
+      } else if (event.phase === 'answered') {
+        setExchange(prev => [
+          ...prev,
+          `${peerApp.name} → ${entry.name}: the report`,
+        ]);
+        setReport(event.answer);
+        setPeerPersona(prev => ({
+          ...prev,
+          state: 'speaking',
+          saying: balloonLine(event.answer),
+          insist: true,
+        }));
+      } else {
+        setExchange(prev => [
+          ...prev,
+          `${peerApp.name} could not answer: ${event.error}`,
+        ]);
+        setPeerPersona(prev => ({
+          ...prev,
+          state: 'idle',
+          saying: balloonLine(event.error),
+          insist: true,
+        }));
+      }
+    },
+    [entry.name, peerApp.name],
+  );
+
+  const agent = useMemo(() => {
+    if (!peer) {
+      return null;
+    }
+    return new ToolLoopAgent({
+      id: entry.id,
+      model: createBrowserModel({
+        ...inference,
+        model: entry.model || undefined,
+      }),
+      instructions: entry.instructions,
+      tools: { [askTool]: a2aPeerTool({ peer, onEvent: onPeerEvent }) },
+      stopWhen: stepCountIs(maxSteps),
+    });
+  }, [peer, inference, onPeerEvent, entry, askTool, maxSteps]);
+
+  const send = useCallback(
+    async (text: string) => {
+      const asked = text.trim();
+      if (!asked || !agent || busy) {
+        return;
+      }
+      setBusy(true);
+      setReport(null);
+      setExchange([]);
+      setTurns(prev => [...prev, { role: 'user', text: asked }]);
+      setEntryPersona({
+        ...AT_REST,
+        state: 'thinking',
+        saying: 'Let me see…',
+        insist: true,
+      });
+      setPeerPersona(AT_REST);
+      history.current = [...history.current, { role: 'user', content: asked }];
+      abort.current = new AbortController();
+      let said = '';
+      try {
+        const result = await agent.stream({
+          messages: history.current,
+          abortSignal: abort.current.signal,
+        });
+        for await (const part of result.fullStream) {
+          if (part.type === 'tool-call' && part.toolName === askTool) {
+            const request = String(
+              (part.input as { request?: string } | undefined)?.request ?? '',
+            );
+            setEntryPersona(prev => ({
+              ...prev,
+              state: 'waiting',
+              saying: balloonLine(`${peerApp.name}, could you: ${request}`),
+              insist: true,
+            }));
+          } else if (part.type === 'tool-result' && part.toolName === askTool) {
+            setEntryPersona(prev => ({
+              ...prev,
+              state: 'thinking',
+              saying: 'Thanks!',
+            }));
+          } else if (part.type === 'text-delta') {
+            said += part.text;
+            setEntryPersona(prev => ({
+              ...prev,
+              state: 'speaking',
+              saying: balloonLine(said),
+              insist: true,
+            }));
+          } else if (part.type === 'error') {
+            throw part.error;
+          }
+        }
+        history.current = [
+          ...history.current,
+          { role: 'assistant', content: said },
+        ];
+        setTurns(prev => [...prev, { role: 'assistant', text: said }]);
+        setEntryPersona(prev => ({
+          ...prev,
+          state: 'idle',
+          saying: balloonLine(said),
+        }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setTurns(prev => [
+          ...prev,
+          { role: 'assistant', text: `Something went wrong: ${message}` },
+        ]);
+        setEntryPersona(prev => ({
+          ...prev,
+          state: 'idle',
+          saying: balloonLine(`Something went wrong: ${message}`),
+          insist: true,
+        }));
+        setFlow('still');
+      } finally {
+        abort.current = null;
+        setBusy(false);
+      }
+    },
+    [agent, busy, askTool, peerApp.name],
+  );
+
+  const stop = useCallback(() => abort.current?.abort(), []);
+
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      clearTimeout(flowTimer.current);
+    },
+    [],
+  );
+
+  const setEntryAway = useCallback(
+    (away: boolean) => setEntryPersona(prev => ({ ...prev, away })),
+    [],
+  );
+  const setPeerAway = useCallback(
+    (away: boolean) => setPeerPersona(prev => ({ ...prev, away })),
+    [],
+  );
+
+  return {
+    entryPersona,
+    peerPersona,
+    setEntryAway,
+    setPeerAway,
+    turns,
+    exchange,
+    report,
+    flow,
+    busy,
+    ready: agent !== null,
+    send,
+    stop,
+  };
+}

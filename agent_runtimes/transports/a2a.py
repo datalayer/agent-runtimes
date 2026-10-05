@@ -413,10 +413,20 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         turn: "TurnSpend",
     ) -> None:
+        from ..loop.apps.visitors import (
+            enter_visitor_run,
+            leave_visitor_run,
+            visitor_of_a2a,
+        )
+
         cancel = self.cancellation.register(task_id) if self.cancellation else None
+        # A visitor's run, as the application's gate marked it: it only reads,
+        # whatever its rules say (LOOP R-30).
+        visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
         try:
             await self._stream_run(task_id, context_id, params, cancel, turn)
         finally:
+            leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
 

@@ -24,6 +24,25 @@ key and never with the runtime's own: the key is handed to the run as its
 delegated credential (`datalayer.credential`, O1-17), so the Datalayer MCP
 gateway is reached with it (`agent_runtimes.mcp.datalayer_gateway`) and
 decides what it reaches from what the key was granted.
+
+**Visitors.** An application its owner served *open to visitors*
+(``/apps/configure`` with ``visitors: true``) also answers a visitor without
+an account, as LOOP R-30 does for ``at:<slug>`` addresses: a visitor's token
+from ai-inference (``POST /anonymous/token``) naming the visitor and this
+application by its id, verified with ai-inference (``GET /anonymous/whoami``).
+A token for another application is refused. A visitor's run never acts with
+the visitor's token, and it only reads: the gate marks it a visitor's
+(``datalayer.visitor``), and its tools are then refused anything that does
+more than read, or that its rules would ask about, as on the visitors'
+runtime (`agent_runtimes.loop.apps.visitors.visitor_refusal`). It keeps the
+owner's credential: the runtime's own, or — given as ``visitors_key`` — the
+owner's key granted to this route that reaches the connections read only
+(``make_temp_key.py``'s shape), its delegated credential. The owner pays for these
+runs, so they are counted at the gate (:class:`VisitorsOpen`): a few a day per
+visitor (``AGENT_RUNTIMES_A2A_VISITOR_TURNS``, 3) and a ceiling a day for all
+of them together (``AGENT_RUNTIMES_A2A_VISITORS_TURNS_A_DAY``, 100), each said
+in a sentence when reached (429). Only a request that starts a run is counted:
+reading a task is not. The counts live in this process.
 """
 
 from __future__ import annotations
@@ -41,6 +60,11 @@ from agent_runtimes.loop.apps.callers import (
     bearer_of,
     is_loopback,
 )
+from agent_runtimes.loop.apps.visitors import (
+    OTHER_APPLICATION,
+    Turns,
+    is_anonymous_audience,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +72,9 @@ __all__ = [
     "A2AGate",
     "SECURITY_REQUIREMENTS",
     "SECURITY_SCHEME",
+    "VisitorsOpen",
+    "as_visitors_run",
+    "visitors_key_problem",
     "card_of",
     "serve_app_over_a2a",
     "served_apps",
@@ -222,6 +249,142 @@ def _with_credential(body: bytes, token: str) -> bytes:
     return json.dumps(request).encode()
 
 
+def as_visitors_run(body: bytes, visitor: str, key: Optional[str]) -> bytes:
+    """A visitor's request, the run it starts marked theirs, with the owner's key when given.
+
+    Whatever the message says: a visitor does not unmark their run, nor pick
+    the identity it acts as.
+    """
+    try:
+        request = json.loads(body or b"null")
+    except ValueError:
+        return body
+    if not isinstance(request, dict) or request.get("method") not in _RUN_METHODS:
+        return body
+    from agent_runtimes.context.delegation import CREDENTIAL_FIELD
+    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+    from agent_runtimes.loop.apps.visitors import A2A_VISITOR_FIELD
+
+    params = request.get("params")
+    message = params.get("message") if isinstance(params, dict) else None
+    if not isinstance(message, dict):
+        return body
+    metadata = message.get("metadata")
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    ours = metadata.get(DELEGATION_META_KEY)
+    ours = dict(ours) if isinstance(ours, dict) else {}
+    ours.pop(CREDENTIAL_FIELD, None)
+    if key:
+        ours[CREDENTIAL_FIELD] = key
+    ours[A2A_VISITOR_FIELD] = visitor or "visitor"
+    metadata[DELEGATION_META_KEY] = ours
+    message["metadata"] = metadata
+    return json.dumps(request).encode()
+
+
+def _starts_a_run(body: bytes) -> bool:
+    """Whether a request starts a run: what a visitor's turn is."""
+    try:
+        request = json.loads(body or b"null")
+    except ValueError:
+        return False
+    return isinstance(request, dict) and request.get("method") in _RUN_METHODS
+
+
+#: A visitor's runs a day on an application served to visitors, and all visitors' together.
+VISITOR_TURNS_ENV = "AGENT_RUNTIMES_A2A_VISITOR_TURNS"
+VISITORS_DAY_ENV = "AGENT_RUNTIMES_A2A_VISITORS_TURNS_A_DAY"
+DEFAULT_VISITOR_TURNS = 3
+DEFAULT_VISITORS_DAY = 100
+
+#: The key all visitors' runs are counted under together.
+_ALL = "*"
+
+
+def _positive(name: str, default: int) -> int:
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(f"{name}={raw!r} is not a whole number.") from None
+    if value <= 0:
+        raise ValueError(f"{name}={raw!r} is not a positive number.")
+    return value
+
+
+def visitors_key_problem(
+    key: str, app_id: str, runtime_id: Optional[str] = None
+) -> str:
+    """
+    Why a key cannot be the one visitors' runs act with, or ``""``.
+
+    It is the owner's key granted to this route: a task grant's token whose
+    task is this application's route on this runtime (:func:`task_prefix`).
+    What it reaches beside the route — the owner's connections, read only —
+    is what the grant says; IAM and the gateway hold it to that.
+    """
+    claims = _unverified_claims(key)
+    if not claims:
+        return "visitors_key is not a token the platform issues."
+    if is_anonymous_audience(claims):
+        return "visitors_key is a visitor's token: it is the owner's key granted to the route."
+    if not claims.get("task_grant_uid"):
+        return (
+            "visitors_key is not a key granted to a route: mint one from a task grant "
+            "whose task is this application's A2A route, reaching its connections read only."
+        )
+    prefix = task_prefix(app_id, runtime_id)
+    if not str(claims.get("task_uid") or "").startswith(prefix):
+        return f"visitors_key was granted to another route than {prefix}…"
+    return ""
+
+
+class VisitorsOpen:
+    """
+    An application served over A2A open to visitors: the key their runs act
+    with, and their runs counted.
+
+    Parameters
+    ----------
+    key : Optional[str]
+        The owner's key granted to the route (:func:`visitors_key_problem`),
+        which a visitor's run acts with; ``None``, it keeps the runtime's
+        own. Never the visitor's token.
+    clock : callable
+        The time, for a test.
+    """
+
+    def __init__(self, key: Optional[str] = None, clock: Any = None) -> None:
+        import time
+
+        self.key = key
+        clock = clock or time.time
+        self._each = Turns(
+            clock, lambda: _positive(VISITOR_TURNS_ENV, DEFAULT_VISITOR_TURNS)
+        )
+        self._all = Turns(
+            clock, lambda: _positive(VISITORS_DAY_ENV, DEFAULT_VISITORS_DAY)
+        )
+
+    def take(self, visitor: str, app_name: str) -> str:
+        """Why a visitor's run is refused, or ``""`` — and the run is then counted."""
+        taken, limit = self._each.take(visitor)
+        if not taken:
+            return (
+                f"You have asked {app_name} {limit} times today without an account: "
+                "sign in to keep going, or come back tomorrow."
+            )
+        taken, limit = self._all.take(_ALL)
+        if not taken:
+            return (
+                f"{app_name} has answered its {limit} visitors' requests for today: "
+                "sign in to keep going, or come back tomorrow."
+            )
+        return ""
+
+
 class A2AGate:
     """
     An application's A2A route, open to the machine itself and to a key granted to it.
@@ -236,6 +399,11 @@ class A2AGate:
         Who checks a token with the platform.
     runtime_id : Optional[str]
         The runtime, by its uid; see :func:`task_prefix`.
+    visitors : Optional[VisitorsOpen]
+        Set when its owner opened it to visitors: a visitor's token for this
+        application is answered too, its run acting with the owner's key.
+    app_name : Optional[str]
+        The application's name, as a refusal says it.
     """
 
     def __init__(
@@ -244,11 +412,15 @@ class A2AGate:
         app_id: str,
         verifier: CallerVerifier = VERIFIER,
         runtime_id: Optional[str] = None,
+        visitors: Optional[VisitorsOpen] = None,
+        app_name: Optional[str] = None,
     ) -> None:
         self.app = app
         self.app_id = app_id
         self.verifier = verifier
         self.prefix = task_prefix(app_id, runtime_id)
+        self.visitors = visitors
+        self.app_name = app_name or app_id
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         if scope["type"] != "http":
@@ -267,6 +439,9 @@ class A2AGate:
             for key, value in scope.get("headers") or []
         }
         token = bearer_of(headers.get("authorization"))
+        if token and is_anonymous_audience(_unverified_claims(token)):
+            await self._visitor(token, scope, receive, send)
+            return
         refusal = await self._refusal(token)
         if refusal is not None:
             for message in _json(*refusal):
@@ -274,6 +449,44 @@ class A2AGate:
             return
         body = await read_body(receive)
         await self.app(scope, replay(_with_credential(body, token), receive), send)
+
+    async def _visitor(self, token: str, scope: Any, receive: Any, send: Any) -> None:
+        """A visitor's request: answered when its owner opened it to visitors (R-30)."""
+        refusal: Optional[tuple[int, str]] = None
+        visitor = ""
+        visitors = self.visitors
+        if visitors is None:
+            refusal = (
+                403,
+                (
+                    f"{self.app_name} is not open to visitors: its owner answers a key "
+                    "granted to its route only."
+                ),
+            )
+        else:
+            try:
+                caller = await self.verifier.verify_visitor(token)
+            except CallerRefused as refused:
+                refusal = refused.status, refused.reason
+            else:
+                visitor = caller.uid
+                if caller.app_uid != self.app_id:
+                    refusal = 403, OTHER_APPLICATION
+        if refusal is None and visitors is not None:
+            body = await read_body(receive)
+            why = visitors.take(visitor, self.app_name) if _starts_a_run(body) else ""
+            if not why:
+                # Marked a visitor's, so it only reads; the owner's key for
+                # visitors, when given, never the visitor's own token.
+                await self.app(
+                    scope,
+                    replay(as_visitors_run(body, visitor, visitors.key), receive),
+                    send,
+                )
+                return
+            refusal = 429, why
+        for message in _json(*(refusal or (403, OTHER_APPLICATION))):
+            await send(message)
 
     async def _refusal(self, token: str) -> Optional[tuple[int, str]]:
         """Why a caller is not answered, or None when it is."""
@@ -315,7 +528,13 @@ def served_apps() -> list[str]:
     return sorted(_SERVED)
 
 
-def serve_app_over_a2a(app: Any, agent: Any, url: str) -> dict[str, str]:
+def serve_app_over_a2a(
+    app: Any,
+    agent: Any,
+    url: str,
+    visitors: bool = False,
+    visitors_key: Optional[str] = None,
+) -> dict[str, Any]:
     """
     Serve an application's agent over A2A, at its route and behind its gate.
 
@@ -328,26 +547,61 @@ def serve_app_over_a2a(app: Any, agent: Any, url: str) -> dict[str, str]:
     url : str
         Where the route is, as its callers reach it: the runtime's address
         and ``/api/v1/a2a/agents/<application id>``.
+    visitors : bool
+        Open to visitors too: their runs only read, and are counted.
+    visitors_key : Optional[str]
+        The owner's key granted to the route that visitors' runs act with
+        (:func:`visitors_key_problem`); unsaid, they keep the runtime's own.
 
     Returns
     -------
-    dict[str, str]
+    dict[str, Any]
         ``url`` (where requests go), ``card`` (its agent card) and ``task``
-        (how the task of a key granted to it begins).
+        (how the task of a key granted to it begins); ``visitors`` when it is
+        open to them: the runs a visitor has a day, and all of them together.
     """
     from agent_runtimes.routes.a2a import register_a2a_agent
 
+    if visitors_key is not None:
+        problem = (
+            "visitors_key is for an application open to visitors."
+            if not visitors
+            else visitors_key_problem(visitors_key, app.id)
+        )
+        if problem:
+            raise ValueError(problem)
     stop_serving_apps()
     url = url.rstrip("/")
+    opened = VisitorsOpen(visitors_key) if visitors else None
     register_a2a_agent(
         agent,
         card_of(app, f"{url}/"),
-        gate=lambda inner: A2AGate(inner, app.id),
+        gate=lambda inner: A2AGate(inner, app.id, visitors=opened, app_name=app.name),
     )
     _SERVED.add(app.id)
-    logger.info("Serving the application %s over A2A at %s/", app.id, url)
+    logger.info(
+        "Serving the application %s over A2A at %s/%s",
+        app.id,
+        url,
+        ", open to visitors" if opened else "",
+    )
     return {
         "url": f"{url}/",
         "card": f"{url}/.well-known/agent-card.json",
         "task": task_prefix(app.id),
+        **(
+            {
+                "visitors": {
+                    "turns_a_visitor": _positive(
+                        VISITOR_TURNS_ENV, DEFAULT_VISITOR_TURNS
+                    ),
+                    "turns_a_day": _positive(VISITORS_DAY_ENV, DEFAULT_VISITORS_DAY),
+                    "acts_with": "visitors_key"
+                    if visitors_key
+                    else "the runtime's own",
+                }
+            }
+            if opened
+            else {}
+        ),
     }

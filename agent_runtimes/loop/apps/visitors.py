@@ -171,9 +171,37 @@ def use_turn_token(token: str) -> None:
     _TURN_TOKEN.set(token or "")
 
 
+#: A visitor's run of an application served to visitors over A2A, on its
+#: owner's runtime (`agent_runtimes.loop.apps.a2a`): only reading, as on the
+#: visitors' runtime, while its models are the runtime's.
+_READ_ONLY_RUN: ContextVar[str] = ContextVar("loop_visitor_a2a_run", default="")
+
+#: Where the gate marks an A2A run as a visitor's: ``datalayer.visitor`` in the
+#: message's metadata, beside the credential (`datalayer.credential`).
+A2A_VISITOR_FIELD = "visitor"
+
+
+def visitor_of_a2a(meta: Any) -> str:
+    """The visitor an A2A message was marked for by the gate, or ``""``."""
+    from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
+
+    ours = meta.get(DELEGATION_META_KEY) if isinstance(meta, Mapping) else None
+    visitor = ours.get(A2A_VISITOR_FIELD) if isinstance(ours, Mapping) else None
+    return visitor if isinstance(visitor, str) else ""
+
+
+def enter_visitor_run(visitor: str) -> Any:
+    """Make the run under way a visitor's (``""`` for none); answer the token to reset it."""
+    return _READ_ONLY_RUN.set(visitor or "")
+
+
+def leave_visitor_run(token: Any) -> None:
+    _READ_ONLY_RUN.reset(token)
+
+
 def in_visitor_turn() -> bool:
-    """Whether the turn under way is a visitor's."""
-    return bool(_TURN_TOKEN.get())
+    """Whether the turn under way is a visitor's: on the visitors' runtime, or over A2A."""
+    return bool(_TURN_TOKEN.get()) or bool(_READ_ONLY_RUN.get())
 
 
 async def turn_api_key() -> str:
@@ -222,17 +250,23 @@ def visitor_refusal(tool: str, classes: Sequence[str], behaviour: str) -> str:
 
 
 class Turns:
-    """The turns each visitor took today, in this process."""
+    """The turns each visitor took today, in this process.
 
-    def __init__(self, clock: Any = time.time) -> None:
+    ``limit`` says how many a visitor has in a day, read at each turn:
+    :func:`turns_a_day` on the visitors' runtime; an application served over
+    A2A to visitors has its own (`agent_runtimes.loop.apps.a2a`).
+    """
+
+    def __init__(self, clock: Any = time.time, limit: Any = None) -> None:
         self._clock = clock
+        self._limit = limit or turns_a_day
         self._lock = threading.Lock()
         self._day = int(clock() // 86400)
         self._taken: Dict[str, int] = {}
 
     def take(self, visitor: str) -> Tuple[bool, int]:
         """Take a turn for ``visitor`` if one is left today: (taken, the day's limit)."""
-        limit = turns_a_day()
+        limit = self._limit()
         with self._lock:
             today = int(self._clock() // 86400)
             if today != self._day:
