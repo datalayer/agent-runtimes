@@ -487,6 +487,12 @@ export default defineConfig(({ mode, command }) => {
       define: {
         __dirname: JSON.stringify('/'),
         __filename: JSON.stringify('/index.js'),
+        // The page loads require.js for widgets fetched from a CDN, so a
+        // global AMD `define` exists; a UMD dependency (backbone, under
+        // @jupyter-widgets/base) would take its AMD branch and export nothing
+        // to the bundle — "Class extends value undefined" in NativeView.
+        // Pre-bundled, every UMD takes its CommonJS branch.
+        define: 'undefined',
       },
       loader: {
         '.whl': 'text',
