@@ -33,6 +33,7 @@ import {
 } from '../plugins/assistant';
 import {
   LoopAssistantCharacter,
+  LoopAssistantMenu,
   LoopChatTurn,
   LoopSlots,
   type ChatTurnSnapshot,
@@ -397,5 +398,63 @@ describe('an approval waits in the balloon (T-23)', () => {
     ]);
     expect(el.querySelector('[data-balloon-approval]')).toBeNull();
     expect(document.body.textContent).toContain(ASSISTANT_WORDS.waiting);
+  });
+});
+
+describe("the Loop assistant's menu", () => {
+  it("lists the plugins' entries, and switches the balloon's display", async () => {
+    const chosen = vi.fn();
+    const MenuPlugin = definePlugin({
+      name: 'test-assistant-menu',
+      contributes: [
+        contribution(
+          LoopAssistantMenu,
+          { id: 'mine', label: 'Mine', onSelect: chosen },
+          { id: 'mine' },
+        ),
+      ],
+    });
+    const el = await mount([
+      AssistantCharactersPlugin,
+      TurnPlugin,
+      MenuPlugin,
+      configurePlugin(LoopAssistantPlugin, { balloon: 'current' }),
+    ]);
+    const open = async () => {
+      await act(async () => {
+        el.querySelector('[data-assistant-figure]')!.dispatchEvent(
+          new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+        );
+      });
+    };
+    const choose = async (id: string) => {
+      await act(async () => {
+        document
+          .querySelector<HTMLElement>(`[data-assistant-menu-item="${id}"]`)
+          ?.click();
+      });
+    };
+    await open();
+    await choose('mine');
+    expect(chosen).toHaveBeenCalled();
+    expect(
+      el
+        .querySelector('[data-assistant-balloon]')
+        ?.getAttribute('data-assistant-balloon'),
+    ).toBe('current');
+    await open();
+    await choose('balloon-history');
+    expect(
+      el
+        .querySelector('[data-assistant-balloon]')
+        ?.getAttribute('data-assistant-balloon'),
+    ).toBe('history');
+    await open();
+    await choose('balloon-current');
+    expect(
+      el
+        .querySelector('[data-assistant-balloon]')
+        ?.getAttribute('data-assistant-balloon'),
+    ).toBe('current');
   });
 });

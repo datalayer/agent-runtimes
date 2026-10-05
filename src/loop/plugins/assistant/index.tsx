@@ -186,8 +186,11 @@ export function LoopAssistant({
   person,
   appId,
   decisions,
-  balloon: display = 'history',
+  balloon: displayGiven = 'history',
 }: LoopAssistantConfig): JSX.Element | null {
+  // The balloon's display, as its menu chose it; the Appspec's until then.
+  const [chosenDisplay, setChosenDisplay] = useState<BalloonDisplay>();
+  const display = chosenDisplay ?? displayGiven;
   const contributed = useContributions(LoopAssistantCharacter).map(
     entry => entry.value,
   );
@@ -368,6 +371,7 @@ export function LoopAssistant({
         onDismiss={onDismiss}
         decide={decide}
         onResetPosition={drag.position ? drag.reset : undefined}
+        onBalloonDisplayChange={setChosenDisplay}
         about={appId ? { name: appId, spec: appId } : undefined}
         contextMenu={menuContributions}
       />

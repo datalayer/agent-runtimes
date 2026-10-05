@@ -17,6 +17,7 @@
 import * as React from 'react';
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { ThemeProvider } from '@primer/react';
 import { A2ATeamGraph } from '../A2ATeamGraph';
 import { AT_REST, type A2ATeamPersona } from '../useA2ATeam';
 import { toolOwnName, type A2ATeamConnection } from '../a2aTeamFlow';
@@ -382,5 +383,89 @@ describe('the team example', () => {
     expect(area).toBeLessThan(composer);
     expect(exampleSource).toContain('expandTarget: notebookArea');
     expect(exampleSource).not.toMatch(/<TeamNotebook/);
+  });
+});
+
+describe("a member's menu", () => {
+  const open = async (container: HTMLElement, id: string) => {
+    const figure = container.querySelector<HTMLElement>(
+      `[data-team-member="${id}"] [data-assistant-figure]`,
+    )!;
+    await act(async () => {
+      figure.dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
+      );
+    });
+  };
+  const choose = async (id: string) => {
+    await act(async () => {
+      document
+        .querySelector<HTMLElement>(`[data-assistant-menu-item="${id}"]`)
+        ?.click();
+    });
+  };
+
+  it('switches its balloon to its history and back, each member its own', async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <ThemeProvider>
+        <A2ATeamGraph
+          entry={{
+            ...member('sales', { ...AT_REST, saying: 'Hello!', insist: true }),
+            onToggle: () => {},
+            conversationLabel: 'Ask Sales',
+            history: [
+              { id: '1', role: 'user', text: 'Open invoices?' },
+              { id: '2', role: 'assistant', text: 'Two are open.' },
+            ],
+            onBalloonDisplayChange: onChange,
+          }}
+          peer={{
+            ...member('accounting', AT_REST),
+            history: [
+              { id: 'p1', role: 'user', text: 'List open invoices.' },
+              { id: 'p2', role: 'assistant', text: 'Used list_invoices' },
+              { id: 'p3', role: 'assistant', text: 'Two are open.' },
+            ],
+          }}
+          flow="still"
+          connected
+        />
+      </ThemeProvider>,
+    );
+    await open(container, 'sales');
+    // A member asked by another has no conversation of its own to open.
+    expect(
+      document.querySelector('[data-assistant-menu-item="conversation"]')
+        ?.textContent,
+    ).toContain('Ask Sales');
+    await choose('balloon-history');
+    expect(onChange).toHaveBeenCalledWith('history');
+    expect(
+      balloonOf(container, 'sales')?.querySelectorAll(
+        '[data-balloon-history-message]',
+      ),
+    ).toHaveLength(2);
+    await open(container, 'sales');
+    expect(
+      document
+        .querySelector('[data-assistant-menu-item="balloon-history"]')
+        ?.getAttribute('aria-checked'),
+    ).toBe('true');
+    await choose('balloon-current');
+    expect(
+      balloonOf(container, 'sales')?.getAttribute('data-balloon-display'),
+    ).toBe('current');
+    // Accounting: no conversation entry; its history, what it was asked and did.
+    await open(container, 'accounting');
+    expect(
+      document.querySelector('[data-assistant-menu-item="conversation"]'),
+    ).toBeNull();
+    await choose('balloon-history');
+    expect(
+      balloonOf(container, 'accounting')?.querySelectorAll(
+        '[data-balloon-history-message]',
+      ),
+    ).toHaveLength(3);
   });
 });

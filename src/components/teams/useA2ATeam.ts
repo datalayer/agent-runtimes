@@ -33,7 +33,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { stepCountIs, ToolLoopAgent, type ModelMessage } from 'ai';
-import type { AssistantState } from '../../chat/assistant/state';
+import type {
+  AssistantState,
+  BalloonHistoryMessage,
+} from '../../chat/assistant/state';
 import {
   createBrowserModel,
   type BrowserModelOptions,
@@ -157,6 +160,13 @@ export type A2ATeam = {
   setEntryAway: (away: boolean) => void;
   setPeerAway: (away: boolean) => void;
   turns: A2ATeamTurn[];
+  /** The entry's conversation, as its `history` balloon lists it. */
+  entryHistory: BalloonHistoryMessage[];
+  /**
+   * What the peer was asked, what it did (its tool lines) and what it
+   * answered, as its `history` balloon lists it.
+   */
+  peerHistory: BalloonHistoryMessage[];
   /** The peer's last answer, as it gave it. */
   report: string | null;
   /** What the peer gave besides words with its last answer, by media type. */
@@ -203,6 +213,16 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   }));
   const [peerPersona, setPeerPersona] = useState<A2ATeamPersona>(AT_REST);
   const [turns, setTurns] = useState<A2ATeamTurn[]>([]);
+  const [peerHistory, setPeerHistory] = useState<BalloonHistoryMessage[]>([]);
+  const told = useRef(0);
+  const tell = useCallback(
+    (role: BalloonHistoryMessage['role'], text: string) => {
+      told.current += 1;
+      const id = `peer-${told.current}`;
+      setPeerHistory(prev => [...prev, { id, role, text }]);
+    },
+    [],
+  );
   const [report, setReport] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<A2APeerArtifact[]>([]);
   const [notebook, setNotebook] = useState<A2APeerArtifact | null>(null);
@@ -250,18 +270,29 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }, after.holdMs);
       }
       if (event.phase === 'asked') {
+        tell('user', event.request);
         setPeerPersona(prev => ({
           ...prev,
           state: 'greeting',
           saying: 'On it. Let me read the books.',
+          full: undefined,
           insist: true,
           tool: undefined,
         }));
       } else if (event.phase === 'working') {
+        if (event.tool?.ended) {
+          tell(
+            'assistant',
+            event.tool.error
+              ? `${event.tool.name} failed: ${event.tool.error}`
+              : `Used ${toolOwnName(event.tool.name, peerConnections)}`,
+          );
+        }
         setPeerPersona(prev => ({
           ...prev,
           state: 'working',
           saying: event.note ? balloonLine(event.note) : prev.saying,
+          full: event.note ?? prev.full,
           insist: Boolean(event.note) || Boolean(event.tool) || prev.insist,
           // The tool it calls, in plain words, from the step it told; a
           // step without a tool (its own words) puts the tool line away.
@@ -273,6 +304,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
             : undefined,
         }));
       } else if (event.phase === 'answered') {
+        tell('assistant', event.answer);
         setReport(event.answer);
         setArtifacts(event.artifacts);
         const given = notebookAmong(event.artifacts);
@@ -292,6 +324,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           setEntryPersona(prev => ({ ...prev, notebook: given }));
         }
       } else {
+        tell('assistant', `Could not answer: ${event.error}`);
         setPeerPersona(prev => ({
           ...prev,
           state: 'idle',
@@ -302,7 +335,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       }
     },
-    [peerApp.id, peerConnections, inspector],
+    [peerApp.id, peerConnections, inspector, tell],
   );
 
   const agent = useMemo(() => {
@@ -401,6 +434,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               ...prev,
               state: 'thinking',
               saying: 'Thanks!',
+              full: undefined,
               tool: undefined,
             }));
             // Accounting has handed its answer over: back at rest, its last
@@ -509,7 +543,19 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     [],
   );
 
+  const entryHistory = useMemo(
+    () =>
+      turns.map((turn, index) => ({
+        id: `turn-${index}`,
+        role: turn.role,
+        text: turn.text,
+      })),
+    [turns],
+  );
+
   return {
+    entryHistory,
+    peerHistory,
     entryPersona,
     peerPersona,
     setEntryAway,

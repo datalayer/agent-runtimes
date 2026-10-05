@@ -198,10 +198,10 @@ function AgentA2ATeam(): JSX.Element {
   return (
     <Box sx={{ p: 4, maxWidth: 1080, mx: 'auto' }}>
       <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
-        {TEAM.emoji} {TEAM.name}
+        Agents A2A Team
       </Heading>
       <Text as="p" sx={{ color: 'fg.muted', mt: 0 }}>
-        {TEAM.description}
+        {TEAM.emoji} <strong>{TEAM.name}</strong>: {TEAM.description}
       </Text>
       {((anonymous.status === 'active' && anonymous.expiresAt) ||
         (accountingKeyClock && !accountingKeyEnded)) && (
@@ -282,7 +282,9 @@ function AgentA2ATeam(): JSX.Element {
                 : 'on a runtime',
             persona: team.entryPersona,
             onToggle: () => composer.current?.focus(),
+            conversationLabel: `Ask ${SALES.name}`,
             onAway: team.setEntryAway,
+            history: team.entryHistory,
             expandTarget: notebookArea,
             notebookTitle: `${ACCOUNTING.name}\u2019s notebook`,
             suggestions: team.ready && !team.busy ? suggestions : undefined,
@@ -304,6 +306,7 @@ function AgentA2ATeam(): JSX.Element {
             where: accountingWhere,
             persona: team.peerPersona,
             onAway: team.setPeerAway,
+            history: team.peerHistory,
             connections: ACCOUNTING_CONNECTIONS,
             inspector,
             about: {
@@ -315,6 +318,8 @@ function AgentA2ATeam(): JSX.Element {
           }}
           flow={team.flow}
           calls={team.calls}
+          // Room for the balloons: suggestions, *more* and a notebook.
+          balloonRoom={320}
           connected={peer !== null}
           label={peer ? `A2A · ${peer.skill.name}` : 'A2A · not connected'}
         />

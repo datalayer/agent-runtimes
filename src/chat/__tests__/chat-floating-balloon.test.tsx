@@ -200,3 +200,60 @@ describe('the floating assistant’s balloon, by display', () => {
     ).toBe('Using list_invoices…');
   });
 });
+
+describe('the floating assistant’s suggestions and menu', () => {
+  it('offers the chat’s suggestions in the balloon, and a click sends one to the chat', async () => {
+    await render({
+      suggestions: [
+        { title: 'Open invoices', message: 'Which invoices are open?' },
+      ],
+    });
+    expect(stage().suggestions).toEqual([
+      { label: 'Open invoices', prompt: 'Which invoices are open?' },
+    ]);
+    const send = vi.fn();
+    await act(async () => {
+      chat().onSendReady({ send, stop: vi.fn(), newChat: vi.fn() });
+    });
+    await act(async () => {
+      stage().onSuggestion(stage().suggestions[0]);
+    });
+    expect(send).toHaveBeenCalledWith('Which invoices are open?');
+  });
+
+  it('gives the menu what it can do: the conversation, stop while busy, the inspector', async () => {
+    const inspector = { subscribe: () => () => {} } as never;
+    await render({ inspector, onBalloonDisplayChange: vi.fn() });
+    // The conversation: the chat opens, as a click on the character does.
+    expect(stage().open).toBe(false);
+    await act(async () => stage().onToggle());
+    expect(stage().open).toBe(true);
+    expect(stage().inspector).toBe(inspector);
+    expect(chat().inspector).toBe(inspector);
+    expect(stage().onBalloonDisplayChange).toBeTypeOf('function');
+    // Stop, only while a turn runs, stops the chat.
+    expect(stage().onStop).toBeUndefined();
+    const stop = vi.fn();
+    await act(async () => {
+      chat().onSendReady({ send: vi.fn(), stop, newChat: vi.fn() });
+      chat().onLoadingChange(true);
+    });
+    await act(async () => stage().onStop());
+    expect(stop).toHaveBeenCalled();
+    // No drag yet: nothing to put back.
+    expect(stage().onResetPosition).toBeUndefined();
+  });
+});
+
+describe('the floating assistant’s balloon, chosen in its menu', () => {
+  it('switches to history and back, and tells the host', async () => {
+    const onBalloonDisplayChange = vi.fn();
+    await render({ balloonDisplay: 'current', onBalloonDisplayChange });
+    expect(stage().balloonDisplay).toBe('current');
+    await act(async () => stage().onBalloonDisplayChange('history'));
+    expect(stage().balloonDisplay).toBe('history');
+    expect(onBalloonDisplayChange).toHaveBeenCalledWith('history');
+    await act(async () => stage().onBalloonDisplayChange('current'));
+    expect(stage().balloonDisplay).toBe('current');
+  });
+});

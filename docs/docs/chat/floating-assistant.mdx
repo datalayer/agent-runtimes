@@ -236,6 +236,84 @@ names under the graph (`expandTarget` on the member) as it arrives; a click
 in the balloon scrolls to it and focuses it. Without an area, *Expand* opens
 it in a dialog.
 
+### Suggestions in the balloon
+
+While the agent waits for a question (idle, or greeting), the balloon offers
+its **suggestions as chips** under its words, in either display. Click one
+to send it as the prompt, the same as typing it and pressing *Send*. Each
+chip is a button whose accessible name is the prompt it sends (*Ask: Which
+customer invoices are still open?*). The chips go away while the agent
+works.
+
+```tsx
+<AssistantStage
+  suggestions={[{ label: 'Open invoices', prompt: 'Which invoices are open?' }]}
+  onSuggestion={suggestion => send(suggestion.prompt)}
+  …
+/>
+```
+
+`ChatFloating` offers its chat's `suggestions` this way and sends them to
+its chat. A team's member takes `suggestions` and `onSuggestion`: the team
+example and the home page put Sales' starters there. The row of buttons under
+the graph is gone, and the row keeps only the trial key's clock.
+
+### While it works: three dots
+
+While the agent thinks, works or waits and has written nothing yet, the
+balloon shows the chat's own **three dots** (`TypingDots`, the same
+component the conversation uses). In `current` they follow the line said now
+(*Thinking*, *Using list_invoices*, *Asking Accounting*), or stand alone
+when there is no line. In `history` they are the last item. They stop when
+the answer's words stream in, or when the turn ends. They hold still, but
+stay visible, for a reader who asks for reduced motion, and a screen reader
+does not hear them: the balloon's live region already says the state.
+
+### More, less, and the history large
+
+When the words in a `current` balloon are cut, by the four lines it shows or
+because the host shortened them (a team member's `saying`, its uncut text in
+`fullText`), a **more** button follows them. It shows the whole text in the
+balloon, taller and scrolled, and **less** folds it back. It is a button
+with `aria-expanded`, and it shows only when something was cut.
+
+In `history`, the header's **Expand** button draws the whole history large:
+every message, the tool line and what goes with the words. It opens in the
+balloon's large-visual dialog, or in the host's `expandTarget` when there is
+one. **Shrink** (or Esc) puts it back in the balloon.
+
+## The assistant's menu
+
+Right-click the character, press Shift+F10 or the ContextMenu key while it
+has the focus, or long-press it on a touch screen. A menu opens where the
+pointer is, and Esc or a click outside closes it. Each host shows only the
+entries it supports:
+
+| Entry | Shown when the host passes |
+| --- | --- |
+| Inspect the agent… | `inspector`: the Agent Inspector in a large dialog, loaded only then |
+| Open / Close the conversation | always, unless `conversationLabel={false}`; a host may rename it (*Ask Sales*) |
+| Stop the turn | `onStop`, while the agent works |
+| New conversation, Clear the conversation | `onNewChat`, `onClear` |
+| Suggestions | `suggestions` and `onSuggestion` |
+| Balloon: History / Current | `onBalloonDisplayChange`; the radio shows the display in use |
+| Change character… | `onChangeCharacter` |
+| Mute / Unmute speech | `speech` |
+| Reset position | `onResetPosition`, after a drag |
+| About this agent | `about`: its name, spec, model and where it runs |
+| Send away | always: for now, for this session, or for good, as the hover × does |
+
+A host or a plugin adds its own entries with `contextMenu`
+(`{id, label, onSelect, checked?, disabled?, group?}`). In the LOOP
+workspace, plugins contribute them to `loop.assistant.menu`
+(`LoopAssistantMenu`).
+
+`ChatFloating` keeps the balloon display chosen in the menu, and tells the
+host with `onBalloonDisplayChange`. It records its agent into `inspector`,
+stops and starts its chat, and mutes its voice. A team's members keep
+their own display choice, and their history lists what each was asked,
+said and did.
+
 ## Ask a decision
 
 Given a runtime to ask, **the balloon offers *Ask a decision***: a typed

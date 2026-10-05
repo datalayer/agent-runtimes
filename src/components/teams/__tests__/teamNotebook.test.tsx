@@ -76,7 +76,7 @@ const CSV: A2APeerArtifact = {
 };
 
 describe('what the peer gave', () => {
-  it('is named on the exchange, and its latest notebook found', async () => {
+  it('is named in words, and its latest notebook found', async () => {
     const { answeredLine, notebookAmong } = await import('../useA2ATeam');
     expect(answeredLine([])).toBe('the report');
     expect(answeredLine([NOTEBOOK])).toBe(
@@ -125,9 +125,6 @@ describe('what the peer gave', () => {
     expect(result.current.report).toBe('Two invoices are open.');
     expect(result.current.artifacts).toEqual([NOTEBOOK]);
     expect(result.current.notebook).toBe(NOTEBOOK);
-    expect(result.current.exchange.at(-1)).toBe(
-      'Accounting → Sales: the report and a notebook, Open invoices',
-    );
     // An answer in words alone leaves the notebook open.
     act(() => {
       told.onEvent?.({

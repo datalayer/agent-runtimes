@@ -58,6 +58,7 @@ import {
   type AssistantAbout,
 } from '../../chat/assistant/AssistantStage';
 import type { BalloonSuggestion } from '../../chat/assistant/SpeechBalloon';
+import type { BalloonHistoryMessage } from '../../chat/assistant/state';
 import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMenu';
 import type { AgentInspectorSink } from '../inspector/agentInspector';
 import { SpecMark } from '../../chat/marks/SpecMark';
@@ -127,6 +128,19 @@ export type A2ATeamGraphMember = {
   about?: AssistantAbout;
   /** The host's own entries of its menu. */
   contextMenu?: readonly AssistantMenuItem[];
+  /**
+   * What its menu calls a click on it (`onToggle`): `Ask Sales` where it
+   * takes the person to the composer. Without `onToggle`, its menu has no
+   * such entry.
+   */
+  conversationLabel?: string;
+  /**
+   * What it said and did, as its `history` balloon lists it (`useA2ATeam`'s
+   * `entryHistory`, `peerHistory`): shown when its menu chooses *History*.
+   */
+  history?: readonly BalloonHistoryMessage[];
+  /** Its balloon's display was chosen in its menu: the page may keep it. */
+  onBalloonDisplayChange?: (display: BalloonDisplay) => void;
 };
 
 export type A2ATeamGraphProps = {
@@ -144,13 +158,19 @@ export type A2ATeamGraphProps = {
   size?: number;
   /** The tool calls running now, to the members' connections (`useA2ATeam`). */
   calls?: A2ATeamCall[];
+  /**
+   * The room above the members for their balloons, in pixels at full scale:
+   * a page that shows suggestions, *more* and a notebook in them gives more.
+   * A notebook in a balloon gets at least its own.
+   */
+  balloonRoom?: number;
 };
 
 /** The graph's own coordinates: the members, and room above them for their balloons. */
 const NODE_WIDTH = 200;
 const BALLOON_ROOM = 144;
 /** The room a balloon that holds a notebook needs above its member. */
-const NOTEBOOK_BALLOON_ROOM = 340;
+const NOTEBOOK_BALLOON_ROOM = 480;
 /** How tall the notebook in a balloon grows before it scrolls. */
 const NOTEBOOK_PREVIEW_HEIGHT = 180;
 const GAP = 220;
@@ -200,10 +220,18 @@ const MemberNode = memo(function MemberNode({
   const { id, side, size } = data;
   const member = useContext(Members)[id];
   const stageRef = useRef<HTMLDivElement>(null);
+  // Its balloon's display, as its menu changes it.
+  const [display, setDisplay] = useState<BalloonDisplay | undefined>();
   if (!member) {
     return null;
   }
   const { persona } = member;
+  const shownDisplay = display ?? member.balloonDisplay ?? 'current';
+  // History: what it said and did, listed.
+  const listed =
+    shownDisplay === 'history' && member.history?.length
+      ? { history: member.history }
+      : {};
   // A notebook it was given: read-only in its balloon, and its large visual
   // the one that runs, editable — under the graph, or in a dialog.
   const notebookTitle =
@@ -274,7 +302,14 @@ const MemberNode = memo(function MemberNode({
             onDragStart={() => undefined}
             open={false}
             onToggle={member.onToggle ?? (() => undefined)}
-            balloonDisplay={member.balloonDisplay ?? 'current'}
+            balloonDisplay={shownDisplay}
+            onBalloonDisplayChange={next => {
+              setDisplay(next);
+              member.onBalloonDisplayChange?.(next);
+            }}
+            conversationLabel={
+              member.onToggle ? (member.conversationLabel ?? undefined) : false
+            }
             balloon={
               persona.tool
                 ? {
@@ -282,10 +317,12 @@ const MemberNode = memo(function MemberNode({
                     tool: persona.tool,
                     busy: persona.state !== 'idle',
                     ...given,
+                    ...listed,
                   }
                 : persona.saying
                   ? {
                       text: persona.saying,
+                      ...(persona.full ? { fullText: persona.full } : {}),
                       more: persona.saying.endsWith('…'),
                       speaking: persona.state === 'speaking',
                       busy:
@@ -293,12 +330,16 @@ const MemberNode = memo(function MemberNode({
                         persona.state === 'working' ||
                         persona.state === 'speaking',
                       ...given,
+                      ...listed,
                     }
-                  : undefined
+                  : 'history' in listed
+                    ? { text: '', ...listed }
+                    : undefined
             }
             expandTarget={member.expandTarget}
             expandOnArrival={!!member.expandTarget}
-            insist={persona.insist}
+            // History, chosen in its menu: shown until Current is.
+            insist={persona.insist || display === 'history'}
             onDismiss={away => member.onAway?.(away !== 'none')}
             suggestions={member.suggestions}
             onSuggestion={member.onSuggestion}
@@ -595,6 +636,7 @@ export function A2ATeamGraph({
   label = 'A2A',
   size = 96,
   calls = [],
+  balloonRoom = BALLOON_ROOM,
 }: A2ATeamGraphProps): JSX.Element {
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
@@ -628,8 +670,8 @@ export function A2ATeamGraph({
   const hasConnections = placed.some(({ connections }) => connections.length);
   // A notebook in a balloon: more room above the members.
   const room = [entry, peer].some(member => member.persona.notebook)
-    ? NOTEBOOK_BALLOON_ROOM
-    : BALLOON_ROOM;
+    ? Math.max(NOTEBOOK_BALLOON_ROOM, balloonRoom)
+    : balloonRoom;
   const height = Math.ceil(
     (room +
       memberHeight +

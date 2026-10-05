@@ -16,6 +16,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useAgentInspector } from '../components/inspector/agentInspector';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { Button, Heading, Text, ToggleSwitch } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -155,6 +156,8 @@ const AssistantExample: React.FC = () => {
   }, []);
   // How the balloon shows the conversation (T-23): history, or current.
   const [balloon, setBalloon] = useState<BalloonDisplay>('history');
+  // What the agent does, for the menu's *Inspect the agent…*.
+  const { sink: inspector } = useAgentInspector();
   // Pixel, the test sprite, read once through the clippy.js reader.
   const [pixel, setPixel] = useState<AssistantCharacterData>();
   useEffect(() => {
@@ -399,6 +402,29 @@ const AssistantExample: React.FC = () => {
             useStore={false}
             // Ask a decision beside the composer: Jev, through this server.
             decisions={{ serverUrl: SERVER }}
+            // Right-click the character: its menu.
+            inspector={inspector}
+            onBalloonDisplayChange={setBalloon}
+            onChangeCharacter={() =>
+              document
+                .querySelector<HTMLElement>('[data-assistant-character]')
+                ?.focus()
+            }
+            about={{
+              name: 'Assistant',
+              spec: AGENT_ID,
+              where: `on a runtime, ${new URL(SERVER).host}`,
+            }}
+            suggestions={[
+              {
+                title: 'What is on this page?',
+                message: 'What is on this page?',
+              },
+              {
+                title: 'Tell me a joke',
+                message: 'Tell me a short joke about accountants.',
+              },
+            ]}
           />
         )}
       </Box>

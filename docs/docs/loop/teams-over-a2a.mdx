@@ -302,8 +302,11 @@ team.send('Which invoices are still open?');
 - **`useA2ATeam`** runs the entry's loop in the page (the Vercel AI SDK's
   `ToolLoopAgent`, its model through ai-inference) with its one tool to the
   peer. It keeps each member's persona (its state and its balloon), the
-  conversation, the exchange, the last report, the flow, and the calls the
-  peer's connections are answering (`calls`, from `callsAfter`).
+  conversation, each member's history (`entryHistory`, `peerHistory`), the
+  last report, the flow, and the calls the peer's connections are answering
+  (`calls`, from `callsAfter`). Given an Agent Inspector's sink
+  (`inspector`), it records the entry's model turns and its call to the peer
+  there.
 - **`flowAfter`** turns an `A2APeerEvent` into the flow. `asked` and
   `working` give `asking`. `answered` gives `answering` for
   `ANSWER_SHOWN_MS` (1.8 s). `failed` gives `still`.
@@ -324,6 +327,89 @@ Datalayer's home page runs the same team for signed-out visitors: Sales in
 their browser with their trial key, Accounting on a cloud runtime open to
 visitors.
 
+## The Agent Inspector
+
+The Agent Inspector shows what agents do, one row a thing, newest last, in
+place of lines of text: the A2A requests, responses and stream events, the
+MCP tool calls, the skills, the frontend and backend tools, and the model
+turns. It is reusable: any page, chat or team can feed it
+(`components/inspector`).
+
+Each row has:
+
+- the time, to the millisecond, and the time since the first row;
+- the direction, seen from the agent the inspector is for: *sent →
+  Accounting*, *received ← Sales*;
+- the source (A2A, MCP, Skill, Frontend tool, Backend tool, Model) and the
+  kind (`request`, `task`, `status-update`, `artifact-update`, `message`,
+  `tool-call`, `turn`) as labels;
+- the name with its mark (`SpecMark`), its status and, once it ended, its
+  duration;
+- a line that says it.
+
+A row unfolds to a JSON tree of its payload (`JsonTree`): objects and arrays
+fold, values are coloured by type, and *Copy JSON* copies it. A tool call's
+start and end are one row, with both its arguments and its result. A large
+payload, such as a notebook, says its size and stays folded until you ask
+for it. The toolbar filters by source, kind and actor, pauses the rows while
+recording goes on, clears them, and exports the session as JSON.
+
+### Feeding it
+
+```tsx
+import {
+  AgentInspector,
+  inspectA2AFetch,
+  useAgentInspector,
+} from '@datalayer/agent-runtimes/lib/components/inspector';
+
+const { sink } = useAgentInspector();
+// The A2A traffic: a fetch under the SDK's JSON-RPC transport.
+connectA2APeer({
+  url,
+  fetch: inspectA2AFetch(fetch, { sink, asker: 'Sales', peer: 'Accounting' }),
+});
+// The team: the entry's turns and its call to the peer.
+useA2ATeam({ ...options, inspector: sink });
+// A chat: its turns and tool calls (ChatBase, ChatFloating, …).
+<ChatFloating inspector={sink} … />;
+<AgentInspector sink={sink} agent="Sales" />;
+```
+
+- **`createAgentInspector({ limit })`** makes the record, a sink kept in
+  memory (2000 entries by default). `start` and `end` pair a call by its
+  key, `push` records one thing, and `note` links what a caller made of an
+  event (an `A2APeerEvent`) to the entry it came from.
+- **`inspectA2AFetch`** hands each request to the network and reads a copy
+  of the answer, so the SDK sees exactly what the network gave. It records
+  the JSON-RPC request, then the response or each server-sent event, with its
+  task id, context id and state. It never records the bearer key. Each
+  `{tool_call}` / `{tool_result}` pair a peer tells on its `working`
+  statuses becomes one row of the peer's, linked to both statuses: an MCP
+  call when it is one of the peer's connections (`teamToolClassifier`),
+  otherwise a tool its runtime runs. The chunks of one artifact are one row.
+- **`ChatBase`** records into its `inspector` prop, or into the sink of the
+  nearest `AgentInspectorProvider`. It records each turn (the prompt, the
+  model, the answer, the tokens) and each tool call from start to end:
+  `skill`, `mcp`, `frontend-tool` or `backend-tool` by who claims the tool's
+  name (`classifyToolCall`).
+- **`<AgentInspector agent="Sales" />`** shows one agent's own record: what
+  it did, and the A2A messages it sent or received. One message shows in
+  both agents' inspectors, as the same entry, sent in one and received in
+  the other.
+- **`AgentInspectorDialog`** shows it over the page. The assistant's menu
+  opens it with *Inspect the agent…*, and loads it only then.
+
+### The duplicated tool lines
+
+The old exchange list showed `Accounting: Calling odoo_accounting_list_invoices`
+twice, then `Read …` twice. These were not duplicated events. Recorded on
+the wire, each `working` status came once, and each call had its own id. The
+model called the tool twice at once, with different arguments
+(`payment_state=not_paid` and `payment_state=partial`), and the line named
+neither. The inspector shows each call as its own row, with its arguments
+and its duration.
+
 ## The example
 
 `AgentA2ATeamExample` puts both applications on screen as Office Assistant
@@ -334,6 +420,25 @@ Sales is the paper clip and Accounting is the wizard. You ask Sales. Sales
 and then the report appears. Sales accepts a notebook: when Accounting gives
 one — ask for one, *open invoices as a notebook* — it opens under the
 conversation in place of the report, to run in the page.
+
+Under the graph, each member has its own Agent Inspector, side by side, or
+stacked on a narrow screen.
+
+- **Sales' inspector** shows its model turns, its `ask_accounting` call and
+  the A2A messages it sends and receives.
+- **Accounting's inspector** shows what it received over A2A, its Odoo MCP
+  calls, `write_notebook`, and its status updates and artifacts.
+
+Sales' suggestions, the starters of its Appspec, are chips in its balloon
+while it waits for a question. Click one to ask it. Right-click a member for
+its menu: *Inspect the agent…*, *Ask Sales* (Sales only), the suggestions,
+*Balloon: History / Current* (its history lists what it was asked, said and
+did), *Stop the turn*, *About*, and *Send away*.
+
+The landing's home page runs the same team without an inspector on the
+page. The members' menus still offer *Inspect the agent…*. The inspector's
+code loads only then, from a record kept in memory from the start, capped
+at the last 500 entries.
 
 1. Start the examples: Vite on :3000 and the local agent-runtimes server on
    :8765 (`npm run examples`).

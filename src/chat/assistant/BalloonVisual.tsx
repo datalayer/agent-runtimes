@@ -23,7 +23,11 @@ import { createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Dialog, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
-import { ScreenFullIcon, XIcon } from '@primer/octicons-react';
+import {
+  ScreenFullIcon,
+  ScreenNormalIcon,
+  XIcon,
+} from '@primer/octicons-react';
 
 /** A large visual a balloon carries, and how it is drawn large. */
 export interface BalloonVisual {
@@ -36,6 +40,11 @@ export interface BalloonVisual {
    * target, or in a dialog, which already shows `title`.
    */
   render: (place: 'target' | 'overlay') => ReactNode;
+  /**
+   * Large, it shrinks back into the balloon (*Shrink*) rather than closes:
+   * the balloon's own content drawn large, such as its history.
+   */
+  shrink?: boolean;
 }
 
 /** Where an expanded visual goes: an element of the page, or none (a dialog). */
@@ -104,11 +113,12 @@ export function ExpandedVisual({
       >
         <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
           <IconButton
-            icon={XIcon}
+            icon={visual.shrink ? ScreenNormalIcon : XIcon}
             size="small"
             variant="invisible"
-            aria-label={`Close ${visual.title}`}
+            aria-label={`${visual.shrink ? 'Shrink' : 'Close'} ${visual.title}`}
             data-balloon-expanded-close=""
+            {...(visual.shrink ? { 'data-balloon-shrink': '' } : {})}
             onClick={onClose}
           />
         </Box>
@@ -133,6 +143,18 @@ export function ExpandedVisual({
         data-balloon-visual={visual.id}
         sx={{ minWidth: 0 }}
       >
+        {visual.shrink && (
+          <Button
+            size="small"
+            variant="invisible"
+            leadingVisual={ScreenNormalIcon}
+            onClick={onClose}
+            data-balloon-shrink=""
+            sx={{ float: 'right' }}
+          >
+            Shrink
+          </Button>
+        )}
         {visual.render('overlay')}
       </Box>
     </Dialog>

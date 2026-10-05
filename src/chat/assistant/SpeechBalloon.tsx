@@ -52,6 +52,7 @@ import {
 } from './BalloonParts';
 import type { BalloonDisplay, BalloonToolLine } from './toolLine';
 import { BalloonExpandButton } from './BalloonVisual';
+import { ScreenFullIcon } from '@primer/octicons-react';
 import { TypingDots } from '../indicators/TypingDots';
 
 /** A suggestion the balloon offers: its label, and the prompt it sends. */
@@ -138,6 +139,8 @@ export interface SpeechBalloonProps {
   onExpand?: () => void;
   /** What the large visual is, for the *Expand* button: `Accounting's notebook`. */
   expandTitle?: string;
+  /** Draws the listed history large (`history` display): its *Expand*. */
+  onExpandHistory?: () => void;
   /**
    * What the person may ask, as chips under the words: one clicked is sent
    * as the prompt (`onSuggestion`), as if typed and asked.
@@ -167,14 +170,62 @@ export const BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT = 120;
  * opens it, then every message, the person's to the right, scrolled to the
  * newest.
  */
+/**
+ * The history balloon, large (*Expand*): every message, then the tool being
+ * called and what goes with the words, in the overlay or the page's area,
+ * scrolled there.
+ */
+export function BalloonHistoryLarge({
+  history,
+  tool,
+  attachment,
+}: {
+  history: readonly BalloonHistoryMessage[];
+  tool?: BalloonToolLine;
+  attachment?: ReactNode;
+}): JSX.Element {
+  return (
+    <Box
+      role="log"
+      aria-label="Conversation"
+      data-balloon-history-large=""
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 1 }}
+    >
+      {history.map(message => (
+        <Box
+          key={message.id}
+          data-balloon-history-message={message.role}
+          sx={{
+            alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
+            maxWidth: '80%',
+            px: 3,
+            py: 2,
+            borderRadius: 2,
+            bg: message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {message.text}
+        </Box>
+      ))}
+      {tool ? <BalloonToolLineView line={tool} /> : null}
+      {attachment ? <Box>{attachment}</Box> : null}
+    </Box>
+  );
+}
+
 function BalloonHistory({
   history,
   onOpen,
   maxHeight = BALLOON_HISTORY_MAX_HEIGHT,
+  onExpand,
 }: {
   history: readonly BalloonHistoryMessage[];
   onOpen: () => void;
   maxHeight?: number;
+  /** Draws the history large: *Expand*. */
+  onExpand?: () => void;
 }): JSX.Element {
   const listRef = useRef<HTMLDivElement>(null);
   const newest = history[history.length - 1]?.id;
@@ -212,6 +263,17 @@ function BalloonHistory({
       >
         {conversationHeaderText(history.length)}
       </Box>
+      {onExpand ? (
+        <IconButton
+          icon={ScreenFullIcon}
+          size="small"
+          variant="invisible"
+          aria-label="Expand the conversation"
+          data-balloon-history-expand=""
+          onClick={onExpand}
+          sx={{ position: 'absolute', top: '4px', right: '28px' }}
+        />
+      ) : null}
       <Box
         ref={listRef}
         role="log"
@@ -273,6 +335,7 @@ export function SpeechBalloon({
   onSuggestion,
   waiting = false,
   fullText,
+  onExpandHistory,
 }: SpeechBalloonProps): JSX.Element {
   // *more*: the words whole, when they were cut or overflow their lines.
   const [whole, setWhole] = useState(false);
@@ -375,6 +438,7 @@ export function SpeechBalloon({
           <BalloonHistory
             history={listed}
             onOpen={onOpen}
+            onExpand={onExpandHistory}
             maxHeight={
               attachment
                 ? BALLOON_HISTORY_WITH_ATTACHMENT_MAX_HEIGHT

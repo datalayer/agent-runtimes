@@ -57,7 +57,12 @@ import {
 } from '@primer/octicons-react';
 import { Dialog, Text } from '@primer/react';
 import { assistantCharacter, type AssistantCharacter } from './characters';
-import { SpeechBalloon, type BalloonSuggestion } from './SpeechBalloon';
+import {
+  BalloonHistoryLarge,
+  SpeechBalloon,
+  type BalloonSuggestion,
+} from './SpeechBalloon';
+import { conversationHeaderText } from './BalloonParts';
 import {
   AssistantContextMenu,
   LONG_PRESS_MS,
@@ -736,6 +741,24 @@ export function AssistantStage({
         }
       }
     : null;
+  // The history, large: drawn from the balloon's messages as they are now.
+  const history = balloon?.history;
+  const historyVisual: BalloonVisual | null =
+    balloonDisplay !== 'current' && history && history.length > 0
+      ? {
+          id: 'balloon-history',
+          title: conversationHeaderText(history.length),
+          shrink: true,
+          render: () => (
+            <BalloonHistoryLarge
+              history={history}
+              tool={balloon?.tool}
+              attachment={balloon?.attachment}
+            />
+          ),
+        }
+      : null;
+  const shown = expanded?.id === 'balloon-history' ? historyVisual : expanded;
   useEffect(() => {
     if (visual && expandOnArrival && expandTarget) {
       setExpanded(visual);
@@ -851,9 +874,9 @@ export function AssistantStage({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {expanded && (
+      {shown && (
         <ExpandedVisual
-          visual={expanded}
+          visual={shown}
           target={expandTarget}
           onClose={() => setExpanded(null)}
         />
@@ -873,6 +896,16 @@ export function AssistantStage({
             history={balloon.history}
             onExpand={expand ?? undefined}
             expandTitle={visual?.title}
+            onExpandHistory={
+              historyVisual
+                ? () => {
+                    setExpanded(historyVisual);
+                    if (expandTarget) {
+                      requestAnimationFrame(() => focusExpanded(expandTarget));
+                    }
+                  }
+                : undefined
+            }
             suggestions={waitsForQuestion ? suggestions : undefined}
             fullText={balloon.fullText}
             waiting={
@@ -902,7 +935,7 @@ export function AssistantStage({
         aria-expanded={open}
         aria-haspopup="menu"
         ref={characterRef}
-        data-assistant-character=""
+        data-assistant-figure=""
         onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
           event.preventDefault();
           clearTimeout(longPress.current);

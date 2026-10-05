@@ -425,7 +425,7 @@ export function ChatFloating({
   launching = false,
   launchingMessage,
   assistantCharacter = DEFAULT_ASSISTANT_CHARACTER,
-  balloonDisplay = DEFAULT_BALLOON_DISPLAY,
+  balloonDisplay: balloonDisplayGiven = DEFAULT_BALLOON_DISPLAY,
   expandTarget,
   conversation,
   decisions,
@@ -445,6 +445,18 @@ export function ChatFloating({
     string | undefined
   >();
   const [speechMuted, setSpeechMuted] = useState(false);
+  // The balloon's display, as the assistant's menu chose it; the host's
+  // until then, and again when the host changes it.
+  const [chosenDisplay, setChosenDisplay] = useState<BalloonDisplay>();
+  useEffect(() => setChosenDisplay(undefined), [balloonDisplayGiven]);
+  const balloonDisplay = chosenDisplay ?? balloonDisplayGiven;
+  const changeBalloonDisplay = useCallback(
+    (next: BalloonDisplay) => {
+      setChosenDisplay(next);
+      onBalloonDisplayChange?.(next);
+    },
+    [onBalloonDisplayChange],
+  );
   // Store-based state
   const storeIsOpen = useChatOpen();
   const storeMessages = useChatMessages();
@@ -1801,7 +1813,7 @@ export function ChatFloating({
           suggestions={balloonSuggestions}
           onSuggestion={sendSuggestion}
           inspector={inspector}
-          onBalloonDisplayChange={onBalloonDisplayChange}
+          onBalloonDisplayChange={changeBalloonDisplay}
           onStop={
             chatBusy && chatControls.current
               ? () => chatControls.current?.stop()
