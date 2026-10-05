@@ -1681,7 +1681,6 @@ async def create_agent(
                 deployment_of,
                 ensure_principal_token,
             )
-
             from agent_runtimes.loop.apps.visitors import visitors_runtime
 
             serving_deployment = deployment_of(request.app_instance)
