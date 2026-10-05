@@ -90,6 +90,30 @@ slot — see `chat/prompt/stack`:
 A band can reserve height for late-arriving content, draw as a flex row of
 controls or as a self-painting block, and disappear entirely when empty.
 
+## Marks: whose a tool is
+
+A tool call in the chat (`ToolCallDisplay`, and `ToolPart` for message parts)
+leads with the mark of whoever the tool belongs to: its **MCP server** (found
+by the tools the server says it serves), its **skill** (`run_skill_script`,
+`load_skill` and `read_skill_resource` name it in their arguments), its
+**frontend tool set** (by the names in the set's `toolset`) or its **runtime
+tool** spec (by `runtime.method`, the name the runtime registers it under).
+The mark is the entry's icon, else its emoji, else nothing (`marksOfToolCall`,
+`SpecMark`, in `chat/marks`).
+
+An icon names its package as the agentspecs catalogues write it,
+`<package>:<name>` — `@datalayer/icons-react:odoo`,
+`@primer/octicons-react:mark-github` — and the name is exported by the package
+as `OdooIcon`, `MarkGithubIcon`. Each package is imported the first time one of
+its icons is drawn, and only then; a blank of the icon's size holds its place
+meanwhile. A malformed reference, or a name the package does not have, throws:
+a test holds every catalogue entry to one its package has.
+
+The composer's menus draw the same marks: the **Tools** menu names the
+runtime's tools and, under their own heading, the **Frontend tools** — the ones
+the page runs — each with its mark, and each MCP server's row with the
+server's; the **Skills** menu each skill with its own.
+
 ## The empty state
 
 `ChatEmptyState` introduces the agent — icon, name, description, and its

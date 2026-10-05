@@ -31,7 +31,7 @@ ACCOUNTING_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["pandas>=2.0.0"],
     tags=["accounting", "finance", "reconciliation", "close"],
-    icon="book",
+    icon="@primer/octicons-react:book",
     emoji="🧮",
     enabled=False,
 )
@@ -49,7 +49,7 @@ CRAWL_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["requests>=2.31.0", "beautifulsoup4>=4.12.0"],
     tags=["web", "crawl", "scraping"],
-    icon="globe",
+    icon="@primer/octicons-react:globe",
     emoji="🌐",
     enabled=True,
 )
@@ -67,7 +67,7 @@ EVENTS_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["httpx>=0.27.0"],
     tags=["events", "orchestration", "automation"],
-    icon="bell",
+    icon="@primer/octicons-react:calendar",
     emoji="📅",
     enabled=False,
 )
@@ -85,7 +85,7 @@ GITHUB_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["PyGithub>=2.1.0"],
     tags=["github", "git", "code"],
-    icon="mark-github",
+    icon="@datalayer/icons-react:github-mark",
     emoji="🐙",
     enabled=False,
 )
@@ -103,7 +103,7 @@ JOKES_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=[],
     tags=["fun", "humor", "demo"],
-    icon="smiley",
+    icon="@primer/octicons-react:smiley",
     emoji="😄",
     enabled=False,
 )
@@ -121,7 +121,7 @@ PDF_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["PyPDF2>=3.0.0", "pdfplumber>=0.10.0"],
     tags=["pdf", "documents", "extraction"],
-    icon="file",
+    icon="@primer/octicons-react:file",
     emoji="📄",
     enabled=False,
 )
@@ -139,7 +139,7 @@ TEXT_SUMMARIZER_SKILL_SPEC_0_0_1 = SkillSpec(
     optional_env_vars=[],
     dependencies=["agent-skills>=0.0.1"],
     tags=["nlp", "summarization", "text-processing"],
-    icon="note",
+    icon="@primer/octicons-react:note",
     emoji="📝",
     enabled=False,
 )

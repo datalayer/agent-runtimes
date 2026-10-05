@@ -32,7 +32,7 @@ CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="create_plan",
     ),
-    icon="list-unordered",
+    icon="@primer/octicons-react:list-unordered",
     emoji="📋",
 )
 
@@ -51,7 +51,7 @@ CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="current_time",
     ),
-    icon="clock",
+    icon="@primer/octicons-react:clock",
     emoji="🕒",
 )
 
@@ -70,7 +70,7 @@ DECIDE_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.tools.decisions",
         method="decide",
     ),
-    icon="law",
+    icon="@primer/octicons-react:law",
     emoji="⚖️",
 )
 
@@ -89,7 +89,7 @@ DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="display_recipe",
     ),
-    icon="book",
+    icon="@primer/octicons-react:book",
     emoji="🍳",
 )
 
@@ -108,7 +108,7 @@ EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="create_plan",
     ),
-    icon="list-unordered",
+    icon="@primer/octicons-react:list-unordered",
     emoji="📋",
 )
 
@@ -127,7 +127,7 @@ EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="current_time",
     ),
-    icon="clock",
+    icon="@primer/octicons-react:clock",
     emoji="🕒",
 )
 
@@ -146,7 +146,7 @@ EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="display_recipe",
     ),
-    icon="book",
+    icon="@primer/octicons-react:book",
     emoji="🍳",
 )
 
@@ -165,7 +165,7 @@ EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_haiku",
     ),
-    icon="pencil",
+    icon="@primer/octicons-react:pencil",
     emoji="🖋️",
 )
 
@@ -184,8 +184,8 @@ EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_task_steps",
     ),
-    icon="tasklist",
-    emoji="🧑‍⚖️",
+    icon="@primer/octicons-react:tasklist",
+    emoji="🙋",
 )
 
 EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
@@ -203,7 +203,7 @@ EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="get_weather",
     ),
-    icon="sun",
+    icon="@primer/octicons-react:sun",
     emoji="🌤️",
 )
 
@@ -222,7 +222,7 @@ EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.a2ui",
         method="render_a2ui_surface",
     ),
-    icon="browser",
+    icon="@primer/octicons-react:browser",
     emoji="🎛️",
 )
 
@@ -241,7 +241,7 @@ EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="update_plan_step",
     ),
-    icon="checklist",
+    icon="@primer/octicons-react:checklist",
     emoji="✅",
 )
 
@@ -260,7 +260,7 @@ GENERATE_HAIKU_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_haiku",
     ),
-    icon="pencil",
+    icon="@primer/octicons-react:pencil",
     emoji="🖋️",
 )
 
@@ -279,8 +279,8 @@ GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="generate_task_steps",
     ),
-    icon="tasklist",
-    emoji="🧑‍⚖️",
+    icon="@primer/octicons-react:tasklist",
+    emoji="🙋",
 )
 
 GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
@@ -298,7 +298,7 @@ GET_WEATHER_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="get_weather",
     ),
-    icon="sun",
+    icon="@primer/octicons-react:sun",
     emoji="🌤️",
 )
 
@@ -317,7 +317,7 @@ RUNTIME_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools",
         method="runtime_echo",
     ),
-    icon="comment",
+    icon="@primer/octicons-react:comment",
     emoji="💬",
 )
 
@@ -336,7 +336,7 @@ RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools",
         method="runtime_send_mail",
     ),
-    icon="mail",
+    icon="@primer/octicons-react:mail",
     emoji="📧",
 )
 
@@ -355,7 +355,7 @@ RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools",
         method="runtime_sensitive_echo",
     ),
-    icon="shield",
+    icon="@primer/octicons-react:shield",
     emoji="🛡️",
 )
 
@@ -374,7 +374,7 @@ UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1 = ToolSpec(
         package="agent_runtimes.examples.tools.ag_ui",
         method="update_plan_step",
     ),
-    icon="checklist",
+    icon="@primer/octicons-react:checklist",
     emoji="✅",
 )
 

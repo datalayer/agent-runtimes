@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
 
@@ -327,6 +328,7 @@ def main() -> None:
 
     print(f"Loading tool specs from {args.specs_dir}...")
     specs = load_tool_specs(args.specs_dir)
+    check_marks(specs, args.specs_dir)
     print(f"Loaded {len(specs)} tool specifications")
 
     print("Generating Python code...")

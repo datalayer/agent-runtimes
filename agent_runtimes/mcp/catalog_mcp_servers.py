@@ -25,7 +25,7 @@ ALPHAVANTAGE_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Alpha Vantage",
     description="Financial market data and stock information",
-    icon="graph",
+    icon="@primer/octicons-react:graph",
     emoji="💹",
     command="uvx",
     args=[
@@ -46,7 +46,7 @@ CHART_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Chart Generator",
     description="Generate charts and visualizations",
-    icon="graph",
+    icon="@datalayer/icons-react:chart-bar",
     emoji="📊",
     command="npx",
     args=[
@@ -64,7 +64,7 @@ DATALAYER_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Datalayer",
     description="Read, edit and run Jupyter notebooks on Datalayer, with sandboxes and data",
-    icon="notebook",
+    icon="@datalayer/icons-react:datalayer",
     emoji="🚀",
     command="npx",
     args=[
@@ -85,7 +85,7 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Earthdata MCP",
     description="Access NASA Earthdata search and metadata capabilities",
-    icon="globe",
+    icon="@datalayer/icons-react:globe-americas",
     emoji="🌍",
     command="npx",
     args=[
@@ -107,7 +107,7 @@ EURUS_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Eurus Climate MCP",
     description="Climate and reanalysis analysis tools for spatial workflows",
-    icon="graph",
+    icon="@primer/octicons-react:cloud",
     emoji="🌦️",
     command="eurus-mcp",
     args=[],
@@ -122,7 +122,7 @@ FILESYSTEM_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Filesystem",
     description="Local filesystem read/write operations",
-    icon="file-directory",
+    icon="@primer/octicons-react:file-directory",
     emoji="📁",
     command="npx",
     args=[
@@ -141,7 +141,7 @@ GITHUB_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="GitHub",
     description="GitHub repository operations (issues, PRs, code search)",
-    icon="mark-github",
+    icon="@datalayer/icons-react:github-mark",
     emoji="🐙",
     command="docker",
     args=[
@@ -166,7 +166,7 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Google Workspace",
     description="Google Drive, Gmail, Calendar, and Docs integration",
-    icon="mail",
+    icon="@datalayer/icons-react:google",
     emoji="📧",
     command="uvx",
     args=[
@@ -191,7 +191,7 @@ HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Hugging Face",
     description="Hugging Face models, datasets, spaces, and papers access",
-    icon="brain",
+    icon="@primer/octicons-react:hubot",
     emoji="🤗",
     command="npx",
     args=[
@@ -212,8 +212,8 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Kaggle",
     description="Kaggle datasets, models, competitions, and notebooks access",
-    icon="database",
-    emoji="📊",
+    icon="@datalayer/icons-react:kaggle",
+    emoji="🏆",
     command="npx",
     args=[
         "-y",
@@ -228,13 +228,34 @@ KAGGLE_MCP_SERVER_0_0_1 = MCPServer(
     required_env_vars=["KAGGLE_API_TOKEN:0.0.1"],
 )
 
+ODOO_ACCOUNTING_MCP_SERVER_0_0_1 = MCPServer(
+    id="odoo-accounting",
+    version="0.0.1",
+    name="Odoo Accounting",
+    description="An accountant's day in Odoo — invoices, bills, journal entries, reconciliations, bank lines and tax returns — through the Datalayer MCP server",
+    icon="@datalayer/icons-react:odoo",
+    emoji="🧮",
+    command="npx",
+    args=[
+        "-y",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp?only=odoo-accounting",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
+    ],
+    transport="stdio",
+    enabled=False,
+    tools=[],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
+)
+
 ODOO_MCP_SERVER_0_0_1 = MCPServer(
     id="odoo",
     version="0.0.1",
     name="Odoo",
     description="Odoo ERP operations (search, invoices, journals, reconciliations)",
-    icon="server",
-    emoji="📚",
+    icon="@datalayer/icons-react:odoo",
+    emoji="🧾",
     command="uvx",
     args=[
         "mcp-server-odoo",
@@ -256,7 +277,7 @@ SALESFORCE_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Salesforce",
     description="Salesforce CRM operations (queries, reports, objects, SOQL)",
-    icon="briefcase",
+    icon="@primer/octicons-react:briefcase",
     emoji="☁️",
     command="npx",
     args=[
@@ -281,7 +302,7 @@ SLACK_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Slack",
     description="Slack messaging and channel operations",
-    icon="comment-discussion",
+    icon="@datalayer/icons-react:slack",
     emoji="💬",
     command="npx",
     args=[
@@ -308,7 +329,7 @@ TAVILY_MCP_SERVER_0_0_1 = MCPServer(
     version="0.0.1",
     name="Tavily Search",
     description="Web search and research capabilities via Tavily API",
-    icon="search",
+    icon="@primer/octicons-react:search",
     emoji="🔍",
     command="npx",
     args=[
@@ -339,6 +360,7 @@ MCP_SERVER_CATALOG: Dict[str, MCPServer] = {
     "google-workspace": GOOGLE_WORKSPACE_MCP_SERVER_0_0_1,
     "huggingface": HUGGINGFACE_MCP_SERVER_0_0_1,
     "kaggle": KAGGLE_MCP_SERVER_0_0_1,
+    "odoo-accounting": ODOO_ACCOUNTING_MCP_SERVER_0_0_1,
     "odoo": ODOO_MCP_SERVER_0_0_1,
     "salesforce": SALESFORCE_MCP_SERVER_0_0_1,
     "slack": SLACK_MCP_SERVER_0_0_1,

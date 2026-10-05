@@ -16,7 +16,7 @@ SHELL=/bin/bash
 
 AGENTSPECS_REPO ?= https://github.com/datalayer/agentspecs.git
 AGENTSPECS_DIR ?= agentspecs
-AGENTSPECS_BRANCH ?= "main"
+AGENTSPECS_BRANCH ?= feat/apps-next
 
 AGENT_SERVE_ID ?= data-acquisition
 AGENT_SERVE_NAME ?= dla-1
@@ -438,7 +438,7 @@ specs-clone: ## clone/update agentspecs repository
 	else \
 		cd $(AGENTSPECS_DIR) && git fetch origin; \
 	fi
-	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH)
+	@cd $(AGENTSPECS_DIR) && git checkout $(AGENTSPECS_BRANCH) && git merge --ff-only origin/$(AGENTSPECS_BRANCH)
 
 specs-generate: ## generate all Python and TypeScript specs from YAML
 	$(call step,Generating agent specifications)

@@ -21,6 +21,7 @@ import { Box } from '@datalayer/primer-addons';
 import { BriefcaseIcon } from '@primer/octicons-react';
 
 import type { SkillInfo } from '../../../types';
+import { SpecMark, hasMark, marksOfSkill } from '../../marks';
 
 export function SkillsMenu({
   skills,
@@ -123,6 +124,9 @@ export function SkillsMenu({
                       <Box
                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                       >
+                        {hasMark(marksOfSkill(skill.id)) && (
+                          <SpecMark {...marksOfSkill(skill.id)} size={16} />
+                        )}
                         <Text
                           id={`toggle-skill-${skill.id}`}
                           sx={{ fontWeight: 'semibold' }}

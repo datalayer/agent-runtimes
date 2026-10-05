@@ -16,6 +16,7 @@ import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ChevronDownIcon, AlertIcon } from '@primer/octicons-react';
 import type { ExecutionResult } from '../../types/execution';
+import { SpecMark, hasMark, marksOfToolCall } from '../marks';
 
 export interface ToolPartProps {
   /** Tool UI part data */
@@ -115,6 +116,13 @@ export function ToolPart({ part }: ToolPartProps) {
   const executionResult = extractExecutionResult(part.output);
   const statusInfo = getStatusInfo(part.state, executionResult);
   const toolName = part.type.split('-').slice(1).join('-') || part.type;
+  // Whose tool it is, from the catalogues: its icon, else its emoji, else nothing.
+  const marks = marksOfToolCall(
+    toolName,
+    part.input && typeof part.input === 'object'
+      ? (part.input as Record<string, unknown>)
+      : undefined,
+  );
   const effectiveExitOutput =
     executionResult?.output ??
     (typeof part.output === 'string'
@@ -158,7 +166,11 @@ export function ToolPart({ part }: ToolPartProps) {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Text sx={{ fontSize: 1, color: 'fg.muted' }}>🔧</Text>
+          {hasMark(marks) && (
+            <Box sx={{ display: 'flex', color: 'fg.muted' }}>
+              <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={14} />
+            </Box>
+          )}
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>{toolName}</Text>
           <Box
             sx={{

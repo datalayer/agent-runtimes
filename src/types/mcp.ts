@@ -45,9 +45,9 @@ export interface MCPServer {
   transport: 'stdio' | 'http';
   /** Environment variables required by this server (e.g., API keys) */
   requiredEnvVars?: string[];
-  /** Icon identifier for the server */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier for the server */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 

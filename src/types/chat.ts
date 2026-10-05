@@ -331,6 +331,10 @@ export interface MCPServerConfig {
   transport?: string;
   isConfig?: boolean;
   isRunning?: boolean;
+  /** The icon, `<package>:<name>` (agentspecs.marks), as the runtime's catalogue says it. */
+  icon?: string;
+  /** Drawn where there is no icon. */
+  emoji?: string;
 }
 
 // ---------------------------------------------------------------------------

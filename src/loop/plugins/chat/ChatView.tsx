@@ -1584,12 +1584,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const offeredTools = useMemo(() => {
     const fromServer = configQuery.data?.builtinTools ?? [];
     const seen = new Set(fromServer.map(tool => tool.name));
-    return [
-      ...fromServer,
-      ...agentTools
+    // The runtime's, and the frontend tools this page runs: named apart.
+    return {
+      runtime: fromServer,
+      frontend: agentTools
         .filter(tool => !seen.has(tool.name))
         .map(tool => ({ id: tool.name, name: tool.name })),
-    ];
+    };
   }, [configQuery.data?.builtinTools, agentTools]);
 
   /* Which skills are on, as the runtime last reported them. Derived rather
@@ -1744,7 +1745,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     selectedModel: activeModel,
     onModelSelect: model => void selectModel(model),
     showToolsMenu: !presence,
-    availableTools: offeredTools,
+    availableTools: offeredTools.runtime,
+    availableFrontendTools: offeredTools.frontend,
     mcpServers: configQuery.data?.mcpServers ?? [],
     // Live from the host example, when one feeds it: the footer's MCP status
     // indicator. (Codemode surfaces through the toggle below, not a blob.)

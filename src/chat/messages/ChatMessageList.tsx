@@ -38,6 +38,7 @@ import {
   streamdownCodeBlockStyles,
 } from '../styles/streamdownStyles';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
 import { TurnFooter } from './TurnFooter';
 import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { parseFormSubmission } from './formSubmission';
@@ -140,6 +141,12 @@ export interface ChatMessageListProps {
    * `note`, which has no footer of its own.
    */
   renderMessageFooter?: (message: ChatMessage) => ReactNode;
+  /**
+   * The MCP servers the agent has, with the tools each serves: a tool call is
+   * drawn with the marks of the server it belongs to. Skills, frontend tools
+   * and runtime tools are found in the catalogues.
+   */
+  mcpServers?: readonly MarkedMcpServer[];
 }
 
 // ---------------------------------------------------------------------------
@@ -549,10 +556,12 @@ export function SubagentChatPanel({
 function DefaultToolCallRenderer({
   item,
   onRespond,
+  mcpServers,
 }: {
   item: ToolCallMessage;
   approvalConfig?: ToolApprovalConfig;
   onRespond: RespondCallback;
+  mcpServers?: readonly MarkedMcpServer[];
 }) {
   const resultObject =
     item.result && typeof item.result === 'object'
@@ -590,19 +599,17 @@ function DefaultToolCallRenderer({
   // Capture the skill id carried in the tool-call arguments so we can match
   // the inline approval button against that synthetic approval entry.
   const skillApprovalKey = useMemo(() => {
-    const SKILL_TOOLS = new Set([
-      'run_skill_script',
-      'load_skill',
-      'read_skill_resource',
-    ]);
-    if (!SKILL_TOOLS.has(item.toolName)) return null;
-    const a = (item.args ?? {}) as Record<string, unknown>;
-    const raw = a.skill_name ?? a.skill ?? a.name;
-    if (typeof raw !== 'string' || raw.length === 0) return null;
-    // Strip optional ``<name>:<version>`` suffix to the base skill id.
-    const base = raw.split(':', 1)[0] || raw;
-    return `skill:${base}`.toLowerCase();
+    // The base skill id, without an optional ``<name>:<version>`` suffix.
+    const skillId = skillIdOfCall(item.toolName, item.args);
+    return skillId ? `skill:${skillId}`.toLowerCase() : null;
   }, [item.toolName, item.args]);
+
+  // Whose tool it is — its MCP server, skill, frontend tool set or runtime
+  // tool — for the mark drawn before its name.
+  const marks = useMemo(
+    () => marksOfToolCall(item.toolName, item.args, mcpServers),
+    [item.toolName, item.args, mcpServers],
+  );
 
   // Read pending approvals from the Zustand store (fed by the agent-runtime WS).
   const approvals = useAgentRuntimeStore(s => s.approvals);
@@ -730,6 +737,7 @@ function DefaultToolCallRenderer({
             : undefined
         }
         approvalLoading={false}
+        marks={marks}
       />
       {isSubagentDelegation && (
         <SubagentChatPanel
@@ -762,6 +770,7 @@ export function ChatMessageList({
   agentUsage,
   onRemoveItems,
   renderMessageFooter,
+  mcpServers,
 }: ChatMessageListProps) {
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
@@ -891,6 +900,7 @@ export function ChatMessageList({
           item={item}
           approvalConfig={approvalConfig}
           onRespond={createRespondCallback(item.toolCallId)}
+          mcpServers={mcpServers}
         />
       );
 

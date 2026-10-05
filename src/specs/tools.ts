@@ -34,7 +34,7 @@ export const CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'create_plan',
   },
-  icon: 'list-unordered',
+  icon: '@primer/octicons-react:list-unordered',
   emoji: '📋',
 };
 
@@ -53,7 +53,7 @@ export const CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'current_time',
   },
-  icon: 'clock',
+  icon: '@primer/octicons-react:clock',
   emoji: '🕒',
 };
 
@@ -73,7 +73,7 @@ export const DECIDE_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.tools.decisions',
     method: 'decide',
   },
-  icon: 'law',
+  icon: '@primer/octicons-react:law',
   emoji: '⚖️',
 };
 
@@ -93,7 +93,7 @@ export const DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'display_recipe',
   },
-  icon: 'book',
+  icon: '@primer/octicons-react:book',
   emoji: '🍳',
 };
 
@@ -113,7 +113,7 @@ export const EXAMPLE_CREATE_PLAN_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'create_plan',
   },
-  icon: 'list-unordered',
+  icon: '@primer/octicons-react:list-unordered',
   emoji: '📋',
 };
 
@@ -132,7 +132,7 @@ export const EXAMPLE_CURRENT_TIME_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'current_time',
   },
-  icon: 'clock',
+  icon: '@primer/octicons-react:clock',
   emoji: '🕒',
 };
 
@@ -152,7 +152,7 @@ export const EXAMPLE_DISPLAY_RECIPE_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'display_recipe',
   },
-  icon: 'book',
+  icon: '@primer/octicons-react:book',
   emoji: '🍳',
 };
 
@@ -172,7 +172,7 @@ export const EXAMPLE_GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'generate_haiku',
   },
-  icon: 'pencil',
+  icon: '@primer/octicons-react:pencil',
   emoji: '🖋️',
 };
 
@@ -192,8 +192,8 @@ export const EXAMPLE_GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'generate_task_steps',
   },
-  icon: 'tasklist',
-  emoji: '🧑‍⚖️',
+  icon: '@primer/octicons-react:tasklist',
+  emoji: '🙋',
 };
 
 export const EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
@@ -212,7 +212,7 @@ export const EXAMPLE_GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'get_weather',
   },
-  icon: 'sun',
+  icon: '@primer/octicons-react:sun',
   emoji: '🌤️',
 };
 
@@ -232,7 +232,7 @@ export const EXAMPLE_RENDER_A2UI_SURFACE_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.a2ui',
     method: 'render_a2ui_surface',
   },
-  icon: 'browser',
+  icon: '@primer/octicons-react:browser',
   emoji: '🎛️',
 };
 
@@ -252,7 +252,7 @@ export const EXAMPLE_UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'update_plan_step',
   },
-  icon: 'checklist',
+  icon: '@primer/octicons-react:checklist',
   emoji: '✅',
 };
 
@@ -272,7 +272,7 @@ export const GENERATE_HAIKU_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'generate_haiku',
   },
-  icon: 'pencil',
+  icon: '@primer/octicons-react:pencil',
   emoji: '🖋️',
 };
 
@@ -292,8 +292,8 @@ export const GENERATE_TASK_STEPS_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'generate_task_steps',
   },
-  icon: 'tasklist',
-  emoji: '🧑‍⚖️',
+  icon: '@primer/octicons-react:tasklist',
+  emoji: '🙋',
 };
 
 export const GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
@@ -312,7 +312,7 @@ export const GET_WEATHER_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'get_weather',
   },
-  icon: 'sun',
+  icon: '@primer/octicons-react:sun',
   emoji: '🌤️',
 };
 
@@ -331,7 +331,7 @@ export const RUNTIME_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools',
     method: 'runtime_echo',
   },
-  icon: 'comment',
+  icon: '@primer/octicons-react:comment',
   emoji: '💬',
 };
 
@@ -351,7 +351,7 @@ export const RUNTIME_SEND_MAIL_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools',
     method: 'runtime_send_mail',
   },
-  icon: 'mail',
+  icon: '@primer/octicons-react:mail',
   emoji: '📧',
 };
 
@@ -370,7 +370,7 @@ export const RUNTIME_SENSITIVE_ECHO_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools',
     method: 'runtime_sensitive_echo',
   },
-  icon: 'shield',
+  icon: '@primer/octicons-react:shield',
   emoji: '🛡️',
 };
 
@@ -390,7 +390,7 @@ export const UPDATE_PLAN_STEP_TOOL_SPEC_0_0_1: ToolSpec = {
     package: 'agent_runtimes.examples.tools.ag_ui',
     method: 'update_plan_step',
   },
-  icon: 'checklist',
+  icon: '@primer/octicons-react:checklist',
   emoji: '✅',
 };
 

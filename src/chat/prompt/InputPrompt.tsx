@@ -280,7 +280,10 @@ export interface InputPromptProps {
   onModelSelect?: (modelId: string) => void;
 
   // ---- Tools ----
+  /** The runtime's tools. */
   availableTools?: BuiltinTool[];
+  /** The frontend tools: the ones this page runs for the agent. */
+  availableFrontendTools?: BuiltinTool[];
   /** MCP servers to render (already filtered by selection) */
   mcpServers?: MCPServerConfig[];
   enabledMcpTools?: Map<string, Set<string>>;
@@ -367,6 +370,7 @@ export function InputPrompt({
   selectedModel = '',
   onModelSelect = () => {},
   availableTools = [],
+  availableFrontendTools = [],
   mcpServers = [],
   enabledMcpTools = EMPTY_TOOL_MAP,
   enabledMcpToolCount = 0,
@@ -612,6 +616,7 @@ export function InputPrompt({
                               approvedMcpTools={approvedMcpTools}
                               onToggleMcpToolApproval={onToggleMcpToolApproval}
                               availableTools={availableTools}
+                              availableFrontendTools={availableFrontendTools}
                             />
                           )}
 

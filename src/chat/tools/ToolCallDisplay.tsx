@@ -27,6 +27,7 @@ import type {
   ExecutionResult,
   DisplayToolCallStatus,
 } from '../../types';
+import { SpecMark, hasMark, type Marks } from '../marks';
 
 /**
  * Error type classification for display purposes
@@ -66,6 +67,12 @@ export interface ToolCallDisplayProps {
   onDeny?: () => void;
   /** Loading state for approval actions */
   approvalLoading?: boolean;
+  /**
+   * The marks of whoever the tool belongs to — its MCP server, skill,
+   * frontend tool set or runtime tool spec — drawn before its name: the
+   * icon, else the emoji, else nothing.
+   */
+  marks?: Marks | null;
 }
 
 /**
@@ -207,6 +214,7 @@ export function ToolCallDisplay({
   onApprove,
   onDeny,
   approvalLoading = false,
+  marks,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -304,10 +312,12 @@ export function ToolCallDisplay({
           )}
         </Box>
 
-        {/* Tool icon */}
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
-          <ToolsIcon size={16} />
-        </Box>
+        {/* Whose tool it is: the icon, else the emoji, else nothing */}
+        {hasMark(marks) && (
+          <Box sx={{ color: 'fg.muted', flexShrink: 0, display: 'flex' }}>
+            <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={16} />
+          </Box>
+        )}
 
         {/* Tool name */}
         <Text

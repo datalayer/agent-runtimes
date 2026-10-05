@@ -105,7 +105,7 @@ class SkillSpec(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -159,7 +159,7 @@ class ToolSpec(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -193,7 +193,7 @@ class FrontendToolSpec(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -1213,7 +1213,7 @@ class MCPServer(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,

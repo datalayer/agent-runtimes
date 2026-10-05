@@ -1915,7 +1915,10 @@ function ChatBaseInner({
    * — that is the whole point of it — so the menu was empty for the one kind
    * of agent whose tools the browser already knows in full.
    */
-  const builtinTools = useMemo<BuiltinTool[]>(() => {
+  const builtinTools = useMemo<{
+    runtime: BuiltinTool[];
+    frontend: BuiltinTool[];
+  }>(() => {
     /*
      * Both lists, not one or the other.
      *
@@ -1956,7 +1959,12 @@ function ChatBaseInner({
         return true;
       })
       .map(tool => ({ id: tool.name, name: tool.name }));
-    return [...fromConfig, ...fromPage];
+    /*
+     * Kept apart: the runtime's tools, and the frontend tools — the ones this
+     * page runs. The menu names them under two headings, so a person can tell
+     * what the agent does on the server from what it does here.
+     */
+    return { runtime: fromConfig, frontend: fromPage };
   }, [configQuery.data?.builtinTools, frontendTools, protocol?.options]);
 
   /*
@@ -4597,6 +4605,7 @@ function ChatBaseInner({
         showTurnFooters={showTurnFooter}
         agentUsage={agentUsage}
         onRemoveItems={handleRemoveItems}
+        mcpServers={filteredMcpServers}
         emptyContent={
           launching ? null : (
             <ChatEmptyState
@@ -4677,7 +4686,8 @@ function ChatBaseInner({
       }
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
-      availableTools={builtinTools}
+      availableTools={builtinTools.runtime}
+      availableFrontendTools={builtinTools.frontend}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
       enabledMcpToolCount={getEnabledMcpToolNames().length}

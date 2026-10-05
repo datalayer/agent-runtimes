@@ -27,8 +27,16 @@ make specs
 ```
 
 This command:
-- Clones the agentspecs repository into ./agentspecs (or pulls updates)
-- Generates Python and TypeScript catalogs for agents, MCP servers, skills, and env vars
+- Clones the agentspecs repository into ./agentspecs, or fetches it and
+  fast-forwards it, on `AGENTSPECS_BRANCH` (`feat/apps-next` unless said)
+- Generates Python and TypeScript catalogs for agents, MCP servers, skills,
+  tools, frontend tools and env vars
+
+The MCP server, skill, tool and frontend tool generators check the marks of
+each entry first, by `agentspecs.marks` imported from the clone: an icon that
+does not say its package (`<package>:<name>`, the package
+`@datalayer/icons-react` or `@primer/octicons-react`) or a missing emoji stops
+the generator, naming the entry. See [Chat — Marks](../chat#marks-whose-a-tool-is).
 
 ## Using a Local Agentspecs Checkout
 

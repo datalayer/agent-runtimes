@@ -39,9 +39,9 @@ export interface ToolSpec {
   requiresApproval?: boolean;
   /** Runtime binding metadata */
   runtime: ToolRuntimeSpec;
-  /** Icon identifier */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 
@@ -86,9 +86,9 @@ export interface FrontendToolSpec {
    * read and edit a notebook but must never delete from it.
    */
   toolset: string | string[];
-  /** Icon identifier */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
 }
 
