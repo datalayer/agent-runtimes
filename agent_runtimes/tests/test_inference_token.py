@@ -268,6 +268,30 @@ class TestTheTokenGiven:
             _call(model)
         assert datalayer_runtime == []
 
+    def test_a_renewed_one_takes_over_on_the_next_call(
+        self, datalayer_runtime: list[httpx.Request]
+    ) -> None:
+        # An unmetered runtime's companion gives it a fresh token before each
+        # hour ends: the model built earlier calls with the newest one, and a
+        # runtime whose token had run out calls again once it is renewed.
+        model = resolve_model_for_inference_provider(SONNET, "datalayer")
+        app = TestClient(_app(), client=("127.0.0.1", 50000))
+        first = _jwt(time.time() - 60)
+        assert app.put(
+            "/api/v1/configure/inference/token", json={"token": first}
+        ).status_code == 200
+        with pytest.raises(InferenceTokenMissing, match="expired at"):
+            _call(model)
+
+        renewed = _jwt(time.time() + 3600)
+        response = app.put("/api/v1/configure/inference/token", json={"token": renewed})
+
+        assert response.status_code == 200
+        assert response.json()["expiresAt"] == pytest.approx(time.time() + 3600, abs=5)
+        assert offered.inference_token_refusal() is None
+        _call(model)
+        assert datalayer_runtime[-1].headers["authorization"] == f"Bearer {renewed}"
+
     def test_the_answer_kept_is_replaced(
         self, datalayer_runtime: list[httpx.Request]
     ) -> None:
