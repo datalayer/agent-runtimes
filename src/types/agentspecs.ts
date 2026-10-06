@@ -581,6 +581,12 @@ export interface AppDeploymentSpec {
   hosted?: {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
     slug: string;
+    /**
+     * At its address, only its character (LOOP T-21): the conversation
+     * opens in its balloon, as when it is shipped as `assistant`. Off
+     * unless said.
+     */
+    characterAlone?: boolean;
   };
   embedded?: { mode: AppEmbedMode; origins: string[] };
 }

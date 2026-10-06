@@ -243,6 +243,27 @@ describe('writing an Appspec', () => {
     );
   });
 
+  it('shows only its character at its address when said, off unless said (T-21)', () => {
+    const alone = parseAppspec({
+      kind: 'chat',
+      deployment: { hosted: { slug: 'desk', character_alone: true } },
+    }).app;
+    expect(alone.deployment.hosted).toEqual({
+      visibility: 'private',
+      slug: 'desk',
+      characterAlone: true,
+    });
+    expect(dumpAppspec(alone).deployment).toEqual({
+      hosted: { slug: 'desk', character_alone: true },
+    });
+    expect(
+      parseAppspec({
+        kind: 'chat',
+        deployment: { hosted: { slug: 'desk', character_alone: 'yes' } },
+      }).app.deployment.hosted?.characterAlone,
+    ).toBeUndefined();
+  });
+
   it('leaves out what is not the spec', () => {
     const app = {
       ...emptyAppspec('chat'),

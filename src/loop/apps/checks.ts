@@ -749,6 +749,12 @@ export function documentShapeProblems(document: unknown): string[] {
           'is lower-case letters, digits and hyphens',
         );
       }
+      if (
+        hosted.character_alone !== undefined &&
+        typeof hosted.character_alone !== 'boolean'
+      ) {
+        at('deployment.hosted.character_alone', 'is true or false');
+      }
     });
     mapping(deployment.embedded, 'deployment.embedded', embedded => {
       oneOf(embedded.mode, ENUMS.mode, 'deployment.embedded.mode');

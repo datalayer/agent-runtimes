@@ -73,6 +73,12 @@ describe('the instant checks', () => {
     expect(
       checkAppspec({ ...BASE, record: { suggest_tests: 'yes' } }).problems,
     ).toContain('record.suggest_tests: is true or false.');
+    expect(
+      checkAppspec({
+        ...BASE,
+        deployment: { hosted: { character_alone: 'yes' } },
+      }).problems,
+    ).toContain('deployment.hosted.character_alone: is true or false.');
     expect(checkAppspec({ ...BASE, team: 'jupyter' }).problems).toContain(
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );

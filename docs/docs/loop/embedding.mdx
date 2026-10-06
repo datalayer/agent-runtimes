@@ -222,6 +222,47 @@ element takes no plugins, so an embedded application draws one of the four.
 Primer's portal root, and the styles go where the host's bundler puts them.
 Pass `ownPortal` only when the component is mounted in a root of its own.
 
+### The character alone, at the application's address
+
+On Datalayer, an application's own address draws its page with its
+conversation. When its Appspec says so —
+
+```yaml
+deployment:
+  hosted:
+    slug: support-desk
+    character_alone: true # false unless said
+```
+
+— the address shows only its character instead, the conversation opening in
+its balloon, as the `assistant` mode does in another product's page: the
+character the Appspec names (`interface.assistant`), else the paper clip,
+whatever the visitor chose in their own settings. `AppFloating` is that
+floating chrome on its own, for a host that already has its theme and passes
+its renderer what else it needs (`renderer`: the UI plugins its organization
+turned off, the visitors' runtime, the agent kept on):
+
+```tsx
+import {
+  AppFloating,
+  embedAssistantCharacter,
+} from '@datalayer/agent-runtimes/lib/loop';
+
+const chosen = embedAssistantCharacter(appspec);
+'problem' in chosen ? (
+  <p>{chosen.problem}</p>
+) : (
+  <AppFloating
+    app={appspec}
+    view="assistant"
+    character={chosen.character}
+    colorMode="light"
+    themeOverrides={{}}
+    renderer={{ pluginsOff: [] }}
+  />
+);
+```
+
 ## The snippet, from Ship
 
 `embedSnippetOf` writes the snippet a host pastes. It writes the mode only
@@ -251,6 +292,7 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
 `embed-element.test.tsx`):
 
 - the modes and the chat each one floats in;
+- `AppFloating` as the character alone, on the visitors' runtime too;
 - the order of the overrides (attribute, then CSS variable, then Appspec) and
   the messages for invalid values;
 - the snippet;

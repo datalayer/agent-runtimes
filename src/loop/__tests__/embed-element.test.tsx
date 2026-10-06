@@ -59,7 +59,7 @@ vi.mock('../../hooks/useAgentRuntimes', () => ({
   },
 }));
 
-import { AppEmbed } from '../embed/AppEmbed';
+import { AppEmbed, AppFloating } from '../embed/AppEmbed';
 import {
   appspecOfText,
   defineDatalayerAppElement,
@@ -270,6 +270,34 @@ describe('AppEmbed, the React component', () => {
     expect(seen.renderer).toHaveLength(0);
     expect(seen.runtimes).toHaveLength(0);
     await act(async () => shown.unmount());
+    await act(async () => root.unmount());
+  });
+
+  it('floats as the character alone for an application’s address, on the visitors’ runtime too (T-21)', async () => {
+    const app = chatApp();
+    const visitors = { url: 'https://r1.example/visitors', token: 'v' };
+    const { root } = await render(
+      <AppFloating
+        app={app}
+        view="assistant"
+        colorMode="light"
+        themeOverrides={{}}
+        instance={{ appUid: 'app-1', deploymentUid: 'dep-1', version: 2 }}
+        renderer={{
+          pluginsOff: ['canvas'],
+          datalayerVisitors: visitors as never,
+        }}
+      />,
+    );
+    expect(seen.floating.at(-1)!.defaultViewMode).toBe('assistant');
+    // Signed out, a visitor runs on the visitors' runtime: not refused.
+    expect(held()).toMatchObject({
+      app,
+      target: 'datalayer',
+      pluginsOff: ['canvas'],
+      datalayerVisitors: visitors,
+      hideChatHeader: true,
+    });
     await act(async () => root.unmount());
   });
 

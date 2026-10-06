@@ -425,6 +425,7 @@ function parseDeployment(data: Data): AppDeploymentSpec {
         'private',
       ),
       slug: text(data.hosted.slug),
+      ...(data.hosted.character_alone === true ? { characterAlone: true } : {}),
     };
   }
   if (isData(data.embedded)) {
@@ -864,7 +865,12 @@ export function dumpAppspec(app: AppSpec): Data {
                 app.deployment.hosted.visibility,
                 'private',
               )
-              .text('slug', app.deployment.hosted.slug).data,
+              .text('slug', app.deployment.hosted.slug)
+              .value<boolean>(
+                'character_alone',
+                app.deployment.hosted.characterAlone === true,
+                false,
+              ).data,
         )
         .present(
           'embedded',

@@ -336,7 +336,13 @@ export { PromptPlugin, PROMPT_PLUGIN_NAME } from './plugins/prompt';
 export { LoopEmbed, type LoopEmbedProps } from './embed/LoopEmbed';
 // An application in another product's page: the React component, the
 // `<datalayer-app>` element, and the snippet a host pastes (LOOP D-07 to D-09).
-export { AppEmbed, type AppEmbedProps } from './embed/AppEmbed';
+export {
+  AppEmbed,
+  AppFloating,
+  embedAssistantCharacter,
+  type AppEmbedProps,
+  type AppFloatingProps,
+} from './embed/AppEmbed';
 export {
   defineDatalayerAppElement,
   type DatalayerAppElementOptions,

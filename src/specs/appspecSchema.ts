@@ -898,6 +898,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Slug',
           type: 'string',
         },
+        character_alone: {
+          default: false,
+          description:
+            'At its address, only its character: the conversation opens in its balloon, as when it is shipped as `assistant`',
+          title: 'Character Alone',
+          type: 'boolean',
+        },
       },
       title: 'HostedDeployment',
       type: 'object',

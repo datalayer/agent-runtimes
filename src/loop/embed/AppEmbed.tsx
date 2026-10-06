@@ -49,7 +49,11 @@ import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import { ChatFloating } from '../../chat/ChatFloating';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
-import { AppRenderer, type AppInstance } from '../apps/AppRenderer';
+import {
+  AppRenderer,
+  type AppInstance,
+  type AppRendererProps,
+} from '../apps/AppRenderer';
 import type { ChatSaid } from '../plugins/chat';
 import {
   AssistantCharactersPlugin,
@@ -131,7 +135,7 @@ function Face({ emoji }: { emoji: string }): JSX.Element {
   return <FluentEmoji emoji={emoji} size={20} label="" />;
 }
 
-type FloatingProps = {
+export type AppFloatingProps = {
   app: AppSpec;
   view: 'floating-small' | 'panel' | 'assistant';
   colorMode: 'light' | 'dark';
@@ -144,6 +148,14 @@ type FloatingProps = {
   instance?: AppInstance;
   /** The visit's embed token, on the host's server (R-20). */
   embedToken?: string;
+  /**
+   * What else the host gives the application's `AppRenderer`: Datalayer's
+   * own page at an application's address (T-21) passes the UI plugins its
+   * organization turned off, the visitors' runtime and the one kept on.
+   */
+  renderer?: Partial<
+    Pick<AppRendererProps, 'pluginsOff' | 'datalayerVisitors' | 'datalayerKept'>
+  >;
 };
 
 /**
@@ -155,7 +167,7 @@ type FloatingProps = {
  * The workspace tells the chrome what the application is doing and what it
  * last said (`onPresence`, `onSaying`).
  */
-function FloatingApp({
+export function AppFloating({
   app,
   view,
   colorMode,
@@ -164,14 +176,16 @@ function FloatingApp({
   serverUrl,
   instance,
   embedToken,
-}: FloatingProps): JSX.Element {
+  renderer,
+}: AppFloatingProps): JSX.Element {
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
   const welcome = app.interface.welcome || app.description;
   // A runtime is somebody's to pay for: on Datalayer, only for a visitor
   // Datalayer knows — said, and nothing launched, for one it does not.
   const token = useIAMStore(state => state.token);
-  const signedOut = !serverUrl && !token;
+  // Signed out on the visitors' runtime (R-30) is somebody's too.
+  const signedOut = !serverUrl && !token && !renderer?.datalayerVisitors;
   return (
     <ChatFloating
       defaultViewMode={view}
@@ -208,6 +222,7 @@ function FloatingApp({
             autoFocusPrompt={false}
             onPresence={setPresence}
             onSaying={setSaid}
+            {...renderer}
           />
         ),
         presence,
@@ -341,7 +356,7 @@ export function AppEmbed({
     >
       {ownPortal ? <OwnPortalRoot /> : null}
       {view ? (
-        <FloatingApp
+        <AppFloating
           app={app}
           view={view}
           serverUrl={serverUrl}
