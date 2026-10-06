@@ -16,6 +16,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { computeAccessibleName } from 'dom-accessibility-api';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
+import { StyleSheetManager } from 'styled-components';
 import { InputPrompt, type InputPromptProps } from '../InputPrompt';
 import { defineAppComposerPlugin } from '../../../loop/apps/AppComposer';
 import { parseAppspec } from '../../../loop/apps/appspec';
@@ -42,11 +43,18 @@ const APP_COMPOSER: InputPromptProps = {
   hasSkillsData: true,
 };
 
+/*
+ * Its own style sheet, in this document's head: styled-components otherwise
+ * writes to the sheet it made first, which a worker that ran another test
+ * file before this one may have made for that file's document.
+ */
 function draw(element: React.ReactElement) {
   return render(
-    <ThemeProvider>
-      <BaseStyles>{element}</BaseStyles>
-    </ThemeProvider>,
+    <StyleSheetManager target={document.head}>
+      <ThemeProvider>
+        <BaseStyles>{element}</BaseStyles>
+      </ThemeProvider>
+    </StyleSheetManager>,
   );
 }
 
@@ -66,10 +74,17 @@ function expectEveryButtonNamed(): void {
   }
 }
 
-/** The CSS styled-components wrote, where the media queries end up. */
+/**
+ * The CSS styled-components wrote, where the media queries end up: a style
+ * tag's text, and the rules inserted into its sheet without text (its
+ * "speedy" mode), each spaced as the browser spaces them.
+ */
 function styles(): string {
   return [...document.querySelectorAll('style')]
-    .map(style => style.textContent ?? '')
+    .flatMap(style => [
+      style.textContent ?? '',
+      ...[...(style.sheet?.cssRules ?? [])].map(rule => rule.cssText),
+    ])
     .join('\n');
 }
 
@@ -190,7 +205,7 @@ describe('the composer’s toolbar, read by name', () => {
     expect(css).toMatch(/mcp-pulse/);
     expect(css).toMatch(/skills-pulse/);
     const reduced = css.match(
-      /@media \(prefers-reduced-motion: ?reduce\)\{[^}]*\{animation:none;?\}/g,
+      /@media \(prefers-reduced-motion: ?reduce\) ?\{[^}]*\{ ?animation: ?none;? ?\}/g,
     );
     expect(reduced?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
