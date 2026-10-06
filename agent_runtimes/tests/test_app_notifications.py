@@ -132,7 +132,9 @@ def test_a_deployment_sends_as_its_principal_through_the_channels_it_names(ai_ag
     assert body["event"] == APPROVAL_REQUESTED
     assert body["app_uid"] == "app-1" and body["deployment_uid"] == "dep-1"
     assert body["session_uid"] == "s-1"
-    assert body["title"] == "Inbox triage asks before it acts"
+    # Its face first, where only text goes (I-08).
+    assert body["title"] == f"{notifier.app.emoji} Inbox triage asks before it acts"
+    assert notifier.app.emoji
     assert (
         "gmail_send" in body["message"]
         and "Sending a mail asks you first." in body["message"]

@@ -196,9 +196,12 @@ class AppNotifier:
     async def approval_asked(self, tool_name: str, sentence: str) -> None:
         """Tell the channels that it asks a person before it acts."""
         app = self.app.name.strip() or "An application"
+        # Its face first, where only text goes (LOOP I-08): a person tells two
+        # applications apart by it before reading their names.
+        face = f"{self.app.emoji} " if self.app.emoji else ""
         await self.notify(
             APPROVAL_REQUESTED,
-            title=f"{app} asks before it acts",
+            title=f"{face}{app} asks before it acts",
             message=(
                 f"{app} wants to use {tool_name}. {sentence} "
                 "It waits for your answer under Tool Approvals, on Datalayer."
