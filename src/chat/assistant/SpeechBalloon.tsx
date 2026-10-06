@@ -31,7 +31,7 @@
  * @module chat/assistant/SpeechBalloon
  */
 
-import type { JSX, ReactNode } from 'react';
+import type { JSX, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -399,11 +399,28 @@ export function SpeechBalloon({
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
         {current && !approval ? (
+          // Not a <button>: the body draws the chat's tool card, a button of
+          // its own, and a click on that card is the card's alone.
           <Box
-            as="button"
-            type="button"
+            role="button"
+            tabIndex={0}
             data-balloon-peek=""
-            onClick={onOpen}
+            onClick={(event: MouseEvent<HTMLElement>) => {
+              const inner = (event.target as HTMLElement).closest('button');
+              if (inner && event.currentTarget.contains(inner)) {
+                return;
+              }
+              onOpen();
+            }}
+            onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
+              if (
+                event.target === event.currentTarget &&
+                (event.key === 'Enter' || event.key === ' ')
+              ) {
+                event.preventDefault();
+                onOpen();
+              }
+            }}
             sx={{
               flex: 1,
               minWidth: 0,
