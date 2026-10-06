@@ -497,7 +497,12 @@ export function AppRenderer({
   const system = useSystemColorMode();
   const named = app.interface?.theme;
   const worn = embed.themeVariant ?? named?.variant ?? pageTheme;
-  const namedMode = named?.mode === 'auto' ? system : named?.mode;
+  const namedMode: 'light' | 'dark' | undefined =
+    named?.mode === 'auto'
+      ? system
+      : named?.mode === 'light' || named?.mode === 'dark'
+        ? named.mode
+        : undefined;
   const accent = app.interface?.accent;
   const themeOverrides = useMemo(
     () => appThemeOverrides(app, worn),
