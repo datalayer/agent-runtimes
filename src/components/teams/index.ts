@@ -15,6 +15,7 @@
 export * from './a2aTeamFlow';
 export * from './teamConnections';
 export * from './useA2ATeam';
+export * from './usePeerSandbox';
 export * from './A2ATeamGraph';
 export * from './TeamNotebook';
 export * from './NotebookPreview';

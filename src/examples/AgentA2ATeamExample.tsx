@@ -75,6 +75,7 @@ import {
   teamConnectionsOf,
   teamToolClassifier,
   useA2ATeam,
+  usePeerSandbox,
 } from '../components/teams';
 import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_1 } from '../specs/apps';
 import {
@@ -177,6 +178,9 @@ function AgentA2ATeam(): JSX.Element {
     accept: NOTEBOOK_AND_WORDS,
     inspector,
   });
+  // Accounting works in codemode: its sandbox, on the runtime it answers
+  // from, read again when a turn ends.
+  const accountingSandbox = usePeerSandbox(accountingUrl, team.busy);
   // Sales' starters, in its balloon while it waits for a question.
   const suggestions = useMemo(
     () =>
@@ -310,6 +314,7 @@ function AgentA2ATeam(): JSX.Element {
             history: team.peerHistory,
             connections: ACCOUNTING_CONNECTIONS,
             inspector,
+            sandbox: accountingSandbox,
             about: {
               name: ACCOUNTING.name,
               spec: `${ACCOUNTING.id}:${ACCOUNTING.version}`,
