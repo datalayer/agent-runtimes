@@ -49,11 +49,25 @@ def app_suggesting(include: list[str]) -> AppSpec:
     )
 
 
+def kept_by_session(sent: list) -> Any:
+    """A send that keeps what ai-agents keeps: each session's entries in one
+    body, in the order sent — a run's start is sent at once (LOOP R-15), the
+    rest as it ends."""
+
+    async def send(body: dict) -> None:
+        for held in sent:
+            if held["session_uid"] == body["session_uid"]:
+                held["entries"] = [*held["entries"], *body["entries"]]
+                return
+        sent.append({**body, "entries": list(body["entries"])})
+
+    return send
+
+
 def recorded(spec: AppSpec, *turns: Any, **instance: Any) -> tuple[Agent, list]:
     sent: list = []
 
-    async def send(body: dict) -> None:
-        sent.append(body)
+    send = kept_by_session(sent)
 
     instance = {"deployment_uid": "dep-1", **instance}
     recorder = AppRecorder(app=spec, app_uid="app-1", version=3, send=send, **instance)
@@ -91,11 +105,12 @@ async def test_a_session_is_sent_with_what_it_did():
     )
     assert [entry["kind"] for entry in body["entries"]] == [
         "session",
+        "run",
         "tool_call",
         "output",
     ]
-    assert body["entries"][1]["payload"]["tool"] == "search"
-    assert body["entries"][2]["summary"] == "Here is the news."
+    assert body["entries"][2]["payload"]["tool"] == "search"
+    assert body["entries"][3]["summary"] == "Here is the news."
     # Real use: no purpose named, and a person opened it: nothing woke it.
     assert (body["purpose"], body["launch_uid"]) == ("", "")
     assert body["woken_by"] == {}
@@ -131,7 +146,7 @@ async def test_a_session_nobody_opened_says_what_woke_it():
 async def test_only_what_the_application_keeps_is_kept():
     agent, sent = recorded(app([]), ("search", {"q": "news"}), "Here is the news.")
     await agent.run("news?")
-    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session"]
+    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "run"]
 
 
 async def test_a_stopped_run_is_recorded_with_its_check():
@@ -140,9 +155,9 @@ async def test_a_stopped_run_is_recorded_with_its_check():
     with pytest.raises(AppCheckBlockedError):
         await agent.run("search my key")
     kinds = [entry["kind"] for entry in sent[0]["entries"]]
-    assert kinds == ["session", "check", "output"]
-    assert "AWS access key" in sent[0]["entries"][1]["summary"]
-    assert sent[0]["entries"][2]["summary"].startswith("Stopped:")
+    assert kinds == ["session", "run", "check", "output"]
+    assert "AWS access key" in sent[0]["entries"][2]["summary"]
+    assert sent[0]["entries"][3]["summary"].startswith("Stopped:")
     # What is recorded withholds what it records.
     assert AWS not in str(sent[0])
 
@@ -171,10 +186,14 @@ async def test_a_client_that_goes_once_it_has_its_answer_leaves_a_record():
             if isinstance(event, (PartStartEvent, PartDeltaEvent)):
                 break  # the client has what it came for, and goes
     for _ in range(20):
-        if sent:
+        if sent and sent[0]["entries"][-1]["kind"] == "output":
             break
         await asyncio.sleep(0.05)
-    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+    assert [entry["kind"] for entry in sent[0]["entries"]] == [
+        "session",
+        "run",
+        "output",
+    ]
 
 
 async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
@@ -214,12 +233,16 @@ async def test_an_ag_ui_client_that_stops_at_run_finished_leaves_a_record():
                 if "RUN_FINISHED" in line:
                     break
     for _ in range(20):
-        if sent:
+        if sent and sent[0]["entries"][-1]["kind"] == "output":
             break
         await asyncio.sleep(0.05)
-    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+    assert [entry["kind"] for entry in sent[0]["entries"]] == [
+        "session",
+        "run",
+        "output",
+    ]
     assert sent[0]["session_uid"] == "t-1"
-    assert sent[0]["entries"][1]["summary"] == "Python is a language."
+    assert sent[0]["entries"][2]["summary"] == "Python is a language."
 
 
 async def test_a_stream_whose_closing_raises_still_sends_the_record():
@@ -231,8 +254,7 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
 
     sent: list = []
 
-    async def send(body: dict) -> None:
-        sent.append(body)
+    send = kept_by_session(sent)
 
     capability = AppRecordCapability(
         recorder=AppRecorder(app=app(["outputs"]), send=send)
@@ -265,7 +287,7 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
         async for _ in capability.wrap_run_event_stream(ctx, stream=Stream()):
             pass
     for _ in range(20):
-        if sent:
+        if sent and sent[0]["entries"][-1]["kind"] == "output":
             break
         await asyncio.sleep(0.05)
     assert [entry["summary"] for entry in sent[0]["entries"]][-1] == "An answer."
@@ -277,8 +299,7 @@ async def test_a_stream_whose_closing_raises_still_sends_the_record():
 def feedback_recorder(include: list[str]) -> tuple[AppRecorder, list]:
     sent: list = []
 
-    async def send(body: dict) -> None:
-        sent.append(body)
+    send = kept_by_session(sent)
 
     recorder = AppRecorder(app=app(include), app_uid="app-1", version=3, send=send)
     return recorder, sent
@@ -340,8 +361,8 @@ async def test_a_turn_keeps_what_was_asked_and_answered_under_conversations():
     agent, sent = recorded(app(["conversations", "outputs"]), "Here is the news.")
     await agent.run("news?")
     kinds = [entry["kind"] for entry in sent[0]["entries"]]
-    assert kinds == ["session", "turn", "output"]
-    turn = sent[0]["entries"][1]
+    assert kinds == ["session", "run", "turn", "output"]
+    turn = sent[0]["entries"][2]
     assert turn["summary"] == "news?"
     # Not used to suggest tests unless the application said so when it was had.
     assert turn["payload"] == {
@@ -361,7 +382,11 @@ async def test_a_turn_says_its_conversation_may_suggest_tests_when_it_may():
 async def test_no_turn_is_kept_unless_conversations_are():
     agent, sent = recorded(app_suggesting(["outputs"]), "Here is the news.")
     await agent.run("news?")
-    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "output"]
+    assert [entry["kind"] for entry in sent[0]["entries"]] == [
+        "session",
+        "run",
+        "output",
+    ]
 
 
 async def test_a_stopped_run_keeps_no_turn():
@@ -405,7 +430,7 @@ async def test_an_ag_ui_turn_keeps_the_question_from_its_messages():
             async for _ in response.aiter_lines():
                 pass
     for _ in range(20):
-        if sent:
+        if sent and sent[0]["entries"][-1]["kind"] == "output":
             break
         await asyncio.sleep(0.05)
     turn = next(entry for entry in sent[0]["entries"] if entry["kind"] == "turn")

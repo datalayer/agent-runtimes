@@ -76,6 +76,7 @@ from agent_runtimes.loop.apps.computer import (
     wait_until_handed_back,
 )
 from agent_runtimes.loop.apps.grants import Approval, Granted
+from agent_runtimes.loop.apps.guards import Answered, asked_and_answered
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -225,6 +226,9 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     known_mcp_tools: Optional[Callable[[], Set[str]]] = None
     """The MCP tool names the runtime knows (`server__tool` among them)."""
+
+    answered: Optional[Answered] = None
+    """Told what came of asking the person: the record's approval (LOOP R-07)."""
 
     unattended: Optional[Callable[[], bool]] = None
     """Whether the current run has nobody present — a session woken by a
@@ -510,8 +514,14 @@ class AppRulesCapability(AbstractCapability[Any]):
             await self._computer_free(call.tool_name)
             return args
         if decision.behaviour in (ASK_FIRST, IF_ASKED):
-            # Not approved in advance: the person is asked.
-            await self._ask(call.tool_name, args, decision)
+            # Not approved in advance: the person is asked, and what they
+            # answered is an entry of the record of its own (LOOP R-07).
+            await asked_and_answered(
+                self._ask(call.tool_name, args, decision),
+                call.tool_name,
+                sentence_of(decision),
+                self.answered,
+            )
             await self._computer_free(call.tool_name)
             return args
         raise AppRuleBlockedError(decision)

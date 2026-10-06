@@ -2406,6 +2406,8 @@ async def create_agent(
                 rules = rules_for(running_app, agent_id=agent_id)
                 rules.record = recorder.decided
                 rules.notify = notifier.approval_asked
+                # What the person answered is an entry of its own (LOOP R-07).
+                rules.answered = recorder.answered
                 rules.app_uid = recorder.app_uid
                 # *Do it if I asked* decided from what the person approved
                 # in advance, read from IAM as it acts (LOOP U-25); an
@@ -2431,6 +2433,7 @@ async def create_agent(
                         decide=rules.decide,
                         record=recorder.checked,
                         notify=notifier.approval_asked,
+                        answered=recorder.answered,
                     ),
                 )
                 capabilities.insert(2, AppRecordCapability(recorder=recorder))

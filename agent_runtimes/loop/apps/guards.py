@@ -253,6 +253,37 @@ RETRIES = {"retry"}
 ASKS = {"human_approval_required", "human_review_required", "expert_review_required"}
 
 
+#: Told what came of asking a person (LOOP R-07): the tool, the sentence it was
+#: asked under, the outcome — ``approved``, ``declined`` or ``unanswered`` —
+#: and what the person said with it.
+Answered = Callable[[str, str, str, str], None]
+
+
+async def asked_and_answered(
+    asking: Awaitable[Any], tool: str, under: str, answered: Optional[Answered]
+) -> None:
+    """Ask a person, and tell ``answered`` what came of it, before going on.
+
+    Declined is any refusal of the call (the tool-approval path's, a
+    session's, a rule's or a Gate's); unanswered, a question that waited past
+    its time. Raised on as it was: the record is told, the run decides.
+    """
+    from agent_runtimes.guardrails.tool_approvals import ToolApprovalTimeoutError
+
+    try:
+        await asking
+    except (ToolApprovalTimeoutError, TimeoutError) as error:
+        if answered is not None:
+            answered(tool, under, "unanswered", "")
+        raise error
+    except GuardrailBlockedError as error:
+        if answered is not None:
+            answered(tool, under, "declined", str(getattr(error, "note", "") or ""))
+        raise error
+    if answered is not None:
+        answered(tool, under, "approved", "")
+
+
 class AppCheckBlockedError(GuardrailBlockedError):
     """What an application's checks stopped, in a sentence."""
 
@@ -388,6 +419,9 @@ class AppChecksCapability(AbstractCapability[Any]):
     """Told when a person is asked through the tool-approval path: the
     application's channels (LOOP R-37)."""
 
+    answered: Optional[Answered] = None
+    """Told what came of asking a person: the record's approval (LOOP R-07)."""
+
     async def before_run(self, ctx: RunContext[Any]) -> None:
         for sentence in self.checks.unexecuted:
             logger.warning("%s: %s", self.checks.app.id, sentence)
@@ -412,7 +446,12 @@ class AppChecksCapability(AbstractCapability[Any]):
         if verdict.action == "retry":
             raise ModelRetry(verdict.sentence)
         if verdict.action == "ask":
-            await self._ask(call.tool_name, args, verdict.sentence)
+            await asked_and_answered(
+                self._ask(call.tool_name, args, verdict.sentence),
+                call.tool_name,
+                verdict.sentence,
+                self.answered,
+            )
             return args
         if verdict.action == "stop":
             raise AppCheckBlockedError(verdict.sentence)

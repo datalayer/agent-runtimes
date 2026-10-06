@@ -154,7 +154,13 @@ beside it what it is allowed to do and what it did:
   kept under `instance.appUid`), each in a sentence (*2 tool calls, 1
   answer.*), opened on what it did step by step. Read again as each turn of
   the conversation ends. An application not saved on Datalayer has no record:
-  the feed says it is recorded once it is.
+  the feed says it is recorded once it is. Real use only: the sessions its
+  tests ran (`purpose: test`, the Evals engine's) are read apart
+  (`listSessions(…, tests)`, LOOP R-07). What the person answered when they
+  were asked is a step of its own — *send_gmail_message: approved*,
+  *declined*, or *not answered in time* — whether a rule or a Gate asked. A
+  run's start is sent at once (`run`), so that the platform reads what is in
+  progress (LOOP R-15); the feed shows it as no step.
 - **Computer** (`defineAppComputerPlugin`, `AppComputer`): the sandbox its
   agent runs on, live — see [Its computer](#its-computer).
 

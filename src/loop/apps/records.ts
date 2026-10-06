@@ -24,7 +24,11 @@ export type RecordKind =
   | 'output'
   | 'feedback'
   /** A turn of a conversation: what was asked, what it answered. */
-  | 'turn';
+  | 'turn'
+  /** A run began: what Activity reads as in progress until it answers (R-15). */
+  | 'run'
+  /** What one of its channels was sent, or why not (R-37). */
+  | 'notification';
 
 /** One entry of an application's record. */
 export type RecordEntry = {
@@ -56,6 +60,8 @@ export const RECORD_KIND_WORDS: Record<RecordKind, string> = {
   output: 'Answer',
   feedback: 'Feedback',
   turn: 'Turn',
+  run: 'Working',
+  notification: 'Notification',
 };
 
 /** An entry as ai-agents answers with it. */
@@ -125,15 +131,22 @@ async function read(
   return body;
 }
 
-/** The sessions of an application, newest first: their opening entries. */
+/**
+ * The sessions of an application, newest first: their opening entries. Real
+ * use only — the sessions its tests ran are read apart (R-07) — unless
+ * `tests` says otherwise: `true` for the tests only, `null` for both.
+ */
 export async function listSessions(
   context: RecordsContext,
   appUid: string,
   limit = 20,
+  tests: boolean | null = false,
 ): Promise<RecordEntry[]> {
   const body = await read(
     context,
-    `/sessions?app_uid=${encodeURIComponent(appUid)}&limit=${limit}`,
+    `/sessions?app_uid=${encodeURIComponent(appUid)}&limit=${limit}${
+      tests === null ? '' : `&tests=${tests}`
+    }`,
     'The sessions could not be read',
   );
   return Array.isArray(body.sessions)
@@ -141,7 +154,7 @@ export async function listSessions(
     : [];
 }
 
-/** What one session did, in order. */
+/** What one session did, in order: a run's start is a mark, not a step (R-15). */
 export async function readSession(
   context: RecordsContext,
   sessionUid: string,
@@ -152,6 +165,8 @@ export async function readSession(
     'The session could not be read',
   );
   return Array.isArray(body.entries)
-    ? (body.entries as Record<string, unknown>[]).map(entryOf)
+    ? (body.entries as Record<string, unknown>[])
+        .map(entryOf)
+        .filter(entry => entry.kind !== 'run')
     : [];
 }

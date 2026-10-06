@@ -93,9 +93,17 @@ INCLUDED_BY = {
     "turn": "conversations",
 }
 
-#: Kept whatever `record.include` says: a session's start, and what its
-#: channels were sent (LOOP R-37).
-ALWAYS_KEPT = frozenset({"session", "notification"})
+#: Kept whatever `record.include` says: a session's start, a run's start
+#: (what Activity reads as in progress, LOOP R-15), and what its channels were
+#: sent (LOOP R-37).
+ALWAYS_KEPT = frozenset({"session", "run", "notification"})
+
+#: What a person's answer is said as, in an approval entry (LOOP R-07).
+ANSWERS = {
+    "approved": "approved",
+    "declined": "declined",
+    "unanswered": "not answered in time",
+}
 
 #: The session the current run belongs to.
 _SESSION: contextvars.ContextVar[str] = contextvars.ContextVar(
@@ -110,6 +118,9 @@ _RECORDERS: Dict[str, "AppRecorder"] = {}
 #: The recorder of each application's agent on this runtime, by agent id: the
 #: one the session API writes a session's start to (LOOP R-04).
 _AGENT_RECORDERS: Dict[str, "AppRecorder"] = {}
+
+#: The sends begun as a run starts, held until done: a task nothing refers to may be collected.
+_SENDING: Set[Any] = set()
 
 #: The longest comment kept with a thumb.
 COMMENT_LIMIT = 2000
@@ -141,15 +152,26 @@ def agent_recorder(agent_id: str) -> Optional["AppRecorder"]:
     return _AGENT_RECORDERS.get(agent_id)
 
 
-def keep_days_of(app: AppSpec) -> int:
-    """How many days the record is kept, from `record.keep_for`.
+def kept_of(app: AppSpec) -> Any:
+    """What the record keeps and for how long: as `record` says, or as the
+    Track the application names under `checks` says (LOOP R-07).
 
-    Read from agentspecs, not from the generated `retention_days`, which is a
-    plain field there and says a year whatever `keep_for` says.
+    Read from agentspecs (`kept_record`), not from the generated
+    `retention_days`, which is a plain field there and says a year whatever
+    `keep_for` says.
     """
-    from agentspecs.apps import retention_days
+    from agentspecs.apps import kept_record
 
-    return int(retention_days(app.record.keep_for))
+    return kept_record(
+        app.record.keep_for,
+        list(app.record.include),
+        app.checks.track,
+    )
+
+
+def keep_days_of(app: AppSpec) -> int:
+    """How many days the record is kept: `record.keep_for`, or its Track's retention."""
+    return int(kept_of(app).days)
 
 
 def _short(value: Any, limit: int = 500) -> str:
@@ -263,11 +285,7 @@ class AppRecorder:
         # notification that reached nobody is never silent (LOOP R-37).
         if kind in ALWAYS_KEPT:
             return True
-        wanted = INCLUDED_BY.get(kind)
-        include = {
-            str(getattr(item, "value", item)) for item in self.app.record.include
-        }
-        return wanted in include
+        return INCLUDED_BY.get(kind) in kept_of(self.app).include
 
     def add(
         self, kind: str, summary: str, payload: Optional[Dict[str, Any]] = None
@@ -442,6 +460,32 @@ class AppRecorder:
             detail,
         )
 
+    def answered(self, tool: str, under: str, outcome: str, note: str = "") -> None:
+        """What a person answered when they were asked (LOOP R-07): an entry of its own.
+
+        ``outcome`` is ``approved``, ``declined`` or ``unanswered``; ``under``
+        the rule or Gate it was asked under, in its sentence.
+        """
+        said = redact(note.strip())[:COMMENT_LIMIT]
+        self.add(
+            "approval",
+            f"{tool}: {ANSWERS.get(outcome, outcome)}" + (f": {said}" if said else ""),
+            {"tool": tool, "outcome": outcome, "asked_under": under, "note": said},
+        )
+
+    def ran(self, session: str) -> None:
+        """Say that a run of ``session`` began, and send it now (LOOP R-15).
+
+        What Activity reads as *in progress*: a run that began and has not
+        answered yet. Sent at once, with the session's start when it is its
+        first run, in a task of its own; never fails the run.
+        """
+        _SESSION.set(session)
+        self.add("run", f"{self.app.name} is working", {})
+        task = asyncio.get_running_loop().create_task(self.flush(session))
+        _SENDING.add(task)
+        task.add_done_callback(_SENDING.discard)
+
     def approvals_unread(self, why: str) -> None:
         """What the person approved in advance could not be read: they are asked."""
         self.add("decision", why, {"approvals_unread": why})
@@ -507,6 +551,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         if spoken is not None:
             self._spoken[self._key(ctx)] = spoken.as_payload()
         self.recorder.start(session)
+        self.recorder.ran(session)
 
     async def after_tool_execute(
         self,
@@ -620,6 +665,7 @@ class AppRecordCapability(AbstractCapability[Any]):
 
 __all__ = [
     "ALWAYS_KEPT",
+    "ANSWERS",
     "AppRecordCapability",
     "AppRecorder",
     "COMMENT_LIMIT",
@@ -629,6 +675,8 @@ __all__ = [
     "agent_recorder",
     "current_session",
     "keep_agent_recorder",
+    "keep_days_of",
+    "kept_of",
     "recorder_of",
     "send_to_ai_agents",
     "token_for",

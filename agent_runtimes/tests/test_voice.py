@@ -140,10 +140,10 @@ def test_a_message_is_spoken_only_when_its_metadata_says_so():
 
 
 async def test_the_record_keeps_a_spoken_turn_as_its_transcript_marked_spoken():
-    sent: list = []
+    from agent_runtimes.tests.test_apps_record import kept_by_session
 
-    async def send(body: dict) -> None:
-        sent.append(body)
+    sent: list = []
+    send = kept_by_session(sent)
 
     spec = app(include=["conversations"])
     recorder = AppRecorder(app=spec, app_uid="app-1", send=send)

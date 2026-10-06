@@ -82,6 +82,8 @@ def app_capabilities(
     """
     rules = rules_for(app, agent_id=agent_id, registry=registry)
     rules.record = recorder.decided
+    # What the person answered when asked is an entry of its own (LOOP R-07).
+    rules.answered = recorder.answered
     # A session nobody opened — woken by a schedule — has nobody present: it
     # only reads, unless a rule says otherwise (LOOP R-16).
     from agent_runtimes.loop.apps.record import current_session
@@ -95,6 +97,7 @@ def app_capabilities(
         ask=ask_check,
         decide=rules.decide,
         record=recorder.checked,
+        answered=recorder.answered,
     )
     capabilities: List[Any] = [rules, checks, AppRecordCapability(recorder=recorder)]
     # Answers that may be heard are written for the ear too (VOICE.md VO-44).

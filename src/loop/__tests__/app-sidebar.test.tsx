@@ -269,6 +269,13 @@ describe('the activity feed', () => {
                   kind: 'output',
                   summary: 'Three sources',
                 },
+                // A run's start is a mark, not a step (R-15).
+                {
+                  uid: 'e4',
+                  session_uid: 's1',
+                  kind: 'run',
+                  summary: 'Web Research is working',
+                },
               ],
             };
         return new Response(JSON.stringify(body), { status: 200 });
@@ -276,7 +283,8 @@ describe('the activity feed', () => {
     );
     const { container } = await render(<AppActivity appUid="app-1" />);
     expect(calls[0][0]).toBe(
-      'https://ai.example/api/ai-agents/v1/apps/sessions?app_uid=app-1&limit=20',
+      // Real use: the sessions its tests ran are read apart (R-07).
+      'https://ai.example/api/ai-agents/v1/apps/sessions?app_uid=app-1&limit=20&tests=false',
     );
     expect((calls[0][1]?.headers as Record<string, string>).Authorization).toBe(
       'Bearer jwt',
@@ -295,6 +303,7 @@ describe('the activity feed', () => {
     );
     expect(container.textContent).toContain('Searched the web');
     expect(container.textContent).toContain('1 tool call, 1 answer.');
+    expect(container.textContent).not.toContain('is working');
   });
 
   it('says it is recorded once saved, and is its owner’s to read', async () => {
