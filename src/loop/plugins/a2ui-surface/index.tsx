@@ -94,13 +94,21 @@ export function createA2uiSurfacePlugin(
   options: A2uiSurfacePluginOptions = {},
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   const id = `a2ui-surface-${(counter += 1)}`;
-  let currentSend: ((message: string) => void) | undefined;
-  const send = (message: string): boolean => {
+  let currentSend:
+    | ((
+        message: string,
+        forwardedProps?: Record<string, unknown>,
+      ) => string | void)
+    | undefined;
+  const send = (
+    message: string,
+    forwardedProps?: Record<string, unknown>,
+  ): boolean => {
     if (!currentSend) {
       return false;
     }
-    currentSend(message);
-    return true;
+    // The chat answers why it could not send, when it could not.
+    return !currentSend(message, forwardedProps);
   };
 
   function Capture({
@@ -176,6 +184,7 @@ export const A2uiSurfacePlugin = createA2uiSurfacePlugin();
 
 export type { SurfaceRendered, SurfaceSubmitted } from './SurfaceToolResult';
 export {
+  answerAction,
   readA2uiToolResult,
   validateA2uiField,
   validateA2uiSubmission,

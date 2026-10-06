@@ -167,3 +167,43 @@ export function validateA2uiSubmission(
     .map(rule => validateA2uiField(rule, values[rule.id]))
     .filter((message): message is string => message !== null);
 }
+
+/** Where the surface of what an application's answer shows is named (LOOP P-04). */
+export const ANSWER_SURFACE_PREFIX = 'answer-';
+
+/** A button pressed on an answer's surface, as the chat sends it on. */
+export type AnswerAction = {
+  /** The person's turn, in words: the action's name. */
+  message: string;
+  /** What the session API reads besides the message (`forwardedProps.loop`). */
+  forwardedProps: {
+    loop: { action: { name: string; payload: Record<string, unknown> } };
+  };
+};
+
+/**
+ * What a button pressed on the surface an application's answer shows sends:
+ * its action, by name, with what it read — the application's code reacts
+ * with its `@app.action(name)`, as to a button of its page. `null` for any
+ * other surface, whose buttons stay the agent's form submission.
+ */
+export function answerAction(action: {
+  name: string;
+  surfaceId: string;
+  context?: Record<string, unknown>;
+}): AnswerAction | null {
+  if (
+    !action.surfaceId.startsWith(ANSWER_SURFACE_PREFIX) ||
+    !action.name.trim()
+  ) {
+    return null;
+  }
+  return {
+    message: action.name.trim(),
+    forwardedProps: {
+      loop: {
+        action: { name: action.name.trim(), payload: { ...action.context } },
+      },
+    },
+  };
+}

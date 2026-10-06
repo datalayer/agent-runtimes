@@ -454,7 +454,9 @@ async def test_an_answer_shows_components_of_the_catalog():
                 "costs", kind="bar", x="model", y="cost", points={"path": "/runs"}
             ),
             session.ui.text("again-label", text="Run again"),
-            session.ui.button("again", child="again-label", action={"name": "again"}),
+            session.ui.button(
+                "again", child="again-label", action={"event": {"name": "again"}}
+            ),
         ],
         data={"runs": [{"model": "a", "cost": 1}]},
     )
@@ -480,7 +482,11 @@ async def test_an_answer_shows_components_of_the_catalog():
     with pytest.raises(ValueError, match="no component missing-label"):
         await session.send(
             "x",
-            show=[session.ui.button("b", child="missing-label", action={"name": "go"})],
+            show=[
+                session.ui.button(
+                    "b", child="missing-label", action={"event": {"name": "go"}}
+                )
+            ],
         )
     with pytest.raises(ValueError, match="one component per id: note twice"):
         await session.send(
@@ -507,7 +513,7 @@ def test_an_answers_surface_lays_its_components_in_a_column():
                 "id": "go",
                 "component": "Button",
                 "child": "label",
-                "action": {"name": "go"},
+                "action": {"event": {"name": "go"}},
             },
             {"id": "intro", "component": "Text", "text": "Ready."},
         ]

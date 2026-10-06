@@ -40,10 +40,8 @@ What does **not** exist yet:
   built in this process, it is refused with the reason (see
   [The agent](#the-agent)).
 - **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`).
-- **A button in an answer that runs code.** An answer shows buttons (see
-  [What an answer shows](#what-an-answer-shows)), but the chat hands back only
-  a form's submission, as the person's next message; a button's action does
-  not reach `@app.action` yet.
+- **A file to download in an answer.** The catalog has no such component
+  yet; see [What an answer shows](#what-an-answer-shows).
 
 ## Where its code runs
 
@@ -455,6 +453,10 @@ await session.send(
   the catalog; a file to download is not in the catalog.
 - `data` — what a property bound to a path reads (a Table's `rows`, a
   Chart's `points`): the answer's own data.
+- A Button's action (`action={"event": {"name": "again"}}`) is sent to the
+  application when it is pressed, by name, with what it read: its
+  `@app.action("again")` reacts, as to a button of its page. A form's
+  submission on any other surface stays the agent's next message.
 - `send`, `stream` and `update` take both; `update` keeps what the message
   showed unless told, and `show=[]` takes it away.
 - A component the catalog does not have, properties its schema refuses, two

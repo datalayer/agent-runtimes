@@ -26,6 +26,7 @@ import type { ToolCallRenderContext } from '../../../types/chat';
 import { encodeFormSubmission } from '../../../chat/messages/formSubmission';
 import { InlineSurface, SURFACE_CATALOG_ID } from './InlineSurface';
 import {
+  answerAction,
   readA2uiToolResult,
   validateA2uiSubmission,
   type A2uiToolResult,
@@ -47,8 +48,11 @@ export type SurfaceSubmitted = {
 
 export type SurfaceToolResultProps = {
   context: ToolCallRenderContext;
-  /** Say something as the reader; `false` when the chat cannot take it. */
-  send: (message: string) => boolean;
+  /**
+   * Say something as the reader, with what goes with the run besides it;
+   * `false` when the chat cannot take it.
+   */
+  send: (message: string, forwardedProps?: Record<string, unknown>) => boolean;
   onRendered?: (rendered: SurfaceRendered) => void;
   onSubmitted?: (submitted: SurfaceSubmitted) => void;
 };
@@ -87,6 +91,12 @@ export function SurfaceToolResult({
   const handleAction = useCallback(
     (action: A2uiClientAction) => {
       if (action.name !== 'submit_a2ui_form') {
+        // A button of what an application's answer shows: its action goes to
+        // the application, as a button of its page does (LOOP P-04).
+        const pressed = answerAction(action);
+        if (pressed && !send(pressed.message, pressed.forwardedProps)) {
+          setValidationError('The chat is not ready to take it yet.');
+        }
         return;
       }
       const values = (action.context ?? {}) as Record<string, unknown>;
