@@ -250,6 +250,39 @@ describe('the floating assistant', () => {
     });
     expect(onDismiss).toHaveBeenCalledWith('session');
   });
+
+  it('is named as its agent where the host says so, its character the description', async () => {
+    const plain = await render();
+    const figure = plain.container.querySelector('[data-assistant-figure]');
+    expect(figure?.getAttribute('aria-label')).toMatch(/^Talk to /);
+    expect(figure?.hasAttribute('aria-describedby')).toBe(false);
+    const named = await render({
+      agentName: 'Sales',
+      label: 'Sales (in your browser)',
+    });
+    const team = named.container.querySelector('[data-assistant-figure]');
+    expect(team?.getAttribute('aria-label')).toBe('Sales (in your browser)');
+    const description = named.container.querySelector(
+      `[id="${team?.getAttribute('aria-describedby')}"]`,
+    );
+    expect(description?.textContent).toMatch(/^Its character: \S/);
+    expect(description?.textContent).not.toContain('Sales');
+    // Its menu, by keyboard, is the agent's: Shift+F10.
+    await act(async () => {
+      team?.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'F10',
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+    });
+    expect(
+      document
+        .querySelector('[data-assistant-menu] [aria-label]')
+        ?.getAttribute('aria-label'),
+    ).toBe('Sales\u2019s menu');
+  });
 });
 
 describe('where the balloon goes (T-23)', () => {

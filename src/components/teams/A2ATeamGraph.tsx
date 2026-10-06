@@ -28,12 +28,13 @@
  * @module components/teams/A2ATeamGraph
  */
 
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
 import {
   createContext,
   memo,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -511,6 +512,10 @@ const MemberNode = memo(function MemberNode({
             contextMenu={member.contextMenu}
             // A member of the graph: what is clicked around it is the graph.
             stayPut
+            // Named as the member, not its character: `Sales (in your
+            // browser)`; the character describes it.
+            agentName={member.name}
+            label={memberLabel(member)}
           />
         )}
       </Box>
@@ -543,6 +548,23 @@ const MemberNode = memo(function MemberNode({
   );
 });
 
+/** A member's accessible name: its name, and where it runs. */
+export function memberLabel(
+  member: Pick<A2ATeamGraphMember, 'name' | 'where'>,
+): string {
+  return member.where ? `${member.name} (${member.where})` : member.name;
+}
+
+/** A connection's accessible name: `Odoo, Accounting's MCP connection`. */
+export function connectionLabel(
+  connection: Pick<A2ATeamConnection, 'label'>,
+  member: string | undefined,
+): string {
+  return member
+    ? `${connection.label}, ${member}\u2019s MCP connection`
+    : `${connection.label}, an MCP connection`;
+}
+
 type ConnectionData = {
   member: string;
   connection: string;
@@ -555,10 +577,14 @@ const ConnectionNode = memo(function ConnectionNode({
   data,
 }: NodeProps<Node<ConnectionData>>): JSX.Element | null {
   const { member, connection: connectionId, size } = data;
-  const connection = useContext(Members)[member]?.connections?.find(
+  const owner = useContext(Members)[member];
+  const connection = owner?.connections?.find(
     known => known.id === connectionId,
   );
   const tool = useContext(Busy)[id];
+  // Its details, shown and hidden by a click or Enter on its mark.
+  const [told, setTold] = useState(false);
+  const detailsId = useId();
   if (!connection) {
     return null;
   }
@@ -585,10 +611,24 @@ const ConnectionNode = memo(function ConnectionNode({
         isConnectable={false}
       />
       <Box
+        as="button"
+        type="button"
         className={tool ? 'a2a-team-connection-busy' : undefined}
+        aria-label={connectionLabel(connection, owner?.name)}
+        aria-expanded={told}
+        aria-controls={detailsId}
+        data-connection-figure=""
+        onClick={() => setTold(shown => !shown)}
+        onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
+          if (event.key === 'Escape' && told) {
+            event.stopPropagation();
+            setTold(false);
+          }
+        }}
         sx={{
           width: size,
           height: size,
+          p: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -596,6 +636,12 @@ const ConnectionNode = memo(function ConnectionNode({
           border: '1px solid',
           borderColor: tool ? 'accent.emphasis' : 'border.default',
           bg: 'canvas.default',
+          cursor: 'pointer',
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+            outlineOffset: 2,
+          },
         }}
       >
         <SpecMark
@@ -615,9 +661,38 @@ const ConnectionNode = memo(function ConnectionNode({
           {connection.via}
         </Text>
       )}
+      <Box
+        id={detailsId}
+        hidden={!told}
+        data-connection-details=""
+        sx={{
+          fontSize: '10px',
+          color: 'fg.muted',
+          textAlign: 'center',
+          maxWidth: CONNECTION_WIDTH + 40,
+        }}
+      >
+        {connectionDetails(connection, owner?.name, tool)}
+      </Box>
     </Box>
   );
 });
+
+/** What a connection's details say: the server, who reaches it, and the call running now. */
+export function connectionDetails(
+  connection: Pick<A2ATeamConnection, 'name' | 'tools'>,
+  member: string | undefined,
+  calling?: string,
+): string {
+  const tools = connection.tools.length;
+  return [
+    `${connection.name}, an MCP server${member ? ` ${member} reaches` : ''}.`,
+    tools ? `${tools} tool${tools === 1 ? '' : 's'}.` : '',
+    calling ? `Now: ${calling}.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
 
 type LinkData = {
   flow: A2ATeamFlow;

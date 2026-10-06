@@ -29,7 +29,10 @@ import { ThemeProvider } from '@primer/react';
 import {
   A2ATeamGraph,
   CallEdge,
+  connectionDetails,
+  connectionLabel,
   flowWords,
+  memberLabel,
   teamViewport,
 } from '../A2ATeamGraph';
 import { teamConnectionsOf } from '../teamConnections';
@@ -409,6 +412,67 @@ function Edge({ calling }: { calling: string }) {
     </ReactFlowProvider>
   );
 }
+
+describe('A2ATeamGraph, by name and by keyboard', () => {
+  it('names each member as itself, where it runs, its character as the description', () => {
+    const { container } = render(<Graph flow="still" />);
+    const figure = container.querySelector(
+      '[data-team-member="sales"] [data-assistant-figure]',
+    );
+    expect(figure?.getAttribute('aria-label')).toBe('Sales (in your browser)');
+    const described = figure?.getAttribute('aria-describedby');
+    expect(described).toBeTruthy();
+    expect(container.querySelector(`[id="${described}"]`)?.textContent).toMatch(
+      /^Its character: \S/,
+    );
+    expect(
+      container
+        .querySelector(
+          '[data-team-member="accounting"] [data-assistant-figure]',
+        )
+        ?.getAttribute('aria-label'),
+    ).toBe('Accounting (on a runtime)');
+    expect(memberLabel({ name: 'Sales', where: '' })).toBe('Sales');
+  });
+
+  it('reaches Odoo by keyboard: a button named for Accounting, Enter shows its details, Escape hides them', () => {
+    const { container } = render(<TeamWithOdoo calls={[]} />);
+    const button = container.querySelector<HTMLButtonElement>(
+      '[data-team-connection="odoo-accounting"] [data-connection-figure]',
+    );
+    expect(button?.tagName).toBe('BUTTON');
+    expect(button?.getAttribute('aria-label')).toBe(
+      'Odoo, Accounting\u2019s MCP connection',
+    );
+    const details = container.querySelector<HTMLElement>(
+      '[data-team-connection="odoo-accounting"] [data-connection-details]',
+    );
+    expect(details?.hidden).toBe(true);
+    // A button's Enter is its click.
+    act(() => button?.click());
+    expect(button?.getAttribute('aria-expanded')).toBe('true');
+    expect(details?.hidden).toBe(false);
+    expect(details?.textContent).toContain(
+      'Odoo Accounting, an MCP server Accounting reaches.',
+    );
+    act(() => {
+      button?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+    });
+    expect(details?.hidden).toBe(true);
+    expect(connectionLabel({ label: 'Odoo' }, undefined)).toBe(
+      'Odoo, an MCP connection',
+    );
+    expect(
+      connectionDetails(
+        { name: 'X', tools: ['a'] },
+        undefined,
+        'list invoices',
+      ),
+    ).toBe('X, an MCP server. 1 tool. Now: list invoices.');
+  });
+});
 
 describe('The edge to a connection', () => {
   it('is still at rest, and flows toward the connection with an arrow while a call runs', () => {

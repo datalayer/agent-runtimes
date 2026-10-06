@@ -37,6 +37,7 @@ import {
   lazy,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react';
@@ -649,6 +650,17 @@ export interface AssistantStageProps {
    * and its neighbours, not a page somebody is working on.
    */
   stayPut?: boolean;
+  /**
+   * The agent's own name, used in place of the character's by its menu and
+   * its *Send … away*: `Sales`, where the character is a paper clip.
+   */
+  agentName?: string;
+  /**
+   * The figure's accessible name, in place of *Talk to <character>*:
+   * `Sales (in your browser)`. Given this or `agentName`, the character's
+   * name describes the figure instead (`aria-describedby`).
+   */
+  label?: string;
 }
 
 /** The openings of the mouth, by level: shut, a little, half, wide. */
@@ -726,6 +738,8 @@ export function AssistantStage({
   about,
   sandbox,
   contextMenu,
+  agentName,
+  label,
 }: AssistantStageProps): JSX.Element {
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
@@ -735,9 +749,14 @@ export function AssistantStage({
       : 'Drawing' in character
         ? character
         : undefined;
-  const name = shipped
+  const characterName = shipped
     ? shipped.name
     : (character as AssistantCharacterData).name;
+  // The agent's name where the host gives it, else the character's.
+  const name = agentName ?? characterName;
+  // The character, as the figure's description, when it is not its name.
+  const describedBy = useId();
+  const described = Boolean(agentName || label);
   // Drawn for the chat's colour mode: the dark drawing on a dark page (T-25).
   const { colorScheme } = useTheme();
   const colorMode = colorScheme?.startsWith('dark') ? 'dark' : 'light';
@@ -1003,8 +1022,10 @@ export function AssistantStage({
         as="button"
         type="button"
         aria-label={
-          open ? `Close the conversation with ${name}` : `Talk to ${name}`
+          label ??
+          (open ? `Close the conversation with ${name}` : `Talk to ${name}`)
         }
+        aria-describedby={described ? describedBy : undefined}
         aria-expanded={open}
         aria-haspopup="menu"
         ref={characterRef}
@@ -1077,6 +1098,22 @@ export function AssistantStage({
           },
         }}
       >
+        {described && (
+          <Box
+            as="span"
+            id={describedBy}
+            sx={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {`Its character: ${characterName}`}
+          </Box>
+        )}
         {shipped ? (
           <shipped.Drawing size={size} mode={colorMode} />
         ) : (
@@ -1178,7 +1215,7 @@ export function AssistantStage({
             ['Spec', about.spec],
             ['Model', about.model],
             ['Runs', about.where],
-            ['Character', name],
+            ['Character', characterName],
           ]
             .filter(([, value]) => value)
             .map(([key, value]) => (
