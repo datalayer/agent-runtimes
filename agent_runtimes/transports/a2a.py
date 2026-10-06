@@ -11,6 +11,7 @@ Supports identity context for OAuth token propagation across agent boundaries.
 import asyncio
 import logging
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
@@ -391,6 +392,27 @@ class A2AWorker(_FastA2AWorker):
     #: The media types its answers come in, as its card declares them: a
     #: caller that accepts one besides words gets it as an artifact.
     output_modes: tuple[str, ...] = ()
+
+    @asynccontextmanager
+    async def run(self) -> AsyncIterator[None]:
+        """Run the worker: every task it is given runs at once, beside the others.
+
+        fasta2a's worker awaits each task before it takes the next, so a
+        request sent while another task works waited for it — a minute for a
+        report — before its stream said anything, and one its caller gave up
+        on meanwhile stayed submitted for ever.
+        """
+        import anyio
+
+        async with anyio.create_task_group() as tasks:
+
+            async def loop() -> None:
+                async for operation in self.broker.receive_task_operations():
+                    tasks.start_soon(self._handle_task_operation, operation)
+
+            tasks.start_soon(loop)
+            yield
+            tasks.cancel_scope.cancel()
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
