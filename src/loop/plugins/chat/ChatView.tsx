@@ -536,7 +536,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * file there. An agent turned in this page has no session, and no file is
    * handed to it: said, rather than dropped. What the workspace's plugins
    * send with every run (`LoopRunProps`: the modes the person is in, LOOP
-   * P-19) goes under it.
+   * P-19) goes under it — and an agent turned in this page applies the modes
+   * itself (`modeEffect`, `BrowserAgentAdapter`).
    */
   const sendNow = useCallback(
     (message: string, given?: Record<string, unknown>): string | void => {
@@ -1477,6 +1478,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // composer's pulse draw an in-page delegation like any other.
             onSubagentEvent: event =>
               agentRuntimeStore.getState().appendSubagentEvent(event),
+            // An application's modes (LOOP P-19): the options sent with a
+            // run tell it their instructions, on the model one names, as
+            // its session API does on a runtime.
+            modeEffect: blueprintTurn?.modeEffect,
           })
         : {
             type: 'ag-ui',

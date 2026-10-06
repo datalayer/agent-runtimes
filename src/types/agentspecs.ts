@@ -520,6 +520,17 @@ export interface AppModeSpec {
   default?: string | null;
 }
 
+/**
+ * What a run in the modes chosen is told, and the model it runs on (LOOP
+ * P-19): agentspecs' `ModeEffect`.
+ */
+export interface AppModeEffect {
+  /** The instructions of the options chosen, in the order of the modes. */
+  instructions: string;
+  /** The model an option chosen names; the application's when unsaid. */
+  model?: string;
+}
+
 export interface AppSettingSpec {
   id: string;
   type: 'select' | 'text' | 'toggle' | 'slider' | 'number';

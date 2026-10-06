@@ -305,8 +305,16 @@ The checks refuse a name that is not slash-safe, a name or an id said twice,
 a prompt with a placeholder other than `{input}`, a mode with fewer than two
 options or a default not among them, two modes that choose the model, a model
 the catalogue does not have, and a key none of them knows (`checkAppspec`).
-An agent turned in the page itself has no session: its commands work, its
-modes are shown but not told to it.
+An agent turned in the page itself (the browser target) has no session, and
+applies its modes itself, as the runtime does: the application's blueprint
+carries `modeEffect` (agentspecs' `mode_effect`, said again in
+`loop/apps/composer`), and the in-page adapter (`BrowserAgentAdapter`) reads
+`forwardedProps.loop.modes` from each run, adds the options' `instructions`
+after the agent's for that run only, and asks the inference service for the
+`model` one names, over the one picked in the chat. What it cannot apply it
+refuses, in a sentence in the chat, rather than run without it: modes sent to
+an agent that has none, a mode or an option the application does not have,
+and a mode's model for an agent whose model its host chose itself.
 
 ## Feedback on its answers
 

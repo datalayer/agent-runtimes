@@ -74,6 +74,7 @@ import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
 import { defineAppComposerPlugin } from './AppComposer';
+import { modeEffect } from './composer';
 import { defineAppFeedbackPlugin } from './AppFeedback';
 import { defineAppKeptPlugin } from './AppKept';
 import { keepsFeedback } from './feedback';
@@ -132,6 +133,15 @@ export function defineAppPlugin(
     // application's model when it names one (`loop/apps/agent`).
     instructions: app.instructions,
     model: app.model,
+    // Its modes (LOOP P-19), as the session API applies them: the
+    // instructions of the options chosen and the model one names, for the
+    // run they are sent with.
+    ...((app.interface.modes ?? []).length > 0
+      ? {
+          modeEffect: (chosen: Record<string, string>) =>
+            modeEffect(app, chosen),
+        }
+      : {}),
   });
 }
 

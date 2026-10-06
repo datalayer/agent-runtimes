@@ -10,12 +10,22 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { LoopCommand, LoopRunProps, runForwardedProps } from '../core';
+import {
+  LoopAgentBlueprint,
+  LoopCommand,
+  LoopRunProps,
+  runForwardedProps,
+} from '../core';
 import { defineAppComposerPlugin } from '../apps/AppComposer';
 import { appPreset } from '../apps/AppRenderer';
 import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import { checkAppspec } from '../apps/checks';
-import { commandPrompt, modeChoice, modeDefaults } from '../apps/composer';
+import {
+  commandPrompt,
+  modeChoice,
+  modeDefaults,
+  modeEffect,
+} from '../apps/composer';
 
 const BASE = {
   schema: 'loop.app/v1',
@@ -224,5 +234,59 @@ describe('commands and modes in the composer', () => {
     expect(names(BASE)).not.toContain(
       '@datalayer/loop-plugin-app-composer-desk',
     );
+  });
+
+  it('tell a run the options’ instructions, in the order of the modes, on the model one names', () => {
+    const two = parseAppspec({
+      ...BASE,
+      interface: {
+        modes: [
+          ...MODES,
+          {
+            id: 'voice',
+            label: 'Voice',
+            options: [
+              { id: 'plain', label: 'Plain', instructions: '  ' },
+              {
+                id: 'formal',
+                label: 'Formal',
+                instructions: 'Say vous.',
+                model: 'bedrock:us.anthropic.claude-opus-4-1',
+              },
+            ],
+          },
+        ],
+      },
+    }).app;
+    // Where each starts: the default of the first, the first of the second,
+    // whose blank instructions say nothing.
+    expect(modeEffect(two)).toEqual({ instructions: 'Cite what you read.' });
+    expect(modeEffect(two, { depth: 'quick', voice: 'formal' })).toEqual({
+      instructions: 'Two sentences.\n\nSay vous.',
+      model: 'bedrock:us.anthropic.claude-opus-4-1',
+    });
+    expect(() => modeEffect(two, { depth: 'deep' })).toThrow(
+      'The mode Depth has no option “deep”.',
+    );
+    expect(modeEffect(parseAppspec(BASE).app)).toEqual({ instructions: '' });
+  });
+
+  it('are applied by an agent turned in the page, through its blueprint', () => {
+    const blueprint = (spec: unknown) => {
+      const [plugin] = appPreset(parseAppspec(spec).app).plugins as Array<{
+        contributes?: Array<{ point?: unknown; value: Record<string, any> }>;
+      }>;
+      return plugin.contributes?.find(item => item.point === LoopAgentBlueprint)
+        ?.value;
+    };
+    const desk = blueprint(DESK);
+    expect(desk?.modeEffect({ depth: 'quick' })).toEqual({
+      instructions: 'Two sentences.',
+    });
+    expect(() => desk?.modeEffect({ speed: 'fast' })).toThrow(
+      'Desk has no mode “speed”.',
+    );
+    // An application with no modes says none.
+    expect(blueprint(BASE)?.modeEffect).toBeUndefined();
   });
 });

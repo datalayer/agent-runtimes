@@ -23,6 +23,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { ExecutionState } from '@datalayer/jupyter-react/kernel-indicator';
 import type { ToolbarItem } from '@datalayer/primer-addons';
 import type { FrontendToolDefinition } from '../../types/tools';
+import type { AppModeEffect } from '../../types/agentspecs';
 import type { ContextSnapshotData } from '../../types/context';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
@@ -628,6 +629,12 @@ export type AgentBlueprintContribution = {
   instructions?: string;
   /** The model it runs on in the page, in place of its spec's. */
   model?: string;
+  /**
+   * What the modes chosen in the composer (`forwardedProps.loop.modes`, LOOP
+   * P-19) tell a run turned in the page, and the model it runs on — as the
+   * runtime's session API applies them. Unsaid for an agent with no modes.
+   */
+  modeEffect?: (chosen: Record<string, string>) => AppModeEffect;
 };
 
 export const LoopAgentBlueprint =

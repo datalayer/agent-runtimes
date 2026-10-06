@@ -6,14 +6,19 @@
 /**
  * Commands and modes in the composer (LOOP P-19), as rules: what a command
  * sends, and which option of each mode a run is in. agentspecs' own
- * (`command_prompt`, `AppInterface.mode_choice`), said again for the page.
+ * (`command_prompt`, `AppInterface.mode_choice`, `mode_effect`), said again
+ * for the page.
  *
  * Pure: no React, no network.
  *
  * @module loop/apps/composer
  */
 
-import type { AppCommandSpec, AppSpec } from '../../types/agentspecs';
+import type {
+  AppCommandSpec,
+  AppModeEffect,
+  AppSpec,
+} from '../../types/agentspecs';
 
 /** Where a command's prompt takes the words typed after it. */
 export const COMMAND_INPUT = '{input}';
@@ -70,4 +75,26 @@ export function modeChoice(
     }
   }
   return { ...modeDefaults(app), ...chosen };
+}
+
+/**
+ * What a run in the modes chosen is told, and the model it runs on —
+ * agentspecs' `mode_effect`: the instructions of every option chosen, in the
+ * order of the modes, and the model of the first that names one. Refused as
+ * {@link modeChoice} refuses.
+ */
+export function modeEffect(
+  app: Pick<AppSpec, 'name' | 'interface'>,
+  chosen: Record<string, string> = {},
+): AppModeEffect {
+  const choice = modeChoice(app, chosen);
+  const options = (app.interface.modes ?? []).flatMap(mode =>
+    mode.options.filter(option => option.id === choice[mode.id]),
+  );
+  const instructions = options
+    .map(option => (option.instructions ?? '').trim())
+    .filter(Boolean)
+    .join('\n\n');
+  const model = options.find(option => option.model)?.model ?? undefined;
+  return model ? { instructions, model } : { instructions };
 }

@@ -427,3 +427,117 @@ describe('stopping a run in flight', () => {
     expect(adapter.connectionState).toBe('connected');
   });
 });
+
+describe('an application’s modes, in the page (LOOP P-19)', () => {
+  /** The system prompt and model each request to the inference service asked for. */
+  function recording(modeEffect?: (chosen: Record<string, string>) => any) {
+    const asked: Array<{ model: string; system?: string }> = [];
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      instructions: 'You keep the desk.',
+      inference: {
+        inferenceUrl: 'https://inference.example',
+        token: 'tok',
+        fetch: async (_input, init) => {
+          const body = JSON.parse(String(init?.body));
+          asked.push({
+            model: body.model,
+            system: body.messages.find((m: any) => m.role === 'system')
+              ?.content,
+          });
+          throw new TypeError('Failed to fetch');
+        },
+      },
+      model: 'bedrock:built-with',
+      ...(modeEffect ? { modeEffect } : {}),
+    });
+    const events: any[] = [];
+    adapter.subscribe(event => events.push(event));
+    return { adapter, asked, events };
+  }
+
+  const DEPTH = (chosen: Record<string, string>) =>
+    chosen.depth === 'quick'
+      ? { instructions: 'Two sentences.', model: 'bedrock:quick-one' }
+      : { instructions: 'Cite what you read.' };
+
+  it('tells a run its options’ instructions and runs the model one names, for that run only', async () => {
+    const { adapter, asked } = recording(DEPTH);
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      model: 'bedrock:picked-in-the-chat',
+      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+    });
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { modes: { depth: 'thorough' } } },
+    });
+    await adapter.sendMessage(userMessage('hello'), { messages: [] });
+
+    expect(asked).toEqual([
+      {
+        model: 'bedrock:quick-one',
+        system: 'You keep the desk.\n\nTwo sentences.',
+      },
+      {
+        model: 'bedrock:built-with',
+        system: 'You keep the desk.\n\nCite what you read.',
+      },
+      { model: 'bedrock:built-with', system: 'You keep the desk.' },
+    ]);
+  });
+
+  it('refuses modes it does not have, rather than running without them', async () => {
+    const { adapter, asked, events } = recording();
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+    });
+    expect(asked).toEqual([]);
+    expect(events.find(event => event.type === 'error').error.message).toBe(
+      'This agent has no modes: the options chosen in the composer cannot be applied to it.',
+    );
+    expect(events.some(event => event.type === 'done')).toBe(true);
+  });
+
+  it('says why an option the application does not have is refused', async () => {
+    const { adapter, asked, events } = recording(() => {
+      throw new Error('The mode Depth has no option “deep”.');
+    });
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { modes: { depth: 'deep' } } },
+    });
+    expect(asked).toEqual([]);
+    expect(events.find(event => event.type === 'error').error.message).toBe(
+      'The mode Depth has no option “deep”.',
+    );
+  });
+
+  it('refuses a mode’s model when the host chose the model itself', async () => {
+    const adapter = new BrowserAgentAdapter({
+      protocol: 'browser-vercel-ai',
+      baseUrl: '',
+      languageModel: modelStreaming([FINISH]),
+      modeEffect: DEPTH,
+    });
+    const events: any[] = [];
+    adapter.subscribe(event => events.push(event));
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { modes: { depth: 'quick' } } },
+    });
+    expect(events.find(event => event.type === 'error').error.message).toBe(
+      "The mode chosen runs on bedrock:quick-one, and this agent's model is its host's own: it cannot run on another.",
+    );
+    // Its instructions alone are told, on the host's model.
+    const told: any[] = [];
+    adapter.subscribe(event => told.push(event));
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { modes: { depth: 'thorough' } } },
+    });
+    expect(told.some(event => event.type === 'error')).toBe(false);
+  });
+});

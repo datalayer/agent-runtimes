@@ -30,6 +30,7 @@ import {
 import {
   LoopAgentBlueprint,
   LoopChatSuggestion,
+  type AgentBlueprintContribution,
   type ChatSuggestionItem,
 } from '../../core';
 
@@ -53,6 +54,8 @@ export type AgentCapacityOptions = {
   instructions?: string;
   /** The model it runs on in the page, in place of its spec's. */
   model?: string;
+  /** What its modes tell a run turned in the page (LOOP P-19). */
+  modeEffect?: AgentBlueprintContribution['modeEffect'];
 };
 
 export function defineAgentCapacityPlugin(
@@ -70,6 +73,7 @@ export function defineAgentCapacityPlugin(
     suggestions,
     instructions,
     model,
+    modeEffect,
   } = options;
   return definePlugin({
     name: `@datalayer/loop-plugin-agent-${key}`,
@@ -91,6 +95,7 @@ export function defineAgentCapacityPlugin(
           },
           ...(instructions ? { instructions } : {}),
           ...(model ? { model } : {}),
+          ...(modeEffect ? { modeEffect } : {}),
         },
         { id: key },
       ),

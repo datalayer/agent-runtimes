@@ -24,6 +24,7 @@ import type { ProtocolConfig } from '../../types/protocol';
 import type { AgentStreamSubagentPayload } from '../../types/stream';
 import type { FrontendToolDefinition } from '../../types/tools';
 import type { TeamContextSharing } from '../../types/teams';
+import type { AppModeEffect } from '../../types/agentspecs';
 import type { BrowserModelOptions } from './model';
 import type { BrowserSubagent } from './subagents';
 
@@ -50,6 +51,8 @@ export type BrowserProtocolOptions = {
   sharing?: TeamContextSharing;
   /** Told what a delegated run does, as it does it — see `subagentTools`. */
   onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
+  /** What the modes a run is sent in tell it (LOOP P-19); none when unsaid. */
+  modeEffect?: (chosen: Record<string, string>) => AppModeEffect;
 };
 
 /**
@@ -77,6 +80,7 @@ export function browserProtocolConfig(
     subagents,
     sharing,
     onSubagentEvent,
+    modeEffect,
   } = options;
   return {
     type: 'browser-vercel-ai',
@@ -91,6 +95,7 @@ export function browserProtocolConfig(
       subagents,
       sharing,
       onSubagentEvent,
+      modeEffect,
     },
   };
 }
