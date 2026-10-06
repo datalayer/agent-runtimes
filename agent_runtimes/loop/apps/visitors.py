@@ -327,7 +327,7 @@ def path_answered(method: str, path: str) -> bool:
 
 
 def loopback_url() -> str:
-    """This runtime, as the pod itself reaches it."""
+    """The runtime itself, as the pod reaches it."""
     return f"http://127.0.0.1:{os.environ.get('AGENT_RUNTIMES_PORT') or '8765'}"
 
 

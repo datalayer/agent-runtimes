@@ -764,7 +764,8 @@ class AppHost:
 
     async def message(self, session: Session, text: str) -> None:
         """The user wrote: the command its code answers, when the message calls one
-        (``/<name> words``, LOOP P-19); else ``message``, or the agent answers."""
+        (``/<name> words``, LOOP P-19); else ``message``, or the agent answers.
+        """
         self._open(session)
         called = command_called(self.spec, text)
         if called is not None:
@@ -823,7 +824,8 @@ class AppHost:
 
     async def logout(self, session: Session) -> None:
         """The person signed out: what runs is cancelled, ``logout`` runs, then
-        the session ends (LOOP P-14)."""
+        the session ends (LOOP P-14).
+        """
         self._open(session)
         await self._cancel(session)
         handler = self._reaction("logout")

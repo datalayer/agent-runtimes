@@ -67,7 +67,7 @@ DESK = {
 
 
 class AiAgents:
-    """ai-agents minting a Preview's token: the person's, narrowed to the Spaces asked for."""
+    """The ai-agents service minting a Preview's token: the person's, narrowed to the Spaces asked for."""
 
     def __init__(self) -> None:
         self.asked: List[tuple[str, Dict[str, Any], str]] = []
@@ -146,7 +146,8 @@ def _make(
     agent_id: str, spec: Dict[str, Any], instance: Dict[str, Any], ai_agents: AiAgents
 ) -> List[str]:
     """The application's agent, as the create route makes it, with one tool
-    that reaches a Space with the token of the run. Answers what each call carried."""
+    that reaches a Space with the token of the run. Answers what each call carried.
+    """
     from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
     from agent_runtimes.context.identities import get_request_user_jwt
     from agent_runtimes.transports import AGUITransport

@@ -229,7 +229,7 @@ class TestTheCard:
 
 
 class TestTheWire:
-    """fasta2a answers `@a2a-js/sdk` 1.x: A2A 1.0 method names and enums."""
+    """The fasta2a server answers `@a2a-js/sdk` 1.x: A2A 1.0 method names and enums."""
 
     @pytest.mark.asyncio
     async def test_a_1_0_stream_is_answered_in_1_0(self, state: Any) -> None:
@@ -476,7 +476,7 @@ def _visitor_token(visitor: str = "tab-ada-0001", app: str = "accounting") -> st
 
 @pytest.fixture
 def inference(monkeypatch: Any) -> list[str]:
-    """ai-inference, as the verifier asks it who a visitor is."""
+    """The ai-inference service, as the verifier asks it who a visitor is."""
     asked: list[str] = []
 
     async def verify_visitor(token: str) -> Caller:

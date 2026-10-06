@@ -289,7 +289,8 @@ def api_key_for(deployment_uid: str) -> Callable[[], Awaitable[str]]:
 def preview_key(app_uid: str, person_uid: str, permissions: Mapping[str, Any]) -> str:
     """Where a Preview's token is held: by application, the person trying it,
     and the Spaces its Appspec grants now — a list changed is a token asked
-    again, never one narrowed to the list before."""
+    again, never one narrowed to the list before.
+    """
     spaces = sorted(
         (str(grant.get("space") or ""), str(grant.get("access") or "read"))
         for grant in permissions.get("spaces") or []

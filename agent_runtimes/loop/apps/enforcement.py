@@ -545,7 +545,8 @@ def _unruled(enforced: "Enforced", tool_name: str) -> Optional[Decision]:
     """The first part of a call that acts and that no rule of its own covers,
     or None: what background work does not do (LOOP R-16). Its own computer —
     its shell, its files — is its own, and code is decided by the tools it
-    names."""
+    names.
+    """
     if part_of(tool_name) is not None and not enforced.parts:
         return None
     for decision in enforced.parts or (enforced.decision,):

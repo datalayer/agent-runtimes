@@ -522,8 +522,9 @@ class LiveSession:
         }
 
     def thread(self) -> List[Dict[str, Any]]:
-        """Its conversation as AG-UI messages, as a snapshot says it: what a
-        page reloaded draws again (LOOP D-13)."""
+        """The conversation as AG-UI messages, as a snapshot says it: what a
+        page reloaded draws again (LOOP D-13).
+        """
         return [
             message.model_dump(mode="json", by_alias=True, exclude_none=True)
             for message in _snapshot(self.messages)
@@ -1160,7 +1161,8 @@ class LiveSession:
         """The token a run of the session carries: the request's, but in a
         Preview a person opened (LOOP R-25) theirs narrowed to the Spaces its
         application is granted, held for it (`principal.ensure_preview_token`)
-        — and without one the run is refused, never run with theirs."""
+        — and without one the run is refused, never run with theirs.
+        """
         person = str(self.acts_as.get("uid") or "")
         if self.acts_as.get("kind") != "person" or not person:
             return bearer

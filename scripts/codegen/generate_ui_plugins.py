@@ -104,18 +104,18 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
         "# The components as typed calls (LOOP C-15)",
         "# " + "=" * 76,
         "",
-        "#: A property bound to what the application publishes or takes: ``{\"path\": \"/runs\"}``.",
+        '#: A property bound to what the application publishes or takes: ``{"path": "/runs"}``.',
         "Bound = Mapping[str, str]",
         "",
         "",
         "class SurfaceComponents:",
-        '    """Every component of the catalog as a typed call: ``app.ui.table(\"runs\", columns=[...])``.',
+        '    """Every component of the catalog as a typed call: ``app.ui.table("runs", columns=[...])``.',
         "",
         "    Each places the node the Canvas and the YAML write, through",
         "    `Application.component`, which checks it against the same JSON Schema; an",
         "    IDE completes its properties, and a type checker refuses a wrong value",
         "    before the application runs. A property may be bound instead",
-        '    (``{\"path\": ...}``); a property left as ``None`` is not written.',
+        '    (``{"path": ...}``); a property left as ``None`` is not written.',
         '    """',
         "",
         "    def __init__(self, place: Callable[..., Dict[str, Any]]) -> None:",
@@ -131,15 +131,21 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
             bindings = component.get("bindings") or {}
             extra = [
                 name
-                for name in dict.fromkeys([*(bindings.get("shows") or []), *(bindings.get("sends") or [])])
+                for name in dict.fromkeys(
+                    [*(bindings.get("shows") or []), *(bindings.get("sends") or [])]
+                )
                 if name not in fields
             ]
             params = ["        self,", "        id: str,", "        *,"]
-            ordered = [n for n in fields if n in required] + [n for n in fields if n not in required]
+            ordered = [n for n in fields if n in required] + [
+                n for n in fields if n not in required
+            ]
             for name in ordered:
                 kind = f"Union[{_py_type(fields[name])}, Bound]"
                 params.append(
-                    f"        {name}: {kind}," if name in required else f"        {name}: Optional[{kind}] = None,"
+                    f"        {name}: {kind},"
+                    if name in required
+                    else f"        {name}: Optional[{kind}] = None,"
                 )
             for name in extra:
                 params.append(f"        {name}: Optional[Bound] = None,")
@@ -157,9 +163,16 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
             ]
             for name in ordered:
                 field = fields[name]
-                doc += [f"        {name} : {_py_type(field)} or Bound", f"            {field.get('title', name)}: {field.get('description', '')}"]
+                doc += [
+                    f"        {name} : {_py_type(field)} or Bound",
+                    f"            {field.get('title', name)}: {field.get('description', '')}",
+                ]
             for name in extra:
-                said = "What it shows" if name in (bindings.get("shows") or []) else "Where what a person does is written"
+                said = (
+                    "What it shows"
+                    if name in (bindings.get("shows") or [])
+                    else "Where what a person does is written"
+                )
                 doc += [f"        {name} : Bound", f"            {said}."]
             doc += ['        """']
             names = [*ordered, *extra]
@@ -171,7 +184,7 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
                 f"    def {call_name(component['id'])}(",
                 *params,
                 "    ) -> Dict[str, Any]:",
-                *[d.replace('\\', '\\\\') for d in doc],
+                *[d.replace("\\", "\\\\") for d in doc],
                 "        given = {",
                 *[f"            {json.dumps(name)}: {name}," for name in names],
                 "        }",

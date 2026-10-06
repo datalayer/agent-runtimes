@@ -110,9 +110,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         timeout = _timeout_hms(spec)
@@ -157,9 +155,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         lines.append(f'    "{tool_id}": {const_name},')
 
     lines.extend(
@@ -215,9 +211,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         runtime = _require_runtime(spec)
         requires_approval = _requires_approval(spec)
         timeout = _timeout_hms(spec)
@@ -264,9 +258,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     for spec in specs:
         tool_id = spec["id"]
         version = spec["version"]
-        const_name = (
-            f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
-        )
+        const_name = f"{tool_id.upper().replace('-', '_')}_BACKEND_TOOL_SPEC{version_suffix(version)}"
         lines.append(f"  '{tool_id}': {const_name},")
 
     lines.extend(

@@ -34,7 +34,7 @@ SPEC = {
 
 
 class AiAgents:
-    """ai-agents' skills routes, as the runtime asks them."""
+    """The ai-agents skills routes, as the runtime asks them."""
 
     def __init__(self) -> None:
         self.asked: List[Tuple[str, Dict[str, Any], str]] = []

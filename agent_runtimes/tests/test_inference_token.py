@@ -277,9 +277,12 @@ class TestTheTokenGiven:
         model = resolve_model_for_inference_provider(SONNET, "datalayer")
         app = TestClient(_app(), client=("127.0.0.1", 50000))
         first = _jwt(time.time() - 60)
-        assert app.put(
-            "/api/v1/configure/inference/token", json={"token": first}
-        ).status_code == 200
+        assert (
+            app.put(
+                "/api/v1/configure/inference/token", json={"token": first}
+            ).status_code
+            == 200
+        )
         with pytest.raises(InferenceTokenMissing, match="expired at"):
             _call(model)
 

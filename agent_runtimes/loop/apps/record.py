@@ -234,7 +234,8 @@ def persons_own_token(token: Optional[str]) -> Iterator[None]:
 def own_token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
     """The token for what the runtime does for a person that reaches no Space
     — an application's documents: `token_for`, but in a Preview's run the
-    person's own, not the one narrowed to its Space grants (LOOP R-25)."""
+    person's own, not the one narrowed to its Space grants (LOOP R-25).
+    """
     own = _PERSONS_OWN.get()
     if own and not deployment_uid.strip():
         return own, ""

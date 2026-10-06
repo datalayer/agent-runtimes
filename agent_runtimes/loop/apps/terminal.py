@@ -228,7 +228,8 @@ class AppTux(CliTux):
     async def handle_command(self, user_input: str) -> Optional[str]:
         """``/action <name> [json]`` presses one of the application's buttons;
         ``/<command> words`` runs one of its commands (LOOP P-19): the code
-        answers it when it has the command, else its prompt is sent."""
+        answers it when it has the command, else its prompt is sent.
+        """
         called = command_called(self.application.spec, user_input)
         if called is not None:
             command, words = called

@@ -852,7 +852,8 @@ async def session_thread(uid: str, request: Request) -> Dict[str, Any]:
     """What a session's conversation holds, as AG-UI messages: what a page
     that reloaded draws again, for the caller that opened it — an embed's
     visit, with a token renewed for it (LOOP D-13). A session this runtime
-    no longer holds, or somebody else's, is a 404."""
+    no longer holds, or somebody else's, is a 404.
+    """
     live, _ = await _held(uid, request)
     return {"uid": live.uid, "messages": live.thread()}
 
@@ -919,7 +920,8 @@ async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
 @router.post("/sessions/{uid}/end")
 async def end_session(uid: str, request: Request) -> Dict[str, Any]:
     """End a session: what runs is cancelled, a Python application's ``end`` runs,
-    and the runtime no longer holds it (LOOP P-14). Its record stays."""
+    and the runtime no longer holds it (LOOP P-14). Its record stays.
+    """
     live, _ = await _held(uid, request)
     await live.end()
     return dict(live.describe())
@@ -928,7 +930,8 @@ async def end_session(uid: str, request: Request) -> Dict[str, Any]:
 @router.post("/sessions/logout")
 async def logout_sessions(request: Request) -> Dict[str, Any]:
     """The caller signed out: each of their sessions here runs its ``logout``,
-    then ends (LOOP P-14)."""
+    then ends (LOOP P-14).
+    """
     from agent_runtimes.loop.apps import sessions
 
     authorized = await _authorize(request, False)

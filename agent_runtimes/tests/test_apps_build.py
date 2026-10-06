@@ -22,7 +22,7 @@ from agent_runtimes.loop.apps.build import (
     read_code_marks,
 )
 from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
-from agent_runtimes.loop.apps.session import ChoiceQuestion, FormQuestion
+from agent_runtimes.loop.apps.session import ChoiceQuestion, FormQuestion, Session
 from agent_runtimes.loop.apps.terminal import AppTux, TerminalChannel, ask_once
 from agent_runtimes.types import AppSettingSpec
 

@@ -52,7 +52,8 @@ def app_suggesting(include: list[str]) -> AppSpec:
 def kept_by_session(sent: list) -> Any:
     """A send that keeps what ai-agents keeps: each session's entries in one
     body, in the order sent — a run's start is sent at once (LOOP R-15), the
-    rest as it ends."""
+    rest as it ends.
+    """
 
     async def send(body: dict) -> None:
         for held in sent:

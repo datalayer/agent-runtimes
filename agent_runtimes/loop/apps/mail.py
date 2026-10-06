@@ -320,7 +320,7 @@ def _recipients(value: Any) -> List[str]:
 
 
 def gmail_toolset(source: MailSource) -> Any:
-    """Gmail's tools, as the Google Workspace server names them and takes
+    """The Gmail tools, as the Google Workspace server names them and takes
     their arguments, served from a mail source.
 
     Each takes the mailbox it acts on (`user_google_email`) and refuses

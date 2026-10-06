@@ -117,13 +117,13 @@ class TestVersionShown:
 
 class TestGoodbye:
     def test_it_keeps_looping_with_the_eyes(self) -> None:
-        assert LOOP_WORDMARK_VERB == "L\U0001f440ping"
+        assert LOOP_WORDMARK_VERB == "L\U0001f440PING"
         assert LOOP_WORDMARK_VERB in GOODBYE_MESSAGE
         assert "\u27f3" not in GOODBYE_MESSAGE
         assert "looping" not in GOODBYE_MESSAGE
         # The bars sit with the name at the end, not in front of the line.
         assert GOODBYE_MESSAGE.startswith("Keep ")
-        assert "\u2630 Datalayer!" in GOODBYE_MESSAGE
+        assert GOODBYE_MESSAGE.endswith("\u2630 Datalayer")
 
 
 class TestUsageDirection:

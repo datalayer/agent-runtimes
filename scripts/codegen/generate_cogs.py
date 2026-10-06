@@ -208,7 +208,9 @@ def generate_typescript_code(specs: list[dict[str, Any]], specs_dir: Path) -> st
     # is one directory up, beside the catalogues it imports.
     head = head.replace("from '../../types'", "from '../types'")
     head = re.sub(
-        r"from '\.\./(mcpServers|skills|backendTools|frontendTools)'", r"from './\1'", head
+        r"from '\.\./(mcpServers|skills|backendTools|frontendTools)'",
+        r"from './\1'",
+        head,
     )
 
     lines = [

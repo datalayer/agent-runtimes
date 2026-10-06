@@ -33,26 +33,34 @@ function readWav(path) {
   return samples;
 }
 
-const loading = performance.now();
-const transcribe = await pipeline('automatic-speech-recognition', model, {
-  dtype: 'q8',
-  device: 'cpu',
-});
-const loadMs = Math.round(performance.now() - loading);
-// Whisper is told the language; Moonshine hears English only.
-const options = model.startsWith('whisper')
-  ? { language: language === 'fr' ? 'french' : 'english', task: 'transcribe' }
-  : {};
-const results = [];
-for (const file of files) {
-  const audio = readWav(file);
-  const started = performance.now();
-  const output = await transcribe(audio, options);
-  results.push({
-    file: file.split('/').pop(),
-    text: output.text.trim(),
-    ms: Math.round(performance.now() - started),
-    audio_s: Math.round((audio.length / 16000) * 100) / 100,
+/** Load the model, transcribe each file, print the JSON line. */
+async function main() {
+  const loading = performance.now();
+  const transcribe = await pipeline('automatic-speech-recognition', model, {
+    dtype: 'q8',
+    device: 'cpu',
   });
+  const loadMs = Math.round(performance.now() - loading);
+  // Whisper is told the language; Moonshine hears English only.
+  const options = model.startsWith('whisper')
+    ? { language: language === 'fr' ? 'french' : 'english', task: 'transcribe' }
+    : {};
+  const results = [];
+  for (const file of files) {
+    const audio = readWav(file);
+    const started = performance.now();
+    const output = await transcribe(audio, options);
+    results.push({
+      file: file.split('/').pop(),
+      text: output.text.trim(),
+      ms: Math.round(performance.now() - started),
+      audio_s: Math.round((audio.length / 16000) * 100) / 100,
+    });
+  }
+  console.log(JSON.stringify({ model, language, load_ms: loadMs, results }));
 }
-console.log(JSON.stringify({ model, language, load_ms: loadMs, results }));
+
+main().catch(error => {
+  console.error(error);
+  process.exit(1);
+});

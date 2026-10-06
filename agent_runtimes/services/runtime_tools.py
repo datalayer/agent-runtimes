@@ -111,7 +111,9 @@ def register_agent_tools(
     for tool_id in tool_ids:
         spec: BackendToolSpec | None = get_backend_tool_spec(tool_id)
         if spec is None:
-            logger.warning("Tool '%s' not found in BACKEND_TOOL_CATALOG; skipping", tool_id)
+            logger.warning(
+                "Tool '%s' not found in BACKEND_TOOL_CATALOG; skipping", tool_id
+            )
             continue
         if not spec.enabled:
             logger.info("Tool '%s' is disabled; skipping", tool_id)

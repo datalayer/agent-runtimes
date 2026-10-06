@@ -410,7 +410,8 @@ from agent_runtimes.types import (
                 for skill in spec.get("skills", [])
             ]
             tool_refs = [
-                versioned_ref(*split_spec_ref(tool)) for tool in spec.get("backend_tools", [])
+                versioned_ref(*split_spec_ref(tool))
+                for tool in spec.get("backend_tools", [])
             ]
             frontend_tool_refs = [
                 versioned_ref(*split_spec_ref(ft))
@@ -1032,7 +1033,8 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
 
             # Get backend tools - resolve to BackendToolSpec via TOOL_MAP
             tool_ids_list = [
-                versioned_ref(*split_spec_ref(sid)) for sid in spec.get("backend_tools", [])
+                versioned_ref(*split_spec_ref(sid))
+                for sid in spec.get("backend_tools", [])
             ]
             if has_tools and tool_ids_list:
                 tools_str = ", ".join(f"TOOL_MAP['{tid}']" for tid in tool_ids_list)

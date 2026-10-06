@@ -137,7 +137,8 @@ def code_of(model: dict[str, Any]) -> Optional[dict[str, str]]:
 
 def pull(store: AppStore, uid: str) -> tuple[str, int, Optional[dict[str, str]]]:
     """The application's Appspec as its file, the version it is, and its
-    ``app.py`` when it is written in Python (``{file, text}``)."""
+    ``app.py`` when it is written in Python (``{file, text}``).
+    """
     app = store.item(uid)
     if app.model.get("format") != APP_ITEM_FORMAT or not isinstance(
         app.model.get("spec"), dict

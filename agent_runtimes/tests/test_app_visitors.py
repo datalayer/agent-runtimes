@@ -54,9 +54,7 @@ from agent_runtimes.tests.test_app_sessions import (
     Runtime,
     answer_of,
     events_of,
-)
-from agent_runtimes.tests.test_app_sessions import (
-    runtime as _sessions_runtime,  # noqa: F401
+    runtime,  # noqa: F401  (the fixture, registered under its own name)
 )
 
 

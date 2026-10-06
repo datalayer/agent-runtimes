@@ -88,9 +88,7 @@ async def test_a_task_sent_while_another_works_starts_at_once(state: Any) -> Non
 
     storage = DurableStorage(state, "accounting")
     broker = InMemoryBroker()
-    worker = A2AWorker(
-        broker=broker, storage=storage, agent=_agent(asyncio.Event())
-    )
+    worker = A2AWorker(broker=broker, storage=storage, agent=_agent(asyncio.Event()))
     first = await storage.submit_task("ctx-first", _message("first"))
     second = await storage.submit_task("ctx-second", _message("second"))
     async with broker, worker.run():
