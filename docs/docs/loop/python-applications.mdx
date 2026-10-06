@@ -42,6 +42,23 @@ What does **not** exist yet:
 - **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`) and
   what an answer shows beyond text (tables, charts, buttons).
 
+## Where its code runs
+
+**On a runtime, never in a service** (LOOP R-21). On the platform, the only
+Python application code that runs is the catalogue's — its examples'
+`app.py`, shipped with agentspecs — and it runs on a runtime, the sandbox a
+person's agent runs in, through the [Session API](./session-api). An
+`app.py` of your own is built on your machine into the spec it amounts to
+(`loop apps build`, `push`); the platform keeps and runs the spec, never the
+file: an application saved with an example's id and another version runs as
+its agent answers, not as the example's code.
+
+The services — ai-agents, durable — import only what reads a spec:
+`load_app`, `schedule_triggers`, `session_payload`. None of them loads an
+`app.py`, builds one, or runs a session; a test of each side keeps it so
+(`test_app_code_runs_where.py` here, `test_no_service_runs_application_code.py`
+in the services).
+
 ## A runnable example
 
 A customer interview: it asks the person what they want to learn when the
