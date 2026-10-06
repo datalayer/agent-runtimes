@@ -378,11 +378,12 @@ function useSystemMode(): 'light' | 'dark' {
   return dark ? 'dark' : 'light';
 }
 
-/** The `loop` theme, with the application's (or the host's) accent and face. */
+/** The application's theme (`loop` unless it names one), with its (or the host's) accent and face. */
 export function EmbedThemed({
   accent,
   colorMode,
   font,
+  variant,
   children,
   style,
 }: {
