@@ -4048,11 +4048,11 @@ async def _start_mcp_servers_for_agent(
     logger.info(f"_start_mcp_servers_for_agent: Starting for agent '{agent_id}'")
     logger.info(f"_start_mcp_servers_for_agent: Adapter type: {type(adapter).__name__}")
     if env_vars:
-        for ev in env_vars:
-            stripped = ev.value[:5] + "..." if len(ev.value) > 5 else ev.value
-            logger.info(
-                f"_start_mcp_servers_for_agent: env var: {ev.name} = {stripped}"
-            )
+        # Names only: never any part of a value.
+        logger.info(
+            "_start_mcp_servers_for_agent: env vars: %s",
+            sorted(ev.name for ev in env_vars),
+        )
     else:
         logger.info("_start_mcp_servers_for_agent: no env vars provided")
 
@@ -4291,10 +4291,8 @@ async def _setup_env_and_sandbox(
     label = f"mcp-servers/start/{agent_id}" if agent_id else "mcp-servers/start"
     env_var_names = [ev.name for ev in body.env_vars]
     for env_var in body.env_vars:
-        stripped = (
-            env_var.value[:5] + "..." if len(env_var.value) > 5 else env_var.value
-        )
-        logger.info("[%s] setting env var: %s = %s", label, env_var.name, stripped)
+        # Names only: never any part of a value.
+        logger.info("[%s] setting env var: %s", label, env_var.name)
         os.environ[env_var.name] = env_var.value
     if env_var_names:
         logger.info(
@@ -4945,10 +4943,8 @@ async def configure_from_spec_endpoint(
         name = env_var.get("name", "")
         value = env_var.get("value", "")
         if name:
-            stripped = value[:5] + "..." if len(value) > 5 else value
-            logger.info(
-                "[configure-from-spec] setting env var: %s = %s", name, stripped
-            )
+            # Names only: never any part of a value.
+            logger.info("[configure-from-spec] setting env var: %s", name)
             os.environ[name] = value
 
     # Store the user JWT so that ToolApprovalConfig.from_env() can later
@@ -5083,7 +5079,12 @@ async def configure_from_spec_endpoint(
         # CodeSandboxManager independently of the agent lifecycle.
         if target_agent_name in _agents:
             try:
-                await delete_agent(target_agent_name)
+                # Said in full: called directly, delete_agent's Query
+                # defaults are FieldInfo objects, truthy, and asked it to stop
+                # the runtime under a runtime id made of a FieldInfo's repr.
+                await delete_agent(
+                    target_agent_name, stop_runtime=False, runtime_id=None
+                )
             except Exception as e:
                 logger.warning("Failed to delete existing default agent: %s", e)
 

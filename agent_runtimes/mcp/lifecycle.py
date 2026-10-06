@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import traceback
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -22,10 +23,34 @@ from agent_runtimes.types import MCPServer, MCPServerTool
 
 logger = logging.getLogger(__name__)
 
-# Startup timeout for each MCP server (in seconds)
-MCP_SERVER_STARTUP_TIMEOUT = 300  # 5 minutes
-MCP_SERVER_HANDSHAKE_TIMEOUT = 180
+# How long an MCP server is given to start, in seconds: the whole of its
+# start, which a configure request waits on. A server that has not answered by
+# then is failed, and not tried again: a server that hangs (one waiting on a
+# sign-in nobody will make) would hang as long on every attempt.
+MCP_SERVER_STARTUP_TIMEOUT = float(
+    os.environ.get("AGENT_RUNTIMES_MCP_STARTUP_TIMEOUT", "45")
+)
+MCP_SERVER_HANDSHAKE_TIMEOUT = MCP_SERVER_STARTUP_TIMEOUT
 MCP_SERVER_MAX_ATTEMPTS = 3
+
+#: An argument that sends a bearer token: empty, a remote server answers 401
+#: and ``mcp-remote`` falls back to an interactive OAuth sign-in, in a browser
+#: a runtime does not have — it waits for it forever.
+_BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
+
+
+def empty_bearer_problem(server_id: str, raw_args: list[Any], args: list[Any]) -> str:
+    """Why a server is not started with an empty bearer token, or ''."""
+    for raw, arg in zip(raw_args, args):
+        if isinstance(arg, str) and _BEARER_ARG.match(arg):
+            names = re.findall(r"\$\{([^}]+)\}", raw if isinstance(raw, str) else "")
+            what = " or ".join(names) if names else "its token"
+            return (
+                f"MCP server '{server_id}' is not started: {what} is not set, and "
+                "it would send an empty bearer token and wait for a sign-in in a browser."
+            )
+    return ""
+
 
 try:  # Python 3.11+
     from builtins import BaseExceptionGroup
@@ -85,8 +110,17 @@ class MCPLifecycleManager:
         self._expected_servers: set[str] = set()  # server_ids declared in mcp.json
         self._initialization_event: asyncio.Event | None = None
         self._initialization_started: bool = False
-        self._lock = asyncio.Lock()
+        # One lock per server: a server that is slow to start holds back
+        # another start of itself, and no other server's.
+        self._locks: dict[str, asyncio.Lock] = {}
         logger.info("MCPLifecycleManager initialized (separate config/catalog storage)")
+
+    def _lock_for(self, server_id: str) -> asyncio.Lock:
+        """The lock a server's start and stop are made under."""
+        lock = self._locks.get(server_id)
+        if lock is None:
+            lock = self._locks[server_id] = asyncio.Lock()
+        return lock
 
     def get_mcp_config_path(self) -> Path:
         """Get the path to the MCP configuration file."""
@@ -308,7 +342,7 @@ class MCPLifecycleManager:
     ) -> MCPServerInstance | None:
         """Inner implementation of start_server (called with _starting_servers tracking)."""
 
-        async with self._lock:
+        async with self._lock_for(server_id):
             logger.debug(f"Acquired lock for '{server_id}'")
 
             # Determine which storage to use based on config.is_config
@@ -364,11 +398,11 @@ class MCPLifecycleManager:
 
                 if extra_env:
                     env.update(extra_env)
-                    for k, v in extra_env.items():
-                        stripped = v[:5] + "..." if len(v) > 5 else v
-                        logger.info(
-                            f"  [mcp/lifecycle] extra env var for '{server_id}': {k} = {stripped}"
-                        )
+                    # Names only: never any part of a value.
+                    logger.info(
+                        f"  [mcp/lifecycle] extra env vars for '{server_id}': "
+                        f"{sorted(extra_env.keys())}"
+                    )
                     logger.debug(
                         f"  Merged {len(extra_env)} extra env var(s): "
                         f"{list(extra_env.keys())}"
@@ -395,6 +429,13 @@ class MCPLifecycleManager:
                     else arg
                     for arg in (config.args or [])
                 ]
+                problem = empty_bearer_problem(
+                    server_id, list(config.args or []), expanded_args
+                )
+                if problem:
+                    logger.error(f"✗ {problem}")
+                    self._failed_servers[server_id] = problem
+                    return None
 
                 pydantic_server = MCPToolset(
                     StdioTransport(
@@ -442,7 +483,10 @@ class MCPLifecycleManager:
                     # Get tools
                     tools: list[MCPServerTool] = []
                     try:
-                        running_tools = await pydantic_server.list_tools()
+                        running_tools = await asyncio.wait_for(
+                            pydantic_server.list_tools(),
+                            timeout=MCP_SERVER_STARTUP_TIMEOUT,
+                        )
                         for tool in running_tools:
                             input_schema = tool.input_schema
                             tools.append(
@@ -490,17 +534,21 @@ class MCPLifecycleManager:
                     return instance
 
                 except asyncio.TimeoutError:
-                    error_detail = f"Timeout after {MCP_SERVER_STARTUP_TIMEOUT}s"
-                    logger.error(
-                        f"✗ MCP server '{server_id}' startup timed out on attempt {attempt}: {error_detail}"
+                    # Not tried again: a server that hangs hangs as long on
+                    # every attempt, and the configure waiting on it with it.
+                    error_detail = (
+                        f"MCP server '{server_id}' did not start within "
+                        f"{MCP_SERVER_STARTUP_TIMEOUT:g}s"
                     )
-                    if attempt >= MCP_SERVER_MAX_ATTEMPTS:
+                    logger.error(f"✗ {error_detail}")
+                    try:
                         await exit_stack.__aexit__(None, None, None)
-                        self._failed_servers[server_id] = error_detail
-                        return None
-                    await asyncio.sleep(min(2 * attempt, 5))
-                    attempt += 1
-                    continue
+                    except BaseException as close_error:  # noqa: BLE001
+                        logger.debug(
+                            f"Closing '{server_id}' after its timeout: {close_error}"
+                        )
+                    self._failed_servers[server_id] = error_detail
+                    return None
 
                 except (_ExceptionGroup, BaseExceptionGroup) as eg:
                     error_lines = self._format_exception_group(eg)
@@ -558,7 +606,7 @@ class MCPLifecycleManager:
         Returns:
             True if stopped successfully, False otherwise
         """
-        async with self._lock:
+        async with self._lock_for(server_id):
             # Select the appropriate storage
             storage = self._config_servers if is_config else self._catalog_servers
             storage_name = "config" if is_config else "catalog"

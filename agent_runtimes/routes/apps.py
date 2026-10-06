@@ -269,6 +269,32 @@ async def a_caller(request: Request) -> Authorized:
     return await _authorize(request, person_only=False)
 
 
+def connections_not_started(adapter: Any) -> List[Tuple[str, str]]:
+    """The MCP servers an agent reaches that failed to start, with why.
+
+    A server still starting (in the background) is not one of them, nor one
+    reached through a Contents session, which has no process.
+    """
+    from agent_runtimes.mcp.lifecycle import get_mcp_lifecycle_manager
+
+    manager = get_mcp_lifecycle_manager()
+    failed = manager.get_failed_servers()
+    starting = set(getattr(manager, "_starting_servers", ()))
+    not_started: List[Tuple[str, str]] = []
+    for selection in getattr(adapter, "_selected_mcp_servers", None) or []:
+        server_id = getattr(selection, "id", str(selection))
+        if getattr(selection, "origin", None) == "contents":
+            continue
+        if server_id in starting or manager.is_server_running(server_id):
+            continue
+        if server_id in failed:
+            # A traceback's last line says what went wrong.
+            lines = [line.strip() for line in str(failed[server_id]).splitlines()]
+            said = [line for line in lines if line] or ["unknown error"]
+            not_started.append((server_id, said[-1][:300]))
+    return not_started
+
+
 @router.post("/configure")
 async def configure_app(
     http_request: Request,
@@ -348,6 +374,24 @@ async def configure_app(
             transport="ag-ui",
         ),
     )
+    # Fail fast: an application whose connections did not start is not
+    # served, and the caller is told which and why (an MCP start is bounded,
+    # so this is known before the caller gives up waiting).
+    from agent_runtimes.routes.acp import _agents as _acp_agents
+
+    if "default" in _acp_agents:
+        not_started = connections_not_started(_acp_agents["default"][0])
+        if not_started:
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "problems": [
+                        f"{app.name} is not served: its connection {server} "
+                        f"did not start ({error})."
+                        for server, error in not_started
+                    ]
+                },
+            )
     # Its own plugin, whether or not agent creation registered it already.
     register_app(app)
     _RUNNING["default"] = app.id

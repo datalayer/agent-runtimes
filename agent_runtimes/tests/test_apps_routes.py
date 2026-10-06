@@ -68,7 +68,9 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
         created.append(request)
         return {"id": request.name}
 
-    async def delete_agent(name: str) -> None:
+    async def delete_agent(
+        name: str, stop_runtime: bool = False, runtime_id: Any = None
+    ) -> None:
         return None
 
     monkeypatch.setattr(agents, "create_agent", create_agent)
