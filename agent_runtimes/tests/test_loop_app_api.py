@@ -754,3 +754,70 @@ async def test_run_sync_and_cache():
     assert fetched == ["a", "bad", "bad"]
     with pytest.raises(TypeError, match="hashable"):
         await fetch(["a"])  # type: ignore[arg-type]
+
+
+# --- P-28: an application is a Reactor plugin ----------------------------------------
+
+
+async def test_an_application_is_its_plugin_each_reaction_a_contribution():
+    from reactor import ContributionRegistry, PluginContributions
+
+    from agent_runtimes.loop.apps.plugins import (
+        APP_POINT,
+        REACTION_POINTS,
+        find_app,
+        reaction_of,
+        reactions_named,
+    )
+
+    app = interview()
+
+    @app.start
+    async def opening(session: Session) -> None:
+        await session.send("Hello.")
+
+    @app.message
+    async def reply(session: Session, text: str) -> None:
+        await session.send(f"Heard {text}.")
+
+    @app.action("save")
+    def save(session: Session, payload: dict) -> None: ...
+
+    registry = ContributionRegistry()
+    host, channel, _ = hosted(app)
+    host = AppHost(
+        app, channel, agent=host._agent, recorder=host.recorder, registry=registry
+    )
+    # Its identity is the plugin's manifest; its spec and every reaction are
+    # contributions of that plugin.
+    assert host.plugin.name == "loop-app-customer-interview"
+    assert find_app("customer-interview", registry) == app.spec
+    assert [(c.plugin, c.id) for c in registry.get(REACTION_POINTS["message"])] == [
+        ("loop-app-customer-interview", "customer-interview")
+    ]
+    assert reaction_of("customer-interview", "action", "save", registry) is save
+    assert reactions_named("customer-interview", "action", registry) == ["save"]
+    assert reaction_of("customer-interview", "stop", registry=registry) is None
+    with pytest.raises(ValueError, match="A reaction is one of"):
+        reaction_of("customer-interview", "on_message", registry=registry)
+
+    # Another plugin's later contribution answers in its place.
+    async def louder(session: Session, text: str) -> None:
+        await session.send(f"HEARD {text.upper()}.")
+
+    PluginContributions(registry, "shouting").contribute(
+        REACTION_POINTS["message"], louder, contribution_id="customer-interview"
+    )
+    session = await host.open()
+    await host.message(session, "hi")
+    assert [m.text for m in channel.messages] == ["Hello.", "HEARD HI."]
+    registry.dispose_plugin("shouting")
+    await host.message(session, "hi")
+    assert channel.messages[-1].text == "Heard hi."
+
+    # Disposed with its plugin: its spec, its reactions.
+    host.dispose()
+    assert not registry.get(APP_POINT, plugins=[host.plugin.name])
+    assert reaction_of("customer-interview", "message", registry=registry) is None
+    with pytest.raises(KeyError, match="no action 'save'"):
+        await host.action(session, "save", {})

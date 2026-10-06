@@ -19,11 +19,19 @@ application only as a contribution to the ``loop.app`` point:
 
 A contribution made by an application's own plugin wins over the catalogue's:
 a runtime configured with an edited *Web research* runs the edit.
+
+An application written in Python is the same plugin with its code (LOOP P-28):
+each of its decorators — ``@app.start``, ``@app.message``, ``@app.action``,
+``@app.schedule`` and the rest — is a contribution to a ``loop.app.<moment>``
+point, beside its spec, disposed with the plugin (`register_application`). An
+`AppHost` loads the application so and calls what the points hold: a later
+contribution — another plugin's — to the same moment of the same application
+answers in its place.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from reactor import (
     ContributionPoint,
@@ -43,6 +51,25 @@ APP_POINT: ContributionPoint[AppSpec] = define_contribution_point("loop.app")
 #: What extends an application's contribution to decide its tool calls: a
 #: factory from the application, and the agent that runs it, to its capability.
 RulesFactory = Callable[[AppSpec, Optional[str]], AppRulesCapability]
+
+#: The moments an application's code reacts to, one point each: a moment's
+#: contribution is known by the application's id, an action's and a
+#: schedule's by ``<application id>/<name>``.
+REACTIONS: Tuple[str, ...] = (
+    "start",
+    "message",
+    "settings",
+    "stop",
+    "resume",
+    "end",
+    "logout",
+    "action",
+    "schedule",
+)
+REACTION_POINTS: Dict[str, ContributionPoint[Callable[..., Any]]] = {
+    reaction: define_contribution_point(f"loop.app.{reaction}")
+    for reaction in REACTIONS
+}
 
 #: The plugin that contributes the catalogue.
 CATALOGUE_PLUGIN = "agent-runtimes"
@@ -116,6 +143,97 @@ def register_app(
     registry.dispose_plugin(manifest.name)
     _contribute(PluginContributions(registry, manifest.name), app)
     return manifest
+
+
+def register_application(
+    application: Any, registry: Optional[ContributionRegistry] = None
+) -> PluginManifest:
+    """Load an application written in Python as its plugin: its spec, and each
+    of its reactions a contribution to its ``loop.app.<moment>`` point
+    (LOOP P-28). An earlier load of the same application is disposed first.
+
+    Parameters
+    ----------
+    application : Application
+        The application, its code attached.
+    registry : ContributionRegistry, optional
+        The host's registry; the runtime's when unsaid.
+
+    Returns
+    -------
+    PluginManifest
+        Its plugin's manifest: ``registry.dispose_plugin(manifest.name)``
+        takes all of it away.
+    """
+    registry = _the(registry)
+    app: AppSpec = application.spec
+    manifest = manifest_of(app)
+    registry.dispose_plugin(manifest.name)
+    contributions = PluginContributions(registry, manifest.name)
+    _contribute(contributions, app)
+    for reaction in REACTIONS[:-2]:
+        handler = application.handler(reaction)
+        if handler is not None:
+            contributions.contribute(
+                REACTION_POINTS[reaction], handler, contribution_id=app.id
+            )
+    for reaction, named in (
+        ("action", application.actions),
+        ("schedule", application.schedules),
+    ):
+        for name, handler in named.items():
+            contributions.contribute(
+                REACTION_POINTS[reaction], handler, contribution_id=f"{app.id}/{name}"
+            )
+    return manifest
+
+
+def reaction_of(
+    app_id: str,
+    reaction: str,
+    name: str = "",
+    registry: Optional[ContributionRegistry] = None,
+) -> Optional[Callable[..., Any]]:
+    """What answers a moment of an application: the last contribution to it.
+
+    Parameters
+    ----------
+    app_id : str
+        The application's id.
+    reaction : str
+        One of `REACTIONS`.
+    name : str
+        An action's or a schedule's name.
+    registry : ContributionRegistry, optional
+        The host's registry; the runtime's when unsaid.
+
+    Returns
+    -------
+    callable or None
+        The handler, or None when nothing answers it.
+    """
+    point = REACTION_POINTS.get(reaction)
+    if point is None:
+        raise ValueError(
+            f"A reaction is one of {', '.join(REACTIONS)}, not {reaction!r}."
+        )
+    wanted = f"{app_id}/{name}" if reaction in ("action", "schedule") else app_id
+    found = [c for c in _the(registry).get(point) if c.id == wanted]
+    return found[-1].value if found else None
+
+
+def reactions_named(
+    app_id: str, reaction: str, registry: Optional[ContributionRegistry] = None
+) -> List[str]:
+    """The names of an application's actions or schedules its points hold."""
+    prefix = f"{app_id}/"
+    names: List[str] = []
+    for contribution in _the(registry).get(REACTION_POINTS[reaction]):
+        if contribution.id and contribution.id.startswith(prefix):
+            name = contribution.id[len(prefix) :]
+            if name not in names:
+                names.append(name)
+    return names
 
 
 def unregister_app(

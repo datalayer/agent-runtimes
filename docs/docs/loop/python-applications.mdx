@@ -347,8 +347,8 @@ Tool Approvals page and its channels say whose it is.
 
 ## `AppHost`
 
-`AppHost(app, channel, *, agent=local_agent, recorder=None)` runs an
-application in this process. A runtime, a test or a script drives it:
+`AppHost(app, channel, *, agent=local_agent, recorder=None, registry=None)`
+runs an application in this process. A runtime, a test or a script drives it:
 
 | Method | Does |
 | --- | --- |
@@ -369,6 +369,40 @@ platform unless said).
 
 `load_application(path)` returns the one `Application` an `app.py` defines;
 a file with none, or more than one, raises `ValueError`.
+
+### A Reactor plugin
+
+An application written in Python is a [Reactor](./index) plugin, as one
+written as a spec is: `loop-app-<id>`, its manifest the application's
+identity (name, version, description, emoji, kind). Each decorator is a
+contribution of that plugin to a point of its own — `loop.app.start`,
+`loop.app.message`, `loop.app.settings`, `loop.app.stop`, `loop.app.resume`,
+`loop.app.end`, `loop.app.logout`, and `loop.app.action` and
+`loop.app.schedule` known as `<id>/<name>` — beside its spec on `loop.app`.
+
+An `AppHost` loads the application so (`register_application`) into its
+`registry` — one of its own unless given — and calls what the points hold
+(`reaction_of`): a later contribution to the same moment of the same
+application, another plugin's, answers in its place, and is gone when that
+plugin is disposed. `host.dispose()` takes the application's plugin away —
+its spec and every reaction; an action then raises `KeyError`. `loop apps
+run` and a runtime's [session](./session-api) load it the same way, each
+session's host with its own registry.
+
+```python
+from reactor import ContributionRegistry, PluginContributions
+from agent_runtimes.loop.apps.plugins import REACTION_POINTS
+
+registry = ContributionRegistry()
+host = AppHost(app, channel, registry=registry)
+
+async def louder(session, text):
+    await session.send(text.upper())
+
+PluginContributions(registry, "shouting").contribute(
+    REACTION_POINTS["message"], louder, contribution_id=app.id
+)  # answers in place of app's own @app.message, until disposed
+```
 
 ## `Session`
 
@@ -612,7 +646,9 @@ this page in process: declarations becoming a validated Appspec, attaching
 to an existing one, one handler per moment; start, message, action,
 settings, stop, resume, end, logout and schedule through an `AppHost` (an
 ended session taking nothing more, and reopened by `resume`); messages
-updated and removed, `run_sync` and `cache`; the agent
+updated and removed, `run_sync` and `cache`; the application loaded as its
+Reactor plugin, another plugin's reaction answering in its place, and
+disposed; the agent
 answering, streamed, when there is no message handler; `send`, `stream`,
 nested steps and their errors; `ask` with text, choice, file and form, wrong
 answers and timeouts; state per session; the record; the agent's history

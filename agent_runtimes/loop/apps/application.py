@@ -39,10 +39,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 
 import jsonschema
+from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import Channel, Session, call
@@ -557,6 +559,11 @@ class AppHost:
         The agent a session's code calls, made for that session: on a
         runtime, the agent the runtime made for the application (LOOP R-04);
         built from ``agent`` when unsaid.
+    registry : ContributionRegistry, optional
+        The Reactor registry the application is loaded into, as its plugin
+        (LOOP P-28); one of the host's own when unsaid. What a moment calls is
+        what the registry holds for it, so a later contribution — another
+        plugin's — answers in the application's place.
     """
 
     def __init__(
@@ -567,8 +574,12 @@ class AppHost:
         agent: AgentFactory = local_agent,
         recorder: Optional[AppRecorder] = None,
         agent_maker: Optional[Callable[[Session], AppAgent]] = None,
+        registry: Optional[ContributionRegistry] = None,
     ) -> None:
         self.app = app
+        self.registry = registry if registry is not None else ContributionRegistry()
+        self.plugin = register_application(app, self.registry)
+        """The application's plugin, as the registry holds it."""
         self.channel = channel
         self.spec = app.spec
         self._agent = agent
@@ -587,6 +598,13 @@ class AppHost:
             agent_maker=self._agent_maker,
             **kwargs,
         )
+
+    def _reaction(self, reaction: str, name: str = "") -> Optional[Handler]:
+        return reaction_of(self.spec.id, reaction, name, self.registry)
+
+    def dispose(self) -> None:
+        """Take the application's plugin away: its spec and every reaction."""
+        self.registry.dispose_plugin(self.plugin.name)
 
     def _open(self, session: Session) -> None:
         if session.id in self._ended:
@@ -641,7 +659,7 @@ class AppHost:
             The session.
         """
         session = self._session(user=user, settings=settings, id=id)
-        handler = self.app.handler("start")
+        handler = self._reaction("start")
         if handler is not None:
             await self._react(session, handler)
         return session
@@ -649,7 +667,7 @@ class AppHost:
     async def message(self, session: Session, text: str) -> None:
         """The user wrote: run ``message``, or let the agent answer."""
         self._open(session)
-        await self._react(session, self.app.handler("message") or _answer, text)
+        await self._react(session, self._reaction("message") or _answer, text)
 
     async def action(
         self, session: Session, name: str, payload: Optional[Mapping[str, Any]] = None
@@ -660,7 +678,7 @@ class AppHost:
         (C-16): refused, the handler is not called.
         """
         self._open(session)
-        handler = self.app.actions.get(name)
+        handler = self._reaction("action", name)
         if handler is None:
             raise KeyError(f"{self.app.id} has no action {name!r}.")
         refused = form_values_refused(self.app.spec, name, payload or {})
@@ -672,7 +690,7 @@ class AppHost:
         """The user changed settings: check them, keep them, run ``settings``."""
         self._open(session)
         updated = session._update_settings(values)
-        handler = self.app.handler("settings")
+        handler = self._reaction("settings")
         if handler is not None:
             await self._react(session, handler, updated)
 
@@ -680,7 +698,7 @@ class AppHost:
         """The user pressed Stop: what runs is cancelled, then ``stop`` runs."""
         self._open(session)
         await self._cancel(session)
-        handler = self.app.handler("stop")
+        handler = self._reaction("stop")
         if handler is not None:
             await self._react(session, handler)
 
@@ -694,7 +712,7 @@ class AppHost:
             return
         await self._cancel(session)
         self._ended.add(session.id)
-        handler = self.app.handler("end")
+        handler = self._reaction("end")
         if handler is not None:
             await self._react(session, handler)
 
@@ -703,7 +721,7 @@ class AppHost:
         the session ends (LOOP P-14)."""
         self._open(session)
         await self._cancel(session)
-        handler = self.app.handler("logout")
+        handler = self._reaction("logout")
         if handler is not None:
             await self._react(session, handler)
         await self.end(session)
@@ -740,7 +758,7 @@ class AppHost:
         session = self._session(
             id=session_id, user=user, state=dict(state), settings=settings
         )
-        handler = self.app.handler("resume")
+        handler = self._reaction("resume")
         if handler is not None:
             await self._react(session, handler)
         return session
@@ -759,7 +777,7 @@ class AppHost:
         Session
             The session it ran in.
         """
-        handler = self.app.schedules.get(name)
+        handler = self._reaction("schedule", name)
         if handler is None:
             raise KeyError(f"{self.app.id} has no schedule {name!r}.")
         session = self._session()
