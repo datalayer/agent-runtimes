@@ -175,6 +175,7 @@ What an application declares is its Appspec. Each call adds to it:
 | `app.setting(id, type, label, *, options=(), default=None, min=None, max=None)` | A setting of the session: `select`, `text`, `toggle`, `slider` or `number`. |
 | `app.rule(action, *, applies_to, behaviour)` | When it acts alone and when it asks: `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
+| `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui-plugins#typed-calls-from-python). |
 
 `app.spec` is the Appspec they amount to, **validated** as any Appspec is:
 an application that would not run raises `AppNotRunnable` with its reasons,
@@ -190,7 +191,7 @@ session always first:
 | --- | --- | --- |
 | `@app.start` | `(session)` | A session starts. |
 | `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
-| `@app.action(name)` | `(session, payload)` | The person presses the button of that name. |
+| `@app.action(name)` | `(session, payload)` | The person presses the button of that name. The values a `Form` sends with it are checked against its schema first: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). |
 | `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back. |

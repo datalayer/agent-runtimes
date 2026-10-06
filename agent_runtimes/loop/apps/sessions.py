@@ -66,6 +66,7 @@ from typing import (
 from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
+from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -825,6 +826,10 @@ class LiveSession:
             return self._answer_waiting(
                 text=text, files=given, run_id=run_id, head=head
             )
+        # A form's values are checked again here, against its schema (C-16).
+        refused = form_values_refused(self.app, name, payload or {})
+        if refused:
+            raise SessionRefused(422, refused)
         if self.host is not None:
             return self._start_turn(
                 lambda: self._action_code(name, payload or {}, text, given),

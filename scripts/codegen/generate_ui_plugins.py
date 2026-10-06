@@ -19,6 +19,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -62,7 +63,7 @@ def _py_component(component: dict[str, Any]) -> str:
         f"id={_py(component['id'])}, name={json.dumps(component['name'], ensure_ascii=False)}, "
         f"description={json.dumps(component['description'].strip(), ensure_ascii=False)}, "
         f"category={_py(component['category'])}, emoji={json.dumps(component['emoji'], ensure_ascii=False)}, "
-        f"standard={bool(component['standard'])}, "
+        f"version={_py(str(component['version']))}, standard={bool(component['standard'])}, "
         f"properties={component.get('properties')!r}, "
         + (
             f"bindings=ComponentBindingsSpec(shows={bindings['shows']!r}, sends={bindings['sends']!r}), "
@@ -71,6 +72,114 @@ def _py_component(component: dict[str, Any]) -> str:
         )
         + f"events={component.get('events') or []!r}, example={component.get('example')!r})"
     )
+
+
+def call_name(component_id: str) -> str:
+    """The Python call of a component: ``Table`` → ``table``, ``TextField`` → ``text_field``."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", component_id).lower()
+
+
+def _py_type(prop: dict[str, Any]) -> str:
+    """The Python type of a property of a component's JSON Schema."""
+    if "enum" in prop:
+        return "Literal[" + ", ".join(json.dumps(value) for value in prop["enum"]) + "]"
+    kind = prop.get("type")
+    if kind == "array":
+        return f"List[{_py_type(prop.get('items') or {})}]"
+    return {
+        "string": "str",
+        "integer": "int",
+        "number": "float",
+        "boolean": "bool",
+        "object": "Dict[str, Any]",
+    }.get(str(kind), "Any")
+
+
+def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
+    """The catalog's components as typed calls (LOOP C-15), one method each."""
+    lines = [
+        "",
+        "",
+        "# " + "=" * 76,
+        "# The components as typed calls (LOOP C-15)",
+        "# " + "=" * 76,
+        "",
+        "#: A property bound to what the application publishes or takes: ``{\"path\": \"/runs\"}``.",
+        "Bound = Mapping[str, str]",
+        "",
+        "",
+        "class SurfaceComponents:",
+        '    """Every component of the catalog as a typed call: ``app.ui.table(\"runs\", columns=[...])``.',
+        "",
+        "    Each places the node the Canvas and the YAML write, through",
+        "    `Application.component`, which checks it against the same JSON Schema; an",
+        "    IDE completes its properties, and a type checker refuses a wrong value",
+        "    before the application runs. A property may be bound instead",
+        '    (``{\"path\": ...}``); a property left as ``None`` is not written.',
+        '    """',
+        "",
+        "    def __init__(self, place: Callable[..., Dict[str, Any]]) -> None:",
+        "        self._place = place",
+    ]
+    for spec in specs:
+        if not spec.get("enabled", True):
+            continue
+        for component in spec.get("components") or []:
+            schema = component.get("properties") or {}
+            required = set(schema.get("required") or [])
+            fields = dict(schema.get("properties") or {})
+            bindings = component.get("bindings") or {}
+            extra = [
+                name
+                for name in dict.fromkeys([*(bindings.get("shows") or []), *(bindings.get("sends") or [])])
+                if name not in fields
+            ]
+            params = ["        self,", "        id: str,", "        *,"]
+            ordered = [n for n in fields if n in required] + [n for n in fields if n not in required]
+            for name in ordered:
+                kind = f"Union[{_py_type(fields[name])}, Bound]"
+                params.append(
+                    f"        {name}: {kind}," if name in required else f"        {name}: Optional[{kind}] = None,"
+                )
+            for name in extra:
+                params.append(f"        {name}: Optional[Bound] = None,")
+            if component.get("events") and "action" not in fields:
+                params.append("        action: Optional[Dict[str, Any]] = None,")
+            params.append("        visible_when: Optional[Bound] = None,")
+            params.append("        weight: Optional[float] = None,")
+            doc = [
+                f'        """{component["name"]}, version {component["version"]}: {component["description"].strip()}',
+                "",
+                "        Parameters",
+                "        ----------",
+                "        id : str",
+                "            Its id on the surface, unique; ``root`` is where the surface starts.",
+            ]
+            for name in ordered:
+                field = fields[name]
+                doc += [f"        {name} : {_py_type(field)} or Bound", f"            {field.get('title', name)}: {field.get('description', '')}"]
+            for name in extra:
+                said = "What it shows" if name in (bindings.get("shows") or []) else "Where what a person does is written"
+                doc += [f"        {name} : Bound", f"            {said}."]
+            doc += ['        """']
+            names = [*ordered, *extra]
+            if component.get("events") and "action" not in fields:
+                names.append("action")
+            names += ["visible_when", "weight"]
+            lines += [
+                "",
+                f"    def {call_name(component['id'])}(",
+                *params,
+                "    ) -> Dict[str, Any]:",
+                *[d.replace('\\', '\\\\') for d in doc],
+                "        given = {",
+                *[f"            {json.dumps(name)}: {name}," for name in names],
+                "        }",
+                "        return self._place(",
+                f"            id, {_py(component['id'])}, **{{name: value for name, value in given.items() if value is not None}}",
+                "        )",
+            ]
+    return lines
 
 
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
@@ -87,7 +196,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         '"""',
         "",
-        "from typing import Dict",
+        "from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union",
         "",
         "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec",
         "",
@@ -160,6 +269,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "def list_components() -> list[ComponentSpec]:",
             "    return list(COMPONENT_CATALOGUE.values())",
+            *_py_calls(specs),
             "",
         ]
     )

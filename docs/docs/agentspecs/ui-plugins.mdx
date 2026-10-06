@@ -8,9 +8,10 @@ A **UI plugin** is how an agent's answer becomes an interface rather than text: 
 protocol the host renders — A2UI today; MCP Apps and MCP UI are listed and not enabled.
 Each plugin hosts **the catalog of visual components** it renders (LOOP C-13): A2UI's
 18 standard v0.9 components (`Text`, `Row`, `Card`, `Button`, `ChoicePicker`…) and
-Datalayer's own six — `Table`, `Chart`, `FileUpload`, `Chat`, `Evidence` and `Form` —
-each of which carries its properties as a JSON Schema, what it can be bound to, the
-events it reports and a valid example.
+Datalayer's own six — `Table`, `Chart`, `FileUpload`, `Chat`, `Evidence` and `Form`.
+Every one has a version and carries its properties as a JSON Schema of the catalog's
+own — a standard one's named, required and chosen as A2UI's are; Datalayer's own with
+what it can be bound to, the events it reports and a valid example.
 
 The plugins are specs of [Agentspecs](./index.mdx) (`agentspecs/ui-plugins/*.yaml`).
 Their fields, every component and how an Appspec's surface names one are documented
@@ -47,8 +48,9 @@ A `ComponentSpec` says:
 | `description` | What it is for, in a sentence. |
 | `category` | `text`, `input`, `action`, `data`, `conversation`, `media` or `layout`. |
 | `emoji` | Its face on the palette. |
-| `standard` | Its properties are the protocol's own (A2UI's), and not carried here. |
-| `properties` | For Datalayer's own: its properties as a JSON Schema — what the Canvas draws its properties form from. |
+| `version` | Its version in the catalog: A2UI's standard ones `0.9.0`, Datalayer's own `1.0.0`. |
+| `standard` | Named and drawn as its protocol says (A2UI's basic catalog). |
+| `properties` | Its properties as a JSON Schema: what a builder sets — what the Canvas draws its properties form from, and what types its Python call. A value A2UI lets be bound (`{"path": …}`) is written here as the value itself. |
 | `bindings` | For Datalayer's own: what it `shows` and what it `sends`. |
 | `events` | What it reports. |
 | `example` | A configuration of it, valid against `properties`. |
@@ -78,9 +80,36 @@ listComponents().filter(c => !c.standard).map(c => c.id);
   `getComponent`, and `checkApp` says an application is not ready when its
   `interface.components`, or a node of its `surface`, names a component the catalog does
   not have — the same sentences as `app_problems` in Agentspecs.
+- **Python** (`Application.component`, and `app.ui`, below): every component placed
+  from Python is checked against its schema, a standard one too.
+- **Forms** (LOOP C-16): `checkApp` refuses a `Form` whose `schema` is not an object of
+  named fields, or that requires a field it does not ask (`formProblems`, agentspecs'
+  `form_problems`); and when an action arrives, the runtime checks the values a `Form`
+  sends with it against the same schema (`agent_runtimes.loop.apps.forms.form_values_refused`):
+  refused, the session API answers 422 with the sentence —
+  *“The quote” was sent what its fields refuse: seats: 0 is less than the minimum of 1.* —
+  and the application's handler is not called.
 - **Tests** hold the catalogue to the plugins (`agent_runtimes/tests/test_ui_plugin_components.py`):
-  the component catalog is A2UI's own, Datalayer's components carry a schema their
-  example meets, and an unknown name is `None`.
+  the component catalog is A2UI's own, every component has a version and a schema,
+  Datalayer's carry an example their schema meets, and an unknown name is `None`.
+
+## Typed calls from Python
+
+The same generation writes every component as a typed call (LOOP C-15):
+`SurfaceComponents` in `agent_runtimes.specs.ui_plugins`, which an application reaches
+as `app.ui`. One method per component, named for it in snake case (`Table` → `table`,
+`TextField` → `text_field`), whose keyword arguments are its properties, typed from its
+JSON Schema — an enumeration a `Literal`, a required property without a default — and,
+for Datalayer's own, its bindings; each may be bound instead (`{"path": …}`). An IDE
+completes them, a type checker refuses a wrong value before the application runs, and
+the call writes the node `app.component(id, component, **properties)` writes, checked
+against the same schema:
+
+```python
+app.ui.column("root", children=["runs"])
+app.ui.table("runs", columns=["model", "cost"], page_size=10, rows={"path": "/runs"})
+app.ui.text("hello", text="Hello", variant="huge")  # refused: 'huge' is not one of h1…body
+```
 
 ## How they are drawn
 
@@ -122,6 +151,3 @@ On an application's page, a chat publishes its conversation at `/messages` for a
 `Chat` block, and a widget takes a `FileUpload`'s files at `/files` and hands a text
 file's contents to its agent when it is run (`upload` runs it at once): see *An
 application's page* on the Loop page.
-
-Not built yet: a version per component, and the standard components' properties as a
-JSON Schema of the catalog's own (they are A2UI's today).

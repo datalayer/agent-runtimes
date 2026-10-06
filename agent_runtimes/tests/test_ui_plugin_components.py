@@ -18,15 +18,15 @@ def test_the_component_catalog_is_the_ui_plugins_own() -> None:
     assert set(COMPONENT_CATALOGUE) == {component.id for component in a2ui.components}
 
 
-def test_datalayers_own_carry_a_schema_their_example_meets() -> None:
+def test_every_component_carries_a_version_and_a_schema() -> None:
+    """Datalayer's own with an example its schema meets; A2UI's standard ones
+    with the catalog's own schema of what a builder sets (C-13)."""
     for component in COMPONENT_CATALOGUE.values():
-        if component.standard:
-            assert component.properties is None, component.id
-            continue
-        assert component.properties is not None and component.example is not None, (
-            component.id
-        )
+        assert component.version, component.id
         jsonschema.Draft202012Validator.check_schema(component.properties)
+        if component.standard:
+            continue
+        assert component.example is not None, component.id
         jsonschema.validate(component.example, component.properties)
 
 

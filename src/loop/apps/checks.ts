@@ -180,6 +180,49 @@ function shapeProblems(app: AppSpec): string[] {
 }
 
 /** How an organization's own context is named: never a catalogue id (agentspecs' `ORGANIZATION_FRAME_PREFIX`). */
+/**
+ * What stops a Form block from asking (LOOP C-16), in agentspecs'
+ * `form_problems` sentences: its schema is an object of named fields, each
+ * required one among them, so that the page draws it and the runtime checks
+ * what it receives against the same schema.
+ */
+export function formProblems(node: Record<string, unknown>): string[] {
+  const said = `The form “${String(node.id)}”`;
+  const schema = node.schema;
+  if (!isPlainRecord(schema)) {
+    return [
+      `${said} has no fields: its schema is the JSON Schema of what it asks.`,
+    ];
+  }
+  const fields = schema.properties;
+  if (
+    schema.type !== 'object' ||
+    !isPlainRecord(fields) ||
+    Object.keys(fields).length === 0
+  ) {
+    return [
+      `${said} asks for no named field: its schema is an object with properties.`,
+    ];
+  }
+  const problems: string[] = [];
+  for (const [name, field] of Object.entries(fields)) {
+    if (!isPlainRecord(field)) {
+      problems.push(`${said}'s field “${name}” is not a schema.`);
+    }
+  }
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  const missing = required.filter(name => !(String(name) in fields));
+  if (missing.length > 0) {
+    problems.push(
+      `${said} requires ${missing.map(name => `“${String(name)}”`).join(', ')}, which it does not ask.`,
+    );
+  }
+  return problems;
+}
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 export const ORGANIZATION_FRAME_PREFIX = 'org-';
 
 /** Whether a reference names an organization's own context rather than the catalogue's (LOOP U-32). */
@@ -255,6 +298,8 @@ function referenceProblems(
       problems.push(
         `The surface's “${String(node.id)}” is a “${String(node.component)}”, which the catalog does not have.`,
       );
+    } else if (node.component === 'Form') {
+      problems.push(...formProblems(node));
     }
   }
   const decider = app.decision?.decisionModel;

@@ -171,6 +171,37 @@ describe('the instant checks', () => {
     ]);
   });
 
+  it('refuse a form that asks no named field (C-16)', () => {
+    const page = (form: Record<string, unknown>) =>
+      checkAppspec({
+        ...BASE,
+        interface: {
+          layout: 'page',
+          surface: {
+            components: [
+              { id: 'root', component: 'Column', children: ['quote'] },
+              { id: 'quote', component: 'Form', ...form },
+            ],
+          },
+        },
+      }).problems;
+    const seats = {
+      type: 'object',
+      required: ['seats'],
+      properties: { seats: { type: 'integer', minimum: 1 } },
+    };
+    expect(page({ schema: seats })).toEqual([]);
+    expect(page({})).toEqual([
+      'The form “quote” has no fields: its schema is the JSON Schema of what it asks.',
+    ]);
+    expect(page({ schema: { type: 'string' } })).toEqual([
+      'The form “quote” asks for no named field: its schema is an object with properties.',
+    ]);
+    expect(
+      page({ schema: { ...seats, required: ['seats', 'reason'] } }),
+    ).toEqual(['The form “quote” requires “reason”, which it does not ask.']);
+  });
+
   it('need attention for a Guard the runtime does not run (R-06)', () => {
     const check = checkAppspec({
       ...BASE,

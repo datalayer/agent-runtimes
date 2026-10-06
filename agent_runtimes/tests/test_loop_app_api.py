@@ -293,6 +293,132 @@ def test_a_component_its_schema_refuses_is_not_placed():
     ]
 
 
+def test_every_component_is_a_typed_call_writing_the_node_the_canvas_writes():
+    """LOOP C-15: ``app.ui.<component>`` for every component of the catalog —
+    its properties named and typed from the same JSON Schema — writes the node
+    ``app.component`` writes, which the YAML and the Canvas read."""
+    import inspect
+    import re
+
+    from agent_runtimes.specs.ui_plugins import SurfaceComponents, list_components
+
+    for spec in list_components():
+        name = re.sub(r"(?<!^)(?=[A-Z])", "_", spec.id).lower()
+        call = getattr(SurfaceComponents, name)
+        parameters = inspect.signature(call).parameters
+        for field in spec.properties.get("properties", {}):
+            assert field in parameters, f"{name}: {field}"
+        for field in spec.properties.get("required", []):
+            assert parameters[field].default is inspect.Parameter.empty, (
+                f"{name}: {field}"
+            )
+    typed, untyped = interview(), interview()
+    node = typed.ui.table(
+        "runs", columns=["model", "cost"], page_size=10, rows={"path": "/runs"}
+    )
+    assert node == untyped.component(
+        "runs", "Table", columns=["model", "cost"], page_size=10, rows={"path": "/runs"}
+    )
+    assert typed.ui.text("hello", text="Hello", variant="h2") == {
+        "id": "hello",
+        "component": "Text",
+        "text": "Hello",
+        "variant": "h2",
+    }
+
+
+def test_a_typed_call_its_schema_refuses_is_not_placed_a_standard_one_too():
+    app = interview()
+    with pytest.raises(ValueError, match="page_size: 0 is less than the minimum of 1"):
+        app.ui.table("runs", columns=["model"], page_size=0)
+    with pytest.raises(ValueError, match=r"variant: 'huge' is not one of"):
+        app.ui.text("hello", text="Hello", variant="huge")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="'max' is a required property"):
+        app.component("budget", "Slider", value={"path": "/budget"})
+    # Bound, a standard component's value is the binding's.
+    assert app.ui.slider("budget", max=100, value={"path": "/budget"})["value"] == {
+        "path": "/budget"
+    }
+
+
+def test_python_yaml_and_back_are_one_surface():
+    """LOOP C-15: what Python places is the spec's text, and read back from
+    that text it is the same surface — one component, three editors."""
+    import yaml
+
+    app = Application.from_spec(
+        {**interview().document, "interface": {"layout": "page"}}
+    )
+    app.ui.column("root", children=["quote", "runs"])
+    app.ui.form(
+        "quote",
+        schema={"type": "object", "properties": {"seats": {"type": "integer"}}},
+        values={"path": "/quote"},
+        action={"event": {"name": "send", "context": {"values": {"path": "/quote"}}}},
+    )
+    app.ui.table("runs", columns=["model"], rows={"path": "/runs"})
+    text = yaml.safe_dump(app.document, sort_keys=False)
+    again = Application.from_spec(yaml.safe_load(text))
+    assert again.spec.interface.surface == app.spec.interface.surface
+    assert [node["component"] for node in again.spec.interface.surface.components] == [
+        "Column",
+        "Form",
+        "Table",
+    ]
+
+
+def quote_app() -> Application:
+    app = Application.from_spec(
+        {**interview().document, "interface": {"layout": "page"}}
+    )
+    app.ui.column("root", children=["quote"])
+    app.ui.form(
+        "quote",
+        title="The quote",
+        schema={
+            "type": "object",
+            "required": ["seats"],
+            "properties": {"seats": {"type": "integer", "minimum": 1}},
+        },
+        values={"path": "/quote"},
+        action={"event": {"name": "price", "context": {"values": {"path": "/quote"}}}},
+    )
+    return app
+
+
+def test_a_forms_values_are_checked_again_when_they_arrive():
+    """LOOP C-16: the runtime checks what a form sends against its schema."""
+    from agent_runtimes.loop.apps.forms import form_values_refused
+
+    spec = quote_app().spec
+    assert form_values_refused(spec, "price", {"values": {"seats": 3}}) is None
+    assert form_values_refused(spec, "price", {"values": {"seats": 0}}) == (
+        "“The quote” was sent what its fields refuse: seats: 0 is less than the minimum of 1."
+    )
+    assert "'seats' is a required property" in str(
+        form_values_refused(spec, "price", {"values": {}})
+    )
+    # Another action, or no values carried: not the form's to check.
+    assert form_values_refused(spec, "send", {"values": {"seats": 0}}) is None
+    assert form_values_refused(spec, "price", {}) is None
+
+
+async def test_a_refused_forms_action_never_reaches_its_handler():
+    app = quote_app()
+    seen: list = []
+
+    @app.action("price")
+    async def price(session: Session, payload: dict) -> None:
+        seen.append(payload)
+
+    host, _, _ = hosted(app)
+    session = await host.open()
+    with pytest.raises(ValueError, match="seats: 0 is less than the minimum of 1"):
+        await host.action(session, "price", {"values": {"seats": 0}})
+    await host.action(session, "price", {"values": {"seats": 2}})
+    assert seen == [{"values": {"seats": 2}}]
+
+
 # --- P-03: the session --------------------------------------------------------------
 
 

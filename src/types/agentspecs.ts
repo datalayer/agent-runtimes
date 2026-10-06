@@ -102,10 +102,12 @@ export interface ComponentSpec {
   category: string;
   /** Its face on the palette. */
   emoji: string;
-  /** Its properties are its protocol's own. */
+  /** Its version in the catalog. */
+  version: string;
+  /** Named and drawn as its protocol says (A2UI's basic catalog). */
   standard: boolean;
-  /** Its properties as a JSON Schema, when it is Datalayer's own. */
-  properties?: Record<string, unknown>;
+  /** Its properties as a JSON Schema: what a builder sets (C-13). */
+  properties: Record<string, unknown>;
   /** What it can be bound to: what it shows, what it sends. */
   bindings?: { shows: string[]; sends: string[] };
   /** What it reports. */

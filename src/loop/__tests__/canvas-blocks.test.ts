@@ -37,7 +37,9 @@ const gauge: ComponentSpec = {
   description: 'A needle on a dial.',
   category: 'data',
   emoji: '🧭',
+  version: '1.0.0',
   standard: false,
+  properties: { type: 'object', properties: {} },
   events: [],
 };
 

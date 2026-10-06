@@ -257,9 +257,10 @@ class ComponentBindingsSpec(BaseModel):
 
 class ComponentSpec(BaseModel):
     """A visual component a UI plugin renders (LOOP C-13), named as a surface
-    names it. A standard one's properties are its protocol's own; Datalayer's
-    own carry theirs as a JSON Schema, from which its properties form is drawn
-    (C-14).
+    names it, with its version. Every one carries its properties as a JSON
+    Schema of the catalog's own — a standard one's named as its protocol names
+    them — from which its properties form is drawn (C-14) and its Python call
+    typed (C-15).
     """
 
     id: str = Field(..., description="The name a surface gives it (e.g. 'Table')")
@@ -269,10 +270,12 @@ class ComponentSpec(BaseModel):
         ..., description="text, input, action, data, conversation, media, layout"
     )
     emoji: str = Field(..., description="Its face on the palette")
-    standard: bool = Field(..., description="Its properties are its protocol's own")
-    properties: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Its properties as a JSON Schema, when it is Datalayer's own",
+    version: str = Field(..., description="Its version in the catalog")
+    standard: bool = Field(
+        ..., description="Named and drawn as its protocol says (A2UI's basic catalog)"
+    )
+    properties: Dict[str, Any] = Field(
+        ..., description="Its properties as a JSON Schema: what a builder sets"
     )
     bindings: Optional[ComponentBindingsSpec] = Field(
         default=None, description="What it can be bound to"

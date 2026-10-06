@@ -23,7 +23,7 @@ An `Application` is an Appspec and the code that reacts to its sessions::
         await session.send(answer.text)
 
 What it declares — starters, settings, rules, connections, schedules, the
-components of its surface — is its spec (`Application.spec`), validated as
+components of its surface (``app.ui.table(...)``) — is its spec (`Application.spec`), validated as
 any Appspec is. What it reacts to —
 ``start``, ``message``, ``action``, ``settings``, ``stop``, ``resume``,
 ``schedule`` — is called by whoever runs it, through an `AppHost`.
@@ -40,11 +40,12 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 import jsonschema
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
+from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import Channel, Session, call
-from agent_runtimes.specs.ui_plugins import get_component
+from agent_runtimes.specs.ui_plugins import SurfaceComponents, get_component
 from agent_runtimes.types import (
     AppConnectionSpec,
     AppRuleSpec,
@@ -328,11 +329,13 @@ class Application:
         """Place a component of the catalog on the application's surface (LOOP C-15).
 
         ``app.component("runs", "Table", title="Runs", columns=["model", "cost"])``
-        writes the node the Canvas and the YAML write. A component of
-        Datalayer's own has its properties checked against its JSON Schema, the
-        one its properties form is drawn from; a property bound to what the
-        application publishes is written ``{"path": "/runs"}`` and checked when
-        the spec is. A standard one's properties are A2UI's own.
+        writes the node the Canvas and the YAML write; ``app.ui.table(...)`` is
+        the same call, typed. Every component has its properties checked
+        against its JSON Schema in the catalog, the one its properties form is
+        drawn from — A2UI's standard ones too; a property bound to what the
+        application publishes is written ``{"path": "/runs"}`` (a List's
+        template ``{"componentId": ..., "path": ...}``) and checked when the
+        spec is.
 
         Parameters
         ----------
@@ -351,30 +354,29 @@ class Application:
         spec = get_component(component)
         if spec is None:
             raise ValueError(f"The catalog has no component {component!r}.")
-        if not spec.standard and spec.properties:
-            own = {
-                name: value
-                for name, value in properties.items()
-                if not (isinstance(value, Mapping) and set(value) == {"path"})
-            }
-            schema = {
-                **spec.properties,
-                "required": [
-                    name
-                    for name in spec.properties.get("required", [])
-                    if name not in properties or name in own
-                ],
-            }
-            refused = sorted(
-                jsonschema.Draft202012Validator(schema).iter_errors(own),
-                key=lambda error: list(error.path),
+        own = {
+            name: value
+            for name, value in properties.items()
+            if not (isinstance(value, Mapping) and "path" in value)
+        }
+        schema = {
+            **spec.properties,
+            "required": [
+                name
+                for name in spec.properties.get("required", [])
+                if name not in properties or name in own
+            ],
+        }
+        refused = sorted(
+            jsonschema.Draft202012Validator(schema).iter_errors(own),
+            key=lambda error: list(error.path),
+        )
+        if refused:
+            said = "; ".join(
+                f"{'.'.join(str(part) for part in error.path) or 'its properties'}: {error.message}"
+                for error in refused
             )
-            if refused:
-                said = "; ".join(
-                    f"{'.'.join(str(part) for part in error.path) or 'its properties'}: {error.message}"
-                    for error in refused
-                )
-                raise ValueError(f"{id} is a {spec.name} its schema refuses: {said}.")
+            raise ValueError(f"{id} is a {spec.name} its schema refuses: {said}.")
         interface = self._document.setdefault("interface", {})
         surface = interface.get("surface") or {"protocol": "a2ui/v0.9"}
         nodes = surface.setdefault("components", [])
@@ -385,6 +387,17 @@ class Application:
         interface["surface"] = surface
         self._spec = None
         return dict(node)
+
+    @property
+    def ui(self) -> SurfaceComponents:
+        """Every component of the catalog as a typed call (LOOP C-15).
+
+        ``app.ui.table("runs", columns=["model", "cost"], page_size=10)`` is
+        ``app.component("runs", "Table", ...)`` with its properties named and
+        typed from the catalog's JSON Schema: an IDE completes them, and a
+        type checker refuses a wrong one before the application runs.
+        """
+        return SurfaceComponents(self.component)
 
     # --- reactions -------------------------------------------------------------
 
@@ -614,10 +627,17 @@ class AppHost:
     async def action(
         self, session: Session, name: str, payload: Optional[Mapping[str, Any]] = None
     ) -> None:
-        """The user pressed a button: run the action of that name."""
+        """The user pressed a button: run the action of that name.
+
+        A form's values sent with it are checked against its schema first
+        (C-16): refused, the handler is not called.
+        """
         handler = self.app.actions.get(name)
         if handler is None:
             raise KeyError(f"{self.app.id} has no action {name!r}.")
+        refused = form_values_refused(self.app.spec, name, payload or {})
+        if refused:
+            raise ValueError(refused)
         await self._react(session, handler, dict(payload or {}))
 
     async def settings(self, session: Session, values: Mapping[str, Any]) -> None:
