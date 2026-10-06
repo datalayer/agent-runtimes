@@ -879,6 +879,62 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     assert json.loads(snapshot[1]["content"]) == surface
 
 
+async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
+    """STEP_STARTED and STEP_FINISHED carry a name; loop.step the step (LOOP P-16)."""
+    from agent_runtimes.loop.apps import AppHost, Application
+    from agent_runtimes.loop.apps.callers import Caller
+
+    application = Application(id="notes-assistant", agent="example-simple")
+    app = application.spec
+    live = sessions.LiveSession(
+        uid="session-0017",
+        agent_id="notes-assistant",
+        app=app,
+        instance={},
+        opened_by=Caller(kind="person", uid="ada"),
+        acts_as={"kind": "person", "uid": "ada"},
+        recorder=AppRecorder(app=app, send=lambda body: _nothing()),
+    )
+    live.host = AppHost(application, live, recorder=live.recorder)
+    live.session = await live.host.open(id=live.uid)
+    queue = live._open_stream()
+    async with live.session.step("Researching", input="q") as outer:
+        async with live.session.step(
+            "Searching", kind="tool", input={"q": "x"}
+        ) as inner:
+            inner.output = object()
+        outer.output = {"found": 2}
+    events = []
+    while not queue.empty():
+        chunk = queue.get_nowait()
+        events.extend(
+            json.loads(line[len("data:") :])
+            for line in chunk.splitlines()
+            if line.startswith("data:")
+        )
+    assert [(e["type"], e.get("stepName") or e["value"]["name"]) for e in events] == [
+        ("STEP_STARTED", "Researching"),
+        ("CUSTOM", "Researching"),
+        ("STEP_STARTED", "Searching"),
+        ("CUSTOM", "Searching"),
+        ("STEP_FINISHED", "Searching"),
+        ("CUSTOM", "Searching"),
+        ("STEP_FINISHED", "Researching"),
+        ("CUSTOM", "Researching"),
+    ]
+    started, ended = events[3]["value"], events[5]["value"]
+    assert events[3]["name"] == sessions.LOOP_STEP
+    assert started["parent_id"] == events[1]["value"]["id"]
+    assert (started["kind"], started["input"], started["ended_at"]) == (
+        "tool",
+        {"q": "x"},
+        None,
+    )
+    # What JSON does not carry is said in words.
+    assert ended["output"].startswith("<object object at") and ended["ended_at"]
+    assert events[7]["value"]["output"] == {"found": 2}
+
+
 async def _nothing() -> None:
     return None
 
@@ -1002,7 +1058,9 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "CUSTOM:loop.session",
         "RUN_STARTED",
         "STEP_STARTED",
+        "CUSTOM:loop.step",
         "STEP_FINISHED",
+        "CUSTOM:loop.step",
         "TEXT_MESSAGE_START",
         "TEXT_MESSAGE_END",
         "RUN_FINISHED",

@@ -139,6 +139,7 @@ import {
   type ChatInspectorRecorder,
 } from '../../components/inspector/chatInspect';
 import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
+import { loopStepOf, withLoopStep } from './loopStep';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -3620,6 +3621,12 @@ function ChatBaseInner({
           break;
 
         case 'activity': {
+          // A step of an application's code, drawn as it runs (LOOP P-16).
+          const step = loopStepOf(event.activity);
+          if (step) {
+            setDisplayItems(prev => withLoopStep(prev, step));
+            break;
+          }
           // An application's code changed a message it sent: its author
           // said, or the message taken away (LOOP P-15).
           const change = loopMessageChange(event.activity);

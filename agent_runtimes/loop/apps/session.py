@@ -680,7 +680,7 @@ class Session:
             yield holder
         except BaseException as error:
             _STEP.reset(token)
-            await self.channel.deliver(
+            await self._ended(
                 replace(
                     started,
                     output=holder.output,
@@ -690,9 +690,19 @@ class Session:
             )
             raise
         _STEP.reset(token)
-        await self.channel.deliver(
-            replace(started, output=holder.output, ended_at=_now())
-        )
+        await self._ended(replace(started, output=holder.output, ended_at=_now()))
+
+    async def _ended(self, step: Step) -> None:
+        """A step that ended: shown, and kept in the record (LOOP P-16).
+
+        The record is sent when the outermost step ends, with the steps
+        nested in it.
+        """
+        await self.channel.deliver(step)
+        self._recorder.start(self.id)
+        self._recorder.stepped(step)
+        if step.parent_id is None:
+            await self._recorder.flush(self.id)
 
     # --- asking the user -------------------------------------------------------
 
@@ -750,8 +760,8 @@ class Session:
         summary : str
             The entry in a sentence; the payload's keys when unsaid.
         kind : str
-            ``output``, ``tool_call``, ``decision``, ``check``, ``approval``
-            or ``feedback``.
+            ``output``, ``tool_call``, ``decision``, ``check``, ``approval``,
+            ``feedback``, ``turn`` or ``step``.
 
         Returns
         -------

@@ -559,6 +559,47 @@ async def test_steps_nest_and_say_how_they_ended():
             pass
 
 
+async def test_steps_are_kept_in_the_record_with_its_actions():
+    """A step that ended is a `step` entry, sent when the outermost one ends (LOOP P-16)."""
+    host, _, sent = hosted(interview(), include=("actions",))
+    session = await host.open()
+    sent.clear()
+    async with session.step("Researching", input="q") as outer:
+        async with session.step("Searching", kind="tool", input={"q": "x"}) as inner:
+            inner.output = [1, 2]
+        assert sent == []  # nested: sent with its parent
+        outer.output = "done"
+    with pytest.raises(RuntimeError):
+        async with session.step("Failing", kind="model"):
+            raise RuntimeError("no network")
+    entries = [
+        entry for body in sent for entry in body["entries"] if entry["kind"] == "step"
+    ]
+    assert [(e["kind"], e["summary"]) for e in entries] == [
+        ("step", "Searching"),
+        ("step", "Researching"),
+        ("step", "Failing: no network"),
+    ]
+    searching, researching, failing = (e["payload"] for e in entries)
+    assert searching["parent_id"] == researching["id"]
+    assert (searching["kind"], searching["input"], searching["output"]) == (
+        "tool",
+        "{'q': 'x'}",
+        "[1, 2]",
+    )
+    assert researching["parent_id"] == "" and researching["output"] == "done"
+    assert (failing["error"], failing["output"]) == ("no network", "")
+    assert all(e["started_at"] and e["ended_at"] for e in (searching, failing))
+
+    # Not kept by an application whose record does not keep its actions.
+    host, _, sent = hosted(interview(), include=("outputs",))
+    session = await host.open()
+    sent.clear()
+    async with session.step("Researching"):
+        pass
+    assert not [e for body in sent for e in body["entries"] if e["kind"] == "step"]
+
+
 async def test_ask_text_choice_file_and_form():
     host, channel, _ = hosted(interview())
     session = await host.open()

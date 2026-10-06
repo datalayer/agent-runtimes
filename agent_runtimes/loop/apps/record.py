@@ -91,6 +91,8 @@ INCLUDED_BY = {
     "output": "outputs",
     "feedback": "feedback",
     "turn": "conversations",
+    # What the application did, step by step: with its actions (LOOP P-16).
+    "step": "actions",
 }
 
 #: Kept whatever `record.include` says: a session's start, a run's start
@@ -436,6 +438,30 @@ class AppRecorder:
                 "answered": redact(answered.strip())[:TURN_LIMIT],
                 "suggest_tests": bool(self.app.record.suggest_tests),
                 **({"spoken": spoken} if spoken else {}),
+            },
+        )
+
+    def stepped(self, step: Any) -> None:
+        """Keep a step that ended, as the chain of thought shows it (LOOP P-16).
+
+        Kept under ``actions``: its name and kind, the step it is nested in,
+        what it started from and what it gave, or why it failed, each cut
+        and redacted as a tool call's are, and when it started and ended.
+        """
+        started, ended = step.started_at, step.ended_at
+        self.add(
+            "step",
+            f"{step.name}: {step.error}" if step.error else step.name,
+            {
+                "id": step.id,
+                "name": step.name,
+                "kind": step.kind,
+                "parent_id": step.parent_id or "",
+                "input": "" if step.input is None else _short(step.input),
+                "output": "" if step.output is None else _short(step.output, 300),
+                "error": _short(step.error, 300) if step.error else "",
+                "started_at": started.isoformat(),
+                "ended_at": ended.isoformat() if ended else "",
             },
         )
 

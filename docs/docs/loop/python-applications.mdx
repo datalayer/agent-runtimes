@@ -530,6 +530,20 @@ A step shows the person what the application is doing while it does it.
 inside another is nested in it. Each is delivered twice: when it starts, and
 when it ends — with its output, or with the error that ended it.
 
+Steps are the application's chain of thought:
+
+- **In the conversation**, each is a row the chat draws as it draws a tool
+  call — collapsed, running until it ends, its kind and input inside, then
+  its output or its error; a nested step says the step it is in (*tool
+  step, inside Researching*). Over the [Session API](./session-api) a step
+  is AG-UI's `STEP_STARTED` and `STEP_FINISHED`, and beside each a
+  `loop.step` event that says it whole.
+- **In the record**, each step that ended is a `step` entry when the
+  Appspec's `record.include` names `actions`: `{id, name, kind, parent_id,
+  input, output, error, started_at, ended_at}`, its input, output and error
+  cut and redacted as a tool call's are. They are sent when the outermost
+  step ends.
+
 ### Asking
 
 `await session.ask(question, timeout=None)` stops and asks the person, then
@@ -549,7 +563,7 @@ sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
 `await session.record(payload, summary="", kind="output")` writes an entry
 to the application's record and sends it at once. `kind` is `output`,
-`tool_call`, `decision`, `check`, `approval`, `feedback` or `turn`. It
+`tool_call`, `decision`, `check`, `approval`, `feedback`, `turn` or `step`. It
 returns whether the application keeps entries of that kind: only those its
 Appspec's `record.include` names (`outputs`, `actions`, `decisions`,
 `checks`, `approvals`, `feedback`, `conversations`) are kept. A session's
@@ -690,7 +704,7 @@ updated and removed, `run_sync` and `cache`; the application loaded as its
 Reactor plugin, another plugin's reaction answering in its place, and
 disposed; the agent
 answering, streamed, when there is no message handler; `send`, `stream`,
-nested steps and their errors; what an answer shows, checked against the
+nested steps and their errors, kept in the record; what an answer shows, checked against the
 catalog; `ask` with text, choice, file and form, wrong
 answers and timeouts; state per session; the record; the agent's history
 across turns; a rule asking the person and a refusal raising; the local

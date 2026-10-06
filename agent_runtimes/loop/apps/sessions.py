@@ -387,6 +387,41 @@ def code_of(app: AppSpec) -> Any:
 #: (LOOP P-15): ``{id, author}`` or ``{id, removed: true}``.
 LOOP_MESSAGE = "loop.message"
 
+#: The ``CUSTOM`` event that says a step whole, as it starts and as it ends
+#: (LOOP P-16): ``{id, name, kind, parent_id, input, output, error,
+#: started_at, ended_at}``.
+LOOP_STEP = "loop.step"
+
+#: The longest input or output of a step the chat is sent, in characters.
+STEP_VALUE_LIMIT = 4000
+
+
+def _step_value(value: Any) -> Any:
+    """A step's input or output as JSON carries it: as it is, or in words."""
+    if value is None:
+        return None
+    try:
+        said = json.dumps(value)
+    except (TypeError, ValueError):
+        return str(value)[:STEP_VALUE_LIMIT]
+    return value if len(said) <= STEP_VALUE_LIMIT else said[:STEP_VALUE_LIMIT]
+
+
+def step_of(step: Step) -> Dict[str, Any]:
+    """A step as the ``loop.step`` event carries it."""
+    return {
+        "id": step.id,
+        "name": step.name,
+        "kind": step.kind,
+        "parent_id": step.parent_id,
+        "input": _step_value(step.input),
+        "output": _step_value(step.output),
+        "error": step.error,
+        "started_at": step.started_at.isoformat(),
+        "ended_at": step.ended_at.isoformat() if step.ended_at else None,
+    }
+
+
 #: The tool whose result the chat draws as an A2UI surface where it lands
 #: (``frontend_render_tools``, the ``a2ui-surface`` renderer): what an answer
 #: shows besides its text is sent as its result, under the message (LOOP P-04).
@@ -728,6 +763,10 @@ class LiveSession:
                 self.emit(StepStartedEvent(step_name=event.name))
             else:
                 self.emit(StepFinishedEvent(step_name=event.name))
+            # AG-UI's step is its name: what the chat shows of it — its
+            # kind, the step it is nested in, its input, output or error —
+            # is said beside it (LOOP P-16).
+            self.emit(CustomEvent(name=LOOP_STEP, value=step_of(event)))
 
     async def ask(self, session_id: str, question: Question) -> Any:
         """What the code asks: a file already given answers a file; else the person is asked.

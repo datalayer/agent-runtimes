@@ -211,7 +211,11 @@ refused (409), as is anything but `resume` on a stopped session.
 - **An application written in Python** (an `app.py` of the catalogue): its
   code reacts, through an `AppHost` whose channel is the session.
   `session.send` and `session.stream` are `TEXT_MESSAGE_*` events,
-  `session.step` is `STEP_STARTED` and `STEP_FINISHED`, and `session.agent`
+  `session.step` is `STEP_STARTED` and `STEP_FINISHED`, each followed by a
+  `CUSTOM` event named `loop.step` that says the step whole — `{id, name,
+  kind, parent_id, input, output, error, started_at, ended_at}`, `ended_at`
+  null while it runs, an input or output JSON does not carry said in words —
+  which the chat draws as a collapsed row, and `session.agent`
   is the agent the runtime made for the application — its tools, its rules,
   its record. A message the code changed (`message.update`) is written again,
   whole, under its id, which the chat draws in place of what it said; one it
@@ -336,10 +340,11 @@ file put in the sandbox of an application with a shell, a text file in the
 message of one without, anything else refused; settings checked and kept;
 stop and resume; end and sign out, only the caller's sessions; a Python
 application's message changed, removed and written by another author on the
-stream, and its `end` and `logout` run; resume from the record after the sessions are forgotten;
+stream, its steps said whole beside AG-UI's, what its answers show as a
+surface under the message, and its `end` and `logout` run; resume from the record after the sessions are forgotten;
 *Report from a File* taking its CSV from the page, asking for it when none was
 given, and refusing a PDF. The page side is tested with vitest
-(`app-page`, `app-page-blocks`, `embed-element`, `loopMessage`).
+(`app-page`, `app-page-blocks`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`).
 
 Visitors (`agent_runtimes/tests/test_app_visitors.py`): one visitor never
 reaches another's session on the same runtime; a token reaches its own
