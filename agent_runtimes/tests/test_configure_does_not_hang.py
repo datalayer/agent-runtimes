@@ -164,7 +164,7 @@ def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
         adapter = SimpleNamespace(
             _selected_mcp_servers=[SimpleNamespace(id="hanging", origin="catalog")]
         )
-        _agents["default"] = (adapter, SimpleNamespace())
+        _agents["default"] = (adapter, SimpleNamespace())  # type: ignore[assignment]
         agents._agentspecs["default"] = request.model_dump()
         await manager.start_server("hanging", HANGING.model_copy())
         return {"id": request.name}
