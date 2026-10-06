@@ -16,6 +16,16 @@ os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 # reaches the API, so a placeholder is all this needs.
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key-not-used")
 
+# The protocol state store (A2A tasks, ACP sessions) is a SQLite file in the
+# person's home by default, the one their running servers write: tests sharing
+# it met "database is locked" and read each other's tasks. Each test process
+# keeps its own, whatever the shell says.
+import tempfile  # noqa: E402
+
+os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
+    tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "protocol-state.sqlite"
+)
+
 from collections.abc import Iterator  # noqa: E402
 
 import pytest  # noqa: E402

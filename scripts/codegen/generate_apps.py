@@ -110,6 +110,10 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 if isinstance(rule["applies_to"], str)
                 else rule["applies_to"]
             )
+        # A case decided by code names it; the others say nothing of it.
+        for case in spec["tests"]["cases"]:
+            if not case.get("code"):
+                case.pop("code", None)
         for key in ("description", "instructions", "goal"):
             spec[key] = _flat(spec.get(key))
         spec["interface"]["welcome"] = _flat(spec["interface"].get("welcome"))
