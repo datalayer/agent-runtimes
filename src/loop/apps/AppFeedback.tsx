@@ -116,9 +116,11 @@ export function AppFeedback({
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           {FEEDBACK_WORDS.ask}
         </Text>
+        {/* Reactions in the theme (LOOP T-06, T-17): line icons in the
+            ink, the chosen one on a quiet ground — no colour, no fill. */}
         <IconButton
           size="small"
-          variant={choice === true ? 'primary' : 'invisible'}
+          variant={choice === true ? 'default' : 'invisible'}
           icon={ThumbsupIcon}
           aria-label={FEEDBACK_WORDS.liked}
           aria-pressed={choice === true}
@@ -126,7 +128,7 @@ export function AppFeedback({
         />
         <IconButton
           size="small"
-          variant={choice === false ? 'danger' : 'invisible'}
+          variant={choice === false ? 'default' : 'invisible'}
           icon={ThumbsdownIcon}
           aria-label={FEEDBACK_WORDS.disliked}
           aria-pressed={choice === false}
@@ -145,9 +147,10 @@ export function AppFeedback({
             onChange={event => setComment(event.target.value)}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Quiet: the screen's one filled button is the composer's. */}
             <Button
               size="small"
-              variant="primary"
+              variant="default"
               disabled={done?.state === 'sending'}
               onClick={() => void send()}
             >
@@ -160,7 +163,10 @@ export function AppFeedback({
         </>
       ) : null}
       {done?.state === 'refused' ? (
-        <Text sx={{ fontSize: 0, color: 'danger.fg' }}>{done.says}</Text>
+        // Said in the ink, as an alert: not a verdict, so not its colour.
+        <Text role="alert" sx={{ fontSize: 0, color: 'fg.default' }}>
+          {done.says}
+        </Text>
       ) : null}
     </div>
   );
