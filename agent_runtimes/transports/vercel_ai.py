@@ -1404,12 +1404,28 @@ class VercelAITransport(BaseTransport):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
                 if serving_deployment:
+                    from ..loop.apps.acting import acting_token, servers_in_users_name
                     from ..mcp.datalayer_gateway import toolsets_for_the_run
 
                     # The Datalayer MCP gateway is reached as the deployment's
-                    # principal, never with the process's key (LOOP I-03).
+                    # principal, never with the process's key (LOOP I-03); its
+                    # servers in each user's name with the token of the person
+                    # talking to it, from what they let it do (LOOP I-04).
+                    in_users_name = servers_in_users_name(self._agent_id)
                     runtime_toolsets = toolsets_for_the_run(
-                        runtime_toolsets, principal_token(serving_deployment) or ""
+                        runtime_toolsets,
+                        principal_token(serving_deployment) or "",
+                        in_users_name=in_users_name,
+                        users_token=(
+                            await acting_token(
+                                serving_deployment,
+                                extract_jwt_token(
+                                    request.headers.get("authorization"), None
+                                ),
+                            )
+                            if in_users_name
+                            else ""
+                        ),
                     )
 
                 # Filter MCP toolsets to only expose tools the user has enabled.

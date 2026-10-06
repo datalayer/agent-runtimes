@@ -2562,6 +2562,13 @@ async def create_agent(
             if refusal:
                 raise HTTPException(status_code=400, detail=f"{refusal}.")
             remember_app_instance(agent_id, serving_app)
+            # Which of its gateway's servers it reaches in each user's name,
+            # with the token of who talks to it (LOOP I-04).
+            from agent_runtimes.loop.apps.acting import remember_servers_in_users_name
+
+            remember_servers_in_users_name(
+                agent_id, running_app.connections if running_app is not None else None
+            )
             try:
                 resolved_model = resolve_model_for_inference_provider(
                     request.model,

@@ -37,6 +37,13 @@ is not there or runs no application.
   token, and asked again with the latest request's token when it runs out
   (see *In whose name it acts on the platform* in
   [Applications in Python](./python-applications)).
+- **Its connections in the name of each person who uses it** (`as: user`) to
+  the Datalayer MCP gateway are reached with **the person's** token, never
+  the principal's: on each request the runtime asks IAM, with the token of
+  the person talking to it, for what they let this deployment do in their
+  name, and a token from it naming the application (fifteen minutes, kept by
+  person and deployment). A person who has not let it, at its address, gets
+  the gateway's refusal in its sentence (LOOP I-04).
 - **A Preview's session** runs as the **person**: the agent was made without a
   deployment, on the runtime's own token.
 

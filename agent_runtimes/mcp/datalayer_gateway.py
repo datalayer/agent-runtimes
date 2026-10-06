@@ -84,7 +84,13 @@ def gateway_query(server_id: str) -> str | None:
     return None
 
 
-def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
+def toolsets_for_the_run(
+    toolsets: list[Any],
+    token: str,
+    *,
+    in_users_name: frozenset[str] = frozenset(),
+    users_token: str = "",
+) -> list[Any]:
     """
     A run's toolsets, with the Datalayer gateway reached as the run.
 
@@ -94,6 +100,14 @@ def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
         The agent's toolsets, as the process holds them.
     token : str
         The run's own token.
+    in_users_name : frozenset[str]
+        The gateway's servers an application reaches in the name of each
+        person who uses it (LOOP I-04): reached with `users_token`, never
+        with the run's.
+    users_token : str
+        The token of the person talking to it, naming the application;
+        `""` when they have not let it act in their name, and the gateway
+        then refuses those servers in its sentence.
 
     Returns
     -------
@@ -117,7 +131,9 @@ def toolsets_for_the_run(toolsets: list[Any], token: str) -> list[Any]:
                 f"{gateway_url()}?{query}" if query else gateway_url(),
                 id=server_id if query else "datalayer",
                 http_client=tracing_client(
-                    headers={"Authorization": f"Bearer {token}"}
+                    headers={
+                        "Authorization": f"Bearer {users_token if server_id in in_users_name else token}"
+                    }
                 ),
             )
         )
