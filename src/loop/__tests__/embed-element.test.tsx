@@ -104,9 +104,18 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-/** What the floating window holds: the renderer's element, and its props. */
-const held = (): Record<string, any> =>
-  seen.floating.at(-1)!.conversation.body.props;
+/**
+ * What the floating window holds: the renderer's element, and its props —
+ * beside what the session says when it resumes (D-13), in one fragment.
+ */
+const held = (): Record<string, any> => {
+  const body = seen.floating.at(-1)!.conversation.body;
+  const children = [body.props.children].flat();
+  const renderer = children.find(
+    (child: any) => child?.props && 'app' in child.props,
+  );
+  return (renderer ?? body).props;
+};
 
 async function render(element: React.ReactElement) {
   const container = document.createElement('div');
