@@ -38,8 +38,8 @@ import {
   type ClippyJsCharacterName,
 } from './utils/clippyJsCharacters';
 import {
-  readAcsCharacter,
-  readClippyCharacter,
+  CHARACTER_FILES_ACCEPT,
+  readCharacterFiles,
   type AssistantCharacterData,
 } from '../chat/assistant/formats';
 
@@ -102,30 +102,6 @@ const CATALOGUE = assistantCharactersOf(reactor).map(entry => ({
   id: entry.id,
   name: entry.character.name,
 }));
-
-/**
- * A character file a person picked, read in the page (T-26): one `.acs`, or
- * a clippy.js character's `agent.js` and `map.png` (and its sounds file).
- */
-async function readPicked(files: File[]): Promise<AssistantCharacterData> {
-  const acs = files.find(file => file.name.toLowerCase().endsWith('.acs'));
-  if (acs) {
-    return readAcsCharacter(await acs.arrayBuffer());
-  }
-  const agentJs = files.find(file => file.name.toLowerCase() === 'agent.js');
-  const mapPng = files.find(file => /\.(png|gif|webp|jpe?g)$/i.test(file.name));
-  const soundsJs = files.find(file => /^sounds-.*\.js$/i.test(file.name));
-  if (!agentJs || !mapPng) {
-    throw new Error(
-      'Pick one .acs file, or a clippy.js character: its agent.js and its map image (and a sounds file if you have one).',
-    );
-  }
-  return readClippyCharacter({
-    agentJs: await agentJs.text(),
-    mapPng,
-    soundsJs: soundsJs ? await soundsJs.text() : undefined,
-  });
-}
 
 const AssistantExample: React.FC = () => {
   const [character, setCharacter] = useState<string | AssistantCharacterData>(
@@ -350,7 +326,7 @@ const AssistantExample: React.FC = () => {
             <input
               type="file"
               multiple
-              accept=".acs,.js,.png,.gif,.webp,.jpg,.jpeg"
+              accept={CHARACTER_FILES_ACCEPT}
               aria-label="Character files"
               onChange={async event => {
                 const files = Array.from(event.target.files ?? []);
@@ -358,7 +334,7 @@ const AssistantExample: React.FC = () => {
                   return;
                 }
                 try {
-                  setCharacter(await readPicked(files));
+                  setCharacter(await readCharacterFiles(files));
                   setLoadError(undefined);
                 } catch (error) {
                   setLoadError(

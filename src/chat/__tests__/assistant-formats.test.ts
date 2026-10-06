@@ -13,6 +13,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AssistantCharacterFormatError,
+  CHARACTER_FILES_EXPECTED,
+  characterFilesOf,
+  readCharacterFiles,
   type AssistantCharacterData,
   composeAcsCell,
   decodeAcsImage,
@@ -78,6 +81,50 @@ clippy.ready('Paperclip', {
   },
 });
 `;
+
+describe('the files a person picked (readCharacterFiles)', () => {
+  // jsdom's Blob has no text(): the agent.js's is given.
+  const named = (name: string, parts: BlobPart[] = []) =>
+    Object.assign(new Blob(parts), {
+      name,
+      text: async () => parts.map(String).join(''),
+    });
+
+  it('takes an .acs alone, or a clippy.js agent.js with its map and sounds', () => {
+    const acs = named('Peedy.ACS');
+    expect(characterFilesOf([named('x.png'), acs])).toEqual({
+      kind: 'acs',
+      acs,
+    });
+    const agentJs = named('agent.js');
+    const map = named('map.png');
+    const sounds = named('sounds-mp3.js');
+    expect(characterFilesOf([map, sounds, agentJs])).toEqual({
+      kind: 'clippy',
+      agentJs,
+      map,
+      sounds,
+    });
+  });
+
+  it('refuses a map without its agent.js, in a sentence', async () => {
+    expect(characterFilesOf([named('map.png')])).toEqual({
+      problem: CHARACTER_FILES_EXPECTED,
+    });
+    const error = await rejection(readCharacterFiles([named('map.png')]));
+    expect(error).toBeInstanceOf(AssistantCharacterFormatError);
+    expect(error.message).toBe(CHARACTER_FILES_EXPECTED);
+  });
+
+  it('reads a clippy.js character from its files', async () => {
+    const character = await readCharacterFiles([
+      named('agent.js', [AGENT_JS]),
+      named('map.png', [PNG]),
+    ]);
+    expect(character.name).toBe('Paperclip');
+    expect(character.sprite).toBe('blob:test/1');
+  });
+});
 
 describe('readClippyCharacter', () => {
   it('reads the agent, the sprite and the sounds', async () => {

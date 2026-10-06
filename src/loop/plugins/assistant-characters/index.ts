@@ -58,6 +58,27 @@ export const AssistantCharactersPlugin: ReactorPlugin<
   ),
 });
 
+/**
+ * A plugin contributing one character (LOOP T-24, T-26): a character a
+ * person brought — a `.acs` or a clippy.js character read in their page —
+ * offered beside the contributed ones under the id it is chosen by. The
+ * character stays in the page: the plugin only says it is there.
+ */
+export function defineAssistantCharacterPlugin(
+  id: string,
+  character: AssistantCharacter | AssistantCharacterData,
+): ReactorPlugin<Record<string, never>, unknown, unknown> {
+  return definePlugin({
+    name: `${ASSISTANT_CHARACTERS_PLUGIN_NAME}-${id}`,
+    displayName: `Assistant character: ${character.name}`,
+    description: `${character.name}, a character for the floating assistant.`,
+    octicon: 'paperclip',
+    contributes: [
+      contribution(LoopAssistantCharacter, { id, character }, { id }),
+    ],
+  });
+}
+
 /** The characters the enabled plugins contribute, in contribution order. */
 export function assistantCharactersOf(
   reactor: ContributionsReader,

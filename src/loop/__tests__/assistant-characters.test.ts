@@ -19,6 +19,7 @@ import {
   AssistantCharactersPlugin,
   assistantCharacterNamed,
   assistantCharactersOf,
+  defineAssistantCharacterPlugin,
 } from '../plugins/assistant-characters';
 import { LoopAssistantCharacter } from '../core';
 
@@ -41,6 +42,22 @@ const RobotPlugin = definePlugin({
 });
 
 describe('the characters of the floating assistant', () => {
+  it('take one a person brought, beside the contributed ones (T-26)', async () => {
+    const reactor = buildReactorFromPlugins([
+      AssistantCharactersPlugin,
+      defineAssistantCharacterPlugin('own', robot),
+    ]);
+    await reactor.start();
+    expect(assistantCharactersOf(reactor).map(entry => entry.id)).toEqual([
+      'paperclip',
+      'wizard',
+      'cat',
+      'eyes',
+      'own',
+    ]);
+    expect(assistantCharacterNamed(reactor, 'own')).toBe(robot);
+  });
+
   it("are Datalayer's four when its plugin is enabled", async () => {
     const reactor = buildReactorFromPlugins([AssistantCharactersPlugin]);
     await reactor.start();

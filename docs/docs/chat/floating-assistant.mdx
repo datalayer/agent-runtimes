@@ -696,6 +696,16 @@ by the names Office characters use (`Thinking`, `Processing`,
 file declares (`Showing`, `Speaking`, `Hiding`, `IdlingLevel1`…); a state
 with no match plays the idle animations (`stateAnimations`).
 
+The files a person picked are read as one character by `readCharacterFiles`:
+one `.acs`, or a clippy.js character's `agent.js` with its map image (and its
+sounds file); `characterFilesOf` says which of them make the character, and
+`CHARACTER_FILES_ACCEPT` is what a file input should accept. Once read, a
+character joins the others as a plugin of its own,
+`defineAssistantCharacterPlugin(id, character)`, contributed to
+`loop.assistant.character` under the id it is chosen by — that is how
+Datalayer's *Settings → Appearance* offers a person their own character on
+the pages of their applications, kept in their browser and never sent.
+
 A file that cannot be read is refused with a sentence that says why
 (`AssistantCharacterFormatError`). A Microsoft Agent `.acf`, whose
 animations live in separate `.aca` files, is refused for now: load the
@@ -729,29 +739,10 @@ import { useState } from 'react';
 import { ChatFloating } from '@datalayer/agent-runtimes';
 import { ASSISTANT_CHARACTERS } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
 import {
-  readAcsCharacter,
-  readClippyCharacter,
+  CHARACTER_FILES_ACCEPT,
+  readCharacterFiles,
   type AssistantCharacterData,
 } from '@datalayer/agent-runtimes/lib/chat/assistant/formats';
-
-/** One .acs file, or a clippy.js character's agent.js and map image. */
-async function readPicked(files: File[]): Promise<AssistantCharacterData> {
-  const acs = files.find(file => file.name.toLowerCase().endsWith('.acs'));
-  if (acs) {
-    return readAcsCharacter(await acs.arrayBuffer());
-  }
-  const agentJs = files.find(file => file.name.toLowerCase() === 'agent.js');
-  const mapPng = files.find(file => /\.(png|gif|webp|jpe?g)$/i.test(file.name));
-  const soundsJs = files.find(file => /^sounds-.*\.js$/i.test(file.name));
-  if (!agentJs || !mapPng) {
-    throw new Error('Pick one .acs file, or a clippy.js agent.js and its map image.');
-  }
-  return readClippyCharacter({
-    agentJs: await agentJs.text(),
-    mapPng,
-    soundsJs: soundsJs ? await soundsJs.text() : undefined,
-  });
-}
 
 export function Page() {
   const [character, setCharacter] = useState<string | AssistantCharacterData>(
@@ -772,9 +763,11 @@ export function Page() {
       <input
         type="file"
         multiple
-        accept=".acs,.js,.png,.gif,.webp,.jpg,.jpeg"
+        accept={CHARACTER_FILES_ACCEPT}
         onChange={async event =>
-          setCharacter(await readPicked(Array.from(event.target.files ?? [])))
+          setCharacter(
+            await readCharacterFiles(Array.from(event.target.files ?? [])),
+          )
         }
       />
       <ChatFloating
@@ -833,4 +826,5 @@ clippy.js characters, in memory, not kept); the floating popup's blink and
 balloon seen in a browser; stepping aside, seen in a browser.
 
 **Not built yet.** Sounds are read but not played; the mouth overlays of an
-Agent character while it speaks; `.acf` files; the assistant on the hosted page.
+Agent character while it speaks; `.acf` files; sharing a character one
+brought with one's organisation.

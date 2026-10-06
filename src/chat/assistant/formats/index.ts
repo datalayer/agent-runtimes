@@ -27,3 +27,10 @@ export {
 export type { AcsFile, AcsAnimation, AcsFrame, AcsImage } from './acs';
 export { decompressAgentData } from './agentCompression';
 export { stateAnimations } from './stateAnimations';
+export {
+  CHARACTER_FILES_ACCEPT,
+  CHARACTER_FILES_EXPECTED,
+  characterFilesOf,
+  readCharacterFiles,
+} from './files';
+export type { PickedFile } from './files';
