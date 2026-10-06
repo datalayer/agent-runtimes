@@ -342,7 +342,19 @@ export {
   embedAssistantCharacter,
   type AppEmbedProps,
   type AppFloatingProps,
+  useHostBridge,
 } from './embed/AppEmbed';
+// The host page and an embedded application, talking (LOOP D-10).
+export {
+  HOST_CONTEXT_TOOL,
+  hostFrontendTools,
+  hostRefused,
+  hostTool,
+  hostToolsOf,
+  type AppEmbedHost,
+  type HostEvent,
+  type HostFunction,
+} from './embed/hostBridge';
 export {
   defineDatalayerAppElement,
   type DatalayerAppElementOptions,

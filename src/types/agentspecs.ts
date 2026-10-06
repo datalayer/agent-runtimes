@@ -577,6 +577,28 @@ export interface AppChecksSpec {
   track: string;
 }
 
+/** A function of the host page the application's agent may call (LOOP D-10). */
+export interface AppHostFunctionSpec {
+  /** Lower-case words joined by `_`: called as the tool `host_<name>`. */
+  name: string;
+  /** What it does, for the agent: when to call it. */
+  description: string;
+  /** Its arguments, a JSON Schema of `type: object`. */
+  parameters: Record<string, unknown>;
+}
+
+/**
+ * What the host page and an embedded application say to each other (LOOP
+ * D-10): the host's values it reads (`user`, `page`, or the host's own),
+ * through the tool `host_context`, and the host's functions it may call,
+ * each through `host_<name>` — every one of them decided by a rule that
+ * names it.
+ */
+export interface AppHostBridgeSpec {
+  context: string[];
+  functions: AppHostFunctionSpec[];
+}
+
 export interface AppDeploymentSpec {
   hosted?: {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
@@ -588,7 +610,12 @@ export interface AppDeploymentSpec {
      */
     characterAlone?: boolean;
   };
-  embedded?: { mode: AppEmbedMode; origins: string[] };
+  embedded?: {
+    mode: AppEmbedMode;
+    origins: string[];
+    /** What the host page passes it and the functions of the host it may call (LOOP D-10). */
+    host?: AppHostBridgeSpec;
+  };
 }
 
 /** What starts a worker's work. */

@@ -407,6 +407,59 @@ describe('the element', () => {
     expect(defineDatalayerAppElement()).toBe(Element);
   });
 
+  it('takes what the page passes and offers, and tells it what the application said (D-10)', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const element = document.createElement('datalayer-app') as HTMLElement & {
+      context: Record<string, unknown>;
+      functions: Record<string, unknown>;
+    };
+    element.innerHTML = `<script type="application/yaml">
+schema: loop.app/v1
+id: shop-help
+name: Shop help
+kind: chat
+agent: support-agent
+rules:
+  - action: Read what the page says
+    applies_to: host_context
+    behaviour: do_it
+deployment:
+  embedded:
+    host:
+      context: [user]
+</script>`;
+    element.context = { user: 'Ana' };
+    const messages: unknown[] = [];
+    element.addEventListener('message', event =>
+      messages.push((event as CustomEvent).detail),
+    );
+    await act(async () => {
+      document.body.appendChild(element);
+    });
+    await settle();
+    const renderer = seen.renderer.at(-1)!;
+    // The host's tools reach its agent through a plugin of the renderer's.
+    expect(renderer.plugins).toHaveLength(1);
+    expect(element.context).toEqual({ user: 'Ana' });
+    await act(async () => {
+      renderer.onSaying({
+        saying: {
+          id: 'm1',
+          text: 'Hello Ana',
+          markdown: 'Hello **Ana**',
+          more: false,
+        },
+        answering: true,
+      });
+      renderer.onPresence('thinking');
+      renderer.onPresence('idle');
+      // Said once.
+      renderer.onPresence('idle');
+    });
+    expect(messages).toEqual([{ id: 'm1', text: 'Hello **Ana**' }]);
+    element.remove();
+  });
+
   it('draws an Appspec written in it, in its shadow root, in the mode its spec says', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app');

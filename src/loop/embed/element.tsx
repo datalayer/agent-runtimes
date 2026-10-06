@@ -29,6 +29,15 @@
  * drawn in it, so nothing of the application's styles reaches the page and
  * nothing of the page's reaches the application.
  *
+ * The page and the application talk (LOOP D-10), for the names its Appspec
+ * gives under `deployment.embedded.host`: the page sets `element.context`
+ * (`{ user, page, …its own }`), which its agent reads with `host_context`,
+ * and `element.functions` (`{ open_ticket: async args => … }`), which its
+ * agent calls as `host_open_ticket`, each as the rule naming it decides; the
+ * element raises `message` when the application has answered and `action`
+ * when it called a function of the page, beside `decision` and
+ * `token-expired`.
+ *
  * @module loop/embed/element
  */
 
@@ -40,6 +49,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
 import { readAppspecYaml } from '../apps/yaml';
 import { AppEmbed, embedAssistantCharacter } from './AppEmbed';
+import type { AppEmbedHost, HostFunction } from './hostBridge';
 import {
   EMBED_HOST_VARIABLES,
   EMBED_OBSERVED_ATTRIBUTES,
@@ -235,6 +245,43 @@ export function defineDatalayerAppElement(
     private frame: HTMLIFrameElement | null = null;
     private source: EmbedSource | null = null;
     private loading = 0;
+    private passed: Record<string, unknown> = {};
+    /** One object, its functions replaced in place: the host below holds it. */
+    private readonly offered: Record<string, HostFunction> = {};
+    /** What the page gives the application, read at each call (D-10). */
+    private readonly host: AppEmbedHost = {
+      context: () => this.passed,
+      functions: this.offered,
+      onEvent: event =>
+        this.dispatchEvent(
+          new CustomEvent(event.type, {
+            detail: event.detail,
+            bubbles: true,
+            composed: true,
+          }),
+        ),
+    };
+
+    /** The values the page passes: `user`, `page`, its own (D-10). */
+    get context(): Record<string, unknown> {
+      return this.passed;
+    }
+
+    set context(value: Record<string, unknown>) {
+      this.passed = { ...(value ?? {}) };
+    }
+
+    /** The page's functions the application may call, by name (D-10). */
+    get functions(): Record<string, HostFunction> {
+      return this.offered;
+    }
+
+    set functions(value: Record<string, HostFunction>) {
+      for (const name of Object.keys(this.offered)) {
+        delete this.offered[name];
+      }
+      Object.assign(this.offered, value ?? {});
+    }
 
     constructor() {
       super();
@@ -482,6 +529,7 @@ export function defineDatalayerAppElement(
             {...(server && this.token ? { embedToken: this.token } : {})}
             height={inlineHeightOf(this.getAttribute('height'))}
             ownPortal
+            host={this.host}
           />
         </StyleSheetManager>,
       );

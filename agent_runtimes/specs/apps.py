@@ -127,7 +127,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -266,7 +266,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -359,7 +359,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -518,7 +518,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -680,7 +680,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "Keep my inbox sorted, draft the replies, and never send without my approval.",
@@ -799,7 +799,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -1138,7 +1138,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
             "track": "financial-reporting:0.0.1",
         },
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "Every week, the board's sales pipeline report — stage health, conversion, weighted forecast, regional performance and risks — with every figure traceable to the pipeline data, approved by a person before it is sent.",
@@ -1355,8 +1355,8 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
-            "embedded": {"mode": "inline", "origins": [], "host": None},
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": {"mode": "inline", "origins": []},
         },
         "goal": "",
         "triggers": [],
@@ -1558,8 +1558,8 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
-            "embedded": {"mode": "inline", "origins": [], "host": None},
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": {"mode": "inline", "origins": []},
         },
         "goal": "",
         "triggers": [],
@@ -1670,7 +1670,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -1766,7 +1766,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -1940,7 +1940,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",
@@ -2214,8 +2214,8 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
-            "embedded": {"mode": "bubble", "origins": [], "host": None},
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": {"mode": "bubble", "origins": []},
         },
         "goal": "",
         "triggers": [],
@@ -2336,7 +2336,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         },
         "checks": {"guards": [], "gates": [], "track": ""},
         "deployment": {
-            "hosted": {"visibility": "private", "slug": "", "character_alone": False},
+            "hosted": {"visibility": "private", "slug": ""},
             "embedded": None,
         },
         "goal": "",

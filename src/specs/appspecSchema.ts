@@ -879,8 +879,74 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Origins',
           type: 'array',
         },
+        host: {
+          anyOf: [
+            {
+              $ref: '#/$defs/HostBridge',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'What the host page passes it and the functions of the host it may call',
+        },
       },
       title: 'EmbeddedDeployment',
+      type: 'object',
+    },
+    HostBridge: {
+      additionalProperties: false,
+      description:
+        "What the host page and the application say to each other (LOOP D-10).\n\nThe values of the host it reads (`context`: `user`, `page`, or a name of\nthe host's own), through the tool `host_context`; the functions of the\nhost it may call, each through `host_<name>`. Every one of these tools is\ndecided by a rule that names it, as any tool is: one no rule names is\nleft to the person.",
+      properties: {
+        context: {
+          description:
+            "The host's values it reads: `user`, `page`, or names of the host's own",
+          items: {
+            type: 'string',
+          },
+          title: 'Context',
+          type: 'array',
+        },
+        functions: {
+          description: "The host's functions it may call",
+          items: {
+            $ref: '#/$defs/HostFunction',
+          },
+          title: 'Functions',
+          type: 'array',
+        },
+      },
+      title: 'HostBridge',
+      type: 'object',
+    },
+    HostFunction: {
+      additionalProperties: false,
+      description:
+        "A function of the host page the application's agent may call (LOOP D-10).",
+      properties: {
+        name: {
+          description:
+            'Its name, lower-case words joined by `_`: `open_ticket`',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          description: 'What it does, for the agent: when to call it',
+          title: 'Description',
+          type: 'string',
+        },
+        parameters: {
+          additionalProperties: true,
+          description: 'Its arguments, as a JSON Schema object',
+          title: 'Parameters',
+          type: 'object',
+        },
+      },
+      required: ['name', 'description'],
+      title: 'HostFunction',
       type: 'object',
     },
     HostedDeployment: {

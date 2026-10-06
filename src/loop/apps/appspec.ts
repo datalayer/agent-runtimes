@@ -122,6 +122,9 @@ const DEFAULT_VERSION = '0.0.1';
 
 type Data = Record<string, unknown>;
 
+/** A host function's arguments when it names none: an empty object. */
+const NO_HOST_PARAMETERS = { type: 'object', properties: {} };
+
 const isData = (value: unknown): value is Data =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -432,6 +435,20 @@ function parseDeployment(data: Data): AppDeploymentSpec {
     deployment.embedded = {
       mode: oneOf(data.embedded.mode, APP_EMBED_MODES, 'inline'),
       origins: texts(data.embedded.origins),
+      ...(isData(data.embedded.host)
+        ? {
+            host: {
+              context: texts(data.embedded.host.context),
+              functions: records(data.embedded.host.functions).map(fn => ({
+                name: text(fn.name),
+                description: text(fn.description),
+                parameters: isData(fn.parameters)
+                  ? fn.parameters
+                  : { ...NO_HOST_PARAMETERS },
+              })),
+            },
+          }
+        : {}),
     };
   }
   return deployment;
@@ -877,7 +894,25 @@ export function dumpAppspec(app: AppSpec): Data {
           app.deployment.embedded &&
             new Writer()
               .value<string>('mode', app.deployment.embedded.mode, 'inline')
-              .list('origins', app.deployment.embedded.origins).data,
+              .list('origins', app.deployment.embedded.origins)
+              .present(
+                'host',
+                app.deployment.embedded.host &&
+                  new Writer()
+                    .list('context', app.deployment.embedded.host.context)
+                    .list(
+                      'functions',
+                      app.deployment.embedded.host.functions.map(fn => ({
+                        name: fn.name,
+                        description: fn.description,
+                        // No arguments is what it is unless said.
+                        ...(JSON.stringify(fn.parameters) ===
+                        JSON.stringify(NO_HOST_PARAMETERS)
+                          ? {}
+                          : { parameters: fn.parameters }),
+                      })),
+                    ).data,
+              ).data,
         ).data,
     )
     .text('goal', app.goal)

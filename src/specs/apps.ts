@@ -143,7 +143,6 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -292,7 +291,6 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -391,7 +389,6 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -573,7 +570,6 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -745,7 +741,6 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: 'Keep my inbox sorted, draft the replies, and never send without my approval.',
@@ -872,7 +867,6 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -1260,7 +1254,6 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: "Every week, the board's sales pipeline report — stage health, conversion, weighted forecast, regional performance and risks — with every figure traceable to the pipeline data, approved by a person before it is sent.",
@@ -1523,7 +1516,6 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
     embedded: {
       mode: 'inline',
@@ -1773,7 +1765,6 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
     embedded: {
       mode: 'inline',
@@ -1902,7 +1893,6 @@ export const SALES_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -2004,7 +1994,6 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -2186,7 +2175,6 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',
@@ -2508,7 +2496,6 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
     embedded: {
       mode: 'bubble',
@@ -2650,7 +2637,6 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
-      character_alone: false,
     },
   },
   goal: '',

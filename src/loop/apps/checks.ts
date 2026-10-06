@@ -48,6 +48,7 @@ import type {
 import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
 import { isAssistantCharacterId, parseAppspec } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
+import { HOST_NAME, hostToolsOf } from '../embed/hostBridge';
 
 export const NOT_READY = 'Not ready';
 export const NEEDS_ATTENTION = 'Needs attention';
@@ -149,6 +150,48 @@ function shapeProblems(app: AppSpec): string[] {
     problems.push(
       `A ${app.kind} application starts when somebody opens it: \`triggers\` are a worker's.`,
     );
+  }
+  // What the host page passes and offers (D-10): named once each, in words
+  // its agent's tools can carry, each function saying what it does.
+  const host = app.deployment.embedded?.host;
+  if (host) {
+    for (const name of host.context) {
+      if (!HOST_NAME.test(name)) {
+        problems.push(
+          `Cannot use “${name}” as a value of the host: lower-case letters, digits and \`_\`.`,
+        );
+      }
+    }
+    if (new Set(host.context).size !== host.context.length) {
+      problems.push('The host’s values are named once each.');
+    }
+    for (const fn of host.functions) {
+      if (!HOST_NAME.test(fn.name)) {
+        problems.push(
+          `Cannot use “${fn.name}” as a host function: lower-case letters, digits and \`_\`.`,
+        );
+      }
+      if (!fn.description.trim()) {
+        problems.push(`The host function “${fn.name}” says what it does.`);
+      }
+      if (fn.parameters.type !== 'object') {
+        problems.push(
+          `The host function “${fn.name}” takes its arguments as a JSON Schema of \`type: object\`.`,
+        );
+      }
+    }
+    const names = host.functions.map(fn => fn.name);
+    if (new Set(names).size !== names.length) {
+      problems.push('The host’s functions are named once each.');
+    }
+    const named = new Set(app.rules.flatMap(rule => rule.appliesTo));
+    for (const tool of hostToolsOf(host)) {
+      if (!named.has(tool)) {
+        problems.push(
+          `No rule names “${tool}”, which the host page offers it: it is left to the person until a rule decides it.`,
+        );
+      }
+    }
   }
   const servers = app.connections.map(connection => idOf(connection.server));
   if (new Set(servers).size !== servers.length) {
@@ -333,11 +376,14 @@ function referenceProblems(
       );
     }
   }
+  // The tools of the host page are the application's own (D-10).
+  const hostTools = hostToolsOf(app.deployment.embedded?.host);
   for (const rule of app.rules) {
     for (const target of rule.appliesTo) {
       if (CLASS_NAMES.has(target)) continue;
       const [server, name] = splitRef(target);
       if (server === undefined) {
+        if (hostTools.includes(target)) continue;
         if (!getBackendToolSpec(name)) {
           problems.push(
             `The rule “${rule.action}” names the tool “${target}”, which the catalogue does not have.`,
@@ -774,6 +820,20 @@ export function documentShapeProblems(document: unknown): string[] {
           }
         });
       }
+      mapping(embedded.host, 'deployment.embedded.host', host => {
+        texts(host.context, 'deployment.embedded.host.context');
+        records(
+          host.functions,
+          'deployment.embedded.host.functions',
+          (item, where) => {
+            required(item, 'name', where);
+            required(item, 'description', where);
+            text(item.name, `${where}.name`);
+            text(item.description, `${where}.description`);
+            mapping(item.parameters, `${where}.parameters`, () => undefined);
+          },
+        );
+      });
     });
   });
   records(d.triggers, 'triggers', (item, where) => {

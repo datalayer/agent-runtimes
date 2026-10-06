@@ -263,6 +263,71 @@ const chosen = embedAssistantCharacter(appspec);
 );
 ```
 
+## The page and the application, talking
+
+An embedded application can read what the page passes it, call functions of
+the page, and tell the page what it did (LOOP D-10). What it may read and
+call is named in its Appspec, under `deployment.embedded.host`, and each is
+a tool its agent calls — `host_context` for the values, `host_<name>` for a
+function — decided by the rule that names it, as any tool of the
+application is:
+
+```yaml
+deployment:
+  embedded:
+    mode: assistant
+    host:
+      context: [user, page, plan]
+      functions:
+        - name: open_ticket
+          description: Open a ticket in the shop's helpdesk for this customer
+          parameters:
+            type: object
+            properties: { title: { type: string } }
+            required: [title]
+rules:
+  - action: Read what the page says
+    applies_to: host_context
+    behaviour: do_it
+  - action: Open a ticket
+    applies_to: host_open_ticket
+    behaviour: ask_first
+```
+
+The page gives the values and the functions to the element, and listens to
+what it says:
+
+```html
+<datalayer-app app="01M…" token="…"></datalayer-app>
+<script>
+  const app = document.querySelector('datalayer-app');
+  app.context = { user: { name: 'Ana', plan: 'pro' }, page: location.pathname, plan: 'pro' };
+  app.functions = {
+    open_ticket: async ({ title }) => (await fetch('/tickets', { method: 'POST', body: title })).json(),
+  };
+  app.addEventListener('message', event => console.log('It said', event.detail.text));
+  app.addEventListener('action', event => console.log('It called', event.detail.function, event.detail));
+  app.addEventListener('token-expired', () => renewToken(app));
+</script>
+```
+
+- **In.** `host_context` returns the values the Appspec names, as the page
+  passes them at that moment (`values`), and says the ones it has not passed
+  (`unsaid`); anything else the page passes is never read.
+- **Offered.** `host_open_ticket` calls `functions.open_ticket` with the
+  arguments the agent gives, and returns what it returns (`result`) or why
+  not (`error`): the page offers no such function, or it failed.
+- **Out.** The element raises `message` (`{ id, text }`) once the application
+  has answered, and `action` (`{ function, arguments, result | error }`) for
+  each function of the page it called, beside `decision` and `token-expired`.
+- **Ruled.** A tool of the host that no rule names is left to the person: the
+  page refuses it before calling anything (`hostRefused`), and the checks
+  say it (*No rule names “host_refund”…*). A rule's `ask_first` is asked by
+  the application's runtime, as for any tool.
+
+In React, `AppEmbed` takes the same as `host`:
+`{ context: () => ({ user, page }), functions, onEvent }`.
+
 ## The snippet, from Ship
 
 `embedSnippetOf` writes the snippet a host pastes. It writes the mode only
@@ -293,6 +358,9 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
 
 - the modes and the chat each one floats in;
 - `AppFloating` as the character alone, on the visitors' runtime too;
+- the host's tools (`host-bridge.test.ts`): the values named and no others,
+  a function called and told to the page, one no rule names refused before
+  the page is called; the element's `context` and `message`;
 - the order of the overrides (attribute, then CSS variable, then Appspec) and
   the messages for invalid values;
 - the snippet;
@@ -319,3 +387,7 @@ Not done yet:
   it is missing, the controls keep Primer's corners.
 - Two embeds on one page share Primer's portal root: the second one's overlays
   win.
+- The host's tools have not run against a runtime: that a call of
+  `host_<name>` reaches the application's rules on the runtime (and its
+  `ask_first` is asked there) is not verified; the page's own refusal of a
+  tool no rule names is.

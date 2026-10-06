@@ -53,6 +53,7 @@ CAMEL = {
     "min_confidence": "minConfidence",
     "decision_model": "decisionModel",
     "backend_tools": "backendTools",
+    "character_alone": "characterAlone",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights by name.
@@ -90,6 +91,12 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         spec["interface"]["layout"] = app.layout.value
         spec["record"]["retention_days"] = app.record.retention_days
         spec["setup"] = apps_module.app_setup(app)
+        # What TypeScript reads only when it is said: off, or none.
+        deployment = spec.get("deployment") or {}
+        if (deployment.get("hosted") or {}).get("character_alone") is False:
+            del deployment["hosted"]["character_alone"]
+        if deployment.get("embedded") and deployment["embedded"].get("host") is None:
+            del deployment["embedded"]["host"]
         behaviours[identity] = {
             tool: behaviour.value
             for tool, behaviour in sorted(apps_module.tool_behaviours(app).items())

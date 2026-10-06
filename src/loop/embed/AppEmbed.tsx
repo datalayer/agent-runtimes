@@ -36,7 +36,14 @@
  * @module loop/embed/AppEmbed
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { CSSProperties, JSX, ReactNode } from 'react';
 import type { PluginRef } from '@datalayer/reactor';
 import { Text, registerPortalRoot } from '@primer/react';
@@ -62,6 +69,8 @@ import {
   type AssistantCharacterChosen,
 } from '../plugins/assistant-characters';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
+import { createChatExtrasPlugin } from '../plugins/chat-extras';
+import { hostFrontendTools, type AppEmbedHost } from './hostBridge';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 
 export type AppEmbedProps = {
@@ -104,7 +113,75 @@ export type AppEmbedProps = {
    * element passes none.
    */
   plugins?: PluginRef[];
+  /**
+   * What the page gives the application (LOOP D-10): the values it passes,
+   * its functions, and what it is told — read for the names the Appspec
+   * gives under `deployment.embedded.host`.
+   */
+  host?: AppEmbedHost;
 };
+
+/** No plugins for the renderer: one array, so that it never reads as a change. */
+const NO_HOST_PLUGINS: PluginRef[] = [];
+
+/**
+ * The page and the application talking (LOOP D-10): the tools of the host
+ * the Appspec names, given to its agent through a chat-extras plugin made
+ * once — the page's newest values and functions read at each call — and
+ * `message` said to the page when an answer is done.
+ */
+export function useHostBridge(
+  app: AppSpec,
+  host: AppEmbedHost | undefined,
+): {
+  plugins: PluginRef[];
+  onPresence: (state: PresenceState) => void;
+  onSaying: (said: ChatSaid) => void;
+} {
+  const hostRef = useRef(host);
+  hostRef.current = host;
+  const handle = useMemo(() => createChatExtrasPlugin(), []);
+  const bridge = app.deployment.embedded?.host;
+  const key = JSON.stringify([bridge ?? null, app.rules, app.connections]);
+  useEffect(() => {
+    handle.setExtras({
+      frontendTools: hostFrontendTools(app, () => hostRef.current ?? {}),
+    });
+    // The tools change with what the Appspec names, and the rules that decide them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handle, key]);
+  const plugins = useMemo(
+    () => (bridge ? [handle.plugin as PluginRef] : NO_HOST_PLUGINS),
+    [bridge, handle],
+  );
+  const said = useRef<ChatSaid>({ answering: false });
+  const before = useRef<PresenceState>('idle');
+  const told = useRef('');
+  const onSaying = useCallback((next: ChatSaid) => {
+    said.current = next;
+  }, []);
+  const onPresence = useCallback((state: PresenceState) => {
+    const was = before.current;
+    before.current = state;
+    const done = state === 'idle' || state === 'waiting';
+    const saying = said.current.saying;
+    if (
+      done &&
+      was !== 'idle' &&
+      was !== 'waiting' &&
+      said.current.answering &&
+      saying &&
+      saying.id !== told.current
+    ) {
+      told.current = saying.id;
+      hostRef.current?.onEvent?.({
+        type: 'message',
+        detail: { id: saying.id, text: saying.markdown || saying.text },
+      });
+    }
+  }, []);
+  return { plugins, onPresence, onSaying };
+}
 
 /** No host plugins: one array, so that it never reads as a change. */
 const NO_PLUGINS: PluginRef[] = [];
@@ -156,6 +233,8 @@ export type AppFloatingProps = {
   renderer?: Partial<
     Pick<AppRendererProps, 'pluginsOff' | 'datalayerVisitors' | 'datalayerKept'>
   >;
+  /** What the page gives the application (D-10). */
+  host?: AppEmbedHost;
 };
 
 /**
@@ -177,9 +256,25 @@ export function AppFloating({
   instance,
   embedToken,
   renderer,
+  host,
 }: AppFloatingProps): JSX.Element {
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
+  const bridge = useHostBridge(app, host);
+  const onPresence = useCallback(
+    (state: PresenceState) => {
+      setPresence(state);
+      bridge.onPresence(state);
+    },
+    [bridge.onPresence],
+  );
+  const onSaying = useCallback(
+    (next: ChatSaid) => {
+      setSaid(next);
+      bridge.onSaying(next);
+    },
+    [bridge.onSaying],
+  );
   const welcome = app.interface.welcome || app.description;
   // A runtime is somebody's to pay for: on Datalayer, only for a visitor
   // Datalayer knows — said, and nothing launched, for one it does not.
@@ -220,8 +315,9 @@ export function AppFloating({
             hideChatHeader
             // Mounted closed: the caret goes in when the window opens.
             autoFocusPrompt={false}
-            onPresence={setPresence}
-            onSaying={setSaid}
+            onPresence={onPresence}
+            onSaying={onSaying}
+            plugins={bridge.plugins}
             {...renderer}
           />
         ),
@@ -317,7 +413,9 @@ export function AppEmbed({
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
+  host,
 }: AppEmbedProps): JSX.Element {
+  const bridge = useHostBridge(app, host);
   const system = useSystemMode();
   const resolvedMode = colorMode === 'auto' ? system : colorMode;
   const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
@@ -365,6 +463,7 @@ export function AppEmbed({
           colorMode={resolvedMode}
           themeOverrides={themeOverrides}
           character={character}
+          host={host}
         />
       ) : (
         <AppRenderer
@@ -380,6 +479,10 @@ export function AppEmbed({
           // visitor's system's, not a Datalayer setting.
           themeOverrides={themeOverrides}
           colorMode={resolvedMode}
+          // What the page gives it, and what it tells the page (D-10).
+          plugins={bridge.plugins}
+          onPresence={bridge.onPresence}
+          onSaying={bridge.onSaying}
         />
       )}
     </EmbedThemed>
