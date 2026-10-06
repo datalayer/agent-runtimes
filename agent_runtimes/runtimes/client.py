@@ -166,6 +166,8 @@ class RuntimesClient:
         content_attachment_uids: Optional[list[str]] = None,
         parent_reservation_uid: Optional[str] = None,
         environment_version: Optional[Union[int, str]] = None,
+        app_uid: Optional[str] = None,
+        deployment_uid: Optional[str] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -197,12 +199,25 @@ class RuntimesClient:
             The execution tree the runtime is metered against
             (ORCHESTRATOR.md, O1-07): IAM grants its reservation no more than
             the tree has left, and refuses it once the tree has nothing.
+        app_uid : Optional[str]
+            The LOOP application the runtime runs for (plans/LOOP.md, R-09).
+        deployment_uid : Optional[str]
+            The deployment of that application it runs for — a scheduled
+            tick's or an event's session. The Operator writes both on the
+            runtime's reservation, so its running time is counted per
+            application and per deployment; they never change who pays. A
+            deployment is always of an application: one named without
+            ``app_uid`` is refused (`ValueError`).
 
         Returns
         -------
         dict[str, Any]
             Response containing runtime creation details.
         """
+        if deployment_uid and not app_uid:
+            raise ValueError(
+                f"Deployment {deployment_uid} is named without its application: give app_uid."
+            )
         # The launch contract is `environment: {name, version}`, and the
         # version is additive: absent, this is byte for byte the request every
         # platform environment has always been launched with (PLAN_ENV.md,
@@ -282,6 +297,11 @@ class RuntimesClient:
                 body["billing_entity_type"] = billing_entity_type
             if resolved_billing_entity_handle:
                 body["billing_entity_handle"] = resolved_billing_entity_handle
+
+            if app_uid:
+                body["app_uid"] = app_uid
+            if deployment_uid:
+                body["deployment_uid"] = deployment_uid
 
             if runtime_name:
                 body["runtime_name"] = runtime_name

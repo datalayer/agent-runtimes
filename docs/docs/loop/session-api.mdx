@@ -179,7 +179,7 @@ as `GET` says it — then the turn's events.
 
 | Route | What it does |
 | --- | --- |
-| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, session?, woken_by?}`. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered. |
+| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, session?, woken_by?}`. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). |
 | `POST /sessions/{uid}/messages` | **Message**: `{text}`. The next turn — or the answer to what the application asked. |
 | `POST /sessions/{uid}/actions` | **Action**: `{name, payload?, text?, files?}`. A page block's action — File upload's `upload`, a Form's `submit`, a Table's `select` — with the files given. |
 | `PUT /sessions/{uid}/settings` | **Settings change**: `{values}`, checked against the application's settings (`Tone is one of Plain, Warm.`) and kept. |

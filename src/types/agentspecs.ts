@@ -772,6 +772,11 @@ export interface AppSpec {
   /** What it names that is not enabled today, in sentences. */
   setup: string[];
   enabled: boolean;
+  /**
+   * Why it is not offered today, in a sentence its page shows: said when
+   * `enabled` is false, and only then (empty otherwise).
+   */
+  unavailable_because: string;
   tags: string[];
   icon?: string;
   /** Its face: one emoji, shown wherever the application appears. */

@@ -425,7 +425,9 @@ file learns nothing.
 
 A session nobody opened — woken by one of its schedules (`woken_by`) — has
 nobody to ask (LOOP R-16). Its rules capability is told so
-(`AppRulesCapability.unattended`, set from the recorder by `app_capabilities`):
+(`AppRulesCapability.unattended`, set from the recorder by
+`unattended_when_woken` — on the agent made in process by `app_capabilities`
+and on the one a runtime makes for a deployment):
 a call that does more than read is done, or asked of its maker, only when a
 rule of the application's own decided it (`Decision.rule`); one decided by
 default is refused before it runs, recorded as `unattended`, and the agent is

@@ -847,11 +847,25 @@ class LiveSession:
         head: str = "",
         bearer: str = "",
     ) -> AsyncIterator[str]:
-        """Start: the session's record begins, the code's ``start`` runs, then the opener."""
+        """Start: the session's record begins, the code's ``start`` runs, then the opener.
+
+        A session a schedule woke (LOOP R-14) runs, in the opener's place, the
+        handler its code declared for that schedule, when it declared one: the
+        trigger's prompt is what its agent is asked otherwise.
+        """
+        try:
+            schedule = self._woken_schedule(woken_by)
+        except SessionRefused:
+            _SESSIONS.pop(self.uid, None)
+            raise
 
         async def work() -> None:
             """The turn."""
             await self._open_code(woken_by)
+            if schedule is not None:
+                assert self.host is not None and self.session is not None
+                await self.host.scheduled(self.session, schedule)
+                return
             if not opener:
                 return
             if self.host is not None:
@@ -864,6 +878,36 @@ class LiveSession:
         return self._start_turn(
             work, wraps_run=self.host is not None, head=head, counts=bool(opener)
         )
+
+    def _woken_schedule(self, woken_by: Optional[Mapping[str, Any]]) -> Optional[str]:
+        """The schedule of its code a tick woke it for, by the trigger's position
+        among the application's triggers (LOOP R-14); ``None`` when no schedule
+        woke it, it has no code, or its code declared no schedule there.
+
+        Refused when the tick names no position, or when the trigger the
+        running Appspec has there is not the schedule the code declared:
+        its code and its Appspec are of different versions.
+        """
+        if self.host is None or not woken_by or woken_by.get("kind") != "schedule":
+            return None
+        position = woken_by.get("position")
+        if not isinstance(position, int) or isinstance(position, bool):
+            raise SessionRefused(
+                422, "The schedule that woke the session names no trigger position."
+            )
+        name = self.host.app.schedule_at(position)
+        if name is None:
+            return None
+        triggers = self.app.triggers
+        trigger = triggers[position] if position < len(triggers) else None
+        cron = self.host.app._schedule_crons.get(name, "")
+        if trigger is None or trigger.type != "schedule" or trigger.cron != cron:
+            raise SessionRefused(
+                409,
+                f"The trigger at {position} of {self.app.name} is not the schedule "
+                f"{name} ({cron}) its code declares: its code and its Appspec differ.",
+            )
+        return name
 
     def _with_turn(self, text: str) -> List[Dict[str, Any]]:
         """The conversation with the person's next message."""

@@ -133,6 +133,7 @@ class Application:
         self._actions: Dict[str, Handler] = {}
         self._schedules: Dict[str, Handler] = {}
         self._schedule_crons: Dict[str, str] = {}
+        self._schedule_positions: Dict[str, int] = {}
         self._commands: Dict[str, Handler] = {}
 
     @classmethod
@@ -164,6 +165,7 @@ class Application:
         application._actions = {}
         application._schedules = {}
         application._schedule_crons = {}
+        application._schedule_positions = {}
         application._commands = {}
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
@@ -588,6 +590,9 @@ class Application:
                 description=description or name,
                 prompt=prompt,
             )
+            # Where it sits among the triggers: what the platform's scheduler
+            # keeps it under, and wakes it by (LOOP R-14).
+            self._schedule_positions[name] = len(self._document.get("triggers") or [])
             self._declare("triggers", trigger)
             self._schedules[name] = handler
             self._schedule_crons[name] = cron
@@ -622,6 +627,28 @@ class Application:
     def schedules(self) -> Dict[str, Handler]:
         """The application's schedules, by handler name; a copy."""
         return dict(self._schedules)
+
+    def schedule_at(self, position: int) -> Optional[str]:
+        """The schedule its code declared at a position among its triggers.
+
+        A deployment's schedule is woken by its position (LOOP R-14): the
+        scheduler knows a trigger by where it sits, and a trigger has no name.
+
+        Parameters
+        ----------
+        position : int
+            The trigger's position among the application's triggers.
+
+        Returns
+        -------
+        str or None
+            The schedule's name — its handler's — or ``None`` when its code
+            declared no schedule there.
+        """
+        for name, at in self._schedule_positions.items():
+            if at == position:
+                return name
+        return None
 
     @property
     def commands(self) -> Dict[str, Handler]:
@@ -884,8 +911,7 @@ class AppHost:
         Session
             The session it ran in.
         """
-        handler = self._reaction("schedule", name)
-        if handler is None:
+        if self._reaction("schedule", name) is None:
             raise KeyError(f"{self.app.id} has no schedule {name!r}.")
         session = self._session()
         self.recorder.start(
@@ -896,8 +922,31 @@ class AppHost:
                 "cron": self.app._schedule_crons.get(name, ""),
             },
         )
-        await self._react(session, handler)
+        await self.scheduled(session, name)
         return session
+
+    async def scheduled(self, session: Session, name: str) -> None:
+        """Run a schedule's handler in a session already open — one the
+        platform's scheduler woke on a runtime (LOOP R-14) — as a command's
+        code runs: what the registry holds for it, as one turn of the session.
+
+        Parameters
+        ----------
+        session : Session
+            The session the tick opened.
+        name : str
+            The schedule, by its handler's name.
+
+        Raises
+        ------
+        KeyError
+            When the application has no schedule of that name.
+        """
+        self._open(session)
+        handler = self._reaction("schedule", name)
+        if handler is None:
+            raise KeyError(f"{self.app.id} has no schedule {name!r}.")
+        await self._react(session, handler)
 
 
 def load_application(path: Union[str, Path]) -> Application:

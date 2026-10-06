@@ -197,8 +197,9 @@ COG_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1 = Agentspec(
     description="Conducts adaptive customer interviews under the Customer Research Frame: consent first, no leading question, and insights that each cite the interviewee's own words.",
     tags=["research", "customer-support", "analysis", "cog"],
     domain="market-analyst",
-    enabled=False,
+    enabled=True,
     model="bedrock:us.anthropic.claude-sonnet-4-6",
+    model_additionals=["alibaba:qwen-max"],
     inference_provider=None,
     mcp_servers=[],
     skills=["text-summarizer:0.0.1", "events:0.0.1"],
@@ -571,7 +572,7 @@ COG_CUSTOMER_INTERVIEWER_0_0_1 = CogSpec(
     frames=["customer-research"],
     lineage=["datalayer", "customer-research"],
     kind="context",
-    enabled=False,
+    enabled=True,
     guards=[
         FrameGuardSpec(
             **{

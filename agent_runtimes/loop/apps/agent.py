@@ -30,6 +30,7 @@ from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.composer import ModeEffect
 from agent_runtimes.loop.apps.documents import AppDocumentsCapability, knows_documents
+from agent_runtimes.loop.apps.enforcement import AppRulesCapability
 from agent_runtimes.loop.apps.enforcement import Ask as RuleAsk
 from agent_runtimes.loop.apps.frames import (
     NO_ORGANIZATION,
@@ -45,6 +46,18 @@ from agent_runtimes.types import Agentspec, AppSpec
 
 #: How a host builds the agent an application runs, from its spec.
 AgentFactory = Callable[[AppSpec], Agent]
+
+
+def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> None:
+    """A session nobody opened — woken by a schedule — has nobody present: it
+    only reads, unless a rule says otherwise (LOOP R-16).
+
+    Said on the rules of every agent of an application: the one made in
+    process (`app_capabilities`) and the one a runtime makes for it.
+    """
+    from agent_runtimes.loop.apps.record import current_session
+
+    rules.unattended = lambda: bool(recorder.woken(current_session()))
 
 
 def app_capabilities(
@@ -86,11 +99,7 @@ def app_capabilities(
     rules.record = recorder.decided
     # What the person answered when asked is an entry of its own (LOOP R-07).
     rules.answered = recorder.answered
-    # A session nobody opened — woken by a schedule — has nobody present: it
-    # only reads, unless a rule says otherwise (LOOP R-16).
-    from agent_runtimes.loop.apps.record import current_session
-
-    rules.unattended = lambda: bool(recorder.woken(current_session()))
+    unattended_when_woken(rules, recorder)
     if ask_rule is not None:
         rules.ask = ask_rule
     checks = AppChecksCapability(

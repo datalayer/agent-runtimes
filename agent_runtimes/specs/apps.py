@@ -139,6 +139,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "accounting", "finance", "odoo", "a2a", "team"],
         "icon": "book",
         "emoji": "🧾",
@@ -260,7 +261,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
                     "Its code runs in process in Datalayer's own tests with a scripted model: consent asked, a refusal honoured, a reply per message, an insight saved, the result recorded."
                 ],
                 "unverified": [
-                    "Its agent is switched off in the catalogue: its code has not run with a real model, and its tests have not been run."
+                    "Its code has not run with a real model: its agent was switched on in the catalogue on 2026-10-06, and its tests have not been run."
                 ],
             },
         },
@@ -280,13 +281,14 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
-        "enabled": False,
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "research", "python"],
         "icon": "comment-discussion",
         "emoji": "🎙️",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'cog-customer-interviewer:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -427,12 +429,13 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "decision", "data-quality"],
         "icon": "filter",
         "emoji": "🧹",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -539,6 +542,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "decisions", "jev"],
         "icon": "law",
         "emoji": "⚖️",
@@ -679,7 +683,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
                     "Its page drawn in the Studio's Preview signed in (2026-10-04); no mail read."
                 ],
                 "recorded": [
-                    "Run end to end on a test mailbox of example mail, a scripted model in place of its agent's (agent-runtimes test_inbox_triage.py, 2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing."
+                    "Run end to end in Datalayer's own tests on a test mailbox of example mail, a scripted model in place of its agent's (2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing."
                 ],
                 "unverified": [
                     "Its agent and the Google Workspace server are switched off in the catalogue: no real mail has been read, drafted or sent.",
@@ -721,6 +725,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         "notifications": ["email"],
         "decision": None,
         "enabled": False,
+        "unavailable_because": "It reads and sorts your mail, and a mailbox cannot be connected yet: the Google Workspace connection is still being built.",
         "tags": ["example", "worker", "mail"],
         "icon": "mail",
         "emoji": "📬",
@@ -929,12 +934,13 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "decision", "benchmarks", "models"],
         "icon": "cpu",
         "emoji": "🧠",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -1177,6 +1183,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "notifications": ["email"],
         "decision": None,
         "enabled": False,
+        "unavailable_because": "Ten of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.",
         "tags": ["example", "worker", "sales", "reporting"],
         "icon": "graph",
         "emoji": "📈",
@@ -1366,7 +1373,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                 ],
                 "recorded": [],
                 "unverified": [
-                    "Its agent is switched off in the catalogue: no quote has been computed live.",
+                    "No quote has been computed live: its agent was switched on in the catalogue on 2026-10-06 and has not run it yet.",
                     "Its tests have not been run.",
                 ],
             },
@@ -1387,13 +1394,14 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
-        "enabled": False,
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "widget"],
         "icon": "number",
         "emoji": "🧮",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -1572,7 +1580,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                     "Its code runs in process in Datalayer's own tests with a scripted model: a CSV asked for and reported on, a PDF refused, a file given on its page answering what its code asks."
                 ],
                 "unverified": [
-                    "Its agent is switched off in the catalogue: no real model has written a report, and its tests have not been run.",
+                    "No real model has written a report: its agent was switched on in the catalogue on 2026-10-06, and its tests have not been run.",
                     "The report is kept in its record; no download link is drawn yet.",
                 ],
             },
@@ -1593,13 +1601,14 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
-        "enabled": False,
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "widget", "python"],
         "icon": "file",
         "emoji": "📑",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -1709,6 +1718,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "sales", "finance", "a2a", "team"],
         "icon": "briefcase",
         "emoji": "💼",
@@ -1886,12 +1896,13 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "decision", "benchmarks"],
         "icon": "checklist",
         "emoji": "🚢",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -2048,12 +2059,13 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "decision", "procurement"],
         "icon": "package",
         "emoji": "🚚",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'jupyter-data-analyst:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -2239,7 +2251,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "Its agent is switched off in the catalogue: no conversation has run.",
+                    "No conversation has run: its agent was switched on in the catalogue on 2026-10-06 and has not answered yet.",
                     "Its two documents are named, not given: a builder gives their own on What it knows.",
                     "Its tests have not been run.",
                 ],
@@ -2261,13 +2273,14 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
-        "enabled": False,
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "support"],
         "icon": "question",
         "emoji": "🛟",
         "avatar": "",
         "banner": "",
-        "setup": ["The agent 'worker-document-qa:0.0.1' is not enabled."],
+        "setup": [],
     }
 )
 
@@ -2387,6 +2400,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "research"],
         "icon": "search",
         "emoji": "🔎",

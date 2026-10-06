@@ -5128,8 +5128,9 @@ export const JUPYTER_DATA_ANALYST_AGENTSPEC_0_0_1: Agentspec = {
     'collaboration',
   ],
   domain: undefined,
-  enabled: false,
+  enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [].filter(Boolean) as SkillSpec[],
   backendTools: [TOOL_MAP['runtime-echo:0.0.1']],
@@ -8255,8 +8256,9 @@ export const WORKER_CUSTOMER_INTERVIEWER_AGENTSPEC_0_0_1: Agentspec = {
   description: `Conducts adaptive, AI-led interviews that respond intelligently to each answer. It asks relevant follow-up questions, uncovers motivations and decision-making patterns, and transforms conversations into structured, actionable insights.`,
   tags: ['research', 'customer-support', 'analysis'],
   domain: 'market-analyst',
-  enabled: false,
+  enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['text-summarizer:0.0.1']
@@ -8544,8 +8546,9 @@ export const WORKER_DOCUMENT_QA_AGENTSPEC_0_0_1: Agentspec = {
     'qa',
   ],
   domain: 'personal-assistant',
-  enabled: false,
+  enabled: true,
   model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+  modelAdditionals: ['alibaba:qwen-max'],
   mcpServers: [],
   skills: [
     SKILL_MAP['events:0.0.1']

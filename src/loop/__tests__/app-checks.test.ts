@@ -88,6 +88,37 @@ describe('the instant checks', () => {
     );
   });
 
+  it('refuse an application off with no reason, or a reason on one offered (E-01)', () => {
+    expect(checkAppspec({ ...BASE, enabled: false }).problems).toContain(
+      'An application that is not offered says why, under `unavailable_because`.',
+    );
+    expect(
+      checkAppspec({ ...BASE, enabled: false, unavailable_because: '  ' })
+        .problems,
+    ).toContain(
+      'An application that is not offered says why, under `unavailable_because`.',
+    );
+    expect(
+      checkAppspec({ ...BASE, unavailable_because: 'Not yet.' }).problems,
+    ).toContain(
+      'An application offered today is available: remove `unavailable_because`, or set `enabled: false`.',
+    );
+    expect(
+      checkAppspec({
+        ...BASE,
+        enabled: false,
+        unavailable_because: 'Not yet.',
+      }).problems,
+    ).toEqual([]);
+    expect(
+      checkAppspec({
+        ...BASE,
+        enabled: false,
+        unavailable_becuase: 'Not yet.',
+      }).problems,
+    ).toContain('`unavailable_becuase` is not a field of the spec.');
+  });
+
   it('say every reference that does not resolve, by name', () => {
     const check = checkAppspec({
       ...BASE,

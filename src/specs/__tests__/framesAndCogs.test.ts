@@ -70,8 +70,9 @@ describe('the Cog catalogue', () => {
     expect(
       listCogs()
         .filter(cog => cog.enabled)
-        .map(cog => cog.id),
-    ).toEqual(['cog-crawler']);
+        .map(cog => cog.id)
+        .sort(),
+    ).toEqual(['cog-crawler', 'cog-customer-interviewer']);
   });
 
   it('gives a Cog as the agent it extends, with its Frames', () => {

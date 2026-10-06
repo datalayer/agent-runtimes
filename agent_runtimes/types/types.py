@@ -2513,6 +2513,13 @@ class AppSpec(BaseModel):
         description="What it names that is not enabled today, in sentences",
     )
     enabled: bool = Field(default=True, description="Whether it is offered today")
+    unavailable_because: str = Field(
+        default="",
+        description=(
+            "Why it is not offered today, in a sentence its page shows: "
+            "said when `enabled` is false, and only then"
+        ),
+    )
     tags: List[str] = Field(default_factory=list)
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: str = Field(

@@ -230,18 +230,40 @@ A second handler for the same moment, action or schedule raises
 A deployed application's schedules fire with nobody at a browser. When an
 application is deployed, each `schedule` trigger of the deployed version is
 registered with the platform's scheduler; on each tick the scheduler
-launches a runtime, creates the application's agent on it as the hosted
-page does, asks it the trigger's `prompt` (its `description` when it has no
-prompt), and stops the runtime. Pausing the deployment stops its schedules,
+launches a runtime — named for the application and the deployment, so its
+time is counted against them on Usage — creates the application's agent on
+it as the hosted page does, opens a session of it on the
+[Session API](./session-api) said to be woken by that schedule, and stops
+the runtime. The session runs the schedule's handler, or asks the agent the
+trigger's `prompt` (its `description` when it has no prompt). Pausing the deployment stops its schedules,
 resuming starts them again, taking it down removes them; deploying another
 version registers that version's schedules. Every tick is a run of the
 schedule, which says whether it answered.
 
-What runs on the platform is the Appspec: the code of a `@app.schedule`
-handler runs where an `AppHost` runs it (`host.schedule(name)`), not on the
-platform's tick. A schedule with neither a prompt nor a description is
-refused at deploy: a session woken with nothing to ask does nothing. An
-application run by a team is not woken yet.
+**A `@app.schedule` handler runs on the tick** when the runtime runs the
+application's code — an `app.py` of the catalogue, at the version the
+runtime has: the scheduler knows a schedule by its position among the
+application's triggers, the runtime finds the handler the code declared
+there (`app.schedule_at(position)`) and runs it with the session, in place
+of the prompt, as a command's code runs — what the registry holds for
+`loop.app.schedule` under `<id>/<name>` (`AppHost.scheduled(session, name)`).
+The code's `start` runs first, as in any session opened. A schedule the
+code did not declare — one of the Appspec's own — asks the agent its
+prompt. When the trigger at that position is not the schedule the code
+declared (another cron: code and Appspec of different versions), the
+session is refused and the tick fails, saying so. An `app.py` of your own
+is built into its spec, and the spec is what runs: its handlers run where an
+`AppHost` runs them (`host.schedule(name)`), not on the tick.
+
+Woken, nobody is present: the session only reads unless one of the
+application's rules says otherwise (see *With nobody present* in the
+[app renderer](./app-renderer)) — its handler's `session.agent` and its
+agent alike. A handler that asks somebody something (`session.ask`) ends
+the tick as waiting: nobody is there to answer.
+
+A schedule with neither a prompt nor a description is refused at deploy: a
+session woken with nothing to ask does nothing. An application run by a
+team is not woken yet.
 
 The record of a session nobody opened says what woke it: `woken_by`,
 `{"kind": "schedule", ...}` — the schedule, its cron, and on the platform
@@ -376,6 +398,7 @@ runs an application in this process. A runtime, a test or a script drives it:
 | `await host.end(session)` | Cancels what runs in the session, runs `end`; the session then takes nothing more — a message, an action, settings or Stop raise `ValueError` (*Session … has ended.*). Ending it again does nothing. |
 | `await host.logout(session)` | Cancels what runs, runs `logout`, then ends the session. |
 | `await host.schedule(name)` | Runs a schedule now, in a new session whose record says the schedule woke it. |
+| `await host.scheduled(session, name)` | Runs a schedule's handler in a session already open — the one a tick woke on a runtime. |
 
 Each handler runs as one turn: it can be stopped, and the record of the turn
 is sent when it ends. `agent` says how the application's agent is built

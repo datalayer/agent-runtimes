@@ -135,6 +135,18 @@ function shapeProblems(app: AppSpec): string[] {
       'An application names who does the work: an `agent`, or a `team`, and not both.',
     );
   }
+  // agentspecs refuses either way round (LOOP E-01): off says why, on says nothing.
+  const because = (app.unavailable_because ?? '').trim();
+  if (!app.enabled && !because) {
+    problems.push(
+      'An application that is not offered says why, under `unavailable_because`.',
+    );
+  }
+  if (app.enabled && because) {
+    problems.push(
+      'An application offered today is available: remove `unavailable_because`, or set `enabled: false`.',
+    );
+  }
   if (app.kind === 'decision' && !app.decision) {
     problems.push(
       'A decision application says what it decides, under `decision`.',

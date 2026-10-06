@@ -239,6 +239,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     notifications: [],
     setup: [],
     enabled: true,
+    unavailable_because: '',
     tags: [],
     icon: DEFAULT_ICON,
     emoji: DEFAULT_EMOJI,
@@ -279,6 +280,7 @@ const KNOWN_KEYS = [
   'notifications',
   'decision',
   'enabled',
+  'unavailable_because',
   'tags',
   'icon',
   'emoji',
@@ -664,6 +666,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     memory: text(data.memory),
     notifications: texts(data.notifications),
     enabled: flag(data.enabled, true),
+    unavailable_because: text(data.unavailable_because),
     tags: texts(data.tags),
     icon: text(data.icon, DEFAULT_ICON),
     emoji: text(data.emoji, DEFAULT_EMOJI) || DEFAULT_EMOJI,
@@ -1047,6 +1050,7 @@ export function dumpAppspec(app: AppSpec): Data {
   }
   writer
     .value('enabled', app.enabled, true)
+    .text('unavailable_because', app.unavailable_because)
     .list('tags', app.tags)
     .text('icon', app.icon ?? DEFAULT_ICON, DEFAULT_ICON)
     .text('emoji', app.emoji, DEFAULT_EMOJI)

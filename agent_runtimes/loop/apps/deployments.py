@@ -13,7 +13,9 @@ the main site, `/apps/<slug>`.
 And a session of a deployment that nobody opened: woken by one of its
 schedules (LOOP R-14), the scheduler launches a runtime, creates the
 deployment's agent on it with `session_payload` — what ai-agents answers it
-with — and asks it the trigger's prompt with `start_session`.
+with — and opens a session of it with `start_session`, on the session API,
+said to be woken: the handler the application's code declared for that
+schedule runs, or its agent is asked the trigger's prompt.
 
 And a deployment kept on a runtime of its own (LOOP R-33): a live deployment
 its owner keeps always on has one runtime, launched as its owner, whose
@@ -27,7 +29,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Mapping, Optional
+from typing import Any, Iterable, Mapping, Optional
 from urllib.parse import quote
 
 import httpx
@@ -377,9 +379,10 @@ def session_payload(
     woken_by: Mapping[str, Any],
 ) -> dict[str, Any]:
     """What creates a deployment's agent on a runtime for a session nobody
-    opened: the payload the hosted page sends (`AppRenderer`), on Vercel AI
-    since the session is one prompt, with the instance its record is kept
-    under — the deployment, and what woke it.
+    opened: the payload the hosted page sends (`AppRenderer`), over AG-UI —
+    the session API's transport, on which `start_session` opens the session
+    — with the instance its record is kept under: the deployment, and what
+    woke it.
 
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which a woken session
@@ -395,7 +398,7 @@ def session_payload(
     return {
         "name": app.id,
         "description": f"{app.name or app.id}, version {version}, woken by its {woken_by.get('kind') or 'trigger'}",
-        "transport": "vercel-ai",
+        "transport": "ag-ui",
         "agent_spec_id": agent_id_of(app),
         "app_spec": dict(spec),
         "enable_codemode": bool(app.permissions.computer.shell),
@@ -523,29 +526,126 @@ def start_session(
     client: Optional[httpx.Client] = None,
 ) -> dict[str, Any]:
     """Create the deployment's agent on a runtime that was just launched
-    (`create_agent`), then ask it the trigger's prompt — the routes the
-    hosted page and the Evals engine use (`/api/v1/agents`, then
-    `/api/v1/vercel-ai/<agent>`).
+    (`create_agent`), then open a session of it on the session API
+    (`/api/v1/apps/sessions`, the hosted page's route), said to be woken by
+    what the payload's instance names, with the trigger's prompt as its
+    opener (LOOP R-14).
 
-    Answers the agent's id and the chat's result (``status`` ``completed`` or
-    not, the answer's text, and why it failed when it did);
-    `SessionNotStarted` when the agent could not be created.
+    On the runtime, an application written in Python whose code declared the
+    schedule at that trigger runs that handler, with the session; any other
+    is asked the prompt. Either way the session has nobody present, and only
+    reads unless a rule says otherwise (R-16).
+
+    Answers the agent's id, the session's uid and its result: ``status``
+    ``completed``, ``failed`` or ``waiting`` (it asked somebody something),
+    the answer's text, and why it did not complete. `SessionNotStarted` when
+    the agent could not be created, or the session was refused — and for a
+    payload not made for the session API (one on another transport, from an
+    ai-agents on agent-runtimes before 1.3.83, or one nothing woke).
     """
-    from agent_runtimes.client.agent_client import run_cloud_agent_chat
+    transport = str(payload.get("transport") or "")
+    if transport != "ag-ui":
+        raise SessionNotStarted(
+            f"The session's agent is made on {transport or 'no transport'}, not AG-UI, "
+            "which the session API runs on: ai-agents predates agent-runtimes 1.3.83."
+        )
+    instance = payload.get("app_instance") or {}
+    woken_by = instance.get("woken_by") if isinstance(instance, Mapping) else None
+    if not isinstance(woken_by, Mapping) or not woken_by:
+        raise SessionNotStarted("The session's payload says nothing woke it.")
+    from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
-    agent_id = create_agent(
-        ingress=ingress,
-        token=token,
-        payload=payload,
-        attempts=attempts,
-        wait_seconds=wait_seconds,
-        client=client,
-    )
-    result = run_cloud_agent_chat(
-        ingress=ingress,
-        token=token,
-        prompt=prompt,
-        route_candidates=[agent_id],
-        timeout=timeout,
-    )
-    return {"agent_id": agent_id, "result": result}
+    base = build_agent_runtimes_base_url(ingress).rstrip("/")
+    if not base:
+        raise SessionNotStarted("The runtime has no address to reach it at.")
+    http = client or httpx.Client(timeout=60.0)
+    try:
+        agent_id = create_agent(
+            ingress=ingress,
+            token=token,
+            payload=payload,
+            attempts=attempts,
+            wait_seconds=wait_seconds,
+            client=http,
+        )
+        body = {
+            "agent": agent_id,
+            "app_uid": str(instance.get("app_uid") or ""),
+            "version": int(instance.get("version") or 0),
+            "deployment_uid": str(instance.get("deployment_uid") or ""),
+            "opener": prompt,
+            "woken_by": dict(woken_by),
+        }
+        with http.stream(
+            "POST",
+            f"{base}/api/v1/apps/sessions",
+            json=body,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "text/event-stream",
+            },
+            timeout=httpx.Timeout(float(timeout), connect=30.0),
+        ) as response:
+            if response.status_code >= 300:
+                said = response.read().decode("utf-8", errors="replace")
+                raise SessionNotStarted(
+                    f"The runtime refused the session ({response.status_code}): {said[:500]}"
+                )
+            session_uid, result = session_result(response.iter_lines())
+    except httpx.HTTPError as error:
+        raise SessionNotStarted(f"The session's stream broke: {error}") from None
+    finally:
+        if client is None:
+            http.close()
+    return {"agent_id": agent_id, "session_uid": session_uid, "result": result}
+
+
+def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
+    """What a woken session's stream amounts to: its uid, and its result.
+
+    The stream is the session API's AG-UI events, as server-sent events. Its
+    result is ``completed`` when its run finished, ``failed`` with the error
+    the stream said — or when it ended before its run did — and ``waiting``
+    when it asked somebody something: nobody is present to answer.
+    """
+    uid = ""
+    text: list[str] = []
+    error = ""
+    asked = ""
+    finished = False
+    for line in lines:
+        if not line.startswith("data:"):
+            continue
+        try:
+            event = json.loads(line[len("data:") :].strip())
+        except ValueError:
+            continue
+        if not isinstance(event, Mapping):
+            continue
+        kind = event.get("type")
+        if kind == "CUSTOM" and event.get("name") == "loop.session" and not uid:
+            uid = str((event.get("value") or {}).get("uid") or "")
+        elif kind == "CUSTOM" and event.get("name") == "loop.ask":
+            asked = str((event.get("value") or {}).get("prompt") or "a question")
+        elif kind == "TEXT_MESSAGE_CONTENT":
+            text.append(str(event.get("delta") or ""))
+        elif kind == "RUN_ERROR":
+            error = str(event.get("message") or "The run failed.")
+        elif kind == "RUN_FINISHED":
+            finished = True
+    output = {"text": "".join(text)}
+    if error:
+        return uid, {"status": "failed", "output": output, "failure_cause": error}
+    if asked:
+        return uid, {
+            "status": "waiting",
+            "output": output,
+            "failure_cause": f"It asked {asked!r}, and nobody is present to answer.",
+        }
+    if not finished:
+        return uid, {
+            "status": "failed",
+            "output": output,
+            "failure_cause": "The session's stream ended before its run finished.",
+        }
+    return uid, {"status": "completed", "output": output}

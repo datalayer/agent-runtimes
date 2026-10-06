@@ -227,7 +227,8 @@ def test_a_woken_session_is_created_with_its_deployment_and_what_woke_it():
     )
     assert payload["name"] == "digest"
     assert payload["agent_spec_id"] == "cog-crawler"
-    assert payload["transport"] == "vercel-ai"
+    # The session API's transport: `start_session` opens the session on it.
+    assert payload["transport"] == "ag-ui"
     assert payload["app_spec"] == DIGEST
     assert payload["app_instance"] == {
         "app_uid": "app-1",
@@ -256,48 +257,143 @@ def _runtime(answers: list[httpx.Response], seen: list[httpx.Request]) -> httpx.
     return httpx.Client(transport=httpx.MockTransport(handle))
 
 
-def test_a_woken_session_creates_its_agent_then_asks_it(monkeypatch):
-    from agent_runtimes.client import agent_client
+WOKEN = {
+    "kind": "schedule",
+    "schedule_uid": "sch-1",
+    "position": 1,
+    "cron": "0 9 * * 1",
+}
+
+WOKEN_PAYLOAD = {
+    "name": "digest",
+    "transport": "ag-ui",
+    "app_instance": {
+        "app_uid": "app-1",
+        "deployment_uid": "dep-1",
+        "version": 4,
+        "woken_by": WOKEN,
+    },
+}
+
+
+def _sse(*events: dict) -> bytes:
+    return b"".join(f"data: {json.dumps(event)}\n\n".encode() for event in events)
+
+
+SESSION_SAID = {"type": "CUSTOM", "name": "loop.session", "value": {"uid": "s-1"}}
+
+
+def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():
+    """LOOP R-14: the agent made, then a session of it on the session API —
+    said to be woken, the trigger's prompt its opener — whose stream is read
+    to its end."""
     from agent_runtimes.loop.apps.deployments import start_session
 
-    asked: list[dict] = []
-    monkeypatch.setattr(
-        agent_client,
-        "run_cloud_agent_chat",
-        lambda **kwargs: (
-            asked.append(kwargs) or {"status": "completed", "output": {"text": "Done."}}
-        ),
-    )
     seen: list[httpx.Request] = []
     # The runtime was just launched: it does not answer at first.
     client = _runtime(
         [
             httpx.Response(503, text="starting"),
             httpx.Response(201, json={"id": "digest"}),
+            httpx.Response(
+                200,
+                content=_sse(
+                    SESSION_SAID,
+                    {"type": "RUN_STARTED", "threadId": "s-1", "runId": "r"},
+                    {"type": "TEXT_MESSAGE_CONTENT", "messageId": "m", "delta": "Do"},
+                    {"type": "TEXT_MESSAGE_CONTENT", "messageId": "m", "delta": "ne."},
+                    {"type": "RUN_FINISHED", "threadId": "s-1", "runId": "r"},
+                ),
+                headers={"content-type": "text/event-stream"},
+            ),
         ],
         seen,
     )
     started = start_session(
         ingress="https://r1.example/jupyter/server/rt-1",
         token="tok",
-        payload={"name": "digest", "app_instance": {}},
+        payload=WOKEN_PAYLOAD,
         prompt="Write the Monday digest.",
         wait_seconds=0,
         client=client,
     )
     assert started == {
         "agent_id": "digest",
+        "session_uid": "s-1",
         "result": {"status": "completed", "output": {"text": "Done."}},
     }
     assert [str(request.url) for request in seen] == [
-        "https://r1.example/agent-runtimes/rt-1/api/v1/agents"
-    ] * 2
-    assert seen[0].headers["authorization"] == "Bearer tok"
-    assert asked[0]["route_candidates"] == ["digest"]
-    assert asked[0]["prompt"] == "Write the Monday digest."
+        "https://r1.example/agent-runtimes/rt-1/api/v1/agents",
+        "https://r1.example/agent-runtimes/rt-1/api/v1/agents",
+        "https://r1.example/agent-runtimes/rt-1/api/v1/apps/sessions",
+    ]
+    assert {request.headers["authorization"] for request in seen} == {"Bearer tok"}
+    assert json.loads(seen[2].content) == {
+        "agent": "digest",
+        "app_uid": "app-1",
+        "version": 4,
+        "deployment_uid": "dep-1",
+        "opener": "Write the Monday digest.",
+        "woken_by": WOKEN,
+    }
 
 
-def test_a_woken_session_the_runtime_refuses_is_said(monkeypatch):
+@pytest.mark.parametrize(
+    ("events", "result"),
+    [
+        (
+            [SESSION_SAID, {"type": "RUN_ERROR", "message": "The turn failed: boom"}],
+            {
+                "status": "failed",
+                "output": {"text": ""},
+                "failure_cause": "The turn failed: boom",
+            },
+        ),
+        (
+            [
+                SESSION_SAID,
+                {"type": "RUN_STARTED"},
+                {"type": "CUSTOM", "name": "loop.ask", "value": {"prompt": "Which?"}},
+                {"type": "TEXT_MESSAGE_CONTENT", "delta": "Which?"},
+                {"type": "RUN_FINISHED"},
+            ],
+            {
+                "status": "waiting",
+                "output": {"text": "Which?"},
+                "failure_cause": "It asked 'Which?', and nobody is present to answer.",
+            },
+        ),
+        (
+            [SESSION_SAID, {"type": "RUN_STARTED"}],
+            {
+                "status": "failed",
+                "output": {"text": ""},
+                "failure_cause": "The session's stream ended before its run finished.",
+            },
+        ),
+    ],
+)
+def test_a_woken_session_that_fails_asks_or_breaks_off_is_said(events, result):
+    from agent_runtimes.loop.apps.deployments import start_session
+
+    client = _runtime(
+        [
+            httpx.Response(201, json={"id": "digest"}),
+            httpx.Response(200, content=_sse(*events)),
+        ],
+        [],
+    )
+    started = start_session(
+        ingress="https://rt",
+        token="t",
+        payload=WOKEN_PAYLOAD,
+        prompt="p",
+        client=client,
+    )
+    assert (started["session_uid"], started["result"]) == ("s-1", result)
+
+
+def test_a_woken_session_the_runtime_refuses_is_said():
     from agent_runtimes.loop.apps.deployments import SessionNotStarted, start_session
 
     seen: list[httpx.Request] = []
@@ -306,7 +402,7 @@ def test_a_woken_session_the_runtime_refuses_is_said(monkeypatch):
         start_session(
             ingress="https://rt",
             token="t",
-            payload={"name": "d"},
+            payload=WOKEN_PAYLOAD,
             prompt="p",
             client=refused,
         )
@@ -315,12 +411,53 @@ def test_a_woken_session_the_runtime_refuses_is_said(monkeypatch):
         start_session(
             ingress="https://rt",
             token="t",
-            payload={"name": "d"},
+            payload=WOKEN_PAYLOAD,
             prompt="p",
             attempts=2,
             wait_seconds=0,
             client=silent,
         )
+    session_refused = _runtime(
+        [
+            httpx.Response(201, json={"id": "digest"}),
+            httpx.Response(409, json={"detail": "its code and its Appspec differ"}),
+        ],
+        seen,
+    )
+    with pytest.raises(SessionNotStarted, match=r"refused the session \(409\).*differ"):
+        start_session(
+            ingress="https://rt",
+            token="t",
+            payload=WOKEN_PAYLOAD,
+            prompt="p",
+            client=session_refused,
+        )
+
+
+def test_a_payload_not_made_for_the_session_api_is_refused_before_anything_is_asked():
+    """Fail fast: a payload on Vercel AI comes from an ai-agents before
+    agent-runtimes 1.3.83, and one nothing woke is not a woken session."""
+    from agent_runtimes.loop.apps.deployments import SessionNotStarted, start_session
+
+    seen: list[httpx.Request] = []
+    client = _runtime([], seen)
+    with pytest.raises(SessionNotStarted, match="predates agent-runtimes 1.3.83"):
+        start_session(
+            ingress="https://rt",
+            token="t",
+            payload={**WOKEN_PAYLOAD, "transport": "vercel-ai"},
+            prompt="p",
+            client=client,
+        )
+    with pytest.raises(SessionNotStarted, match="nothing woke it"):
+        start_session(
+            ingress="https://rt",
+            token="t",
+            payload={**WOKEN_PAYLOAD, "app_instance": {"deployment_uid": "dep-1"}},
+            prompt="p",
+            client=client,
+        )
+    assert seen == []
 
 
 def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():

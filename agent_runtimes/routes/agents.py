@@ -2360,6 +2360,7 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
+                from agent_runtimes.loop.apps.agent import unattended_when_woken
                 from agent_runtimes.loop.apps.guards import (
                     AppChecks,
                     AppChecksCapability,
@@ -2409,6 +2410,10 @@ async def create_agent(
                 # What the person answered is an entry of its own (LOOP R-07).
                 rules.answered = recorder.answered
                 rules.app_uid = recorder.app_uid
+                # A session nobody opened — woken by a schedule — has nobody
+                # present: it only reads, unless a rule says otherwise
+                # (LOOP R-16), on a runtime as in process.
+                unattended_when_woken(rules, recorder)
                 # *Do it if I asked* decided from what the person approved
                 # in advance, read from IAM as it acts (LOOP U-25); an
                 # application the platform does not know has none.

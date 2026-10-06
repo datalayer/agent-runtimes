@@ -1427,6 +1427,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Enabled',
       type: 'boolean',
     },
+    unavailable_because: {
+      default: '',
+      description:
+        'Why it is not offered today, in a sentence its page shows: said when `enabled` is false, and only then',
+      title: 'Unavailable Because',
+      type: 'string',
+    },
     tags: {
       items: {
         type: 'string',

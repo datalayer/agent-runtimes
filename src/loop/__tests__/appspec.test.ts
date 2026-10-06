@@ -213,6 +213,21 @@ describe('writing an Appspec', () => {
     ).toEqual({ layout: 'chat' });
   });
 
+  it('writes why it is not offered only when it says so (E-01)', () => {
+    const off = APP_CATALOGUE['inbox-triage'];
+    expect(off.enabled).toBe(false);
+    expect(off.unavailable_because).toMatch(/\.$/);
+    const written = dumpAppspec(off);
+    expect(written.enabled).toBe(false);
+    expect(written.unavailable_because).toBe(off.unavailable_because);
+    expect(parseAppspec(written).app.unavailable_because).toBe(
+      off.unavailable_because,
+    );
+    const on = APP_CATALOGUE['quote-calculator'];
+    expect(on.enabled).toBe(true);
+    expect(dumpAppspec(on)).not.toHaveProperty('unavailable_because');
+  });
+
   it('writes that its conversations may suggest tests only when they may (V-16)', () => {
     const chat = emptyAppspec('chat');
     expect(chat.record.suggestTests).toBe(false);
