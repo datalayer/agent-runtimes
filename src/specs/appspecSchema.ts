@@ -296,6 +296,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           default: 'green',
           description: "The application's one colour",
         },
+        theme: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppTheme',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "The theme it runs in by default, at its address, embedded, in the Studio's Preview and as an example: a `variant` and, optionally, a colour `mode`. The person's own when unsaid. Its `accent` colours the `loop` theme only",
+        },
         welcome: {
           default: '',
           description: 'What the application says first',
@@ -712,6 +725,33 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppTests',
       type: 'object',
     },
+    AppTheme: {
+      additionalProperties: false,
+      description: 'The theme an application runs in by default (LOOP T-30).',
+      properties: {
+        variant: {
+          $ref: '#/$defs/ThemeVariant',
+          description:
+            'The theme: `datalayer`, `spatial`, `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun` or `loop`',
+        },
+        mode: {
+          anyOf: [
+            {
+              $ref: '#/$defs/ThemeMode',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "`light`, `dark` or `auto` (the device's); the person's own when unsaid",
+        },
+      },
+      required: ['variant'],
+      title: 'AppTheme',
+      type: 'object',
+    },
     AppTrigger: {
       additionalProperties: false,
       description: "What starts a worker's work.",
@@ -1001,6 +1041,30 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       description: 'What a setting is set with.',
       enum: ['select', 'text', 'toggle', 'slider', 'number'],
       title: 'SettingType',
+      type: 'string',
+    },
+    ThemeMode: {
+      description:
+        'The colour mode a theme is worn in: `auto` follows the device.',
+      enum: ['light', 'dark', 'auto'],
+      title: 'ThemeMode',
+      type: 'string',
+    },
+    ThemeVariant: {
+      description:
+        "A theme of Datalayer's, as Appearance names it (LOOP T-30).",
+      enum: [
+        'datalayer',
+        'spatial',
+        'lovely',
+        'matrix',
+        'earth',
+        'sand',
+        'ivory',
+        'sun',
+        'loop',
+      ],
+      title: 'ThemeVariant',
       type: 'string',
     },
     TriggerType: {
