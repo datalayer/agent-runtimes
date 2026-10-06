@@ -48,7 +48,7 @@ import type {
 import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
 import { isAssistantCharacterId, parseAppspec } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
-import { HOST_NAME, hostToolsOf } from '../embed/hostBridge';
+import { HOST_NAME, hostToolsOf } from './hostTools';
 
 export const NOT_READY = 'Not ready';
 export const NEEDS_ATTENTION = 'Needs attention';

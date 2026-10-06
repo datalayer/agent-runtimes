@@ -34,26 +34,14 @@ import type {
 } from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
 import { behaviourFor } from '../apps/rules';
+import {
+  HOST_CONTEXT_TOOL,
+  HOST_NAME,
+  hostTool,
+  hostToolsOf,
+} from '../apps/hostTools';
 
-/** The tool its agent reads what the page passes it with. */
-export const HOST_CONTEXT_TOOL = 'host_context';
-
-/** The tool its agent calls a function of the page with. */
-export const hostTool = (name: string): string => `host_${name}`;
-
-/** How a value or a function of the host is named. */
-export const HOST_NAME = /^[a-z][a-z0-9_]{0,62}$/;
-
-/** The tools its agent is given for the host. */
-export function hostToolsOf(bridge: AppHostBridgeSpec | undefined): string[] {
-  if (!bridge) {
-    return [];
-  }
-  return [
-    ...(bridge.context.length > 0 ? [HOST_CONTEXT_TOOL] : []),
-    ...bridge.functions.map(fn => hostTool(fn.name)),
-  ];
-}
+export { HOST_CONTEXT_TOOL, HOST_NAME, hostTool, hostToolsOf };
 
 /** What the application tells the page it sits in. */
 export type HostEvent =
