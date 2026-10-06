@@ -1291,7 +1291,9 @@ class AppHost:
         self._open(session)
         handler = self._reaction("window")
         if handler is None:
-            raise KeyError(f"{self.app.id} reads no window message: it has no @app.window.")
+            raise KeyError(
+                f"{self.app.id} reads no window message: it has no @app.window."
+            )
         await self._react(session, handler, data)
 
     async def settings(self, session: Session, values: Mapping[str, Any]) -> None:

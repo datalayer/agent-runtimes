@@ -139,6 +139,7 @@ async def served(
     assert ("visitors" in said) == visitors
     registration = a2a_routes.get_a2a_agents()["accounting"]
     [mount] = [m for m in a2a_routes.get_a2a_mounts() if m.path == "/accounting"]
+    assert registration.app is not None
     lifespan = registration.app.router.lifespan_context(registration.app)
     await lifespan.__aenter__()
     try:
@@ -373,9 +374,9 @@ class TestWhoIsAnswered:
             assert agent.contexts[0].metadata["user_token"] == KEY
             # Kept nowhere: the task's history holds that one was sent, not what.
             task_id = events[0]["result"]["task"]["id"]
-            task = await a2a_routes.get_a2a_agents()["accounting"].storage.load_task(
-                task_id
-            )
+            storage = a2a_routes.get_a2a_agents()["accounting"].storage
+            assert storage is not None
+            task = await storage.load_task(task_id)
             assert task is not None and KEY not in json.dumps(task)
             assert task["history"][0]["metadata"]["datalayer"]["credential"] == (
                 "withheld"

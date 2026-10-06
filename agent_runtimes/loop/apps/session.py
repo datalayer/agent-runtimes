@@ -434,7 +434,8 @@ _WHERE_WORDS = {
 def with_own_checks(capabilities: Sequence[Any], own: Sequence[Any]) -> List[Any]:
     """An agent's capabilities with its code's checks (LOOP P-06) right after
     its built-in ones: before its record, so that an answer they refuse is
-    not kept, and their refusals are."""
+    not kept, and their refusals are.
+    """
     listed = list(capabilities)
     at = next(
         (

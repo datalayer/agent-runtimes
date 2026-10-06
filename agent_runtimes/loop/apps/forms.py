@@ -130,7 +130,8 @@ def form_values_refused(
     for node in surface.components:
         if node.get("component") != "Form":
             continue
-        schema = node.get("schema")
+        # A Form has its schema: the Appspec is refused without one (form_problems).
+        schema: Mapping[str, Any] = node["schema"]
         for key in _form_keys(node, action):
             if key not in payload:
                 continue

@@ -332,4 +332,4 @@ def voice_for(language: str) -> Optional[Dict[str, Any]]:
     base = (language or "").strip()
     exact = [v for v in VOICE_CATALOGUE.values() if base in v["languages"]]
     near = [v for v in VOICE_CATALOGUE.values() if voice_speaks(v, base.split("-")[0])]
-    return (exact or near or [None])[0]
+    return next(iter(exact or near), None)

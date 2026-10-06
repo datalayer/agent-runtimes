@@ -26,7 +26,8 @@ os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
     tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "protocol-state.sqlite"
 )
 
-from collections.abc import Iterator  # noqa: E402
+from collections.abc import Iterator, Mapping  # noqa: E402
+from typing import Any, Dict  # noqa: E402
 
 import pytest  # noqa: E402
 
@@ -89,7 +90,9 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
     """
     from agent_runtimes.loop.apps import principal
 
-    async def answer(app_uid: str, permissions: dict, bearer: str) -> dict:
+    async def answer(
+        app_uid: str, permissions: Mapping[str, Any], bearer: str
+    ) -> Dict[str, Any]:
         spaces = [
             {"space": grant.get("space"), "access": grant.get("access")}
             for grant in permissions.get("spaces") or []

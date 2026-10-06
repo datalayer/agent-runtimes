@@ -61,7 +61,8 @@ def mounted(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[Dict[str, Any]]:
     """The developer's FastAPI, the application mounted at /assistant; its
-    agent made as the runtime makes it, on the tests' model."""
+    agent made as the runtime makes it, on the tests' model.
+    """
     made: List[Dict[str, Any]] = []
 
     async def create(app: Any, payload: Dict[str, Any], api_prefix: str) -> None:

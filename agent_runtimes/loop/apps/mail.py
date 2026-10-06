@@ -33,6 +33,7 @@ import re
 from dataclasses import dataclass, field, replace
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -41,11 +42,14 @@ from typing import (
     Protocol,
     Sequence,
     Tuple,
+    TypeVar,
 )
 
 import httpx
 
 from agent_runtimes.loop.apps.rules import addresses
+
+_T = TypeVar("_T")
 
 #: The server whose tools a mail source is served as.
 SERVER = "google-workspace"
@@ -350,7 +354,7 @@ def gmail_toolset(source: MailSource) -> Any:
                 f"say it as user_google_email, not {user_google_email!r}."
             )
 
-    def answered(call: Any) -> str:
+    def answered(call: Callable[[], _T]) -> _T:
         try:
             return call()
         except MailRefused as refused:

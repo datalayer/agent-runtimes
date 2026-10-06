@@ -2686,7 +2686,7 @@ class AppSpec(BaseModel):
     )
 
     def tool(self, name: str) -> Optional[AppToolSpec]:
-        """Its own tool of that name (LOOP P-06), or None."""
+        """Find its own tool of that name (LOOP P-06), or None."""
         for tool in self.tools:
             if tool.name == name:
                 return tool

@@ -35,7 +35,7 @@ from agent_runtimes.routes.agui import register_agui_agent, unregister_agui_agen
 
 CATALOGUE = Path(pytest.importorskip("agentspecs.apps").__file__).parent
 
-ASSISTANT = {
+ASSISTANT: Dict[str, Any] = {
     "schema": "loop.app/v1",
     "id": "notes-assistant",
     "name": "Notes Assistant",
@@ -786,9 +786,10 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
     await live.session.send("Found 3.", author="Searcher")
     await first.update("Searched: 3 results.")
     await first.remove()
-    events = []
+    events: List[Dict[str, Any]] = []
     while not queue.empty():
         chunk = queue.get_nowait()
+        assert chunk is not None
         events.extend(
             json.loads(line[len("data:") :])
             for line in chunk.splitlines()
@@ -857,9 +858,10 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
         data={"runs": [{"model": "a"}, {"model": "b"}]},
     )
     await session.send("Nothing to show.")
-    events = []
+    events: List[Dict[str, Any]] = []
     while not queue.empty():
         chunk = queue.get_nowait()
+        assert chunk is not None
         events.extend(
             json.loads(line[len("data:") :])
             for line in chunk.splitlines()
@@ -923,9 +925,10 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
         ) as inner:
             inner.output = object()
         outer.output = {"found": 2}
-    events = []
+    events: List[Dict[str, Any]] = []
     while not queue.empty():
         chunk = queue.get_nowait()
+        assert chunk is not None
         events.extend(
             json.loads(line[len("data:") :])
             for line in chunk.splitlines()
@@ -1216,7 +1219,7 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
         return heard(messages)
 
     model.said = said  # type: ignore[method-assign]
-    run = {
+    run: Dict[str, Any] = {
         "threadId": "thread-modes",
         "runId": "run-1",
         "state": None,
@@ -1229,11 +1232,11 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
     # Unsaid, a mode is on its first option.
     assert answer_of(events_of(local.post(url, json=run))) == "Heard 1: Hi there"
     assert "Answer in two sentences." in told[-1]
-    assert sessions.session_of("thread-modes").modes == {"depth": "quick"}
+    moded = sessions.session_of("thread-modes")
+    assert moded is not None
+    assert moded.modes == {"depth": "quick"}
     # What is kept of the conversation is what the person said, not the modes.
-    assert all(
-        m["role"] != "system" for m in sessions.session_of("thread-modes").messages
-    )
+    assert all(m["role"] != "system" for m in moded.messages)
 
     for wrong, sentence in (
         ({"speed": "fast"}, "Notes Assistant has no mode 'speed'."),
@@ -1320,6 +1323,7 @@ def test_a_conversation_keeps_the_profile_it_started_with(
     assert forwarded[-1]["told"] == "Talk about plans.\n\nAnswer in two sentences."
     assert forwarded[-1]["model"] == "alibaba:qwen3-32b"
     live = sessions.session_of("thread-profiles")
+    assert live is not None
     assert live.profile == "sales"
     assert live.describe()["profile"] == "sales"
     # A mode's model wins over the profile's.

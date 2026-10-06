@@ -110,7 +110,9 @@ _SCHEMES = {
 }
 
 #: Every request asks for it, as fasta2a's `SecurityRequirement`.
-SECURITY_REQUIREMENTS = [{"schemes": {SECURITY_SCHEME: []}}]
+SECURITY_REQUIREMENTS: list[dict[str, dict[str, list[str]]]] = [
+    {"schemes": {SECURITY_SCHEME: []}}
+]
 
 
 async def read_body(receive: Any) -> bytes:

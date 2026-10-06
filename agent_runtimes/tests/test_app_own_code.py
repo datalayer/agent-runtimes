@@ -36,6 +36,7 @@ from agent_runtimes.loop.apps.own import (
 from agent_runtimes.loop.apps.plugins import reaction_of
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import decision_for
+from agent_runtimes.loop.apps.session import ChoiceQuestion
 from agent_runtimes.tests.test_apps_guards import scripted
 
 pytest.importorskip("agentspecs.apps")
@@ -151,7 +152,9 @@ def test_tools_checks_and_tests_are_declared_in_the_spec() -> None:
     }
     spec = app.spec  # validated as any spec is
     assert [tool.name for tool in spec.tools] == ["lookup_order", "refund"]
-    assert spec.tool("refund").does == ["write", "buy"]
+    refund = spec.tool("refund")
+    assert refund is not None
+    assert refund.does == ["write", "buy"]
     assert [check.on for check in spec.checks.code] == ["answer", "tool_call"]
     assert spec.tests.cases[0].code == "no_leading_question"
     assert set(app.tools) == {"lookup_order", "refund"}
@@ -270,7 +273,9 @@ async def test_the_agent_calls_its_tools_and_the_rules_decide_them() -> None:
     channel.reply("Refuse")
     with pytest.raises(AppRuleBlockedError):
         await session.agent.run("Refund it.")
-    assert channel.questions[-1].options == ("Allow", "Refuse")
+    asked = channel.questions[-1]
+    assert isinstance(asked, ChoiceQuestion)
+    assert asked.options == ("Allow", "Refuse")
 
 
 async def test_a_rule_names_its_tool_by_its_name() -> None:

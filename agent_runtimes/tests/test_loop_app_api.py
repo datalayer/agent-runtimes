@@ -341,7 +341,7 @@ def test_a_typed_call_its_schema_refuses_is_not_placed_a_standard_one_too():
     with pytest.raises(ValueError, match="page_size: 0 is less than the minimum of 1"):
         app.ui.table("runs", columns=["model"], page_size=0)
     with pytest.raises(ValueError, match=r"variant: 'huge' is not one of"):
-        app.ui.text("hello", text="Hello", variant="huge")  # type: ignore[arg-type]
+        app.ui.text("hello", text="Hello", variant="huge")
     with pytest.raises(ValueError, match="'max' is a required property"):
         app.component("budget", "Slider", value={"path": "/budget"})
     # Bound, a standard component's value is the binding's.
@@ -503,7 +503,7 @@ async def test_an_answer_shows_components_of_the_catalog():
             show=[session.ui.text("note", text="a"), session.ui.text("note", text="b")],
         )
     with pytest.raises(ValueError, match="item 1 is not one"):
-        await session.send("x", show=["a table"])  # type: ignore[list-item]
+        await session.send("x", show=["a table"])
 
     # Changed: what it shows goes with it unless said, and can be taken away.
     kept = await sent.update("Three runs, sorted.")
@@ -904,7 +904,7 @@ async def test_run_sync_and_cache():
             await fetch("bad")
     assert fetched == ["a", "bad", "bad"]
     with pytest.raises(TypeError, match="hashable"):
-        await fetch(["a"])  # type: ignore[arg-type]
+        await fetch(["a"])
 
 
 # --- P-28: an application is a Reactor plugin ----------------------------------------

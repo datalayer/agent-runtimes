@@ -15,7 +15,7 @@ says what it was given, nothing reached over the network.
 """
 
 import asyncio
-from typing import Any, Dict, Iterator, List
+from typing import Any, Callable, Dict, Iterator, List
 
 import httpx
 import pytest
@@ -157,7 +157,9 @@ def test_a_tick_runs_the_handler_its_code_declared_not_the_prompt(
         e for e in made.entries("session") if e["session_uid"] == "session-tick-01"
     ]
     assert began["payload"]["woken_by"]["position"] == 2
-    assert sessions.session_of("session-tick-01").describe()["acts_as"] == {
+    woken_live = sessions.session_of("session-tick-01")
+    assert woken_live is not None
+    assert woken_live.describe()["acts_as"] == {
         "kind": "principal",
         "uid": "principal-7",
         "deployment_uid": "dep-1",
@@ -261,7 +263,7 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
 
     application, _ = digest()
 
-    def rules_of(name: str, instance: Dict[str, Any]) -> AppRulesCapability:
+    def unattended_of(name: str, instance: Dict[str, Any]) -> Callable[[], bool]:
         request = CreateAgentRequest(
             name=name,
             transport="ag-ui",
@@ -270,16 +272,16 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
         )
         asyncio.run(create_agent(request, _DummyRequest()))
         capabilities = creation_spy["pydantic_kwargs"]["capabilities"]
-        return next(c for c in capabilities if isinstance(c, AppRulesCapability))
+        rules = next(c for c in capabilities if isinstance(c, AppRulesCapability))
+        assert rules.unattended is not None
+        return rules.unattended
 
     # The deployment's principal holds a token: its agent is made (I-03).
     principal.give_principal_token("dep-1", "narrowed", expires_in=3600)
     token = _SESSION.set("session-tick-05")
     try:
-        assert rules_of(
-            "digest-woken", {**DEPLOYMENT, "woken_by": woken(2)}
-        ).unattended()
-        assert not rules_of("digest-opened", DEPLOYMENT).unattended()
+        assert unattended_of("digest-woken", {**DEPLOYMENT, "woken_by": woken(2)})()
+        assert not unattended_of("digest-opened", DEPLOYMENT)()
     finally:
         _SESSION.reset(token)
         principal.forget_principal_token("dep-1")

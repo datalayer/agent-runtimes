@@ -2,7 +2,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 """Where an element shows: inline, in a side panel, or on a page of its own,
-opened and closed from Python (LOOP P-18)."""
+opened and closed from Python (LOOP P-18).
+"""
 
 import json
 from typing import Any, Dict, List

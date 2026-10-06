@@ -306,9 +306,10 @@ class AppTux(CliTux):
         except json.JSONDecodeError as error:
             self.console.print(f"[red]✗[/red] The payload is not JSON: {error}")
             return None
-        session = self.app_session
-        assert session is not None
-        await self._turn(lambda: self.host.action(session, action, data))
+        # The session opens before the first prompt (show_prompt).
+        pressing = self.app_session
+        assert pressing is not None
+        await self._turn(lambda: self.host.action(pressing, action, data))
         return None
 
     async def send_message(self, message: str) -> None:

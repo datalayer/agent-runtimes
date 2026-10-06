@@ -1005,7 +1005,7 @@ class LiveSession:
         await self.host.message(self.session, text)
 
     async def _files_code(self, text: str, given: List[UploadedFile]) -> None:
-        """Files sent without being asked, for the code (LOOP P-21): its
+        """Give the code files sent without being asked (LOOP P-21): its
         ``file``, given them and the words; without one, the words go to its
         ``message`` and the files wait for what it asks.
         """

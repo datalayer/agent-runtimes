@@ -88,7 +88,7 @@ def cache(function: Callable[..., Any]) -> Callable[..., Any]:
                     del running[key]
                 raise
 
-        cached_async.cache_clear = running.clear  # type: ignore[attr-defined]
+        cached_async.cache_clear = running.clear
         return cached_async
 
     kept: Dict[Hashable, Any] = {}
@@ -100,7 +100,7 @@ def cache(function: Callable[..., Any]) -> Callable[..., Any]:
             kept[key] = function(*args, **kwargs)
         return kept[key]
 
-    cached.cache_clear = kept.clear  # type: ignore[attr-defined]
+    cached.cache_clear = kept.clear
     return cached
 
 
