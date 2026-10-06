@@ -73,6 +73,7 @@ import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
+import { defineAppComposerPlugin } from './AppComposer';
 import { defineAppFeedbackPlugin } from './AppFeedback';
 import { defineAppKeptPlugin } from './AppKept';
 import { keepsFeedback } from './feedback';
@@ -267,7 +268,8 @@ export type AppPreset = {
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
- *   comment on each answer when its record keeps feedback (V-18); what it
+ *   comment on each answer when its record keeps feedback (V-18); its
+ *   commands in the composer's `/` menu and its modes beside it (P-19); what it
  *   keeps and for how long, under its prompt before the first message, when
  *   `kept` says it (R-31); with
  *   `sidebar`, its rules and approvals card, its activity feed and its
@@ -322,6 +324,12 @@ export function appPreset(
     plugins: [
       defineAppPlugin(app),
       ...(withPage ? [defineAppPagePlugin(app), ...blocks] : []),
+      // Its commands in the composer's `/` menu and its modes beside the
+      // composer (LOOP P-19): only for an application that has some.
+      ...((app.interface.commands ?? []).length > 0 ||
+      (app.interface.modes ?? []).length > 0
+        ? [defineAppComposerPlugin(app)]
+        : []),
       // A thumb and a comment on each answer, kept in its record (LOOP
       // V-18): only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),

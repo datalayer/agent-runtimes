@@ -47,7 +47,11 @@ import {
   AgentMentionPlugin,
   type MentionableAgent,
 } from './plugins/AgentMentionPlugin';
-import { CommandPlugin, PROMPT_COMMANDS } from './plugins/CommandPlugin';
+import {
+  CommandPlugin,
+  PROMPT_COMMANDS,
+  type PromptCommand,
+} from './plugins/CommandPlugin';
 import type { HistoryDirection } from './promptHistory';
 
 // ---- Lexical extension (plain-text only) ---------------------------------
@@ -393,6 +397,11 @@ export interface InputPromptLexicalProps {
    * choose between, and a menu on every `@` would be in the way.
    */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * Commands listed while `/` is typed, before the prompt's own: an
+   * application's (LOOP P-19).
+   */
+  promptCommands?: PromptCommand[];
 }
 
 export function InputPromptLexical({
@@ -406,6 +415,7 @@ export function InputPromptLexical({
   autoFocus = false,
   focusSignal,
   mentionableAgents,
+  promptCommands,
 }: InputPromptLexicalProps) {
   return (
     <Box
@@ -491,10 +501,17 @@ export function InputPromptLexical({
           readOnly={readOnly}
         />
         <AutoFocusPlugin autoFocus={autoFocus} focusSignal={focusSignal} />
-        {/* `/` for commands, beside `@` for agents. Always mounted: the list
-            is fixed, so unlike the mentions there is no host that might have
-            nothing to offer. */}
-        <CommandPlugin commands={PROMPT_COMMANDS} />
+        {/* `/` for commands, beside `@` for agents. Always mounted: its own
+            list is fixed, so unlike the mentions there is no host that might
+            have nothing to offer; a host's commands (an application's,
+            LOOP P-19) come first. */}
+        <CommandPlugin
+          commands={
+            promptCommands?.length
+              ? [...promptCommands, ...PROMPT_COMMANDS]
+              : PROMPT_COMMANDS
+          }
+        />
         {mentionableAgents?.length ? (
           <AgentMentionPlugin agents={mentionableAgents} />
         ) : null}

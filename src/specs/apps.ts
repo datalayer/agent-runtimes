@@ -81,6 +81,8 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
         message: 'Give the trial balance for last month.',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [],
     components: [],
     assistant: 'wizard',
@@ -210,6 +212,8 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
         message: 'Interview me about my first week with the product.',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [
       {
         id: 'language',
@@ -338,6 +342,8 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     accent: 'green',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [],
     components: [
       'Card',
@@ -514,6 +520,8 @@ export const DECIDE_APP_0_0_1: AppSpec = {
           "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
       },
     ],
+    commands: [],
+    modes: [],
     settings: [],
     components: [],
     assistant: 'wizard',
@@ -674,6 +682,8 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
         message: 'What arrived since yesterday, and what did you do with it?',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [],
     components: [],
     voice: {
@@ -813,6 +823,8 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     accent: 'green',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [],
     components: [
       'Card',
@@ -1047,6 +1059,8 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
         message: "What changed in the pipeline since last week's report?",
       },
     ],
+    commands: [],
+    modes: [],
     settings: [],
     components: [
       'Card',
@@ -1311,6 +1325,8 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     accent: 'sun',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [
       {
         id: 'seats',
@@ -1574,6 +1590,8 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
     accent: 'sky',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [
       {
         id: 'report',
@@ -1832,6 +1850,8 @@ export const SALES_APP_0_0_1: AppSpec = {
         message: 'What does the trial balance say for last month?',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [],
     components: [],
     assistant: 'paperclip',
@@ -1942,6 +1962,8 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     accent: 'green',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [],
     components: [
       'Card',
@@ -2121,6 +2143,8 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     accent: 'green',
     welcome: '',
     starters: [],
+    commands: [],
+    modes: [],
     settings: [],
     components: [
       'Card',
@@ -2305,6 +2329,8 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
           'What is the difference between the Team and the Business plan?',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [
       {
         id: 'product',
@@ -2571,6 +2597,8 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
           'Is it true that most data science projects never reach production? Find the primary source.',
       },
     ],
+    commands: [],
+    modes: [],
     settings: [
       {
         id: 'depth',

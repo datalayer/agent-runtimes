@@ -314,11 +314,22 @@ besides the message:
     "loop": {
       "action": {"name": "upload", "payload": {}},
       "files": [{"name": "report.pdf", "type": "application/pdf", "size": 18, "data_url": "data:application/pdf;base64,…"}],
-      "settings": {"tone": "Warm"}
+      "settings": {"tone": "Warm"},
+      "modes": {"depth": "thorough"}
     }
   }
 }
 ```
+
+`modes` says the option of each of the application's modes the person is in
+(LOOP P-19); unsaid, each stays where it was, else on its default or first
+option. A mode or an option the application does not have is refused with
+422 (*The mode Depth has no option 'deep'.*). The options' `instructions` are
+told to the agent for that run, besides its own — set by the runtime around
+the run it forwards, never as a message, since the agent takes no system
+message from a request — and the `model` one of them names is run on, for
+that run. A Python application reads them as `session.modes`, and
+`session.agent` is told them.
 
 This is what the chat of an application's page speaks: `ChatView` addresses an
 application's agent here rather than at `/api/v1/ag-ui/{agent}/`, and the

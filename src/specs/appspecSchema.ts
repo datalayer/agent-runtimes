@@ -74,6 +74,36 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppChecks',
       type: 'object',
     },
+    AppCommand: {
+      additionalProperties: false,
+      description:
+        "A slash command the user picks in the composer (LOOP P-19).\n\nTyping `/` lists the application's commands; picking one sends its\n`prompt`, `{input}` replaced by the words typed after the command.",
+      properties: {
+        name: {
+          description:
+            'What follows the slash: lower-case letters, digits and hyphens, a letter first (`summarise`)',
+          pattern: '^[a-z](?:[a-z0-9-]{0,30}[a-z0-9])?$',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          description: "What the composer's menu says it does",
+          minLength: 1,
+          title: 'Description',
+          type: 'string',
+        },
+        prompt: {
+          description:
+            "What is sent when it is picked: `{input}` stands for the words typed after it; without `{input}`, those words follow the prompt. An application's code answers `/<name> {input}` itself (`@app.command`)",
+          minLength: 1,
+          title: 'Prompt',
+          type: 'string',
+        },
+      },
+      required: ['name', 'description', 'prompt'],
+      title: 'AppCommand',
+      type: 'object',
+    },
     AppComputer: {
       additionalProperties: false,
       description:
@@ -323,6 +353,24 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Starters',
           type: 'array',
         },
+        commands: {
+          description:
+            'Slash commands the user picks in the composer: typing `/` lists them (LOOP P-19)',
+          items: {
+            $ref: '#/$defs/AppCommand',
+          },
+          title: 'Commands',
+          type: 'array',
+        },
+        modes: {
+          description:
+            'Mode switches in the composer: the option picked goes with every run, its instructions told to the agent and its model run on (LOOP P-19)',
+          items: {
+            $ref: '#/$defs/AppMode',
+          },
+          title: 'Modes',
+          type: 'array',
+        },
         settings: {
           description: 'What the user may set',
           items: {
@@ -406,6 +454,99 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       enum: ['chat', 'widget', 'decision', 'worker'],
       title: 'AppKind',
       type: 'string',
+    },
+    AppMode: {
+      additionalProperties: false,
+      description:
+        'A mode switch in the composer (LOOP P-19): the person picks one of its options.',
+      properties: {
+        id: {
+          description: 'Its id, the key a run says its option under',
+          pattern: '^[a-z][a-z0-9_-]{0,39}$',
+          title: 'Id',
+          type: 'string',
+        },
+        label: {
+          description: 'What the switch is called',
+          minLength: 1,
+          title: 'Label',
+          type: 'string',
+        },
+        options: {
+          description: 'Its positions, two at least',
+          items: {
+            $ref: '#/$defs/AppModeOption',
+          },
+          minItems: 2,
+          title: 'Options',
+          type: 'array',
+        },
+        default: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'The option it starts on; the first when unsaid',
+          title: 'Default',
+        },
+      },
+      required: ['id', 'label', 'options'],
+      title: 'AppMode',
+      type: 'object',
+    },
+    AppModeOption: {
+      additionalProperties: false,
+      description:
+        'One position of a mode switch (LOOP P-19): what the agent is told, the model it runs on.',
+      properties: {
+        id: {
+          description: 'Its id, what a run says it is in',
+          pattern: '^[a-z][a-z0-9_-]{0,39}$',
+          title: 'Id',
+          type: 'string',
+        },
+        label: {
+          description: 'What the switch says',
+          minLength: 1,
+          title: 'Label',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it changes, in a sentence',
+          title: 'Description',
+          type: 'string',
+        },
+        instructions: {
+          default: '',
+          description:
+            'What the agent is told besides its instructions, in every run in this mode',
+          title: 'Instructions',
+          type: 'string',
+        },
+        model: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "The model a run in this mode runs on, in place of the application's",
+          title: 'Model',
+        },
+      },
+      required: ['id', 'label'],
+      title: 'AppModeOption',
+      type: 'object',
     },
     AppPermissions: {
       additionalProperties: false,

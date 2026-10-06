@@ -28,6 +28,7 @@ from rich.console import Console
 
 from agent_runtimes.chat.tux import CliTux
 from agent_runtimes.loop.apps.application import AppHost, Application
+from agent_runtimes.loop.apps.composer import command_called, command_prompt
 from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -225,7 +226,17 @@ class AppTux(CliTux):
         return await super().show_prompt()
 
     async def handle_command(self, user_input: str) -> Optional[str]:
-        """``/action <name> [json]`` presses one of the application's buttons."""
+        """``/action <name> [json]`` presses one of the application's buttons;
+        ``/<command> words`` runs one of its commands (LOOP P-19): the code
+        answers it when it has the command, else its prompt is sent."""
+        called = command_called(self.application.spec, user_input)
+        if called is not None:
+            command, words = called
+            if command.name in self.application.commands and self.app_session:
+                session = self.app_session
+                await self._turn(lambda: self.host.message(session, user_input))
+                return None
+            return command_prompt(command, words)
         name, _, rest = user_input.partition(" ")
         if name != "/action":
             return await super().handle_command(user_input)

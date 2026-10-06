@@ -43,7 +43,7 @@ class CodeMark:
     """One thing the code decides: a moment, and the handler that decides it."""
 
     moment: str
-    """``start``, ``message``…, ``action <name>`` or ``schedule <name>``."""
+    """``start``, ``message``…, ``action <name>``, ``schedule <name>`` or ``command <name>``."""
 
     handler: str
     """The handler's name."""
@@ -114,6 +114,10 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         )
     for name, handler in application.schedules.items():
         marks.append(CodeMark(f"schedule {name}", name, _where(handler, source)))
+    for name, handler in application.commands.items():
+        marks.append(
+            CodeMark(f"command {name}", handler.__name__, _where(handler, source))
+        )
     return marks
 
 

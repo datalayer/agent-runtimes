@@ -58,6 +58,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "chat",
             "accent": "green",
+            "theme": None,
             "welcome": "Ask me for a report from the books: open invoices, aged balances, a trial balance or a customer's ledger. I read Odoo; I change nothing.",
             "starters": [
                 {
@@ -73,6 +74,8 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
                     "message": "Give the trial balance for last month.",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [],
             "surface": None,
@@ -180,6 +183,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "chat",
             "accent": "rose",
+            "theme": None,
             "welcome": "I interview your customer. I ask for their consent first, then one open question at a time.",
             "starters": [
                 {
@@ -191,6 +195,8 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
                     "message": "Interview me about my first week with the product.",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [
                 {
                     "id": "language",
@@ -310,8 +316,11 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "green",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [
                 "Card",
@@ -455,6 +464,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "chat",
             "accent": "sun",
+            "theme": None,
             "welcome": "Give me a text and a question about it. I ask Jev a typed decision — yes or no, a choice, or a score — and tell you the answer with its confidence.",
             "starters": [
                 {
@@ -470,6 +480,8 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
                     "message": "Score how positive this review is from 1 to 5: 'Setup took an hour, but support answered fast and it works.'",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [],
             "surface": None,
@@ -608,6 +620,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "split",
             "accent": "green",
+            "theme": None,
             "welcome": "I sort your mail and draft the replies. I ask before I send, and I never delete.",
             "starters": [
                 {
@@ -619,6 +632,8 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
                     "message": "What arrived since yesterday, and what did you do with it?",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [],
             "surface": None,
@@ -747,8 +762,11 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "green",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [
                 "Card",
@@ -962,6 +980,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "split",
             "accent": "lime",
+            "theme": None,
             "welcome": "I build the pipeline report every Monday and ask you before it goes to the board.",
             "starters": [
                 {
@@ -973,6 +992,8 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
                     "message": "What changed in the pipeline since last week's report?",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [
                 "Card",
@@ -1191,8 +1212,11 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "sun",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [
                 {
                     "id": "seats",
@@ -1405,8 +1429,11 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "sky",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [
                 {
                     "id": "report",
@@ -1602,6 +1629,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "chat",
             "accent": "sky",
+            "theme": None,
             "welcome": "Hello! I'm at the sales desk. Ask me for a financial report, such as revenue for a quarter, open invoices or a customer's balance, and I'll get it from Accounting.",
             "starters": [
                 {
@@ -1617,6 +1645,8 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
                     "message": "What does the trial balance say for last month?",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [],
             "surface": None,
@@ -1716,8 +1746,11 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "green",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [
                 "Card",
@@ -1888,8 +1921,11 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "green",
+            "theme": None,
             "welcome": "",
             "starters": [],
+            "commands": [],
+            "modes": [],
             "settings": [],
             "components": [
                 "Card",
@@ -2047,6 +2083,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "page",
             "accent": "violet",
+            "theme": None,
             "welcome": "Ask me about the product. I answer from its documentation and show you where; when it does not say, I tell you.",
             "starters": [
                 {
@@ -2062,6 +2099,8 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                     "message": "What is the difference between the Team and the Business plan?",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [
                 {
                     "id": "product",
@@ -2260,6 +2299,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "interface": {
             "layout": "chat",
             "accent": "sky",
+            "theme": None,
             "welcome": "Ask me a question. I search the web, open what I cite, and tell you where the sources disagree.",
             "starters": [
                 {
@@ -2275,6 +2315,8 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
                     "message": "Is it true that most data science projects never reach production? Find the primary source.",
                 },
             ],
+            "commands": [],
+            "modes": [],
             "settings": [
                 {
                     "id": "depth",

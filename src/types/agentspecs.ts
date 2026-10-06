@@ -489,6 +489,37 @@ export interface AppStarterSpec {
   message: string;
 }
 
+/** A slash command the user picks in the composer (LOOP P-19). */
+export interface AppCommandSpec {
+  /** What follows the slash: lower-case letters, digits and hyphens. */
+  name: string;
+  /** What the composer's menu says it does. */
+  description: string;
+  /** What picking it sends: `{input}` the words typed after it. */
+  prompt: string;
+}
+
+/** One position of a mode switch (LOOP P-19). */
+export interface AppModeOptionSpec {
+  id: string;
+  label: string;
+  description?: string;
+  /** What the agent is told in every run in this mode. */
+  instructions?: string;
+  /** The model a run in this mode runs on, in place of the application's. */
+  model?: string | null;
+}
+
+/** A mode switch in the composer (LOOP P-19). */
+export interface AppModeSpec {
+  id: string;
+  label: string;
+  /** Its positions, two at least. */
+  options: AppModeOptionSpec[];
+  /** The option it starts on; the first when unsaid. */
+  default?: string | null;
+}
+
 export interface AppSettingSpec {
   id: string;
   type: 'select' | 'text' | 'toggle' | 'slider' | 'number';
@@ -535,6 +566,10 @@ export interface AppInterfaceSpec {
   theme?: AppThemeSpec;
   welcome: string;
   starters: AppStarterSpec[];
+  /** Slash commands picked in the composer: typing `/` lists them (P-19). */
+  commands: AppCommandSpec[];
+  /** Mode switches in the composer, the option picked going with every run (P-19). */
+  modes: AppModeSpec[];
   settings: AppSettingSpec[];
   /** The components of the catalog the surface may use. */
   components: string[];

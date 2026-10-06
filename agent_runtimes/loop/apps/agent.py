@@ -28,6 +28,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.run import AgentRunResultEvent
 from reactor import ContributionRegistry
 
+from agent_runtimes.loop.apps.composer import ModeEffect
 from agent_runtimes.loop.apps.documents import AppDocumentsCapability, knows_documents
 from agent_runtimes.loop.apps.enforcement import Ask as RuleAsk
 from agent_runtimes.loop.apps.frames import (
@@ -243,10 +244,9 @@ class Answer:
     """The answer as the agent typed it; the text for a text agent."""
 
 
-def _context(context: dict[str, Any]) -> Optional[str]:
-    if not context:
-        return None
-    return "\n".join(f"{key}: {value}" for key, value in context.items())
+def _context(context: dict[str, Any], mode: str = "") -> Optional[str]:
+    said = "\n".join(f"{key}: {value}" for key, value in context.items())
+    return "\n\n".join(part for part in (mode, said) if part) or None
 
 
 @dataclass
@@ -277,6 +277,27 @@ class AppAgent:
     """What every run reaches besides the agent's own tools: on a runtime,
     the MCP servers and sandbox its agent was made with (LOOP R-04)."""
 
+    mode: ModeEffect = field(default_factory=ModeEffect)
+    """What the modes the person chose tell every run, and the model it runs
+    on (LOOP P-19); set by the session."""
+
+    def _run_kwargs(self, context: dict[str, Any]) -> dict[str, Any]:
+        """What a run is given: its turn's context and modes, the session's history."""
+        from agent_runtimes.models.models import resolve_model_for_inference_provider
+
+        return {
+            "conversation_id": self.session_id,
+            "message_history": self.history or None,
+            "instructions": _context(context, self.mode.instructions),
+            "capabilities": self.capabilities,
+            "toolsets": self.toolsets or None,
+            **(
+                {"model": resolve_model_for_inference_provider(self.mode.model, None)}
+                if self.mode.model
+                else {}
+            ),
+        }
+
     async def run(self, prompt: str, **context: Any) -> Answer:
         """Ask the agent, and wait for its whole answer.
 
@@ -292,14 +313,7 @@ class AppAgent:
         Answer
             Its answer.
         """
-        result = await self.agent.run(
-            prompt,
-            conversation_id=self.session_id,
-            message_history=self.history or None,
-            instructions=_context(context),
-            capabilities=self.capabilities,
-            toolsets=self.toolsets or None,
-        )
+        result = await self.agent.run(prompt, **self._run_kwargs(context))
         self.history = result.all_messages()
         return Answer(text=str(result.output), output=result.output)
 
@@ -319,12 +333,7 @@ class AppAgent:
             The pieces of the answer's text, in order.
         """
         async with self.agent.run_stream_events(
-            prompt,
-            conversation_id=self.session_id,
-            message_history=self.history or None,
-            instructions=_context(context),
-            capabilities=self.capabilities,
-            toolsets=self.toolsets or None,
+            prompt, **self._run_kwargs(context)
         ) as events:
             async for event in events:
                 if isinstance(event, PartStartEvent) and isinstance(

@@ -954,3 +954,168 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
     assert reaction_of("customer-interview", "message", registry=registry) is None
     with pytest.raises(KeyError, match="no action 'save'"):
         await host.action(session, "save", {})
+
+
+# --- P-19: commands and modes in the composer ---------------------------------------
+
+
+def test_commands_and_modes_are_declared_in_the_spec():
+    from agent_runtimes.loop.apps.build import code_marks
+
+    app = interview()
+    app.command("summarise", "Summarise what was said", prompt="Summarise: {input}")
+
+    @app.command("export", "Export the notes")
+    async def export(session: Session, words: str) -> None: ...
+
+    app.mode(
+        "depth",
+        "Depth",
+        [
+            {"id": "quick", "label": "Quick", "instructions": "Two sentences."},
+            {"id": "thorough", "label": "Thorough"},
+        ],
+        default="thorough",
+    )
+    spec = app.spec
+    assert [(c.name, c.prompt) for c in spec.interface.commands] == [
+        ("summarise", "Summarise: {input}"),
+        ("export", "/export {input}"),
+    ]
+    assert [
+        (m.id, m.default, [o.id for o in m.options]) for m in spec.interface.modes
+    ] == [("depth", "thorough", ["quick", "thorough"])]
+    assert app.commands == {"export": export}
+    assert app.document["interface"]["modes"][0]["options"][1] == {
+        "id": "thorough",
+        "label": "Thorough",
+    }
+    # What the code answers is marked as code by `loop apps build`.
+    assert [m.moment for m in code_marks(app)] == ["command export"]
+    with pytest.raises(ValueError, match="already has a command /export"):
+        app.command("export", "Again")
+    with pytest.raises(ValueError, match="sends its prompt"):
+        app.command("brief", "Brief", prompt="Be brief.")(export)
+    # What the spec refuses, it refuses here too.
+    app.command("Bad Name", "No")
+    with pytest.raises(AppNotRunnable, match="interface"):
+        app.spec  # noqa: B018
+
+
+async def test_a_command_its_code_answers_runs_in_place_of_message():
+    app = interview()
+    seen: list = []
+    app.command("summarise", "Summarise", prompt="Summarise: {input}")
+
+    @app.command("export", "Export the notes")
+    async def export(session: Session, words: str) -> None:
+        seen.append(("export", words))
+
+    @app.message
+    async def reply(session: Session, text: str) -> None:
+        seen.append(("message", text))
+
+    host, _, _ = hosted(app)
+    session = await host.open()
+    await host.message(session, "/export  as csv ")
+    await host.message(session, "/export")
+    # A command with a prompt arrives as the prompt the page sent; written
+    # out as a command, it is a message like any other.
+    await host.message(session, "/summarise the call")
+    await host.message(session, "/exporter now")
+    assert seen == [
+        ("export", "as csv"),
+        ("export", ""),
+        ("message", "/summarise the call"),
+        ("message", "/exporter now"),
+    ]
+
+
+async def test_the_mode_the_user_is_in_is_told_to_the_agent(monkeypatch):
+    from pydantic_ai.messages import ModelRequest
+
+    from agent_runtimes.models import models
+
+    app = interview()
+    app.mode(
+        "depth",
+        "Depth",
+        [
+            {
+                "id": "quick",
+                "label": "Quick",
+                "instructions": "Answer in two sentences.",
+            },
+            {
+                "id": "thorough",
+                "label": "Thorough",
+                "instructions": "Cite what you read.",
+                "model": "alibaba:qwen-max",
+            },
+        ],
+    )
+    host, _, _ = hosted(app, "First.", "Second.")
+    session = await host.open()
+    assert session.modes == {"depth": "quick"}
+    await session.agent.run("one", goal="pricing")
+    first = session.agent.history[0]
+    assert isinstance(first, ModelRequest)
+    assert first.instructions is not None
+    assert "Answer in two sentences.\n\ngoal: pricing" in first.instructions
+    assert "model" not in session.agent._run_kwargs({})
+
+    assert session._update_modes({"depth": "thorough"}) == {"depth": "thorough"}
+    assert session.agent.mode.instructions == "Cite what you read."
+    monkeypatch.setattr(
+        models,
+        "resolve_model_for_inference_provider",
+        lambda model, provider: f"resolved {model}",
+    )
+    kwargs = session.agent._run_kwargs({})
+    assert (kwargs["model"], kwargs["instructions"]) == (
+        "resolved alibaba:qwen-max",
+        "Cite what you read.",
+    )
+    for wrong, sentence in (
+        ({"speed": "fast"}, "has no mode 'speed'"),
+        ({"depth": "deep"}, "Depth has no option 'deep'"),
+    ):
+        with pytest.raises(ValueError, match=sentence):
+            session._update_modes(wrong)
+        with pytest.raises(ValueError, match=sentence):
+            await host.open(modes=wrong)
+    assert session.modes == {"depth": "thorough"}
+    opened = await host.open(modes={"depth": "thorough"})
+    assert opened.modes == {"depth": "thorough"}
+
+
+def test_composer_rules_on_the_runtimes_types():
+    from agent_runtimes.loop.apps.composer import (
+        command_called,
+        command_prompt,
+        mode_effect,
+    )
+
+    app = interview()
+    app.command("summarise", "Summarise", prompt="Summarise: {input}")
+    app.command("brief", "Brief", prompt="Be brief.")
+    app.mode(
+        "tone",
+        "Tone",
+        [
+            {"id": "plain", "label": "Plain"},
+            {"id": "warm", "label": "Warm", "instructions": "Be warm."},
+        ],
+    )
+    spec = app.spec
+    summarise, brief = spec.interface.commands
+    assert command_prompt(summarise, " the call ") == "Summarise: the call"
+    assert command_prompt(brief) == "Be brief."
+    assert command_prompt(brief, "please") == "Be brief.\n\nplease"
+    called = command_called(spec, "  /summarise the\ncall")
+    assert called is not None and called[0] is summarise and called[1] == "the\ncall"
+    assert command_called(spec, "/nothing") is None
+    assert command_called(spec, "summarise") is None
+    assert command_called(spec, "/") is None
+    assert mode_effect(spec).instructions == ""
+    assert mode_effect(spec, {"tone": "warm"}).instructions == "Be warm."

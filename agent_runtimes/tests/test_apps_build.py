@@ -468,3 +468,30 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
     # What an answer shows is named, not drawn (LOOP P-04).
     assert "▣ Table runs: Runs" in said
     assert tux.app_session is not None and ended == [tux.app_session.id]
+
+
+def test_the_terminal_runs_an_applications_commands() -> None:
+    """LOOP P-19: ``/<command> words`` — the code answers the one it has, else its prompt is sent."""
+    app = Application(id="desk", agent="example-simple")
+    app.command("summarise", "Summarise", prompt="Summarise: {input}")
+    heard: List[str] = []
+
+    @app.command("export", "Export the notes")
+    async def export(session: Session, words: str) -> None:
+        heard.append(words)
+
+    tux = AppTux(
+        app,
+        agent_url="http://runtime/api/v1/ag-ui/default/",
+        server_url="http://runtime",
+        agent_id="default",
+    )
+    tux.console = tux.channel.console = _console()
+
+    async def go() -> None:
+        tux.app_session = await tux.host.open()
+        assert await tux.handle_command("/summarise the call") == "Summarise: the call"
+        assert await tux.handle_command("/export as csv") is None
+
+    asyncio.run(go())
+    assert heard == ["as csv"]

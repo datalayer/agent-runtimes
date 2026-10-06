@@ -67,6 +67,7 @@ from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import answer_surface
+from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
@@ -450,6 +451,8 @@ class LiveSession:
     """In whose name it runs: ``{kind: principal, uid, deployment_uid}`` or ``{kind: person, uid}``."""
     recorder: AppRecorder
     settings: Dict[str, Any] = field(default_factory=dict)
+    modes: Dict[str, str] = field(default_factory=dict)
+    """The option of each of its modes the person is in (LOOP P-19), as the last run said."""
     state: str = "open"
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
@@ -821,7 +824,10 @@ class LiveSession:
         await self.recorder.flush(self.uid)
         if self.host is not None and self.session is None:
             self.session = await self.host.open(
-                user=self.opened_by.uid or None, settings=self.settings, id=self.uid
+                user=self.opened_by.uid or None,
+                settings=self.settings,
+                id=self.uid,
+                modes=self.modes,
             )
 
     def open(
@@ -1142,9 +1148,17 @@ class LiveSession:
         }
         await self.forward(body, bearer=bearer)
 
-    async def forward(self, body: Dict[str, Any], *, bearer: str) -> None:
-        """Run the agent on an AG-UI input, its events streamed and its answer kept."""
+    async def forward(
+        self, body: Dict[str, Any], *, bearer: str, instructions: str = ""
+    ) -> None:
+        """Run the agent on an AG-UI input, its events streamed and its answer kept.
+
+        ``instructions`` are told to the agent for this run besides its own —
+        the modes the person is in (LOOP P-19): set by the runtime, never read
+        from the request, whose system messages the agent does not take.
+        """
         from agent_runtimes.routes.agui import get_agui_app
+        from agent_runtimes.transports.agui import run_instructions
 
         app = get_agui_app(self.agent_id)
         if app is None:
@@ -1212,7 +1226,8 @@ class LiveSession:
                         str(event.get("delta") or "")
                     )
 
-        await app(scope, receive, send)
+        with run_instructions(instructions):
+            await app(scope, receive, send)
         if status >= 300:
             said = b"".join(refused).decode("utf-8", errors="replace")[:500]
             raise SessionRefused(
@@ -1231,8 +1246,13 @@ class LiveSession:
         """An AG-UI run of the session, as a chat sends it.
 
         ``forwardedProps.loop`` says what the page did besides the message: the
-        settings it holds (``settings``), the action of a block (``action``:
+        settings it holds (``settings``), the option of each mode the person is
+        in (``modes``, LOOP P-19), the action of a block (``action``:
         ``{name, payload}``) and the files given with it (``files``).
+
+        The modes' instructions are told to the agent for this run, and the
+        model one of them names is run on: through the code's ``session.agent``
+        for an application written in Python, else on the run itself.
         """
         run_id = str(body.get("runId") or "")
         messages = [
@@ -1252,6 +1272,15 @@ class LiveSession:
                 raise SessionRefused(422, str(wrong)) from None
             # The page says them in its message: not said again.
             self._sent_settings = dict(self.settings)
+        modes = loop.get("modes")
+        if modes is not None and not isinstance(modes, Mapping):
+            raise SessionRefused(422, "The modes sent are not options by mode id.")
+        try:
+            self.modes = mode_choice(self.app, {**self.modes, **(modes or {})})
+        except ValueError as wrong:
+            raise SessionRefused(422, str(wrong)) from None
+        if self.session is not None:
+            self.session._update_modes(self.modes)
         files = given_files(loop.get("files"))
         action = loop.get("action")
         if action is not None and not isinstance(action, Mapping):
@@ -1295,6 +1324,8 @@ class LiveSession:
                 else messages
             )
             self.messages = [dict(m) for m in said]
+            # The modes the person is in, for this run only (LOOP P-19).
+            effect = mode_effect(self.app, self.modes)
             run = {
                 "state": None,
                 "tools": [],
@@ -1304,8 +1335,9 @@ class LiveSession:
                 "runId": self._run_id,
                 "messages": said,
                 "forwardedProps": forwarded or None,
+                **({"model": effect.model} if effect.model else {}),
             }
-            await self.forward(run, bearer=bearer)
+            await self.forward(run, bearer=bearer, instructions=effect.instructions)
 
         return self._start_turn(work, run_id=run_id, wraps_run=False)
 

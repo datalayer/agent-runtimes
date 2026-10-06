@@ -18,9 +18,11 @@ AG-UI is a lightweight protocol focused on UI integration with:
 """
 
 import asyncio
+import contextvars
 import json
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, AsyncIterator, Iterator
 
 if TYPE_CHECKING:
     from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
@@ -44,6 +46,23 @@ from ..otel.prompt_turn_metrics import (
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
+
+#: What a run is told besides its agent's instructions, set by the runtime
+#: itself, never by the request: the modes an application's session is in
+#: (LOOP P-19), for the run it forwards to its agent.
+_run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "run_instructions", default=None
+)
+
+
+@contextmanager
+def run_instructions(instructions: str | None) -> Iterator[None]:
+    """Tell the runs started inside this block ``instructions`` besides their agent's."""
+    token = _run_instructions.set(instructions or None)
+    try:
+        yield
+    finally:
+        _run_instructions.reset(token)
 
 
 class AGUITransport(BaseTransport):
@@ -552,12 +571,14 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
+                    told = _run_instructions.get()
                     response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
                         model=model,
                         toolsets=runtime_toolsets,
                         on_complete=on_complete,
+                        **({"instructions": told} if told else {}),
                         **agui_kwargs,
                     )
 

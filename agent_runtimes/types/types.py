@@ -2218,6 +2218,41 @@ class AppStarterSpec(BaseModel):
     message: str
 
 
+class AppCommandSpec(BaseModel):
+    """A slash command the user picks in the composer (LOOP P-19)."""
+
+    name: str = Field(..., description="What follows the slash")
+    description: str
+    prompt: str = Field(
+        ..., description="What picking it sends: `{input}` the words typed after it"
+    )
+
+
+class AppModeOptionSpec(BaseModel):
+    """One position of a mode switch (LOOP P-19)."""
+
+    id: str
+    label: str
+    description: str = ""
+    instructions: str = Field(
+        default="", description="What the agent is told in every run in this mode"
+    )
+    model: Optional[str] = Field(
+        default=None, description="The model a run in this mode runs on"
+    )
+
+
+class AppModeSpec(BaseModel):
+    """A mode switch in the composer (LOOP P-19)."""
+
+    id: str
+    label: str
+    options: List[AppModeOptionSpec]
+    default: Optional[str] = Field(
+        default=None, description="The option it starts on; the first when unsaid"
+    )
+
+
 class AppSettingSpec(BaseModel):
     """Something the user may set for their session."""
 
@@ -2271,6 +2306,12 @@ class AppInterfaceSpec(BaseModel):
     accent: str = Field(default="green", description="The application's one colour")
     welcome: str = Field(default="")
     starters: List[AppStarterSpec] = Field(default_factory=list)
+    commands: List[AppCommandSpec] = Field(
+        default_factory=list, description="Slash commands picked in the composer"
+    )
+    modes: List[AppModeSpec] = Field(
+        default_factory=list, description="Mode switches in the composer"
+    )
     settings: List[AppSettingSpec] = Field(default_factory=list)
     components: List[str] = Field(
         default_factory=list,

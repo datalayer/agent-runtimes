@@ -53,6 +53,7 @@ import {
   parseAppspec,
 } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
+import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
 import { HOST_NAME, hostToolsOf } from './hostTools';
 
 export const NOT_READY = 'Not ready';
@@ -334,6 +335,16 @@ function referenceProblems(
   }
   if (app.model && !getModel(app.model)) {
     missing('model', app.model);
+  }
+  // The model a mode runs on is the catalogue's (LOOP P-19).
+  for (const mode of app.interface.modes ?? []) {
+    for (const option of mode.options) {
+      if (option.model && !getModel(option.model)) {
+        problems.push(
+          `The mode “${mode.id}” runs “${option.id}” on “${option.model}”, which is no model.`,
+        );
+      }
+    }
   }
   // The components it may use, and those its surface uses, are the catalog's (C-13).
   for (const name of app.interface.components ?? []) {
@@ -648,6 +659,18 @@ export function documentShapeProblems(document: unknown): string[] {
   const required = (item: Raw, key: string, where: string) => {
     if (item[key] === undefined) at(`${where}.${key}`, 'is missing');
   };
+  const unknownKeys = (
+    item: Raw,
+    known: readonly string[],
+    where: string,
+    what: string,
+  ) => {
+    for (const key of Object.keys(item)) {
+      if (!known.includes(key)) {
+        at(`${where}.${key}`, `is not a key of ${what}: ${known.join(', ')}`);
+      }
+    }
+  };
   const d = document;
   for (const key of [
     'id',
@@ -745,6 +768,106 @@ export function documentShapeProblems(document: unknown): string[] {
       required(item, 'label', where);
       required(item, 'message', where);
     });
+    // Its commands and modes in the composer (LOOP P-19), as agentspecs
+    // refuses them: names and ids slash-safe and said once, no key unknown.
+    const named = new Set<string>();
+    records(ui.commands, 'interface.commands', (item, where) => {
+      for (const key of ['name', 'description', 'prompt']) {
+        required(item, key, where);
+        text(item[key], `${where}.${key}`);
+      }
+      unknownKeys(item, ['name', 'description', 'prompt'], where, 'a command');
+      if (typeof item.name === 'string') {
+        if (!COMMAND_NAME.test(item.name)) {
+          at(
+            `${where}.name`,
+            'is what follows the slash: lower-case letters, digits and hyphens, a letter first',
+          );
+        }
+        if (named.has(item.name)) {
+          at(`${where}.name`, `names /${item.name} a second time`);
+        }
+        named.add(item.name);
+      }
+      if (typeof item.prompt === 'string') {
+        for (const placeholder of item.prompt.match(/\{[^{}]*\}/g) ?? []) {
+          if (placeholder !== COMMAND_INPUT) {
+            at(
+              `${where}.prompt`,
+              `takes the words typed after the command as ${COMMAND_INPUT}, not ${placeholder}`,
+            );
+          }
+        }
+      }
+    });
+    const modeIds = new Set<string>();
+    const choosingModel: string[] = [];
+    records(ui.modes, 'interface.modes', (mode, where) => {
+      required(mode, 'id', where);
+      required(mode, 'label', where);
+      required(mode, 'options', where);
+      text(mode.label, `${where}.label`);
+      text(mode.default, `${where}.default`);
+      unknownKeys(mode, ['id', 'label', 'options', 'default'], where, 'a mode');
+      if (typeof mode.id === 'string') {
+        if (!MODE_ID.test(mode.id)) {
+          at(
+            `${where}.id`,
+            'is lower-case letters, digits, `_` and `-`, a letter first',
+          );
+        }
+        if (modeIds.has(mode.id)) {
+          at(`${where}.id`, `names the mode ${mode.id} a second time`);
+        }
+        modeIds.add(mode.id);
+      }
+      const optionIds: string[] = [];
+      let model = false;
+      records(mode.options, `${where}.options`, (option, place) => {
+        required(option, 'id', place);
+        required(option, 'label', place);
+        for (const key of ['label', 'description', 'instructions', 'model']) {
+          text(option[key], `${place}.${key}`);
+        }
+        unknownKeys(
+          option,
+          ['id', 'label', 'description', 'instructions', 'model'],
+          place,
+          'an option',
+        );
+        if (typeof option.id === 'string') {
+          if (!MODE_ID.test(option.id)) {
+            at(
+              `${place}.id`,
+              'is lower-case letters, digits, `_` and `-`, a letter first',
+            );
+          }
+          if (optionIds.includes(option.id)) {
+            at(`${place}.id`, `names the option ${option.id} a second time`);
+          }
+          optionIds.push(option.id);
+        }
+        model ||= typeof option.model === 'string' && option.model !== '';
+      });
+      if (Array.isArray(mode.options) && mode.options.length < 2) {
+        at(`${where}.options`, 'are two at least');
+      }
+      if (
+        typeof mode.default === 'string' &&
+        !optionIds.includes(mode.default)
+      ) {
+        at(`${where}.default`, 'is one of its options');
+      }
+      if (model) {
+        choosingModel.push(String(mode.id));
+      }
+    });
+    if (choosingModel.length > 1) {
+      at(
+        'interface.modes',
+        `let only one mode choose the model, not ${choosingModel.join(', ')}`,
+      );
+    }
     records(ui.settings, 'interface.settings', (item, where) => {
       required(item, 'id', where);
       required(item, 'type', where);

@@ -21,6 +21,7 @@ import type { AgentRuntimeConfig } from './config';
 import type { ContextSnapshotData } from './context';
 import type { InputPromptVariant } from '../chat/prompt/InputPromptBase';
 import type { MentionableAgent } from '../chat/prompt/plugins/AgentMentionPlugin';
+import type { PromptCommand } from '../chat/prompt/plugins/CommandPlugin';
 import type { Icon } from '@primer/octicons-react';
 
 /** One agent a chat may address, as its controls need it. */
@@ -970,6 +971,11 @@ export interface ChatBaseProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /**
+   * Commands the prompt lists while `/` is typed, before its own: an
+   * application's (LOOP P-19). Picking one writes `/<name> `. Lexical only.
+   */
+  promptCommands?: PromptCommand[];
   /**
    * Whether the prompt offers a chooser for who answers.
    *

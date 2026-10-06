@@ -418,7 +418,25 @@ export type CommandContribution = {
    */
   keybinding?: string;
   args?: readonly CommandArgSpec[];
+  /**
+   * Listed in the composer's `/` menu, as an application's commands are
+   * (LOOP P-19). Most commands are not: the menu is for what a person sends,
+   * the palette and `/help` for the rest.
+   */
+  composer?: boolean;
   run: (ctx: LoopCommandContext) => Promise<CommandResult | void>;
+};
+
+/**
+ * What goes with every run besides the message, as AG-UI's `forwardedProps`:
+ * an application's modes say there which option the person is in (LOOP
+ * P-19). Read when a message is sent, so it says what is true then; what a
+ * page says with its own message (its action, its files) is merged over it,
+ * the `loop` part key by key.
+ */
+export type RunPropsContribution = {
+  id: string;
+  props: () => Record<string, unknown>;
 };
 
 /** A candidate offered by an `@` namespace. */
@@ -948,6 +966,33 @@ export { focusPrompt, onPromptFocusRequest } from './focusRequests';
 /** Slash commands, shared in shape with the CLI. */
 export const LoopCommand =
   defineContributionPoint<CommandContribution>('loop.command');
+
+/** What goes with every run besides the message (`forwardedProps`). */
+export const LoopRunProps =
+  defineContributionPoint<RunPropsContribution>('loop.runProps');
+
+/**
+ * The `forwardedProps` of a run: what the contributions say, then what the
+ * sender gave, the `loop` part merged key by key.
+ */
+export function runForwardedProps(
+  contributed: readonly RunPropsContribution[],
+  given?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  let merged: Record<string, unknown> | undefined;
+  for (const part of [...contributed.map(entry => entry.props()), given]) {
+    if (!part) continue;
+    const loop = {
+      ...((merged?.loop as Record<string, unknown> | undefined) ?? {}),
+      ...((part.loop as Record<string, unknown> | undefined) ?? {}),
+    };
+    merged = { ...merged, ...part };
+    if (Object.keys(loop).length > 0) {
+      merged.loop = loop;
+    }
+  }
+  return merged;
+}
 
 /** `@` namespaces. */
 export const LoopMention =

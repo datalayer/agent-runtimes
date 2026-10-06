@@ -53,8 +53,8 @@ APP_POINT: ContributionPoint[AppSpec] = define_contribution_point("loop.app")
 RulesFactory = Callable[[AppSpec, Optional[str]], AppRulesCapability]
 
 #: The moments an application's code reacts to, one point each: a moment's
-#: contribution is known by the application's id, an action's and a
-#: schedule's by ``<application id>/<name>``.
+#: contribution is known by the application's id, an action's, a
+#: schedule's and a command's (LOOP P-19) by ``<application id>/<name>``.
 REACTIONS: Tuple[str, ...] = (
     "start",
     "message",
@@ -65,7 +65,11 @@ REACTIONS: Tuple[str, ...] = (
     "logout",
     "action",
     "schedule",
+    "command",
 )
+
+#: The reactions known by a name besides the application's id.
+NAMED_REACTIONS: Tuple[str, ...] = ("action", "schedule", "command")
 REACTION_POINTS: Dict[str, ContributionPoint[Callable[..., Any]]] = {
     reaction: define_contribution_point(f"loop.app.{reaction}")
     for reaction in REACTIONS
@@ -176,7 +180,9 @@ def register_application(
     registry.dispose_plugin(manifest.name)
     contributions = PluginContributions(registry, manifest.name)
     _contribute(contributions, app)
-    for reaction in REACTIONS[:-2]:
+    for reaction in REACTIONS:
+        if reaction in NAMED_REACTIONS:
+            continue
         handler = application.handler(reaction)
         if handler is not None:
             contributions.contribute(
@@ -185,6 +191,7 @@ def register_application(
     for reaction, named in (
         ("action", application.actions),
         ("schedule", application.schedules),
+        ("command", application.commands),
     ):
         for name, handler in named.items():
             contributions.contribute(
@@ -208,7 +215,7 @@ def reaction_of(
     reaction : str
         One of `REACTIONS`.
     name : str
-        An action's or a schedule's name.
+        An action's, a schedule's or a command's name.
     registry : ContributionRegistry, optional
         The host's registry; the runtime's when unsaid.
 
@@ -222,7 +229,7 @@ def reaction_of(
         raise ValueError(
             f"A reaction is one of {', '.join(REACTIONS)}, not {reaction!r}."
         )
-    wanted = f"{app_id}/{name}" if reaction in ("action", "schedule") else app_id
+    wanted = f"{app_id}/{name}" if reaction in NAMED_REACTIONS else app_id
     found = [c for c in _the(registry).get(point) if c.id == wanted]
     return found[-1].value if found else None
 

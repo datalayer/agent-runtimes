@@ -48,6 +48,7 @@ from typing import (
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilities
 from agent_runtimes.loop.apps.components import answer_components, component_node
+from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.guards import AppCheckBlockedError
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
@@ -439,6 +440,7 @@ class Session:
         state: Optional[Dict[str, Any]] = None,
         settings: Optional[Mapping[str, Any]] = None,
         agent_maker: Optional[Callable[["Session"], AppAgent]] = None,
+        modes: Optional[Mapping[str, Any]] = None,
     ) -> None:
         self.app = app
         """The application, as its spec says it."""
@@ -450,6 +452,7 @@ class Session:
         """What the application keeps across the turns of this session."""
         self.channel = channel
         self._settings = form_values(app.interface.settings, settings or {})
+        self._modes = mode_choice(app, modes)
         self._agent_factory = agent_factory
         self._agent_maker = agent_maker
         self._recorder = recorder
@@ -467,6 +470,16 @@ class Session:
         updated = form_values(self.app.interface.settings, {**self._settings, **values})
         self._settings = updated
         return dict(updated)
+
+    @property
+    def modes(self) -> Dict[str, str]:
+        """The option of each of the application's modes the user is in, by mode id; a copy (LOOP P-19)."""
+        return dict(self._modes)
+
+    def _update_modes(self, chosen: Mapping[str, Any]) -> Dict[str, str]:
+        """The modes the page sent with a run, checked and kept: the agent's next run is told them."""
+        self._modes = mode_choice(self.app, {**self._modes, **chosen})
+        return dict(self._modes)
 
     # --- writing to the user ---------------------------------------------------
 
@@ -806,6 +819,7 @@ class Session:
                     ask_check=self._ask_check,
                 ),
             )
+        self._agent.mode = mode_effect(self.app, self._modes)
         return self._agent
 
     async def _allowed(self, sentence: str) -> bool:

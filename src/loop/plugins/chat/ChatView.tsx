@@ -122,9 +122,12 @@ import {
   LoopChatSuggestion,
   LoopChatSurface,
   LoopChatTurn,
+  LoopCommand,
   LoopFrontendTool,
+  LoopRunProps,
   LoopSlots,
   canOpenView,
+  runForwardedProps,
   onPromptFocusRequest,
   onSurfaceRequest,
   useLoopPromptStore,
@@ -518,6 +521,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   >([]);
   /** Whether the agent is turned in this page: read by `sendNow`, set below. */
   const inPageRef = useRef(false);
+  /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
+  const runProps = useContributions(LoopRunProps);
+  const runPropsRef = useRef(runProps);
+  runPropsRef.current = runProps;
   /*
    * Every message that goes to the agent goes through here: the composer's
    * (through the workspace's dispatch and the prompt channel), a host's, and
@@ -527,17 +534,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * What the page did besides the message goes with it as AG-UI's
    * `forwardedProps` (`loop`, LOOP R-04): the application's session takes a
    * file there. An agent turned in this page has no session, and no file is
-   * handed to it: said, rather than dropped.
+   * handed to it: said, rather than dropped. What the workspace's plugins
+   * send with every run (`LoopRunProps`: the modes the person is in, LOOP
+   * P-19) goes under it.
    */
   const sendNow = useCallback(
-    (
-      message: string,
-      forwardedProps?: Record<string, unknown>,
-    ): string | void => {
-      const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
+    (message: string, given?: Record<string, unknown>): string | void => {
+      const loop = given?.loop as { files?: unknown[] } | undefined;
       if (inPageRef.current && loop?.files && loop.files.length > 0) {
         return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
       }
+      const forwardedProps = runForwardedProps(
+        runPropsRef.current.map(entry => entry.value),
+        given,
+      );
       // A new turn: whatever the panel showed is gone, this message is it.
       turnFeedRef.current?.begin(message, controlsRef.current?.thread());
       const send = controlsRef.current?.send;
@@ -1187,6 +1197,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * silent no-ops. Derived here rather than in the plugin because it changes
    * with the selected member.
    */
+  /*
+   * The commands the composer lists while `/` is typed: those contributed for
+   * it, an application's (LOOP P-19). Picking one writes `/<name> `, and the
+   * workspace runs it when the message is sent.
+   */
+  const commands = useContributions(LoopCommand);
+  const composerCommands = useMemo(
+    () =>
+      commands
+        .filter(entry => entry.value.composer)
+        .map(entry => ({
+          name: entry.value.name,
+          description: entry.value.description,
+        })),
+    [commands],
+  );
   const mentionable = useMemo(() => {
     if (!team || !member) {
       // No team: the spec's own subagents, which the in-page loop can reach
@@ -1718,6 +1744,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     // because focusing an input on mount scrolls the browser to it.
     autoFocus: config?.autoFocusPrompt ?? true,
     mentionableAgents: mentionable,
+    promptCommands: composerCommands,
     headerContent:
       inpromptMenu.length > 0 ? (
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />

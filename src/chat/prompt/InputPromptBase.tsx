@@ -30,6 +30,7 @@ import type { PromptStack } from './stack';
 import { InputPromptText } from './InputPromptText';
 import { InputPromptLexical } from './InputPromptLexical';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import type { PromptCommand } from './plugins/CommandPlugin';
 import { usePromptHistory, type HistoryDirection } from './promptHistory';
 
 /** Input variant type. */
@@ -91,6 +92,8 @@ export interface InputPromptBaseProps {
    * suggestion a person cannot see is worse than none.
    */
   mentionableAgents?: MentionableAgent[];
+  /** Commands listed while `/` is typed, before the prompt's own (LOOP P-19). Lexical only. */
+  promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this composer mounted, oldest first.
    *
@@ -141,6 +144,7 @@ export function InputPromptBase({
   disabled = false,
   readOnly = false,
   mentionableAgents,
+  promptCommands,
   promptHistory,
   sx,
   value: controlledValue,
@@ -403,6 +407,7 @@ export function InputPromptBase({
               autoFocus={autoFocus}
               focusSignal={lexicalFocusSignal}
               mentionableAgents={mentionableAgents}
+              promptCommands={promptCommands}
             />
           ) : (
             <InputPromptText

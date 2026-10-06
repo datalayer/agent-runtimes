@@ -42,6 +42,7 @@ from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
 from agent_runtimes.loop.apps.components import component_node
+from agent_runtimes.loop.apps.composer import COMMAND_INPUT, command_called
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
@@ -50,7 +51,10 @@ from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import Channel, Session, call
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import (
+    AppCommandSpec,
     AppConnectionSpec,
+    AppModeOptionSpec,
+    AppModeSpec,
     AppRuleSpec,
     AppSettingSpec,
     AppSpec,
@@ -129,6 +133,7 @@ class Application:
         self._actions: Dict[str, Handler] = {}
         self._schedules: Dict[str, Handler] = {}
         self._schedule_crons: Dict[str, str] = {}
+        self._commands: Dict[str, Handler] = {}
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -159,6 +164,7 @@ class Application:
         application._actions = {}
         application._schedules = {}
         application._schedule_crons = {}
+        application._commands = {}
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -263,6 +269,115 @@ class Application:
         )
         self._declare("settings", setting, under="interface")
         return setting
+
+    def command(
+        self, name: str, description: str, *, prompt: str = ""
+    ) -> Callable[[Handler], Handler]:
+        """Offer a slash command in the composer (LOOP P-19).
+
+        Typing ``/`` lists the application's commands. With a ``prompt``,
+        picking it sends that prompt, ``{input}`` the words typed after it::
+
+            app.command("summarise", "Summarise what was said",
+                        prompt="Summarise the conversation in five bullets. {input}")
+
+        Without one, its code answers it — ``handler(session, words)``, in
+        place of ``message``::
+
+            @app.command("export", "Export the table")
+            async def export(session: Session, words: str) -> None: ...
+
+        Parameters
+        ----------
+        name : str
+            What follows the slash: lower-case letters, digits and hyphens.
+        description : str
+            What the composer's menu says it does.
+        prompt : str
+            What picking it sends; ``/<name> {input}`` when unsaid, for the
+            code to answer.
+
+        Returns
+        -------
+        callable
+            The decorator, for a command its code answers.
+        """
+        commands = self._document.get("interface", {}).get("commands", [])
+        if any(command.get("name") == name for command in commands):
+            raise ValueError(f"{self.id} already has a command /{name}.")
+        self._declare(
+            "commands",
+            AppCommandSpec(
+                name=name,
+                description=description,
+                prompt=prompt or f"/{name} {COMMAND_INPUT}",
+            ),
+            under="interface",
+        )
+
+        def decorate(handler: Handler) -> Handler:
+            if prompt:
+                raise ValueError(
+                    f"The command /{name} sends its prompt: one its code answers has none."
+                )
+            self._commands[name] = handler
+            return handler
+
+        return decorate
+
+    def mode(
+        self,
+        id: str,
+        label: str,
+        options: Sequence[Union[AppModeOptionSpec, Mapping[str, Any]]],
+        *,
+        default: Optional[str] = None,
+    ) -> AppModeSpec:
+        """Offer a mode switch in the composer (LOOP P-19).
+
+        The option the person picks goes with every run: its ``instructions``
+        are told to the agent, and the ``model`` it names is run on; the code
+        reads it as ``session.modes[id]``::
+
+            app.mode("depth", "Depth", [
+                {"id": "quick", "label": "Quick", "instructions": "Two sentences at most."},
+                {"id": "thorough", "label": "Thorough", "instructions": "Cite what you read."},
+            ])
+
+        Parameters
+        ----------
+        id : str
+            The mode's id: its key in ``session.modes``.
+        label : str
+            What the switch is called.
+        options : sequence
+            Its options, two at least: ``id``, ``label`` and optionally
+            ``description``, ``instructions`` and ``model``.
+        default : str, optional
+            The option it starts on; the first when unsaid.
+
+        Returns
+        -------
+        AppModeSpec
+            The mode, as the spec holds it.
+        """
+        mode = AppModeSpec(
+            id=id,
+            label=label,
+            options=[
+                option
+                if isinstance(option, AppModeOptionSpec)
+                else AppModeOptionSpec.model_validate(dict(option))
+                for option in options
+            ],
+            default=default,
+        )
+        interface = self._document.setdefault("interface", {})
+        interface.setdefault("modes", []).append(
+            mode.model_dump(by_alias=True, exclude_defaults=True, exclude_none=True)
+        )
+        self._spec = None
+        return mode
 
     def rule(
         self,
@@ -508,6 +623,11 @@ class Application:
         """The application's schedules, by handler name; a copy."""
         return dict(self._schedules)
 
+    @property
+    def commands(self) -> Dict[str, Handler]:
+        """The commands its code answers, by name; a copy."""
+        return dict(self._commands)
+
 
 async def _answer(session: Session, text: str) -> None:
     await session.stream(session.agent.stream(text))
@@ -614,6 +734,7 @@ class AppHost:
         user: Optional[str] = None,
         settings: Optional[Mapping[str, Any]] = None,
         id: Optional[str] = None,
+        modes: Optional[Mapping[str, Any]] = None,
     ) -> Session:
         """Open a session, and run the application's ``start``.
 
@@ -626,21 +747,31 @@ class AppHost:
         id : str, optional
             The session's id, when whoever opens it names it — the session
             API's uid (LOOP R-04); a new one when unsaid.
+        modes : mapping, optional
+            The option of each mode the user is in, by mode id; where each
+            starts when unsaid (LOOP P-19).
 
         Returns
         -------
         Session
             The session.
         """
-        session = self._session(user=user, settings=settings, id=id)
+        session = self._session(user=user, settings=settings, id=id, modes=modes)
         handler = self._reaction("start")
         if handler is not None:
             await self._react(session, handler)
         return session
 
     async def message(self, session: Session, text: str) -> None:
-        """The user wrote: run ``message``, or let the agent answer."""
+        """The user wrote: the command its code answers, when the message calls one
+        (``/<name> words``, LOOP P-19); else ``message``, or the agent answers."""
         self._open(session)
+        called = command_called(self.spec, text)
+        if called is not None:
+            handler = self._reaction("command", called[0].name)
+            if handler is not None:
+                await self._react(session, handler, called[1])
+                return
         await self._react(session, self._reaction("message") or _answer, text)
 
     async def action(

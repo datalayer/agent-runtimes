@@ -268,6 +268,46 @@ documentation is on the site, at
 search, reading only, nothing kept, under a visitor's limits. In the browser
 target the model answers alone: no runtime, no tool, no search.
 
+## Commands and modes in the composer
+
+An application's Appspec may give its composer **commands** and **modes**
+(`interface.commands`, `interface.modes`, LOOP P-19). `AppRenderer` adds them
+as a plugin of their own (`defineAppComposerPlugin`), only for an application
+that has some:
+
+- each command is a workspace command (`LoopCommand`, `composer: true`):
+  typing `/` in the composer lists it, with its description, before the
+  prompt's own; picking it writes `/<name> `, and sending runs it — its
+  `prompt` goes to the agent as if typed, the words written after the command
+  in place of `{input}` (`commandPrompt`);
+- each mode is a menu beside the composer (`LoopSlots.promptAction`),
+  *Depth: Quick*, on its `default` or its first option; the option picked goes
+  with every run as `forwardedProps.loop.modes` (`LoopRunProps`, merged under
+  what a page sends with its own message, `runForwardedProps`). The runtime
+  tells the agent that option's `instructions` for the run and runs the
+  `model` it names — see [the Session API](./session-api#over-ag-ui).
+
+```yaml
+interface:
+  commands:
+    - name: summarise
+      description: Summarise what was said
+      prompt: "Summarise the conversation in five bullets. {input}"
+  modes:
+    - id: depth
+      label: Depth
+      options:
+        - {id: quick, label: Quick, instructions: Answer in two sentences.}
+        - {id: thorough, label: Thorough, instructions: Cite what you read.}
+```
+
+The checks refuse a name that is not slash-safe, a name or an id said twice,
+a prompt with a placeholder other than `{input}`, a mode with fewer than two
+options or a default not among them, two modes that choose the model, a model
+the catalogue does not have, and a key none of them knows (`checkAppspec`).
+An agent turned in the page itself has no session: its commands work, its
+modes are shown but not told to it.
+
 ## Feedback on its answers
 
 An application whose record keeps feedback — its Appspec's `record.include`

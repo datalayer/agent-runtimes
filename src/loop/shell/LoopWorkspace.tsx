@@ -321,8 +321,11 @@ function WorkspaceBody({
         workspace: currentWorkspace.current!,
         argv: command.argv,
       });
+      // What a command sends goes to the agent as if typed: an
+      // application's command sends its prompt (LOOP P-19).
       if (result?.prompt) {
         onSend?.(result.prompt, currentWorkspace.current!);
+        prompts.submit(result.prompt);
       }
       return {
         handled: true,

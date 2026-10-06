@@ -44,6 +44,7 @@ import type { PromptSuggestion } from './menus/SuggestionsMenu';
 import { McpStatusIndicator } from '../indicators/McpStatusIndicator';
 import { SkillsStatusIndicator } from '../indicators/SkillsStatusIndicator';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import type { PromptCommand } from './plugins/CommandPlugin';
 
 /*
  * The context-window pie, fetched when there is usage to draw.
@@ -178,6 +179,8 @@ export interface InputPromptProps {
   promptVariant?: InputPromptVariant;
   /** Agents the prompt may address by typing `@`. Lexical only. */
   mentionableAgents?: MentionableAgent[];
+  /** Commands listed while `/` is typed, before the prompt's own (LOOP P-19). Lexical only. */
+  promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this page loaded, oldest first.
    *
@@ -344,6 +347,7 @@ export function InputPrompt({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents,
+  promptCommands,
   promptHistory,
   headerContent,
   showAgentsMenu = false,
@@ -478,6 +482,7 @@ export function InputPrompt({
       <InputPromptBase
         variant={promptVariant}
         mentionableAgents={mentionableAgents}
+        promptCommands={promptCommands}
         promptHistory={promptHistory}
         /*
           Whatever the host puts inside the prompt, and the agent chip beside

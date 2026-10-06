@@ -195,6 +195,8 @@ What an application declares is its Appspec. Each call adds to it:
 | `app.setting(id, type, label, *, options=(), default=None, min=None, max=None)` | A setting of the session: `select`, `text`, `toggle`, `slider` or `number`. |
 | `app.rule(action, *, applies_to, behaviour)` | When it acts alone and when it asks: `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
+| `app.command(name, description, *, prompt="")` | A slash command in the composer (LOOP P-19): typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
+| `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer: `options` are two at least, each `{id, label, description?, instructions?, model?}`. The option the person picks goes with every run: `session.modes[id]` says it, and `session.agent` is told its `instructions` and runs on its `model`. |
 | `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui-plugins#typed-calls-from-python). |
 
 `app.spec` is the Appspec they amount to, **validated** as any Appspec is:
@@ -217,6 +219,7 @@ session always first:
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
+| `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
 | `@app.schedule(cron, *, description="", prompt="")` | `(session)` | On a schedule, in a session of its own. Also adds the schedule to the Appspec's triggers. |
 
 A second handler for the same moment, action or schedule raises

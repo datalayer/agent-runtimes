@@ -802,6 +802,7 @@ function ChatBaseInner({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents: mentionableAgentsProp,
+  promptCommands,
   showAgentsMenu = true,
   agents: agentsProp,
   selectedAgentId,
@@ -4822,6 +4823,7 @@ function ChatBaseInner({
       }
       promptVariant={promptVariant}
       mentionableAgents={mentionableAgents}
+      promptCommands={promptCommands}
       // The runtime's memory of what was sent to this agent, for the arrow
       // keys — part of the same initial state as the models and tools.
       promptHistory={configQuery.data?.promptHistory}

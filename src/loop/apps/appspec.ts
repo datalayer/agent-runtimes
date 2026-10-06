@@ -36,6 +36,7 @@ import type {
   AppThemeVariant,
   AppAssistantCharacter,
   AppEmbedMode,
+  AppCommandSpec,
   AppConnectionSpec,
   AppCriterionSpec,
   AppDecisionSpec,
@@ -44,6 +45,8 @@ import type {
   AppVoiceSpec,
   AppKind,
   AppLayout,
+  AppModeOptionSpec,
+  AppModeSpec,
   AppRuleSpec,
   AppSettingSpec,
   AppSpec,
@@ -210,6 +213,8 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       accent: 'green',
       welcome: '',
       starters: [],
+      commands: [],
+      modes: [],
       settings: [],
       components: [],
       outputs: [],
@@ -301,6 +306,42 @@ function parseRule(data: Data): AppRuleSpec {
   };
 }
 
+/** A slash command (LOOP P-19); a wrong one is said by the checks. */
+function parseCommand(data: Data): AppCommandSpec {
+  return {
+    name: text(data.name),
+    description: text(data.description),
+    prompt: text(data.prompt),
+  };
+}
+
+/** One position of a mode switch, what it does said only when said. */
+function parseModeOption(data: Data): AppModeOptionSpec {
+  const option: AppModeOptionSpec = {
+    id: text(data.id),
+    label: text(data.label),
+  };
+  for (const key of ['description', 'instructions', 'model'] as const) {
+    if (typeof data[key] === 'string' && data[key]) {
+      option[key] = data[key] as string;
+    }
+  }
+  return option;
+}
+
+/** A mode switch (LOOP P-19). */
+function parseMode(data: Data): AppModeSpec {
+  const mode: AppModeSpec = {
+    id: text(data.id),
+    label: text(data.label),
+    options: records(data.options).map(parseModeOption),
+  };
+  if (typeof data.default === 'string' && data.default) {
+    mode.default = data.default;
+  }
+  return mode;
+}
+
 function parseSetting(data: Data): AppSettingSpec {
   const setting: AppSettingSpec = {
     id: text(data.id),
@@ -384,6 +425,8 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
       label: text(starter.label),
       message: text(starter.message),
     })),
+    commands: records(data.commands).map(parseCommand),
+    modes: records(data.modes).map(parseMode),
     settings: records(data.settings).map(parseSetting),
     components: texts(data.components),
     voice: parseVoice(data.voice),
@@ -721,6 +764,38 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
         label: starter.label,
         message: starter.message,
       })),
+    )
+    .list(
+      'commands',
+      spec.commands.map(command => ({
+        name: command.name,
+        description: command.description,
+        prompt: command.prompt,
+      })),
+    )
+    .list(
+      'modes',
+      spec.modes.map(mode => {
+        const written = new Writer()
+          .text('id', mode.id, '\u0000')
+          .text('label', mode.label, '\u0000')
+          .list(
+            'options',
+            mode.options.map(
+              option =>
+                new Writer()
+                  .text('id', option.id, '\u0000')
+                  .text('label', option.label, '\u0000')
+                  .text('description', option.description ?? '')
+                  .text('instructions', option.instructions ?? '')
+                  .text('model', option.model ?? '').data,
+            ),
+          );
+        if (mode.default) {
+          written.data.default = mode.default;
+        }
+        return written.data;
+      }),
     )
     .list(
       'settings',

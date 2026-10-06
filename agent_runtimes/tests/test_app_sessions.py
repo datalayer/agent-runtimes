@@ -1153,3 +1153,101 @@ def test_report_from_a_file_over_ag_ui_as_its_page_runs_it(
     )
     assert answer_of(events) == "Heard 1: Report: Summary"
     assert (events[0]["type"], events[0]["runId"]) == ("RUN_STARTED", "run-1")
+
+
+DEPTH = {
+    "id": "depth",
+    "label": "Depth",
+    "options": [
+        {"id": "quick", "label": "Quick", "instructions": "Answer in two sentences."},
+        {
+            "id": "thorough",
+            "label": "Thorough",
+            "instructions": "Cite what you read.",
+            "model": "alibaba:qwen-max",
+        },
+    ],
+}
+
+
+def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
+    runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP P-19: ``forwardedProps.loop.modes`` — the options' instructions for the
+    run, the model one names run on; a mode or an option it does not have refused."""
+    from pydantic_ai.messages import ModelRequest
+
+    spec = {
+        **ASSISTANT,
+        "interface": {**ASSISTANT["interface"], "modes": [DEPTH]},
+    }
+    model = runtime.make("notes-assistant", spec, {"app_uid": "app-1"})
+    told: List[str] = []
+    heard = model.said
+
+    def said(messages: List[ModelMessage]) -> str:
+        told.append(
+            next(
+                m.instructions or ""
+                for m in reversed(messages)
+                if isinstance(m, ModelRequest)
+            )
+        )
+        return heard(messages)
+
+    model.said = said  # type: ignore[method-assign]
+    run = {
+        "threadId": "thread-modes",
+        "runId": "run-1",
+        "state": None,
+        "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {"loop": {}},
+    }
+    url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
+    # Unsaid, a mode is on its first option.
+    assert answer_of(events_of(local.post(url, json=run))) == "Heard 1: Hi there"
+    assert "Answer in two sentences." in told[-1]
+    assert sessions.session_of("thread-modes").modes == {"depth": "quick"}
+    # What is kept of the conversation is what the person said, not the modes.
+    assert all(
+        m["role"] != "system" for m in sessions.session_of("thread-modes").messages
+    )
+
+    for wrong, sentence in (
+        ({"speed": "fast"}, "Notes Assistant has no mode 'speed'."),
+        ({"depth": "deep"}, "The mode Depth has no option 'deep'."),
+        ("thorough", "The modes sent are not options by mode id."),
+    ):
+        refused = local.post(
+            url, json={**run, "forwardedProps": {"loop": {"modes": wrong}}}
+        )
+        assert refused.status_code == 422
+        assert refused.json()["detail"] == sentence
+
+    # The model an option names goes with the run, for that run.
+    forwarded: List[Dict[str, Any]] = []
+
+    async def forward(
+        self: Any, body: Dict[str, Any], *, bearer: str, instructions: str = ""
+    ) -> None:
+        forwarded.append({**body, "told": instructions})
+
+    monkeypatch.setattr(sessions.LiveSession, "forward", forward)
+    local.post(
+        url,
+        json={
+            **run,
+            "runId": "run-2",
+            "forwardedProps": {"loop": {"modes": {"depth": "thorough"}}},
+        },
+    )
+    assert forwarded[-1]["model"] == "alibaba:qwen-max"
+    assert forwarded[-1]["told"] == "Cite what you read."
+    # Told by the runtime, not as a message: the agent takes no system
+    # message from the request.
+    assert [m["role"] for m in forwarded[-1]["messages"]] == ["user"]
+    # Said once, the mode is kept for the runs that do not say it again.
+    local.post(url, json={**run, "runId": "run-3"})
+    assert forwarded[-1]["model"] == "alibaba:qwen-max"
