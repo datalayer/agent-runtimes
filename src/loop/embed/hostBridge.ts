@@ -27,11 +27,7 @@
  * @module loop/embed/hostBridge
  */
 
-import type {
-  AppBehaviour,
-  AppHostBridgeSpec,
-  AppSpec,
-} from '../../types/agentspecs';
+import type { AppBehaviour, AppSpec } from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
 import { behaviourFor } from '../apps/rules';
 import {
