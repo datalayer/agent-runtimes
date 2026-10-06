@@ -285,6 +285,8 @@ def test_a_preview_session_starts_answers_and_is_recorded_as_the_person(
         "Hello\n\nTone: Plain",
         "And then?",
     ]
+    # Who opened it goes with its record: what they export and delete it by (R-31).
+    assert {body["opened_by"] for body in runtime.records} == {"ada"}
     # Nobody else drives it, nor learns it exists.
     assert (
         remote.get("/api/v1/apps/sessions/session-0001", headers=as_("bob")).status_code
@@ -349,6 +351,12 @@ def test_a_deployments_session_acts_as_its_principal_and_a_preview_is_not_it(
     }
     assert said["preview"] is False
     assert asked == ["ada"]
+    # Run as its principal, it still says the person who opened it (R-31).
+    assert {
+        body["opened_by"]
+        for body in runtime.records
+        if body["session_uid"] == said["uid"]
+    } == {"ada"}
     principal.forget_principal_token("dep-1")
 
 
@@ -477,6 +485,8 @@ def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
         {"tone": "Warm"},
         "local",
     )
+    # The machine itself is nobody whose conversations these are (R-31).
+    assert {body["opened_by"] for body in runtime.records} == {""}
     wrong = local.post(
         "/api/v1/apps/agents/notes-assistant/ag-ui/",
         json={**run, "forwardedProps": {"loop": {"settings": {"tone": "Loud"}}}},

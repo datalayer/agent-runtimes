@@ -14,7 +14,10 @@ an application that runs on a runtime.
 A session is one conversation of one caller with one application. Its **uid**
 is also its AG-UI thread and the session its record is kept under in
 ai-agents, so what the page shows, what the runtime ran and what the record
-says are one thing.
+says are one thing. Who opened it — a person the runtime verified — is sent
+with each of its entries (`opened_by`), so that they can download and delete
+their own conversations with it later (LOOP R-31); a session nobody opened, or
+opened by an embed's visitor or the machine itself, names nobody.
 
 The routes live in `agent_runtimes/routes/apps.py`, beside `configure`,
 `decide` and `feedback`; what they drive is `agent_runtimes.loop.apps.sessions`.

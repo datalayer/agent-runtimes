@@ -11,11 +11,13 @@
 
 export * from './agent';
 export * from './AppFeedback';
+export * from './AppKept';
 export * from './AppRenderer';
 export * from './appspec';
 export * from './checks';
 export * from './computer';
 export * from './feedback';
+export * from './kept';
 export * from './records';
 export * from './rules';
 export * from './yaml';

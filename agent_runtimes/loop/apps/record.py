@@ -19,6 +19,12 @@ host that ran it, names `woken_by` — ``{"kind": "schedule", ...}`` with the
 schedule's details — and it is sent with the entries and written on the
 session's first one. A session a person opened names nothing.
 
+Who opened a session is sent with its entries (``opened_by``, LOOP R-31):
+the uid of the person the runtime verified, its owner or anybody it is shown
+to — what they export and delete their own conversations by. A session
+nobody opened, or opened by somebody nobody knows (an embed's visitor, a
+visitor not signed in), names nobody.
+
 A session is a conversation when the run names one, a run otherwise. The
 record is sent after each run, with the token the run was made with; a
 record that cannot be sent is logged, and never fails the run.
@@ -245,6 +251,7 @@ class AppRecorder:
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
     _started: Set[str] = field(default_factory=set, init=False)
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
+    _opened: Dict[str, str] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
         # Nothing is kept of a conversation without an account (LOOP R-30).
@@ -271,6 +278,17 @@ class AppRecorder:
         self._pending.setdefault(session, []).append(
             {"kind": kind, "summary": summary[:2000], "payload": payload or {}}
         )
+
+    def opened(self, session: str, person_uid: str) -> None:
+        """Say which person opened ``session`` (LOOP R-31); ``""`` for nobody known."""
+        if person_uid:
+            self._opened[session] = person_uid
+        else:
+            self._opened.pop(session, None)
+
+    def opener(self, session: str) -> str:
+        """The person who opened ``session``, or ``""``."""
+        return self._opened.get(session, "")
 
     def woken(self, session: str) -> Dict[str, Any]:
         """What woke a session: its own, or every session's; empty when a person opened it."""
@@ -317,6 +335,7 @@ class AppRecorder:
             "purpose": self.purpose,
             "launch_uid": self.launch_uid,
             "woken_by": self.woken(session),
+            "opened_by": self.opener(session),
             "keep_days": keep_days_of(self.app),
             "entries": entries,
         }

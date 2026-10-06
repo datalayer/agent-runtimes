@@ -1267,6 +1267,9 @@ def new_session(
         deployment_uid=str(instance.get("deployment_uid") or ""),
         version=int(instance.get("version") or 0),
     )
+    # Who opened it, on its record (LOOP R-31): a person the runtime
+    # verified; an embed's visitor or one not signed in is nobody known.
+    recorder.opened(uid, opened_by.uid if opened_by.kind == "person" else "")
     live = LiveSession(
         uid=uid,
         agent_id=agent_id,

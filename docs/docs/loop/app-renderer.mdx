@@ -75,13 +75,13 @@ application's).
 ## The preset per kind
 
 Which plugins an application's kind needs, and how its workspace is laid
-out, is one function, `appPreset(app, { page, pluginsOff, sidebar, appUid })` — the preset per kind, as
+out, is one function, `appPreset(app, { page, pluginsOff, sidebar, appUid, kept })` — the preset per kind, as
 `loopPlugins` is for the examples. `AppRenderer` mounts what it returns, then
 the host's own `plugins`.
 
 | Kind                     | Plugins                                                                                                                                                                                                          | Workspace                                         |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it; with `sidebar`, the `app-rules` and `app-activity` plugins | as its layout says (`appLayoutOptions`)          |
+| chat, widget, worker     | its agent (`defineAppPlugin`); with a page, the `app-page` plugin and the Canvas's block plugins (`CANVAS_BLOCK_PLUGINS`), whose blocks are what the page draws; feedback, when its record keeps it; what it keeps, with `kept`; with `sidebar`, the `app-rules` and `app-activity` plugins | as its layout says (`appLayoutOptions`)          |
 | decision                 | the host's page as the workspace's one view (`defineAppHostPagePlugin`, a `loop.viewType` contribution)                                                                                                           | `conversation: false`: no chat, no composer, no agent |
 
 What cannot be drawn is said in a sentence where it would have been: a
@@ -283,6 +283,36 @@ every entry takes. It answers `404` for a conversation it did not record,
 could not be sent, with the reason; the strip says that sentence. The
 Studio's Readiness page counts what was kept (LOOP V-18).
 
+## What it keeps, before the first message
+
+At its address and embedded — wherever it runs as a deployment, so whenever
+`instance.deploymentUid` is given — an application says under its prompt,
+before anything is written, what its record keeps of the conversation and for
+how long (LOOP R-31). The words come from its Appspec: each item of
+`record.include` in a person's words (`KEPT_ITEMS`), and `record.keep_for`
+as a duration (`keptForWords`):
+
+> *Support Desk keeps this conversation, what it does and what is approved for 90 days, then deletes it.*
+
+An application whose `include` is empty still keeps that a session took place,
+and says that alone: *Quiet keeps only that this conversation took place, for
+a year.* To a visitor not signed in — the page passes `datalayerVisitors` — it
+says *Nothing of this conversation is kept: you are not signed in.*, since
+nothing is (R-30). Its builder's Preview says nothing: it is theirs.
+
+It is a plugin of its own (`defineAppKeptPlugin`, a `LoopPromptPanel`
+contribution below the prompt), drawn by the composer in every layout, and
+gone once the first message is sent (`beforeFirstMessage`). A retention that
+cannot be read is refused in the preset's sentence, as any problem of its
+Appspec is. `keptBeforeFirstMessage(app, { visitor })` gives the sentence to
+a host that draws it elsewhere.
+
+What it says is what ai-agents does: every entry of its record carries the
+day it is deleted, and a job deletes what is past it. The runtime sends, with
+each session's entries, who opened it — the person it verified (`opened_by`)
+— so that each person downloads and deletes their own conversations
+(`GET` and `DELETE /api/ai-agents/v1/apps/conversations/mine`).
+
 ## What is tested, and what is not
 
 Tested: the options per layout and the embed's inline mode
@@ -292,6 +322,9 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); the presence state (`presence-status.test.ts`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
+What it keeps: the words, the plugin only for a deployment, a retention
+refused, before the first message only (`app-kept.test.ts`), and the opener
+sent with the record (`test_app_sessions.py`).
 Feedback: what is offered, what is sent and what a refusal says
 (`app-feedback.test.ts`), and the runtime's route and recorder
 (`test_apps_routes.py`, `test_apps_record.py`). Beside its page: the plugins

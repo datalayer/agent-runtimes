@@ -70,7 +70,9 @@ import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
 import { defineAppFeedbackPlugin } from './AppFeedback';
+import { defineAppKeptPlugin } from './AppKept';
 import { keepsFeedback } from './feedback';
+import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 
 /** The id of an agent or a Cog, without its version. */
@@ -255,7 +257,9 @@ export type AppPreset = {
  *   its page (`app-page`) when it has one, with the Canvas's block plugins
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
- *   comment on each answer when its record keeps feedback (V-18); with
+ *   comment on each answer when its record keeps feedback (V-18); what it
+ *   keeps and for how long, under its prompt before the first message, when
+ *   `kept` says it (R-31); with
  *   `sidebar`, its rules and approvals card, its activity feed and its
  *   computer (R-01b, R-23);
  *   laid out as `interface.layout` says;
@@ -274,6 +278,12 @@ export function appPreset(
     sidebar?: boolean;
     /** What its record is kept under: its activity's. */
     appUid?: string;
+    /**
+     * Say what it keeps before the first message (R-31): at its address and
+     * embedded, not in its builder's Preview — to a `visitor` not signed
+     * in, that nothing is kept (R-30).
+     */
+    kept?: { visitor: boolean };
   } = {},
 ): AppPreset {
   if (app.kind === 'decision') {
@@ -302,6 +312,10 @@ export function appPreset(
       // A thumb and a comment on each answer, kept in its record (LOOP
       // V-18): only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
+      // What it keeps, and for how long, before anything is said (R-31).
+      ...(options.kept
+        ? [defineAppKeptPlugin(app, keptBeforeFirstMessage(app, options.kept))]
+        : []),
       // What its builder reads beside its page (R-01b): its rules and the
       // approvals waiting, and what it did.
       ...(options.sidebar
@@ -404,6 +418,13 @@ export function AppRenderer({
    */
   const source = JSON.stringify(dumpAppspec(app));
   const off = [...(pluginsOff ?? [])].sort().join(',');
+  /*
+   * What it keeps, said before the first message (R-31): run as a
+   * deployment — at its address, embedded — and not in its builder's
+   * Preview; to a visitor not signed in, that nothing is kept (R-30).
+   */
+  const deployed = Boolean(instance?.deploymentUid);
+  const visitor = Boolean(embed.datalayerVisitors);
   const preset = useMemo(
     (): AppPreset | { problem: string } => {
       try {
@@ -412,6 +433,7 @@ export function AppRenderer({
           pluginsOff,
           sidebar,
           appUid: instance?.appUid,
+          ...(deployed ? { kept: { visitor } } : {}),
         });
       } catch (error) {
         return {
@@ -420,7 +442,7 @@ export function AppRenderer({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, page, off, sidebar, instance?.appUid],
+    [source, page, off, sidebar, instance?.appUid, deployed, visitor],
   );
   const allPlugins = useMemo(
     () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
@@ -472,6 +494,8 @@ export function AppRenderer({
             frameTitle: [app.emoji, app.name].filter(Boolean).join(' '),
           }
         : {})}
+      // Its rules, activity and computer on a rail, one at a time (T-07).
+      sidebarRail={sidebar}
       teamPicker={false}
       showAgentVariants={false}
       graph={false}
