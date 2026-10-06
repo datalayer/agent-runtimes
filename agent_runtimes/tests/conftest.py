@@ -26,6 +26,11 @@ os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
     tempfile.mkdtemp(prefix="agent-runtimes-tests-"), "protocol-state.sqlite"
 )
 
+# A machine with the platform's magic key launches unmetered: no credits asked,
+# a reservation that never ends. The tests of launching expect a metered one;
+# the test of the key sets it itself.
+os.environ.pop("DATALAYER_MAGIC_API_KEY", None)
+
 from collections.abc import Iterator, Mapping  # noqa: E402
 from typing import Any, Dict  # noqa: E402
 

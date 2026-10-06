@@ -167,11 +167,16 @@ def seen_whole(media_type: str) -> bool:
     return any(kind_takes(kind, "", media_type) for kind in SEEN_KINDS)
 
 
-def binary_part(name: str, media_type: str, data: str) -> Mapping[str, Any]:
-    """A file as AG-UI's user message carries it whole (``data`` in base64)."""
+def media_part(media_type: str, data: str) -> Mapping[str, Any]:
+    """A file as AG-UI's user message carries it whole (``data`` in base64).
+
+    An image, a recording or a video is its own kind of part, anything else a
+    document, its bytes inline: the typed parts of ag-ui-protocol 0.1.15 and
+    later. Its 1.0 refuses the older ``binary`` part, and pydantic-ai then
+    drops it, so the model would never see the file.
+    """
+    kind = media_type.split("/", 1)[0]
     return {
-        "type": "binary",
-        "mimeType": media_type,
-        "data": data,
-        "filename": name,
+        "type": kind if kind in ("image", "audio", "video") else "document",
+        "source": {"type": "data", "value": data, "mimeType": media_type},
     }

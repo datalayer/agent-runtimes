@@ -121,32 +121,42 @@ class Accounting(BaseAgent):
 async def served(
     state: Any, visitors: bool = False, visitors_key: str | None = None
 ) -> AsyncIterator[tuple[Any, Accounting]]:
-    """The application's route, mounted and running, as the runtime serves it."""
+    """The application's route, mounted and running, as the runtime serves it.
+
+    Its lifespan is entered here, and only here: an app an earlier test made
+    (``set_a2a_app``) would otherwise be given the route too, and start a
+    second worker on the same tasks — every run twice.
+    """
     agent = Accounting()
     a2a_routes._a2a_mounts.clear()
-    said = apps_a2a.serve_app_over_a2a(
-        APP_CATALOGUE["accounting"],
-        agent,
-        URL,
-        visitors=visitors,
-        visitors_key=visitors_key,
-    )
-    assert {key: said[key] for key in ("url", "card", "task")} == {
-        "url": f"{URL}/",
-        "card": f"{URL}/.well-known/agent-card.json",
-        "task": "a2a:local:accounting:",
-    }
-    assert ("visitors" in said) == visitors
-    registration = a2a_routes.get_a2a_agents()["accounting"]
-    [mount] = [m for m in a2a_routes.get_a2a_mounts() if m.path == "/accounting"]
-    assert registration.app is not None
-    lifespan = registration.app.router.lifespan_context(registration.app)
-    await lifespan.__aenter__()
+    held = (a2a_routes._app, a2a_routes._api_prefix)
+    a2a_routes.set_a2a_app(None)
     try:
-        yield mount.app, agent
+        said = apps_a2a.serve_app_over_a2a(
+            APP_CATALOGUE["accounting"],
+            agent,
+            URL,
+            visitors=visitors,
+            visitors_key=visitors_key,
+        )
+        assert {key: said[key] for key in ("url", "card", "task")} == {
+            "url": f"{URL}/",
+            "card": f"{URL}/.well-known/agent-card.json",
+            "task": "a2a:local:accounting:",
+        }
+        assert ("visitors" in said) == visitors
+        registration = a2a_routes.get_a2a_agents()["accounting"]
+        [mount] = [m for m in a2a_routes.get_a2a_mounts() if m.path == "/accounting"]
+        assert registration.app is not None
+        lifespan = registration.app.router.lifespan_context(registration.app)
+        await lifespan.__aenter__()
+        try:
+            yield mount.app, agent
+        finally:
+            await lifespan.__aexit__(None, None, None)
     finally:
-        await lifespan.__aexit__(None, None, None)
         apps_a2a.stop_serving_apps()
+        a2a_routes.set_a2a_app(*held)
 
 
 def _client(app: Any, client: tuple[str, int] = LOCAL) -> httpx.AsyncClient:

@@ -38,10 +38,12 @@ as they take a spec, and `run` runs its code in this process (P-08).
 
 from __future__ import annotations
 
+import contextlib
 import json
+import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 import typer
 from rich.console import Console
@@ -458,7 +460,6 @@ def _code_tests_of(path: Path, report: Report, *, local: bool) -> bool:
     Returns whether they were asked but not all run (exit 3).
     """
     import asyncio
-    import logging
 
     from agent_runtimes.loop.apps import own
     from agent_runtimes.loop.apps.loading import AppNotRunnable
@@ -496,10 +497,9 @@ def _code_tests_of(path: Path, report: Report, *, local: bool) -> bool:
             "each decided by its code."
         )
         return False
-    for name in ("agent_runtimes", "botocore", "httpx", "httpx2"):
-        logging.getLogger(name).setLevel(logging.WARNING)
     try:
-        results = asyncio.run(own.run_code_tests(application))
+        with _quiet():
+            results = asyncio.run(own.run_code_tests(application))
     except AppNotRunnable as refused:
         report.tests = listed
         report.tests_says = "Its code's tests: not run. " + " ".join(refused.problems)
@@ -607,20 +607,44 @@ def _safety_of(
     return _safety_here(application, report, cases, judge)
 
 
+@contextlib.contextmanager
+def _quiet() -> Iterator[None]:
+    """While cases run, the terminal says what came of each: no model routing
+    or record log over it. The loggers are as they were after: a validation
+    run in a process that goes on (a test, a notebook) leaves its logs alone.
+    """
+    loggers = [
+        logging.getLogger(name)
+        for name in ("agent_runtimes", "botocore", "httpx", "httpx2")
+    ]
+    held = [each.level for each in loggers]
+    for each in loggers:
+        each.setLevel(logging.WARNING)
+    try:
+        yield
+    finally:
+        for each, level in zip(loggers, held):
+            each.setLevel(level)
+
+
 def _safety_here(
     application: Any, report: Report, cases: List[Any], judge_model: Any
 ) -> bool:
     """The safety set asked on this machine, and judged here when a judge is."""
+    with _quiet():
+        return _ask_safety_here(application, report, cases, judge_model)
+
+
+def _ask_safety_here(
+    application: Any, report: Report, cases: List[Any], judge_model: Any
+) -> bool:
+    """Each case asked of the application in this process, and judged."""
     import asyncio
-    import logging
 
     from agent_runtimes.evals.remote.evaluators import default_judge
     from agent_runtimes.loop.apps import safety as _safety
     from agent_runtimes.loop.apps.loading import AppNotRunnable
 
-    # The terminal says what came of each case: no model routing or record log over it.
-    for name in ("agent_runtimes", "botocore", "httpx", "httpx2"):
-        logging.getLogger(name).setLevel(logging.WARNING)
     judge = _safety.model_judge(judge_model) if judge_model else default_judge()
     if judge is None:
         _list_safety(

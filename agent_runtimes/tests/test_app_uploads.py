@@ -140,7 +140,8 @@ def test_an_image_sent_without_being_asked_goes_to_the_model_whole(
         "type": "text",
         "text": "What is in it?\n\nThe file p.png (image/png) is attached.",
     }
-    assert asked["content"][1]["mimeType"] == "image/png"
+    assert asked["content"][1]["type"] == "image"
+    assert asked["content"][1]["source"]["mimeType"] == "image/png"
     assert live.describe()["files"] == [
         {"name": "p.png", "type": "image/png", "size": len(png), "path": ""}
     ]

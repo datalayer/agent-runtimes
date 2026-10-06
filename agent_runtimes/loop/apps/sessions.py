@@ -91,7 +91,7 @@ from agent_runtimes.loop.apps.session import (
     form_values,
 )
 from agent_runtimes.loop.apps.uploads import (
-    binary_part,
+    media_part,
     page_refused,
     seen_whole,
     unasked_refused,
@@ -1188,8 +1188,7 @@ class LiveSession:
                 self._keep([file], path)
             elif not is_text(file) and seen_whole(file.media_type):
                 whole.append(
-                    binary_part(
-                        file.name,
+                    media_part(
                         file.media_type,
                         base64.b64encode(file.content).decode("ascii"),
                     )

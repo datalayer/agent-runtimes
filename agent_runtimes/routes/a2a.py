@@ -211,6 +211,10 @@ def register_a2a_agent(
         return
 
     agent_id = card.id
+    if agent_id in _a2a_agents:
+        # Made again under the same id: the new agent replaces the old one,
+        # rather than being mounted after a route that still answers first.
+        unregister_a2a_agent(agent_id)
 
     from ..transports.a2a import A2AWorker, TaskCancellation
 
