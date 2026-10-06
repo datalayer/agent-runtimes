@@ -26,7 +26,8 @@ What it declares — starters, settings, rules, connections, schedules, the
 components of its surface (``app.ui.table(...)``) — is its spec (`Application.spec`), validated as
 any Appspec is. What it reacts to —
 ``start``, ``message``, ``action``, ``settings``, ``stop``, ``resume``,
-``schedule`` — is called by whoever runs it, through an `AppHost`.
+``end``, ``logout``, ``schedule`` — is called by whoever runs it, through
+an `AppHost`.
 """
 
 from __future__ import annotations
@@ -59,7 +60,7 @@ from agent_runtimes.types import (
 Handler = Callable[..., Any]
 
 #: The moments an application reacts to with one handler each.
-EVENTS = ("start", "message", "settings", "stop", "resume")
+EVENTS = ("start", "message", "settings", "stop", "resume", "end", "logout")
 
 
 class Application:
@@ -433,6 +434,17 @@ class Application:
         """React to an earlier session reopened, its state back: ``handler(session)``."""
         return self._on("resume", handler)
 
+    def end(self, handler: Handler) -> Handler:
+        """React to the conversation closing for good: ``handler(session)``.
+
+        The last thing a session runs; nobody reads what it sends.
+        """
+        return self._on("end", handler)
+
+    def logout(self, handler: Handler) -> Handler:
+        """React to the person signing out: ``handler(session)``, then the session ends."""
+        return self._on("logout", handler)
+
     def action(self, name: str) -> Callable[[Handler], Handler]:
         """React to a button: ``handler(session, payload)``.
 
@@ -498,7 +510,8 @@ class Application:
         Parameters
         ----------
         event : str
-            ``start``, ``message``, ``settings``, ``stop`` or ``resume``.
+            ``start``, ``message``, ``settings``, ``stop``, ``resume``,
+            ``end`` or ``logout``.
 
         Returns
         -------
@@ -563,6 +576,7 @@ class AppHost:
         self.recorder = recorder or AppRecorder(app=self.spec)
         self._running: Dict[str, asyncio.Task[Any]] = {}
         self._stopped: set[str] = set()
+        self._ended: set[str] = set()
 
     def _session(self, **kwargs: Any) -> Session:
         return Session(
@@ -573,6 +587,18 @@ class AppHost:
             agent_maker=self._agent_maker,
             **kwargs,
         )
+
+    def _open(self, session: Session) -> None:
+        if session.id in self._ended:
+            raise ValueError(f"Session {session.id} has ended.")
+
+    async def _cancel(self, session: Session) -> None:
+        """Cancel what runs in the session, if anything does."""
+        task = self._running.get(session.id)
+        if task is not None and not task.done():
+            self._stopped.add(session.id)
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
 
     async def _react(self, session: Session, handler: Handler, *args: Any) -> None:
         """Run a handler as one turn of the session: stoppable, then recorded."""
@@ -622,6 +648,7 @@ class AppHost:
 
     async def message(self, session: Session, text: str) -> None:
         """The user wrote: run ``message``, or let the agent answer."""
+        self._open(session)
         await self._react(session, self.app.handler("message") or _answer, text)
 
     async def action(
@@ -632,6 +659,7 @@ class AppHost:
         A form's values sent with it are checked against its schema first
         (C-16): refused, the handler is not called.
         """
+        self._open(session)
         handler = self.app.actions.get(name)
         if handler is None:
             raise KeyError(f"{self.app.id} has no action {name!r}.")
@@ -642,6 +670,7 @@ class AppHost:
 
     async def settings(self, session: Session, values: Mapping[str, Any]) -> None:
         """The user changed settings: check them, keep them, run ``settings``."""
+        self._open(session)
         updated = session._update_settings(values)
         handler = self.app.handler("settings")
         if handler is not None:
@@ -649,14 +678,35 @@ class AppHost:
 
     async def stop(self, session: Session) -> None:
         """The user pressed Stop: what runs is cancelled, then ``stop`` runs."""
-        task = self._running.get(session.id)
-        if task is not None and not task.done():
-            self._stopped.add(session.id)
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
+        self._open(session)
+        await self._cancel(session)
         handler = self.app.handler("stop")
         if handler is not None:
             await self._react(session, handler)
+
+    async def end(self, session: Session) -> None:
+        """The conversation closed: what runs is cancelled, ``end`` runs, and
+        the session takes nothing more (LOOP P-14).
+
+        Ending a session that has ended does nothing.
+        """
+        if session.id in self._ended:
+            return
+        await self._cancel(session)
+        self._ended.add(session.id)
+        handler = self.app.handler("end")
+        if handler is not None:
+            await self._react(session, handler)
+
+    async def logout(self, session: Session) -> None:
+        """The person signed out: what runs is cancelled, ``logout`` runs, then
+        the session ends (LOOP P-14)."""
+        self._open(session)
+        await self._cancel(session)
+        handler = self.app.handler("logout")
+        if handler is not None:
+            await self._react(session, handler)
+        await self.end(session)
 
     async def resume(
         self,
@@ -666,7 +716,8 @@ class AppHost:
         user: Optional[str] = None,
         settings: Optional[Mapping[str, Any]] = None,
     ) -> Session:
-        """Reopen an earlier session with its state, and run ``resume``.
+        """Reopen an earlier session with its state, and run ``resume`` — an
+        ended one too.
 
         Parameters
         ----------
@@ -684,6 +735,8 @@ class AppHost:
         Session
             The session.
         """
+        # An ended session is reopened so: its thread, its state (LOOP P-14).
+        self._ended.discard(session_id)
         session = self._session(
             id=session_id, user=user, state=dict(state), settings=settings
         )

@@ -22,7 +22,7 @@ import json
 import mimetypes
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from rich.console import Console
 
@@ -37,6 +37,7 @@ from agent_runtimes.loop.apps.session import (
     FormQuestion,
     Message,
     Question,
+    Removed,
     Session,
     Step,
     UploadedFile,
@@ -57,10 +58,22 @@ class TerminalChannel:
 
     console: Console
     read: Optional[Callable[[str], str]] = None
+    app_name: str = ""
+    """The application's name: a message by anybody else says its author."""
     _streaming: Dict[str, bool] = field(default_factory=dict)
+    _shown: Set[str] = field(default_factory=set)
+
+    def _bullet(self, author: str) -> None:
+        self.console.print("[green]●[/green] ", end="")
+        if self.app_name and author != self.app_name:
+            self.console.print(f"[bold]{author}:[/bold] ", end="", highlight=False)
 
     async def deliver(self, event: Event) -> None:
-        """Show a message, a piece of one, or a step."""
+        """Show a message, a piece of one, a message changed or removed, or a step.
+
+        A terminal does not write over what it printed: a message changed is
+        printed again, marked edited; one removed is said removed.
+        """
         if isinstance(event, Delta):
             if not self._streaming.get(event.message_id):
                 self._streaming[event.message_id] = True
@@ -69,9 +82,16 @@ class TerminalChannel:
         elif isinstance(event, Message):
             if self._streaming.pop(event.id, False):
                 self.console.print()
-            else:
-                self.console.print("[green]●[/green] ", end="")
+            elif event.id in self._shown:
+                self.console.print("[dim]↻ edited:[/dim] ", end="")
                 self.console.print(event.text, markup=False, highlight=False)
+            else:
+                self._bullet(event.author)
+                self.console.print(event.text, markup=False, highlight=False)
+            self._shown.add(event.id)
+        elif isinstance(event, Removed):
+            if event.message_id in self._shown:
+                self.console.print("[dim]✗ a message was removed.[/dim]")
         elif isinstance(event, Step):
             indent = "  " if event.parent_id else ""
             if event.ended_at is None:
@@ -138,7 +158,7 @@ class AppTux(CliTux):
     ) -> None:
         super().__init__(**kwargs)
         self.application = application
-        self.channel = TerminalChannel(self.console)
+        self.channel = TerminalChannel(self.console, app_name=application.spec.name)
         self.host = AppHost(application, self.channel)
         self.app_session: Optional[Session] = None
         self._reload = reload
@@ -229,18 +249,21 @@ class AppTux(CliTux):
         await self._turn(lambda: self.host.message(session, message))
         self.console.print()
 
-    async def stop_session(self) -> None:
-        """The person leaves: the code's ``stop`` runs."""
-        if self.app_session is not None and self.application.handler("stop"):
+    async def end_session(self) -> None:
+        """The person leaves: the conversation is closed, the code's ``end`` runs (LOOP P-14)."""
+        if self.app_session is not None:
             session = self.app_session
-            await self._turn(lambda: self.host.stop(session))
+            await self._turn(lambda: self.host.end(session))
 
 
 async def ask_once(application: Application, text: str, console: Console) -> None:
     """One question to an application's code: its ``start``, then its ``message``."""
-    host = AppHost(application, TerminalChannel(console))
+    host = AppHost(
+        application, TerminalChannel(console, app_name=application.spec.name)
+    )
     session = await host.open()
     await host.message(session, text)
+    await host.end(session)
 
 
 async def run_app_tux(
@@ -254,7 +277,7 @@ async def run_app_tux(
     try:
         await tux.run()
     finally:
-        await tux.stop_session()
+        await tux.end_session()
 
 
 __all__ = ["AppTux", "TerminalChannel", "ask_once", "run_app_tux"]

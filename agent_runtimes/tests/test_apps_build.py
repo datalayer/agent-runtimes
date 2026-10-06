@@ -395,3 +395,42 @@ def test_the_renderer_routes_to_the_code_and_reloads_with_the_state(
     assert "v2 heard again (2)" in said
     assert tux.app_session is not None
     assert tux.app_session.state["saved"] == {"a": 1}
+
+
+def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -> None:
+    """LOOP P-14, P-15: a terminal does not write over what it printed."""
+    from agent_runtimes.loop.apps import Session
+
+    app = Application(id="interview", agent="example-simple")
+    ended: List[str] = []
+
+    @app.start
+    async def opening(session: Session) -> None:
+        first = await session.send("Searching…")
+        other = await session.send("Found 3.", author="Searcher")
+        await first.update("Searched: 3 results.")
+        await other.remove()
+
+    @app.end
+    def closed(session: Session) -> None:
+        ended.append(session.id)
+
+    tux = AppTux(
+        app,
+        agent_url="http://runtime/api/v1/ag-ui/default/",
+        server_url="http://runtime",
+        agent_id="default",
+    )
+    tux.console = tux.channel.console = _console()
+
+    async def go() -> None:
+        tux.app_session = await tux.host.open()
+        await tux.end_session()
+
+    asyncio.run(go())
+    said = tux.console.export_text()
+    assert "● Searching…" in said
+    assert "● Searcher: Found 3." in said
+    assert "↻ edited: Searched: 3 results." in said
+    assert "✗ a message was removed." in said
+    assert tux.app_session is not None and ended == [tux.app_session.id]

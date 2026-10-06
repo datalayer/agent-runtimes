@@ -840,6 +840,30 @@ async def stop_session(uid: str, request: Request) -> Dict[str, Any]:
     return dict(live.describe())
 
 
+@router.post("/sessions/{uid}/end")
+async def end_session(uid: str, request: Request) -> Dict[str, Any]:
+    """End a session: what runs is cancelled, a Python application's ``end`` runs,
+    and the runtime no longer holds it (LOOP P-14). Its record stays."""
+    live, _ = await _held(uid, request)
+    await live.end()
+    return dict(live.describe())
+
+
+@router.post("/sessions/logout")
+async def logout_sessions(request: Request) -> Dict[str, Any]:
+    """The caller signed out: each of their sessions here runs its ``logout``,
+    then ends (LOOP P-14)."""
+    from agent_runtimes.loop.apps import sessions
+
+    authorized = await _authorize(request, False)
+    ended: List[str] = []
+    for live in list(sessions._SESSIONS.values()):
+        if live.answers_to(authorized.caller):
+            await live.logout()
+            ended.append(live.uid)
+    return {"ended": ended}
+
+
 @router.post("/sessions/{uid}/resume")
 async def resume_session(uid: str, body: ResumeSessionRequest, request: Request) -> Any:
     """Resume a stopped session — or, from its record, one this runtime no longer holds."""

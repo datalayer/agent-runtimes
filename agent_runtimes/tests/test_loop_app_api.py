@@ -129,7 +129,7 @@ def test_one_handler_per_moment():
         def second(session: Session, text: str) -> None: ...
 
     with pytest.raises(ValueError, match="A moment is one of"):
-        app.handler("logout")
+        app.handler("on_chat_end")
 
 
 async def test_start_then_message_then_action():
@@ -597,3 +597,160 @@ def test_the_local_agent_is_its_agents_prompt_then_the_applications_instructions
     assert written.startswith("You are a concise writing specialist")
     assert written.endswith("\n\nWrite short.")
     # Its model is never called here: building it is the test.
+
+
+# --- P-14: the whole life cycle ---------------------------------------------------
+
+
+async def test_end_cancels_what_runs_reacts_and_takes_nothing_more():
+    app = interview()
+    said: list = []
+
+    @app.message
+    async def slow(session: Session, text: str) -> None:
+        await asyncio.sleep(30)
+
+    @app.end
+    async def closed(session: Session) -> None:
+        said.append(("end", session.id))
+
+    host, _, _ = hosted(app)
+    session = await host.open()
+    running = asyncio.create_task(host.message(session, "go"))
+    await asyncio.sleep(0.01)
+    await host.end(session)
+    await asyncio.wait_for(running, 1)
+    assert said == [("end", session.id)]
+    # Ended twice is ended once.
+    await host.end(session)
+    assert said == [("end", session.id)]
+    with pytest.raises(ValueError, match="has ended"):
+        await host.message(session, "again")
+    with pytest.raises(ValueError, match="has ended"):
+        await host.stop(session)
+    # Resumed, its thread is open again.
+    again = await host.resume(session.id, {"goal": "pricing"})
+    await host.settings(again, {"tone": "dry"})
+
+
+async def test_logout_reacts_then_ends():
+    app = interview()
+    said: list = []
+
+    @app.logout
+    def signed_out(session: Session) -> None:
+        said.append("logout")
+
+    @app.end
+    def closed(session: Session) -> None:
+        said.append("end")
+
+    host, _, _ = hosted(app)
+    session = await host.open(user="ada")
+    await host.logout(session)
+    assert said == ["logout", "end"]
+    with pytest.raises(ValueError, match="has ended"):
+        await host.logout(session)
+
+
+def test_end_and_logout_are_one_handler_each_and_marked_as_code():
+    from agent_runtimes.loop.apps.application import EVENTS
+
+    app = interview()
+
+    @app.end
+    def closed(session: Session) -> None: ...
+
+    with pytest.raises(ValueError, match="already reacts to end"):
+        app.end(closed)
+    assert app.handler("end") is closed
+    assert app.handler("logout") is None
+    assert EVENTS[-2:] == ("end", "logout")
+
+
+# --- P-15: messages that change ---------------------------------------------------
+
+
+async def test_a_message_is_updated_and_removed_where_the_user_reads_it():
+    from agent_runtimes.loop.apps import Removed
+
+    host, channel, _ = hosted(interview())
+    session = await host.open()
+    first = await session.send("Searching…")
+    other = await session.send("Found 3.", author="Searcher")
+    changed = await first.update("Searched: 3 results.")
+    assert (changed.id, changed.text, changed.author) == (
+        first.id,
+        "Searched: 3 results.",
+        first.author,
+    )
+    # The channel is told the same message again, under its id.
+    assert channel.events[-1] == changed
+    assert [(m.text, m.author) for m in channel.messages] == [
+        ("Searched: 3 results.", "Customer interview"),
+        ("Found 3.", "Searcher"),
+    ]
+    await other.remove()
+    assert channel.events[-1] == Removed(other.id, session.id)
+    assert [m.text for m in channel.messages] == ["Searched: 3 results."]
+    with pytest.raises(ValueError, match="was removed"):
+        await other.update("back")
+    # A streamed message changes the same way.
+
+    streamed = await session.stream(["a", "b"])
+    assert (await streamed.update("ab, said again")).text == "ab, said again"
+    # Only the session that sent it changes it.
+    elsewhere = await host.open()
+    with pytest.raises(ValueError, match="not"):
+        await elsewhere.update(changed, "x")
+    with pytest.raises(ValueError, match="not sent by a session"):
+        await Message("m", session.id, "x", "y").update("z")
+
+
+async def test_run_sync_and_cache():
+    import threading
+
+    from agent_runtimes.loop.apps import cache, run_sync
+
+    main = threading.get_ident()
+    assert await run_sync(threading.get_ident) != main
+
+    async def not_blocking() -> None: ...
+
+    with pytest.raises(TypeError, match="is async"):
+        await run_sync(not_blocking)
+
+    calls: list = []
+
+    @cache
+    def square(n: int) -> int:
+        calls.append(n)
+        return n * n
+
+    assert (square(3), square(3), square(n=3)) == (9, 9, 9)
+    assert calls == [3, 3]  # 3 positional, then n=3 by name
+    square.cache_clear()
+    square(3)
+    assert calls == [3, 3, 3]
+
+    fetched: list = []
+
+    @cache
+    async def fetch(key: str) -> str:
+        fetched.append(key)
+        await asyncio.sleep(0.01)
+        if key == "bad":
+            raise RuntimeError("no")
+        return key.upper()
+
+    # Called again while the first call runs: it waits for that one.
+    assert await asyncio.gather(fetch("a"), fetch("a")) == ["A", "A"]
+    assert await fetch("a") == "A"
+    assert fetched == ["a"]
+    # What it raised is not kept.
+    for _ in range(2):
+        with pytest.raises(RuntimeError):
+            await fetch("bad")
+    assert fetched == ["a", "bad", "bad"]
+    with pytest.raises(TypeError, match="hashable"):
+        await fetch(["a"])  # type: ignore[arg-type]

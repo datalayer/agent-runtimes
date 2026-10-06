@@ -897,8 +897,8 @@ def apps_run(
     The runtime is configured with the application, so its rules decide every
     tool call; its starters are the terminal's suggestions. An app.py is built
     first, and its code runs in this process: what it reacts to — start, a
-    message, an action (/action <name> [json]), stop — is its code's; a
-    message it does not take is answered by the runtime's agent.
+    message, an action (/action <name> [json]), end when you leave — is its
+    code's; a message it does not take is answered by the runtime's agent.
     """
     import asyncio
 

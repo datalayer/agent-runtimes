@@ -213,7 +213,9 @@ session always first:
 | `@app.action(name)` | `(session, payload)` | The person presses the button of that name. The values a `Form` sends with it are checked against its schema first: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). |
 | `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
-| `@app.resume` | `(session)` | An earlier session is reopened, its state back. |
+| `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
+| `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
+| `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.schedule(cron, *, description="", prompt="")` | `(session)` | On a schedule, in a session of its own. Also adds the schedule to the Appspec's triggers. |
 
 A second handler for the same moment, action or schedule raises
@@ -355,7 +357,9 @@ application in this process. A runtime, a test or a script drives it:
 | `await host.action(session, name, payload=None)` | Runs the action; an unknown one raises `KeyError`. |
 | `await host.settings(session, values)` | Checks the values, keeps them, runs `settings`. A value its input does not take raises `InvalidAnswer`. |
 | `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
-| `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume`. |
+| `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume` — an ended one too. |
+| `await host.end(session)` | Cancels what runs in the session, runs `end`; the session then takes nothing more — a message, an action, settings or Stop raise `ValueError` (*Session … has ended.*). Ending it again does nothing. |
+| `await host.logout(session)` | Cancels what runs, runs `logout`, then ends the session. |
 | `await host.schedule(name)` | Runs a schedule now, in a new session whose record says the schedule woke it. |
 
 Each handler runs as one turn: it can be stopped, and the record of the turn
@@ -388,6 +392,57 @@ made by that code.
   is delivered as a `Delta`, then the whole `Message`.
   `await session.stream(session.agent.stream(text))` shows the agent's
   answer as the model writes it.
+
+### Messages that change
+
+A message sent is not final:
+
+```python
+found = await session.send("Searching…")
+rows = await run_sync(search, query)          # blocking code, in a thread
+await found.update(f"Found {len(rows)}.")     # the same message, changed in place
+note = await session.send("Read the first three.", author="Searcher")
+await note.remove()                           # taken away from the conversation
+```
+
+- `await message.update(text)` — or `session.update(message, text)` —
+  changes what it says where the person reads it, and returns the message
+  as it is now: the same id, the same author. A streamed message changes the
+  same way.
+- `await message.remove()` — or `session.remove(message)` — takes it away.
+  A removed message cannot be changed again (`ValueError`), and only the
+  session that sent a message changes it.
+- `author` names who wrote a message, the application's name unless said: the
+  page draws a message by anybody else under that name, and the terminal
+  prints it before the text.
+
+On the channel, a message changed is the same `Message` delivered again
+under its id; one removed is a `Removed(message_id, session_id)`.
+`MemoryChannel.messages` says the conversation as it is now. Over the
+[Session API](./session-api) a change is the message written again under its
+id, and the author or the removal a `loop.message` event. A terminal does not
+write over what it printed: it prints the message again, marked
+*↻ edited*, or says *✗ a message was removed.*
+
+### Small conveniences
+
+Handlers are sync or async alike. Besides:
+
+- `await run_sync(function, *args, **kwargs)` runs blocking code — a file
+  read, `pandas`, a client without `async` — in a thread, so that the
+  session's other work goes on. An async function is refused: await it.
+- `@cache` keeps what a function answers for its arguments, for every session
+  of the process. Sync or async; an async one called again while its first
+  call runs waits for that call rather than running twice; what it raised is
+  not kept; its arguments are hashable; `fn.cache_clear()` forgets.
+
+```python
+from agent_runtimes.loop.apps import cache, run_sync
+
+@cache
+async def prices(region: str) -> dict:
+    return await fetch_prices(region)
+```
 
 ### Steps
 
@@ -533,7 +588,7 @@ terminal is also the application's `AppHost`:
 
 - **In this process**, through a channel to the terminal: `start` when the
   session opens, `message` when the application has one, an action with
-  `/action <name> [json]`, `stop` when the person leaves; `session.ask` asks
+  `/action <name> [json]`, `end` when the person leaves; `session.ask` asks
   at the prompt. With a `message`, `--ask "…"` runs `start`, then it, once.
 - **On the runtime**: a message the code does not take, answered by the
   runtime's agent with the application's rules, as for a spec.
@@ -555,7 +610,9 @@ builds is said, and the application as it was goes on. For a spec,
 **Verified.** `agent_runtimes/tests/test_loop_app_api.py` runs every call on
 this page in process: declarations becoming a validated Appspec, attaching
 to an existing one, one handler per moment; start, message, action,
-settings, stop, resume and schedule through an `AppHost`; the agent
+settings, stop, resume, end, logout and schedule through an `AppHost` (an
+ended session taking nothing more, and reopened by `resume`); messages
+updated and removed, `run_sync` and `cache`; the agent
 answering, streamed, when there is no message handler; `send`, `stream`,
 nested steps and their errors; `ask` with text, choice, file and form, wrong
 answers and timeouts; state per session; the record; the agent's history
@@ -563,7 +620,8 @@ across turns; a rule asking the person and a refusal raising; the local
 agent refusing what only a runtime brings; `load_application`. The example
 above was run as printed. `agent_runtimes/tests/test_apps_build.py` covers
 `build`, its refusals and its marks, `validate` and `push` of an `app.py`,
-`run` serving one, the terminal routing to the code, and `--watch` rebuilding
+`run` serving one, the terminal routing to the code — an author, an edit and
+a removal printed, `end` when the person leaves — and `--watch` rebuilding
 with the session's state kept; `loop apps run app.py --local --ask` was run
 against a local server.
 

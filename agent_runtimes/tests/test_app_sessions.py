@@ -684,6 +684,137 @@ def test_settings_change_stop_and_resume(runtime: Runtime, local: TestClient) ->
     ).startswith("Heard 2: Two")
 
 
+def test_end_and_logout(runtime: Runtime, remote: TestClient) -> None:
+    """Ended, a session is no longer held, its record stays; signing out ends
+    the caller's sessions, nobody else's (LOOP P-14)."""
+    runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1"})
+    for person, uid in (
+        ("ada", "session-0011"),
+        ("ada", "session-0012"),
+        ("bob", "session-0013"),
+    ):
+        events_of(
+            remote.post(
+                "/api/v1/apps/sessions",
+                headers=as_(person),
+                json={"agent": "notes-assistant", "session": uid, "opener": "One"},
+            )
+        )
+    # Only who opened it ends it.
+    assert (
+        remote.post(
+            "/api/v1/apps/sessions/session-0011/end", headers=as_("bob")
+        ).status_code
+        == 404
+    )
+    ended = remote.post(
+        "/api/v1/apps/sessions/session-0011/end", headers=as_("ada")
+    ).json()
+    assert ended["state"] == "ended"
+    assert (
+        remote.get("/api/v1/apps/sessions/session-0011", headers=as_("ada")).status_code
+        == 404
+    )
+    out = remote.post("/api/v1/apps/sessions/logout", headers=as_("ada")).json()
+    assert out == {"ended": ["session-0012"]}
+    held = remote.get("/api/v1/apps/sessions", headers=as_("bob")).json()["sessions"]
+    assert [s["uid"] for s in held] == ["session-0013"]
+    assert sessions.session_of("session-0012") is None
+    # The record of an ended session stays: it began, and was answered.
+    assert {r["session_uid"] for r in runtime.records} >= {
+        "session-0011",
+        "session-0012",
+    }
+
+
+async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> None:
+    """A message changed is written again under its id, its author said, one
+    removed said removed; the code's end and logout run (LOOP P-14, P-15)."""
+    from agent_runtimes.loop.apps import AppHost, Application, Session
+    from agent_runtimes.loop.apps.callers import Caller
+
+    application = Application(id="notes-assistant", agent="example-simple")
+    said: List[str] = []
+
+    @application.end
+    def closed(session: Session) -> None:
+        said.append(f"end {session.id}")
+
+    @application.logout
+    def out(session: Session) -> None:
+        said.append(f"logout {session.id}")
+
+    app = application.spec
+
+    def live_session(uid: str) -> sessions.LiveSession:
+        live = sessions.LiveSession(
+            uid=uid,
+            agent_id="notes-assistant",
+            app=app,
+            instance={},
+            opened_by=Caller(kind="person", uid="ada"),
+            acts_as={"kind": "person", "uid": "ada"},
+            recorder=AppRecorder(app=app, send=lambda body: _nothing()),
+        )
+        sessions._SESSIONS[uid] = live
+        live.host = AppHost(application, live, recorder=live.recorder)
+        return live
+
+    live = live_session("session-0014")
+    live.session = await live.host.open(id=live.uid)
+    queue = live._open_stream()
+    first = await live.session.send("Searching…")
+    await live.session.send("Found 3.", author="Searcher")
+    await first.update("Searched: 3 results.")
+    await first.remove()
+    events = []
+    while not queue.empty():
+        chunk = queue.get_nowait()
+        events.extend(
+            json.loads(line[len("data:") :])
+            for line in chunk.splitlines()
+            if line.startswith("data:")
+        )
+    assert [
+        (
+            e["type"],
+            e.get("messageId") or e.get("value", {}).get("id"),
+            e.get("delta") or e.get("value"),
+        )
+        for e in events
+        if e["type"] != "TEXT_MESSAGE_END"
+    ] == [
+        ("TEXT_MESSAGE_START", first.id, None),
+        ("TEXT_MESSAGE_CONTENT", first.id, "Searching…"),
+        ("TEXT_MESSAGE_START", events[4]["messageId"], None),
+        ("TEXT_MESSAGE_CONTENT", events[4]["messageId"], "Found 3."),
+        (
+            "CUSTOM",
+            events[4]["messageId"],
+            {"id": events[4]["messageId"], "author": "Searcher"},
+        ),
+        ("TEXT_MESSAGE_START", first.id, None),
+        ("TEXT_MESSAGE_CONTENT", first.id, "Searched: 3 results."),
+        ("CUSTOM", first.id, {"id": first.id, "removed": True}),
+    ]
+    assert [(m["content"], m.get("name")) for m in live.messages] == [
+        ("Found 3.", "Searcher")
+    ]
+    await live.end()
+    assert said == ["end session-0014"]
+    assert sessions.session_of("session-0014") is None
+
+    other = live_session("session-0015")
+    other.session = await other.host.open(id=other.uid)
+    await other.logout()
+    assert said[1:] == ["logout session-0015", "end session-0015"]
+    assert (other.state, sessions.session_of("session-0015")) == ("ended", None)
+
+
+async def _nothing() -> None:
+    return None
+
+
 def test_a_session_this_runtime_no_longer_holds_resumes_from_its_record(
     runtime: Runtime, local: TestClient
 ) -> None:

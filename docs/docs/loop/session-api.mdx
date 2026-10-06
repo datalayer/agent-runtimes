@@ -154,6 +154,8 @@ as `GET` says it — then the turn's events.
 | `PUT /sessions/{uid}/settings` | **Settings change**: `{values}`, checked against the application's settings (`Tone is one of Plain, Warm.`) and kept. |
 | `POST /sessions/{uid}/stop` | **Stop**: what runs is cancelled, a Python application's `stop` runs, the session waits to be resumed. Answers the session, as JSON. |
 | `POST /sessions/{uid}/resume` | **Resume** a stopped session; or, with `{agent}`, one this runtime no longer holds, from its record. |
+| `POST /sessions/{uid}/end` | **End**: what runs is cancelled, a Python application's `end` runs, and the runtime no longer holds the session. Answers the session, `ended`, as JSON. Its record stays. |
+| `POST /sessions/logout` | **Sign out**: each of the caller's sessions here runs a Python application's `logout`, then ends. Answers `{ended: [uid, …]}`. |
 | `GET /sessions/{uid}` | What the session is. |
 | `GET /sessions` | The caller's sessions on this runtime (`?agent=`). |
 | `POST /agents/{agent}/ag-ui/` | The application's agent over **AG-UI**, each thread a session, opened at its first run. |
@@ -181,7 +183,8 @@ What `GET` says of a session:
 ```
 
 `state` is `open`, `running` (a turn streams), `waiting` (the application
-asked the person something) or `stopped`. A second turn while one runs is
+asked the person something), `stopped`, or `ended` — said once, by the
+`end` route's answer, since an ended session is no longer held. A second turn while one runs is
 refused (409), as is anything but `resume` on a stopped session.
 
 ## What answers
@@ -196,7 +199,13 @@ refused (409), as is anything but `resume` on a stopped session.
   `session.send` and `session.stream` are `TEXT_MESSAGE_*` events,
   `session.step` is `STEP_STARTED` and `STEP_FINISHED`, and `session.agent`
   is the agent the runtime made for the application — its tools, its rules,
-  its record.
+  its record. A message the code changed (`message.update`) is written again,
+  whole, under its id, which the chat draws in place of what it said; one it
+  removed, and the author of one not written by the application, are a
+  `CUSTOM` event named `loop.message` — `{id, removed: true}` or
+  `{id, author}` — after which the chat takes the message away, or draws it
+  under that name. The conversation a resume snapshots keeps each author as
+  the message's `name`.
 
 ## Files
 
@@ -249,6 +258,19 @@ become the conversation, and the record says *A session of … resumed* under
 the same uid. An application whose record keeps no conversations cannot be
 resumed so, and says it.
 
+## End and sign out
+
+**End** closes the conversation for good: the turn is cancelled, a Python
+application's `end` runs — what it sends is read by nobody — and the runtime
+forgets the session, so that `GET` answers 404 after it. Its **record** stays,
+so `resume` with `{agent}` reopens it from there, as any session the runtime
+no longer holds. `loop apps run` ends its session when the person leaves the
+terminal.
+
+**Sign out** ends every session the caller drives on this runtime, each
+running its `logout` first: a person's sessions, a visitor's own visit's,
+everything for a call from the machine itself.
+
 ## Over AG-UI
 
 `POST /api/v1/apps/agents/{agent}/ag-ui/` takes AG-UI's `RunAgentInput` and
@@ -289,10 +311,12 @@ uid as the person; a deployment's acting as its principal, and a Preview
 refused on it; the chat's AG-UI run opening a session at its thread; a binary
 file put in the sandbox of an application with a shell, a text file in the
 message of one without, anything else refused; settings checked and kept;
-stop and resume; resume from the record after the sessions are forgotten;
+stop and resume; end and sign out, only the caller's sessions; a Python
+application's message changed, removed and written by another author on the
+stream, and its `end` and `logout` run; resume from the record after the sessions are forgotten;
 *Report from a File* taking its CSV from the page, asking for it when none was
 given, and refusing a PDF. The page side is tested with vitest
-(`app-page`, `app-page-blocks`, `embed-element`).
+(`app-page`, `app-page-blocks`, `embed-element`, `loopMessage`).
 
 Visitors (`agent_runtimes/tests/test_app_visitors.py`): one visitor never
 reaches another's session on the same runtime; a token reaches its own

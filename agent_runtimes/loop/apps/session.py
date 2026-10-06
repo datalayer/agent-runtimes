@@ -58,13 +58,50 @@ from agent_runtimes.types import AppSettingSpec, AppSpec
 
 @dataclass(frozen=True)
 class Message:
-    """A message the application wrote to the user."""
+    """A message the application wrote to the user.
+
+    Delivered again under the same id, it is that message changed
+    (`Message.update`); `Removed` takes it away (`Message.remove`).
+    """
 
     id: str
     session_id: str
     text: str
     author: str
     """Who wrote it: the application's name unless said."""
+    _session: Optional["Session"] = field(default=None, compare=False, repr=False)
+
+    def _sent_by(self) -> "Session":
+        if self._session is None:
+            raise ValueError(f"Message {self.id} was not sent by a session.")
+        return self._session
+
+    async def update(self, text: str) -> "Message":
+        """Change what the message says, where the user reads it (LOOP P-15).
+
+        Parameters
+        ----------
+        text : str
+            What it says now.
+
+        Returns
+        -------
+        Message
+            The message as it is now.
+        """
+        return await self._sent_by().update(self, text)
+
+    async def remove(self) -> None:
+        """Take the message away from the conversation (LOOP P-15)."""
+        await self._sent_by().remove(self)
+
+
+@dataclass(frozen=True)
+class Removed:
+    """A message taken away from the conversation."""
+
+    message_id: str
+    session_id: str
 
 
 @dataclass(frozen=True)
@@ -95,8 +132,8 @@ class Step:
 
 
 #: What a session delivers to its channel. A step is delivered twice: when it
-#: starts, and when it ends (with `ended_at`).
-Event = Union[Message, Delta, Step]
+#: starts, and when it ends (with `ended_at`); a message again when it changed.
+Event = Union[Message, Delta, Step, Removed]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
 
@@ -218,8 +255,14 @@ class MemoryChannel:
 
     @property
     def messages(self) -> List[Message]:
-        """The messages delivered, whole."""
-        return [event for event in self.events if isinstance(event, Message)]
+        """The messages delivered, whole, as they are now: changed, and without those removed."""
+        shown: Dict[str, Message] = {}
+        for event in self.events:
+            if isinstance(event, Message):
+                shown[event.id] = event
+            elif isinstance(event, Removed):
+                shown.pop(event.message_id, None)
+        return list(shown.values())
 
     async def deliver(self, event: Event) -> None:
         """Keep what is shown."""
@@ -395,6 +438,7 @@ class Session:
         self._agent_maker = agent_maker
         self._recorder = recorder
         self._agent: Optional[AppAgent] = None
+        self._removed: set[str] = set()
 
     # --- what the user set -----------------------------------------------------
 
@@ -425,9 +469,54 @@ class Session:
         Message
             The message as delivered.
         """
-        message = Message(_new_id(), self.id, text, author or self.app.name)
+        message = Message(_new_id(), self.id, text, author or self.app.name, self)
         await self.channel.deliver(message)
         return message
+
+    def _own(self, message: Message) -> None:
+        if message.session_id != self.id:
+            raise ValueError(
+                f"Message {message.id} is session {message.session_id}'s, not {self.id}'s."
+            )
+        if message.id in self._removed:
+            raise ValueError(f"Message {message.id} was removed.")
+
+    async def update(self, message: Message, text: str) -> Message:
+        """Change what a message of this session says, in place (LOOP P-15).
+
+        ``await message.update(text)`` says the same.
+
+        Parameters
+        ----------
+        message : Message
+            A message this session sent.
+        text : str
+            What it says now.
+
+        Returns
+        -------
+        Message
+            The message as it is now: the same id, and author.
+        """
+        self._own(message)
+        changed = replace(message, text=text, _session=self)
+        await self.channel.deliver(changed)
+        return changed
+
+    async def remove(self, message: Message) -> None:
+        """Take a message of this session away from the conversation (LOOP P-15).
+
+        ``await message.remove()`` says the same; a removed message cannot be
+        changed again.
+
+        Parameters
+        ----------
+        message : Message
+            A message this session sent.
+        """
+        self._own(message)
+        self._removed.add(message.id)
+        await self.channel.deliver(Removed(message.id, self.id))
 
     async def stream(
         self,
@@ -457,7 +546,9 @@ class Session:
         async for token in _text_of(tokens):
             pieces.append(token)
             await self.channel.deliver(Delta(message_id, self.id, token))
-        message = Message(message_id, self.id, "".join(pieces), author or self.app.name)
+        message = Message(
+            message_id, self.id, "".join(pieces), author or self.app.name, self
+        )
         await self.channel.deliver(message)
         return message
 
@@ -681,6 +772,7 @@ __all__ = [
     "MemoryChannel",
     "Message",
     "Question",
+    "Removed",
     "Session",
     "Step",
     "StepOutput",

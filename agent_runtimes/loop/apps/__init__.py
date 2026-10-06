@@ -6,7 +6,7 @@
 An application written in Python is an `Application` — its Appspec and the
 code that reacts to its sessions — run by an `AppHost`; its code is handed a
 `Session`, an application's session, apart from the workspace's `LoopSession`
-(`agent_runtimes.loop.session`). LOOP §10, P-01 to P-03.
+(`agent_runtimes.loop.session`). LOOP §10, P-01 to P-03, P-14, P-15.
 
 An application (`agent_runtimes.specs.apps`) carries rules written in a
 person's words and applied to what a tool does. This package is where they are
@@ -59,11 +59,13 @@ from agent_runtimes.loop.apps.session import (
     MemoryChannel,
     Message,
     Question,
+    Removed,
     Session,
     Step,
     TextQuestion,
     UploadedFile,
 )
+from agent_runtimes.loop.apps.utilities import cache, run_sync
 
 __all__ = [
     "AgentFactory",
@@ -81,13 +83,16 @@ __all__ = [
     "MemoryChannel",
     "Message",
     "Question",
+    "Removed",
     "Session",
     "Step",
     "TextQuestion",
     "UploadedFile",
     "app_capabilities",
+    "cache",
     "load_application",
     "local_agent",
+    "run_sync",
     "AppRuleBlockedError",
     "AppRulesCapability",
     "Enforced",

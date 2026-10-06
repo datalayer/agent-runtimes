@@ -77,6 +77,7 @@ from agent_runtimes.loop.apps.session import (
     InvalidAnswer,
     Message,
     Question,
+    Removed,
     Session,
     Step,
     TextQuestion,
@@ -101,7 +102,7 @@ FILES_DIR = "files"
 SESSION_UID = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 
 #: The states of a session.
-STATES = ("open", "running", "waiting", "stopped")
+STATES = ("open", "running", "waiting", "stopped", "ended")
 
 #: The kinds of file read as text, besides ``text/*``.
 TEXT_TYPES = frozenset(
@@ -381,6 +382,10 @@ def code_of(app: AppSpec) -> Any:
     return _CODE[key]
 
 
+#: The ``CUSTOM`` event that says a message's author, or that it was removed
+#: (LOOP P-15): ``{id, author}`` or ``{id, removed: true}``.
+LOOP_MESSAGE = "loop.message"
+
 # --- the session ----------------------------------------------------------------
 
 
@@ -617,6 +622,7 @@ class LiveSession:
     async def deliver(self, event: Event) -> None:
         """What the application's code shows, as AG-UI events (the `Channel`)."""
         from ag_ui.core import (
+            CustomEvent,
             StepFinishedEvent,
             StepStartedEvent,
             TextMessageContentEvent,
@@ -638,6 +644,9 @@ class LiveSession:
                     )
                 )
         elif isinstance(event, Message):
+            # A message delivered again under its id is that message changed:
+            # it is written again whole, under the same id, which a page
+            # draws in place of what it said (LOOP P-15).
             if self._streamed.pop(event.id, None) is None:
                 self.emit(TextMessageStartEvent(message_id=event.id, role="assistant"))
                 if event.text:
@@ -645,8 +654,29 @@ class LiveSession:
                         TextMessageContentEvent(message_id=event.id, delta=event.text)
                     )
             self.emit(TextMessageEndEvent(message_id=event.id))
-            self.messages.append(
-                {"id": event.id, "role": "assistant", "content": event.text}
+            kept = {"id": event.id, "role": "assistant", "content": event.text}
+            if event.author != self.app.name:
+                kept["name"] = event.author
+                self.emit(
+                    CustomEvent(
+                        name=LOOP_MESSAGE,
+                        value={"id": event.id, "author": event.author},
+                    )
+                )
+            for index, said in enumerate(self.messages):
+                if said.get("id") == event.id:
+                    self.messages[index] = kept
+                    break
+            else:
+                self.messages.append(kept)
+        elif isinstance(event, Removed):
+            self.messages = [
+                said for said in self.messages if said.get("id") != event.message_id
+            ]
+            self.emit(
+                CustomEvent(
+                    name=LOOP_MESSAGE, value={"id": event.message_id, "removed": True}
+                )
             )
         elif isinstance(event, Step):
             if event.ended_at is None:
@@ -946,6 +976,37 @@ class LiveSession:
 
     async def stop(self) -> None:
         """Stop: what runs is cancelled, the code's ``stop`` runs, and the session waits to be resumed."""
+        await self._close()
+        self.state = "stopped"
+        if self.host is not None and self.session is not None:
+            # Its own `stop` has nothing left to cancel: it runs, and what it
+            # shows is kept in the conversation for whoever resumes it.
+            await self.host.stop(self.session)
+
+    async def end(self) -> None:
+        """End: what runs is cancelled, the code's ``end`` runs, and the
+        runtime no longer holds the session (LOOP P-14).
+
+        Its record stays: it is resumed from it, as any session this runtime
+        no longer holds.
+        """
+        await self._close()
+        if self.host is not None and self.session is not None:
+            # Nobody reads what it shows: the conversation is closed.
+            await self.host.end(self.session)
+        self.state = "ended"
+        _SESSIONS.pop(self.uid, None)
+
+    async def logout(self) -> None:
+        """The person signed out: the code's ``logout`` runs, then the session ends (LOOP P-14)."""
+        await self._close()
+        if self.host is not None and self.session is not None:
+            await self.host.logout(self.session)
+        self.state = "ended"
+        _SESSIONS.pop(self.uid, None)
+
+    async def _close(self) -> None:
+        """Cancel the turn and the question waited on, and end the stream."""
         task = self._task
         if task is not None and not task.done():
             task.cancel()
@@ -955,11 +1016,6 @@ class LiveSession:
         self._question = None
         self._answer = None
         self._end_stream()
-        self.state = "stopped"
-        if self.host is not None and self.session is not None:
-            # Its own `stop` has nothing left to cancel: it runs, and what it
-            # shows is kept in the conversation for whoever resumes it.
-            await self.host.stop(self.session)
 
     def resume(self, *, head: str = "") -> AsyncIterator[str]:
         """Resume: the conversation so far, then the code's ``resume``; open again."""
@@ -1184,7 +1240,9 @@ def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
         elif message.get("role") == "assistant":
             shown.append(
                 AssistantMessage(
-                    id=str(message.get("id") or _new_id()), content=content
+                    id=str(message.get("id") or _new_id()),
+                    content=content,
+                    name=message.get("name") or None,
                 )
             )
     return shown
@@ -1412,6 +1470,7 @@ async def conversation_from_record(
 
 __all__ = [
     "FILES_DIR",
+    "LOOP_MESSAGE",
     "MAX_FILE_BYTES",
     "MAX_TEXT_CHARACTERS",
     "STATES",

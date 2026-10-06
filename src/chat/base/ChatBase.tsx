@@ -138,6 +138,7 @@ import {
   chatInspectorRecorder,
   type ChatInspectorRecorder,
 } from '../../components/inspector/chatInspect';
+import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -3617,6 +3618,24 @@ function ChatBaseInner({
             }
           }
           break;
+
+        case 'activity': {
+          // An application's code changed a message it sent: its author
+          // said, or the message taken away (LOOP P-15).
+          const change = loopMessageChange(event.activity);
+          if (!change) break;
+          setDisplayItems(prev => withLoopMessage(prev, change));
+          if (useStoreMode) {
+            if ('removed' in change) {
+              useChatStore.getState().deleteMessage(change.id);
+            } else {
+              useChatStore.getState().updateMessage(change.id, {
+                speaker: speakerOf(change.author),
+              });
+            }
+          }
+          break;
+        }
 
         case 'done':
           /*
