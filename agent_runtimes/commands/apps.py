@@ -692,6 +692,64 @@ def apps_init(
     )
 
 
+@app.command(name="eject")
+def apps_eject(
+    path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="The application's Appspec, a YAML file."
+    ),
+    out: Path = typer.Option(
+        None, "--out", "-o", help="The file written; app.py beside the spec by default."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite a file that is there."
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Eject without asking: it is one way."
+    ),
+) -> None:
+    """Write an application built by spec or on the Canvas as an app.py (LOOP P-13).
+
+    One way: from then on the file is its source, and its spec is built from
+    it. Said before it is done, and asked unless --yes; the file holds the
+    spec and builds it the same, or nothing is written. `push` it as the
+    application's next version: its versions so far are kept.
+    """
+    import yaml
+
+    from agent_runtimes.loop.apps.scaffold import EJECT_SAID, InitRefused, eject
+    from agent_runtimes.loop.launch import interactive
+
+    _require_agentspecs()
+    loaded = yaml.safe_load(path.read_text())
+    name = loaded.get("name") or loaded.get("id") if isinstance(loaded, dict) else None
+    said = EJECT_SAID.format(
+        file=(out or path.with_name("app.py")).name, name=name or path.name
+    )
+    console.print(said, highlight=False)
+    if not yes:
+        if not interactive():
+            console.print(
+                "[yellow]Not without a yes: --yes ejects it.[/yellow]", highlight=False
+            )
+            raise typer.Exit(1)
+        if not typer.confirm("Eject it?", default=False):
+            raise typer.Exit(1)
+    try:
+        written = eject(path, out, force=force)
+    except InitRefused as refused:
+        console.print(f"[red]✗[/red] {refused}", highlight=False)
+        raise typer.Exit(1)
+    console.print(
+        f"[green]✓[/green] {written} written: it builds {path.name} as it is.",
+        highlight=False,
+    )
+    console.print(
+        f"Next: loop apps run {written.name} --watch, then "
+        f"loop apps push {written.name} --app <its id>.",
+        highlight=False,
+    )
+
+
 @app.command(name="build")
 def apps_build(
     path: Path = typer.Argument(

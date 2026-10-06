@@ -264,6 +264,23 @@ Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests
 Next: cd desk && loop apps run app.yaml
 ```
 
+### Eject: an application into Python
+
+`loop apps eject app.yaml` writes an application built by spec or on the
+Canvas as an `app.py` that reproduces it (LOOP P-13): the file holds the
+spec, ready for code, and builds the same spec again — checked before it is
+written; otherwise nothing is. It is one way, and it says so first: from then
+on the file is the application's source, its spec built from it. It asks
+before it writes (`--yes` in a script; without a terminal, nothing is
+written without it), never writes over a file (`--force`), and writes
+`app.py` beside the spec unless `--out` says where.
+
+```bash
+loop apps pull <id>                      # its spec, as the Studio keeps it
+loop apps eject app.yaml --yes           # app.py, which builds it the same
+loop apps push app.py --app <id>         # the next version; the versions so far are kept
+```
+
 ### An application's safety set
 
 `loop apps validate <file>` runs the instant checks of an application: no model is called, so it is quick and free in CI. Add `--safety` and it also takes the **safety set** every application runs, the same tests the Studio asks with every *Run its tests*:

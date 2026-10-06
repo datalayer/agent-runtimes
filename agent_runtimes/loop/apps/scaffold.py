@@ -122,15 +122,22 @@ async def reply(session: Session, text: str) -> None:
 '''
 
 
-def _python_of_spec(text: str, app_id: str, example: str) -> str:
-    """An ``app.py`` holding an example written as a spec, ready for code."""
+def _python_of_spec(
+    text: str, app_id: str, example: str, *, by: str = "loop apps init"
+) -> str:
+    """An ``app.py`` holding a spec — an example's, or one ejected — ready for code."""
+    origin = (
+        f"the `{example}` example"
+        if by == "loop apps init"
+        else f"`{example}`, its spec until then"
+    )
     if '"""' in text or "\\" in text:
         raise InitRefused(
-            f"The `{example}` example cannot be held in an app.py as it is written."
+            f"{origin[0].upper()}{origin[1:]} cannot be held in an app.py as it is written."
         )
     return f'''"""{app_id}: an application written in Python.
 
-Written by `loop apps init` from the `{example}` example, written as a spec:
+Written by `{by}` from {origin}, written as a spec:
 its spec is held below, ready for code; with no reaction of its own, its agent
 answers. This file is the application's source:
 
@@ -265,6 +272,69 @@ def _from_example(folder: Path, app_id: str, example: str, python: bool) -> List
         f"# Written by `loop apps init` from the `{example}` example.\n" + text
     )
     return [SPEC_FILE]
+
+
+#: What ejecting does, said before it is done (LOOP P-13).
+EJECT_SAID = (
+    "Ejecting is one way: {file} becomes the source of {name}. From then on "
+    "its spec is built from the file — push the file, not the spec — and "
+    "the Studio shows its code in the Python tab, what the code decides "
+    "locked on the Canvas. Its versions so far are kept."
+)
+
+
+def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -> Path:
+    """Write an application built by spec or on the Canvas as an ``app.py`` (LOOP P-13).
+
+    The file holds the spec and builds it again, the same: checked before it
+    is written, and refused otherwise.
+
+    Parameters
+    ----------
+    spec_path : Path
+        The application's Appspec (``loop apps pull`` writes it).
+    out : Path, optional
+        The file written; ``app.py`` beside the spec when unsaid.
+    force : bool
+        Overwrite a file that is there.
+
+    Returns
+    -------
+    Path
+        The file written.
+
+    Raises
+    ------
+    InitRefused
+        For a file that is not an application's spec, one that does not
+        validate, a file there already, or a spec the file would not build
+        the same.
+    """
+    text = spec_path.read_text()
+    loaded = yaml.safe_load(text)
+    if not isinstance(loaded, dict) or not isinstance(loaded.get("id"), str):
+        raise InitRefused(f"{spec_path} is not an application's spec.")
+    problems = spec_problems(spec_path)
+    if problems:
+        raise InitRefused(" ".join(problems))
+    target = out or spec_path.with_name(PYTHON_FILE)
+    if target.exists() and not force:
+        raise InitRefused(f"{target} is there already; --force overwrites it.")
+    source = _python_of_spec(text, loaded["id"], spec_path.name, by="loop apps eject")
+    with tempfile.TemporaryDirectory() as scratch:
+        staged = Path(scratch) / target.name
+        staged.write_text(source)
+        try:
+            built = build(staged)
+        except AppNotRunnable as refused:
+            raise InitRefused(" ".join(refused.problems)) from None
+    if built.document != loaded:
+        raise InitRefused(
+            f"The app.py written from {spec_path} would not build the same spec: "
+            "nothing was written."
+        )
+    target.write_text(source)
+    return target
 
 
 def init(

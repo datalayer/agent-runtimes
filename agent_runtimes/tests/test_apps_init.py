@@ -155,3 +155,53 @@ def test_the_folder_s_own_tests_pass_as_written(
     )
     assert ran.returncode == 0, ran.stdout + ran.stderr
     assert f"{checks} passed" in ran.stdout
+
+
+# --- P-13: eject ------------------------------------------------------------------
+
+
+def test_eject_writes_an_app_py_that_builds_the_same_spec(tmp_path: Path) -> None:
+    from agent_runtimes.loop.apps.scaffold import eject
+
+    written = init("desk", tmp_path, example="support-desk")
+    spec_path = written.folder / "app.yaml"
+    code = eject(spec_path)
+    assert code == written.folder / "app.py"
+    assert "Written by `loop apps eject` from `app.yaml`" in code.read_text()
+    assert build(code).document == yaml.safe_load(spec_path.read_text())
+    application = load_application(code)
+    assert application.spec.id == "desk"
+    # Never over a file that is there, unless asked.
+    with pytest.raises(InitRefused, match="is there already"):
+        eject(spec_path)
+    assert eject(spec_path, force=True) == code
+
+
+def test_eject_refuses_what_is_not_a_spec_that_validates(tmp_path: Path) -> None:
+    from agent_runtimes.loop.apps.scaffold import eject
+
+    stray = tmp_path / "notes.yaml"
+    stray.write_text("- a list\n")
+    with pytest.raises(InitRefused, match="is not an application's spec"):
+        eject(stray)
+    held = tmp_path / "held.yaml"
+    held.write_text('schema: loop.app/v1\nid: held\nname: "A \\\\ B"\nkind: chat\n')
+    with pytest.raises(InitRefused):
+        eject(held)
+    assert not (tmp_path / "app.py").exists()
+
+
+def test_the_command_says_eject_is_one_way_and_asks(tmp_path: Path) -> None:
+    written = init("desk", tmp_path, example="support-desk")
+    spec_path = written.folder / "app.yaml"
+    # Not a terminal and no yes: said, and nothing is written.
+    refused = runner.invoke(app, ["eject", str(spec_path)])
+    assert refused.exit_code == 1
+    assert "Ejecting is one way" in refused.output
+    assert "Not without a yes" in refused.output
+    assert not (written.folder / "app.py").exists()
+    done = runner.invoke(app, ["eject", str(spec_path), "--yes"])
+    assert done.exit_code == 0, done.output
+    assert "Its versions so far are kept." in done.output
+    assert (written.folder / "app.py").exists()
+    assert "loop apps push app.py --app" in done.output
