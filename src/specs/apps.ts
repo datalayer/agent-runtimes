@@ -119,10 +119,11 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Answered live over A2A on a developer's machine (2026-10-06), asked for the open customer invoices: it read the aged receivables from the Odoo books and said that the list of invoices had failed. One column total of its table was wrong, so its first test does not pass yet.",
+      ],
       recorded: [],
       unverified: [
-        "It has not run against Odoo live over A2A: agent-runtimes' tests serve it with fasta2a in process, on a fake agent.",
         'Its tests have not been run as a set: no validation run is attached to it.',
       ],
     },
@@ -1864,7 +1865,7 @@ export const SALES_APP_0_0_1: AppSpec = {
       live: [],
       recorded: [],
       unverified: [
-        'It has not talked to Accounting live: the agent-runtimes example AgentA2ATeamExample runs it in the browser against an Accounting runtime that someone starts.',
+        "It has not talked to Accounting live yet: a developer's example runs it in the browser, against an Accounting that someone starts.",
         'Its tests have not been run as a set: no validation run is attached to it.',
       ],
     },
@@ -2754,8 +2755,10 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Answered live over A2A on a developer's machine (2026-10-06), asked for the open customer invoices: it read the aged receivables from the Odoo books and said that the list of invoices had failed. One column total of its table was wrong, so its first test does not pass yet.",
+        ],
         unverified: [
-          "It has not run against Odoo live over A2A: agent-runtimes' tests serve it with fasta2a in process, on a fake agent.",
           'Its tests have not been run as a set: no validation run is attached to it.',
         ],
       },
@@ -3999,7 +4002,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         unverified: [
-          'It has not talked to Accounting live: the agent-runtimes example AgentA2ATeamExample runs it in the browser against an Accounting runtime that someone starts.',
+          "It has not talked to Accounting live yet: a developer's example runs it in the browser, against an Accounting that someone starts.",
           'Its tests have not been run as a set: no validation run is attached to it.',
         ],
       },
