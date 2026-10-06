@@ -348,12 +348,14 @@ export {
 export {
   HOST_CONTEXT_TOOL,
   hostFrontendTools,
+  hostNotAllowed,
   hostRefused,
   hostTool,
   hostToolsOf,
   type AppEmbedHost,
   type HostEvent,
   type HostFunction,
+  type HostQuestion,
 } from './embed/hostBridge';
 export {
   defineDatalayerAppElement,

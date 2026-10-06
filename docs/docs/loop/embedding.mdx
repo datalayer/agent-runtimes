@@ -320,13 +320,15 @@ what it says:
 - **Out.** The element raises `message` (`{ id, text }`) once the application
   has answered, and `action` (`{ function, arguments, result | error }`) for
   each function of the page it called, beside `decision` and `token-expired`.
-- **Ruled.** A tool of the host that no rule names is left to the person: the
-  page refuses it before calling anything (`hostRefused`), and the checks
-  say it (*No rule names “host_refund”…*). A rule's `ask_first` is asked by
-  the application's runtime, as for any tool.
+- **Ruled.** Each call is decided in the page by the rule that names its
+  tool, before the page is called: a tool no rule names, or *leave it to
+  me*, is refused (`hostRefused`), and the checks say it (*No rule names
+  “host_refund”…*); *ask me first* and *do it if I asked* ask the person on
+  the page — `host.ask` in React, else the browser's `confirm` — and a call
+  they do not allow is refused; *do it* is done.
 
 In React, `AppEmbed` takes the same as `host`:
-`{ context: () => ({ user, page }), functions, onEvent }`.
+`{ context: () => ({ user, page }), functions, onEvent, ask }`.
 
 ## The snippet, from Ship
 
@@ -387,7 +389,7 @@ Not done yet:
   it is missing, the controls keep Primer's corners.
 - Two embeds on one page share Primer's portal root: the second one's overlays
   win.
-- The host's tools have not run against a runtime: that a call of
-  `host_<name>` reaches the application's rules on the runtime (and its
-  `ask_first` is asked there) is not verified; the page's own refusal of a
-  tool no rule names is.
+- The host's tools have not run against a runtime: whether the runtime's
+  own enforcement of the rules sees a call of `host_<name>` — a tool the
+  page runs — is not verified. If it does, it knows no class for it, and an
+  embed's visitor, whose turns only read, would be refused it there.

@@ -16,18 +16,22 @@
  *
  * Offered: the functions of the page its Appspec names
  * (`deployment.embedded.host.functions`), each called by its agent as the
- * tool `host_<name>`. Every one of these tools is decided by the rule that
- * names it, as any tool of the application is: by its runtime, which asks
- * the person first when the rule says so; in the page too, where a tool no
- * rule names is refused before the page is called (`behaviourFor`: left to
- * the person).
+ * tool `host_<name>`. Every one of these tools is decided in the page by
+ * the rule that names it (`behaviourFor`), before the page is called: one no
+ * rule names, or *leave it to me*, is refused; *ask me first* and *do it if
+ * I asked* ask the person on the page (`ask`, else the browser's `confirm`),
+ * and a call they do not allow is refused; *do it* is done.
  *
- * Pure: the tools call the page through what they are given.
+ * Pure: the tools call the page, and ask, through what they are given.
  *
  * @module loop/embed/hostBridge
  */
 
-import type { AppHostBridgeSpec, AppSpec } from '../../types/agentspecs';
+import type {
+  AppBehaviour,
+  AppHostBridgeSpec,
+  AppSpec,
+} from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
 import { behaviourFor } from '../apps/rules';
 
@@ -82,11 +86,42 @@ export type AppEmbedHost = {
   functions?: Record<string, HostFunction>;
   /** Told what the application does: `message`, `action`. */
   onEvent?: (event: HostEvent) => void;
+  /**
+   * Asks the person on the page whether a call its rule says to ask first
+   * may be made; the browser's `confirm` when the page gives none.
+   */
+  ask?: (question: HostQuestion) => boolean | Promise<boolean>;
+};
+
+/** What the person is asked before a call of the page is made. */
+export type HostQuestion = {
+  /** The function, as the Appspec names it. */
+  function: string;
+  arguments: Record<string, unknown>;
+  /** The question, in a sentence. */
+  sentence: string;
 };
 
 /** The sentence a call is refused with when no rule names its tool. */
 export const hostRefused = (tool: string): string =>
   `No rule of this application names ${tool}: it is left to the person, and the page was not called.`;
+
+/** The sentence a call is refused with when the person did not allow it. */
+export const hostNotAllowed = (tool: string): string =>
+  `The person did not allow ${tool}: the page was not called.`;
+
+/** Asks with the browser's `confirm`, where there is one; refuses where not. */
+const confirmOnPage = (question: HostQuestion): boolean =>
+  typeof window !== 'undefined' && typeof window.confirm === 'function'
+    ? window.confirm(question.sentence)
+    : false;
+
+/** The words of the rule that names the tool, for the question. */
+const actionOf = (
+  app: Pick<AppSpec, 'rules'>,
+  tool: string,
+): string | undefined =>
+  app.rules.find(rule => rule.appliesTo.includes(tool))?.action;
 
 /**
  * The frontend tools its agent is given for the page: `host_context` when
@@ -101,8 +136,8 @@ export function hostFrontendTools(
   if (!bridge) {
     return [];
   }
-  const ruled = (tool: string): boolean =>
-    behaviourFor(app, tool) !== 'leave_to_me';
+  const behaviour = (tool: string): AppBehaviour => behaviourFor(app, tool);
+  const ruled = (tool: string): boolean => behaviour(tool) !== 'leave_to_me';
   const tools: FrontendToolDefinition[] = [];
   if (bridge.context.length > 0) {
     tools.push({
@@ -145,6 +180,18 @@ export function hostFrontendTools(
         };
         if (!ruled(tool)) {
           return said({ error: hostRefused(tool) });
+        }
+        if (behaviour(tool) !== 'do_it') {
+          const action = actionOf(app, tool) ?? fn.description;
+          const ask = host().ask ?? confirmOnPage;
+          const allowed = await ask({
+            function: fn.name,
+            arguments: args,
+            sentence: `${action}? (${fn.name} with ${JSON.stringify(args)})`,
+          });
+          if (!allowed) {
+            return said({ error: hostNotAllowed(tool) });
+          }
         }
         const call = host().functions?.[fn.name];
         if (!call) {

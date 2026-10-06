@@ -114,15 +114,23 @@ describe('the tools of the host', () => {
       ticket: 42,
       title: args.title,
     }));
+    const ask = vi.fn(() => true);
     const host: AppEmbedHost = {
       functions: { open_ticket: openTicket },
       onEvent,
+      ask,
     };
     const tools = hostFrontendTools(RULED, () => host);
     expect(
       await tool(tools, 'host_open_ticket').handler!({ title: 'Late' }),
     ).toEqual({ result: { ticket: 42, title: 'Late' } });
     expect(openTicket).toHaveBeenCalledWith({ title: 'Late' });
+    // Its rule says ask first: the person on the page was asked.
+    expect(ask).toHaveBeenCalledWith({
+      function: 'open_ticket',
+      arguments: { title: 'Late' },
+      sentence: 'Open a ticket? (open_ticket with {"title":"Late"})',
+    });
     expect(onEvent).toHaveBeenCalledWith({
       type: 'action',
       detail: {
@@ -131,6 +139,40 @@ describe('the tools of the host', () => {
         result: { ticket: 42, title: 'Late' },
       },
     });
+  });
+
+  it('refuse a call the person did not allow, and ask nobody for one done', async () => {
+    const openTicket = vi.fn();
+    const tools = hostFrontendTools(RULED, () => ({
+      functions: { open_ticket: openTicket },
+      ask: async () => false,
+    }));
+    expect(await tool(tools, 'host_open_ticket').handler!({})).toEqual({
+      error:
+        'The person did not allow host_open_ticket: the page was not called.',
+    });
+    expect(openTicket).not.toHaveBeenCalled();
+    // No page asker and no confirm to ask with: refused too.
+    vi.stubGlobal('window', {});
+    const silent = hostFrontendTools(RULED, () => ({
+      functions: { open_ticket: openTicket },
+    }));
+    expect(await tool(silent, 'host_open_ticket').handler!({})).toEqual({
+      error:
+        'The person did not allow host_open_ticket: the page was not called.',
+    });
+    vi.unstubAllGlobals();
+    const ask = vi.fn(() => true);
+    const done = hostFrontendTools(
+      hosted([
+        { action: 'Refund', appliesTo: ['host_refund'], behaviour: 'do_it' },
+      ]),
+      () => ({ functions: { refund: () => 'ok' }, ask }),
+    );
+    expect(await tool(done, 'host_refund').handler!({})).toEqual({
+      result: 'ok',
+    });
+    expect(ask).not.toHaveBeenCalled();
   });
 
   it('refuse, before the page is called, a tool no rule names', async () => {
@@ -160,11 +202,13 @@ describe('the tools of the host', () => {
   it('say a function the page does not offer, and one that failed', async () => {
     const tools = hostFrontendTools(RULED, () => ({
       functions: {},
+      ask: () => true,
     }));
     expect(await tool(tools, 'host_open_ticket').handler!({})).toEqual({
       error: 'The page offers no function open_ticket: it was not called.',
     });
     const failing = hostFrontendTools(RULED, () => ({
+      ask: () => true,
       functions: {
         open_ticket: () => {
           throw new Error('the helpdesk is down');
