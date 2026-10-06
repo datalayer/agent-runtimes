@@ -54,8 +54,10 @@ file: an application saved with an example's id and another version runs as
 its agent answers, not as the example's code.
 
 The services — ai-agents, durable — import only what reads a spec:
-`load_app`, `schedule_triggers`, `session_payload`. None of them loads an
-`app.py`, builds one, or runs a session; a test of each side keeps it so
+`load_app`, `schedule_triggers`, `session_payload`; the scheduler starts a
+woken session on the runtime it launched, over HTTP (`start_session`). None
+of them loads an `app.py`, builds one, or runs a session in its own process;
+a test of each side keeps it so
 (`test_app_code_runs_where.py` here, `test_no_service_runs_application_code.py`
 in the services).
 

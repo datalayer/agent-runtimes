@@ -9,8 +9,10 @@ on a runtime, the sandbox a person's agent runs in. An ``app.py`` of
 anybody's own is built on their machine into the spec it amounts to; the
 platform keeps and runs the spec, never the file. The services import the
 loaders that read a spec (``load_app``, ``schedule_triggers``,
-``session_payload``), which run no code of the application's; services'
-own test (``test_no_service_runs_application_code``) keeps them so.
+``session_payload``), which run no code of the application's, and the
+scheduler starts a woken session on a runtime over HTTP (``start_session``);
+services' own test (``test_no_service_runs_application_code``, services
+dac587ca) keeps them so.
 """
 
 from pathlib import Path
