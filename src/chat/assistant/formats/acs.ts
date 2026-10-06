@@ -24,6 +24,7 @@ import {
   AssistantCharacterFormatError,
   type AssistantCharacterAnimation,
   type AssistantCharacterData,
+  type AssistantMouthShape,
 } from './types';
 
 export const ACS_SIGNATURE = 0xabcdabc3;
@@ -48,6 +49,36 @@ export interface AcsFrameImage {
   y: number;
 }
 
+/**
+ * A mouth overlay (ACSOVERLAYINFO), drawn only while the character speaks:
+ * its image over the frame's top image, or in its place.
+ */
+export interface AcsOverlay {
+  /** 0 closed, 1 to 4 wide open, 5 medium, 6 narrow (`MOUTH_SHAPES`). */
+  type: number;
+  /** Whether the overlay takes the place of the frame's top image. */
+  replaceTop: boolean;
+  image: number;
+  x: number;
+  y: number;
+  /**
+   * What the mouth is drawn over in place of the frame's images, when the
+   * file says (an `.aca` gives the frame without its top image).
+   */
+  base?: AcsFrameImage[];
+}
+
+/** The mouth shapes of the format, by overlay type. */
+export const MOUTH_SHAPES: readonly AssistantMouthShape[] = [
+  'closed',
+  'wide1',
+  'wide2',
+  'wide3',
+  'wide4',
+  'medium',
+  'narrow',
+];
+
 export interface AcsFrame {
   /** Images, as stored: the first is drawn on top. */
   images: AcsFrameImage[];
@@ -58,6 +89,8 @@ export interface AcsFrame {
   /** Frame index, or a negative value for none. */
   exitBranch: number;
   branches: { frameIndex: number; probability: number }[];
+  /** Its mouth overlays, by shape; none for most frames. */
+  overlays: AcsOverlay[];
 }
 
 export interface AcsAnimation {
@@ -94,25 +127,34 @@ export interface AcsImage {
   pixels: Uint8Array;
 }
 
-class Reader {
+/**
+ * Little-endian reads that refuse, in a sentence naming the file kind, to
+ * run past the end. `terminated`: whether a STRING ends with a null
+ * character, as in an `.acs` (an `.acf`'s do not).
+ */
+export class AgentReader {
   private readonly view: DataView;
   pos = 0;
 
-  constructor(readonly bytes: Uint8Array) {
+  constructor(
+    readonly bytes: Uint8Array,
+    readonly kind: string = '.acs',
+    readonly terminated: boolean = true,
+  ) {
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
   need(count: number, what: string): void {
     if (count < 0 || this.pos + count > this.bytes.length) {
       throw new AssistantCharacterFormatError(
-        `This .acs ends early: ${what} at byte ${this.pos} runs past the end of the file.`,
+        `This ${this.kind} ends early: ${what} at byte ${this.pos} runs past the end of the file.`,
       );
     }
   }
   seek(locator: AcsLocator, what: string): void {
     if (locator.offset + locator.size > this.bytes.length) {
       throw new AssistantCharacterFormatError(
-        `This .acs is damaged: ${what} is said to be at byte ${locator.offset}, past the end of the file.`,
+        `This ${this.kind} is damaged: ${what} is said to be at byte ${locator.offset}, past the end of the file.`,
       );
     }
     this.pos = locator.offset;
@@ -152,21 +194,25 @@ class Reader {
   locator(what: string): AcsLocator {
     return { offset: this.u32(what), size: this.u32(what) };
   }
-  /** STRING: a ULONG count of UTF-16 characters, then a null terminator. */
+  /**
+   * STRING: a ULONG count of UTF-16 characters, then, in an `.acs`, a null
+   * terminator.
+   */
   string(what: string): string {
     const count = this.u32(what);
     if (count === 0) return '';
-    this.need((count + 1) * 2, what);
+    const stored = this.terminated ? count + 1 : count;
+    this.need(stored * 2, what);
     let out = '';
     for (let k = 0; k < count; k++) {
       out += String.fromCharCode(this.view.getUint16(this.pos + k * 2, true));
     }
-    this.pos += (count + 1) * 2;
+    this.pos += stored * 2;
     return out;
   }
 }
 
-function readCharacterInfo(r: Reader, at: AcsLocator) {
+function readCharacterInfo(r: AgentReader, at: AcsLocator) {
   r.seek(at, 'the character information');
   const minor = r.u16('the version');
   const major = r.u16('the version');
@@ -246,7 +292,7 @@ function readCharacterInfo(r: Reader, at: AcsLocator) {
   };
 }
 
-function readFrames(r: Reader, animation: string): AcsFrame[] {
+function readFrames(r: AgentReader, animation: string): AcsFrame[] {
   const frameCount = r.u16(`the frames of ${animation}`);
   const frames: AcsFrame[] = [];
   for (let f = 0; f < frameCount; f++) {
@@ -264,16 +310,25 @@ function readFrames(r: Reader, animation: string): AcsFrame[] {
     for (let k = 0; k < branchCount; k++) {
       branches.push({ frameIndex: r.u16(where), probability: r.u16(where) });
     }
+    const overlays: AcsOverlay[] = [];
     const overlayCount = r.u8(where);
     for (let k = 0; k < overlayCount; k++) {
-      // Mouth overlays, drawn only while Agent speaks: read past, not kept.
-      // Type, replace flag, image index, an unknown byte; then the region flag.
-      r.skip(5, where);
+      // A mouth overlay, drawn only while the character speaks: its type,
+      // whether it replaces the top image, its image, an unknown byte, the
+      // region flag, its offset, its size (halved, and not needed: the
+      // image has its own), its region.
+      const type = r.u8(where);
+      const replaceTop = r.u8(where) !== 0;
+      const image = r.u16(where);
+      r.skip(1, where);
       const hasRegion = r.u8(where) !== 0;
-      r.skip(8, where);
+      const x = r.i16(where);
+      const y = r.i16(where);
+      r.skip(4, where);
       if (hasRegion) r.skip(r.u32(where), where);
+      overlays.push({ type, replaceTop, image, x, y });
     }
-    frames.push({ images, sound, duration, exitBranch, branches });
+    frames.push({ images, sound, duration, exitBranch, branches, overlays });
   }
   return frames;
 }
@@ -289,11 +344,11 @@ export function parseAcs(buffer: ArrayBuffer): AcsFile {
       `This is not a Microsoft Agent character: the file is ${bytes.length} bytes, shorter than the header of an .acs.`,
     );
   }
-  const r = new Reader(bytes);
+  const r = new AgentReader(bytes);
   const signature = r.u32('the signature');
   if (signature === ACF_SIGNATURE) {
     throw new AssistantCharacterFormatError(
-      'This is a Microsoft Agent .acf, whose animations are in separate .aca files: .acf is not read yet, load the .acs of the character.',
+      'This is a Microsoft Agent .acf, whose animations are in separate .aca files: pick the .acf together with its .aca files.',
     );
   }
   if (signature !== ACS_SIGNATURE) {
@@ -368,6 +423,13 @@ export function parseAcs(buffer: ArrayBuffer): AcsFile {
           `This .acs is damaged: frame ${f} of ${name} plays sound ${frame.sound}, and there are ${sounds.length}.`,
         );
       }
+      for (const overlay of frame.overlays) {
+        if (overlay.image >= images.length) {
+          throw new AssistantCharacterFormatError(
+            `This .acs is damaged: a mouth of frame ${f} of ${name} draws image ${overlay.image}, and there are ${images.length}.`,
+          );
+        }
+      }
       for (const branch of frame.branches) {
         if (branch.frameIndex >= frames.length) {
           throw new AssistantCharacterFormatError(
@@ -400,7 +462,7 @@ export function decodeAcsImage(file: AcsFile, index: number): AcsImage {
   if (!entry) {
     throw new AssistantCharacterFormatError(`This .acs has no image ${index}.`);
   }
-  const r = new Reader(file.bytes);
+  const r = new AgentReader(file.bytes);
   const what = `image ${index}`;
   r.seek(entry.locator, what);
   r.skip(1, what);
@@ -435,6 +497,24 @@ export function decodeAcsImage(file: AcsFile, index: number): AcsImage {
   return { width, height, pixels };
 }
 
+/**
+ * What a Microsoft Agent character is drawn from, whichever file it came in:
+ * an `.acs` (`parseAcs`), or an `.acf` and its `.aca` files (`readAcfCharacter`).
+ */
+export interface AgentCharacterSource {
+  name: string;
+  width: number;
+  height: number;
+  transparentIndex: number;
+  palette: Uint32Array;
+  states: Record<string, string[]>;
+  animations: AcsAnimation[];
+  /** Image `index`, decoded. */
+  decode: (index: number) => AcsImage;
+  /** The bytes of sound `index` (RIFF WAVE). */
+  sound: (index: number) => Uint8Array;
+}
+
 /** One cell of the sprite sheet: the frames that look the same share it. */
 export interface AcsSpriteLayout {
   columns: number;
@@ -443,23 +523,57 @@ export interface AcsSpriteLayout {
   cells: AcsFrameImage[][];
   /** For each animation, for each frame, its cell, or -1 for an empty frame. */
   frameCells: number[][];
+  /**
+   * For each animation, for each frame, the cell of each mouth it has — the
+   * frame with that overlay drawn over its top image, or in its place.
+   */
+  mouthCells: Array<Array<Partial<Record<AssistantMouthShape, number>>>>;
 }
 
-/** Assign a cell to each distinct, non-empty frame. */
-export function layoutAcsSprite(file: AcsFile): AcsSpriteLayout {
+/** The images of a frame with a mouth: over the top image, or in its place. */
+export function mouthImages(
+  frame: Pick<AcsFrame, 'images'>,
+  overlay: AcsOverlay,
+): AcsFrameImage[] {
+  const mouth = { image: overlay.image, x: overlay.x, y: overlay.y };
+  const under =
+    overlay.base ?? (overlay.replaceTop ? frame.images.slice(1) : frame.images);
+  return [mouth, ...under];
+}
+
+/** Assign a cell to each distinct, non-empty frame, and to each mouth. */
+export function layoutAcsSprite(
+  file: Pick<AgentCharacterSource, 'width' | 'height' | 'animations'>,
+): AcsSpriteLayout {
   const cells: AcsFrameImage[][] = [];
   const byKey = new Map<string, number>();
+  const cellOf = (images: AcsFrameImage[]): number => {
+    if (images.length === 0) return -1;
+    const key = images.map(i => `${i.image},${i.x},${i.y}`).join(';');
+    let cell = byKey.get(key);
+    if (cell === undefined) {
+      cell = cells.length;
+      cells.push(images);
+      byKey.set(key, cell);
+    }
+    return cell;
+  };
   const frameCells = file.animations.map(animation =>
-    animation.frames.map(frame => {
-      if (frame.images.length === 0) return -1;
-      const key = frame.images.map(i => `${i.image},${i.x},${i.y}`).join(';');
-      let cell = byKey.get(key);
-      if (cell === undefined) {
-        cell = cells.length;
-        cells.push(frame.images);
-        byKey.set(key, cell);
+    animation.frames.map(frame => cellOf(frame.images)),
+  );
+  const mouthCells = file.animations.map(animation =>
+    animation.frames.map((frame, f) => {
+      const mouths: Partial<Record<AssistantMouthShape, number>> = {};
+      for (const overlay of frame.overlays) {
+        const shape = MOUTH_SHAPES[overlay.type];
+        if (!shape) {
+          throw new AssistantCharacterFormatError(
+            `This character is damaged: a mouth of frame ${f} of ${animation.name} is of type ${overlay.type}, where 0 to 6 are expected.`,
+          );
+        }
+        mouths[shape] = cellOf(mouthImages(frame, overlay));
       }
-      return cell;
+      return mouths;
     }),
   );
   const count = Math.max(1, cells.length);
@@ -477,10 +591,10 @@ export function layoutAcsSprite(file: AcsFile): AcsSpriteLayout {
     rows * file.height > SHEET_MAX_SIDE
   ) {
     throw new AssistantCharacterFormatError(
-      `This .acs has ${cells.length} distinct frames of ${file.width}×${file.height} pixels, more than one sprite sheet can hold.`,
+      `This character has ${cells.length} distinct frames of ${file.width}×${file.height} pixels, more than one sprite sheet can hold.`,
     );
   }
-  return { columns, rows, cells, frameCells };
+  return { columns, rows, cells, frameCells, mouthCells };
 }
 
 /**
@@ -488,9 +602,13 @@ export function layoutAcsSprite(file: AcsFile): AcsSpriteLayout {
  * each at its offset, the transparent colour left clear. RGBA, frame-sized.
  */
 export function composeAcsCell(
-  file: AcsFile,
+  file: Pick<
+    AgentCharacterSource,
+    'width' | 'height' | 'transparentIndex' | 'palette'
+  >,
   images: AcsFrameImage[],
-  decode: (index: number) => AcsImage = index => decodeAcsImage(file, index),
+  decode: (index: number) => AcsImage = index =>
+    decodeAcsImage(file as AcsFile, index),
 ): Uint8ClampedArray {
   const { width, height, transparentIndex, palette } = file;
   const out = new Uint32Array(width * height);
@@ -549,7 +667,7 @@ function makeSheet(
               ? resolve(blob)
               : reject(
                   new AssistantCharacterFormatError(
-                    'The sprite sheet of this .acs could not be drawn.',
+                    'The sprite sheet of this character could not be drawn.',
                   ),
                 ),
           'image/png',
@@ -572,22 +690,20 @@ function makeSheet(
 }
 
 /**
- * Read a Microsoft Agent character (`.acs`) a person picked: its animations,
- * a sprite sheet drawn in the page (an object URL), its sounds as object
- * URLs. Nothing leaves the page.
+ * Draw a Microsoft Agent character in the page: its sprite sheet (an object
+ * URL), its animations with their mouths, its sounds as object URLs.
  */
-export async function readAcsCharacter(
-  buffer: ArrayBuffer,
+export async function drawAgentCharacter(
+  source: AgentCharacterSource,
 ): Promise<AssistantCharacterData> {
-  const file = parseAcs(buffer);
-  const layout = layoutAcsSprite(file);
-  const { width, height } = file;
+  const layout = layoutAcsSprite(source);
+  const { width, height } = source;
 
   const decoded = new Map<number, AcsImage>();
   const decode = (index: number): AcsImage => {
     let image = decoded.get(index);
     if (!image) {
-      image = decodeAcsImage(file, index);
+      image = source.decode(index);
       decoded.set(index, image);
     }
     return image;
@@ -599,7 +715,7 @@ export async function readAcsCharacter(
   });
   layout.cells.forEach((images, cell) => {
     const data = sheet.context.createImageData(width, height);
-    data.data.set(composeAcsCell(file, images, decode));
+    data.data.set(composeAcsCell(source, images, decode));
     const { x, y } = cellAt(cell);
     sheet.context.putImageData(data, x, y);
   });
@@ -607,10 +723,13 @@ export async function readAcsCharacter(
 
   const used = new Set<number>();
   const animations: Record<string, AssistantCharacterAnimation> = {};
-  file.animations.forEach((animation, a) => {
+  source.animations.forEach((animation, a) => {
     animations[animation.name] = {
       frames: animation.frames.map((frame, f) => {
         const cell = layout.frameCells[a][f];
+        const mouths = Object.entries(layout.mouthCells[a][f]) as Array<
+          [AssistantMouthShape, number]
+        >;
         if (frame.sound >= 0) used.add(frame.sound);
         return {
           duration: frame.duration * 10,
@@ -628,6 +747,13 @@ export async function readAcsCharacter(
           frame.exitBranch < animation.frames.length
             ? { exitBranch: frame.exitBranch }
             : {}),
+          ...(mouths.length
+            ? {
+                mouths: Object.fromEntries(
+                  mouths.map(([shape, at]) => [shape, cellAt(at)]),
+                ),
+              }
+            : {}),
         };
       }),
     };
@@ -637,21 +763,37 @@ export async function readAcsCharacter(
   if (used.size > 0) {
     sounds = {};
     for (const index of [...used].sort((x, y) => x - y)) {
-      const { offset, size } = file.sounds[index];
       sounds[String(index)] = objectUrl(
-        new Blob([file.bytes.slice(offset, offset + size)], {
-          type: 'audio/wav',
-        }),
+        new Blob([source.sound(index).slice()], { type: 'audio/wav' }),
       );
     }
   }
 
   return {
-    name: file.name,
+    name: source.name,
     frameSize: { width, height },
     sprite,
     animations,
     ...(sounds ? { sounds } : {}),
-    authoredStates: file.states,
+    authoredStates: source.states,
   };
+}
+
+/**
+ * Read a Microsoft Agent character (`.acs`) a person picked: its animations
+ * and their mouths, a sprite sheet drawn in the page (an object URL), its
+ * sounds as object URLs. Nothing leaves the page.
+ */
+export async function readAcsCharacter(
+  buffer: ArrayBuffer,
+): Promise<AssistantCharacterData> {
+  const file = parseAcs(buffer);
+  return drawAgentCharacter({
+    ...file,
+    decode: index => decodeAcsImage(file, index),
+    sound: index => {
+      const { offset, size } = file.sounds[index];
+      return file.bytes.subarray(offset, offset + size);
+    },
+  });
 }

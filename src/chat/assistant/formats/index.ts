@@ -5,7 +5,8 @@
 
 /**
  * Character files a person brings (LOOP T-26): clippy.js sprite maps and
- * Microsoft Agent `.acs` files, read in the page into one shape.
+ * Microsoft Agent `.acs` files, or `.acf` files with their `.aca` files,
+ * read in the page into one shape.
  *
  * @module chat/assistant/formats
  */
@@ -23,8 +24,20 @@ export {
   decodeAcsImage,
   layoutAcsSprite,
   composeAcsCell,
+  drawAgentCharacter,
+  mouthImages,
+  MOUTH_SHAPES,
 } from './acs';
-export type { AcsFile, AcsAnimation, AcsFrame, AcsImage } from './acs';
+export type {
+  AcsFile,
+  AcsAnimation,
+  AcsFrame,
+  AcsImage,
+  AcsOverlay,
+  AgentCharacterSource,
+} from './acs';
+export { readAcfCharacter, parseAcf, parseAca } from './acf';
+export type { AcfFile, AcfAnimationEntry, AcaFile } from './acf';
 export { decompressAgentData } from './agentCompression';
 export { stateAnimations } from './stateAnimations';
 export {

@@ -6,8 +6,8 @@
 
 /**
  * Character files a person brings (T-26): clippy.js maps and Microsoft Agent
- * .acs files, from small synthetic fixtures built here — no character of
- * Microsoft's is in the repository.
+ * .acs files, and .acf files with their .aca files, from small synthetic
+ * fixtures built here — no character of Microsoft's is in the repository.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,7 +20,10 @@ import {
   composeAcsCell,
   decodeAcsImage,
   decompressAgentData,
+  parseAca,
+  parseAcf,
   parseAcs,
+  readAcfCharacter,
   readAcsCharacter,
   readClippyCharacter,
   stateAnimations,
@@ -556,8 +559,16 @@ describe('parseAcs', () => {
         duration: 10,
         exitBranch: 1,
         branches: [{ frameIndex: 1, probability: 60 }],
+        overlays: [{ type: 0, replaceTop: true, image: 1, x: 0, y: 0 }],
       },
-      { images: [], sound: -1, duration: 25, exitBranch: -2, branches: [] },
+      {
+        images: [],
+        sound: -1,
+        duration: 25,
+        exitBranch: -2,
+        branches: [],
+        overlays: [],
+      },
     ]);
     expect(file.animations[1].transition).toBe(2);
   });
@@ -602,7 +613,7 @@ describe('parseAcs', () => {
     [
       'an .acf',
       { signature: 0xabcdabc4 },
-      'This is a Microsoft Agent .acf, whose animations are in separate .aca files: .acf is not read yet, load the .acs of the character.',
+      'This is a Microsoft Agent .acf, whose animations are in separate .aca files: pick the .acf together with its .aca files.',
     ],
     [
       'an empty colour table',
@@ -659,13 +670,18 @@ describe('readAcsCharacter', () => {
     expect(character.name).toBe('Paperclip');
     expect(character.frameSize).toEqual({ width: 4, height: 2 });
     expect(character.sprite).toBe('blob:test/1');
-    expect(sheets).toEqual(['4x4']); // two distinct frames, laid out near square
+    // Two distinct frames and a mouth, laid out near square.
+    expect(sheets).toEqual(['8x4']);
     expect(urls[0].type).toBe('image/png');
     expect(puts[1].data.slice(4, 8)).toEqual([255, 0, 0, 255]);
     expect(puts.map(p => [p.x, p.y])).toEqual([
       [0, 0],
+      [4, 0],
       [0, 2],
     ]);
+    // The mouth takes the place of the top image (the green bar): image 1
+    // at (0, 0) over image 0, its first row green from x 0.
+    expect(puts[2].data.slice(0, 4)).toEqual([0, 255, 0, 255]);
     expect(character.animations.Idle1_1.frames).toEqual([
       {
         duration: 100,
@@ -673,11 +689,12 @@ describe('readAcsCharacter', () => {
         sound: '0',
         branching: [{ frameIndex: 1, weight: 60 }],
         exitBranch: 1,
+        mouths: { closed: { x: 0, y: 2 } },
       },
       { duration: 250, images: [] },
     ]);
     expect(character.animations.Greet.frames).toEqual([
-      { duration: 50, images: [{ x: 0, y: 2 }] },
+      { duration: 50, images: [{ x: 4, y: 0 }] },
     ]);
     expect(character.sounds).toEqual({ '0': 'blob:test/2' });
     expect(urls[1].type).toBe('audio/wav');
@@ -777,5 +794,294 @@ describe('stateAnimations', () => {
     for (const list of Object.values(plain)) {
       expect(list).toEqual(['Dance']);
     }
+  });
+});
+
+// ---------------------------------------------------------------- .acf
+
+/** An .acf STRING: its count, its characters, no terminator. */
+function acfString(w: Writer, s: string): Writer {
+  w.u32(s.length);
+  for (const c of s) w.u16(c.charCodeAt(0));
+  return w;
+}
+
+const WAV = [0x52, 0x49, 0x46, 0x46, 4, 0, 0, 0, 0x57, 0x41, 0x56, 0x45];
+
+/**
+ * A 4×2 character for the web, palette [transparent, red, green, blue]: an
+ * .acf naming Greet (greet.aca: a red frame with a sound and a wide-open
+ * mouth over a blue base) and Idle1_1 (IDLE1_1.ACA, compressed: a green
+ * frame branching to an empty one).
+ */
+function buildAcf(options: { compressed?: boolean } = {}): ArrayBuffer {
+  const c = new Writer();
+  c.u16(0).u16(2);
+  c.u16(2);
+  acfString(acfString(acfString(c, 'Greet'), 'greet.aca'), '').u32(0x1111);
+  acfString(acfString(acfString(c, 'Idle1_1'), 'IDLE1_1.ACA'), 'IDLE1_1').u32(
+    0x2222,
+  );
+  c.u32(0);
+  c.raw(new Array(16).fill(7));
+  c.u16(1).u16(0x409);
+  acfString(acfString(acfString(c, 'Webby'), 'A test'), '');
+  c.u16(4).u16(2).u8(0);
+  c.u32(4).raw([255, 0, 255, 0, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0]);
+  c.u16(1);
+  acfString(c, 'Showing').u16(1);
+  acfString(c, 'Greet');
+  const w = new Writer();
+  w.u32(0xabcdabc4).u32(c.bytes.length);
+  if (options.compressed) {
+    const packed = compressLiterals(c.bytes);
+    w.u32(packed.length).raw(packed);
+  } else {
+    w.u32(0).raw(c.bytes);
+  }
+  return w.buffer();
+}
+
+function buildGreetAca(
+  options: { checksum?: number; imageBytes?: number } = {},
+) {
+  const w = new Writer();
+  w.u16(0)
+    .u16(2)
+    .u32(options.checksum ?? 0x1111)
+    .u8(0);
+  w.u16(1).u32(WAV.length).raw(WAV);
+  // One frame image, 4×2 bottom-up: the bottom row red, the top row red
+  // but for a transparent first pixel.
+  const size = options.imageBytes ?? 8;
+  w.u16(1).u32(size).u8(0);
+  w.raw([1, 1, 1, 1, 0, 1, 1, 1].slice(0, size)).raw(
+    new Array(Math.max(0, size - 8)).fill(1),
+  );
+  w.u32(0);
+  w.u8(2);
+  w.u16(1);
+  // The frame: image 0, sound 0, 0.1 s, no exit, no branch, one mouth.
+  w.u16(0).u16(0).u16(10).u32(0).u16(0xffff).u8(0);
+  w.u8(1);
+  // Wide open 1, in place of the top image: over a blue base.
+  w.u8(1).u32(8).raw(new Array(8).fill(3)).u32(0);
+  w.u8(1).u32(8).u8(0).u8(0).u16(1).u16(0).u16(1).u16(1);
+  w.raw([2, 2, 0, 0, 2, 2, 0, 0]);
+  return w.buffer();
+}
+
+function buildIdleAca(): ArrayBuffer {
+  const d = new Writer();
+  d.u16(0);
+  d.u16(1).u32(8).u8(0).raw(new Array(8).fill(2)).u32(0);
+  d.u8(0);
+  d.u16(2);
+  d.u16(0).u16(0xffff).u16(5).u32(0).u16(1).u8(1).u16(1).u16(50).u8(0);
+  d.u16(0xffff).u16(0xffff).u16(5).u32(0).u16(0xfffe).u8(0).u8(0);
+  const packed = compressLiterals(d.bytes);
+  const w = new Writer();
+  w.u16(0).u16(2).u32(0x2222).u8(1);
+  w.u32(d.bytes.length).u32(packed.length).raw(packed);
+  return w.buffer();
+}
+
+describe('parseAcf and parseAca', () => {
+  it.each([false, true])(
+    'reads the character and the animations it names (compressed: %s)',
+    compressed => {
+      const file = parseAcf(buildAcf({ compressed }));
+      expect(file.name).toBe('Webby');
+      expect(file.version).toEqual({ major: 2, minor: 0 });
+      expect([file.width, file.height, file.transparentIndex]).toEqual([
+        4, 2, 0,
+      ]);
+      expect(file.states).toEqual({ Showing: ['Greet'] });
+      expect(file.animations).toEqual([
+        {
+          name: 'Greet',
+          file: 'greet.aca',
+          returnAnimation: '',
+          checksum: 0x1111,
+        },
+        {
+          name: 'Idle1_1',
+          file: 'IDLE1_1.ACA',
+          returnAnimation: 'IDLE1_1',
+          checksum: 0x2222,
+        },
+      ]);
+    },
+  );
+
+  it('reads an .aca: its sound, its frame image, its mouth over its base', () => {
+    const aca = parseAca(buildGreetAca(), 4, 2, 'greet.aca');
+    expect(aca.checksum).toBe(0x1111);
+    expect(aca.transition).toBe(2);
+    expect(aca.sounds).toHaveLength(1);
+    expect(aca.images.map(i => [i.width, i.height])).toEqual([
+      [4, 2],
+      [4, 2],
+      [2, 2],
+    ]);
+    expect(aca.images[0].pixels).toEqual(
+      new Uint8Array([0, 1, 1, 1, 1, 1, 1, 1]),
+    );
+    expect(aca.frames).toEqual([
+      {
+        images: [{ image: 0, x: 0, y: 0 }],
+        sound: 0,
+        duration: 10,
+        exitBranch: -1,
+        branches: [],
+        overlays: [
+          {
+            type: 1,
+            replaceTop: true,
+            image: 2,
+            x: 1,
+            y: 0,
+            base: [{ image: 1, x: 0, y: 0 }],
+          },
+        ],
+      },
+    ]);
+    const idle = parseAca(buildIdleAca(), 4, 2, 'IDLE1_1.ACA');
+    expect(idle.frames.map(f => [f.images, f.sound, f.branches])).toEqual([
+      [[{ image: 0, x: 0, y: 0 }], -1, [{ frameIndex: 1, probability: 50 }]],
+      [[], -1, []],
+    ]);
+  });
+
+  it('refuses, in a sentence, another file and an image of another size', () => {
+    expect(thrown(() => parseAcf(buildAcs())).message).toBe(
+      'This is not a Microsoft Agent .acf: it starts with 0xabcdabc3, not 0xabcdabc4.',
+    );
+    expect(
+      thrown(() =>
+        parseAca(buildGreetAca({ imageBytes: 12 }), 4, 2, 'greet.aca'),
+      ).message,
+    ).toBe(
+      'greet.aca is not of this character: image 0 holds 12 bytes, where a 4×2 frame takes 8.',
+    );
+  });
+});
+
+describe('readAcfCharacter', () => {
+  function fakeCanvas() {
+    const puts: Array<{ data: number[]; x: number; y: number }> = [];
+    const sheets: string[] = [];
+    class FakeOffscreenCanvas {
+      constructor(
+        public width: number,
+        public height: number,
+      ) {
+        sheets.push(`${width}x${height}`);
+      }
+      getContext() {
+        return {
+          createImageData: (width: number, height: number) => ({
+            width,
+            height,
+            data: new Uint8ClampedArray(width * height * 4),
+          }),
+          putImageData: (
+            image: { data: Uint8ClampedArray },
+            x: number,
+            y: number,
+          ) => puts.push({ data: Array.from(image.data), x, y }),
+        };
+      }
+      convertToBlob() {
+        return Promise.resolve(new Blob(['sheet'], { type: 'image/png' }));
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    return { puts, sheets };
+  }
+
+  it('draws the character from its .acf and .aca files, mouths and sounds included', async () => {
+    const { puts, sheets } = fakeCanvas();
+    const character = await readAcfCharacter(buildAcf(), {
+      'GREET.ACA': buildGreetAca(),
+      'idle1_1.aca': buildIdleAca(),
+    });
+    expect(character.name).toBe('Webby');
+    expect(sheets).toEqual(['8x4']);
+    expect(character.animations.Greet.frames).toEqual([
+      {
+        duration: 100,
+        images: [{ x: 0, y: 0 }],
+        sound: '0',
+        mouths: { wide1: { x: 0, y: 2 } },
+      },
+    ]);
+    expect(character.animations.Idle1_1.frames).toEqual([
+      {
+        duration: 50,
+        images: [{ x: 4, y: 0 }],
+        branching: [{ frameIndex: 1, weight: 50 }],
+        exitBranch: 1,
+      },
+      { duration: 50, images: [] },
+    ]);
+    // The mouth's cell: the blue base, the green mouth from x 1.
+    const mouth = puts.find(p => p.x === 0 && p.y === 2);
+    expect(mouth?.data.slice(0, 4)).toEqual([0, 0, 255, 255]);
+    expect(mouth?.data.slice(4, 8)).toEqual([0, 255, 0, 255]);
+    expect(character.sounds).toEqual({ '0': 'blob:test/2' });
+    expect(urls[1].type).toBe('audio/wav');
+    expect(character.authoredStates).toEqual({ Showing: ['Greet'] });
+  });
+
+  it('refuses an .acf without every .aca it names, or with another one', async () => {
+    fakeCanvas();
+    expect(
+      (
+        await rejection(
+          readAcfCharacter(buildAcf(), { 'greet.aca': buildGreetAca() }),
+        )
+      ).message,
+    ).toBe(
+      'This .acf names 1 animation file that was not picked (IDLE1_1.ACA): pick the .acf with every .aca beside it.',
+    );
+    expect(
+      (
+        await rejection(
+          readAcfCharacter(buildAcf(), {
+            'greet.aca': buildGreetAca({ checksum: 0x9999 }),
+            'IDLE1_1.ACA': buildIdleAca(),
+          }),
+        )
+      ).message,
+    ).toBe(
+      'greet.aca is not the one this .acf names for Greet: their checksums differ.',
+    );
+  });
+
+  it('is read from the files a person picked: the .acf and its .aca files', async () => {
+    fakeCanvas();
+    const named = (name: string, buffer: ArrayBuffer) =>
+      Object.assign(new Blob([buffer]), {
+        name,
+        arrayBuffer: async () => buffer,
+      });
+    const acf = named('Webby.acf', buildAcf());
+    const greet = named('greet.aca', buildGreetAca());
+    const idle = named('IDLE1_1.ACA', buildIdleAca());
+    expect(
+      characterFilesOf([
+        named('x.png', PNG.buffer as ArrayBuffer),
+        greet,
+        acf,
+        idle,
+      ]),
+    ).toEqual({
+      kind: 'acf',
+      acf,
+      acas: [greet, idle],
+    });
+    const character = await readCharacterFiles([acf, greet, idle]);
+    expect(Object.keys(character.animations)).toEqual(['Greet', 'Idle1_1']);
   });
 });

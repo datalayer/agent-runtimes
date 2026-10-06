@@ -10,6 +10,13 @@
  * @module chat/assistant/formats/types
  */
 
+/**
+ * The shapes of a mouth while the character speaks, as Microsoft Agent
+ * names its overlays: closed, wide open (four), medium, narrow.
+ */
+export type AssistantMouthShape =
+  'closed' | 'wide1' | 'wide2' | 'wide3' | 'wide4' | 'medium' | 'narrow';
+
 /** One frame of an animation. */
 export interface AssistantCharacterFrame {
   /** How long the frame shows, in milliseconds. */
@@ -26,6 +33,12 @@ export interface AssistantCharacterFrame {
   branching?: { frameIndex: number; weight: number }[];
   /** The frame to go to when the animation is asked to end early. */
   exitBranch?: number;
+  /**
+   * The frame with each mouth the character has for it, drawn while it
+   * speaks in place of `images`: the sprite offset of each (Microsoft Agent's
+   * mouth overlays, composited into the sheet). Most frames have none.
+   */
+  mouths?: Partial<Record<AssistantMouthShape, { x: number; y: number }>>;
 }
 
 /** A named sequence of frames. */

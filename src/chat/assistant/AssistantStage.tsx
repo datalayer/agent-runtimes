@@ -18,7 +18,8 @@
  * (`AssistantContextMenu`): what the host passes applies — *Inspect the
  * agent…* (the Agent Inspector, in a dialog loaded then), the conversation,
  * the balloon's display, the suggestions, *Stop*, a new conversation,
- * another character, its voice, send it away, its place, about it — and
+ * another character, its voice, a brought character's sounds (off until
+ * *Play its sounds*), send it away, its place, about it — and
  * what a host or a plugin adds (`contextMenu`).
  *
  * Given suggestions, its balloon offers them while it waits for a question
@@ -93,6 +94,7 @@ import type { DisplayItem } from '../../types/chat';
 import {
   ASSISTANT_OBSTACLES,
   POINTER_CALM_MS,
+  mouthOpening,
   boxesMeet,
   pointerNear,
   type AssistantAway,
@@ -215,6 +217,8 @@ export function assistantMenuItems(options: {
   onClear?: () => void;
   onChangeCharacter?: () => void;
   speech?: { muted: boolean; onToggle: () => void };
+  /** The sounds of a character read from a file (T-26): off unless asked. */
+  characterSounds?: { on: boolean; onToggle: () => void };
   onResetPosition?: () => void;
   about?: () => void;
   extra?: readonly AssistantMenuItem[];
@@ -324,6 +328,14 @@ export function assistantMenuItems(options: {
       label: options.speech.muted ? 'Unmute speech' : 'Mute speech',
       icon: options.speech.muted ? UnmuteIcon : MuteIcon,
       onSelect: options.speech.onToggle,
+    });
+  }
+  if (options.characterSounds) {
+    items.push({
+      id: 'character-sounds',
+      label: options.characterSounds.on ? 'Mute its sounds' : 'Play its sounds',
+      icon: options.characterSounds.on ? MuteIcon : UnmuteIcon,
+      onSelect: options.characterSounds.onToggle,
     });
   }
   if (options.onResetPosition) {
@@ -663,10 +675,7 @@ export interface AssistantStageProps {
   label?: string;
 }
 
-/** The openings of the mouth, by level: shut, a little, half, wide. */
-export function mouthOpening(level: number): 0 | 1 | 2 | 3 {
-  return level < 0.08 ? 0 : level < 0.3 ? 1 : level < 0.6 ? 2 : 3;
-}
+export { mouthOpening };
 
 /**
  * Moves the mouth with the voice: the opening is written on the stage as
@@ -772,6 +781,11 @@ export function AssistantStage({
     undefined,
   );
   const closeMenu = useCallback(() => setMenuAt(null), []);
+  // A character read from a file plays its sounds only once asked (T-26).
+  const [soundsOn, setSoundsOn] = useState(false);
+  const hasSounds =
+    !shipped &&
+    Object.keys((character as AssistantCharacterData).sounds ?? {}).length > 0;
   useEffect(() => () => clearTimeout(longPress.current), []);
   // Where the press began: a press that moves is a drag, not a click.
   const pressedAt = useRef<{ x: number; y: number } | null>(null);
@@ -817,6 +831,9 @@ export function AssistantStage({
     onClear,
     onChangeCharacter,
     speech,
+    characterSounds: hasSounds
+      ? { on: soundsOn, onToggle: () => setSoundsOn(on => !on) }
+      : undefined,
     onResetPosition,
     about: about ? () => setTelling(true) : undefined,
     extra: contextMenu,
@@ -1121,6 +1138,8 @@ export function AssistantStage({
             character={character as AssistantCharacterData}
             state={state}
             size={size}
+            sounds={soundsOn}
+            mouthLevel={mouthLevel}
           />
         )}
       </Box>

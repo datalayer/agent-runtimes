@@ -681,7 +681,15 @@ file is read there, drawn there, and **sent nowhere**.
 - **A Microsoft Agent character** — one `.acs` file:
   `readAcsCharacter(await file.arrayBuffer())`. Its header, character,
   palette, states, animations, frames, branches and sounds are read, its
-  images decompressed and composited into a sprite sheet on a canvas.
+  images decompressed and composited into a sprite sheet on a canvas, its
+  mouth overlays composited too, one cell per mouth.
+- **A Microsoft Agent character for the web** — an `.acf` file and the `.aca`
+  files it names, picked together: `readAcfCharacter(acf, { 'greet.aca':
+  buffer, … })`. The `.acf` holds the character (its size, palette, states,
+  names) and names one `.aca` per animation; each `.aca` holds that
+  animation's frames, images, sounds and mouths. Every `.aca` the `.acf`
+  names has to be picked, the very one it names (their checksums agree);
+  otherwise it is refused in a sentence. It is drawn as an `.acs` is.
 - **A clippy.js character** — its `agent.js`, its map image (`map.png`), and
   a `sounds-mp3.js` or `sounds-ogg.js` if there is one:
   `readClippyCharacter({ agentJs, mapPng, soundsJs })`. The JavaScript is
@@ -697,8 +705,8 @@ file declares (`Showing`, `Speaking`, `Hiding`, `IdlingLevel1`…); a state
 with no match plays the idle animations (`stateAnimations`).
 
 The files a person picked are read as one character by `readCharacterFiles`:
-one `.acs`, or a clippy.js character's `agent.js` with its map image (and its
-sounds file); `characterFilesOf` says which of them make the character, and
+one `.acs`; an `.acf` with its `.aca` files; or a clippy.js character's
+`agent.js` with its map image (and its sounds file); `characterFilesOf` says which of them make the character, and
 `CHARACTER_FILES_ACCEPT` is what a file input should accept. Once read, a
 character joins the others as a plugin of its own,
 `defineAssistantCharacterPlugin(id, character)`, contributed to
@@ -707,9 +715,23 @@ Datalayer's *Settings → Appearance* offers a person their own character on
 the pages of their applications, kept in their browser and never sent.
 
 A file that cannot be read is refused with a sentence that says why
-(`AssistantCharacterFormatError`). A Microsoft Agent `.acf`, whose
-animations live in separate `.aca` files, is refused for now: load the
-`.acs` of the character.
+(`AssistantCharacterFormatError`).
+
+### Its mouth and its sounds
+
+While it speaks, a frame of a Microsoft Agent character that has mouths is
+drawn with one of them in place of the frame: the one its voice's loudness
+opens when it is heard (shut, a little, half, wide — `mouthLevel`, as
+Datalayer's characters open theirs), else one after another as its words
+come, every 110 ms (`mouthFor`, `MOUTH_STEP_MS`). Nothing moves for a reader
+who asks for reduced motion.
+
+A character's sounds — an Agent file's, or a clippy.js `sounds-*.js` — are
+**off until the person asks for them**: the character's right-click menu has
+*Play its sounds*, and then *Mute its sounds*. A shipped character has no
+such entry; it has none. Once asked, a frame's sound plays when the frame
+shows (`SpriteCharacter`'s `sounds`); a sound the browser will not play yet
+is skipped with a warning in the console.
 
 ## Using it
 
@@ -801,10 +823,11 @@ character drawn, the balloon while closed and never over the open
 conversation, a click against a drag, sending it away, where the balloon
 goes, stepping aside for a dialog, an overlay, another chat's composer and
 the pointer at work, and not for its own conversation
-(`assistant-stage.test.tsx`); the clippy.js and `.acs` readers, the
-Agent image compression and the mapping of states (`assistant-formats.test.ts`,
-on hand-built files); the player's frames and branches
-(`sprite-character.test.ts`). Seen in Chrome on 2026-10-04, in the examples
+(`assistant-stage.test.tsx`); the clippy.js, `.acs` and `.acf`/`.aca` readers,
+the mouths composited, the Agent image compression and the mapping of states
+(`assistant-formats.test.ts`, on hand-built files); the player's frames and
+branches (`sprite-character.test.ts`); its mouths while it speaks, its sounds
+off until asked and muted from its menu (`sprite-character-voice.test.tsx`). Seen in Chrome on 2026-10-04, in the examples
 app signed out: the paper clip arrives greeting and settles to idle, a hover
 shows the welcome in its balloon, a drag moves it and the conversation opens
 above it where it was put down, and the wizard, the cat and the eyes draw.
@@ -820,11 +843,12 @@ there, never another application's — are tested (`loop-assistant.test.tsx`;
 the chat's own assistant in `chat-floating-conversation.test.tsx`); an Appspec naming a plugin's character is read,
 and a wrongly shaped id refused (`app-checks.test.ts`).
 
-**Not verified yet.** A real `.acs` file someone holds the rights to (the
-reader is tested on a hand-built file, and the clippy.js reader on the
+**Not verified yet.** A real `.acs`, or `.acf` with its `.aca` files, someone
+holds the rights to (the readers are tested on hand-built files, after
+Lebeau's public description of the formats, whose `.aca` part is the least
+certain; and the clippy.js reader on the
 clippy.js characters, in memory, not kept); the floating popup's blink and
-balloon seen in a browser; stepping aside, seen in a browser.
+balloon seen in a browser; stepping aside, seen in a browser; a brought
+character's mouths and sounds, seen and heard in a browser.
 
-**Not built yet.** Sounds are read but not played; the mouth overlays of an
-Agent character while it speaks; `.acf` files; sharing a character one
-brought with one's organisation.
+**Not built yet.** Sharing a character one brought with one's organisation.

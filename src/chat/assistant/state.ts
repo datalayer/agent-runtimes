@@ -231,6 +231,11 @@ export function latestSaying(
  * popup's button calls it back — for the session, or for good; the header's
  * *Floating assistant* always calls it back.
  */
+/** The openings of the mouth, by level: shut, a little, half, wide. */
+export function mouthOpening(level: number): 0 | 1 | 2 | 3 {
+  return level < 0.08 ? 0 : level < 0.3 ? 1 : level < 0.6 ? 2 : 3;
+}
+
 export type AssistantAway = 'none' | 'page' | 'session' | 'always';
 
 /** Where the choice is kept: the session's storage, or for good. */
