@@ -597,6 +597,12 @@ class SessionSettingsRequest(BaseModel):
     values: Dict[str, Any] = Field(..., description="The settings changed, by id")
 
 
+class SessionWindowRequest(BaseModel):
+    """A message from the page the application sits in (LOOP P-25)."""
+
+    data: Any = Field(..., description="What the page posted: anything JSON writes")
+
+
 class ResumeSessionRequest(BaseModel):
     """What a session is resumed with."""
 
@@ -905,6 +911,21 @@ async def session_settings(
     live, _ = await _held(uid, request)
     try:
         return _stream(live.change_settings(body.values, head=live.session_event()))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/sessions/{uid}/window")
+async def session_window(uid: str, body: SessionWindowRequest, request: Request) -> Any:
+    """A message from the page the application sits in (LOOP P-25): its code's
+    ``@app.window`` runs on it, streamed — what the code sends back is a
+    ``loop.window`` event.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        return _stream(live.window_message(body.data, head=live.session_event()))
     except SessionRefused as refused:
         raise _refused(refused) from None
 

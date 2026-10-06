@@ -11,8 +11,15 @@
  * its Appspec names (`deployment.embedded.host.context`).
  *
  * Out: what the application does, as events — `message` when it has said
- * something, `action` when it called a function of the page — beside the
+ * something, `action` when it called a function of the page,
+ * `window-message` when its code told the page something outside the
+ * conversation (LOOP P-25, `session.send_window_message`) — beside the
  * `decision` and `token-expired` the element raises already.
+ *
+ * Window messages, in (P-25): the page posts one with
+ * `element.postWindowMessage(data)`; its code's `@app.window` reads it, on
+ * the host's own server (`server`), and what it answers comes back as
+ * `window-message` events.
  *
  * Offered: the functions of the page its Appspec names
  * (`deployment.embedded.host.functions`), each called by its agent as the
@@ -55,7 +62,15 @@ export type HostEvent =
         result?: unknown;
         error?: string;
       };
+    }
+  | {
+      type: 'window-message';
+      /** What its code told the page (LOOP P-25): anything JSON writes. */
+      detail: { data: unknown };
     };
+
+/** Posts a window message to the application's session (LOOP P-25). */
+export type WindowPost = (data: unknown) => Promise<void>;
 
 /** A function of the page, as the page gives it. */
 export type HostFunction = (
@@ -75,6 +90,12 @@ export type AppEmbedHost = {
    * may be made; the browser's `confirm` when the page gives none.
    */
   ask?: (question: HostQuestion) => boolean | Promise<boolean>;
+  /**
+   * Handed how a window message is posted to the application's session once
+   * the embed can (LOOP P-25) — on the host's own server, its conversation
+   * started — and `null` when it no longer can.
+   */
+  onWindowPort?: (post: WindowPost | null) => void;
 };
 
 /** What the person is asked before a call of the page is made. */

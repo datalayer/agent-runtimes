@@ -22,6 +22,7 @@ import { UploadIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { BlockFrame, CARD_RADIUS, Problem, Quiet, isRecord } from './parts';
 import { ownImplementation, type OwnCommon } from './implementation';
+import { acceptsFile } from '../../../loop/apps/uploads';
 
 export type FileUploadProps = OwnCommon & {
   label: string;
@@ -43,17 +44,18 @@ export type GivenFile = {
 /** The default the catalog gives `max_mb`. */
 const MAX_MB = 25;
 
-/** Why a file is refused, or `null` when it is taken. */
+/**
+ * Why a file is refused, or `null` when it is taken: its kinds are
+ * extensions (`.csv`), media types (`application/pdf`) or families
+ * (`image/*`), as the Appspec's uploads say them (LOOP P-21).
+ */
 export function refusal(
-  file: Pick<File, 'name' | 'size'>,
+  file: Pick<File, 'name' | 'size'> & { type?: string },
   accept: string[] | undefined,
   maxMb: number,
 ): string | null {
-  if (accept?.length) {
-    const lower = file.name.toLowerCase();
-    if (!accept.some(extension => lower.endsWith(extension.toLowerCase()))) {
-      return `${file.name} is not one it takes (${accept.join(', ')}).`;
-    }
+  if (!acceptsFile(accept, { name: file.name, type: file.type ?? '' })) {
+    return `${file.name} is not one it takes (${(accept ?? []).join(', ')}).`;
   }
   if (file.size > maxMb * 1024 * 1024) {
     return `${file.name} is larger than ${maxMb} MB.`;
@@ -61,7 +63,8 @@ export function refusal(
   return null;
 }
 
-const readFile = (file: File): Promise<GivenFile> =>
+/** A file as the application receives it: its content as a data URL. */
+export const readFile = (file: File): Promise<GivenFile> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () =>

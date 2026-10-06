@@ -49,7 +49,7 @@ from agent_runtimes.loop.apps.own import CHECK_STAGES, own_checks, own_toolset
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
-from agent_runtimes.loop.apps.session import Channel, Session, Shown, call
+from agent_runtimes.loop.apps.session import Channel, Session, Shown, UploadedFile, call
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import (
     AppCodeCheckSpec,
@@ -69,7 +69,17 @@ from agent_runtimes.types import (
 Handler = Callable[..., Any]
 
 #: The moments an application reacts to with one handler each.
-EVENTS = ("start", "message", "settings", "stop", "resume", "end", "logout")
+EVENTS = (
+    "start",
+    "message",
+    "file",
+    "settings",
+    "window",
+    "stop",
+    "resume",
+    "end",
+    "logout",
+)
 
 
 class Application:
@@ -521,9 +531,30 @@ class Application:
         """
         return self._on("message", handler)
 
+    def file(self, handler: Handler) -> Handler:
+        """React to files the user sent without being asked for them (LOOP
+        P-21): ``handler(session, files, text)`` — the `UploadedFile` s sent
+        with one message, and its words.
+
+        Which kinds and sizes may be sent is the Appspec's
+        ``interface.uploads``: the runtime refuses the rest before this runs.
+        Without one, the files wait for what the code asks
+        (``session.ask(FileQuestion(...))``), and the words go to ``message``.
+        """
+        return self._on("file", handler)
+
     def settings(self, handler: Handler) -> Handler:
         """React to the user changing settings: ``handler(session, settings)``."""
         return self._on("settings", handler)
+
+    def window(self, handler: Handler) -> Handler:
+        """React to a message from the page the application sits in (LOOP
+        P-25): ``handler(session, data)``, ``data`` what the page posted.
+
+        Embedded, the page posts with ``element.postWindowMessage(data)``;
+        ``session.send_window_message(data)`` answers it.
+        """
+        return self._on("window", handler)
 
     def stop(self, handler: Handler) -> Handler:
         """React to the user pressing Stop: ``handler(session)``."""
@@ -846,6 +877,59 @@ class Application:
         """The commands its code answers, by name; a copy."""
         return dict(self._commands)
 
+    # --- where it is served (LOOP P-25) ----------------------------------------
+
+    def mount(
+        self,
+        api: Any,
+        path: str = "/assistant",
+        *,
+        app_uid: str = "",
+        token: Optional[Callable[..., Any]] = None,
+        embed_origin: str = "https://datalayer.ai",
+        config: Any = None,
+    ) -> Any:
+        """Serve the application inside a FastAPI of one's own (LOOP P-25):
+        ``app.mount(api, path="/assistant")``.
+
+        Under ``path``: its page (the embed, its agent on this runtime), the
+        session API and the chat's AG-UI, the runtime's own routes; its agent
+        made when ``api`` starts, and its code reacting to its sessions. See
+        `agent_runtimes.loop.apps.mounting.mount`.
+
+        Parameters
+        ----------
+        api : FastAPI
+            The developer's FastAPI.
+        path : str
+            Where it is served.
+        app_uid : str
+            The application as Datalayer knows it, when an embed token names it.
+        token : callable, optional
+            ``token(request)``: the visit's embed token, issued by the
+            developer's server, given to the page (LOOP R-20).
+        embed_origin : str
+            Where the embed's script is served.
+        config : ServerConfig, optional
+            The runtime's configuration.
+
+        Returns
+        -------
+        FastAPI
+            The runtime, as mounted.
+        """
+        from agent_runtimes.loop.apps.mounting import mount
+
+        return mount(
+            self,
+            api,
+            path,
+            app_uid=app_uid,
+            token=token,
+            embed_origin=embed_origin,
+            config=config,
+        )
+
 
 def _first_line(function: Handler) -> str:
     """The first line of a function's docstring, or nothing."""
@@ -1028,6 +1112,36 @@ class AppHost:
         if refused:
             raise ValueError(refused)
         await self._react(session, handler, dict(payload or {}))
+
+    async def files(
+        self, session: Session, files: Sequence[UploadedFile], text: str = ""
+    ) -> None:
+        """The user sent files without being asked (LOOP P-21): run ``file``.
+
+        Without one, the words go to ``message`` (or the agent), and the files
+        wait for what the code asks.
+        """
+        self._open(session)
+        handler = self._reaction("file")
+        if handler is None:
+            if text.strip():
+                await self.message(session, text)
+            return
+        await self._react(session, handler, list(files), text)
+
+    async def window(self, session: Session, data: Any) -> None:
+        """The page posted a message (LOOP P-25): run ``window``.
+
+        Raises
+        ------
+        KeyError
+            When its code has no ``@app.window``.
+        """
+        self._open(session)
+        handler = self._reaction("window")
+        if handler is None:
+            raise KeyError(f"{self.app.id} reads no window message: it has no @app.window.")
+        await self._react(session, handler, data)
 
     async def settings(self, session: Session, values: Mapping[str, Any]) -> None:
         """The user changed settings: check them, keep them, run ``settings``."""

@@ -60,6 +60,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Tuple,
 )
 
@@ -86,7 +87,14 @@ from agent_runtimes.loop.apps.session import (
     Step,
     TextQuestion,
     UploadedFile,
+    WindowMessage,
     form_values,
+)
+from agent_runtimes.loop.apps.uploads import (
+    binary_part,
+    page_refused,
+    seen_whole,
+    unasked_refused,
 )
 from agent_runtimes.types import AppSpec
 
@@ -365,15 +373,31 @@ def _new_id() -> str:
 
 _CODE: Dict[Tuple[str, str], Any] = {}
 
+#: The applications whose code this process was given to run, beside the
+#: catalogue's (LOOP P-25), by id and version.
+_SERVED: Dict[Tuple[str, str], Any] = {}
+
+
+def serve_code(application: Any) -> None:
+    """Run an application's code on this runtime: its sessions, at its id and
+    version, are reacted to by it (LOOP P-25, ``app.mount``).
+    """
+    spec = application.spec
+    _SERVED[(spec.id, spec.version)] = application
+
 
 def code_of(app: AppSpec) -> Any:
     """The `Application` an application's code defines, when it is written in Python.
 
-    An example of the catalogue built from its ``app.py`` (`APP_BUILT`), at the
-    version the runtime runs; ``None`` for a spec, which its agent answers.
+    One this process was given to run (`serve_code`), else an example of the
+    catalogue built from its ``app.py`` (`APP_BUILT`), at the version the
+    runtime runs; ``None`` for a spec, which its agent answers.
     """
     from agent_runtimes.specs.apps import APP_BUILT
 
+    served = _SERVED.get((app.id, app.version))
+    if served is not None:
+        return served
     if APP_BUILT.get(app.id) != "python":
         return None
     key = (app.id, app.version)
@@ -412,6 +436,11 @@ def element_of(shown: Shown) -> Dict[str, Any]:
         "title": shown.title,
         "shows": answer_surface(shown.id, shown.title, shown.components, shown.data),
     }
+
+
+#: The ``CUSTOM`` event that hands the page a message of the code's (LOOP
+#: P-25): ``{data}``, what ``session.send_window_message(data)`` said.
+LOOP_WINDOW = "loop.window"
 
 
 #: The longest input or output of a step the chat is sent, in characters.
@@ -806,6 +835,9 @@ class LiveSession:
             # A side panel or a page of its own, opened or changed (LOOP P-18).
             self._elements[event.id] = event
             self.emit(CustomEvent(name=LOOP_ELEMENT, value=element_of(event)))
+        elif isinstance(event, WindowMessage):
+            # For the page the application sits in, not the conversation (P-25).
+            self.emit(CustomEvent(name=LOOP_WINDOW, value={"data": event.data}))
         elif isinstance(event, Closed):
             self._elements.pop(event.element_id, None)
             self.emit(
@@ -943,9 +975,18 @@ class LiveSession:
             )
         return name
 
-    def _with_turn(self, text: str) -> List[Dict[str, Any]]:
-        """The conversation with the person's next message."""
-        self.messages.append({"id": _new_id(), "role": "user", "content": text})
+    def _with_turn(
+        self, text: str, parts: Sequence[Mapping[str, Any]] = ()
+    ) -> List[Dict[str, Any]]:
+        """The conversation with the person's next message — and the files a
+        model is given whole with it (LOOP P-21).
+        """
+        content: Any = (
+            [{"type": "text", "text": text}, *[dict(part) for part in parts]]
+            if parts
+            else text
+        )
+        self.messages.append({"id": _new_id(), "role": "user", "content": content})
         return list(self.messages)
 
     async def _message_code(self, text: str) -> None:
@@ -955,6 +996,28 @@ class LiveSession:
         assert self.session is not None
         self.messages.append({"id": _new_id(), "role": "user", "content": text})
         await self.host.message(self.session, text)
+
+    async def _files_code(self, text: str, given: List[UploadedFile]) -> None:
+        """Files sent without being asked, for the code (LOOP P-21): its
+        ``file``, given them and the words; without one, the words go to its
+        ``message`` and the files wait for what it asks.
+        """
+        self._keep(given)
+        if self.host.app.handler("file") is None:
+            self._unasked.extend(given)
+        if self.session is None:
+            await self._open_code()
+        assert self.session is not None
+        names = ", ".join(file.name for file in given)
+        said = text.strip()
+        self.messages.append(
+            {
+                "id": _new_id(),
+                "role": "user",
+                "content": f"{said}\n\n(Sent {names}.)" if said else f"Sent {names}.",
+            }
+        )
+        await self.host.files(self.session, given, said)
 
     async def _action_code(
         self,
@@ -1046,6 +1109,10 @@ class LiveSession:
             return self._answer_waiting(
                 text=text, files=given, run_id=run_id, head=head
             )
+        # What its page asks for, by kind and size (LOOP P-21): checked again here.
+        refused = page_refused(self.app, given)
+        if refused:
+            raise SessionRefused(422, refused)
         # A form's values are checked again here, against its schema (C-16).
         refused = form_values_refused(self.app, name, payload or {})
         if refused:
@@ -1072,13 +1139,13 @@ class LiveSession:
 
         async def work() -> None:
             """The turn."""
-            words = await asyncio.to_thread(self._files_in_words, given)
+            words, parts = await asyncio.to_thread(self._files_for_agent, given)
             said = "\n\n".join(
                 part
                 for part in (text.strip(), done, self._settings_in_words(), words)
                 if part
             )
-            await self._run_agent(self._with_turn(said), bearer=bearer)
+            await self._run_agent(self._with_turn(said, parts), bearer=bearer)
 
         return self._start_turn(work, run_id=run_id, wraps_run=False, head=head)
 
@@ -1094,19 +1161,38 @@ class LiveSession:
                 }
             )
 
-    def _files_in_words(self, given: List[UploadedFile]) -> str:
-        """What the agent is told of the files given: where they are, or their text."""
+    def _files_for_agent(
+        self, given: List[UploadedFile]
+    ) -> Tuple[str, List[Mapping[str, Any]]]:
+        """What the agent is told of the files given — where they are, or their
+        text — and those its model is given whole.
+
+        With a shell, every file is put in its sandbox. Without one, a text
+        file goes in the message; an image, a recording or a PDF goes to the
+        model as it is (LOOP P-21); anything else is refused.
+        """
         shell = bool(self.app.permissions.computer.shell)
-        parts: List[str] = []
+        words: List[str] = []
+        whole: List[Mapping[str, Any]] = []
         for file in given:
             if shell:
                 path = put_in_sandbox(self.agent_id, self.uid, file)
-                parts.append(placed_in_words(file, path))
+                words.append(placed_in_words(file, path))
                 self._keep([file], path)
-            else:
-                parts.append(text_in_words(file))
+            elif not is_text(file) and seen_whole(file.media_type):
+                whole.append(
+                    binary_part(
+                        file.name,
+                        file.media_type,
+                        base64.b64encode(file.content).decode("ascii"),
+                    )
+                )
+                words.append(f"The file {file.name} ({file.media_type}) is attached.")
                 self._keep([file])
-        return "\n\n".join(parts)
+            else:
+                words.append(text_in_words(file))
+                self._keep([file])
+        return "\n\n".join(words), whole
 
     def change_settings(
         self, values: Mapping[str, Any], *, head: str = ""
@@ -1147,6 +1233,33 @@ class LiveSession:
             for key, value in self.settings.items()
             if str(value).strip()
         )
+
+    def window_message(self, data: Any, *, head: str = "") -> AsyncIterator[str]:
+        """A message from the page the application sits in (LOOP P-25): its
+        code's ``window`` runs on it, as a turn, streamed — what it sends back
+        with ``session.send_window_message`` a ``loop.window`` event.
+
+        Refused for an application whose code reads none: a spec, or code
+        without ``@app.window``.
+        """
+        if self.host is None or self.host.app.handler("window") is None:
+            raise SessionRefused(
+                422,
+                f"{self.app.name} reads no window message: its code has no @app.window.",
+            )
+        try:
+            json.dumps(data)
+        except (TypeError, ValueError):
+            raise SessionRefused(422, "A window message is what JSON writes.") from None
+
+        async def work() -> None:
+            """The turn."""
+            if self.session is None:
+                await self._open_code()
+            assert self.session is not None
+            await self.host.window(self.session, data)
+
+        return self._start_turn(work, wraps_run=True, head=head)
 
     async def stop(self) -> None:
         """Stop: what runs is cancelled, the code's ``stop`` runs, and the session waits to be resumed."""
@@ -1412,8 +1525,19 @@ class LiveSession:
             return self._answer_waiting(
                 text=text, files=files, values=settings, run_id=run_id
             )
+        if action is None:
+            # Files sent without being asked: what its Appspec takes (P-21).
+            refused = unasked_refused(self.app, files)
+            if refused:
+                raise SessionRefused(422, refused)
         if self.host is not None:
-            if action is None and not files:
+            if action is None:
+                if files:
+                    return self._start_turn(
+                        lambda: self._files_code(text, files),
+                        run_id=run_id,
+                        wraps_run=True,
+                    )
                 if not text:
                     raise SessionRefused(422, "Nothing to send: write a message first.")
                 return self._start_turn(
@@ -1430,6 +1554,10 @@ class LiveSession:
             raise SessionRefused(
                 422, "A file was given with no message to run it with."
             )
+        if action is not None:
+            refused = page_refused(self.app, files)
+            if refused:
+                raise SessionRefused(422, refused)
         # A spec: the chat's conversation is the session's, the files given
         # are put where its agent reads them, and the run is its agent's.
         forwarded = body.get("forwardedProps")
@@ -1440,12 +1568,12 @@ class LiveSession:
 
         async def work() -> None:
             """The turn."""
-            words = await asyncio.to_thread(self._files_in_words, files)
-            said = (
-                [*messages[:-1], {**last, "content": f"{text}\n\n{words}"}]
-                if words
-                else messages
-            )
+            words, parts = await asyncio.to_thread(self._files_for_agent, files)
+            content: Any = f"{text}\n\n{words}" if words else text
+            if parts:
+                # What its model is given whole: an image, a recording, a PDF (P-21).
+                content = [{"type": "text", "text": content}, *parts]
+            said = [*messages[:-1], {**last, "content": content}] if words else messages
             self.messages = [dict(m) for m in said]
             # The modes the person is in, for this run only (LOOP P-19).
             effect = mode_effect(self.app, self.modes)
@@ -1529,8 +1657,9 @@ def session_of(uid: str) -> Optional[LiveSession]:
 
 
 def forget_sessions() -> None:
-    """Forget every session (a test)."""
+    """Forget every session, and the code it was given to run (a test)."""
     _SESSIONS.clear()
+    _SERVED.clear()
 
 
 def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:

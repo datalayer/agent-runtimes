@@ -336,10 +336,12 @@ export function appPreset(
     plugins: [
       defineAppPlugin(app),
       ...(withPage ? [defineAppPagePlugin(app), ...blocks] : []),
-      // Its commands in the composer's `/` menu and its modes beside the
-      // composer (LOOP P-19): only for an application that has some.
+      // Its commands in the composer's `/` menu, its modes beside the
+      // composer (LOOP P-19) and what a person may attach there (P-21):
+      // only for an application that has some.
       ...((app.interface.commands ?? []).length > 0 ||
-      (app.interface.modes ?? []).length > 0
+      (app.interface.modes ?? []).length > 0 ||
+      app.interface.uploads
         ? [defineAppComposerPlugin(app)]
         : []),
       // A thumb and a comment on each answer, kept in its record (LOOP

@@ -37,7 +37,10 @@ import {
   type EmbedSession,
 } from '../embed/AppEmbed';
 import { EmbedAttributeError, resumeOf } from '../embed/embedConfig';
+import type { AppEmbedHost, WindowPost } from '../embed/hostBridge';
+import { tellLoopWindow } from '../../chat/base/loopWindow';
 import {
+  WINDOW_NOT_YET,
   embedSessionKey,
   forgetSessionsInMemory,
   messagesOfThread,
@@ -422,5 +425,62 @@ describe('AppEmbed', () => {
     const props = seen.renderer[seen.renderer.length - 1];
     expect(props.thread.id).not.toBe('msg_gone');
     await act(async () => root.unmount());
+  });
+});
+
+describe('window messages, between the page and the application (LOOP P-25)', () => {
+  it('are posted to the session the chat goes on with, and what its code answers is raised on the page', async () => {
+    const events: Array<{ type: string; detail: unknown }> = [];
+    let post: WindowPost | null = null;
+    const ports: Array<WindowPost | null> = [];
+    const host: AppEmbedHost = {
+      onEvent: event => events.push(event),
+      onWindowPort: given => {
+        ports.push(given);
+        post = given;
+      },
+    };
+    const fetcher = vi.fn(
+      async () =>
+        new Response(
+          `data: ${JSON.stringify({
+            type: 'CUSTOM',
+            name: 'loop.window',
+            value: { data: { seen: '/cart' } },
+          })}\n\n`,
+        ),
+    );
+    globalThis.fetch = fetcher as unknown as typeof fetch;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    // On the host's own server, without a token: the machine itself.
+    await act(async () => {
+      root.render(
+        <AppEmbed app={app} mode="inline" serverUrl={SERVER} host={host} />,
+      );
+    });
+    expect(post).not.toBeNull();
+    // Before its conversation has started there is no session to post to.
+    await expect(post!({ page: '/cart' })).rejects.toThrow(WINDOW_NOT_YET);
+    expect(fetcher).not.toHaveBeenCalled();
+    const { thread } = seen.renderer[seen.renderer.length - 1];
+    await act(async () => thread.onStarted(thread.id));
+    await act(async () => post!({ page: '/cart' }));
+    expect(fetcher).toHaveBeenCalledWith(
+      `${SERVER}/api/v1/apps/sessions/${encodeURIComponent(thread.id)}/window`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(events).toEqual([
+      { type: 'window-message', detail: { data: { seen: '/cart' } } },
+    ]);
+    // What its code tells the page during a chat's turn, raised the same way.
+    await act(async () => tellLoopWindow({ open: 'invoice' }));
+    expect(events[1]).toEqual({
+      type: 'window-message',
+      detail: { data: { open: 'invoice' } },
+    });
+    await act(async () => root.unmount());
+    expect(ports[ports.length - 1]).toBeNull();
   });
 });

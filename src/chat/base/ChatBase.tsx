@@ -141,6 +141,7 @@ import {
 import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 import { loopStepOf, withLoopStep } from './loopStep';
 import { applyLoopElement, loopElementChange } from './loopElement';
+import { loopWindowMessage, tellLoopWindow } from './loopWindow';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -3664,6 +3665,13 @@ function ChatBaseInner({
           const step = loopStepOf(event.activity);
           if (step) {
             setDisplayItems(prev => withLoopStep(prev, step));
+            break;
+          }
+          // What its code tells the page it sits in, outside the
+          // conversation (LOOP P-25): handed to whoever listens.
+          const windowMessage = loopWindowMessage(event.activity);
+          if (windowMessage) {
+            tellLoopWindow(windowMessage.data);
             break;
           }
           // An element its code opened in a side panel or on a page of its

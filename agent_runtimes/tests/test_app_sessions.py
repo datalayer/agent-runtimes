@@ -52,7 +52,16 @@ ASSISTANT = {
                     "default": "Plain",
                 }
             },
-        }
+        },
+        # What a person may send without being asked (LOOP P-21).
+        "uploads": {
+            "kinds": [
+                {"type": ".csv", "max_mb": 1},
+                {"type": "image/*", "max_mb": 1},
+                {"type": "application/zip"},
+            ],
+            "max_files": 2,
+        },
     },
     "record": {"keep_for": "30_days", "include": ["conversations", "outputs"]},
 }
@@ -62,6 +71,10 @@ ANALYST = {
     "id": "file-analyst",
     "name": "File Analyst",
     "kind": "widget",
+    "interface": {
+        **ASSISTANT["interface"],
+        "uploads": {"kinds": [{"type": "application/pdf"}]},
+    },
     "permissions": {"computer": {"shell": True}},
 }
 
@@ -605,9 +618,9 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
                 "text": "And this?",
                 "files": [
                     {
-                        "name": "x.bin",
-                        "type": "application/octet-stream",
-                        "data_url": data_url(b"\x00", "application/octet-stream"),
+                        "name": "x.zip",
+                        "type": "application/zip",
+                        "data_url": data_url(b"PK\x00", "application/zip"),
                     }
                 ],
             },
@@ -615,7 +628,7 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
     )
     [error] = [e for e in refused if e["type"] == "RUN_ERROR"]
     assert error["message"].startswith(
-        "x.bin is not a text file, and the application has no computer"
+        "x.zip is not a text file, and the application has no computer"
     )
     assert (
         local.post(
@@ -1109,20 +1122,21 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     assert answer_of(went_on) == "Heard 2: Again"
     assert local.get("/api/v1/apps/sessions/session-0007").json()["state"] == "open"
 
-    # A PDF is not what it asks for: refused in its own sentence.
+    # A PDF is not what its page asks for: refused before its code runs, in
+    # the sentence the page says (LOOP P-21).
     pdf = {
         "name": "a.pdf",
         "type": "application/pdf",
         "data_url": data_url(b"%PDF", "application/pdf"),
     }
-    refused = events_of(
-        local.post(
-            "/api/v1/apps/sessions/session-0007/actions",
-            json={"name": "run", "files": [pdf]},
-        )
+    refused = local.post(
+        "/api/v1/apps/sessions/session-0007/actions",
+        json={"name": "run", "files": [pdf]},
     )
-    [error] = [e for e in refused if e["type"] == "RUN_ERROR"]
-    assert error["message"] == "a.pdf is not one of .csv."
+    assert (refused.status_code, refused.json()["detail"]) == (
+        422,
+        "a.pdf is not a kind of file Report from a File's page asks for: it asks for .csv.",
+    )
 
 
 def test_report_from_a_file_over_ag_ui_as_its_page_runs_it(

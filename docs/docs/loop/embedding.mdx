@@ -367,7 +367,47 @@ what it says:
   they do not allow is refused; *do it* is done.
 
 In React, `AppEmbed` takes the same as `host`:
-`{ context: () => ({ user, page }), functions, onEvent, ask }`.
+`{ context: () => ({ user, page }), functions, onEvent, ask, onWindowPort }`.
+
+### Window messages
+
+An application written in Python also talks to the page outside the
+conversation, with **window messages** (LOOP P-25):
+
+- **Out.** Its code's `await session.send_window_message(data)` — anything
+  JSON writes — is raised on the element as `window-message`
+  (`event.detail.data`), during a turn of the conversation or in answer to
+  the page. The person does not see it.
+- **In.** `element.postWindowMessage(data)` hands the page's message to its
+  code's `@app.window`; what that answers comes back as `window-message`
+  events. It goes to the session the conversation started, on the
+  application's own server (`server`, with the visit's `token` when there is
+  one): before the conversation has started, or off that server, the
+  promise is refused in a sentence; an application whose code reads none
+  refuses it (*… reads no window message: its code has no @app.window.*).
+  In React, `host.onWindowPort(post)` is handed the same `post`, and `null`
+  when it no longer applies.
+
+```html
+<datalayer-app server="https://shop.example/assistant" token="…"></datalayer-app>
+<script>
+  const app = document.querySelector('datalayer-app');
+  app.addEventListener('window-message', event => highlight(event.detail.data));
+  document.querySelector('#checkout').addEventListener('click', () =>
+    app.postWindowMessage({ page: '/checkout' }),
+  );
+</script>
+```
+
+## Mounted from Python
+
+A Python application serves itself, its page and its session API from a
+FastAPI of your own — `app.mount(api, path="/assistant")` — and the page at
+`/assistant` is the element above, its Appspec written in it and its
+`server` that path. Embed it in your own pages the same way:
+`<datalayer-app server="https://your.site/assistant">` with the Appspec
+written in the element, its origin named in `deployment.embedded.origins`.
+See [Mounted into your own FastAPI](./python-applications#mounted-into-your-own-fastapi).
 
 ## The snippet, from Ship
 
@@ -413,6 +453,12 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
 - the host's tools (`host-bridge.test.ts`): the values named and no others,
   a function called and told to the page, one no rule names refused before
   the page is called; the element's `context` and `message`;
+- window messages (`embed-session.test.tsx`, `loopWindow.test.ts`): a post
+  refused before the conversation has started, then sent to its session on
+  the host's server, what the code answers raised as `window-message`, and
+  what its code says in a turn raised the same way; the runtime's side and
+  the mount (`test_app_mount.py`, with FastAPI's `TestClient`). Not seen in a
+  browser;
 - the order of the overrides (attribute, then CSS variable, then Appspec) and
   the messages for invalid values;
 - the snippet;

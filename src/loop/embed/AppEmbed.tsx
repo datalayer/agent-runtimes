@@ -86,12 +86,15 @@ import { createChatExtrasPlugin } from '../plugins/chat-extras';
 import { hostFrontendTools, type AppEmbedHost } from './hostBridge';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 import {
+  WINDOW_NOT_YET,
   embedSessionKey,
+  postWindowMessage,
   reattachSession,
   sessionGoneSentence,
   sessionKeeper,
   visitOfToken,
 } from './embedSession';
+import { onLoopWindowMessage } from '../../chat/base/loopWindow';
 
 export type AppEmbedProps = {
   /** The application. */
@@ -247,6 +250,75 @@ export function useEmbedSession({
   };
 }
 
+/**
+ * Window messages from the page (LOOP P-25): on the host's own server, the
+ * page is handed how to post one to the application's session
+ * (`host.onWindowPort`) — the session the chat goes on with, its uid known
+ * from its first message — and what the code answers is raised on the page
+ * as `window-message` events. The session returned is the one to draw: its
+ * thread told when it starts.
+ */
+export function useWindowPort({
+  serverUrl,
+  embedToken,
+  session,
+  host,
+}: {
+  serverUrl?: string;
+  embedToken?: string;
+  session: EmbedSession;
+  host?: AppEmbedHost;
+}): EmbedSession {
+  const hostRef = useRef(host);
+  hostRef.current = host;
+  const given = session.thread;
+  const uid = useRef<string | undefined>(
+    given?.messages.length ? given.id : undefined,
+  );
+  // A thread of its own where the embed keeps none, so that its uid is known.
+  const own = useMemo<ResumedThread>(
+    () => ({ id: generateMessageId(), messages: [] }),
+    [],
+  );
+  const base = given ?? (serverUrl && session.ready ? own : undefined);
+  const thread = useMemo<ResumedThread | undefined>(
+    () =>
+      base && {
+        ...base,
+        onStarted: (id: string) => {
+          uid.current = id;
+          base.onStarted?.(id);
+        },
+      },
+    [base],
+  );
+  useEffect(() => {
+    const port = host?.onWindowPort;
+    if (!serverUrl || !port) {
+      return undefined;
+    }
+    port(async data => {
+      if (!uid.current) {
+        throw new Error(WINDOW_NOT_YET);
+      }
+      const said = await postWindowMessage({
+        serverUrl,
+        uid: uid.current,
+        ...(embedToken ? { token: embedToken } : {}),
+        data,
+      });
+      for (const answer of said) {
+        hostRef.current?.onEvent?.({
+          type: 'window-message',
+          detail: { data: answer },
+        });
+      }
+    });
+    return () => port(null);
+  }, [serverUrl, embedToken, host]);
+  return thread ? { ...session, thread } : session;
+}
+
 /** What the embed says once of its session, above the conversation. */
 function SessionSaid({ said }: { said?: string }): JSX.Element | null {
   return said ? (
@@ -288,6 +360,17 @@ export function useHostBridge(
   const plugins = useMemo(
     () => (bridge ? [handle.plugin as PluginRef] : NO_HOST_PLUGINS),
     [bridge, handle],
+  );
+  // What its code tells the page during a turn (LOOP P-25), raised on it.
+  useEffect(
+    () =>
+      onLoopWindowMessage(data =>
+        hostRef.current?.onEvent?.({
+          type: 'window-message',
+          detail: { data },
+        }),
+      ),
+    [],
   );
   const said = useRef<ChatSaid>({ answering: false });
   const before = useRef<PresenceState>('idle');
@@ -565,7 +648,14 @@ export function AppEmbed({
   resume = true,
 }: AppEmbedProps): JSX.Element {
   const bridge = useHostBridge(app, host);
-  const session = useEmbedSession({ app, serverUrl, embedToken, resume });
+  const kept = useEmbedSession({ app, serverUrl, embedToken, resume });
+  // Window messages from the page, on the host's own server (P-25).
+  const session = useWindowPort({
+    serverUrl,
+    embedToken,
+    session: kept,
+    host,
+  });
   const system = useSystemMode();
   // The theme the application names (T-30), `loop` when none; its mode
   // the host's, else the application's, else the visitor's system's.

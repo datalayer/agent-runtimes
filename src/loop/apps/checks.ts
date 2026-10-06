@@ -55,6 +55,7 @@ import {
 import { classesOf, splitRef, toolBehaviours } from './rules';
 import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
 import { HOST_NAME, hostToolsOf } from './hostTools';
+import { MAX_UPLOAD_MB, UPLOAD_KIND } from './uploads';
 
 export const NOT_READY = 'Not ready';
 export const NEEDS_ATTENTION = 'Needs attention';
@@ -957,6 +958,54 @@ export function documentShapeProblems(document: unknown): string[] {
         problems.push(...formProblems({ id: 'settings', schema: settings }));
       });
     }
+    // What a person may send without being asked (LOOP P-21), as agentspecs
+    // refuses it: a kind at least, each a type said once, sizes it takes.
+    mapping(ui.uploads, 'interface.uploads', uploads => {
+      unknownKeys(
+        uploads,
+        ['kinds', 'max_files'],
+        'interface.uploads',
+        'uploads',
+      );
+      required(uploads, 'kinds', 'interface.uploads');
+      const types = new Set<string>();
+      records(uploads.kinds, 'interface.uploads.kinds', (kind, where) => {
+        required(kind, 'type', where);
+        unknownKeys(kind, ['type', 'max_mb'], where, 'a kind of upload');
+        if (kind.type !== undefined) {
+          if (typeof kind.type !== 'string' || !UPLOAD_KIND.test(kind.type)) {
+            at(
+              `${where}.type`,
+              'is a media type (application/pdf), a family (image/*) or an extension (.csv), lowercase',
+            );
+          } else if (types.has(kind.type)) {
+            at(`${where}.type`, `names ${kind.type} a second time`);
+          } else {
+            types.add(kind.type);
+          }
+        }
+        const size = kind.max_mb;
+        if (
+          size !== undefined &&
+          (typeof size !== 'number' || size <= 0 || size > MAX_UPLOAD_MB)
+        ) {
+          at(`${where}.max_mb`, `is more than 0 and ${MAX_UPLOAD_MB} at most`);
+        }
+      });
+      if (Array.isArray(uploads.kinds) && uploads.kinds.length === 0) {
+        at('interface.uploads.kinds', 'are one at least');
+      }
+      const most = uploads.max_files;
+      if (
+        most !== undefined &&
+        (typeof most !== 'number' ||
+          !Number.isInteger(most) ||
+          most < 1 ||
+          most > 20)
+      ) {
+        at('interface.uploads.max_files', 'is a whole number from 1 to 20');
+      }
+    });
     mapping(ui.surface, 'interface.surface', surface => {
       records(
         surface.components,

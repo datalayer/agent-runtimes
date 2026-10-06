@@ -587,6 +587,27 @@ export interface AppVoiceSpec {
   where: 'auto' | 'device' | 'server';
 }
 
+/**
+ * A kind of file a person may send, and how large (LOOP P-21): a media type
+ * (`application/pdf`), a family (`image/*`, `audio/*`) or an extension
+ * (`.csv`), lowercase.
+ */
+export interface AppUploadKindSpec {
+  type: string;
+  /** The largest file of this kind, in megabytes; 10 unless said, 25 at most. */
+  maxMb: number;
+}
+
+/**
+ * What a person may send in the composer without being asked (LOOP P-21):
+ * the kinds it takes, each with its largest size, and how many at once.
+ */
+export interface AppUploadsSpec {
+  kinds: AppUploadKindSpec[];
+  /** The most files sent with one message; 5 unless said. */
+  maxFiles: number;
+}
+
 /** What the user of an application sees. */
 export interface AppInterfaceSpec {
   layout: AppLayout;
@@ -605,6 +626,12 @@ export interface AppInterfaceSpec {
    * conversation and on a deployment's Ship card; none when unsaid.
    */
   settings?: AppFormSchema;
+  /**
+   * What a person may send in the composer without being asked (P-21): none
+   * when unsaid — the composer offers no attachment, and the runtime refuses
+   * a file sent with a message.
+   */
+  uploads?: AppUploadsSpec;
   /** The components of the catalog the surface may use. */
   components: string[];
   surface?: AppSurfaceSpec;

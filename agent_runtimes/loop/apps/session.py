@@ -24,8 +24,8 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
-import fnmatch
 import inspect
+import json
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
@@ -54,6 +54,7 @@ from agent_runtimes.loop.apps.forms import form_defaults, form_fields, refused_b
 from agent_runtimes.loop.apps.guards import AppCheckBlockedError, AppChecksCapability
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
 from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.loop.apps.uploads import accepts
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import AppSpec
 
@@ -242,10 +243,22 @@ class Element:
         await self._shown_by().close(self)
 
 
+@dataclass(frozen=True)
+class WindowMessage:
+    """A message to the page the application sits in (LOOP P-25): not shown
+    in the conversation, but handed to the page — raised on the embed as its
+    ``window-message`` event — for the page's own code to read.
+    """
+
+    session_id: str
+    data: Any
+    """What it says: anything JSON writes."""
+
+
 #: What a session delivers to its channel. A step is delivered twice: when it
 #: starts, and when it ends (with `ended_at`); a message again when it changed,
 #: an element of a panel or a page likewise.
-Event = Union[Message, Delta, Step, Removed, Shown, Closed]
+Event = Union[Message, Delta, Step, Removed, Shown, Closed, WindowMessage]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
 
@@ -443,16 +456,8 @@ def _new_id() -> str:
 
 
 def _accepted(question: FileQuestion, upload: UploadedFile) -> bool:
-    if not question.accept:
-        return True
-    name = upload.name.lower()
-    for pattern in question.accept:
-        if pattern.startswith("."):
-            if name.endswith(pattern.lower()):
-                return True
-        elif fnmatch.fnmatchcase(upload.media_type, pattern):
-            return True
-    return False
+    # The kinds a File upload block and the Appspec's uploads say (P-21).
+    return accepts(question.accept, upload.name, upload.media_type)
 
 
 def form_values(
@@ -909,6 +914,37 @@ class Session:
             await self.remove(open_.message)
             return
         await self.channel.deliver(Closed(element_id, self.id))
+
+    async def send_window_message(self, data: Any) -> WindowMessage:
+        """Tell the page the application sits in something, outside the
+        conversation (LOOP P-25): ``await session.send_window_message({"open":
+        "invoice", "id": 42})``. Embedded, the page hears it as the element's
+        ``window-message`` event; its answer comes back to ``@app.window``.
+
+        Parameters
+        ----------
+        data : any
+            What it says: anything JSON writes.
+
+        Returns
+        -------
+        WindowMessage
+            What was sent.
+
+        Raises
+        ------
+        ValueError
+            For what JSON does not write.
+        """
+        try:
+            json.dumps(data)
+        except (TypeError, ValueError) as wrong:
+            raise ValueError(
+                f"A window message is what JSON writes: {wrong}."
+            ) from None
+        message = WindowMessage(self.id, data)
+        await self.channel.deliver(message)
+        return message
 
     @asynccontextmanager
     async def step(

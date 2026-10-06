@@ -26,6 +26,7 @@
  */
 
 import type { ChatMessage } from '../../types/messages';
+import { windowTurnOf } from '../../chat/base/loopWindow';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
@@ -195,6 +196,58 @@ export async function reattachSession({
   } catch {
     return { kind: 'gone', uid };
   }
+}
+
+/** Said when a window message is posted before the conversation has started. */
+export const WINDOW_NOT_YET =
+  'The application takes a window message once its conversation has started, on its own server (the "server" attribute).';
+
+/**
+ * Post a window message to a session (LOOP P-25): its code's `@app.window`
+ * runs on it. Returns what the code told the page back; refused — the
+ * runtime's sentence — when the session or its code takes none.
+ */
+export async function postWindowMessage({
+  serverUrl,
+  uid,
+  token,
+  data,
+  fetcher = fetch,
+}: {
+  serverUrl: string;
+  uid: string;
+  token?: string;
+  data: unknown;
+  fetcher?: typeof fetch;
+}): Promise<unknown[]> {
+  const response = await fetcher(
+    `${serverUrl.replace(/\/+$/, '')}/api/v1/apps/sessions/${encodeURIComponent(uid)}/window`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ data }),
+    },
+  );
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : '';
+    } catch {
+      // No sentence: the status says it.
+    }
+    throw new Error(
+      detail || `The window message was refused (${response.status}).`,
+    );
+  }
+  const turn = windowTurnOf(await response.text());
+  if (turn.error) {
+    throw new Error(turn.error);
+  }
+  return turn.said;
 }
 
 /** What the page says, once, when the conversation it kept is gone. */

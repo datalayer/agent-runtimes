@@ -2287,6 +2287,27 @@ class AppVoiceSpec(BaseModel):
         return self.enabled and self.output != "off"
 
 
+class AppUploadKindSpec(BaseModel):
+    """A kind of file a person may send, and how large (LOOP P-21)."""
+
+    type: str = Field(
+        ...,
+        description="A media type, a family of them (`image/*`) or an extension (`.csv`)",
+    )
+    max_mb: float = Field(
+        default=10, description="The largest file of this kind, in MB"
+    )
+
+
+class AppUploadsSpec(BaseModel):
+    """What a person may send in the composer without being asked (LOOP P-21)."""
+
+    kinds: List[AppUploadKindSpec] = Field(default_factory=list)
+    max_files: int = Field(
+        default=5, description="The most files sent with one message"
+    )
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -2305,6 +2326,13 @@ class AppInterfaceSpec(BaseModel):
         description=(
             "What the user may set: the JSON Schema of a form, an object of "
             "named fields (LOOP C-16); none when unsaid"
+        ),
+    )
+    uploads: Optional[AppUploadsSpec] = Field(
+        default=None,
+        description=(
+            "What a person may send in the composer without being asked, by "
+            "kind and size (LOOP P-21); none when unsaid: no file with a message"
         ),
     )
     components: List[str] = Field(

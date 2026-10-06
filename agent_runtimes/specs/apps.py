@@ -78,6 +78,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": "wizard",
@@ -222,6 +223,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": "cat",
@@ -333,6 +335,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -496,6 +499,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": "wizard",
@@ -653,6 +657,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": None,
@@ -793,6 +798,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -1022,6 +1028,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -1275,6 +1282,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -1483,6 +1491,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -1683,6 +1692,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": "paperclip",
@@ -1793,6 +1803,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -1970,6 +1981,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             "commands": [],
             "modes": [],
             "settings": None,
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -2157,6 +2169,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                     }
                 },
             },
+            "uploads": None,
             "components": [
                 "Card",
                 "Column",
@@ -2379,6 +2392,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
                     }
                 },
             },
+            "uploads": None,
             "components": [],
             "surface": None,
             "assistant": None,

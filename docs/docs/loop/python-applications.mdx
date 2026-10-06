@@ -30,11 +30,13 @@ page).
 
 What does **not** exist yet:
 
-- **A Python application of your own on a runtime.** A runtime runs the
-  code of the catalogue's Python examples through the
+- **A Python application of your own on a hosted runtime.** A runtime runs
+  the code of the catalogue's Python examples through the
   [Session API](./session-api) — its channel the session, what it shows
   streamed as AG-UI events, what it asks answered from the page — and an
-  `app.py` saved elsewhere runs as the spec it builds, answered by its agent.
+  `app.py` deployed on Datalayer runs as the spec it builds, answered by its
+  agent. Your own code runs on a runtime you serve: mounted into your own
+  FastAPI (see [Mounted into your own FastAPI](#mounted-into-your-own-fastapi)).
 - **An agent with tools in process.** An application whose agent needs
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
@@ -213,7 +215,9 @@ session always first:
 | `@app.start` | `(session)` | A session starts. |
 | `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
 | `@app.action(name)` | `(session, payload)` | The person presses the button of that name. The values a `Form` sends with it are checked against its schema first: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). |
+| `@app.file` | `(session, files, text)` | The person sends files with a message without being asked (LOOP P-21): the `UploadedFile`s, and the words sent with them. Which kinds and sizes may be sent is the Appspec's `interface.uploads`; the runtime refuses the rest before this runs. Without a handler, the words go to `message` and the files wait for what the code asks. See [What a person sends](#what-a-person-sends). |
 | `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. |
+| `@app.window` | `(session, data)` | The page the application sits in posts a message (LOOP P-25): `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
@@ -455,6 +459,8 @@ runs an application in this process. A runtime, a test or a script drives it:
 | `await host.open(user=None, settings=None)` | Opens a session and runs `start`. Returns the `Session`. |
 | `await host.message(session, text)` | Runs `message`, or lets the agent answer. |
 | `await host.action(session, name, payload=None)` | Runs the action; an unknown one raises `KeyError`. |
+| `await host.files(session, files, text="")` | Runs `file` with the files sent without being asked; without one, the words go to `message`. |
+| `await host.window(session, data)` | Runs `window` with what the page posted; without one, raises `KeyError`. |
 | `await host.settings(session, values)` | Checks the values against the settings' form, keeps them, runs `settings`. A field the form does not have, or a value its schema refuses, raises `InvalidAnswer` (*“Its settings” was sent what its fields refuse: depth: 9 is greater than the maximum of 5.*). |
 | `await host.stop(session)` | Cancels what runs in the session, then runs `stop`. |
 | `await host.resume(session_id, state, user=None, settings=None)` | Reopens a session with its state, and runs `resume` — an ended one too. |
@@ -703,6 +709,50 @@ goes on with their answer:
 An answer that does not answer the question raises `InvalidAnswer`, in a
 sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
+### What a person sends
+
+A person sends a file two ways: when the application asks
+(`FileQuestion`, or a File upload block of its page), and **without being
+asked**, attached in the composer to a message (LOOP P-21). What it takes
+then is said in its Appspec — the kinds, each with its largest size, and how
+many at once — and nothing else is sent:
+
+```python
+app = Application.from_spec({
+    # …
+    "interface": {
+        "uploads": {
+            "kinds": [
+                {"type": "image/*", "max_mb": 5},
+                {"type": "application/pdf"},
+                {"type": ".csv", "max_mb": 2},
+            ],
+            "max_files": 3,
+        },
+    },
+})
+
+@app.file
+async def received(session: Session, files: list[UploadedFile], text: str):
+    names = ", ".join(file.name for file in files)
+    await session.send(f"Thanks for {names}. {text}")
+```
+
+A kind is a media type, a family (`image/*`, `audio/*`) or an extension;
+`max_mb` is 10 unless said, 25 at most; `max_files` 5 unless said. The
+composer offers a paper clip that takes those kinds and refuses the rest in a
+sentence before anything is read; the runtime refuses again, with 422 and the
+same sentence, what a client sent around the page (*p.png is 6.0 MB: Photo
+Desk takes image/* of at most 5 MB.*). Without `uploads` the composer offers
+no attachment, and a file sent with a message is refused.
+
+Without `@app.file`, the words go to `@app.message` (or its agent), and the
+files wait for what the code asks next: `await
+session.ask(FileQuestion(...))` is answered by one at once. An application
+without code gives them to its agent: a text file in the message, an image, a
+recording or a PDF whole to its model, anything else in its sandbox when its
+permissions turn a shell on (see [Files](./session-api#files)).
+
 ### The record
 
 `await session.record(payload, summary="", kind="output")` writes an entry
@@ -748,6 +798,79 @@ organization's, the catalogue's otherwise. What only a runtime brings — connec
 is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.
+
+## Mounted into your own FastAPI
+
+An application runs inside a FastAPI of your own, under a path of its own
+(LOOP P-25):
+
+```python
+from fastapi import FastAPI
+
+from my_app import app  # an Application, its code attached
+
+api = FastAPI()
+app.mount(api, path="/assistant")
+```
+
+`uvicorn main:api` then serves, under `/assistant`:
+
+- **its page**, at `/assistant`: the application, embedded with
+  `<datalayer-app server="…/assistant">` and its Appspec written in the
+  element (see [Embedding](./embedding));
+- **the runtime's own routes**: the [Session API](./session-api) at
+  `/assistant/api/v1/apps/sessions`, the chat's AG-UI at
+  `/assistant/api/v1/apps/agents/<id>/ag-ui/`, and the rest of
+  agent-runtimes' routes — the runtime is mounted as it is;
+- **its agent**, made when your FastAPI starts, as the platform makes an
+  application's (`POST /api/v1/agents` with its Appspec, in process): the
+  runtime's lifespan runs inside yours;
+- **its code**: `@app.message`, `@app.file`, `@app.window` and the rest react
+  to its sessions, as the catalogue's Python examples do on a runtime.
+
+| Parameter | What it says |
+| --- | --- |
+| `path` | Where it is served: `/assistant` unless said. A path of its own: not `/`, no trailing slash. |
+| `app_uid` | The application as Datalayer knows it, when an embed token names it. |
+| `token` | `token(request)` gives the page the visit's embed token, issued by your server for each visit ([Private applications](./embedding#private-applications)); none for a page only the machine itself opens. |
+| `embed_origin` | Where the embed's script is served: `https://datalayer.ai` unless said. |
+| `config` | The runtime's `ServerConfig`; its defaults unless said. |
+
+Who may call is decided as on any runtime: the machine itself needs no
+token; anybody else sends a person's token or an embed token, from an origin
+the Appspec names (`deployment.embedded.origins`) — your page's own included.
+Your own routes stay yours: the mount answers its path and nothing else.
+
+### Window messages
+
+The application and the page it sits in talk outside the conversation:
+
+```python
+@app.window
+async def from_page(session: Session, data: dict):
+    if data.get("page") == "/checkout":
+        await session.send_window_message({"highlight": "coupon"})
+```
+
+```js
+const element = document.querySelector('datalayer-app');
+element.addEventListener('window-message', event => {
+  console.log('the application says', event.detail.data);
+});
+await element.postWindowMessage({ page: location.pathname });
+```
+
+`await session.send_window_message(data)` — anything JSON writes — is raised
+on the element as its `window-message` event, whether its code sends it in
+a turn of the conversation or in answer to the page. The page posts with
+`element.postWindowMessage(data)`, on the application's own server (the
+`server` attribute), once its conversation has started: its `@app.window`
+runs on it, and a session whose code has none refuses it in a sentence. A
+window message is not a message of the conversation: the person does not see
+it, and it is no turn of theirs. Beside them, the host's values and
+functions (`host_context`, `host_<name>`) are what its agent reads and
+calls, each decided by its rules ([The page and the application,
+talking](./embedding#the-page-and-the-application-talking)).
 
 ## Channels
 
@@ -885,9 +1008,18 @@ recorded; tests run and decided by their code, from `validate --tests
 --local`. `agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
 `loop.element` events of the Session API, drawn again on a resume.
+`agent_runtimes/tests/test_app_uploads.py` covers what a person sends: the
+kinds, sizes and counts of `uploads` refused with 422 in sentences, an image
+given to the model whole, `@app.file`, and a file waiting for what the code
+asks. `agent_runtimes/tests/test_app_mount.py` covers `app.mount` in a
+FastAPI of one's own, with FastAPI's `TestClient`: the page, the
+developer's own routes, the Session API and the code under the path, the
+agent made through the runtime's own route, and window messages both ways.
 
-**Not verified.** A Python application reached from a browser on a cloud
-runtime: the [Session API](./session-api) runs one in process in its tests
+**Not verified.** A mounted application's page in a browser — the embed's
+script loaded from Datalayer and talking to the mount — and a model reading an
+image sent: the model is scripted in the tests. A Python application reached
+from a browser on a cloud runtime: the [Session API](./session-api) runs one in process in its tests
 (`test_app_sessions.py`, *Report from a File* taking its file from the page),
 not yet live. The agent is scripted in the tests; no test calls a real model
 through this API.

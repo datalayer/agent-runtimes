@@ -38,6 +38,11 @@
  * when it called a function of the page, beside `decision` and
  * `token-expired`.
  *
+ * Window messages (LOOP P-25), on the host's own server: the element raises
+ * `window-message` (`detail.data`) when the application's code tells the page
+ * something outside the conversation (`session.send_window_message`), and
+ * `element.postWindowMessage(data)` hands the page's to its `@app.window`.
+ *
  * On the host's server (`server`) with the visit's embed token, the
  * session the application opens is kept in the page's `localStorage`, under
  * the application and the visit its token names, and picked up again after
@@ -56,7 +61,8 @@ import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
 import { readAppspecYaml } from '../apps/yaml';
 import { AppEmbed, embedAssistantCharacter } from './AppEmbed';
-import type { AppEmbedHost, HostFunction } from './hostBridge';
+import type { AppEmbedHost, HostFunction, WindowPost } from './hostBridge';
+import { WINDOW_NOT_YET } from './embedSession';
 import {
   EMBED_HOST_VARIABLES,
   EMBED_OBSERVED_ATTRIBUTES,
@@ -256,10 +262,15 @@ export function defineDatalayerAppElement(
     private passed: Record<string, unknown> = {};
     /** One object, its functions replaced in place: the host below holds it. */
     private readonly offered: Record<string, HostFunction> = {};
+    /** How a window message reaches the application's session, once it can (P-25). */
+    private windowPort: WindowPost | null = null;
     /** What the page gives the application, read at each call (D-10). */
     private readonly host: AppEmbedHost = {
       context: () => this.passed,
       functions: this.offered,
+      onWindowPort: post => {
+        this.windowPort = post;
+      },
       onEvent: event =>
         this.dispatchEvent(
           new CustomEvent(event.type, {
@@ -277,6 +288,19 @@ export function defineDatalayerAppElement(
 
     set context(value: Record<string, unknown>) {
       this.passed = { ...(value ?? {}) };
+    }
+
+    /**
+     * Post a window message to the application (LOOP P-25): its code's
+     * `@app.window` reads it, and what it answers is raised as
+     * `window-message` events. Refused, in a sentence, before its
+     * conversation has started or off the host's own server.
+     */
+    postWindowMessage(data: unknown): Promise<void> {
+      const post = this.windowPort;
+      return post
+        ? post(data)
+        : Promise.reject(new Error(`datalayer-app: ${WINDOW_NOT_YET}`));
     }
 
     /** The page's functions the application may call, by name (D-10). */

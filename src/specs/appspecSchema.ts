@@ -427,6 +427,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             "What the user may set: the JSON Schema of a form, an object of named fields, each with its `title` and its `default` (LOOP C-16). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card, its values go with every run and are checked by the runtime against the same schema. None when unsaid",
           title: 'Settings',
         },
+        uploads: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppUploads',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'What a person may send in the composer without being asked — images, files, audio — by kind, each with its largest size, and how many at once (LOOP P-21). None when unsaid: the composer offers no attachment, and a file sent with a message is refused',
+        },
         components: {
           description:
             "The components of the catalog the surface may use; the kind's own when empty",
@@ -953,6 +966,60 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['type'],
       title: 'AppTrigger',
+      type: 'object',
+    },
+    AppUploadKind: {
+      additionalProperties: false,
+      description:
+        'A kind of file a person may send, and how large (LOOP P-21).',
+      properties: {
+        type: {
+          description:
+            'A media type (`application/pdf`), a family of them (`image/*`, `audio/*`) or an extension (`.csv`), lowercase',
+          pattern:
+            '^(?:[a-z0-9][a-z0-9.+-]*/(?:\\*|[a-z0-9][a-z0-9.+-]*)|\\.[a-z0-9][a-z0-9_+-]*)$',
+          title: 'Type',
+          type: 'string',
+        },
+        max_mb: {
+          default: 10,
+          description:
+            'The largest file of this kind, in megabytes; 25 at most',
+          exclusiveMinimum: 0,
+          maximum: 25,
+          title: 'Max Mb',
+          type: 'number',
+        },
+      },
+      required: ['type'],
+      title: 'AppUploadKind',
+      type: 'object',
+    },
+    AppUploads: {
+      additionalProperties: false,
+      description:
+        'What a person may send in the composer without being asked (LOOP P-21): images, files, audio.\n\nA file of a kind it does not name, larger than its kind takes, or one too\nmany is refused, in a sentence — by the page before it is sent, and by the\nruntime when it is sent all the same.',
+      properties: {
+        kinds: {
+          description: 'The kinds of file it takes, each with its largest size',
+          items: {
+            $ref: '#/$defs/AppUploadKind',
+          },
+          minItems: 1,
+          title: 'Kinds',
+          type: 'array',
+        },
+        max_files: {
+          default: 5,
+          description: 'The most files sent with one message',
+          maximum: 20,
+          minimum: 1,
+          title: 'Max Files',
+          type: 'integer',
+        },
+      },
+      required: ['kinds'],
+      title: 'AppUploads',
       type: 'object',
     },
     AppVerified: {

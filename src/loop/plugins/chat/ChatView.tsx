@@ -541,14 +541,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const sendNow = useCallback(
     (message: string, given?: Record<string, unknown>): string | void => {
-      const loop = given?.loop as { files?: unknown[] } | undefined;
-      if (inPageRef.current && loop?.files && loop.files.length > 0) {
-        return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
-      }
       const forwardedProps = runForwardedProps(
         runPropsRef.current.map(entry => entry.value),
         given,
       );
+      // The page's files, or those attached in the composer (LOOP P-21).
+      const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
+      if (inPageRef.current && loop?.files && loop.files.length > 0) {
+        return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
+      }
       // A new turn: whatever the panel showed is gone, this message is it.
       turnFeedRef.current?.begin(message, controlsRef.current?.thread());
       const send = controlsRef.current?.send;

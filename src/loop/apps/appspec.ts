@@ -53,8 +53,10 @@ import type {
   AppSurfaceSpec,
   AppToolSpec,
   AppTriggerSpec,
+  AppUploadsSpec,
 } from '../../types/agentspecs';
 import { BEHAVIOURS } from './rules';
+import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
 export const APP_SCHEMA = 'loop.app/v1';
@@ -407,6 +409,17 @@ function parseVoice(data: unknown): AppVoiceSpec {
   };
 }
 
+/** What a person may send without being asked (P-21), as the spec says it. */
+function parseUploads(data: Data): AppUploadsSpec {
+  return {
+    kinds: records(data.kinds).map(kind => ({
+      type: text(kind.type),
+      maxMb: numberOf(kind.max_mb, DEFAULT_UPLOAD_MB),
+    })),
+    maxFiles: numberOf(data.max_files, DEFAULT_MAX_FILES),
+  };
+}
+
 function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   const parsed: AppInterfaceSpec = {
     layout: oneOf(
@@ -433,6 +446,9 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     parsed.settings = JSON.parse(
       JSON.stringify(data.settings),
     ) as AppFormSchema;
+  }
+  if (isData(data.uploads)) {
+    parsed.uploads = parseUploads(data.uploads);
   }
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
@@ -816,8 +832,22 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
         return written.data;
       }),
     )
-    .part('settings', spec.settings ? { ...spec.settings } : {})
-    .list('components', spec.components);
+    .part('settings', spec.settings ? { ...spec.settings } : {});
+  // What a person may send without being asked (P-21): written when said.
+  if (spec.uploads) {
+    writer.data.uploads = new Writer()
+      .list(
+        'kinds',
+        spec.uploads.kinds.map(
+          kind =>
+            new Writer()
+              .text('type', kind.type, '\u0000')
+              .value('max_mb', kind.maxMb, DEFAULT_UPLOAD_MB).data,
+        ),
+      )
+      .value('max_files', spec.uploads.maxFiles, DEFAULT_MAX_FILES).data;
+  }
+  writer.list('components', spec.components);
   if (spec.surface) {
     writer.data.surface = dumpSurface(spec.surface);
   }

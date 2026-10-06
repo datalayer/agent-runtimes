@@ -68,6 +68,7 @@ from agent_runtimes.loop.apps.session import (
     Step,
     TextQuestion,
     UploadedFile,
+    WindowMessage,
 )
 from agent_runtimes.loop.apps.utilities import cache, run_sync
 
@@ -96,6 +97,7 @@ __all__ = [
     "Step",
     "TextQuestion",
     "UploadedFile",
+    "WindowMessage",
     "app_capabilities",
     "cache",
     "load_application",

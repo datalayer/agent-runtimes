@@ -45,6 +45,7 @@ from agent_runtimes.loop.apps.session import (
     Shown,
     Step,
     UploadedFile,
+    WindowMessage,
 )
 
 
@@ -130,6 +131,14 @@ class TerminalChannel:
             title = self._elements.pop(event.element_id, "")
             if title:
                 self.console.print(f"[dim]▹ {title}, closed.[/dim]", highlight=False)
+        elif isinstance(event, WindowMessage):
+            # A page the terminal does not have: what it would be told, said (LOOP P-25).
+            self.console.print("[dim]⇢ to the page:[/dim] ", end="")
+            self.console.print(
+                json.dumps(event.data, ensure_ascii=False),
+                markup=False,
+                highlight=False,
+            )
         elif isinstance(event, Removed):
             if event.message_id in self._shown:
                 self.console.print("[dim]✗ a message was removed.[/dim]")

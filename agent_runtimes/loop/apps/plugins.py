@@ -59,7 +59,9 @@ RulesFactory = Callable[[AppSpec, Optional[str]], AppRulesCapability]
 REACTIONS: Tuple[str, ...] = (
     "start",
     "message",
+    "file",
     "settings",
+    "window",
     "stop",
     "resume",
     "end",
