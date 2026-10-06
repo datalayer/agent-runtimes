@@ -669,6 +669,19 @@ reasons of `AppNotRunnable`).
 as they take a spec: they build it first. `deploy` deploys a saved version
 by its id, so a Python application reaches it through `push`.
 
+**Where the file lives.** `loop apps push app.py --app <id>` keeps the file
+itself in the application's item, beside the spec it builds — `code`,
+`{"file": "app.py", "text": …}` in the item's content — and versions it with
+the spec: a changed file is the next version, even when the spec it builds
+is the same, and the version left behind keeps its own file. `loop apps pull
+<id>` writes it back, `app.py` beside `app.yaml` (neither overwritten without
+`--force`). An application kept with its file is refused a spec pushed
+without it (*… is written in Python: push its app.py, which builds this
+spec.*). The Studio shows the file in the application's **Python** tab, every
+line numbered, and the Canvas links each thing the code decides
+(`app.py line 23`) to its line there. The file is changed where it is kept,
+not in the Studio; an application of several files keeps its `app.py` only.
+
 `loop apps run app.py` runs it as it runs a spec — a runtime here
 (`--local`) or on Datalayer (`--cloud`), configured with the built Appspec,
 in the terminal's renderer, the starters as its suggestions — and the

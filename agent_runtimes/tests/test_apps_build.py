@@ -206,16 +206,39 @@ def test_validate_builds_an_app_py_first(tmp_path: Path) -> None:
     assert validate_file(plain).verdict == PASSES
 
 
-def test_push_saves_the_built_spec(tmp_path: Path, monkeypatch) -> None:
-    saved: List[str] = []
+def test_push_saves_the_built_spec_and_the_file(tmp_path: Path, monkeypatch) -> None:
+    saved: List[Any] = []
     monkeypatch.setattr(commands, "_store", lambda: object())
     monkeypatch.setattr(
         "agent_runtimes.loop.apps.store.push",
-        lambda store, uid, text: (_kept(saved, text, 3), "saved"),
+        lambda store, uid, text, code=None: (_kept(saved, (text, code), 3), "saved"),
     )
-    result = runner.invoke(app, ["push", str(write(tmp_path)), "--app", "app-1"])
+    path = write(tmp_path)
+    result = runner.invoke(app, ["push", str(path), "--app", "app-1"])
     assert result.exit_code == 0, result.output
-    assert read_code_marks(saved[0]) and yaml.safe_load(saved[0])["id"] == "interview"
+    text, code = saved[0]
+    assert read_code_marks(text) and yaml.safe_load(text)["id"] == "interview"
+    # The app.py itself, kept in the application's item beside it (P-10).
+    assert code == {"file": path.name, "text": path.read_text()}
+
+
+def test_pull_writes_the_app_py_beside_the_spec_it_builds(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(commands, "_store", lambda: object())
+    code = {"file": "app.py", "text": "# the code\n"}
+    monkeypatch.setattr(
+        "agent_runtimes.loop.apps.store.pull",
+        lambda store, uid: ("id: interview\n", 4, code),
+    )
+    out = tmp_path / "app.yaml"
+    result = runner.invoke(app, ["pull", "app-1", "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "app.py").read_text() == "# the code\n"
+    assert out.read_text() == "id: interview\n"
+    # Neither is overwritten unless asked.
+    again = runner.invoke(app, ["pull", "app-1", "--out", str(out)])
+    assert again.exit_code == 1 and "there already" in again.output
 
 
 # --- run (P-08) ------------------------------------------------------------------

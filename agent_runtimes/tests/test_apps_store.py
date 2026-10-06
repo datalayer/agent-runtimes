@@ -70,7 +70,7 @@ def store(spacer: Spacer) -> AppStore:
 
 
 def test_pull_writes_the_text_the_studio_keeps(store):
-    assert pull(store, "app-1") == (SOURCE, 3)
+    assert pull(store, "app-1") == (SOURCE, 3, None)
 
 
 def test_the_same_file_pushed_changes_nothing(store, spacer):
@@ -103,3 +103,29 @@ def test_an_application_in_the_older_form_is_refused(store, spacer):
         pull(store, "app-1")
     with pytest.raises(DeployRefused, match="older form"):
         push(store, "app-1", SOURCE)
+
+
+# --- P-10: an app.py kept in the application's item ------------------------------
+
+CODE = {"file": "app.py", "text": "from agent_runtimes.loop.apps import Application\n"}
+
+
+def test_an_app_py_is_kept_beside_its_spec_and_versioned_with_it(store, spacer):
+    built = "# Built from app.py by `loop apps build`\n" + SOURCE
+    assert push(store, "app-1", built, code=CODE) == (4, "saved")
+    assert spacer.model()["code"] == CODE
+    assert pull(store, "app-1") == (built, 4, CODE)
+    # The same file again: nothing.
+    assert push(store, "app-1", built, code=CODE) == (4, "unchanged")
+    # The file changed, its spec the same: the next version, the last kept with its own.
+    changed = {**CODE, "text": CODE["text"] + "# more\n"}
+    assert push(store, "app-1", built, code=changed) == (5, "saved")
+    kept = [
+        json.loads(i["model_s"])
+        for i in spacer.items.values()
+        if i["type_s"] == "appversion"
+    ]
+    assert [k.get("code") for k in kept] == [None, CODE]
+    # Its spec alone is refused: its code builds it.
+    with pytest.raises(DeployRefused, match="written in Python: push its app.py"):
+        push(store, "app-1", built)

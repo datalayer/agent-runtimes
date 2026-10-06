@@ -7,6 +7,13 @@
 comments included (F-09) — and `push` saves a file back the way the Studio's
 own save does: the version left behind is kept as an `appversion` item, and a
 changed specification is the next version; the same one is not.
+
+An application written in Python keeps its ``app.py`` in its item, beside
+the Appspec it builds (LOOP P-10, decided 2026-10-06): ``code`` —
+``{"file": "app.py", "text": ...}`` — saved by ``push`` of the file,
+versioned with the spec (a changed file is the next version, and the one
+left behind keeps its own), written back by ``pull``, and read by the
+Studio, whose Canvas links to its lines.
 """
 
 from __future__ import annotations
@@ -115,8 +122,22 @@ class AppStore(Deployments):
         )
 
 
-def pull(store: AppStore, uid: str) -> tuple[str, int]:
-    """The application's Appspec as its file, and the version it is."""
+def code_of(model: dict[str, Any]) -> Optional[dict[str, str]]:
+    """The ``app.py`` an application's item keeps, ``{file, text}``, or None."""
+    code = model.get("code")
+    if (
+        isinstance(code, dict)
+        and isinstance(code.get("file"), str)
+        and isinstance(code.get("text"), str)
+        and code["text"].strip()
+    ):
+        return {"file": code["file"], "text": code["text"]}
+    return None
+
+
+def pull(store: AppStore, uid: str) -> tuple[str, int, Optional[dict[str, str]]]:
+    """The application's Appspec as its file, the version it is, and its
+    ``app.py`` when it is written in Python (``{file, text}``)."""
     app = store.item(uid)
     if app.model.get("format") != APP_ITEM_FORMAT or not isinstance(
         app.model.get("spec"), dict
@@ -124,20 +145,32 @@ def pull(store: AppStore, uid: str) -> tuple[str, int]:
         raise DeployRefused(
             f"{app.name} is kept in an older form: open it in the Studio and save it once."
         )
+    code = code_of(app.model)
     source = app.model.get("source")
     if isinstance(source, str) and source.strip():
-        return source if source.endswith("\n") else source + "\n", app.version
-    return yaml.safe_dump(
-        app.model["spec"], sort_keys=False, allow_unicode=True
-    ), app.version
+        return source if source.endswith("\n") else source + "\n", app.version, code
+    return (
+        yaml.safe_dump(app.model["spec"], sort_keys=False, allow_unicode=True),
+        app.version,
+        code,
+    )
 
 
 def push(
-    store: AppStore, uid: str, text: str, spec: Optional[dict[str, Any]] = None
+    store: AppStore,
+    uid: str,
+    text: str,
+    spec: Optional[dict[str, Any]] = None,
+    code: Optional[dict[str, str]] = None,
 ) -> tuple[int, str]:
     """Save a file as the application. Returns its version and what was done:
     ``saved`` (the next version), ``rewritten`` (the same specification,
     written differently) or ``unchanged``.
+
+    ``code`` is the ``app.py`` the text was built from, ``{file, text}``:
+    kept beside it, and a changed file is the next version too. An
+    application kept with its code is refused a spec without one: its code
+    is pushed, not the spec it builds.
     """
     if spec is None:
         loaded = yaml.safe_load(text)
@@ -149,7 +182,13 @@ def push(
         raise DeployRefused(
             f"{app.name} is kept in an older form: open it in the Studio and save it once."
         )
-    same = _canonical(spec) == _canonical(app.model.get("spec"))
+    kept_code = code_of(app.model)
+    if kept_code is not None and code is None:
+        raise DeployRefused(
+            f"{app.name} is written in Python: push its {kept_code['file']}, "
+            "which builds this spec."
+        )
+    same = _canonical(spec) == _canonical(app.model.get("spec")) and code == kept_code
     if same and app.model.get("source") == text:
         return app.version, "unchanged"
     state = dict(app.model.get("state") or {})
@@ -158,7 +197,13 @@ def push(
         state["revision"] = app.version + 1
     store.save(
         uid,
-        {"format": APP_ITEM_FORMAT, "spec": spec, "state": state, "source": text},
+        {
+            "format": APP_ITEM_FORMAT,
+            "spec": spec,
+            "state": state,
+            "source": text,
+            **({"code": code} if code is not None else {}),
+        },
     )
     name = spec.get("name")
     if isinstance(name, str) and name.strip() and name.strip() != app.name:

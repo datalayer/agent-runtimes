@@ -1264,7 +1264,9 @@ def apps_pull(
     """Write an application's Appspec to a file (LOOP S-04).
 
     The text the Studio keeps, comments included: a repository holds the same
-    file, and `push` saves it back.
+    file, and `push` saves it back. An application written in Python has its
+    app.py written beside it, as its item keeps it (LOOP P-10): the file to
+    edit and push.
     """
     import httpx
 
@@ -1272,15 +1274,27 @@ def apps_pull(
     from agent_runtimes.loop.apps.store import pull
 
     out = path or Path("app.yaml")
-    if out.exists() and not force:
-        console.print(f"[red]✗[/red] {out} is there already; --force overwrites it.")
-        raise typer.Exit(1)
     try:
-        text, version = pull(_store(), app_uid)
+        text, version, code = pull(_store(), app_uid)
     except (DeployRefused, httpx.HTTPError) as refused:
         console.print(f"[red]✗[/red] {refused}")
         raise typer.Exit(1)
+    written = [out] + ([out.parent / Path(code["file"]).name] if code else [])
+    there = [str(file) for file in written if file.exists()]
+    if there and not force:
+        console.print(
+            f"[red]✗[/red] {', '.join(there)} "
+            f"{'is' if len(there) == 1 else 'are'} there already; --force overwrites."
+        )
+        raise typer.Exit(1)
     out.write_text(text)
+    if code:
+        written[1].write_text(code["text"])
+        console.print(
+            f"[green]✓[/green] Version {version} written to {written[1]}, "
+            f"and the spec it builds to {out}."
+        )
+        return
     console.print(f"[green]✓[/green] Version {version} written to {out}.")
 
 
@@ -1304,7 +1318,9 @@ def apps_push(
     """Save a file as an application, as the Studio saves it (LOOP S-04).
 
     A file that is not ready is refused. A changed specification is the next
-    version, and the one left behind is kept; the same one is not.
+    version, and the one left behind is kept; the same one is not. An app.py
+    is kept in the application's item beside the spec it builds, and a
+    changed app.py is the next version too (LOOP P-10).
     """
     import httpx
 
@@ -1316,8 +1332,12 @@ def apps_push(
         for problem in report.problems:
             console.print(f"[red]✗[/red] {problem}")
         raise typer.Exit(1)
+    from agent_runtimes.loop.apps.build import is_python
+
+    # An app.py is kept beside the spec it builds, versioned with it (P-10).
+    code = {"file": path.name, "text": path.read_text()} if is_python(path) else None
     try:
-        version, done = push(_store(), app_uid, _spec_text(path))
+        version, done = push(_store(), app_uid, _spec_text(path), code=code)
     except (DeployRefused, httpx.HTTPError) as refused:
         console.print(f"[red]✗[/red] {refused}")
         raise typer.Exit(1)
