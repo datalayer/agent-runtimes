@@ -88,6 +88,15 @@ class TerminalChannel:
             else:
                 self._bullet(event.author)
                 self.console.print(event.text, markup=False, highlight=False)
+            for node in event.components:
+                # A terminal draws no surface: it names what the page shows.
+                if node.get("component") in ("Row", "Column", "Card", "List", "Tabs"):
+                    continue
+                said = node.get("title") or node.get("text") or node.get("label") or ""
+                line = f"  ▣ {node.get('component')} {node.get('id')}"
+                if isinstance(said, str) and said:
+                    line += f": {said}"
+                self.console.print(line, style="dim", markup=False, highlight=False)
             self._shown.add(event.id)
         elif isinstance(event, Removed):
             if event.message_id in self._shown:

@@ -38,17 +38,17 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 
-import jsonschema
 from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
+from agent_runtimes.loop.apps.components import component_node
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import Channel, Session, call
-from agent_runtimes.specs.ui_plugins import SurfaceComponents, get_component
+from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import (
     AppConnectionSpec,
     AppRuleSpec,
@@ -354,38 +354,12 @@ class Application:
         dict
             The node, as the surface holds it.
         """
-        spec = get_component(component)
-        if spec is None:
-            raise ValueError(f"The catalog has no component {component!r}.")
-        own = {
-            name: value
-            for name, value in properties.items()
-            if not (isinstance(value, Mapping) and "path" in value)
-        }
-        schema = {
-            **spec.properties,
-            "required": [
-                name
-                for name in spec.properties.get("required", [])
-                if name not in properties or name in own
-            ],
-        }
-        refused = sorted(
-            jsonschema.Draft202012Validator(schema).iter_errors(own),
-            key=lambda error: list(error.path),
-        )
-        if refused:
-            said = "; ".join(
-                f"{'.'.join(str(part) for part in error.path) or 'its properties'}: {error.message}"
-                for error in refused
-            )
-            raise ValueError(f"{id} is a {spec.name} its schema refuses: {said}.")
+        node = component_node(id, component, **properties)
         interface = self._document.setdefault("interface", {})
         surface = interface.get("surface") or {"protocol": "a2ui/v0.9"}
         nodes = surface.setdefault("components", [])
         if any(node.get("id") == id for node in nodes):
             raise ValueError(f"The surface already has a component named {id}.")
-        node = {"id": id, "component": component, **properties}
         nodes.append(node)
         interface["surface"] = surface
         self._spec = None

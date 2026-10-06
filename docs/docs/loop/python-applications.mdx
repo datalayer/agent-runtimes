@@ -39,8 +39,11 @@ What does **not** exist yet:
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
   [The agent](#the-agent)).
-- **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`) and
-  what an answer shows beyond text (tables, charts, buttons).
+- **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`).
+- **A button in an answer that runs code.** An answer shows buttons (see
+  [What an answer shows](#what-an-answer-shows)), but the chat hands back only
+  a form's submission, as the person's next message; a button's action does
+  not reach `@app.action` yet.
 
 ## Where its code runs
 
@@ -427,6 +430,41 @@ made by that code.
   `await session.stream(session.agent.stream(text))` shows the agent's
   answer as the model writes it.
 
+### What an answer shows
+
+An answer shows more than text: the components of the catalog — the ones the
+Canvas places and `app.ui` places on the application's surface, checked
+against the same JSON Schema. `session.ui.<component>(id, **properties)`
+makes one, typed:
+
+```python
+await session.send(
+    "Three runs, cheapest first.",
+    show=[
+        session.ui.table("runs", columns=["model", "cost"], rows={"path": "/runs"}),
+        session.ui.chart("costs", kind="bar", x="model", y="cost", points={"path": "/runs"}),
+        session.ui.image("plot", url="https://example.com/plot.png"),
+    ],
+    data={"runs": runs},
+)
+```
+
+- `show` — components, drawn under the text in the order given; a component
+  another names as its child (a Button's label) is drawn where that one puts
+  it. Text, Image, Table, Chart, Button, Card, Row, Column and the rest of
+  the catalog; a file to download is not in the catalog.
+- `data` — what a property bound to a path reads (a Table's `rows`, a
+  Chart's `points`): the answer's own data.
+- `send`, `stream` and `update` take both; `update` keeps what the message
+  showed unless told, and `show=[]` takes it away.
+- A component the catalog does not have, properties its schema refuses, two
+  components of one id or a child no component is raise `ValueError`, in a
+  sentence, before anything is sent.
+
+On the channel, they are the `Message`'s `components` and `data`. Over the
+[Session API](./session-api) they are a surface under the message, drawn by
+the chat's A2UI renderer; a terminal names each (*▣ Table runs*).
+
 ### Messages that change
 
 A message sent is not final:
@@ -650,7 +688,8 @@ updated and removed, `run_sync` and `cache`; the application loaded as its
 Reactor plugin, another plugin's reaction answering in its place, and
 disposed; the agent
 answering, streamed, when there is no message handler; `send`, `stream`,
-nested steps and their errors; `ask` with text, choice, file and form, wrong
+nested steps and their errors; what an answer shows, checked against the
+catalog; `ask` with text, choice, file and form, wrong
 answers and timeouts; state per session; the record; the agent's history
 across turns; a rule asking the person and a refusal raising; the local
 agent refusing what only a runtime brings; `load_application`. The example

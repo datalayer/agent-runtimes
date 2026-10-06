@@ -66,6 +66,7 @@ from typing import (
 from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
+from agent_runtimes.loop.apps.components import answer_surface
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
@@ -386,6 +387,17 @@ def code_of(app: AppSpec) -> Any:
 #: (LOOP P-15): ``{id, author}`` or ``{id, removed: true}``.
 LOOP_MESSAGE = "loop.message"
 
+#: The tool whose result the chat draws as an A2UI surface where it lands
+#: (``frontend_render_tools``, the ``a2ui-surface`` renderer): what an answer
+#: shows besides its text is sent as its result, under the message (LOOP P-04).
+SHOW_TOOL = "render_a2ui_surface"
+
+
+def _shown_call_id(message_id: str) -> str:
+    """The tool call that carries what a message shows."""
+    return f"{message_id}-shows"
+
+
 # --- the session ----------------------------------------------------------------
 
 
@@ -628,6 +640,10 @@ class LiveSession:
             TextMessageContentEvent,
             TextMessageEndEvent,
             TextMessageStartEvent,
+            ToolCallArgsEvent,
+            ToolCallEndEvent,
+            ToolCallResultEvent,
+            ToolCallStartEvent,
         )
 
         if isinstance(event, Delta):
@@ -654,7 +670,36 @@ class LiveSession:
                         TextMessageContentEvent(message_id=event.id, delta=event.text)
                     )
             self.emit(TextMessageEndEvent(message_id=event.id))
-            kept = {"id": event.id, "role": "assistant", "content": event.text}
+            kept: Dict[str, Any] = {
+                "id": event.id,
+                "role": "assistant",
+                "content": event.text,
+            }
+            if event.components:
+                # What it shows: a surface under the message, as the result
+                # of the tool the chat draws surfaces for (LOOP P-04).
+                shown = answer_surface(
+                    event.id, event.author, event.components, event.data
+                )
+                call_id = _shown_call_id(event.id)
+                self.emit(
+                    ToolCallStartEvent(
+                        tool_call_id=call_id,
+                        tool_call_name=SHOW_TOOL,
+                        parent_message_id=event.id,
+                    )
+                )
+                self.emit(ToolCallArgsEvent(tool_call_id=call_id, delta="{}"))
+                self.emit(ToolCallEndEvent(tool_call_id=call_id))
+                self.emit(
+                    ToolCallResultEvent(
+                        message_id=_new_id(),
+                        tool_call_id=call_id,
+                        content=json.dumps(shown),
+                        role="tool",
+                    )
+                )
+                kept["shows"] = shown
             if event.author != self.app.name:
                 kept["name"] = event.author
                 self.emit(
@@ -1227,8 +1272,18 @@ class LiveSession:
 
 
 def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
-    """The conversation as AG-UI messages, for a snapshot."""
-    from ag_ui.core import AssistantMessage, UserMessage
+    """The conversation as AG-UI messages, for a snapshot.
+
+    What a message showed comes back as the call of the tool that drew it,
+    and its result (LOOP P-04).
+    """
+    from ag_ui.core import (
+        AssistantMessage,
+        FunctionCall,
+        ToolCall,
+        ToolMessage,
+        UserMessage,
+    )
 
     shown: List[Any] = []
     for message in messages:
@@ -1238,13 +1293,34 @@ def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
                 UserMessage(id=str(message.get("id") or _new_id()), content=content)
             )
         elif message.get("role") == "assistant":
+            message_id = str(message.get("id") or _new_id())
+            surface = message.get("shows")
+            call_id = _shown_call_id(message_id)
             shown.append(
                 AssistantMessage(
-                    id=str(message.get("id") or _new_id()),
+                    id=message_id,
                     content=content,
                     name=message.get("name") or None,
+                    tool_calls=(
+                        [
+                            ToolCall(
+                                id=call_id,
+                                function=FunctionCall(name=SHOW_TOOL, arguments="{}"),
+                            )
+                        ]
+                        if surface
+                        else None
+                    ),
                 )
             )
+            if surface:
+                shown.append(
+                    ToolMessage(
+                        id=f"{call_id}-result",
+                        tool_call_id=call_id,
+                        content=json.dumps(surface),
+                    )
+                )
     return shown
 
 

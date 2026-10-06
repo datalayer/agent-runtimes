@@ -47,10 +47,12 @@ from typing import (
 )
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilities
+from agent_runtimes.loop.apps.components import answer_components, component_node
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.guards import AppCheckBlockedError
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
 from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import AppSettingSpec, AppSpec
 
 # --- what the user sees ---------------------------------------------------------
@@ -69,6 +71,10 @@ class Message:
     text: str
     author: str
     """Who wrote it: the application's name unless said."""
+    components: Tuple[Dict[str, Any], ...] = ()
+    """What it shows besides its text: components of the catalog (LOOP P-04)."""
+    data: Mapping[str, Any] = field(default_factory=dict)
+    """What its components bound to a path read (a Table's rows, a Chart's points)."""
     _session: Optional["Session"] = field(default=None, compare=False, repr=False)
 
     def _sent_by(self) -> "Session":
@@ -76,20 +82,30 @@ class Message:
             raise ValueError(f"Message {self.id} was not sent by a session.")
         return self._session
 
-    async def update(self, text: str) -> "Message":
+    async def update(
+        self,
+        text: str,
+        *,
+        show: Optional[Sequence[Mapping[str, Any]]] = None,
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> "Message":
         """Change what the message says, where the user reads it (LOOP P-15).
 
         Parameters
         ----------
         text : str
             What it says now.
+        show : sequence of components, optional
+            What it shows now; what it showed when unsaid.
+        data : mapping, optional
+            What its components read now; what they read when unsaid.
 
         Returns
         -------
         Message
             The message as it is now.
         """
-        return await self._sent_by().update(self, text)
+        return await self._sent_by().update(self, text, show=show, data=data)
 
     async def remove(self) -> None:
         """Take the message away from the conversation (LOOP P-15)."""
@@ -454,7 +470,25 @@ class Session:
 
     # --- writing to the user ---------------------------------------------------
 
-    async def send(self, text: str, *, author: Optional[str] = None) -> Message:
+    @property
+    def ui(self) -> SurfaceComponents:
+        """Every component of the catalog as a typed call, for an answer to show (LOOP P-04).
+
+        ``await session.send("Here they are.", show=[session.ui.table("runs",
+        columns=[...], rows=[...])])``: the same components, checked against
+        the same JSON Schema, as ``app.ui`` places on the application's
+        surface and the Canvas places — one catalog for the three flavors.
+        """
+        return SurfaceComponents(component_node)
+
+    async def send(
+        self,
+        text: str,
+        *,
+        author: Optional[str] = None,
+        show: Sequence[Mapping[str, Any]] = (),
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> Message:
         """Write a message to the user.
 
         Parameters
@@ -463,13 +497,35 @@ class Session:
             The message.
         author : str, optional
             Who wrote it; the application's name when unsaid.
+        show : sequence of components
+            What it shows besides its text: components of the catalog
+            (``session.ui.<component>(...)``), each carrying its values,
+            drawn under the text in the order given (LOOP P-04).
+        data : mapping, optional
+            What its components bound to a path read:
+            ``session.ui.table("runs", columns=[...], rows={"path": "/runs"})``
+            with ``data={"runs": [...]}``.
 
         Returns
         -------
         Message
             The message as delivered.
+
+        Raises
+        ------
+        ValueError
+            For a component the catalog does not have, or properties its
+            schema refuses.
         """
-        message = Message(_new_id(), self.id, text, author or self.app.name, self)
+        message = Message(
+            _new_id(),
+            self.id,
+            text,
+            author or self.app.name,
+            answer_components(show),
+            dict(data or {}),
+            self,
+        )
         await self.channel.deliver(message)
         return message
 
@@ -481,7 +537,14 @@ class Session:
         if message.id in self._removed:
             raise ValueError(f"Message {message.id} was removed.")
 
-    async def update(self, message: Message, text: str) -> Message:
+    async def update(
+        self,
+        message: Message,
+        text: str,
+        *,
+        show: Optional[Sequence[Mapping[str, Any]]] = None,
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> Message:
         """Change what a message of this session says, in place (LOOP P-15).
 
         ``await message.update(text)`` says the same.
@@ -492,6 +555,10 @@ class Session:
             A message this session sent.
         text : str
             What it says now.
+        show : sequence of components, optional
+            What it shows now; what it showed when unsaid, nothing when empty.
+        data : mapping, optional
+            What its components read now; what they read when unsaid.
 
         Returns
         -------
@@ -499,7 +566,13 @@ class Session:
             The message as it is now: the same id, and author.
         """
         self._own(message)
-        changed = replace(message, text=text, _session=self)
+        changed = replace(
+            message,
+            text=text,
+            components=message.components if show is None else answer_components(show),
+            data=message.data if data is None else dict(data),
+            _session=self,
+        )
         await self.channel.deliver(changed)
         return changed
 
@@ -523,6 +596,8 @@ class Session:
         tokens: Union[AsyncIterable[str], Iterable[str]],
         *,
         author: Optional[str] = None,
+        show: Sequence[Mapping[str, Any]] = (),
+        data: Optional[Mapping[str, Any]] = None,
     ) -> Message:
         """Write a message to the user as it comes, piece by piece.
 
@@ -535,19 +610,30 @@ class Session:
             The pieces of the message, in order.
         author : str, optional
             Who wrote it; the application's name when unsaid.
+        show : sequence of components
+            What it shows under its text once it is whole (LOOP P-04).
+        data : mapping, optional
+            What its components bound to a path read.
 
         Returns
         -------
         Message
             The whole message, delivered after its last piece.
         """
+        components = answer_components(show)
         message_id = _new_id()
         pieces: List[str] = []
         async for token in _text_of(tokens):
             pieces.append(token)
             await self.channel.deliver(Delta(message_id, self.id, token))
         message = Message(
-            message_id, self.id, "".join(pieces), author or self.app.name, self
+            message_id,
+            self.id,
+            "".join(pieces),
+            author or self.app.name,
+            components,
+            dict(data or {}),
+            self,
         )
         await self.channel.deliver(message)
         return message

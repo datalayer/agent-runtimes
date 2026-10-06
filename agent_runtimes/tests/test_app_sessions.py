@@ -811,6 +811,74 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
     assert (other.state, sessions.session_of("session-0015")) == ("ended", None)
 
 
+async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
+    """An answer's components arrive as the result of the tool the chat draws
+    surfaces for, under the message, and come back with a resume (LOOP P-04)."""
+    from agent_runtimes.loop.apps import AppHost, Application
+    from agent_runtimes.loop.apps.callers import Caller
+
+    application = Application(id="notes-assistant", agent="example-simple")
+    app = application.spec
+    live = sessions.LiveSession(
+        uid="session-0016",
+        agent_id="notes-assistant",
+        app=app,
+        instance={},
+        opened_by=Caller(kind="person", uid="ada"),
+        acts_as={"kind": "person", "uid": "ada"},
+        recorder=AppRecorder(app=app, send=lambda body: _nothing()),
+    )
+    live.host = AppHost(application, live, recorder=live.recorder)
+    live.session = await live.host.open(id=live.uid)
+    queue = live._open_stream()
+    session = live.session
+    sent = await session.send(
+        "Two runs.",
+        show=[session.ui.table("runs", columns=["model"], rows={"path": "/runs"})],
+        data={"runs": [{"model": "a"}, {"model": "b"}]},
+    )
+    await session.send("Nothing to show.")
+    events = []
+    while not queue.empty():
+        chunk = queue.get_nowait()
+        events.extend(
+            json.loads(line[len("data:") :])
+            for line in chunk.splitlines()
+            if line.startswith("data:")
+        )
+    kinds = [e["type"] for e in events]
+    assert kinds[:7] == [
+        "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_CONTENT",
+        "TEXT_MESSAGE_END",
+        "TOOL_CALL_START",
+        "TOOL_CALL_ARGS",
+        "TOOL_CALL_END",
+        "TOOL_CALL_RESULT",
+    ]
+    assert "TOOL_CALL_START" not in kinds[7:]
+    start, result = events[3], events[6]
+    assert (start["toolCallName"], start["parentMessageId"]) == (
+        sessions.SHOW_TOOL,
+        sent.id,
+    )
+    surface = json.loads(result["content"])
+    assert surface["surfaceId"] == f"answer-{sent.id}"
+    components = surface["messages"][1]["updateComponents"]["components"]
+    assert [c["id"] for c in components] == ["root", "runs"]
+    assert surface["messages"][2]["updateDataModel"]["value"] == {
+        "runs": [{"model": "a"}, {"model": "b"}]
+    }
+
+    snapshot = [
+        m.model_dump(by_alias=True, exclude_none=True)
+        for m in sessions._snapshot(live.messages)
+    ]
+    assert [m["role"] for m in snapshot] == ["assistant", "tool", "assistant"]
+    assert snapshot[0]["toolCalls"][0]["function"]["name"] == sessions.SHOW_TOOL
+    assert json.loads(snapshot[1]["content"]) == surface
+
+
 async def _nothing() -> None:
     return None
 

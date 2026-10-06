@@ -410,6 +410,15 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
         other = await session.send("Found 3.", author="Searcher")
         await first.update("Searched: 3 results.")
         await other.remove()
+        await session.send(
+            "Here.",
+            show=[
+                session.ui.table(
+                    "runs", title="Runs", columns=["model"], rows={"path": "/runs"}
+                )
+            ],
+            data={"runs": []},
+        )
 
     @app.end
     def closed(session: Session) -> None:
@@ -433,4 +442,6 @@ def test_the_terminal_shows_an_author_an_edit_a_removal_and_ends_the_session() -
     assert "● Searcher: Found 3." in said
     assert "↻ edited: Searched: 3 results." in said
     assert "✗ a message was removed." in said
+    # What an answer shows is named, not drawn (LOOP P-04).
+    assert "▣ Table runs: Runs" in said
     assert tux.app_session is not None and ended == [tux.app_session.id]

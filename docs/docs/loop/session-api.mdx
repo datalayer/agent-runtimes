@@ -220,6 +220,13 @@ refused (409), as is anything but `resume` on a stopped session.
   `{id, author}` — after which the chat takes the message away, or draws it
   under that name. The conversation a resume snapshots keeps each author as
   the message's `name`.
+  What an answer shows besides its text (`session.send(text, show=[...],
+  data={...})`) follows its message as the call of the tool the chat draws
+  surfaces for, `render_a2ui_surface`, under the message
+  (`parentMessageId`), its result the A2UI messages that draw it —
+  `{surfaceId: "answer-<message id>", title, messages}`: `createSurface`,
+  `updateComponents` and, with data, `updateDataModel`. A resume's snapshot
+  brings it back as that call and its result.
 
 ## Files
 

@@ -440,6 +440,92 @@ async def test_send_and_stream():
     ]
 
 
+async def test_an_answer_shows_components_of_the_catalog():
+    """What an answer shows is the catalog the Canvas places (LOOP P-04)."""
+    host, channel, _ = hosted(interview())
+    session = await host.open()
+    sent = await session.send(
+        "Three runs.",
+        show=[
+            session.ui.text("note", text="Cheapest first."),
+            session.ui.table("runs", columns=["model", "cost"], rows={"path": "/runs"}),
+            session.ui.image("plot", url="https://example.com/plot.png"),
+            session.ui.chart(
+                "costs", kind="bar", x="model", y="cost", points={"path": "/runs"}
+            ),
+            session.ui.text("again-label", text="Run again"),
+            session.ui.button("again", child="again-label", action={"name": "again"}),
+        ],
+        data={"runs": [{"model": "a", "cost": 1}]},
+    )
+    assert [node["component"] for node in sent.components] == [
+        "Text",
+        "Table",
+        "Image",
+        "Chart",
+        "Text",
+        "Button",
+    ]
+    assert sent.data == {"runs": [{"model": "a", "cost": 1}]}
+    assert channel.events[-1] == sent
+
+    # The catalog's schema refuses what it refuses, as on the surface.
+    with pytest.raises(ValueError, match="The catalog has no component 'Banner'"):
+        await session.send("x", show=[{"id": "b", "component": "Banner"}])
+    with pytest.raises(ValueError, match="kind"):
+        await session.send(
+            "x",
+            show=[{"id": "c", "component": "Chart", "kind": "pie", "x": "a", "y": "b"}],
+        )
+    with pytest.raises(ValueError, match="no component missing-label"):
+        await session.send(
+            "x",
+            show=[session.ui.button("b", child="missing-label", action={"name": "go"})],
+        )
+    with pytest.raises(ValueError, match="one component per id: note twice"):
+        await session.send(
+            "x",
+            show=[session.ui.text("note", text="a"), session.ui.text("note", text="b")],
+        )
+    with pytest.raises(ValueError, match="item 1 is not one"):
+        await session.send("x", show=["a table"])  # type: ignore[list-item]
+
+    # Changed: what it shows goes with it unless said, and can be taken away.
+    kept = await sent.update("Three runs, sorted.")
+    assert kept.components == sent.components and kept.data == sent.data
+    bare = await kept.update("No runs.", show=[])
+    assert bare.components == ()
+
+
+def test_an_answers_surface_lays_its_components_in_a_column():
+    from agent_runtimes.loop.apps.components import answer_components, answer_surface
+
+    nodes = answer_components(
+        [
+            {"id": "label", "component": "Text", "text": "Go"},
+            {
+                "id": "go",
+                "component": "Button",
+                "child": "label",
+                "action": {"name": "go"},
+            },
+            {"id": "intro", "component": "Text", "text": "Ready."},
+        ]
+    )
+    surface = answer_surface("m1", "Notes", nodes, {"rows": []})
+    create, components, data = surface["messages"]
+    assert create["createSurface"]["surfaceId"] == surface["surfaceId"] == "answer-m1"
+    root = components["updateComponents"]["components"][0]
+    # A child is drawn where its parent puts it, not again in the column.
+    assert root == {"id": "root", "component": "Column", "children": ["go", "intro"]}
+    assert data["updateDataModel"] == {
+        "surfaceId": "answer-m1",
+        "path": "/",
+        "value": {"rows": []},
+    }
+    assert len(answer_surface("m2", "Notes", nodes)["messages"]) == 2
+
+
 async def test_steps_nest_and_say_how_they_ended():
     host, channel, _ = hosted(interview())
     session = await host.open()
