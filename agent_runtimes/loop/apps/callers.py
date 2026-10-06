@@ -42,6 +42,9 @@ import jwt
 #: The audience of an app embed token (`datalayer_common.authn.app_embed`).
 APP_EMBED_AUDIENCE = "datalayer:app:embed"
 
+#: What an embed token names when it runs a session of its application (LOOP R-20).
+SESSION_SCOPE = "session"
+
 #: The longest a verified token is trusted without asking again.
 CACHE_SECONDS = 300.0
 
@@ -63,6 +66,13 @@ class Caller:
     kind: str  # "person" | "embed" | "visitor" | "local"
     uid: str = ""
     app_uid: str = ""
+    #: For an embed: the visit its token was issued for — the host's, kept
+    #: across the tokens it renews, else the token's own id — so that one
+    #: visitor of the host's page never reaches another's session (LOOP R-20).
+    visit: str = ""
+    #: For an embed: what its token names it may do — `read`, `decide`,
+    #: `session` — and nothing else (LOOP R-20).
+    scopes: Tuple[str, ...] = ()
 
 
 LOCAL = Caller(kind="local")
@@ -187,7 +197,11 @@ class CallerVerifier:
                 f"{spacer}/api/spacer/v1/apps/{app_uid}/embedded", token
             )
             caller = Caller(
-                kind="embed", uid=str(claims.get("sub") or ""), app_uid=app_uid
+                kind="embed",
+                uid=str(claims.get("sub") or ""),
+                app_uid=app_uid,
+                visit=str(claims.get("visit") or claims.get("jti") or ""),
+                scopes=tuple(str(claims.get("scope") or "").split()),
             )
         else:
             iam = _platform_url("DATALAYER_IAM_URL")

@@ -172,6 +172,8 @@ export type LoopPresetOptions = {
   datalayerCreatePayload?: Record<string, unknown>;
   /** A conversation without an account, on the visitors' runtime (LOOP R-30). */
   datalayerVisitors?: AgentsConfig['datalayerVisitors'];
+  /** An embed token: the embedded application's session, and nothing else (LOOP R-20). */
+  embedToken?: string;
   /** The target is the host's to fix, even with the agent control hidden. */
   targetFixed?: boolean;
   /** The theme the conversation wears, by name; the person's unless said. */
@@ -292,6 +294,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     datalayerAgentSpecId,
     datalayerCreatePayload,
     datalayerVisitors,
+    embedToken,
     targetFixed,
     themeVariant,
     themeOverrides,
@@ -369,6 +372,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       datalayerAgentSpecId,
       datalayerCreatePayload,
       datalayerVisitors,
+      embedToken,
       targetFixed,
       showAgentVariants,
       showAgentSummary: agentSummary,

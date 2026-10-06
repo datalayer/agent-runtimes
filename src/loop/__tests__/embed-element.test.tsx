@@ -305,6 +305,32 @@ describe('AppEmbed, the React component', () => {
     await act(async () => two.root.unmount());
   });
 
+  it('speaks to the host’s server with the visit’s embed token, and never hands it to a Datalayer runtime (LOOP R-20)', async () => {
+    const hosted = await render(
+      <AppEmbed
+        app={chatApp()}
+        mode="inline"
+        serverUrl="http://localhost:8765"
+        embedToken="embed-token-of-the-visit"
+      />,
+    );
+    expect(seen.renderer.at(-1)).toMatchObject({
+      target: 'local',
+      embedToken: 'embed-token-of-the-visit',
+    });
+    await act(async () => hosted.root.unmount());
+    const datalayer = await render(
+      <AppEmbed
+        app={chatApp()}
+        mode="inline"
+        embedToken="embed-token-of-the-visit"
+      />,
+    );
+    expect(seen.renderer.at(-1)!.target).toBe('datalayer');
+    expect(seen.renderer.at(-1)!.embedToken).toBeUndefined();
+    await act(async () => datalayer.root.unmount());
+  });
+
   it('wears the application’s accent, or the host’s, and the host’s face', async () => {
     const { container, root } = await render(
       <AppEmbed

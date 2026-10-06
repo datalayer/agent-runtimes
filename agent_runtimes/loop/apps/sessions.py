@@ -470,7 +470,13 @@ class LiveSession:
         """Whether a caller may drive this session: who opened it, or the machine itself."""
         if caller.kind == "local":
             return True
-        return (caller.kind, caller.uid) == (self.opened_by.kind, self.opened_by.uid)
+        # An embed's visitors are one owner's token each: told apart by the
+        # visit their token was issued for (LOOP R-20).
+        return (caller.kind, caller.uid, caller.visit) == (
+            self.opened_by.kind,
+            self.opened_by.uid,
+            self.opened_by.visit,
+        )
 
     # --- streaming -----------------------------------------------------------------
 
@@ -568,7 +574,10 @@ class LiveSession:
         async def runner() -> None:
             """The turn, framed, its failure said on the stream."""
             from agent_runtimes.loop.apps.memory import remember_for
-            from agent_runtimes.loop.apps.visitors import use_turn_token
+            from agent_runtimes.loop.apps.visitors import (
+                enter_visitor_run,
+                use_turn_token,
+            )
 
             # It remembers for whoever opened the session, each person apart,
             # a visitor not signed in nothing (LOOP R-18, R-36).
@@ -576,6 +585,10 @@ class LiveSession:
             # A visitor's turn calls its models with their own token, and
             # reads only (LOOP R-30); anybody else's with what it always did.
             use_turn_token(token if visitor else "")
+            # An embed's visitor is nobody the platform knows: their turn
+            # only reads, and asks nobody, as a visitor's (LOOP R-20).
+            if self.opened_by.kind == "embed":
+                enter_visitor_run(f"embed:{self.opened_by.visit}")
             try:
                 if wraps_run:
                     self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))

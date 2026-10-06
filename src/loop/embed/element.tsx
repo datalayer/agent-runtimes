@@ -477,6 +477,9 @@ export function defineDatalayerAppElement(
             colorMode={look.colorMode}
             font={look.font}
             serverUrl={server}
+            // The visit's embed token goes with the conversation to the
+            // host's server, which runs the application's deployment (R-20).
+            {...(server && this.token ? { embedToken: this.token } : {})}
             height={inlineHeightOf(this.getAttribute('height'))}
             ownPortal
           />

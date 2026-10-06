@@ -134,6 +134,13 @@ export type AgentsConfig = {
    */
   datalayerVisitors?: DatalayerVisitors;
   /**
+   * An embed token for the application (LOOP R-20): what an embedded
+   * application's chat speaks to its session with, for a visitor the platform
+   * does not know — it runs a session of the application's deployment, and
+   * reaches nothing else.
+   */
+  embedToken?: string;
+  /**
    * The target is the host's decision, not the reader's: started there even
    * with the control hidden. For an application that runs where it is
    * deployed; a workspace leaves it unset.

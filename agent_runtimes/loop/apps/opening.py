@@ -16,8 +16,11 @@ conversation costs one call and a level narrowed reaches a session within a
 minute. A visitor without an account (R-30, on the visitors' runtime) is
 asked about with no token: ai-agents lets them talk to an application anyone
 with the link or everyone may open when it needs nothing a visitor nobody
-knows may not be given, and says why not otherwise. A caller with no token
-who is not a visitor holds no session. The machine itself is not asked about.
+knows may not be given, and says why not otherwise. An embed token is asked
+about with itself: ai-agents lets it into a live embedded deployment of the
+one application it names, of the owner who was issued it (LOOP R-20). A
+caller with no token who is not a visitor holds no session. The machine
+itself is not asked about.
 """
 
 from __future__ import annotations
@@ -130,7 +133,12 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
         raise NotLetIn(401, SIGNED_OUT)
     key = (
         deployment_uid,
-        "" if kind == "visitor" else str(getattr(caller, "uid", "") or bearer),
+        ""
+        if kind == "visitor"
+        # An embed's visit, apart from its owner's own answer (LOOP R-20).
+        else f"embed:{getattr(caller, 'visit', '')}"
+        if kind == "embed"
+        else str(getattr(caller, "uid", "") or bearer),
     )
     remembered = _ANSWERS.get(key)
     if remembered and remembered[1] > time.monotonic():

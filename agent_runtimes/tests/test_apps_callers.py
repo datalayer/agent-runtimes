@@ -78,6 +78,19 @@ def test_an_embed_token_is_whom_spacer_accepts_for_its_application() -> None:
         asyncio.run(verifier.verify(embed, "inbox-triage"))
 
 
+def test_an_embed_token_says_its_visit_and_what_it_may_do() -> None:
+    """LOOP R-20: the visit its owner's server issued it for, kept across the
+    tokens renewed for it — else the token's own id — and its scope."""
+    verifier = CallerVerifier(fetch=Platform())
+    claims = {"sub": "owner", "aud": APP_EMBED_AUDIENCE, "app_uid": "web-research"}
+    named = token(**claims, jti="t-1", visit="v-9", scope="read decide session")
+    caller = asyncio.run(verifier.verify(named, "web-research"))
+    assert (caller.visit, caller.scopes) == ("v-9", ("read", "decide", "session"))
+    unnamed = token(**claims, jti="t-2")
+    caller = asyncio.run(verifier.verify(unnamed, "web-research"))
+    assert (caller.visit, caller.scopes) == ("t-2", ())
+
+
 def test_what_the_platform_refuses_or_cannot_say_is_refused() -> None:
     with pytest.raises(CallerRefused) as refused:
         asyncio.run(CallerVerifier(fetch=Platform(401)).verify(token(sub="u1")))

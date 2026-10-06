@@ -79,6 +79,13 @@ export type AppEmbedProps = {
   serverUrl?: string;
   /** What its record is kept under, on Datalayer. */
   instance?: AppInstance;
+  /**
+   * The embed token the host's server was issued for this visit (LOOP R-20):
+   * what the chat speaks to the application's session with on the
+   * agent-runtimes server that runs its deployment (`serverUrl`). It runs a
+   * session of that deployment, and reaches nothing else.
+   */
+  embedToken?: string;
   /** Height of an inline application. */
   height?: number | string;
   /**
@@ -135,6 +142,8 @@ type FloatingProps = {
   /** The host's agent-runtimes server, when it names one. */
   serverUrl?: string;
   instance?: AppInstance;
+  /** The visit's embed token, on the host's server (R-20). */
+  embedToken?: string;
 };
 
 /**
@@ -154,6 +163,7 @@ function FloatingApp({
   character,
   serverUrl,
   instance,
+  embedToken,
 }: FloatingProps): JSX.Element {
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
@@ -186,6 +196,7 @@ function FloatingApp({
             app={app}
             target={serverUrl ? 'local' : 'datalayer'}
             {...(serverUrl ? { serverUrl } : {})}
+            {...(serverUrl && embedToken ? { embedToken } : {})}
             instance={instance}
             // The host's accent and face over the application's own, inside
             // its conversation too, in the embed's mode.
@@ -287,6 +298,7 @@ export function AppEmbed({
   font,
   serverUrl,
   instance,
+  embedToken,
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
@@ -334,6 +346,7 @@ export function AppEmbed({
           view={view}
           serverUrl={serverUrl}
           instance={instance}
+          embedToken={embedToken}
           colorMode={resolvedMode}
           themeOverrides={themeOverrides}
           character={character}
@@ -343,6 +356,9 @@ export function AppEmbed({
           app={app}
           target={serverUrl ? 'local' : 'datalayer'}
           {...(serverUrl ? { serverUrl } : {})}
+          // Only on the host's server: a Datalayer runtime is launched with
+          // a person's credentials, which an embed token never stands for.
+          {...(serverUrl && embedToken ? { embedToken } : {})}
           instance={instance}
           // The host's accent and face over the application's own, inside
           // its conversation too, in the embed's mode: the host's or its

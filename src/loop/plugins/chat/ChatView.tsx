@@ -1417,7 +1417,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const visitors =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
   const visitor = useVisitorToken(visitors);
-  const iamToken = visitors ? visitor.token : memberToken;
+  // An embedded application's own token, for a visitor the platform does
+  // not know (LOOP R-20): it runs a session of its deployment, and no more.
+  const embedToken =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
+  const iamToken = visitors ? visitor.token : embedToken || memberToken;
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage

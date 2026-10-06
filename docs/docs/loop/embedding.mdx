@@ -183,12 +183,17 @@ when the token lapses. The host then sets a new one.
 
 - The app embed token is **built but not deployed** (Spacer on prod1,
   ai-inference on r1). No private embed works until it is (LOOP D-14).
-- Even once it is deployed, the token reads the application and asks a
-  decision's typed questions. Nothing yet lets it launch a **chat, widget or
-  worker's agent** on the owner's account for an anonymous visitor. Today such
-  an application runs embedded in two cases only: for a visitor signed in to
-  Datalayer, or on the host's own agent-runtimes server (`server`). For any
-  other visitor, the element says why it cannot run, and launches nothing.
+- The token reads the application, asks a decision's typed questions, and
+  **runs a session of its deployment** (LOOP R-20): on the host's own
+  agent-runtimes server (`server`), the element hands the visit's token to
+  the conversation, and the server lets it into a live embedded deployment
+  of that application only — as its principal, each visit apart, only
+  reading (see [An embed's visitor](./session-api.mdx#an-embeds-visitor)).
+  It never launches a Datalayer runtime: a runtime is launched with a
+  person's credentials, and one kept by each deployment waits (LOOP R-33).
+  Without a `server`, a chat, widget or worker runs embedded only for a
+  visitor signed in to Datalayer; for any other visitor, the element says
+  why it cannot run, and launches nothing.
 - Allowed origins per deployment (`deployment.embedded.origins`) are not yet
   enforced on the server (LOOP D-12).
 

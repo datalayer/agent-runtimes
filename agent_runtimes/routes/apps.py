@@ -163,12 +163,17 @@ class Authorized:
 
 
 async def _authorize(
-    request: Request, person_only: bool, for_app: Optional[AppSpec] = None
+    request: Request,
+    person_only: bool,
+    for_app: Optional[AppSpec] = None,
+    app_uid: str = "",
 ) -> Authorized:
     """Who is calling, or an HTTP refusal that says why.
 
     For the application the runtime runs, or the one ``for_app`` names — the
-    application of an agent a session is opened on (LOOP R-04).
+    application of an agent a session is opened on (LOOP R-04). An embed
+    token is checked against ``app_uid``, the application as the platform
+    knows it, when the session's instance names it; its spec's id otherwise.
     """
     app = for_app if for_app is not None else running_app()
     origin = request.headers.get("origin")
@@ -194,7 +199,7 @@ async def _authorize(
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        caller = await VERIFIER.verify(token, app.id if app else "")
+        caller = await VERIFIER.verify(token, app_uid or (app.id if app else ""))
     except CallerRefused as refused:
         raise HTTPException(status_code=refused.status, detail=refused.reason) from None
     if person_only and caller.kind != "person":
@@ -446,6 +451,16 @@ async def feedback(
         from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
 
         raise HTTPException(status_code=409, detail=NOTHING_KEPT)
+    if authorized.caller.kind == "embed":
+        # An embed's visitor speaks of their own session, and no other (R-20).
+        from agent_runtimes.loop.apps.sessions import session_of
+
+        live = session_of(body.session)
+        if live is None or not live.answers_to(authorized.caller):
+            raise HTTPException(
+                status_code=404,
+                detail=f"No conversation {body.session} is yours here.",
+            )
     app = authorized.app
     if app is None:
         raise HTTPException(status_code=404, detail="This runtime runs no application.")
@@ -581,6 +596,22 @@ async def _acts_as(
     from agent_runtimes.loop.apps.sessions import SessionRefused
 
     deployment = deployment_of(instance)
+    if caller.kind == "embed":
+        # An embed token runs a session of its application's embedded
+        # deployment, as that deployment's principal, and nothing beyond
+        # (LOOP R-20): never a Preview, never in its owner's name.
+        from agent_runtimes.loop.apps.callers import SESSION_SCOPE
+
+        if SESSION_SCOPE not in caller.scopes:
+            raise HTTPException(
+                status_code=403,
+                detail="This embed token does not run a session: ask its owner's server for a new one.",
+            )
+        if not deployment:
+            raise HTTPException(
+                status_code=403,
+                detail="An embed token runs its application as it is deployed, not a Preview.",
+            )
     if caller.kind == "visitor":
         # A visitor nobody knows (R-30): their own token calls the models,
         # and no principal acts for them — an application at its address is
@@ -672,7 +703,9 @@ async def _held(uid: str, request: Request) -> Tuple[Any, str]:
     live = session_of(uid)
     if live is None:
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
-    authorized = await _authorize(request, False, live.app)
+    authorized = await _authorize(
+        request, False, live.app, str(live.instance.get("app_uid") or "")
+    )
     if not live.answers_to(authorized.caller):
         # Somebody else's is not said to exist.
         raise HTTPException(status_code=404, detail=f"No session {uid} is held here.")
@@ -694,7 +727,9 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
         app, instance = agent_app(body.agent)
     except SessionRefused as refused:
         raise _refused(refused) from None
-    authorized = await _authorize(request, False, app)
+    authorized = await _authorize(
+        request, False, app, str(instance.get("app_uid") or "")
+    )
     _reaches(authorized.caller, body.agent)
     _check_instance(body, app, instance)
     bearer = bearer_of(request.headers.get("authorization"))
@@ -828,11 +863,20 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
                 "and it is resumed from its record.",
             )
         app, instance = agent_app(body.agent)
-        authorized = await _authorize(request, False, app)
+        authorized = await _authorize(
+            request, False, app, str(instance.get("app_uid") or "")
+        )
         if authorized.caller.kind == "visitor":
             from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
 
             raise SessionRefused(404, NOTHING_KEPT)
+        if authorized.caller.kind == "embed":
+            # Its record names nobody who opened it (R-31): nobody can say
+            # it is theirs to go on with (LOOP R-20).
+            raise SessionRefused(
+                404,
+                "An embedded session is resumed only while this runtime holds it.",
+            )
         bearer = bearer_of(request.headers.get("authorization"))
         set_request_user_jwt(bearer or None)
         acts_as = await _acts_as(instance, authorized.caller, bearer)
@@ -882,7 +926,9 @@ async def session_agui(agent: str, request: Request) -> Any:
         app, instance = agent_app(agent)
     except SessionRefused as refused:
         raise _refused(refused) from None
-    authorized = await _authorize(request, False, app)
+    authorized = await _authorize(
+        request, False, app, str(instance.get("app_uid") or "")
+    )
     _reaches(authorized.caller, agent)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
