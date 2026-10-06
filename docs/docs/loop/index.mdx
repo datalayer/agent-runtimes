@@ -472,9 +472,25 @@ still wins over the application: any `LoopEmbed` prop it passes —
 its face and name. The embed's inline mode (`AppEmbed`, `<datalayer-app>`) is
 `AppRenderer`, so an embedded application is drawn by its layout too.
 
+**The rail.** With its sidebar (`sidebar`, what a builder reads beside its
+page: its rules and approvals, its activity, its computer), an application's
+workspace draws a rail (`LoopEmbed`'s and `LoopWorkspace`'s `sidebarRail`):
+a narrow column of line icons on the trailing edge, one per panel, the chosen
+one on a grey rounded square, and that one panel beside it. A click shows a
+panel, a click on the chosen one closes the column; every panel stays mounted
+while another is shown. A sidebar plugin names itself on the rail by giving
+its component a `rail: { label, icon }` (`LoopSidebarComponent`); one that
+does not is shown by its id under a generic icon.
+
+**A pane opening.** The split's page, the rail's panel and the page layout's
+conversation panel open at the theme's pace — `--theme-motion-pane` and
+`--theme-motion-easing` (`paneOpening`; primer-addons' `panelOpening`) — which
+only the `loop` theme sets to a duration: nothing moves in another theme, nor
+when the person asked for reduced motion.
+
 Tested in `app-layout.test.tsx` (the options per layout, the split's
-contribution, the hairline by key and pointer, the embed's inline mode); not
-yet seen in a browser.
+contribution, the hairline by key and pointer, the embed's inline mode) and
+`sidebar-rail.test.tsx` (the rail, its panels, the pane's motion).
 
 ### An application's page
 

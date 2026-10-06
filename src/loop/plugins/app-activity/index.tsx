@@ -13,6 +13,7 @@
 
 import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
+import { PulseIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots } from '../../core';
 import { AppActivity } from './AppActivity';
@@ -44,6 +45,8 @@ export function defineAppActivityPlugin(
           slot: LoopSlots.sidebar,
           order: 20,
           Component: Feed,
+          // Its line icon on the workspace's rail (T-07).
+          rail: { label: 'Activity', icon: PulseIcon },
         },
       ],
     }),

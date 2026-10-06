@@ -13,6 +13,7 @@
 
 import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
+import { ShieldCheckIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots } from '../../core';
 import { AppRulesCard } from './AppRulesCard';
@@ -39,6 +40,8 @@ export function defineAppRulesPlugin(
           slot: LoopSlots.sidebar,
           order: 10,
           Component: Card,
+          // Its line icon on the workspace's rail (T-07).
+          rail: { label: 'Rules', icon: ShieldCheckIcon },
         },
       ],
     }),

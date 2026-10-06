@@ -14,6 +14,7 @@
 
 import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
+import { DeviceDesktopIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import { AppComputer } from './AppComputer';
@@ -44,6 +45,8 @@ export function defineAppComputerPlugin(
           slot: LoopSlots.sidebar,
           order: 30,
           Component: Computer,
+          // Its line icon on the workspace's rail (T-07).
+          rail: { label: 'Computer', icon: DeviceDesktopIcon },
         },
       ],
     }),

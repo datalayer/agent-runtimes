@@ -62,6 +62,11 @@ export type LoopEmbedProps = LoopPresetOptions & {
    */
   frameHeight?: number | string;
   /**
+   * The sidebar as a rail of line icons, one panel shown at a time (LOOP
+   * T-07). See `LoopWorkspaceProps.sidebarRail`.
+   */
+  sidebarRail?: boolean;
+  /**
    * The host's own plugins, mounted alongside the preset's.
    *
    * How a page adds something to Loop rather than around it — a button in the
@@ -80,6 +85,7 @@ export function LoopEmbed({
   headerContainer,
   frameTitle,
   frameHeight,
+  sidebarRail = false,
   plugins = [],
   ...preset
 }: LoopEmbedProps): React.JSX.Element {
@@ -204,6 +210,7 @@ export function LoopEmbed({
       chatHeaderActions={chatHeaderActions}
       headerActions={headerActions}
       headerContainer={headerContainer}
+      sidebarRail={sidebarRail}
     />
   );
 

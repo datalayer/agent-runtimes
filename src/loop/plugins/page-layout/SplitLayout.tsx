@@ -15,7 +15,8 @@
  *
  * The hairline is a separator a person can move with the pointer or the
  * keyboard (arrows by a step, Home and End to the bounds); the share it
- * leaves the conversation is kept while the workspace is mounted.
+ * leaves the conversation is kept while the workspace is mounted. The page
+ * opens at the theme's pace (T-10, `paneOpening`).
  *
  * @module loop/plugins/page-layout/SplitLayout
  */
@@ -24,6 +25,7 @@ import type { JSX, KeyboardEvent, PointerEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import type { ChatLayoutParts } from '../../core';
+import { paneOpening } from '../../shell/paneMotion';
 
 /** The conversation's share of the width when the split opens. */
 export const SPLIT_DEFAULT_SHARE = 0.4;
@@ -192,6 +194,9 @@ export function SplitLayout({
                   minWidth: 0,
                   minHeight: 0,
                   display: 'flex',
+                  // The page opening beside the conversation, at the theme's
+                  // pace (T-10): no motion where the theme sets none.
+                  ...paneOpening('right'),
                 }
               : // Mounted but out of sight: the editors keep their place.
                 {

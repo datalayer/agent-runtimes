@@ -58,6 +58,7 @@ import {
 } from '../core';
 import { SIDEBAR_WIDTH } from '../plugins/plugins-panel';
 import { ViewSwitcher } from './ViewSwitcher';
+import { SidebarRail } from './SidebarRail';
 
 export type LoopWorkspaceProps = {
   /** Server backing this session. */
@@ -153,6 +154,13 @@ export type LoopWorkspaceProps = {
    * and no row is drawn in its place.
    */
   headerContainer?: HTMLElement | null;
+  /**
+   * The sidebar as a rail (LOOP T-07): a narrow column of line icons, one per
+   * panel, and the chosen panel beside it — rather than every panel stacked
+   * in one column. False by default; an application's shell asks for it. In
+   * a `panel` layout the sidebar stays a stack under the view.
+   */
+  sidebarRail?: boolean;
 };
 
 /** Build the platform for a set of plugins. */
@@ -178,6 +186,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     chatHeaderActions,
     headerActions,
     headerContainer,
+    sidebarRail = false,
   } = props;
 
   // Building the platform is a one-time act: rebuilding it on every render
@@ -204,6 +213,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       chatHeaderActions={chatHeaderActions}
       headerActions={headerActions}
       headerContainer={headerContainer}
+      sidebarRail={sidebarRail}
     />
   );
 }
@@ -234,6 +244,7 @@ function WorkspaceBody({
   chatHeaderActions,
   headerActions,
   headerContainer,
+  sidebarRail = false,
 }: BodyProps): JSX.Element {
   /*
    * Which agent the session is talking to.
@@ -505,7 +516,13 @@ function WorkspaceBody({
             )}
           />
         </Box>
-        {sidebar.length > 0 ? (
+        {sidebar.length > 0 && sidebarRail && !compact ? (
+          <SidebarRail
+            components={sidebar}
+            props={{ workspace }}
+            width={SIDEBAR_WIDTH}
+          />
+        ) : sidebar.length > 0 ? (
           <Box
             as="aside"
             sx={{

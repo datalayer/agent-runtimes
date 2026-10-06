@@ -22,3 +22,18 @@ export {
   type WorkspaceFullScreen,
 } from './useWorkspaceFullScreen';
 export { WorkspaceFullScreenAction } from './WorkspaceFullScreenAction';
+export {
+  SidebarRail,
+  RAIL_WIDTH,
+  railChoiceAfter,
+  railItemsOf,
+  type LoopSidebarComponent,
+  type LoopSidebarRail,
+  type RailItem,
+  type SidebarRailProps,
+} from './SidebarRail';
+export {
+  paneOpening,
+  paneOpenAnimation,
+  paneOpenKeyframes,
+} from './paneMotion';
