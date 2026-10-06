@@ -14,7 +14,6 @@ from typing import Dict, Literal
 
 from agent_runtimes.types import AppSpec
 
-
 # ============================================================================
 # Application Definitions
 # ============================================================================

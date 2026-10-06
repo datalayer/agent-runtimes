@@ -216,7 +216,6 @@ def generate_python_code(specs: list[dict[str, Any]], built: dict[str, str]) -> 
         "",
         "from agent_runtimes.types import AppSpec",
         "",
-        "",
         "# " + "=" * 76,
         "# Application Definitions",
         "# " + "=" * 76,
