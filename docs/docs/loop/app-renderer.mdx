@@ -57,6 +57,7 @@ From the application, `AppRenderer` sets on `LoopEmbed`:
 | `editors`, `showViewSelector`, `pageLayout`, `pageLayoutArrangement`, … | What its layout asks for (`appLayoutOptions(app)`): see [An application's layout](./index.mdx#an-applications-layout). |
 | `datalayerAgentSpecId`, `datalayerCreatePayload`   | On Datalayer, a runtime allocated with a plain agentspec and the application's agent created on it with the application's spec, so that the runtime enforces its rules. |
 | `datalayerVisitors`                                | `{url, app, inferenceUrl}`: without an account (LOOP R-30), the application already runs on the visitors' runtime at `url`; nothing is allocated or made, and the chat speaks to it with a visitor's token for `app` (an example's id, or `at:<slug>`), minted by ai-inference and minted again before it runs out (`useVisitorToken`). See *Visitors without an account* in [Session API](./session-api). |
+| `datalayerKept`                                    | `{url}`: a deployment kept always on (LOOP R-33) already has its agent on a runtime of its own, at `url`, made from its deployment record (`kept_payload`) as that runtime started; nothing is allocated or made, and the chat speaks to it with the person's own token. ai-agents names `url` at the deployment's address for a person it lets talk to it. |
 
 **A host wins over the application.** Every `LoopEmbed` prop a host passes is
 applied after these, and replaces them: `showTokenUsage` brings the counters

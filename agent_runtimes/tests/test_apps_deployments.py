@@ -321,3 +321,66 @@ def test_a_woken_session_the_runtime_refuses_is_said(monkeypatch):
             wait_seconds=0,
             client=silent,
         )
+
+
+def test_a_kept_deployment_is_made_as_its_hosted_page_would_make_it():
+    """LOOP R-33: the agent on the runtime a deployment is kept on is the
+    one the hosted page's chat addresses — the application's id, over AG-UI —
+    with the deployment as its instance and nothing woken."""
+    pytest.importorskip("agentspecs.apps")
+    from agent_runtimes.loop.apps.deployments import kept_payload
+
+    payload = kept_payload(
+        DIGEST,
+        app_uid="app-1",
+        deployment_uid="dep-1",
+        version=4,
+        organization_uid="org-1",
+    )
+    assert (payload["name"], payload["transport"]) == ("digest", "ag-ui")
+    assert payload["app_spec"] == DIGEST
+    assert payload["app_instance"] == {
+        "app_uid": "app-1",
+        "deployment_uid": "dep-1",
+        "version": 4,
+        "organization_uid": "org-1",
+    }
+    assert (
+        "organization_uid"
+        not in kept_payload(DIGEST, app_uid="app-1", deployment_uid="dep-1", version=4)[
+            "app_instance"
+        ]
+    )
+    with pytest.raises(DeployRefused, match="not kept on a runtime yet"):
+        kept_payload(
+            {
+                **{k: v for k, v in DIGEST.items() if k != "agent"},
+                "team": "analyze-support-tickets:0.0.1",
+            },
+            app_uid="app-1",
+            deployment_uid="dep-1",
+            version=4,
+        )
+
+
+def test_a_kept_agent_is_created_once_and_one_already_there_is_kept():
+    from agent_runtimes.loop.apps.deployments import create_agent
+
+    seen: list[httpx.Request] = []
+    made = create_agent(
+        ingress="https://r1.example/jupyter/server/rt-1",
+        token="tok",
+        payload={"name": "digest"},
+        wait_seconds=0,
+        client=_runtime(
+            [httpx.Response(503), httpx.Response(201, json={"id": "digest"})], seen
+        ),
+    )
+    assert made == "digest" and len(seen) == 2
+    there = create_agent(
+        ingress="https://r1.example/jupyter/server/rt-1",
+        token="tok",
+        payload={"name": "Digest"},
+        client=_runtime([httpx.Response(409)], seen),
+    )
+    assert there == "digest"

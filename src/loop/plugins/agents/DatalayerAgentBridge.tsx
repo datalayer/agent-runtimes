@@ -53,6 +53,11 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   // A conversation without an account (LOOP R-30): the agent is already on
   // the visitors' runtime, kept warm there; nothing is allocated or made.
   const visitors = agentsConfig?.datalayerVisitors;
+  // A deployment kept on a runtime of its own (LOOP R-33): its agent was made
+  // there from the deployment record as the runtime started; nothing is
+  // allocated or made either.
+  const kept = agentsConfig?.datalayerKept;
+  const already = visitors?.url ?? kept?.url;
 
   const service = useOptionalSandboxService();
   const target = useSignalValue(service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL);
@@ -104,20 +109,21 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     agentSpecId,
     agentConfig,
     variant: 'cloud-pydanticai',
-    autoStart: onDatalayer && !visitors,
-    autoCreateAgent: onDatalayer && !visitors,
+    autoStart: onDatalayer && !already,
+    autoCreateAgent: onDatalayer && !already,
   });
 
   useEffect(() => {
     if (!service || !onDatalayer) {
       return;
     }
-    if (visitors) {
+    if (already) {
       service.report({
         variant: 'datalayer',
-        // No sandbox: a visitor's application runs no code.
+        // No sandbox reported: the agent is already on its runtime, and the
+        // chat is all the page talks to.
         sandbox_running: false,
-        agent_base_url: visitors.url,
+        agent_base_url: already,
       });
       return;
     }
@@ -155,7 +161,7 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       // host's server for an agent that is not on it.
       agent_base_url: runtime.agentBaseUrl,
     });
-  }, [service, onDatalayer, runtime, status, error, visitors]);
+  }, [service, onDatalayer, runtime, status, error, already]);
 
   return null;
 }

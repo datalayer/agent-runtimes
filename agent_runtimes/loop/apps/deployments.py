@@ -14,6 +14,12 @@ And a session of a deployment that nobody opened: woken by one of its
 schedules (LOOP R-14), the scheduler launches a runtime, creates the
 deployment's agent on it with `session_payload` — what ai-agents answers it
 with — and asks it the trigger's prompt with `start_session`.
+
+And a deployment kept on a runtime of its own (LOOP R-33): a live deployment
+its owner keeps always on has one runtime, launched as its owner, whose
+agent is made from the deployment record every time that runtime starts —
+`kept_payload`, created with `create_agent` — so that a visitor waits for
+the answer and never for the start (R-08).
 """
 
 from __future__ import annotations
@@ -332,45 +338,78 @@ def session_payload(
     }
 
 
+def kept_payload(
+    spec: Mapping[str, Any],
+    *,
+    app_uid: str,
+    deployment_uid: str,
+    version: int,
+    organization_uid: str = "",
+) -> dict[str, Any]:
+    """What creates a deployment's agent on the runtime it is kept on
+    (LOOP R-33): the payload the hosted page sends (`AppRenderer`'s
+    `appDatalayerCreatePayload`) — under the application's id, over AG-UI,
+    with its Appspec and the deployment as its instance — so that the page's
+    chat finds the agent it would have made, already there.
+
+    `AppNotRunnable` when the runtime's own loader refuses the Appspec;
+    `DeployRefused` for an application run by a team, which is not kept yet.
+    """
+    from agent_runtimes.loop.apps.loading import agent_id_of, load_app
+
+    app = load_app(spec)
+    if not app.agent:
+        raise DeployRefused(
+            f"{app.name or app.id} is run by a team, which is not kept on a runtime yet."
+        )
+    return {
+        "name": app.id,
+        "description": f"{app.name or app.id}, version {version}, kept on its runtime",
+        "transport": "ag-ui",
+        "agent_spec_id": agent_id_of(app),
+        "app_spec": dict(spec),
+        "enable_codemode": bool(app.permissions.computer.shell),
+        **({"model": app.model} if app.model else {}),
+        "app_instance": {
+            "app_uid": app_uid,
+            "deployment_uid": deployment_uid,
+            "version": int(version),
+            **({"organization_uid": organization_uid} if organization_uid else {}),
+        },
+    }
+
+
 class SessionNotStarted(RuntimeError):
     """Why a woken session could not start on its runtime, in a sentence."""
 
 
-def start_session(
+def create_agent(
     *,
     ingress: str,
     token: str,
     payload: Mapping[str, Any],
-    prompt: str,
-    timeout: int = 300,
     attempts: int = 12,
     wait_seconds: float = 5.0,
     client: Optional[httpx.Client] = None,
-) -> dict[str, Any]:
-    """Create the deployment's agent on a runtime that was just launched,
-    then ask it the trigger's prompt — the routes the hosted page and the
-    Evals engine use (`/api/v1/agents`, then `/api/v1/vercel-ai/<agent>`).
+) -> str:
+    """Create a deployment's agent on a runtime that was just launched
+    (`/api/v1/agents`); its id.
 
     The runtime may not answer yet when it has just been launched: creating
     the agent is tried again for ``attempts`` times, ``wait_seconds`` apart.
-    An agent already there (409) is the one asked. Answers the agent's id and
-    the chat's result (``status`` ``completed`` or not, the answer's text, and
-    why it failed when it did); `SessionNotStarted` when the agent could not
-    be created — the runtime never answered, or refused the application.
+    An agent already there (409) is the one kept. `SessionNotStarted` when
+    the agent could not be created — the runtime never answered, or refused
+    the application.
     """
     import time
 
-    from agent_runtimes.client.agent_client import (
-        build_agent_runtimes_base_url,
-        run_cloud_agent_chat,
-    )
+    from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
     base = build_agent_runtimes_base_url(ingress).rstrip("/")
     if not base:
         raise SessionNotStarted("The runtime has no address to reach it at.")
     http = client or httpx.Client(timeout=60.0)
     fallback = str(payload.get("name") or "").lower().replace(" ", "-")
-    agent_id = ""
     last = ""
     try:
         for attempt in range(max(1, attempts)):
@@ -384,26 +423,53 @@ def start_session(
                 last = f"the runtime did not answer: {error}"
             else:
                 if response.status_code == 409:
-                    agent_id = fallback
-                    break
+                    return fallback
                 if response.status_code in (400, 422):
                     raise SessionNotStarted(
                         f"The runtime refused the application: {response.text[:500]}"
                     )
                 if response.status_code < 300:
                     created = response.json() if response.content else {}
-                    agent_id = str((created or {}).get("id") or fallback)
-                    break
+                    return str((created or {}).get("id") or fallback)
                 last = f"the runtime answered {response.status_code}: {response.text[:200]}"
             if attempt + 1 < attempts:
                 time.sleep(wait_seconds)
     finally:
         if client is None:
             http.close()
-    if not agent_id:
-        raise SessionNotStarted(
-            f"The application's agent could not be created: {last}."
-        )
+    raise SessionNotStarted(f"The application's agent could not be created: {last}.")
+
+
+def start_session(
+    *,
+    ingress: str,
+    token: str,
+    payload: Mapping[str, Any],
+    prompt: str,
+    timeout: int = 300,
+    attempts: int = 12,
+    wait_seconds: float = 5.0,
+    client: Optional[httpx.Client] = None,
+) -> dict[str, Any]:
+    """Create the deployment's agent on a runtime that was just launched
+    (`create_agent`), then ask it the trigger's prompt — the routes the
+    hosted page and the Evals engine use (`/api/v1/agents`, then
+    `/api/v1/vercel-ai/<agent>`).
+
+    Answers the agent's id and the chat's result (``status`` ``completed`` or
+    not, the answer's text, and why it failed when it did);
+    `SessionNotStarted` when the agent could not be created.
+    """
+    from agent_runtimes.client.agent_client import run_cloud_agent_chat
+
+    agent_id = create_agent(
+        ingress=ingress,
+        token=token,
+        payload=payload,
+        attempts=attempts,
+        wait_seconds=wait_seconds,
+        client=client,
+    )
     result = run_cloud_agent_chat(
         ingress=ingress,
         token=token,

@@ -134,6 +134,13 @@ export type AgentsConfig = {
    */
   datalayerVisitors?: DatalayerVisitors;
   /**
+   * A deployment kept on a runtime of its own (LOOP R-33): its agent is
+   * already there, made from the deployment record when the runtime started,
+   * so nothing is allocated or created, and the chat speaks to it with the
+   * person's own token. `url` is the runtime's agent-runtimes address.
+   */
+  datalayerKept?: { url: string };
+  /**
    * An embed token for the application (LOOP R-20): what an embedded
    * application's chat speaks to its session with, for a visitor the platform
    * does not know — it runs a session of the application's deployment, and

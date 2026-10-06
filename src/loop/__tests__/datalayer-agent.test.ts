@@ -68,6 +68,16 @@ describe('the Datalayer target', () => {
     expect(bridge).toContain('agent_base_url: runtime.agentBaseUrl');
   });
 
+  it('allocates nothing for a deployment kept on a runtime of its own', () => {
+    // LOOP R-33: the agent was made there from the deployment record as its
+    // runtime started; the page talks to it, and allocates nothing more.
+    const bridge = read('DatalayerAgentBridge.tsx');
+    expect(bridge).toContain('agentsConfig?.datalayerKept');
+    expect(bridge).toContain('autoStart: onDatalayer && !already');
+    expect(bridge).toContain('agent_base_url: already');
+    expect(read('plugin.ts')).toContain('datalayerKept?: { url: string }');
+  });
+
   it('is loaded lazily, so its runtime stack is not everyone’s', () => {
     // The agent hook reaches JupyterLab, Lumino and the web components. In the
     // plugin's static imports that lands in every host that merely mounts it.
