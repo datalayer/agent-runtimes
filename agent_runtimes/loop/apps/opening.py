@@ -18,7 +18,9 @@ asked about with no token: ai-agents lets them talk to an application anyone
 with the link or everyone may open when it needs nothing a visitor nobody
 knows may not be given, and says why not otherwise. An embed token is asked
 about with itself: ai-agents lets it into a live embedded deployment of the
-one application it names, of the owner who was issued it (LOOP R-20). A
+one application it names, of the owner who was issued it (LOOP R-20), and
+only for a page of a site its owner allows it on (D-12): the runtime says
+the page's origin, as the visitor's browser sent it (`PAGE_ORIGIN`). A
 caller with no token who is not a visitor holds no session. The machine
 itself is not asked about.
 """
@@ -26,9 +28,11 @@ itself is not asked about.
 from __future__ import annotations
 
 import time
+from contextvars import ContextVar
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 __all__ = [
+    "PAGE_ORIGIN",
     "REMEMBERED_SECONDS",
     "SIGNED_OUT",
     "NotLetIn",
@@ -36,6 +40,20 @@ __all__ = [
     "forget_openings",
     "use_opener",
 ]
+
+#: The origin of the page an embed's visitor is on, for this request: what
+#: the visitor's browser sent, said to ai-agents (LOOP D-12).
+PAGE_ORIGIN: ContextVar[str] = ContextVar("loop_embed_page_origin", default="")
+
+#: The header ai-agents reads it in.
+PAGE_ORIGIN_HEADER = "X-Datalayer-Embed-Origin"
+
+
+def page_origin_headers() -> Dict[str, str]:
+    """The page's origin as a header, when an embed's visitor is calling."""
+    origin = PAGE_ORIGIN.get()
+    return {PAGE_ORIGIN_HEADER: origin} if origin else {}
+
 
 #: How long an answer is trusted.
 REMEMBERED_SECONDS = 60.0
@@ -78,7 +96,10 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> Tuple[int, str]:
             response = await client.get(
                 f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/opens",
                 # A visitor is asked about as nobody: ai-agents does not take their token.
-                headers={"Authorization": f"Bearer {bearer}"} if bearer else {},
+                headers={
+                    **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
+                    **page_origin_headers(),
+                },
             )
     except httpx.HTTPError as error:
         return 503, f"ai-agents could not be asked who may open it: {error}."
@@ -135,8 +156,9 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
         deployment_uid,
         ""
         if kind == "visitor"
-        # An embed's visit, apart from its owner's own answer (LOOP R-20).
-        else f"embed:{getattr(caller, 'visit', '')}"
+        # An embed's visit on the page it is on, apart from its owner's own
+        # answer (LOOP R-20, D-12).
+        else f"embed:{getattr(caller, 'visit', '')}@{PAGE_ORIGIN.get()}"
         if kind == "embed"
         else str(getattr(caller, "uid", "") or bearer),
     )

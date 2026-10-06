@@ -66,6 +66,13 @@ that application **as it is deployed**, and nothing beyond:
   the deployment: a live **embedded** deployment of the one application it
   names, of the owner who was issued it. The session acts as the
   application's **principal**, never in its owner's name.
+- **On the sites its owner allows.** The runtime says the page's origin, as
+  the visitor's browser sent it (`Origin`), to ai-agents
+  (`X-Datalayer-Embed-Origin`) when it asks whether to open the session and
+  for the principal's token (LOOP D-12): an embedded deployment is opened
+  only for a page of a site its owner listed under *Ship*, and on no site
+  while none is listed (`403`, in ai-agents' sentence). Each page is asked
+  about apart.
 - **Each visit apart.** A session answers the visit that opened it: another
   visitor of the same page, holding a token of the same owner, reads, drives
   and lists nothing of it. A token renewed for the same visit goes on with it.

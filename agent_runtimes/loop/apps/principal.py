@@ -113,6 +113,8 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> dict[str, Any]:
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
 
+    from agent_runtimes.loop.apps.opening import page_origin_headers
+
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
         raise PrincipalTokenMissing(
@@ -122,7 +124,9 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(
                 f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/principal-token",
-                headers={"Authorization": f"Bearer {bearer}"},
+                # An embed's page, which ai-agents checks against the
+                # sites its owner allows it on (LOOP D-12).
+                headers={"Authorization": f"Bearer {bearer}", **page_origin_headers()},
             )
     except httpx.HTTPError as error:
         raise PrincipalTokenMissing(

@@ -207,6 +207,12 @@ async def _authorize(
             status_code=403,
             detail="Only a person configures the application a runtime runs.",
         )
+    if caller.kind == "embed":
+        # The page an embed's visitor is on, said to ai-agents when it is
+        # asked whether to open the session and for its principal (LOOP D-12).
+        from agent_runtimes.loop.apps.opening import PAGE_ORIGIN
+
+        PAGE_ORIGIN.set(origin or "")
     return Authorized(caller, app)
 
 

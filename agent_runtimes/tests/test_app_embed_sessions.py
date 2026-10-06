@@ -204,3 +204,57 @@ def test_an_embed_reaches_nothing_beyond_its_session(
     )
     # It configures nothing, and lists no applications.
     assert remote.get("/api/v1/apps", headers=embed).status_code == 403
+
+
+def test_the_page_an_embed_is_on_is_said_to_ai_agents(
+    runtime: Runtime,
+    remote: TestClient,
+    embedded: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ai-agents opens an embed's session only for a page of a site its
+    owner allows it on (LOOP D-12): the runtime says the page's origin, as
+    the visitor's browser sent it, and each page is asked about apart."""
+    monkeypatch.setenv(
+        "AGENT_RUNTIMES_APP_ORIGINS", "https://host.example,https://other.example"
+    )
+    said: List[Dict[str, str]] = []
+
+    async def opens(deployment: str, bearer: str) -> Tuple[int, str]:
+        said.append(opening.page_origin_headers())
+        if opening.PAGE_ORIGIN.get() == "https://other.example":
+            return (
+                403,
+                "It is not embedded on https://other.example: its owner allows it on https://host.example only.",
+            )
+        return 200, ""
+
+    opening.use_opener(opens)
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    on_host = remote.post(
+        "/api/v1/apps/sessions",
+        headers={**as_("embed:visit-a"), "Origin": "https://host.example"},
+        json={
+            "agent": "notes-assistant",
+            "deployment_uid": "dep-1",
+            "session": "session-host",
+            "opener": "Hello",
+        },
+    )
+    assert on_host.status_code == 200, on_host.text
+    elsewhere = remote.post(
+        "/api/v1/apps/sessions",
+        headers={**as_("embed:visit-a"), "Origin": "https://other.example"},
+        json={
+            "agent": "notes-assistant",
+            "deployment_uid": "dep-1",
+            "session": "session-other",
+            "opener": "Hello",
+        },
+    )
+    assert elsewhere.status_code == 403
+    assert "not embedded on https://other.example" in elsewhere.json()["detail"]
+    assert said == [
+        {"X-Datalayer-Embed-Origin": "https://host.example"},
+        {"X-Datalayer-Embed-Origin": "https://other.example"},
+    ]
