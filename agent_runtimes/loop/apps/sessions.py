@@ -1156,6 +1156,28 @@ class LiveSession:
         }
         await self.forward(body, bearer=bearer)
 
+    def run_token(self, bearer: str) -> str:
+        """The token a run of the session carries: the request's, but in a
+        Preview a person opened (LOOP R-25) theirs narrowed to the Spaces its
+        application is granted, held for it (`principal.ensure_preview_token`)
+        — and without one the run is refused, never run with theirs."""
+        person = str(self.acts_as.get("uid") or "")
+        if self.acts_as.get("kind") != "person" or not person:
+            return bearer
+        from agent_runtimes.loop.apps.principal import (
+            preview_token,
+            preview_token_refusal,
+        )
+
+        app_uid = str(self.instance.get("app_uid") or "")
+        permissions = self.app.permissions.model_dump(mode="json")
+        token = preview_token(app_uid, person, permissions)
+        if token is None:
+            raise SessionRefused(
+                403, str(preview_token_refusal(app_uid, person, permissions))
+            )
+        return token
+
     async def forward(
         self, body: Dict[str, Any], *, bearer: str, instructions: str = ""
     ) -> None:
@@ -1164,7 +1186,14 @@ class LiveSession:
         ``instructions`` are told to the agent for this run besides its own —
         the modes the person is in (LOOP P-19): set by the runtime, never read
         from the request, whose system messages the agent does not take.
+
+        A Preview's run carries the person's token narrowed to the Spaces its
+        application is granted, in place of theirs (LOOP R-25): every tool of
+        the run reaches those Spaces and no other. Their own token is kept
+        beside it for what the runtime does for them that is not a Space —
+        reading the application's documents (`record.own_token_for`).
         """
+        from agent_runtimes.loop.apps.record import persons_own_token
         from agent_runtimes.routes.agui import get_agui_app
         from agent_runtimes.transports.agui import run_instructions
 
@@ -1173,6 +1202,8 @@ class LiveSession:
             raise SessionRefused(
                 410, f"The agent of {self.app.name} is no longer on this runtime."
             )
+        persons = bearer
+        bearer = self.run_token(bearer)
         raw = json.dumps(body).encode("utf-8")
         headers = [
             (b"content-type", b"application/json"),
@@ -1234,7 +1265,10 @@ class LiveSession:
                         str(event.get("delta") or "")
                     )
 
-        with run_instructions(instructions):
+        with (
+            run_instructions(instructions),
+            persons_own_token(persons if bearer != persons else None),
+        ):
             await app(scope, receive, send)
         if status >= 300:
             said = b"".join(refused).decode("utf-8", errors="replace")[:500]

@@ -45,7 +45,24 @@ is not there or runs no application.
   person and deployment). A person who has not let it, at its address, gets
   the gateway's refusal in its sentence (LOOP I-04).
 - **A Preview's session** runs as the **person**: the agent was made without a
-  deployment, on the runtime's own token.
+  deployment, its model called on the runtime's own token. It is **held to
+  its application's Space grants** (LOOP R-25, decided 2026-10-06), as its
+  deployments are: as it opens, and on each request, the runtime asks
+  ai-agents with the person's token (`POST /api/ai-agents/v1/apps/{app_uid}/preview-token`,
+  with the `permissions` of the Appspec it runs) for a token of theirs
+  narrowed to the Spaces `permissions.spaces` grants, each as far as it says
+  — none when it grants none. IAM mints it for an hour, only for an owner or
+  an editor of the application and only from their own token; the runtime
+  keeps it in memory and asks again before it runs out, as it does a
+  principal's. Every run of the session carries it in place of the person's:
+  a tool reaching a Space not granted is refused by Spacer. The person's own
+  token stays for what reaches no Space — the application's documents. A
+  Preview whose token cannot be had runs nothing (`403`, in a sentence), and
+  an application not saved on Datalayer is not previewed with a person's
+  token: it has no grants to hold it to. A Preview the machine itself opens
+  (`localhost`, no token) runs as that machine, as before. **Not yet held:**
+  the Datalayer MCP gateway's own tools, which a session's AG-UI run reaches
+  with the runtime's key, a Preview's as a deployment's.
 
 A start names what it expects — a deployment, or none for a Preview — and is
 refused when the agent runs something else: a Preview is never run by a
@@ -373,6 +390,16 @@ surface under the message, and its `end` and `logout` run; resume from the recor
 *Report from a File* taking its CSV from the page, asking for it when none was
 given, and refusing a PDF. The page side is tested with vitest
 (`app-page`, `app-page-blocks`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`).
+
+A Preview held to its grants (`agent_runtimes/tests/test_app_preview_grants.py`):
+its token asked with the person's, for the Spaces of the Appspec it runs; each
+tool of its run carrying it, and a Space not granted refused; no grant
+reaching no Space; nothing run when ai-agents refuses it, or for an
+application not on Datalayer; kept, and asked again before it runs out; the
+documents read with the person's own token. What Spacer does with it is
+tested in services (`spacer/tests/test_app_preview_reaches_granted_spaces.py`),
+its mint in ai-agents and IAM (`test_app_preview_token.py`,
+`test_app_previews.py`). Not verified: a Preview on r1, live.
 
 Visitors (`agent_runtimes/tests/test_app_visitors.py`): one visitor never
 reaches another's session on the same runtime; a token reaches its own

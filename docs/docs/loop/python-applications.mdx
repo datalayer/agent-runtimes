@@ -283,6 +283,17 @@ A Preview, a test run and an agent no application runs keep the runtime's
 own inference token: they are a person trying something, not a deployment
 acting alone.
 
+**A Preview is held to the same Space grants** (LOOP R-25): though it runs as
+the person trying it, the tools of its session reach only the Spaces its
+Appspec grants (`permissions.spaces`), each as far as it says — what is tried
+is what ships. The runtime asks ai-agents, with the person's token, for a
+token of theirs narrowed to those Spaces
+(`POST /api/ai-agents/v1/apps/{app_uid}/preview-token`, minted by IAM for an
+hour, only for an owner or editor of the application), keeps it beside the
+principals' and renews it the same way; its runs carry it in place of the
+person's (see [Session API](./session-api)). An Appspec granting no Space
+reaches none. Its model calls do not change.
+
 ### Its notifications
 
 An Appspec's `notifications` names where an approval reaches a person —

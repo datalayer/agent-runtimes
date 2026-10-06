@@ -89,13 +89,15 @@ async def search_on_contents(
     """Ask Contents for the passages, with the token of the run.
 
     A deployment's is its application's principal's, and nobody else's; a
-    Preview's is the person's (`record.token_for`).
+    Preview's is the person's own — not the one its run carries, narrowed to
+    the Spaces its application is granted (LOOP R-25), which Contents does not
+    read documents with (`record.own_token_for`).
     """
     import httpx
 
-    from agent_runtimes.loop.apps.record import token_for
+    from agent_runtimes.loop.apps.record import own_token_for
 
-    token, refusal = token_for(deployment_uid)
+    token, refusal = own_token_for(deployment_uid)
     if not token:
         raise DocumentsNotSearched(f"there is no token to search them with: {refusal}")
     url = f"{_contents_url().rstrip('/')}/api/contents/v1/apps/{quote(app_uid, safe='')}/passages"

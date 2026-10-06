@@ -22,10 +22,23 @@ made; once it has expired the agent calls nothing, and says so.
 What it is used for: model calls through ai-inference (metered on the owner,
 naming the principal), the Datalayer MCP gateway (as a run with an identity
 of its own), and the session's record in ai-agents.
+
+**A Preview is held to the same grants** (LOOP R-25, decided 2026-10-06):
+though it runs as the person trying it, it reaches only the Spaces its
+application is granted. As its session opens, and on each of its requests,
+the runtime asks ai-agents with the person's token for a token of theirs
+narrowed to the Spaces the Appspec it runs grants
+(`POST /apps/{app_uid}/preview-token`, minted by IAM) — none when it grants
+none — keeps it here beside the principals' and asks again before it runs
+out, the same way (`ensure_preview_token`). Its runs carry that token in
+place of the person's (`sessions.LiveSession.forward`); its model calls do
+not change.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import time
 from typing import Any, Awaitable, Callable, Mapping, Optional
@@ -37,12 +50,17 @@ __all__ = [
     "PrincipalTokenMissing",
     "api_key_for",
     "deployment_of",
+    "ensure_preview_token",
     "ensure_principal_token",
     "forget_principal_token",
     "give_principal_token",
+    "preview_key",
+    "preview_token",
+    "preview_token_refusal",
     "principal_token",
     "principal_token_refusal",
     "principal_uid_of",
+    "use_preview_asker",
 ]
 
 #: Asked again when less than this is left: a session in progress never meets
@@ -156,6 +174,48 @@ def use_asker(asker: Optional[Callable[[str, str], Awaitable[dict[str, Any]]]]) 
     _asker["ask"] = asker or _ask_ai_agents
 
 
+async def _ensure_held(
+    key: str,
+    bearer: Optional[str],
+    ask: Callable[[str], Awaitable[dict[str, Any]]],
+    refusal: Callable[[], Optional[str]],
+    what: str,
+) -> dict[str, Any]:
+    """A token held under ``key``, asked for with ``bearer`` when none is held
+    or it runs out: what a deployment's principal and a Preview share.
+
+    Returns what ai-agents answered when it was asked now, else ``{}``.
+    """
+    held = _HELD.get(key)
+    fresh = (
+        held is not None and held["expires_at"] - time.time() > REFRESH_MARGIN_SECONDS
+    )
+    if fresh:
+        return {}
+    if bearer:
+        try:
+            answer = await ask(bearer)
+        except PrincipalTokenMissing:
+            if not refusal():
+                # Still good for a few minutes: the next request asks again.
+                return {}
+            raise
+        token = str(answer.get("access_token") or "")
+        if not token:
+            raise PrincipalTokenMissing(f"ai-agents answered {what} no token.")
+        give_principal_token(
+            key,
+            token,
+            expires_in=int(answer.get("expires_in") or 0),
+            principal_uid=str(answer.get("principal_uid") or ""),
+        )
+        return answer
+    said = refusal()
+    if said:
+        raise PrincipalTokenMissing(said)
+    return {}
+
+
 async def ensure_principal_token(deployment_uid: str, bearer: Optional[str]) -> str:
     """
     The principal's token for a deployment, asked for when none is held or it runs out.
@@ -178,40 +238,19 @@ async def ensure_principal_token(deployment_uid: str, bearer: Optional[str]) -> 
         When none is held and none could be had: the agent is not made, or
         calls nothing.
     """
-    held = _HELD.get(deployment_uid)
-    fresh = (
-        held is not None and held["expires_at"] - time.time() > REFRESH_MARGIN_SECONDS
+    answer = await _ensure_held(
+        deployment_uid,
+        bearer,
+        lambda asking: _asker["ask"](deployment_uid, asking),
+        lambda: principal_token_refusal(deployment_uid),
+        f"deployment {deployment_uid}",
     )
-    if fresh:
-        return str(held["token"])  # type: ignore[index]
-    if bearer:
-        try:
-            answer = await _asker["ask"](deployment_uid, bearer)
-        except PrincipalTokenMissing:
-            if principal_token(deployment_uid):
-                # Still good for a few minutes: the next request asks again.
-                return str(_HELD[deployment_uid]["token"])
-            raise
-        token = str(answer.get("access_token") or "")
-        if not token:
-            raise PrincipalTokenMissing(
-                f"ai-agents answered deployment {deployment_uid} no principal's token."
-            )
-        give_principal_token(
-            deployment_uid,
-            token,
-            expires_in=int(answer.get("expires_in") or 0),
-            principal_uid=str(answer.get("principal_uid") or ""),
-        )
+    if answer:
         logger.info(
             "Deployment %s acts as its principal %s.",
             deployment_uid,
             answer.get("principal_uid") or "?",
         )
-        return token
-    refusal = principal_token_refusal(deployment_uid)
-    if refusal:
-        raise PrincipalTokenMissing(refusal)
     return str(_HELD[deployment_uid]["token"])
 
 
@@ -242,3 +281,151 @@ def api_key_for(deployment_uid: str) -> Callable[[], Awaitable[str]]:
         return str(_HELD[deployment_uid]["token"])
 
     return api_key
+
+
+# --- a Preview, held to its application's Space grants (LOOP R-25) ----------
+
+
+def preview_key(app_uid: str, person_uid: str, permissions: Mapping[str, Any]) -> str:
+    """Where a Preview's token is held: by application, the person trying it,
+    and the Spaces its Appspec grants now — a list changed is a token asked
+    again, never one narrowed to the list before."""
+    spaces = sorted(
+        (str(grant.get("space") or ""), str(grant.get("access") or "read"))
+        for grant in permissions.get("spaces") or []
+    )
+    digest = hashlib.sha256(json.dumps(spaces).encode("utf-8")).hexdigest()[:16]
+    return f"preview:{app_uid}:{person_uid}:{digest}"
+
+
+def preview_token_refusal(
+    app_uid: str, person_uid: str, permissions: Mapping[str, Any]
+) -> Optional[str]:
+    """Why a Preview of an application cannot reach anything now, or ``None`` when it can."""
+    held = _HELD.get(preview_key(app_uid, person_uid, permissions))
+    if not held:
+        return (
+            f"The Preview of {app_uid} holds no token narrowed to the Spaces its "
+            "application is granted: it reaches nothing."
+        )
+    if held["expires_at"] <= time.time():
+        return (
+            f"The token of the Preview of {app_uid} expired: it reaches nothing more. "
+            "Send a message again."
+        )
+    return None
+
+
+def preview_token(
+    app_uid: str, person_uid: str, permissions: Mapping[str, Any]
+) -> Optional[str]:
+    """A Preview's token, or ``None`` when it has none it may use."""
+    if preview_token_refusal(app_uid, person_uid, permissions):
+        return None
+    return str(_HELD[preview_key(app_uid, person_uid, permissions)]["token"])
+
+
+async def _ask_ai_agents_for_a_preview(
+    app_uid: str, permissions: Mapping[str, Any], bearer: str
+) -> dict[str, Any]:
+    import httpx
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise PrincipalTokenMissing(
+            f"The Preview of {app_uid} cannot be held to its grants: no ai-agents is configured."
+        )
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
+                f"{url.rstrip('/')}/api/ai-agents/v1/apps/{app_uid}/preview-token",
+                json={"permissions": dict(permissions)},
+                headers={"Authorization": f"Bearer {bearer}"},
+            )
+    except httpx.HTTPError as error:
+        raise PrincipalTokenMissing(
+            f"ai-agents could not be asked for the Preview of {app_uid}: {error}."
+        ) from error
+    if response.status_code >= 300:
+        detail = ""
+        try:
+            detail = str((response.json() or {}).get("detail") or "")
+        except ValueError:
+            detail = response.text[:200]
+        raise PrincipalTokenMissing(
+            f"ai-agents gave the Preview of {app_uid} no token "
+            f"({response.status_code}){': ' + detail if detail else ''}."
+        )
+    return dict(response.json() or {})
+
+
+#: Who answers a Preview's token; replaced by a test.
+_preview_asker: dict[
+    str, Callable[[str, Mapping[str, Any], str], Awaitable[dict[str, Any]]]
+] = {"ask": _ask_ai_agents_for_a_preview}
+
+
+def use_preview_asker(
+    asker: Optional[Callable[[str, Mapping[str, Any], str], Awaitable[dict[str, Any]]]],
+) -> None:
+    """Who answers a Preview's token: ai-agents, or a test; ``None`` for ai-agents."""
+    _preview_asker["ask"] = asker or _ask_ai_agents_for_a_preview
+
+
+async def ensure_preview_token(
+    app_uid: str,
+    person_uid: str,
+    permissions: Mapping[str, Any],
+    bearer: Optional[str],
+) -> str:
+    """
+    The token a Preview runs with, asked for when none is held or it runs out (LOOP R-25).
+
+    The person's own, narrowed by ai-agents and IAM to the Spaces the Appspec
+    the Preview runs grants (``permissions.spaces``) — none when it grants
+    none — asked for with the person's token, as a deployment's principal's
+    is with its opener's, and kept in memory.
+
+    Parameters
+    ----------
+    app_uid : str
+        The application tried, as Datalayer knows it.
+    person_uid : str
+        Who is trying it.
+    permissions : Mapping[str, Any]
+        The ``permissions`` of the Appspec the Preview runs.
+    bearer : str | None
+        The person's token, from the request.
+
+    Returns
+    -------
+    str
+        The token.
+
+    Raises
+    ------
+    PrincipalTokenMissing
+        When none is held and none could be had: the Preview runs nothing.
+    """
+    if not app_uid:
+        raise PrincipalTokenMissing(
+            "A Preview reaches the Spaces its application is granted on Datalayer, "
+            "and this one is not there: save it first."
+        )
+    key = preview_key(app_uid, person_uid, permissions)
+    answer = await _ensure_held(
+        key,
+        bearer,
+        lambda asking: _preview_asker["ask"](app_uid, permissions, asking),
+        lambda: preview_token_refusal(app_uid, person_uid, permissions),
+        f"the Preview of {app_uid}",
+    )
+    if answer:
+        logger.info(
+            "The Preview of %s for %s reaches %d Space(s).",
+            app_uid,
+            person_uid,
+            len(answer.get("spaces") or []),
+        )
+    return str(_HELD[key]["token"])

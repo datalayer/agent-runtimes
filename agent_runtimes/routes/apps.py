@@ -627,7 +627,7 @@ def _stream(chunks: Any) -> Any:
 
 
 async def _acts_as(
-    instance: Dict[str, Any], caller: Caller, bearer: str
+    instance: Dict[str, Any], caller: Caller, bearer: str, app: AppSpec
 ) -> Dict[str, str]:
     """In whose name a session runs: a deployment's principal, else the person (I-03).
 
@@ -635,11 +635,17 @@ async def _acts_as(
     `loop.apps.opening`), on every request of the session. Its principal's
     token is asked for again with the caller's token when it runs out, as
     every request of the session may.
+
+    A Preview runs as the person, held to its application's Space grants
+    (R-25): the token its runs carry is theirs, narrowed to the Spaces the
+    Appspec it runs grants, asked for and renewed the same way; without one
+    it runs nothing.
     """
     from agent_runtimes.loop.apps.opening import NotLetIn, ensure_may_open
     from agent_runtimes.loop.apps.principal import (
         PrincipalTokenMissing,
         deployment_of,
+        ensure_preview_token,
         ensure_principal_token,
         principal_uid_of,
     )
@@ -679,6 +685,16 @@ async def _acts_as(
             **({"deployment_uid": deployment} if deployment else {}),
         }
     if not deployment:
+        if caller.kind == "person":
+            try:
+                await ensure_preview_token(
+                    str(instance.get("app_uid") or ""),
+                    caller.uid,
+                    app.permissions.model_dump(mode="json"),
+                    bearer or None,
+                )
+            except PrincipalTokenMissing as missing:
+                raise _refused(SessionRefused(403, str(missing))) from None
         return {"kind": "person", "uid": caller.uid}
     # Who may open it (D-02), before its principal acts for them: the token
     # held for the deployment is no reason to let anybody else talk to it.
@@ -762,7 +778,7 @@ async def _held(uid: str, request: Request) -> Tuple[Any, str]:
     _reaches(authorized.caller, live.agent_id)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
-    live.acts_as = await _acts_as(live.instance, authorized.caller, bearer)
+    live.acts_as = await _acts_as(live.instance, authorized.caller, bearer, live.app)
     return live, bearer
 
 
@@ -784,7 +800,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     _check_instance(body, app, instance)
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
-    acts_as = await _acts_as(instance, authorized.caller, bearer)
+    acts_as = await _acts_as(instance, authorized.caller, bearer, app)
     _prune()
     try:
         live = new_session(
@@ -963,7 +979,7 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
             )
         bearer = bearer_of(request.headers.get("authorization"))
         set_request_user_jwt(bearer or None)
-        acts_as = await _acts_as(instance, authorized.caller, bearer)
+        acts_as = await _acts_as(instance, authorized.caller, bearer, app)
         messages = await conversation_from_record(uid, app, instance, bearer)
         _prune()
         live = new_session(
@@ -1025,7 +1041,7 @@ async def session_agui(agent: str, request: Request) -> Any:
     try:
         live = session_of(thread)
         if live is None:
-            acts_as = await _acts_as(instance, authorized.caller, bearer)
+            acts_as = await _acts_as(instance, authorized.caller, bearer, app)
             _prune()
             live = new_session(
                 agent_id=agent,
@@ -1038,7 +1054,7 @@ async def session_agui(agent: str, request: Request) -> Any:
         elif live.agent_id != agent or not live.answers_to(authorized.caller):
             raise SessionRefused(404, f"No session {thread} of {agent} is held here.")
         else:
-            live.acts_as = await _acts_as(instance, authorized.caller, bearer)
+            live.acts_as = await _acts_as(instance, authorized.caller, bearer, app)
         return _stream(live.run_agui(body, loop=loop or {}, bearer=bearer))
     except SessionRefused as refused:
         raise _refused(refused) from None

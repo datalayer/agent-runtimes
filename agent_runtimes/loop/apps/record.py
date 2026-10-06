@@ -49,6 +49,7 @@ import asyncio
 import contextvars
 import logging
 import os
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import (
     Any,
@@ -56,6 +57,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Iterator,
     List,
     Optional,
     Set,
@@ -210,6 +212,33 @@ def token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
         token = None
     token = token or os.environ.get("DATALAYER_USER_TOKEN")
     return (token, "") if token else (None, "no token.")
+
+
+#: The person's own token during a Preview's run, whose request token is
+#: theirs narrowed to the Spaces its application is granted (LOOP R-25).
+_PERSONS_OWN: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "loop_preview_persons_own_token", default=None
+)
+
+
+@contextmanager
+def persons_own_token(token: Optional[str]) -> Iterator[None]:
+    """Keep the person's own token beside a Preview's narrowed one, for one run."""
+    held = _PERSONS_OWN.set(token or None)
+    try:
+        yield
+    finally:
+        _PERSONS_OWN.reset(held)
+
+
+def own_token_for(deployment_uid: str) -> Tuple[Optional[str], str]:
+    """The token for what the runtime does for a person that reaches no Space
+    — an application's documents: `token_for`, but in a Preview's run the
+    person's own, not the one narrowed to its Space grants (LOOP R-25)."""
+    own = _PERSONS_OWN.get()
+    if own and not deployment_uid.strip():
+        return own, ""
+    return token_for(deployment_uid)
 
 
 async def send_to_ai_agents(body: Dict[str, Any]) -> None:
@@ -707,5 +736,7 @@ __all__ = [
     "kept_of",
     "recorder_of",
     "send_to_ai_agents",
+    "own_token_for",
+    "persons_own_token",
     "token_for",
 ]

@@ -60,3 +60,38 @@ def _ai_inference_not_asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     yield
     set_inference_models(None)
     give_inference_token(None)
+
+
+@pytest.fixture(autouse=True)
+def _ai_agents_not_asked_for_previews() -> Iterator[None]:
+    """No test asks the real ai-agents for a Preview's token (LOOP R-25).
+
+    A Preview a person opens runs with their token narrowed to the Spaces its
+    application is granted, asked of ai-agents; without this, a test opening
+    one would ask whatever ``DATALAYER_AI_AGENTS_URL`` names. Here the answer
+    is ``preview:<app>:<the person's token>``, naming the Spaces asked for; a
+    test about the token itself installs its own asker.
+
+    Yields
+    ------
+    None
+        While the test runs with this asker.
+    """
+    from agent_runtimes.loop.apps import principal
+
+    async def answer(app_uid: str, permissions: dict, bearer: str) -> dict:
+        spaces = [
+            {"space": grant.get("space"), "access": grant.get("access")}
+            for grant in permissions.get("spaces") or []
+        ]
+        return {
+            "access_token": f"preview:{app_uid}:{bearer}",
+            "expires_in": 3600,
+            "spaces": spaces,
+        }
+
+    principal.use_preview_asker(answer)
+    yield
+    principal.use_preview_asker(None)
+    for key in [key for key in principal._HELD if key.startswith("preview:")]:
+        principal._HELD.pop(key, None)
