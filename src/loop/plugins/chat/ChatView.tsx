@@ -164,6 +164,7 @@ import {
   newestIsAnswer,
   type AssistantSaying,
 } from '../../../chat/assistant/state';
+import { useChatWords } from '../../../chat/ChatLanguage';
 
 type ChatControls = {
   send: (message: string, forwardedProps?: Record<string, unknown>) => void;
@@ -191,6 +192,7 @@ const FULLSCREEN_HINT_PERIOD_MS = 1400;
 const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
 
 export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
+  const chatText = useChatWords();
   /* The active theme's own colours. Read from the store rather than a
      provider, so a workspace mounted without the addons theme still gets the
      default palette instead of throwing. */
@@ -203,8 +205,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   // where it sets anything else about this plugin.
   const reactor = useReactorPlatform();
   const config = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
-  const placeholder =
-    config?.placeholder ?? 'Ask anything, type / for commands or @ for mention';
+  const placeholder = config?.placeholder || chatText.placeholder;
   const defaultSurface = config?.defaultSurface ?? 'notebook';
   /*
    * The input-prompt plugin's own configuration, read from here rather than
@@ -1300,8 +1301,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     gateBlocked || keyExpired || Boolean(inPageRefusal) || ambient.disabled;
   const disabledReason = keyExpired
     ? expiredKeyIsTemporary
-      ? 'This demo runs on a shared key, and its time is up. Sign in to keep going.'
-      : 'Your key has expired. Sign in to keep going.'
+      ? chatText.demoKeyExpired
+      : chatText.keyExpired
     : (inPageRefusal ??
       gateReason ??
       (ambient.disabled ? ambient.disableReason : undefined));
@@ -2271,7 +2272,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const chipsEl =
     config?.suggestionLabels !== false && chatSuggestions.length > 0 ? (
       <Box
-        aria-label="Suggested prompts"
+        aria-label={chatText.suggestedPrompts}
         sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, pb: '6px' }}
       >
         {chatSuggestions.map(item => (

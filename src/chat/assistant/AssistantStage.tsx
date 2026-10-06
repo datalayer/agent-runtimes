@@ -101,6 +101,7 @@ import {
   type AssistantState,
   type BalloonApproval,
 } from './state';
+import { useChatWords } from '../ChatLanguage';
 
 /** The motions, by the state the stage is in. */
 const MOTIONS = {
@@ -750,6 +751,7 @@ export function AssistantStage({
   agentName,
   label,
 }: AssistantStageProps): JSX.Element {
+  const chatText = useChatWords();
   // A shipped one by id, a drawing contributed by a plugin (T-24), or a
   // character read from a file (T-26).
   const shipped =
@@ -856,7 +858,7 @@ export function AssistantStage({
     balloonDisplay !== 'current' && history && history.length > 0
       ? {
           id: 'balloon-history',
-          title: conversationHeaderText(conversationCount(history)),
+          title: conversationHeaderText(conversationCount(history), chatText),
           shrink: true,
           render: () => (
             <BalloonHistoryLarge

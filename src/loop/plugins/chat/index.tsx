@@ -149,7 +149,7 @@ export type ChatPluginConfig = {
    * Configured on the plugin rather than passed to the workspace: the prompt
    * belongs to the chat, and a shell that has no chat plugin has no prompt to
    * put a placeholder in. A host that wants different words says so where the
-   * words are.
+   * words are. Empty, the chat's own, in the person's language (LOOP P-26).
    */
   placeholder: string;
   /**
@@ -284,7 +284,8 @@ export const CHAT_PLUGIN_NAME = '@datalayer/loop-plugin-chat';
 export const ChatPlugin = definePlugin<ChatPluginConfig>({
   name: CHAT_PLUGIN_NAME,
   config: {
-    placeholder: 'Ask anything, type / for commands or @ for mention',
+    // The chat's own words, in the person's language (`chat/words`).
+    placeholder: '',
     // The notebook: it is what most of these agents work on, and a workspace
     // that opens on an empty chat hides the half of itself that does the work.
     defaultSurface: 'notebook',

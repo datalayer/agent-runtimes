@@ -91,6 +91,7 @@ import { defineAppKeptPlugin } from './AppKept';
 import { keepsFeedback } from './feedback';
 import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
+import { ChatLanguage } from '../../chat/ChatLanguage';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -585,49 +586,53 @@ export function AppRenderer({
     );
   }
   return (
-    <LoopEmbed
-      // The application's own agent: created under its id, so that its
-      // spec is applied to an agent of its own, never to the one it extends.
-      agentId={app.id}
-      // Drawn as its kind and its layout say: the conversation alone, the
-      // page with the conversation over it, the two side by side, or — a
-      // decision — its host's page alone.
-      {...preset.workspace}
-      {...(frame
-        ? {
-            frameTitle: [app.emoji, shown.name].filter(Boolean).join(' '),
-          }
-        : {})}
-      // Its rules, activity and computer on a rail, one at a time (T-07).
-      sidebarRail={sidebar || computer}
-      teamPicker={false}
-      showAgentVariants={false}
-      graph={false}
-      pluginsPanel={false}
-      datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
-      // Where an application runs is decided by its host — the Studio's
-      // Preview, the hosted page — not offered to its user.
-      targetFixed
-      // The theme its Appspec names (T-30), else the page's, the person's
-      // own; a host may say otherwise.
-      {...(named ? { themeVariant: named.variant } : {})}
-      {...(namedMode ? { colorMode: namedMode } : {})}
-      themeOverrides={themeOverrides}
-      // Its own face, name and welcome in the chat (T-08); no counters: a
-      // person using an application is not asking about tokens.
-      presence={{
-        name: shown.name,
-        face: app.emoji,
-        welcome: shown.interface.welcome || shown.description,
-        paused,
-        onPresence,
-        onSaying,
-      }}
-      showTokenUsage={false}
-      datalayerCreatePayload={datalayerCreatePayload}
-      {...embed}
-      plugins={allPlugins}
-    />
+    // The chat's own words in the person's language too (P-26): the host's,
+    // else the browser's.
+    <ChatLanguage language={language}>
+      <LoopEmbed
+        // The application's own agent: created under its id, so that its
+        // spec is applied to an agent of its own, never to the one it extends.
+        agentId={app.id}
+        // Drawn as its kind and its layout say: the conversation alone, the
+        // page with the conversation over it, the two side by side, or — a
+        // decision — its host's page alone.
+        {...preset.workspace}
+        {...(frame
+          ? {
+              frameTitle: [app.emoji, shown.name].filter(Boolean).join(' '),
+            }
+          : {})}
+        // Its rules, activity and computer on a rail, one at a time (T-07).
+        sidebarRail={sidebar || computer}
+        teamPicker={false}
+        showAgentVariants={false}
+        graph={false}
+        pluginsPanel={false}
+        datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
+        // Where an application runs is decided by its host — the Studio's
+        // Preview, the hosted page — not offered to its user.
+        targetFixed
+        // The theme its Appspec names (T-30), else the page's, the person's
+        // own; a host may say otherwise.
+        {...(named ? { themeVariant: named.variant } : {})}
+        {...(namedMode ? { colorMode: namedMode } : {})}
+        themeOverrides={themeOverrides}
+        // Its own face, name and welcome in the chat (T-08); no counters: a
+        // person using an application is not asking about tokens.
+        presence={{
+          name: shown.name,
+          face: app.emoji,
+          welcome: shown.interface.welcome || shown.description,
+          paused,
+          onPresence,
+          onSaying,
+        }}
+        showTokenUsage={false}
+        datalayerCreatePayload={datalayerCreatePayload}
+        {...embed}
+        plugins={allPlugins}
+      />
+    </ChatLanguage>
   );
 }
 

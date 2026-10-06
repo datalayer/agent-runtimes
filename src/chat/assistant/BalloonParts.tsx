@@ -27,6 +27,8 @@ import {
   type BalloonToolLine,
   type ToolLinePhase,
 } from './toolLine';
+import { useChatWords } from '../ChatLanguage';
+import { ENGLISH_CHAT_WORDS, type ChatWords } from '../words';
 
 /** Out of sight, still heard. */
 const VISUALLY_HIDDEN = {
@@ -139,12 +141,13 @@ export function ToolLineAnnouncer({
 }: {
   line?: BalloonToolLine;
 }): JSX.Element {
+  const chatText = useChatWords();
   const last = useRef<{ id: string; phase: ToolLinePhase } | undefined>(
     undefined,
   );
   const [said, setSaid] = useState('');
   useEffect(() => {
-    const words = toolAnnouncement(line, last.current);
+    const words = toolAnnouncement(line, last.current, chatText);
     if (line && words) {
       last.current = { id: line.id, phase: line.phase };
       setSaid(words);
@@ -168,6 +171,7 @@ export function ToolLineAnnouncer({
  * agent is at work — still for a reader who asks for reduced motion.
  */
 export function BalloonNow({ busy = false }: { busy?: boolean }): JSX.Element {
+  const chatText = useChatWords();
   return (
     <Box
       as="span"
@@ -200,14 +204,19 @@ export function BalloonNow({ busy = false }: { busy?: boolean }): JSX.Element {
       }}
     >
       <Box as="span" data-balloon-now-dot="" aria-hidden="true" />
-      Now
+      {chatText.now}
     </Box>
   );
 }
 
 /** How the `history` balloon names itself: "Conversation · 6". */
-export function conversationHeaderText(count: number): string {
-  return count > 0 ? `Conversation · ${count}` : 'Conversation';
+export function conversationHeaderText(
+  count: number,
+  chatText: ChatWords = ENGLISH_CHAT_WORDS,
+): string {
+  return count > 0
+    ? `${chatText.conversation} · ${count}`
+    : chatText.conversation;
 }
 
 /**
@@ -219,6 +228,7 @@ export function ConversationBalloonHeader({
 }: {
   count: number;
 }): JSX.Element {
+  const chatText = useChatWords();
   return (
     <Box
       data-balloon-header=""
@@ -239,7 +249,7 @@ export function ConversationBalloonHeader({
       }}
     >
       <Text sx={{ fontSize: 0, fontWeight: 'semibold', color: 'fg.muted' }}>
-        {conversationHeaderText(count)}
+        {conversationHeaderText(count, chatText)}
       </Text>
     </Box>
   );

@@ -378,6 +378,7 @@ export {
   embedLookOf,
   embedSnippetOf,
   floatingViewOf,
+  languageOf,
   resumeOf,
   type EmbedLook,
   type EmbedSnippetOptions,

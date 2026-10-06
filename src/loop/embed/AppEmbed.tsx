@@ -95,6 +95,7 @@ import {
   visitOfToken,
 } from './embedSession';
 import { onLoopWindowMessage } from '../../chat/base/loopWindow';
+import { ChatLanguage, useChatWords } from '../../chat/ChatLanguage';
 
 export type AppEmbedProps = {
   /** The application. */
@@ -110,6 +111,12 @@ export type AppEmbedProps = {
   colorMode?: EmbedColorMode;
   /** The host's face, a CSS font family; the theme's by default. */
   font?: string;
+  /**
+   * The language the visitor reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
+   * its translation into it and the chat's own words (LOOP P-26). The
+   * visitor's browser's by default.
+   */
+  language?: string;
   /**
    * An agent-runtimes server the application's agent runs on. Without one,
    * it runs on a Datalayer runtime, launched with the visitor's Datalayer
@@ -457,6 +464,8 @@ export type AppFloatingProps = {
   host?: AppEmbedHost;
   /** The visit's session, picked up again after a reload (D-13). */
   session?: EmbedSession;
+  /** The language the visitor reads it in (P-26); the browser's by default. */
+  language?: string;
 };
 
 /**
@@ -481,7 +490,9 @@ export function AppFloating({
   renderer,
   host,
   session,
+  language,
 }: AppFloatingProps): JSX.Element {
+  const chatText = useChatWords();
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
   const bridge = useHostBridge(app, host);
@@ -516,7 +527,7 @@ export function AppFloating({
       description={welcome}
       brandIcon={<Face emoji={app.emoji} />}
       buttonIcon={<Face emoji={app.emoji} />}
-      buttonTooltip={`Talk to ${app.name}`}
+      buttonTooltip={chatText.talkTo(app.name)}
       colorMode={colorMode}
       useStore={false}
       conversation={{
@@ -546,6 +557,7 @@ export function AppFloating({
               onSaying={onSaying}
               plugins={bridge.plugins}
               {...(session?.thread ? { thread: session.thread } : {})}
+              {...(language ? { language } : {})}
               {...renderer}
             />
           </>
@@ -638,6 +650,7 @@ export function AppEmbed({
   accent,
   colorMode,
   font,
+  language,
   serverUrl,
   instance,
   embedToken,
@@ -685,60 +698,65 @@ export function AppEmbed({
   }
   const character = assistant?.character;
   return (
-    <EmbedThemed
-      accent={worn}
-      colorMode={resolvedMode}
-      font={font}
-      variant={variant}
-      style={
-        view
-          ? // Floating: nothing in the page's flow, nothing painted behind.
-            { backgroundColor: 'transparent' }
-          : { height, display: 'flex', flexDirection: 'column' }
-      }
-    >
-      {ownPortal ? <OwnPortalRoot /> : null}
-      {view ? (
-        <AppFloating
-          app={app}
-          view={view}
-          serverUrl={serverUrl}
-          instance={instance}
-          embedToken={embedToken}
-          colorMode={resolvedMode}
-          themeVariant={variant}
-          themeOverrides={themeOverrides}
-          character={character}
-          host={host}
-          session={session}
-        />
-      ) : !session.ready ? null : (
-        <>
-          <SessionSaid said={session.said} />
-          <AppRenderer
+    <ChatLanguage language={language}>
+      <EmbedThemed
+        accent={worn}
+        colorMode={resolvedMode}
+        font={font}
+        variant={variant}
+        style={
+          view
+            ? // Floating: nothing in the page's flow, nothing painted behind.
+              { backgroundColor: 'transparent' }
+            : { height, display: 'flex', flexDirection: 'column' }
+        }
+      >
+        {ownPortal ? <OwnPortalRoot /> : null}
+        {view ? (
+          <AppFloating
             app={app}
-            target={serverUrl ? 'local' : 'datalayer'}
-            {...(serverUrl ? { serverUrl } : {})}
-            // Only on the host's server: a Datalayer runtime is launched with
-            // a person's credentials, which an embed token never stands for.
-            {...(serverUrl && embedToken ? { embedToken } : {})}
+            view={view}
+            serverUrl={serverUrl}
             instance={instance}
-            // The host's accent and face over the application's own, inside
-            // its conversation too, in the embed's mode: the host's or its
-            // visitor's system's, not a Datalayer setting.
-            themeOverrides={themeOverrides}
+            embedToken={embedToken}
             colorMode={resolvedMode}
             themeVariant={variant}
-            // What the page gives it, and what it tells the page (D-10).
-            plugins={bridge.plugins}
-            onPresence={bridge.onPresence}
-            onSaying={bridge.onSaying}
-            // Its session, picked up again after a reload (D-13).
-            {...(session.thread ? { thread: session.thread } : {})}
+            themeOverrides={themeOverrides}
+            character={character}
+            host={host}
+            session={session}
+            {...(language ? { language } : {})}
           />
-        </>
-      )}
-    </EmbedThemed>
+        ) : !session.ready ? null : (
+          <>
+            <SessionSaid said={session.said} />
+            <AppRenderer
+              app={app}
+              target={serverUrl ? 'local' : 'datalayer'}
+              {...(serverUrl ? { serverUrl } : {})}
+              // Only on the host's server: a Datalayer runtime is launched with
+              // a person's credentials, which an embed token never stands for.
+              {...(serverUrl && embedToken ? { embedToken } : {})}
+              instance={instance}
+              // The host's accent and face over the application's own, inside
+              // its conversation too, in the embed's mode: the host's or its
+              // visitor's system's, not a Datalayer setting.
+              themeOverrides={themeOverrides}
+              colorMode={resolvedMode}
+              themeVariant={variant}
+              // What the page gives it, and what it tells the page (D-10).
+              plugins={bridge.plugins}
+              onPresence={bridge.onPresence}
+              onSaying={bridge.onSaying}
+              // Its session, picked up again after a reload (D-13).
+              {...(session.thread ? { thread: session.thread } : {})}
+              // The visitor's language, when the host says it (P-26).
+              {...(language ? { language } : {})}
+            />
+          </>
+        )}
+      </EmbedThemed>
+    </ChatLanguage>
   );
 }
 

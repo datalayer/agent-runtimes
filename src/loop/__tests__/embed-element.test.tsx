@@ -63,6 +63,7 @@ import { AppEmbed, AppFloating } from '../embed/AppEmbed';
 import {
   appspecOfText,
   defineDatalayerAppElement,
+  frameInLanguage,
   frameSrcOf,
   readEmbeddedApp,
 } from '../embed/element';
@@ -556,6 +557,30 @@ deployment:
     await act(async () => element.remove());
   });
 
+  it('reads the application in the language its host says, and refuses one that is none (P-26)', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const element = document.createElement('datalayer-app');
+    element.setAttribute('mode', 'inline');
+    element.setAttribute('language', 'fr');
+    element.innerHTML =
+      '<script type="application/json">{"id":"a","name":"Support Desk","kind":"chat","agent":"x"}</script>';
+    await act(async () => {
+      document.body.appendChild(element);
+    });
+    await settle();
+    expect(seen.renderer.at(-1)!.language).toBe('fr');
+    // Floating, its button says so in the language too.
+    await act(async () => element.setAttribute('mode', 'bubble'));
+    await settle();
+    expect(seen.floating.at(-1)!.buttonTooltip).toBe('Parler à Support Desk');
+    await act(async () => element.setAttribute('language', 'French'));
+    await settle();
+    expect(element.shadowRoot!.textContent).toContain(
+      '"French" is not a language as BCP 47 tags it, such as fr or pt-BR.',
+    );
+    await act(async () => element.remove());
+  });
+
   it('frames a public application named by its id, as before', async () => {
     const element = document.createElement('datalayer-app');
     element.setAttribute('app', '01M');
@@ -567,6 +592,12 @@ deployment:
     expect(frame.getAttribute('src')).toBe(
       'https://datalayer.app/public/apps/01M/run?embed=1',
     );
+    // The visitor's language, told to the framed page (P-26).
+    await act(async () => element.setAttribute('language', 'pt-BR'));
+    await settle();
+    expect(
+      element.shadowRoot!.querySelector('iframe')!.getAttribute('src'),
+    ).toBe('https://datalayer.app/public/apps/01M/run?embed=1&language=pt-BR');
     await act(async () => element.remove());
   });
 
@@ -640,6 +671,12 @@ describe('reading an application on Datalayer with its token', () => {
     ).toBe('widget');
     expect(frameSrcOf('https://datalayer.app/', 'a b', 'x')).toBe(
       'https://datalayer.app/public/apps/a%20b/run?embed=1#token=x',
+    );
+    // The language goes in the query, the token stays in the fragment.
+    expect(
+      frameInLanguage(frameSrcOf('https://datalayer.app', 'a', 'x'), 'fr'),
+    ).toBe(
+      'https://datalayer.app/public/apps/a/run?embed=1&language=fr#token=x',
     );
   });
 

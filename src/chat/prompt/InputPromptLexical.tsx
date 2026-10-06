@@ -53,6 +53,7 @@ import {
   type PromptCommand,
 } from './plugins/CommandPlugin';
 import type { HistoryDirection } from './promptHistory';
+import { useChatWords } from '../ChatLanguage';
 
 // ---- Lexical extension (plain-text only) ---------------------------------
 
@@ -417,6 +418,7 @@ export function InputPromptLexical({
   mentionableAgents,
   promptCommands,
 }: InputPromptLexicalProps) {
+  const chatText = useChatWords();
   return (
     <Box
       sx={{
@@ -482,7 +484,7 @@ export function InputPromptLexical({
           }
           aria-placeholder={placeholder}
           className="input-prompt-lexical-content"
-          aria-label="Message input"
+          aria-label={chatText.messageInput}
           style={{
             outline: 'none',
             minHeight: 32,

@@ -28,7 +28,8 @@
  *   conversation keeps its profile: the picker says so and picks no other.
  *
  * Given the application as the person reads it (`translatedAppspec`, LOOP
- * P-26), its words are theirs; the composer's own, `language`'s.
+ * P-26), its words are theirs; the composer's own, the chat's language's
+ * (`useChatLanguage`).
  *
  * @module loop/apps/AppComposer
  */
@@ -63,8 +64,8 @@ import {
   profileChoice,
   startersFor,
 } from './composer';
-import { DEFAULT_LANGUAGE } from './appspec';
 import { interfaceWords } from './language';
+import { useChatLanguage } from '../../chat/ChatLanguage';
 import { uploadsAccept, uploadsInWords, uploadsRefusal } from './uploads';
 
 /** What the composer holds to send: the files, and why the last were refused. */
@@ -128,7 +129,6 @@ export const needsAppComposer = (app: AppSpec): boolean =>
  * Nothing for an application with none: its plugin contributes nothing.
  */
 export function defineAppComposerPlugin(app: AppSpec) {
-  const words = interfaceWords(app.interface.language ?? DEFAULT_LANGUAGE);
   const profiles = app.interface.profiles ?? [];
   /** The profile picked, and whether the conversation has started with it. */
   const profile = signal<string | undefined>(profileChoice(app)?.id);
@@ -138,6 +138,8 @@ export function defineAppComposerPlugin(app: AppSpec) {
   }));
 
   function ProfilePicker(): JSX.Element | null {
+    // In the chat's language, as the chat's own words (P-26).
+    const words = interfaceWords(useChatLanguage());
     const now = profileChoice(app, useSignalValue(profile));
     const kept = useSignalValue(started);
     if (!now) {
@@ -247,6 +249,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
   const held = signal<HeldUploads>({ files: [], refused: null });
 
   function Attach(): JSX.Element | null {
+    const words = interfaceWords(useChatLanguage());
     const now = useSignalValue(held);
     const input = useRef<HTMLInputElement>(null);
     if (!uploads) {

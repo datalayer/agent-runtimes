@@ -27,6 +27,7 @@ import {
   embedSnippetOf,
   floatingViewOf,
   inlineHeightOf,
+  languageOf,
 } from '../embed/embedConfig';
 import {
   embedShadowCss,
@@ -149,8 +150,18 @@ describe('what the host overrides', () => {
         'server',
         'api',
         'height',
+        'language',
       ]),
     );
+  });
+
+  it('takes the visitor’s language as BCP 47 tags it, and refuses another (P-26)', () => {
+    expect(languageOf(null)).toBeUndefined();
+    expect(languageOf(' ')).toBeUndefined();
+    expect(languageOf('fr')).toBe('fr');
+    expect(languageOf('pt-BR')).toBe('pt-BR');
+    expect(() => languageOf('French')).toThrow(EmbedAttributeError);
+    expect(() => languageOf('fr_FR')).toThrow(/BCP 47/);
   });
 });
 

@@ -70,6 +70,7 @@ import {
   EmbedAttributeError,
   embedLookOf,
   inlineHeightOf,
+  languageOf,
   resumeOf,
   type EmbedAttribute,
   type EmbedInputs,
@@ -155,6 +156,20 @@ export function frameSrcOf(origin: string, app: string, token = ''): string {
   return `${origin.replace(/\/+$/, '')}/public/apps/${encodeURIComponent(app)}/run?embed=1${
     token ? `#token=${encodeURIComponent(token)}` : ''
   }`;
+}
+
+/**
+ * A framed run page told the visitor's language (P-26): `language=` in its
+ * query, before the fragment that holds the token.
+ */
+export function frameInLanguage(src: string, language?: string): string {
+  if (!language) {
+    return src;
+  }
+  const at = src.indexOf('#');
+  const [page, fragment] =
+    at < 0 ? [src, ''] : [src.slice(0, at), src.slice(at)];
+  return `${page}${page.includes('?') ? '&' : '?'}language=${encodeURIComponent(language)}${fragment}`;
 }
 
 /**
@@ -363,7 +378,15 @@ export function defineDatalayerAppElement(
       }
       // How it looks is drawn again; what it is, read again.
       if (
-        ['mode', 'accent', 'theme', 'font', 'height', 'resume'].includes(name)
+        [
+          'mode',
+          'accent',
+          'theme',
+          'font',
+          'height',
+          'resume',
+          'language',
+        ].includes(name)
       ) {
         this.draw();
         return;
@@ -514,11 +537,18 @@ export function defineDatalayerAppElement(
         return;
       }
       if (source.kind === 'frame') {
+        let framedLanguage: string | undefined;
+        try {
+          framedLanguage = languageOf(this.getAttribute('language'));
+        } catch (error) {
+          this.say((error as Error).message);
+          return;
+        }
         this.setAttribute('data-embed-mode', 'inline');
         const shadow = this.skeleton();
         const frame = document.createElement('iframe');
         frame.className = 'datalayer-app-frame';
-        frame.src = source.src;
+        frame.src = frameInLanguage(source.src, framedLanguage);
         frame.title = 'Datalayer app';
         frame.style.height = `${inlineHeightOf(this.getAttribute('height'))}px`;
         frame.setAttribute('allow', 'clipboard-write');
@@ -528,9 +558,11 @@ export function defineDatalayerAppElement(
       }
       let look: EmbedLook;
       let resume: boolean;
+      let language: string | undefined;
       try {
         look = embedLookOf(this.inputs(), source.app);
         resume = resumeOf(this.getAttribute('resume'));
+        language = languageOf(this.getAttribute('language'));
       } catch (error) {
         this.say((error as Error).message);
         return;
@@ -573,6 +605,8 @@ export function defineDatalayerAppElement(
             // The visit's session kept in the page's storage, and picked
             // up again after a reload, unless the host says not (D-13).
             resume={resume}
+            // The visitor's language, when the host says it (P-26).
+            {...(language ? { language } : {})}
           />
         </StyleSheetManager>,
       );

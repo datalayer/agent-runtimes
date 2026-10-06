@@ -22,7 +22,8 @@ import { useEffect, useRef } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
-import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import type { BalloonApproval } from './state';
+import { useChatWords } from '../ChatLanguage';
 
 /** The open balloon's width, in pixels. */
 export const CONVERSATION_BALLOON_WIDTH = 380;
@@ -151,6 +152,7 @@ export function BalloonApprovalMessage({
 }: {
   approval: BalloonApproval;
 }): JSX.Element {
+  const chatText = useChatWords();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     ref.current?.scrollIntoView?.({ block: 'nearest' });
@@ -174,7 +176,7 @@ export function BalloonApprovalMessage({
         }}
       >
         <Text as="p" sx={{ m: 0, color: 'fg.muted', fontSize: 0 }}>
-          {ASSISTANT_WORDS.approval}
+          {chatText.waitingForYou}
         </Text>
         <Text as="p" sx={{ m: 0, fontWeight: 'semibold' }}>
           {approval.asks}
@@ -191,18 +193,18 @@ export function BalloonApprovalMessage({
             disabled={approval.deciding}
             onClick={approval.onApprove}
           >
-            {ASSISTANT_WORDS.approve}
+            {chatText.approve}
           </Button>
           <Button
             size="small"
             disabled={approval.deciding}
             onClick={approval.onDeny}
           >
-            {ASSISTANT_WORDS.deny}
+            {chatText.deny}
           </Button>
           {approval.others > 0 ? (
             <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
-              {moreWaiting(approval.others)}
+              {chatText.moreWaiting(approval.others)}
             </Text>
           ) : null}
         </Box>

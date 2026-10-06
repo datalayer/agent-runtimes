@@ -46,7 +46,6 @@ import { AssistantStage } from '../../../chat/assistant/AssistantStage';
 import { decisionsAskerAt } from '../../../chat/assistant/decisions';
 import { peekLine } from '../../../chat/assistant/ConversationBalloon';
 import {
-  ASSISTANT_WORDS,
   assistantStateOf,
   keepAway,
   keptAway,
@@ -86,6 +85,7 @@ import type {
   BalloonDisplay,
   BalloonToolLine,
 } from '../../../chat/assistant/toolLine';
+import { useChatWords } from '../../../chat/ChatLanguage';
 
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
@@ -204,6 +204,7 @@ export function LoopAssistant({
   balloon: displayGiven = 'history',
   workspace,
 }: LoopAssistantConfig): JSX.Element | null {
+  const chatText = useChatWords();
   // The balloon's display, as its menu chose it; the Appspec's until then.
   const [chosenDisplay, setChosenDisplay] = useState<BalloonDisplay>();
   const display = chosenDisplay ?? displayGiven;
@@ -371,19 +372,19 @@ export function LoopAssistant({
   const current = display === 'current';
   const balloon =
     state === 'paused'
-      ? { text: ASSISTANT_WORDS.paused }
+      ? { text: chatText.paused }
       : approval
-        ? { text: ASSISTANT_WORDS.approval, approval }
+        ? { text: chatText.waitingForYou, approval }
         : presence === 'waiting'
-          ? { text: ASSISTANT_WORDS.waiting }
+          ? { text: chatText.waitingOpen }
           : tool
             ? { text: turn.activity ?? '', tool, busy: true }
             : current && (atWork || unheard)
               ? {
                   text:
                     turn.status === 'thinking'
-                      ? 'Thinking…'
-                      : (saying?.text ?? 'Thinking…'),
+                      ? chatText.thinking
+                      : (saying?.text ?? chatText.thinking),
                   more: saying?.more,
                   speaking: turn.status === 'streaming',
                   busy: atWork,

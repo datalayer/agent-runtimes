@@ -21,6 +21,7 @@ import {
   CheckIcon,
   XIcon,
 } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * A single pending approval item.
@@ -64,6 +65,7 @@ export function ToolApprovalBanner({
   onDismiss,
   collapsible = true,
 }: ToolApprovalBannerProps) {
+  const chatText = useChatWords();
   const [collapsed, setCollapsed] = useState(false);
 
   if (pendingApprovals.length === 0) {
@@ -88,7 +90,7 @@ export function ToolApprovalBanner({
       >
         <ShieldCheckIcon size={16} />
         <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-          Tool approvals pending
+          {chatText.toolApprovalsPending}
         </Text>
         <CounterLabel>{pendingApprovals.length}</CounterLabel>
       </Box>
@@ -116,8 +118,7 @@ export function ToolApprovalBanner({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AlertIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-            {pendingApprovals.length} tool{' '}
-            {pendingApprovals.length === 1 ? 'approval' : 'approvals'} pending
+            {chatText.approvalsPending(pendingApprovals.length)}
           </Text>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -128,7 +129,7 @@ export function ToolApprovalBanner({
               leadingVisual={CheckIcon}
               onClick={onApproveAll}
             >
-              Approve all
+              {chatText.approveAll}
             </Button>
           )}
           {collapsible && (
@@ -137,7 +138,7 @@ export function ToolApprovalBanner({
               variant="invisible"
               onClick={() => setCollapsed(true)}
             >
-              Collapse
+              {chatText.collapse}
             </Button>
           )}
           {onDismiss && (
@@ -146,7 +147,7 @@ export function ToolApprovalBanner({
               variant="invisible"
               leadingVisual={XIcon}
               onClick={onDismiss}
-              aria-label="Dismiss"
+              aria-label={chatText.dismiss}
             />
           )}
         </Box>
@@ -185,7 +186,7 @@ export function ToolApprovalBanner({
               variant="default"
               onClick={() => onReview(approval)}
             >
-              Review
+              {chatText.review}
             </Button>
           </Box>
         ))}

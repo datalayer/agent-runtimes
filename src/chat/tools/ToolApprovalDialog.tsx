@@ -21,6 +21,7 @@ import {
 } from '@primer/react';
 import { Dialog } from '@primer/react/experimental';
 import { AlertIcon, ToolsIcon, CheckIcon, XIcon } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * ToolApprovalDialog props
@@ -64,6 +65,7 @@ export function ToolApprovalDialog({
   onClose,
   showRememberChoice = true,
 }: ToolApprovalDialogProps) {
+  const chatText = useChatWords();
   const [rememberChoice, setRememberChoice] = useState(false);
 
   const handleApprove = useCallback(() => {
@@ -83,7 +85,7 @@ export function ToolApprovalDialog({
       <Dialog.Header>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AlertIcon size={16} />
-          Tool Approval Required
+          {chatText.approvalTitle}
         </Box>
       </Dialog.Header>
 
@@ -114,7 +116,7 @@ export function ToolApprovalDialog({
               display: 'block',
             }}
           >
-            Arguments:
+            {chatText.arguments}
           </Text>
           <Box
             as="pre"
@@ -144,10 +146,7 @@ export function ToolApprovalDialog({
             mb: 3,
           }}
         >
-          <Text sx={{ fontSize: 1 }}>
-            This tool will perform an action on your behalf. Please review the
-            arguments before approving.
-          </Text>
+          <Text sx={{ fontSize: 1 }}>{chatText.approvalWarning}</Text>
         </Box>
 
         {/* Remember choice */}
@@ -157,23 +156,21 @@ export function ToolApprovalDialog({
               checked={rememberChoice}
               onChange={e => setRememberChoice(e.target.checked)}
             />
-            <FormControl.Label>
-              Remember my choice for this tool
-            </FormControl.Label>
+            <FormControl.Label>{chatText.rememberChoice}</FormControl.Label>
           </FormControl>
         )}
 
         {/* Actions */}
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
           <Button variant="danger" onClick={handleDeny} leadingVisual={XIcon}>
-            Deny
+            {chatText.deny}
           </Button>
           <Button
             variant="primary"
             onClick={handleApprove}
             leadingVisual={CheckIcon}
           >
-            Approve
+            {chatText.approve}
           </Button>
         </Box>
       </Box>

@@ -26,6 +26,7 @@ import {
   PauseIcon,
 } from '@primer/octicons-react';
 import { PromptStacks, type PromptStack } from '../stack';
+import { useChatWords } from '../../ChatLanguage';
 
 export interface InPromptFooterProps {
   /** Bands above the control band. */
@@ -56,6 +57,7 @@ export function InPromptFooter({
   onSend,
   onStop,
 }: InPromptFooterProps) {
+  const chatText = useChatWords();
   return (
     <>
       {stacks && stacks.length > 0 ? <PromptStacks stacks={stacks} /> : null}
@@ -82,7 +84,7 @@ export function InPromptFooter({
           {isLoading ? (
             <IconButton
               icon={SquareCircleIcon}
-              aria-label="Stop"
+              aria-label={chatText.stop}
               // A stable hook for tests and probes: the tooltip turns the
               // label above into `aria-labelledby`.
               data-prompt-action="stop"
@@ -93,7 +95,7 @@ export function InPromptFooter({
           ) : isKernelBusy ? (
             <IconButton
               icon={PauseIcon}
-              aria-label="Pause (kernel busy)"
+              aria-label={chatText.pauseKernelBusy}
               onClick={onStop}
               size="small"
               variant="invisible"
@@ -102,7 +104,7 @@ export function InPromptFooter({
           ) : (
             <IconButton
               icon={PaperAirplaneIcon}
-              aria-label="Send"
+              aria-label={chatText.send}
               onClick={onSend}
               disabled={sendDisabled}
               size="small"

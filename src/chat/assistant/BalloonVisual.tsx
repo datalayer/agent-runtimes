@@ -28,6 +28,7 @@ import {
   ScreenNormalIcon,
   XIcon,
 } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /** A large visual a balloon carries, and how it is drawn large. */
 export interface BalloonVisual {
@@ -69,17 +70,18 @@ export function BalloonExpandButton({
   title: string;
   onExpand: () => void;
 }): JSX.Element {
+  const chatText = useChatWords();
   return (
     <Button
       size="small"
       variant="invisible"
       leadingVisual={ScreenFullIcon}
-      aria-label={`Expand ${title}`}
+      aria-label={chatText.expandWhat(title)}
       data-balloon-expand=""
       onClick={onExpand}
       sx={{ alignSelf: 'flex-start', px: 1 }}
     >
-      Expand
+      {chatText.expand}
     </Button>
   );
 }

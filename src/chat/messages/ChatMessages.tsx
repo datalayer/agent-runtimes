@@ -21,6 +21,7 @@ import {
   useChatMessages,
   useChatUIPluginRegistry,
 } from '../../stores/chatStore';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * ChatMessages props
@@ -63,6 +64,7 @@ export function ChatMessages({
   className,
   uiPluginRegistry: uiPluginRegistryProp,
 }: ChatMessagesProps) {
+  const chatText = useChatWords();
   const messages = useChatMessages();
   const storeUIPluginRegistry = useChatUIPluginRegistry();
   const uiPluginRegistry = uiPluginRegistryProp ?? storeUIPluginRegistry;
@@ -205,10 +207,8 @@ export function ChatMessages({
         }}
       >
         <AiAgentIcon colored size={48} />
-        <Text sx={{ mt: 3, fontSize: 2 }}>Start a conversation</Text>
-        <Text sx={{ mt: 1, fontSize: 1 }}>
-          Send a message to begin chatting
-        </Text>
+        <Text sx={{ mt: 3, fontSize: 2 }}>{chatText.startConversation}</Text>
+        <Text sx={{ mt: 1, fontSize: 1 }}>{chatText.sendToBegin}</Text>
       </Box>
     );
   }

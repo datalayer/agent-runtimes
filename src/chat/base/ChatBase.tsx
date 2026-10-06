@@ -142,6 +142,7 @@ import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 import { loopStepOf, withLoopStep } from './loopStep';
 import { applyLoopElement, loopElementChange } from './loopElement';
 import { loopWindowMessage, tellLoopWindow } from './loopWindow';
+import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -922,6 +923,7 @@ function ChatBaseInner({
   onApproveApproval: onApproveApprovalProp,
   onRejectApproval: onRejectApprovalProp,
 }: ChatBaseProps) {
+  const chatText = useChatWords();
   useEffect(() => {
     setupPrimerPortals();
   }, []);
@@ -4046,7 +4048,7 @@ function ChatBaseInner({
                 }
               },
               onError: (error: Error) => {
-                const errorContent = `Error: ${error.message}`;
+                const errorContent = chatText.error(error.message);
                 setDisplayItems(prev =>
                   prev.map(item =>
                     item.id === assistantMessageId
@@ -4107,7 +4109,7 @@ function ChatBaseInner({
         if ((err as Error).name !== 'AbortError') {
           console.error('[ChatBase] Send error:', err);
           const errorMessage = createAssistantMessage(
-            `Error: ${(err as Error).message}`,
+            chatText.error((err as Error).message),
           );
           setDisplayItems(prev => [...prev, errorMessage]);
           setError(err as Error);
@@ -4141,6 +4143,7 @@ function ChatBaseInner({
       getEnabledMcpToolNames,
       getEnabledSkillIds,
       noteThreadStarted,
+      chatText,
     ],
   );
 

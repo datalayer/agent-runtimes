@@ -44,7 +44,7 @@ application's own, created under its id), and nine of its own:
 | `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
 | `page`       | The page a host draws for a kind the workspace has no page for — a decision's. A component defined once, outside the host's render (a new one is a new plugin, and restarts the workspace); it is given `{ app, workspace }`. |
 | `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
-| `language`   | The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`): the platform's setting when the host knows it. The browser's languages (`navigator.languages`) when unsaid. See [In the person's language](#in-the-persons-language). |
+| `language`   | The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`): its translation into it, and the chat's own words. The browser's languages (`navigator.languages`) when unsaid. See [In the person's language](#in-the-persons-language). |
 
 From the application, `AppRenderer` sets on `LoopEmbed`:
 
@@ -363,8 +363,7 @@ preferred)` is the application as they read it; the agent is still created
 with its own Appspec, and what it does — ids, values, prompts — is the same in
 every language. The composer's own words (the profile picker, the paper clip)
 are said in English, French, Spanish, German, Italian and Portuguese
-(`interfaceWords`). The chat's own words — its placeholder, its buttons — are
-not translated yet.
+(`interfaceWords`), in the chat's language.
 
 ```yaml
 interface:
@@ -377,6 +376,31 @@ interface:
       settings:
         product: {title: Produit}
 ```
+
+The chat's own words are said in the same six languages (`CHAT_WORDS`, in
+`chat/words`): the prompt's placeholder, *Send* and *Stop*, the empty chat's
+title, an answer's error, the tool cards' states and sections, the tool lines
+("Using **list_invoices**…"), the approvals (*Approve*, *Deny*, how many
+wait), and the floating assistant's balloon (*Waiting for you*, *Now*, *more*).
+The chat picks its language as the application's words are picked: the
+language its host says, else the first the browser prefers that it is said in,
+else English. `AppRenderer` says its `language` to the chat it draws
+(`<ChatLanguage language>`); a host drawing the chat itself wraps it in
+`ChatLanguage`, and `useChatWords()` reads the words in a component of its
+own. A chat plugin's own `placeholder` is said as written.
+
+```tsx
+import { Chat, ChatLanguage } from '@datalayer/agent-runtimes';
+
+<ChatLanguage language="fr">
+  <Chat … /> {/* Envoyer, Arrêter, Approuver, Refuser… */}
+</ChatLanguage>;
+```
+
+Datalayer has no language setting for a person yet: its hosted page and the
+Studio's Preview say none, and the browser's languages decide. An embed's host
+says its visitor's with the element's `language` attribute (see
+[Embedding](./embedding.mdx)).
 
 ## Feedback on its answers
 

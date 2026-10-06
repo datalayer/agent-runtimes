@@ -14,6 +14,7 @@
 
 import { BACKEND_TOOL_CATALOG } from '../../specs/backendTools';
 import type { DisplayItem, ToolCallMessage } from '../../types/chat';
+import { ENGLISH_CHAT_WORDS, type ChatWords } from '../words';
 
 /**
  * How the balloon shows the conversation: `history`, every message,
@@ -75,8 +76,14 @@ export function toolDisplayName(tool: string): string {
   return at > 0 ? tool.slice(at + 2) : tool;
 }
 
-/** The three parts a tool line is said in: before the name, the name, after it. */
-export function toolLineParts(line: BalloonToolLine): {
+/**
+ * The three parts a tool line is said in: before the name, the name, after
+ * it — in the chat's language (P-26), English unless said.
+ */
+export function toolLineParts(
+  line: BalloonToolLine,
+  chatText: ChatWords = ENGLISH_CHAT_WORDS,
+): {
   before: string;
   name: string;
   after: string;
@@ -86,17 +93,20 @@ export function toolLineParts(line: BalloonToolLine): {
   }
   switch (line.phase) {
     case 'running':
-      return { before: 'Using ', name: line.name, after: '…' };
+      return { ...chatText.toolRunning, name: line.name };
     case 'done':
-      return { before: 'Done: ', name: line.name, after: '' };
+      return { ...chatText.toolDone, name: line.name };
     case 'failed':
-      return { before: '', name: line.name, after: ' failed' };
+      return { ...chatText.toolFailedLine, name: line.name };
   }
 }
 
 /** A tool line in plain words: "Using list_invoices…". */
-export function toolLineText(line: BalloonToolLine): string {
-  const { before, name, after } = toolLineParts(line);
+export function toolLineText(
+  line: BalloonToolLine,
+  chatText: ChatWords = ENGLISH_CHAT_WORDS,
+): string {
+  const { before, name, after } = toolLineParts(line, chatText);
   return `${before}${name}${after}`;
 }
 
@@ -164,6 +174,7 @@ export function toolLineOfStep(
 export function toolAnnouncement(
   line: BalloonToolLine | undefined,
   previous: { id: string; phase: ToolLinePhase } | undefined,
+  chatText: ChatWords = ENGLISH_CHAT_WORDS,
 ): string | undefined {
   if (!line) {
     return undefined;
@@ -171,7 +182,7 @@ export function toolAnnouncement(
   if (previous && previous.id === line.id && previous.phase === line.phase) {
     return undefined;
   }
-  return toolLineText(line);
+  return toolLineText(line, chatText);
 }
 
 /**

@@ -28,6 +28,8 @@ import type {
   DisplayToolCallStatus,
 } from '../../types';
 import { SpecMark, hasMark, type Marks } from '../marks';
+import { useChatWords } from '../ChatLanguage';
+import type { ChatWords } from '../words';
 
 /**
  * Error type classification for display purposes
@@ -87,7 +89,8 @@ export interface ToolCallDisplayProps {
  */
 function getStatusDisplay(
   status: DisplayToolCallStatus,
-  errorType?: ErrorType,
+  errorType: ErrorType | undefined,
+  chatText: ChatWords,
 ): {
   icon: React.ReactNode;
   color: string;
@@ -99,21 +102,21 @@ function getStatusDisplay(
       return {
         icon: <ClockIcon size={14} />,
         color: 'attention.fg',
-        label: 'Preparing...',
+        label: chatText.toolPreparing,
         bgColor: 'attention.subtle',
       };
     case 'executing':
       return {
         icon: <ClockIcon size={14} />,
         color: 'attention.fg',
-        label: 'Executing...',
+        label: chatText.toolExecuting,
         bgColor: 'attention.subtle',
       };
     case 'complete':
       return {
         icon: <CheckCircleIcon size={14} />,
         color: 'success.fg',
-        label: 'Complete',
+        label: chatText.toolComplete,
         bgColor: 'success.subtle',
       };
     case 'error':
@@ -122,28 +125,28 @@ function getStatusDisplay(
         return {
           icon: <AlertIcon size={14} />,
           color: 'danger.fg',
-          label: 'Execution Failed',
+          label: chatText.toolExecutionFailed,
           bgColor: 'danger.subtle',
         };
       } else if (errorType === 'code') {
         return {
           icon: <XCircleIcon size={14} />,
           color: 'severe.fg',
-          label: 'Code Error',
+          label: chatText.toolCodeError,
           bgColor: 'severe.subtle',
         };
       } else if (errorType === 'exit') {
         return {
           icon: <AlertIcon size={14} />,
           color: 'attention.fg',
-          label: 'Exited',
+          label: chatText.toolExited,
           bgColor: 'attention.subtle',
         };
       }
       return {
         icon: <XCircleIcon size={14} />,
         color: 'danger.fg',
-        label: 'Failed',
+        label: chatText.toolFailed,
         bgColor: 'danger.subtle',
       };
     default:
@@ -171,9 +174,12 @@ function formatToolName(name: string): string {
 /**
  * Get a brief summary of the tool arguments
  */
-function getArgsSummary(args: Record<string, unknown>): string {
+function getArgsSummary(
+  args: Record<string, unknown>,
+  chatText: ChatWords,
+): string {
   const entries = Object.entries(args);
-  if (entries.length === 0) return 'No parameters';
+  if (entries.length === 0) return chatText.noParameters;
 
   const summary = entries
     .slice(0, 2)
@@ -189,7 +195,7 @@ function getArgsSummary(args: Record<string, unknown>): string {
     .join(', ');
 
   if (entries.length > 2) {
-    return `${summary} (+${entries.length - 2} more)`;
+    return `${summary} ${chatText.moreArguments(entries.length - 2)}`;
   }
   return summary;
 }
@@ -225,6 +231,7 @@ export function ToolCallDisplay({
   summary,
   density = 'comfortable',
 }: ToolCallDisplayProps) {
+  const chatText = useChatWords();
   const compact = density === 'compact';
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -245,9 +252,9 @@ export function ToolCallDisplay({
             : 'unknown'
       : undefined;
 
-  const statusDisplay = getStatusDisplay(status, errorType);
+  const statusDisplay = getStatusDisplay(status, errorType, chatText);
   const displayName = formatToolName(toolName);
-  const argsSummary = summary || getArgsSummary(args);
+  const argsSummary = summary || getArgsSummary(args, chatText);
   const resultObject =
     result && typeof result === 'object'
       ? (result as Record<string, unknown>)
@@ -366,7 +373,9 @@ export function ToolCallDisplay({
               color: statusDisplay.color,
             }}
           >
-            {isPendingApproval ? 'Awaiting Approval' : statusDisplay.label}
+            {isPendingApproval
+              ? chatText.awaitingApproval
+              : statusDisplay.label}
           </Text>
         </Box>
 
@@ -404,7 +413,7 @@ export function ToolCallDisplay({
                 mb: 2,
               }}
             >
-              Parameters
+              {chatText.parameters}
             </Text>
             <Box
               sx={{
@@ -430,7 +439,7 @@ export function ToolCallDisplay({
               >
                 {Object.keys(args).length > 0
                   ? JSON.stringify(args, null, 2)
-                  : '(no parameters)'}
+                  : `(${chatText.noParameters})`}
               </pre>
             </Box>
           </Box>
@@ -449,7 +458,7 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                Result
+                {chatText.result}
               </Text>
               <Box
                 sx={{
@@ -491,13 +500,13 @@ export function ToolCallDisplay({
                   <Text
                     sx={{ color: 'success.fg', fontSize: 1, display: 'block' }}
                   >
-                    Approved. Executing tool.
+                    {chatText.approvedRunning}
                   </Text>
                   {approvalDecisionSource === 'external' && (
                     <Text
                       sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
                     >
-                      Approved from sidebar.
+                      {chatText.approvedElsewhere}
                     </Text>
                   )}
                 </Box>
@@ -506,20 +515,20 @@ export function ToolCallDisplay({
                   <Text
                     sx={{ color: 'danger.fg', fontSize: 1, display: 'block' }}
                   >
-                    Denied. Tool will not run.
+                    {chatText.deniedWontRun}
                   </Text>
                   {approvalDecisionSource === 'external' && (
                     <Text
                       sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
                     >
-                      Decision came from sidebar.
+                      {chatText.decidedElsewhere}
                     </Text>
                   )}
                 </Box>
               ) : (
                 <>
                   <Text sx={{ fontSize: 1, color: 'fg.default' }}>
-                    This tool requires your approval to run.
+                    {chatText.approvalNeeded}
                   </Text>
                   <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                     <Button
@@ -527,7 +536,7 @@ export function ToolCallDisplay({
                       onClick={onApprove}
                       disabled={approvalLoading || !onApprove}
                     >
-                      Approve
+                      {chatText.approve}
                     </Button>
                     <Button
                       size="small"
@@ -535,7 +544,7 @@ export function ToolCallDisplay({
                       onClick={onDeny}
                       disabled={approvalLoading || !onDeny}
                     >
-                      Deny
+                      {chatText.deny}
                     </Button>
                   </Box>
                 </>
@@ -557,7 +566,7 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                <AlertIcon size={12} /> Execution Error
+                <AlertIcon size={12} /> {chatText.executionError}
               </Text>
               <Box
                 sx={{
@@ -579,7 +588,7 @@ export function ToolCallDisplay({
                     mt: 1,
                   }}
                 >
-                  The sandbox or execution environment failed to run the code.
+                  {chatText.executionErrorWhy}
                 </Text>
               </Box>
             </Box>
@@ -599,7 +608,7 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                Code Error: {effectiveCodeError.name}
+                {chatText.toolCodeError}: {effectiveCodeError.name}
               </Text>
               <Box
                 sx={{
@@ -663,7 +672,7 @@ export function ToolCallDisplay({
                     mb: 2,
                   }}
                 >
-                  Error
+                  {chatText.errorHeading}
                 </Text>
                 <Box
                   sx={{
@@ -697,7 +706,7 @@ export function ToolCallDisplay({
                     mb: 2,
                   }}
                 >
-                  <AlertIcon size={12} /> Process Exited
+                  <AlertIcon size={12} /> {chatText.processExited}
                 </Text>
                 <Box
                   sx={{
@@ -709,7 +718,7 @@ export function ToolCallDisplay({
                   }}
                 >
                   <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
-                    Process exited with code {effectiveExitCode}
+                    {chatText.exitedWithCode(String(effectiveExitCode))}
                   </Text>
                   <Text
                     sx={{
@@ -719,7 +728,7 @@ export function ToolCallDisplay({
                       mt: 1,
                     }}
                   >
-                    The code called sys.exit() with a non-zero exit code.
+                    {chatText.nonZeroExit}
                   </Text>
                 </Box>
                 {effectiveExitOutput && (

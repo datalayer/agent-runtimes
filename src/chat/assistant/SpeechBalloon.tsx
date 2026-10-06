@@ -36,9 +36,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { XIcon } from '@primer/octicons-react';
-import { ASSISTANT_WORDS, type BalloonApproval } from './state';
+import type { BalloonApproval } from './state';
 import type { DisplayItem } from '../../types/chat';
-import { moreWaiting } from './ConversationBalloon';
 import { DecisionAsk } from './DecisionAsk';
 import type { DecisionAsker } from './decisions';
 import {
@@ -56,6 +55,7 @@ import {
 } from './toolLine';
 import { BalloonExpandButton } from './BalloonVisual';
 import { ScreenFullIcon } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /** A suggestion the balloon offers: its label, and the prompt it sends. */
 export type BalloonSuggestion = { label: string; prompt: string };
@@ -68,10 +68,11 @@ export function BalloonSuggestions({
   suggestions: readonly BalloonSuggestion[];
   onSuggestion: (suggestion: BalloonSuggestion) => void;
 }): JSX.Element {
+  const chatText = useChatWords();
   return (
     <Box
       role="group"
-      aria-label="Suggestions"
+      aria-label={chatText.suggestions}
       data-balloon-suggestions=""
       sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}
     >
@@ -187,10 +188,11 @@ export function BalloonHistoryLarge({
   tool?: BalloonToolLine;
   attachment?: ReactNode;
 }): JSX.Element {
+  const chatText = useChatWords();
   return (
     <Box
       role="log"
-      aria-label="Conversation"
+      aria-label={chatText.conversation}
       data-balloon-history-large=""
       sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
     >
@@ -221,6 +223,7 @@ function BalloonHistory({
   /** Draws the history large: *Expand*. */
   onExpand?: () => void;
 }): JSX.Element {
+  const chatText = useChatWords();
   const listRef = useRef<HTMLDivElement>(null);
   const newest = history[history.length - 1]?.id;
   useEffect(() => {
@@ -269,14 +272,14 @@ function BalloonHistory({
           '&:hover': { textDecoration: 'underline' },
         }}
       >
-        {conversationHeaderText(conversationCount(history))}
+        {conversationHeaderText(conversationCount(history), chatText)}
       </Box>
       {onExpand ? (
         <IconButton
           icon={ScreenFullIcon}
           size="small"
           variant="invisible"
-          aria-label="Expand the conversation"
+          aria-label={chatText.expandConversation}
           data-balloon-history-expand=""
           onClick={onExpand}
           sx={{ position: 'absolute', top: '4px', right: '28px' }}
@@ -285,7 +288,7 @@ function BalloonHistory({
       <Box
         ref={listRef}
         role="log"
-        aria-label="Conversation"
+        aria-label={chatText.conversation}
         data-balloon-history-list=""
         sx={{
           maxHeight,
@@ -331,6 +334,7 @@ export function SpeechBalloon({
   fullText,
   onExpandHistory,
 }: SpeechBalloonProps): JSX.Element {
+  const chatText = useChatWords();
   // *more*: the words whole, when they were cut or overflow their lines.
   const [whole, setWhole] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
@@ -495,7 +499,7 @@ export function SpeechBalloon({
             icon={XIcon}
             size="small"
             variant="invisible"
-            aria-label="Dismiss"
+            aria-label={chatText.dismiss}
             data-balloon-dismiss=""
             onClick={onDismissPeek}
             sx={{ mt: '-4px', mr: '-8px', flexShrink: 0 }}
@@ -522,7 +526,7 @@ export function SpeechBalloon({
             '&:hover': { textDecoration: 'underline' },
           }}
         >
-          {whole ? 'less' : 'more'}
+          {whole ? chatText.showLess : chatText.showMore}
         </Box>
       ) : null}
       {/* No history listed, at work with nothing written yet: the dots. */}
@@ -548,19 +552,19 @@ export function SpeechBalloon({
               disabled={approval.deciding}
               onClick={approval.onApprove}
             >
-              {ASSISTANT_WORDS.approve}
+              {chatText.approve}
             </Button>
             <Button
               size="small"
               disabled={approval.deciding}
               onClick={approval.onDeny}
             >
-              {ASSISTANT_WORDS.deny}
+              {chatText.deny}
             </Button>
           </Box>
           {approval.others > 0 ? (
             <Text as="p" sx={{ m: 0, mt: 1, color: 'fg.muted', fontSize: 0 }}>
-              {moreWaiting(approval.others)}
+              {chatText.moreWaiting(approval.others)}
             </Text>
           ) : null}
         </Box>
@@ -577,7 +581,7 @@ export function SpeechBalloon({
           {attachment}
           {onExpand ? (
             <BalloonExpandButton
-              title={expandTitle ?? 'the visual'}
+              title={expandTitle ?? chatText.theVisual}
               onExpand={onExpand}
             />
           ) : null}

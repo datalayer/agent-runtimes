@@ -164,3 +164,14 @@ export {
   type AgentRuntimeChatProps,
 } from '../agents/AgentRuntimeChat';
 export * from './EphemeralSurfaceControl';
+
+// The chat's own words in the person's language (LOOP P-26)
+export { ChatLanguage, useChatLanguage, useChatWords } from './ChatLanguage';
+export {
+  CHAT_WORDS,
+  ENGLISH_CHAT_WORDS,
+  chatLanguage,
+  chatWords,
+  type AroundName,
+  type ChatWords,
+} from './words';

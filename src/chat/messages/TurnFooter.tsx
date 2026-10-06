@@ -27,6 +27,7 @@ import { Box } from '@datalayer/primer-addons';
 import { CheckIcon, CopyIcon, TrashIcon } from '@primer/octicons-react';
 import { formatTokenCount } from '../../utils';
 import type { ContextSnapshotData } from '../../types/context';
+import { useChatWords } from '../ChatLanguage';
 
 /** The four figures a turn is remembered by. */
 type TurnRecord = {
@@ -67,6 +68,7 @@ export function TurnFooter({
   onCopy,
   onRemove,
 }: TurnFooterProps): JSX.Element | null {
+  const chatText = useChatWords();
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | null>(null);
   useEffect(
@@ -173,7 +175,7 @@ export function TurnFooter({
           <IconButton
             data-turn-copy=""
             icon={copied ? CheckIcon : CopyIcon}
-            aria-label="Copy this turn"
+            aria-label={chatText.copyTurn}
             size="small"
             variant="invisible"
             onClick={() => void handleCopy()}
@@ -181,7 +183,7 @@ export function TurnFooter({
           <IconButton
             data-turn-remove=""
             icon={TrashIcon}
-            aria-label="Remove this turn"
+            aria-label={chatText.removeTurn}
             size="small"
             variant="invisible"
             onClick={onRemove}

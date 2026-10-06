@@ -25,6 +25,7 @@ import { AiAgentIcon } from '@datalayer/icons-react';
 
 import type { EmptyStateConfig, Suggestion } from '../../types/chat';
 import { groupSuggestions } from './groupSuggestions';
+import { useChatWords } from '../ChatLanguage';
 
 export { groupSuggestions } from './groupSuggestions';
 
@@ -76,6 +77,7 @@ export function ChatEmptyState({
   onSuggestionFill,
   submitOnSuggestionClick = true,
 }: ChatEmptyStateProps) {
+  const chatText = useChatWords();
   // Custom render takes precedence
   if (emptyState?.render) {
     return <>{emptyState.render()}</>;
@@ -231,7 +233,7 @@ export function ChatEmptyState({
           <>
             {emptyState?.icon || brandIcon || <AiAgentIcon colored size={48} />}
             <Text sx={{ fontSize: 2 }}>
-              {emptyState?.title || 'Start a conversation'}
+              {emptyState?.title || chatText.startConversation}
             </Text>
             {(emptyState?.subtitle || description) && (
               <Text sx={{ fontSize: 1 }}>

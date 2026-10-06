@@ -85,7 +85,6 @@ import {
   newestIsAnswer,
   keepAway,
   keptAway,
-  ASSISTANT_WORDS,
   type AssistantAway,
   type AssistantSaying,
   type BalloonApproval,
@@ -121,6 +120,7 @@ import type {
   ProtocolConfig,
   ThemeOverrides,
 } from '../types';
+import { useChatWords } from './ChatLanguage';
 
 /**
  * A conversation the host draws in the floating window, in place of the
@@ -450,6 +450,7 @@ export function ChatFloating({
   sandbox,
   contextMenu,
 }: ChatFloatingProps) {
+  const chatText = useChatWords();
   // The chat's own send, once it can: what a suggestion in the balloon sends.
   const chatControls = useRef<{
     send: (message: string) => void;
@@ -701,7 +702,7 @@ export function ChatFloating({
   // to fit with the whole kept for *more*.
   const currentWords =
     atWork && !answering
-      ? 'Thinking…'
+      ? chatText.thinking
       : (saying?.more ? saying.text : saying?.markdown) || undefined;
   const currentWhole =
     atWork && !answering
@@ -720,7 +721,7 @@ export function ChatFloating({
     listedHistory ? { ...said, history: listedHistory } : said;
   const assistantBalloon =
     assistantState === 'paused'
-      ? { text: ASSISTANT_WORDS.paused }
+      ? { text: chatText.paused }
       : speakerState.sentence
         ? // Heard: the sentence being said is the one in the balloon (VO-26).
           { text: speakerState.sentence }
@@ -728,14 +729,14 @@ export function ChatFloating({
           ? { text: speakerState.refused }
           : balloonApproval
             ? withHistory({
-                text: ASSISTANT_WORDS.approval,
+                text: chatText.waitingForYou,
                 approval: balloonApproval,
               })
             : assistantState === 'waiting'
-              ? { text: ASSISTANT_WORDS.waiting }
+              ? { text: chatText.waitingOpen }
               : toolSaid
                 ? withHistory({
-                    text: toolLineText(toolSaid),
+                    text: toolLineText(toolSaid, chatText),
                     tool: toolSaid,
                     busy: atWork,
                   })

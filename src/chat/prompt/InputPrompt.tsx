@@ -68,6 +68,7 @@ const ContextPie = lazy(() =>
 /** One agent the footer may offer. */
 import type { FooterAgent } from '../../types/chat';
 import type { Decisions } from '../base/modelChoice';
+import { useChatWords } from '../ChatLanguage';
 
 /*
  * Re-exported, not defined here.
@@ -393,6 +394,7 @@ export function InputPrompt({
   authToken,
   mcpStatusData,
 }: InputPromptProps) {
+  const chatText = useChatWords();
   const isKernelBusy = kernelStatus === 'busy';
   /*
    * Each menu is offered when it is switched on *and* has something behind it.
@@ -503,7 +505,7 @@ export function InputPrompt({
             </>
           ) : undefined
         }
-        placeholder={placeholder || 'Type a message...'}
+        placeholder={placeholder || chatText.typeMessage}
         typingSuggestions={typingSuggestions}
         isLoading={isLoading}
         isKernelBusy={isKernelBusy}

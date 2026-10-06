@@ -24,6 +24,7 @@ import type {
   AppThemeVariant,
 } from '../../types/agentspecs';
 import { APP_ACCENTS, APP_EMBED_MODES } from '../apps/appspec';
+import { LANGUAGE_TAG } from '../apps/language';
 
 /** The element's name: the one a host writes. */
 export const EMBED_TAG = 'datalayer-app';
@@ -54,6 +55,8 @@ export const EMBED_ATTRIBUTES = {
   height: 'The height of an inline application, in pixels; 640 by default.',
   resume:
     'true or false: whether a visit’s conversation is picked up again after the page reloads, kept in the page’s storage; true by default.',
+  language:
+    'The language the visitor reads the application in, as BCP 47 tags it (fr, pt-BR): its translation into it, and the chat’s own words; the visitor’s browser’s by default.',
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
@@ -209,6 +212,26 @@ export function resumeOf(value: string | null | undefined): boolean {
   return (
     oneOf(value, ['true', 'false'] as const, 'a value of resume') !== 'false'
   );
+}
+
+/**
+ * The language a host says its visitor reads (LOOP P-26), checked: a BCP 47
+ * tag (`fr`, `pt-BR`), else refused in a sentence. Unsaid, none: the
+ * visitor's browser's.
+ */
+export function languageOf(
+  value: string | null | undefined,
+): string | undefined {
+  const text = value?.trim();
+  if (!text) {
+    return undefined;
+  }
+  if (!LANGUAGE_TAG.test(text)) {
+    throw new EmbedAttributeError(
+      `datalayer-app: "${text}" is not a language as BCP 47 tags it, such as fr or pt-BR.`,
+    );
+  }
+  return text;
 }
 
 /** The height of an inline application, in pixels. */
