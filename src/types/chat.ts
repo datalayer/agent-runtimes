@@ -948,7 +948,7 @@ export interface ChatBaseProps {
   /**
    * External MCP toolsets status data for the MCP indicator.
    * When provided, the data is forwarded to the McpStatusIndicator
-   * so it shows live status instead of "No MCP Server defined".
+   * so it shows their live status; with none, it is not drawn.
    */
   mcpStatusData?: import('./mcp').McpToolsetsStatusResponse | null;
 

@@ -73,9 +73,21 @@ the rows around it:
   typed decisions, not a conversation: an agent cannot run on it …`.
 - **The context band**: `ContextPie` and the token counts, shown as soon as
   the agent accounts for itself.
+- **The status dots** beside the send button: the agent's MCP servers and
+  its skills, each a button named by their state (*MCP servers ready*,
+  *Skills active (2/3 enabled)*) whose tooltip lists them. An agent with no
+  MCP server, or no skill, has no dot: a control was never named for having
+  nothing to offer. Their pulse, while servers start or skills load, stands
+  still under reduced motion.
 - **`draggable`** wraps the whole prompt in `FloatingCard`: an absolutely
   positioned, draggable card — the same composer, floating over a canvas
   instead of docked under it.
+
+Every control in the toolbar has an accessible name — the send and stop
+buttons, the menus by what they hold (*Tools — 3 tools*, *Model — Claude
+Sonnet 4.6 · 4 to choose from*), an application's mode switch by its mode and
+the option it is on (*Depth: Quick*) — as a screen reader reads them
+(`chat/prompt/__tests__/toolbarNames`).
 
 ### Prompt regions
 
