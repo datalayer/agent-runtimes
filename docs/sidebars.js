@@ -39,6 +39,7 @@ const sidebars = {
         'loop/embedding',
         'loop/memory',
         'loop/documents',
+        'loop/inbox-triage',
       ],
     },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },

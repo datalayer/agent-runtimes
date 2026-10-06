@@ -281,6 +281,40 @@ describe('what a rule decides', () => {
     expect(behaviourFor(forbidden, label, trash)).toBe('leave_to_me');
   });
 
+  it('takes a forward outside the organization for a publish, as Python does (LOOP W-04)', () => {
+    const send = 'google-workspace.send_gmail_message';
+    const mailbox = { user_google_email: 'eric@datalayer.io' };
+    expect(
+      classesOf(send, { ...mailbox, to: 'client@acme.com', thread_id: 't' }),
+    ).toEqual(['send']);
+    const forward = { ...mailbox, forward_message_id: 'm1' };
+    expect(
+      classesOf(send, { ...forward, to: 'Ana <ana@datalayer.io>' }),
+    ).toEqual(['send']);
+    expect(classesOf(send, { ...forward, to: 'lawyer@firm.com' })).toEqual([
+      'send',
+      'publish',
+    ]);
+    expect(
+      classesOf(send, { ...forward, bcc: 'ana@datalayer.io, x@gmail.com' }),
+    ).toEqual(['send', 'publish']);
+    expect(
+      classesOf(send, { forward_message_id: 'm1', to: 'ana@datalayer.io' }),
+    ).toEqual(['send', 'publish']);
+    expect(classesOf(send)).toEqual(['send']);
+    const triage = APP_CATALOGUE['inbox-triage'];
+    expect(
+      behaviourFor(triage, send, {
+        arguments: { ...forward, to: 'ana@datalayer.io' },
+      }),
+    ).toBe('ask_first');
+    expect(
+      behaviourFor(triage, send, {
+        arguments: { ...forward, to: 'lawyer@firm.com' },
+      }),
+    ).toBe('leave_to_me');
+  });
+
   it('leaves a tool nobody classed to the person, unless a rule names it', () => {
     expect(behaviourFor(app(), 'google-workspace.a_tool_added_tomorrow')).toBe(
       'leave_to_me',

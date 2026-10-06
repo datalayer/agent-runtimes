@@ -447,6 +447,8 @@ class AppRecorder:
             "tool": getattr(decision, "tool", ""),
             "behaviour": getattr(decision, "behaviour", ""),
             "because": getattr(decision, "because", ""),
+            # What the call does: a send is counted against its approval (LOOP W-08).
+            "classes": list(getattr(decision, "classes", ()) or ()),
         }
         # Done without asking because the person approved it in advance (U-25).
         approved = getattr(enforced, "approved", None)

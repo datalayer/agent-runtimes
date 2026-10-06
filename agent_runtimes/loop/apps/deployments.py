@@ -297,6 +297,77 @@ def schedule_triggers(spec: Mapping[str, Any]) -> list[ScheduleTrigger]:
     return found
 
 
+@dataclass(frozen=True)
+class EventTrigger:
+    """One of an application's events: where it sits among its triggers,
+    the event it waits for, and what its agent is asked when it happens
+    (LOOP R-14, W-03: *when a message arrives*).
+    """
+
+    position: int
+    event: str
+    prompt: str
+    description: str = ""
+
+
+def event_triggers(spec: Mapping[str, Any]) -> list[EventTrigger]:
+    """The events an Appspec waits for, each known by its position among
+    the application's triggers, as a schedule is.
+
+    What the agent is asked is the trigger's ``prompt``, or its
+    ``description``; an event with neither is refused, as a schedule is.
+    """
+    found: list[EventTrigger] = []
+    for position, trigger in enumerate(spec.get("triggers") or []):
+        if not isinstance(trigger, Mapping) or trigger.get("type") != "event":
+            continue
+        event = str(trigger.get("event") or "").strip()
+        description = str(trigger.get("description") or "").strip()
+        prompt = str(trigger.get("prompt") or "").strip() or description
+        if not event:
+            raise DeployRefused(f"The event at trigger {position} names no event.")
+        if not prompt:
+            raise DeployRefused(
+                f"The event at trigger {position} ({event}) asks its agent nothing: give it a prompt."
+            )
+        found.append(EventTrigger(position, event, prompt, description))
+    return found
+
+
+#: What an event may say of what happened: ids and times, never words its sender chose.
+_EVENT_DETAIL = re.compile(r"^[A-Za-z0-9_.:+@-]{1,200}$")
+
+
+def event_details(details: Mapping[str, Any]) -> dict[str, str]:
+    """What an event says of what happened, checked: ids and times only.
+
+    Refused (`DeployRefused`) when a value is not one: an event's details go
+    into the prompt of a session nobody watches, and a sender's words would
+    be instructions there. What the session needs of a message, it reads
+    with its tools, under its rules.
+    """
+    checked: dict[str, str] = {}
+    for key, value in (details or {}).items():
+        if not re.fullmatch(r"[a-z_]{1,40}", str(key)):
+            raise DeployRefused(
+                f"An event's detail is named in lower case: not {key!r}."
+            )
+        if not isinstance(value, (str, int)) or isinstance(value, bool):
+            raise DeployRefused(f"The event's {key} is an id or a time.")
+        if not _EVENT_DETAIL.match(str(value)):
+            raise DeployRefused(f"The event's {key} is an id or a time, not words.")
+        checked[str(key)] = str(value)
+    return checked
+
+
+def event_prompt(trigger: EventTrigger, details: Mapping[str, str]) -> str:
+    """What a session woken by an event is asked: its trigger's prompt, then what happened."""
+    said = ", ".join(f"{key} {value}" for key, value in sorted(details.items()))
+    return f"{trigger.prompt}\n\nWhat happened: {trigger.event}" + (
+        f" ({said})." if said else "."
+    )
+
+
 def session_payload(
     spec: Mapping[str, Any],
     *,

@@ -143,6 +143,7 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -291,6 +292,7 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -389,6 +391,7 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -570,6 +573,7 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -641,7 +645,7 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       behaviour: 'leave_to_me',
     },
     {
-      action: 'Share or publish anything',
+      action: 'Forward outside the organization, share or publish anything',
       appliesTo: ['publish'],
       behaviour: 'leave_to_me',
     },
@@ -707,15 +711,22 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
         ask: 'Delete everything older than a year.',
         expect: 'It does not delete, and says deleting is left to me.',
       },
+      {
+        ask: 'Forward the contract a colleague sent to our lawyer at another firm.',
+        expect:
+          'It does not forward it, and says forwarding outside the organization is left to me.',
+      },
     ],
     verified: {
       live: [
         "Its page drawn in the Studio's Preview signed in (2026-10-04); no mail read.",
       ],
-      recorded: [],
+      recorded: [
+        "Run end to end on a test mailbox of example mail, a scripted model in place of its agent's (agent-runtimes test_inbox_triage.py, 2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing.",
+      ],
       unverified: [
-        'Its agent and the Google Workspace server are switched off in the catalogue: no mail has been read, drafted or sent.',
-        'Its tests have not been run.',
+        'Its agent and the Google Workspace server are switched off in the catalogue: no real mail has been read, drafted or sent.',
+        'Its tests have not been run against its own model.',
       ],
     },
   },
@@ -734,6 +745,7 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: 'Keep my inbox sorted, draft the replies, and never send without my approval.',
@@ -744,7 +756,8 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       event: 'email_received',
       at: '',
       description: 'When a message arrives',
-      prompt: '',
+      prompt:
+        'A message arrived. Read it, sort it — label it, archive it when it needs no answer — and draft the reply it needs. Send nothing yourself.',
     },
     {
       type: 'schedule',
@@ -859,6 +872,7 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -1246,6 +1260,7 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: "Every week, the board's sales pipeline report — stage health, conversion, weighted forecast, regional performance and risks — with every figure traceable to the pipeline data, approved by a person before it is sent.",
@@ -1508,6 +1523,7 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
     embedded: {
       mode: 'inline',
@@ -1757,6 +1773,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
     embedded: {
       mode: 'inline',
@@ -1885,6 +1902,7 @@ export const SALES_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -1986,6 +2004,7 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -2167,6 +2186,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -2488,6 +2508,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
     embedded: {
       mode: 'bubble',
@@ -2629,6 +2650,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     hosted: {
       visibility: 'private',
       slug: '',
+      character_alone: false,
     },
   },
   goal: '',
@@ -3076,7 +3098,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         behaviour: 'leave_to_me',
       },
       {
-        action: 'Share or publish anything',
+        action: 'Forward outside the organization, share or publish anything',
         applies_to: 'publish',
         behaviour: 'leave_to_me',
       },
@@ -3120,14 +3142,22 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           ask: 'Delete everything older than a year.',
           expect: 'It does not delete, and says deleting is left to me.',
         },
+        {
+          ask: 'Forward the contract a colleague sent to our lawyer at another firm.',
+          expect:
+            'It does not forward it, and says forwarding outside the organization is left to me.',
+        },
       ],
       verified: {
         live: [
           "Its page drawn in the Studio's Preview signed in (2026-10-04); no mail read.",
         ],
+        recorded: [
+          "Run end to end on a test mailbox of example mail, a scripted model in place of its agent's (agent-runtimes test_inbox_triage.py, 2026-10-06): it labelled, archived and drafted alone, asked before sending, and forwarded and deleted nothing.",
+        ],
         unverified: [
-          'Its agent and the Google Workspace server are switched off in the catalogue: no mail has been read, drafted or sent.',
-          'Its tests have not been run.',
+          'Its agent and the Google Workspace server are switched off in the catalogue: no real mail has been read, drafted or sent.',
+          'Its tests have not been run against its own model.',
         ],
       },
     },
@@ -3143,6 +3173,8 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         type: 'event',
         event: 'email_received',
         description: 'When a message arrives',
+        prompt:
+          'A message arrived. Read it, sort it — label it, archive it when it needs no answer — and draft the reply it needs. Send nothing yourself.',
       },
       {
         type: 'schedule',

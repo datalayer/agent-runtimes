@@ -37,9 +37,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from email.utils import getaddresses
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from agent_runtimes.specs.actions import SERVER_ACTIONS, BACKEND_TOOL_ACTIONS
+from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
 from agent_runtimes.types import ActionConditionSpec, AppConnectionSpec, AppSpec
 
 DO_IT = "do_it"
@@ -162,11 +163,72 @@ def _entry(server: str, name: str) -> Tuple[List[str], List[ActionConditionSpec]
     return list(actions.default), []
 
 
+@dataclass(frozen=True)
+class Forwarding:
+    """Where a call of a tool that forwards mail says what it forwards, from where, and to whom."""
+
+    message: str
+    """The argument naming the message forwarded; a call without it does not forward."""
+
+    mailbox: str
+    """The argument holding the address of the mailbox it sends from."""
+
+    recipients: Tuple[str, ...]
+    """The arguments holding its recipients."""
+
+
+#: The tools that forward a message, by (server, tool) — as `agentspecs.actions.FORWARDING`.
+FORWARDING: Dict[Tuple[str, str], Forwarding] = {
+    ("google-workspace", "send_gmail_message"): Forwarding(
+        message="forward_message_id",
+        mailbox="user_google_email",
+        recipients=("to", "cc", "bcc"),
+    ),
+}
+
+
+def addresses(value: Any) -> List[str]:
+    """The mail addresses an argument holds — one, several separated by commas, or a list — in lower case."""
+    items = value if isinstance(value, (list, tuple)) else [value]
+    words = [str(item) for item in items if isinstance(item, str) and item.strip()]
+    return [
+        address.strip().lower() for _, address in getaddresses(words) if "@" in address
+    ]
+
+
+def domain_of(address: str) -> str:
+    """The domain of a mail address, in lower case."""
+    return address.rpartition("@")[2].strip().lower()
+
+
+def forwards_outside(server: str, tool_name: str, arguments: Mapping[str, Any]) -> bool:
+    """Whether a call forwards a message to somebody outside the organization (LOOP W-04).
+
+    The organization is the domain of the mailbox the call sends from. Fails
+    closed: a forward that does not say its mailbox is outside. A reply is
+    not a forward.
+    """
+    forwarding = FORWARDING.get((server, tool_name))
+    if forwarding is None or not str(arguments.get(forwarding.message) or "").strip():
+        return False
+    home = addresses(arguments.get(forwarding.mailbox))
+    if not home:
+        return True
+    recipients = [
+        address
+        for name in forwarding.recipients
+        for address in addresses(arguments.get(name))
+    ]
+    return any(domain_of(address) != domain_of(home[0]) for address in recipients)
+
+
 def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[str]:
     """The classes of a tool, by reference; empty when nobody classed it.
 
     With the `arguments` of a call, the classes of that call. Without them,
-    everything the tool can do: nobody said what it is asked.
+    everything the tool can do: nobody said what it is asked. A forward
+    outside the organization is told from the call (`forwards_outside`): it
+    publishes besides sending.
     """
     server, name = split_ref(ref)
     if server is None:
@@ -175,6 +237,13 @@ def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[
     for condition in conditions:
         if arguments is None or condition_holds(condition, arguments):
             classes.extend(item for item in condition.classes if item not in classes)
+    if (
+        arguments is not None
+        and classes
+        and "publish" not in classes
+        and forwards_outside(server, name, arguments)
+    ):
+        classes.append("publish")
     return classes
 
 

@@ -460,9 +460,11 @@ class AppRulesCapability(AbstractCapability[Any]):
         config = ToolApprovalConfig.from_env()
         config.agent_id = self.agent_id or config.agent_id
         manager = ToolApprovalManager(config)
-        # What is saved is shown whole before it is (LOOP R-24); any other
-        # call's arguments, cut.
-        limit = DRAFT_LIMIT if tool_name == SAVE_TOOL else 500
+        # What is saved is shown whole before it is (LOOP R-24), and so is
+        # what is sent — the draft in full before *Approve* (LOOP W-05); any
+        # other call's arguments, cut.
+        whole = tool_name == SAVE_TOOL or "send" in decision.classes
+        limit = DRAFT_LIMIT if whole else 500
         await manager.request_and_wait(
             tool_name=tool_name,
             tool_args={

@@ -169,11 +169,72 @@ function entryOf(
   return [[...actions.default], []];
 }
 
+/** Where a call of a tool that forwards mail says what it forwards, from where, and to whom. */
+export type Forwarding = {
+  /** The argument naming the message forwarded; a call without it does not forward. */
+  message: string;
+  /** The argument holding the address of the mailbox it sends from. */
+  mailbox: string;
+  /** The arguments holding its recipients. */
+  recipients: string[];
+};
+
+/** The tools that forward a message, by `server.tool` — as `agentspecs.actions.FORWARDING`. */
+export const FORWARDING: Record<string, Forwarding> = {
+  'google-workspace.send_gmail_message': {
+    message: 'forward_message_id',
+    mailbox: 'user_google_email',
+    recipients: ['to', 'cc', 'bcc'],
+  },
+};
+
+/** The mail addresses an argument holds — one, several separated by commas, or a list — in lower case. */
+export function addresses(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : [value];
+  return items
+    .filter((item): item is string => typeof item === 'string')
+    .flatMap(item => item.split(','))
+    .map(part => {
+      const angled = /<([^>]*)>/.exec(part);
+      return (angled ? angled[1] : part).trim().toLowerCase();
+    })
+    .filter(address => address.includes('@'));
+}
+
+const domainOf = (address: string): string =>
+  address.slice(address.lastIndexOf('@') + 1).trim();
+
+/**
+ * Whether a call forwards a message to somebody outside the organization
+ * (LOOP W-04): the domain of the mailbox it sends from. Fails closed: a
+ * forward that does not say its mailbox is outside. A reply is not a forward.
+ */
+export function forwardsOutside(
+  server: string,
+  name: string,
+  args: ToolArguments,
+): boolean {
+  const forwarding = own(FORWARDING, `${server}.${name}`);
+  const message = forwarding ? args[forwarding.message] : undefined;
+  if (!forwarding || typeof message !== 'string' || !message.trim()) {
+    return false;
+  }
+  const [home] = addresses(args[forwarding.mailbox]);
+  if (!home) {
+    return true;
+  }
+  return forwarding.recipients
+    .flatMap(field => addresses(args[field]))
+    .some(address => domainOf(address) !== domainOf(home));
+}
+
 /**
  * The classes of a tool, by reference; empty when nobody classed it.
  *
  * With the arguments of a call, the classes of that call. Without them,
- * everything the tool can do: nobody said what it is asked.
+ * everything the tool can do: nobody said what it is asked. A forward
+ * outside the organization is told from the call (`forwardsOutside`): it
+ * publishes besides sending.
  */
 export function classesOf(ref: string, args?: ToolArguments): ActionClass[] {
   const [server, name] = splitRef(ref);
@@ -189,6 +250,14 @@ export function classesOf(ref: string, args?: ToolArguments): ActionClass[] {
         }
       }
     }
+  }
+  if (
+    args !== undefined &&
+    classes.length > 0 &&
+    !classes.includes('publish') &&
+    forwardsOutside(server, name, args)
+  ) {
+    classes.push('publish');
   }
   return classes;
 }
