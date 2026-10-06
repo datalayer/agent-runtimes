@@ -228,7 +228,7 @@ describe('a File upload on a widget’s page', () => {
     expect(send).not.toHaveBeenCalled();
 
     const run = [...container.querySelectorAll('button')].find(
-      button => button.textContent?.trim() === 'Choose a file and run',
+      button => button.textContent?.trim() === 'Run',
     )!;
     await act(async () => run.click());
     // The file goes to the application's session with the run (R-04), which

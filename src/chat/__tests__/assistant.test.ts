@@ -132,7 +132,13 @@ describe('what the assistant says in its balloon (T-23)', () => {
           content: '**Brussels** — see [the atlas](https://example.org).',
         },
       ]),
-    ).toEqual({ id: 'a2', text: 'Brussels — see the atlas.', more: false });
+    ).toEqual({
+      id: 'a2',
+      text: 'Brussels — see the atlas.',
+      more: false,
+      // The words as written, for the balloon's markdown (the chat's own).
+      markdown: '**Brussels** — see [the atlas](https://example.org).',
+    });
   });
 
   it('skips the person, the tool calls and empty messages', () => {
@@ -147,7 +153,12 @@ describe('what the assistant says in its balloon (T-23)', () => {
         { id: 'a2', role: 'assistant', content: '' },
         { id: 'u1', role: 'user', content: 'thanks' },
       ]),
-    ).toEqual({ id: 'a1', text: 'Searching the web.', more: false });
+    ).toEqual({
+      id: 'a1',
+      text: 'Searching the web.',
+      more: false,
+      markdown: 'Searching the web.',
+    });
   });
 
   it('cuts a long message at a word, and says there is more', () => {
