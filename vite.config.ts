@@ -17,6 +17,9 @@ import wasm from 'vite-plugin-wasm';
 const WORKER_FILE_NAME = 'lite-service-worker.js';
 const WORKER_VIRTUAL_ID = `\0${WORKER_FILE_NAME}`;
 
+/** jupyter-react's marimo notebook, left out of the build (see the plugin). */
+const MARIMO_NOTEBOOK_STUB_ID = '\0jupyter-react-marimo-notebook';
+
 /** The worker is TypeScript on disk; a browser needs it as plain JavaScript. */
 async function transpileWorker(source: string): Promise<{ code: string }> {
   const esbuild = await import('esbuild');
@@ -242,6 +245,34 @@ export default defineConfig(({ mode, command }) => {
     // Fallback: patch Node.js-only references that survive CJS→ESM bundling.
     // - require("../package.json").version from @jupyter-widgets
     // - __dirname from mathjax-full
+    // `@datalayer/jupyter-react` (from 2.0.19) re-exports its marimo notebook
+    // from the package's barrel, and that notebook lazily imports marimo's
+    // whole frontend, prebuilt: 26 MB of minified JavaScript in 554 chunks.
+    // Rollup loads every module a dynamic import reaches, so any import of
+    // the barrel dragged it into this build: transforming it took 35 minutes
+    // and the build ran out of heap. Nothing here uses the marimo notebook,
+    // so the barrel's `./marimo/index.js` is an empty module in this build.
+    // (`lib/jupyter/marimo`, the kernel's reactive semantics, is another
+    // module, small, and stays.)
+    {
+      name: 'jupyter-react-without-marimo-notebook',
+      apply: 'build' as const,
+      enforce: 'pre' as const,
+      resolveId(source: string, importer: string | undefined) {
+        if (source !== './marimo/index.js' || !importer) {
+          return null;
+        }
+        const normImporter = importer.replace(/\\/g, '/');
+        return /(@datalayer\/jupyter-react|jupyter\/ui\/packages\/react)\/lib\/index\.js$/.test(
+          normImporter,
+        )
+          ? MARIMO_NOTEBOOK_STUB_ID
+          : null;
+      },
+      load(id: string) {
+        return id === MARIMO_NOTEBOOK_STUB_ID ? 'export {};' : null;
+      },
+    },
     {
       name: 'patch-node-references-in-bundle',
       generateBundle(_options: any, bundle: any) {
