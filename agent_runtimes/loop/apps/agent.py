@@ -77,10 +77,16 @@ def app_capabilities(
     list
         Its rules first, then its checks — a call the rules refuse is not
         checked, and a Guard reads what the rules decided — then its record,
-        and the tool that searches its documents when it names some.
+        the tool that searches its documents when it names some, and the
+        tool that saves a result when a Space is granted to write.
     """
     rules = rules_for(app, agent_id=agent_id, registry=registry)
     rules.record = recorder.decided
+    # A session nobody opened — woken by a schedule — has nobody present: it
+    # only reads, unless a rule says otherwise (LOOP R-16).
+    from agent_runtimes.loop.apps.record import current_session
+
+    rules.unattended = lambda: bool(recorder.woken(current_session()))
     if ask_rule is not None:
         rules.ask = ask_rule
     checks = AppChecksCapability(
@@ -102,6 +108,18 @@ def app_capabilities(
     if knows_documents(app):
         capabilities.append(
             AppDocumentsCapability(
+                app=app,
+                app_uid=recorder.app_uid,
+                deployment_uid=recorder.deployment_uid,
+            )
+        )
+    # Approve and save (LOOP R-24): the tool that saves a result as a page of
+    # a Space it is granted to write, once a person approved it.
+    from agent_runtimes.loop.apps.saving import AppSavingCapability, saves
+
+    if saves(app):
+        capabilities.append(
+            AppSavingCapability(
                 app=app,
                 app_uid=recorder.app_uid,
                 deployment_uid=recorder.deployment_uid,

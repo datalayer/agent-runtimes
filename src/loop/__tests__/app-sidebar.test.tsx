@@ -24,6 +24,7 @@ import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import { appPreset } from '../apps/AppRenderer';
 import { coverOf, BEHAVIOUR_WORDS } from '../apps/rules';
 import { entryOf, sessionSentence } from '../apps/records';
+import { SAVE_TOOL, SAVE_WORDS, draftOfApproval } from '../apps/saved';
 import { LoopSlots } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
@@ -189,6 +190,36 @@ describe('the rules and approvals card', () => {
     await act(async () => button(APP_RULES_WORDS.reject).click());
     expect(seen.approved).toEqual(['appr-1']);
     expect(seen.rejected).toEqual(['appr-1']);
+  });
+
+  it('shows a result it wants to keep whole, with Approve and save and Decline (R-24)', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    seen.waiting.push({
+      id: 'appr-9',
+      agent_id: 'web-research',
+      tool_name: SAVE_TOOL,
+      tool_args: {
+        title: 'Weekly digest',
+        content: '## This week\n\n- Three releases',
+        space: 'sp-notes',
+        _rule: 'It wants to keep this as a page of your Space.',
+      },
+      status: 'pending',
+    });
+    const { container } = await render(<AppRulesCard app={app()} />);
+    const draft = container.querySelector('[data-testid="app-draft"]')!;
+    expect(draft.textContent).toContain(SAVE_WORDS.where('sp-notes'));
+    expect(draft.textContent).toContain('Weekly digest');
+    expect(draft.querySelector('pre')!.textContent).toBe(
+      '## This week\n\n- Three releases',
+    );
+    const labels = [...container.querySelectorAll('button')].map(
+      each => each.textContent,
+    );
+    expect(labels).toEqual([SAVE_WORDS.approve, SAVE_WORDS.decline]);
+    expect(
+      draftOfApproval({ tool_name: 'send_message', tool_args: {} }),
+    ).toBeNull();
   });
 
   it('says when nothing waits', async () => {

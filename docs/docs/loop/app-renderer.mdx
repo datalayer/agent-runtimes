@@ -283,6 +283,49 @@ every entry takes. It answers `404` for a conversation it did not record,
 could not be sent, with the reason; the strip says that sentence. The
 Studio's Readiness page counts what was kept (LOOP V-18).
 
+## Approve and save
+
+An application whose Appspec grants it a Space to write
+(`permissions.spaces`, `access: write`) is given one tool on the runtime,
+`save_to_space(title, content, space?)` — the result it wants to keep, in
+markdown (LOOP R-24). Nothing is written before a person saw it:
+
+- **Shown first.** The call is always asked on the approvals path — whatever
+  its rules say of writing, short of *Leave it to me*, which refuses it — and
+  never passed by an approval given in advance. The approval carries the title
+  and the whole text (up to 20,000 characters, the most the tool takes), and
+  the rules card beside the Preview and the waiting card on its page and at its
+  address show them (`DraftShown`, `draftOfApproval`), with **Approve and
+  save** and **Decline** in place of *Approve* and *Reject*.
+- **Approve and save** writes it as an editable page of the Space — a
+  Lexical document, the title its heading, the text as headings, lists and
+  paragraphs (`markdown_document`) — and the agent is answered its link,
+  `/<owner>/<space>/documents/<uid>`, to give the person.
+- **Decline** keeps nothing: the tool never runs.
+- **A retry is the same page.** The write names an idempotency key — the
+  application, the session, the Space and what is saved — and Spacer answers a
+  create retried under that key with the page the first one made
+  (`POST /api/spacer/v1/lexicals`, `idempotencyKey`).
+
+It writes with the token of the run: on a deployment, its application's
+principal, which the Space was shared with when it was deployed; in a
+Preview, the person. A visitor without an account only reads: the call is
+refused before anybody is asked. On a deployment the approval reaches its
+maker, as every approval of its rules does.
+
+## With nobody present
+
+A session nobody opened — woken by one of its schedules (`woken_by`) — has
+nobody to ask (LOOP R-16). Its rules capability is told so
+(`AppRulesCapability.unattended`, set from the recorder by `app_capabilities`):
+a call that does more than read is done, or asked of its maker, only when a
+rule of the application's own decided it (`Decision.rule`); one decided by
+default is refused before it runs, recorded as `unattended`, and the agent is
+told *Nobody is here: in work it does on its own it only reads, unless one of
+its rules says otherwise.* Its own computer — its shell, its files — is its
+own and goes on; code is decided by the tools it names. A save (above) is
+still shown first: with a rule on writing, its maker is asked.
+
 ## What it keeps, before the first message
 
 At its address and embedded — wherever it runs as a deployment, so whenever
@@ -322,6 +365,12 @@ conversation, and a decision drawn by the real workspace as its host's page
 says when one is not (`app-page-blocks.test.tsx`); the presence state (`presence-status.test.ts`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
+With nobody present: reading goes on, acting without a rule refused, a rule
+asking or doing, its computer its own (`test_app_background.py`).
+Approve and save: the draft shown with its two buttons (`app-sidebar.test.tsx`),
+and on the runtime the tool given only with a Space to write, always asked,
+saved approved and not declined, one page on a retry, through Spacer under its
+key and as the principal on a deployment (`test_app_saving.py`).
 What it keeps: the words, the plugin only for a deployment, a retention
 refused, before the first message only (`app-kept.test.ts`), and the opener
 sent with the record (`test_app_sessions.py`).

@@ -88,6 +88,7 @@ from agent_runtimes.loop.apps.rules import (
     gives,
     matches,
 )
+from agent_runtimes.loop.apps.saving import APPROVE_AND_SAVE, DRAFT_LIMIT, SAVE_TOOL
 from agent_runtimes.loop.apps.visitors import visitor_refusal
 from agent_runtimes.output.formats import OUTPUT_TOOLS, outputs_toolset, tool_given
 from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
@@ -115,6 +116,15 @@ NO_SHELL = "no_shell"
 #: A visitor without an account's turn, which only reads (LOOP R-30).
 SIGNED_OUT = "signed_out"
 
+#: Background work with nobody present, which only reads unless a rule says otherwise (LOOP R-16).
+UNATTENDED = "unattended"
+
+#: What it says when background work would act on the world unasked.
+UNATTENDED_SENTENCE = (
+    "Nobody is here: in work it does on its own it only reads, unless one of "
+    "its rules says otherwise. `{tool}` can {does}, and no rule of its own covers it."
+)
+
 #: What the person is asked with: the tool, its arguments, the decision.
 Ask = Callable[[str, Dict[str, Any], Decision], Awaitable[Any]]
 
@@ -139,6 +149,11 @@ def sentence_of(decision: Decision) -> str:
         return (
             f"`{decision.tool}` runs code on the application's computer, "
             "and its shell is off: it is left to you."
+        )
+    if decision.because == APPROVE_AND_SAVE:
+        return (
+            "It wants to keep this as a page of your Space: read it, then "
+            "Approve and save, or Decline and nothing is kept."
         )
     return decision.sentence
 
@@ -210,6 +225,11 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     known_mcp_tools: Optional[Callable[[], Set[str]]] = None
     """The MCP tool names the runtime knows (`server__tool` among them)."""
+
+    unattended: Optional[Callable[[], bool]] = None
+    """Whether the current run has nobody present — a session woken by a
+    schedule (LOOP R-14): then it only reads, unless a rule says otherwise
+    (R-16)."""
 
     _catalogue: Dict[str, Set[str]] = field(
         default_factory=dict, init=False, repr=False
@@ -316,6 +336,16 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, _strictest(parts), parts if len(parts) > 1 else ()
             )
+        # A result saved is shown first (LOOP R-24): asked whatever the rules
+        # say of writing, and never passed by an approval given in advance;
+        # only *Leave it to me* stands, and refuses it.
+        if tool_name == SAVE_TOOL and tool_name in self.extra_classes:
+            decided = decision_for(self.app, tool_name, classes=["write"])
+            if decided.behaviour != LEAVE_TO_ME:
+                decided = replace(
+                    decided, behaviour=ASK_FIRST, because=APPROVE_AND_SAVE
+                )
+            return Enforced(tool_name, decided)
         # Only a tool that is neither of a server nor of the catalogue — the
         # runtime's own, or the page's — may be classed by the session.
         if tool_name in self.extra_classes:
@@ -426,10 +456,13 @@ class AppRulesCapability(AbstractCapability[Any]):
         config = ToolApprovalConfig.from_env()
         config.agent_id = self.agent_id or config.agent_id
         manager = ToolApprovalManager(config)
+        # What is saved is shown whole before it is (LOOP R-24); any other
+        # call's arguments, cut.
+        limit = DRAFT_LIMIT if tool_name == SAVE_TOOL else 500
         await manager.request_and_wait(
             tool_name=tool_name,
             tool_args={
-                **{key: str(value)[:500] for key, value in args.items()},
+                **{key: str(value)[:limit] for key, value in args.items()},
                 **approval_marks(self.app.id, self.app_uid, sentence_of(decision)),
             },
         )
@@ -455,6 +488,16 @@ class AppRulesCapability(AbstractCapability[Any]):
             raise AppRuleBlockedError(
                 replace(decision, behaviour=LEAVE_TO_ME, because=SIGNED_OUT), refusal
             )
+        # Nobody present (LOOP R-16): what acts on the world is done, or asked
+        # of its maker, only when a rule of its own says so; its own computer
+        # is its own.
+        if self.unattended is not None and self.unattended():
+            unruled = _unruled(enforced, call.tool_name)
+            if unruled is not None:
+                stopped = replace(decision, behaviour=LEAVE_TO_ME, because=UNATTENDED)
+                if self.record is not None:
+                    self.record(replace(enforced, decision=stopped))
+                raise AppRuleBlockedError(stopped, unattended_sentence(unruled))
         if decision.behaviour == IF_ASKED and self.granted is not None:
             # *Do it if I asked* rests on what the person approved in advance
             # (LOOP U-25), never on a reading of the conversation.
@@ -477,6 +520,30 @@ class AppRulesCapability(AbstractCapability[Any]):
         """A call to a tool of its computer waits while a person has it."""
         if part_of(tool_name) is not None:
             await wait_until_handed_back(self.agent_id)
+
+
+def _acts(decision: Decision) -> bool:
+    """Whether a decision is about acting on the world: anything but reading."""
+    return any(item != "read" for item in decision.classes)
+
+
+def _unruled(enforced: "Enforced", tool_name: str) -> Optional[Decision]:
+    """The first part of a call that acts and that no rule of its own covers,
+    or None: what background work does not do (LOOP R-16). Its own computer —
+    its shell, its files — is its own, and code is decided by the tools it
+    names."""
+    if part_of(tool_name) is not None and not enforced.parts:
+        return None
+    for decision in enforced.parts or (enforced.decision,):
+        if _acts(decision) and not decision.rule:
+            return decision
+    return None
+
+
+def unattended_sentence(decision: Decision) -> str:
+    """Why background work did not do something, in a sentence."""
+    does = " and ".join(decision.classes) or "act"
+    return UNATTENDED_SENTENCE.format(tool=decision.tool, does=does)
 
 
 def approval_marks(app_id: str, app_uid: str, sentence: str) -> Dict[str, str]:

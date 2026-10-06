@@ -23,6 +23,7 @@ import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppRuleSpec, AppSpec } from '../../../types/agentspecs';
 import { BEHAVIOUR_WORDS, coverOf } from '../../apps/rules';
+import { SAVE_WORDS, draftOfApproval, type Draft } from '../../apps/saved';
 import {
   useApproveToolRequest,
   useRejectToolRequest,
@@ -90,6 +91,37 @@ export function approvalsOfApp(
 
 const PENDING = { status: 'pending' as const };
 
+/** A result it wants to keep, shown whole before it is (LOOP R-24). */
+export function DraftShown({ draft }: { draft: Draft }): JSX.Element {
+  return (
+    <Box data-testid="app-draft" sx={{ mt: 1 }}>
+      <Text as="p" sx={{ m: 0, fontSize: 0, color: 'fg.muted' }}>
+        {SAVE_WORDS.where(draft.space)}
+      </Text>
+      <Text as="p" sx={{ m: 0, fontWeight: 'semibold' }}>
+        {draft.title}
+      </Text>
+      <Box
+        as="pre"
+        sx={{
+          m: 0,
+          mt: 1,
+          p: 2,
+          maxHeight: 240,
+          overflow: 'auto',
+          whiteSpace: 'pre-wrap',
+          fontFamily: 'inherit',
+          fontSize: 0,
+          bg: 'canvas.subtle',
+          borderRadius: 2,
+        }}
+      >
+        {draft.content}
+      </Box>
+    </Box>
+  );
+}
+
 function Approvals({ app }: { app: AppSpec }): JSX.Element {
   const query = useToolApprovalsQuery(PENDING);
   const approve = useApproveToolRequest();
@@ -114,42 +146,48 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
         </Text>
       ) : (
         <Box as="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
-          {waiting.map(approval => (
-            <Box
-              as="li"
-              key={approval.id}
-              sx={{
-                py: 2,
-                borderTop: '1px solid',
-                borderColor: 'border.muted',
-                fontSize: 1,
-              }}
-            >
-              <Text sx={{ fontWeight: 'semibold' }}>{approval.tool_name}</Text>
-              {ruleOfApproval(approval) ? (
-                <Text as="p" sx={{ m: 0, color: 'fg.muted', fontSize: 0 }}>
-                  {ruleOfApproval(approval)}
+          {waiting.map(approval => {
+            const draft = draftOfApproval(approval);
+            return (
+              <Box
+                as="li"
+                key={approval.id}
+                sx={{
+                  py: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'border.muted',
+                  fontSize: 1,
+                }}
+              >
+                <Text sx={{ fontWeight: 'semibold' }}>
+                  {approval.tool_name}
                 </Text>
-              ) : null}
-              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                <Button
-                  size="small"
-                  variant="primary"
-                  disabled={approve.isPending}
-                  onClick={() => approve.mutate({ id: approval.id })}
-                >
-                  {APP_RULES_WORDS.approve}
-                </Button>
-                <Button
-                  size="small"
-                  disabled={reject.isPending}
-                  onClick={() => reject.mutate({ id: approval.id })}
-                >
-                  {APP_RULES_WORDS.reject}
-                </Button>
+                {ruleOfApproval(approval) ? (
+                  <Text as="p" sx={{ m: 0, color: 'fg.muted', fontSize: 0 }}>
+                    {ruleOfApproval(approval)}
+                  </Text>
+                ) : null}
+                {draft ? <DraftShown draft={draft} /> : null}
+                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="primary"
+                    disabled={approve.isPending}
+                    onClick={() => approve.mutate({ id: approval.id })}
+                  >
+                    {draft ? SAVE_WORDS.approve : APP_RULES_WORDS.approve}
+                  </Button>
+                  <Button
+                    size="small"
+                    disabled={reject.isPending}
+                    onClick={() => reject.mutate({ id: approval.id })}
+                  >
+                    {draft ? SAVE_WORDS.decline : APP_RULES_WORDS.reject}
+                  </Button>
+                </Box>
               </Box>
-            </Box>
-          ))}
+            );
+          })}
         </Box>
       )}
     </Box>

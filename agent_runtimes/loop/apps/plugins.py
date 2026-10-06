@@ -76,12 +76,16 @@ def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
     # The tool that searches its documents only reads (LOOP R-29): classed
     # here, as the runtime's own, for every place its rules are read.
     from agent_runtimes.loop.apps.documents import DOCUMENT_CLASSES, knows_documents
+    from agent_runtimes.loop.apps.saving import SAVING_CLASSES, saves
 
     extra = (
         {name: list(classes) for name, classes in DOCUMENT_CLASSES.items()}
         if knows_documents(app)
         else {}
     )
+    # The tool that saves a result writes (LOOP R-24), and is always asked.
+    if saves(app):
+        extra.update({name: list(classes) for name, classes in SAVING_CLASSES.items()})
     return AppRulesCapability(app=app, agent_id=agent_id, extra_classes=extra)
 
 
