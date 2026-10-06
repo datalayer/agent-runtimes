@@ -981,7 +981,7 @@ export const A2UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
       emoji: '🧾',
       description:
         'Several fields asked at once, from a JSON Schema, checked as they are filled and again when they arrive (drawn with @datalayer/primer-rjsf).',
-      version: '1.0.0',
+      version: '1.1.0',
       standard: false,
       properties: {
         type: 'object',
@@ -997,6 +997,12 @@ export const A2UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
             title: 'Fields',
             description:
               'The JSON Schema of what is asked: its fields, their types, what is required.',
+          },
+          ui: {
+            type: 'object',
+            title: 'How its fields are drawn',
+            description:
+              "By field name, the ui: options @datalayer/primer-rjsf reads (a uiSchema): ui:widget one of select, radio, range, updown, switch, checkbox, text, textarea, date, checkboxes, tags; each field's own widget when unsaid.",
           },
           submit_label: {
             type: 'string',

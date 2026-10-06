@@ -950,7 +950,7 @@ A2UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
             description="Several fields asked at once, from a JSON Schema, checked as they are filled and again when they arrive (drawn with @datalayer/primer-rjsf).",
             category="input",
             emoji="🧾",
-            version="1.0.0",
+            version="1.1.0",
             standard=False,
             properties={
                 "type": "object",
@@ -965,6 +965,11 @@ A2UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
                         "type": "object",
                         "title": "Fields",
                         "description": "The JSON Schema of what is asked: its fields, their types, what is required.",
+                    },
+                    "ui": {
+                        "type": "object",
+                        "title": "How its fields are drawn",
+                        "description": "By field name, the ui: options @datalayer/primer-rjsf reads (a uiSchema): ui:widget one of select, radio, range, updown, switch, checkbox, text, textarea, date, checkboxes, tags; each field's own widget when unsaid.",
                     },
                     "submit_label": {
                         "type": "string",
@@ -2060,13 +2065,14 @@ class SurfaceComponents:
         *,
         schema: Union[Dict[str, Any], Bound],
         title: Optional[Union[str, Bound]] = None,
+        ui: Optional[Union[Dict[str, Any], Bound]] = None,
         submit_label: Optional[Union[str, Bound]] = None,
         values: Optional[Bound] = None,
         action: Optional[Dict[str, Any]] = None,
         visible_when: Optional[Bound] = None,
         weight: Optional[float] = None,
     ) -> Dict[str, Any]:
-        """Form, version 1.0.0: Several fields asked at once, from a JSON Schema, checked as they are filled and again when they arrive (drawn with @datalayer/primer-rjsf).
+        """Form, version 1.1.0: Several fields asked at once, from a JSON Schema, checked as they are filled and again when they arrive (drawn with @datalayer/primer-rjsf).
 
         Parameters
         ----------
@@ -2076,6 +2082,8 @@ class SurfaceComponents:
             Fields: The JSON Schema of what is asked: its fields, their types, what is required.
         title : str or Bound
             Title: What the form is for, above it.
+        ui : Dict[str, Any] or Bound
+            How its fields are drawn: By field name, the ui: options @datalayer/primer-rjsf reads (a uiSchema): ui:widget one of select, radio, range, updown, switch, checkbox, text, textarea, date, checkboxes, tags; each field's own widget when unsaid.
         submit_label : str or Bound
             Send button: The words on its button.
         values : Bound
@@ -2084,6 +2092,7 @@ class SurfaceComponents:
         given = {
             "schema": schema,
             "title": title,
+            "ui": ui,
             "submit_label": submit_label,
             "values": values,
             "action": action,

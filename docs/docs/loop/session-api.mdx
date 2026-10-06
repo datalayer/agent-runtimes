@@ -179,7 +179,7 @@ as `GET` says it — then the turn's events.
 
 | Route | What it does |
 | --- | --- |
-| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, session?, woken_by?}`. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). |
+| `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, profile?, session?, woken_by?}`; `profile` the one it is with (LOOP P-20), the first when unsaid, 422 for one the application does not have. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). |
 | `POST /sessions/{uid}/messages` | **Message**: `{text}`. The next turn — or the answer to what the application asked. |
 | `POST /sessions/{uid}/actions` | **Action**: `{name, payload?, text?, files?}`. A page block's action — File upload's `upload`, a Form's `submit`, a Table's `select` — with the files given. |
 | `POST /sessions/{uid}/window` | **A window message** from the page the application sits in (LOOP P-25): `{data}`, anything JSON writes. A Python application's `@app.window` runs on it, as a turn; what it tells the page back (`session.send_window_message`) is a `CUSTOM` event named `loop.window`, `{data}`. Refused with 422 for an application whose code reads none (*Help Desk reads no window message: its code has no @app.window.*), 409 while it answers or waits. Not a turn of the conversation. |
@@ -384,7 +384,8 @@ besides the message:
       "action": {"name": "upload", "payload": {}},
       "files": [{"name": "report.pdf", "type": "application/pdf", "size": 18, "data_url": "data:application/pdf;base64,…"}],
       "settings": {"tone": "Warm"},
-      "modes": {"depth": "thorough"}
+      "modes": {"depth": "thorough"},
+      "profile": "sales"
     }
   }
 }
@@ -399,6 +400,18 @@ the run it forwards, never as a message, since the agent takes no system
 message from a request — and the `model` one of them names is run on, for
 that run. A Python application reads them as `session.modes`, and
 `session.agent` is told them.
+
+`profile` says the profile the conversation is with (LOOP P-20): its
+`instructions` are told before the modes', and its `model` is run unless a
+mode names one. Unsaid, the conversation is with the first. Once a
+conversation has a profile it keeps it: another is refused with 409 (*This
+conversation is with Sales: start another to talk to Support.*), one the
+application does not have with 422 (*Desk has no profile 'buyer'.*). A Python
+application reads it as `session.profile`; `GET` says it as `profile`.
+
+`settings` are the values the page holds. When they changed since the last
+run, a Python application's `@app.settings` runs on them before the message
+does (LOOP P-20); the agent of a spec is told them in words.
 
 This is what the chat of an application's page speaks: `ChatView` addresses an
 application's agent here rather than at `/api/v1/ag-ui/{agent}/`, and the

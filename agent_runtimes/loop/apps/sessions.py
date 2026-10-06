@@ -68,7 +68,7 @@ from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import answer_surface
-from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
+from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
@@ -503,6 +503,8 @@ class LiveSession:
     settings: Dict[str, Any] = field(default_factory=dict)
     modes: Dict[str, str] = field(default_factory=dict)
     """The option of each of its modes the person is in (LOOP P-19), as the last run said."""
+    profile: str = ""
+    """The profile the conversation is with (LOOP P-20); ``""`` until one is said, then kept."""
     state: str = "open"
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
@@ -565,6 +567,7 @@ class LiveSession:
             "opened_by": {"kind": self.opened_by.kind, "uid": self.opened_by.uid},
             "state": self.state,
             "settings": dict(self.settings),
+            "profile": self.profile or None,
             "asking": question_of(self._question) if self._question else None,
             "files": [dict(item) for item in self.files],
             "python": self.written_in_python,
@@ -903,7 +906,11 @@ class LiveSession:
                 settings=self.settings,
                 id=self.uid,
                 modes=self.modes,
+                profile=self.profile or None,
             )
+            # Its code's session is with a profile from now on: the first,
+            # when none was said (LOOP P-20).
+            self.profile = self.session.profile or ""
 
     def open(
         self,
@@ -1193,6 +1200,41 @@ class LiveSession:
                 words.append(text_in_words(file))
                 self._keep([file])
         return "\n\n".join(words), whole
+
+    def _choose_profile(self, chosen: Any) -> None:
+        """The profile a run names (LOOP P-20): taken when none was said yet,
+        kept after — a conversation keeps the profile it started with.
+        """
+        if chosen is None or chosen == "":
+            return
+        if not isinstance(chosen, str):
+            raise SessionRefused(422, "The profile sent is not a profile's id.")
+        try:
+            profile = profile_choice(self.app, chosen)
+        except ValueError as wrong:
+            raise SessionRefused(422, str(wrong)) from None
+        assert profile is not None
+        if self.profile and self.profile != profile.id:
+            now = profile_choice(self.app, self.profile)
+            raise SessionRefused(
+                409,
+                f"This conversation is with {now.label if now else self.profile}: "
+                f"start another to talk to {profile.label}.",
+            )
+        self.profile = profile.id
+
+    async def _settings_then(
+        self, changed: Mapping[str, Any], work: Callable[[], Awaitable[None]]
+    ) -> None:
+        """The settings the page changed, told to its code first (``settings``,
+        LOOP P-20), then the turn.
+        """
+        if changed:
+            if self.session is None:
+                await self._open_code()
+            assert self.session is not None
+            await self.host.settings(self.session, changed)
+        await work()
 
     def change_settings(
         self, values: Mapping[str, Any], *, head: str = ""
@@ -1499,13 +1541,22 @@ class LiveSession:
         settings = loop.get("settings")
         if settings is not None and not isinstance(settings, Mapping):
             raise SessionRefused(422, "The settings sent are not values by id.")
+        self._choose_profile(loop.get("profile"))
+        changed: Dict[str, Any] = {}
         if settings is not None:
             try:
-                self.settings = form_values(
+                updated = form_values(
                     self.app.interface.settings, {**self.settings, **settings}
                 )
             except InvalidAnswer as wrong:
                 raise SessionRefused(422, str(wrong)) from None
+            # What changed since the last run: its code is told (LOOP P-20).
+            changed = {
+                key: value
+                for key, value in updated.items()
+                if self.settings.get(key) != value
+            }
+            self.settings = updated
             # The page says them in its message: not said again.
             self._sent_settings = dict(self.settings)
         modes = loop.get("modes")
@@ -1534,14 +1585,20 @@ class LiveSession:
             if action is None:
                 if files:
                     return self._start_turn(
-                        lambda: self._files_code(text, files),
+                        lambda: self._settings_then(
+                            changed, lambda: self._files_code(text, files)
+                        ),
                         run_id=run_id,
                         wraps_run=True,
                     )
                 if not text:
                     raise SessionRefused(422, "Nothing to send: write a message first.")
                 return self._start_turn(
-                    lambda: self._message_code(text), run_id=run_id, wraps_run=True
+                    lambda: self._settings_then(
+                        changed, lambda: self._message_code(text)
+                    ),
+                    run_id=run_id,
+                    wraps_run=True,
                 )
             return self.action(
                 str((action or {}).get("name") or "run"),
@@ -1575,8 +1632,9 @@ class LiveSession:
                 content = [{"type": "text", "text": content}, *parts]
             said = [*messages[:-1], {**last, "content": content}] if words else messages
             self.messages = [dict(m) for m in said]
-            # The modes the person is in, for this run only (LOOP P-19).
-            effect = mode_effect(self.app, self.modes)
+            # The profile the conversation is with, and the modes the person
+            # is in, for this run only (LOOP P-19, P-20).
+            effect = run_effect(self.app, self.profile or None, self.modes)
             run = {
                 "state": None,
                 "tools": [],
@@ -1717,6 +1775,7 @@ def new_session(
     uid: str = "",
     messages: Optional[List[Dict[str, Any]]] = None,
     resumed: bool = False,
+    profile: str = "",
 ) -> LiveSession:
     """A session of an application's agent on this runtime, kept by uid.
 
@@ -1736,6 +1795,11 @@ def new_session(
         values = form_values(app.interface.settings, dict(settings or {}))
     except InvalidAnswer as wrong:
         raise SessionRefused(422, str(wrong)) from None
+    if profile:
+        try:
+            profile_choice(app, profile)
+        except ValueError as wrong:
+            raise SessionRefused(422, str(wrong)) from None
     recorder = agent_recorder(agent_id) or AppRecorder(
         app=app,
         app_uid=str(instance.get("app_uid") or ""),
@@ -1756,6 +1820,7 @@ def new_session(
         settings=values,
         messages=list(messages or []),
         resumed=resumed,
+        profile=profile,
     )
     application = code_of(app)
     if application is not None:

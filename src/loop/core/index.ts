@@ -634,7 +634,10 @@ export type AgentBlueprintContribution = {
    * P-19) tell a run turned in the page, and the model it runs on — as the
    * runtime's session API applies them. Unsaid for an agent with no modes.
    */
-  modeEffect?: (chosen: Record<string, string>) => AppModeEffect;
+  modeEffect?: (
+    chosen: Record<string, string>,
+    profile?: string,
+  ) => AppModeEffect;
 };
 
 export const LoopAgentBlueprint =
@@ -647,6 +650,12 @@ export type ChatSuggestionItem = {
   /** What is submitted; the chip's words when absent. */
   message?: string;
   emoji?: string;
+  /**
+   * The heading it is offered under: openers of one group together, under
+   * its name, those without one first — an application's starter's category
+   * (LOOP P-20).
+   */
+  group?: string;
 };
 
 /**
@@ -779,6 +788,13 @@ export type LoopChatExtrasValue = {
    * offering a first question to somebody who has already asked one.
    */
   hideOpeners?: boolean;
+  /**
+   * Openers in place of the contributed ones, live: what an application
+   * offers with the profile picked in its composer (LOOP P-20) — the empty
+   * chat offers these, and changes them when the profile changes, without
+   * rebuilding the reactor. `hiddenOpeners` still applies.
+   */
+  openers?: ChatSuggestionItem[];
   /**
    * Told what the agent has used, each time the chat learns it.
    *

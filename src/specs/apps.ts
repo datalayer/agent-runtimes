@@ -84,6 +84,9 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [],
     assistant: 'wizard',
     voice: {
@@ -217,6 +220,7 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
     settings: {
       type: 'object',
       properties: {
@@ -235,6 +239,8 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
         },
       },
     },
+    language: 'en',
+    translations: {},
     components: [],
     assistant: 'cat',
     voice: {
@@ -350,6 +356,9 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -530,6 +539,9 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [],
     assistant: 'wizard',
     voice: {
@@ -694,6 +706,9 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [],
     voice: {
       enabled: false,
@@ -838,6 +853,9 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -1076,6 +1094,9 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -1345,6 +1366,7 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
     settings: {
       type: 'object',
       properties: {
@@ -1369,6 +1391,8 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
         },
       },
     },
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -1612,6 +1636,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
     settings: {
       type: 'object',
       properties: {
@@ -1628,6 +1653,8 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
         },
       },
     },
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -1875,6 +1902,9 @@ export const SALES_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [],
     assistant: 'paperclip',
     voice: {
@@ -1989,6 +2019,9 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -2172,6 +2205,9 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
     components: [
       'Card',
       'Column',
@@ -2347,19 +2383,23 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
       {
         label: 'Reset my password',
         message: 'How do I reset my password?',
+        category: 'Account',
       },
       {
         label: 'Returns',
         message: 'Can I return a product I bought six weeks ago?',
+        category: 'Orders',
       },
       {
         label: 'Plans',
         message:
           'What is the difference between the Team and the Business plan?',
+        category: 'Account',
       },
     ],
     commands: [],
     modes: [],
+    profiles: [],
     settings: {
       type: 'object',
       properties: {
@@ -2369,6 +2409,50 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
           enum: ['Cloud', 'Desktop'],
           default: 'Cloud',
         },
+      },
+    },
+    settingsUi: {
+      product: {
+        'ui:widget': 'radio',
+      },
+    },
+    language: 'en',
+    translations: {
+      fr: {
+        name: 'Service client',
+        description: '',
+        welcome:
+          'Posez-moi vos questions sur le produit. Je réponds à partir de sa documentation et vous montre où ; quand elle ne le dit pas, je vous le dis.',
+        starters: {
+          'Reset my password': {
+            label: 'Réinitialiser mon mot de passe',
+            message: 'Comment réinitialiser mon mot de passe ?',
+          },
+          Returns: {
+            label: 'Retours',
+            message:
+              'Puis-je retourner un produit acheté il y a six semaines ?',
+          },
+          Plans: {
+            label: 'Offres',
+            message:
+              "Quelle est la différence entre l'offre Team et l'offre Business ?",
+          },
+        },
+        categories: {
+          Account: 'Compte',
+          Orders: 'Commandes',
+        },
+        settings: {
+          product: {
+            title: 'Produit',
+            description: '',
+            options: {},
+          },
+        },
+        commands: {},
+        modes: {},
+        profiles: {},
       },
     },
     components: [
@@ -2633,6 +2717,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
+    profiles: [],
     settings: {
       type: 'object',
       properties: {
@@ -2644,6 +2729,8 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
         },
       },
     },
+    language: 'en',
+    translations: {},
     components: [],
     voice: {
       enabled: false,
@@ -4331,15 +4418,18 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           label: 'Reset my password',
           message: 'How do I reset my password?',
+          category: 'Account',
         },
         {
           label: 'Returns',
           message: 'Can I return a product I bought six weeks ago?',
+          category: 'Orders',
         },
         {
           label: 'Plans',
           message:
             'What is the difference between the Team and the Business plan?',
+          category: 'Account',
         },
       ],
       settings: {
@@ -4350,6 +4440,43 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             title: 'Product',
             enum: ['Cloud', 'Desktop'],
             default: 'Cloud',
+          },
+        },
+      },
+      settings_ui: {
+        product: {
+          'ui:widget': 'radio',
+        },
+      },
+      translations: {
+        fr: {
+          name: 'Service client',
+          welcome:
+            'Posez-moi vos questions sur le produit. Je réponds à partir de sa documentation et vous montre où ; quand elle ne le dit pas, je vous le dis.',
+          starters: {
+            'Reset my password': {
+              label: 'Réinitialiser mon mot de passe',
+              message: 'Comment réinitialiser mon mot de passe ?',
+            },
+            Returns: {
+              label: 'Retours',
+              message:
+                'Puis-je retourner un produit acheté il y a six semaines ?',
+            },
+            Plans: {
+              label: 'Offres',
+              message:
+                "Quelle est la différence entre l'offre Team et l'offre Business ?",
+            },
+          },
+          categories: {
+            Account: 'Compte',
+            Orders: 'Commandes',
+          },
+          settings: {
+            product: {
+              title: 'Produit',
+            },
           },
         },
       },

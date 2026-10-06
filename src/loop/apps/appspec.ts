@@ -47,7 +47,10 @@ import type {
   AppLayout,
   AppModeOptionSpec,
   AppModeSpec,
+  AppProfileSpec,
   AppRuleSpec,
+  AppStarterSpec,
+  AppTranslationSpec,
   AppFormSchema,
   AppSpec,
   AppSurfaceSpec,
@@ -60,6 +63,9 @@ import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
 export const APP_SCHEMA = 'loop.app/v1';
+
+/** The language an application's own words are in, unless it says (LOOP P-26). */
+export const DEFAULT_LANGUAGE = 'en';
 
 /** The face of an application that has not chosen one. */
 export const DEFAULT_EMOJI = '\u{1F440}';
@@ -218,6 +224,9 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       starters: [],
       commands: [],
       modes: [],
+      profiles: [],
+      language: DEFAULT_LANGUAGE,
+      translations: {},
       components: [],
       outputs: [],
     },
@@ -362,6 +371,87 @@ function parseMode(data: Data): AppModeSpec {
   return mode;
 }
 
+/** A starter, its category said only when it has one (LOOP P-20). */
+function parseStarter(data: Data): AppStarterSpec {
+  const starter: AppStarterSpec = {
+    label: text(data.label),
+    message: text(data.message),
+  };
+  if (typeof data.category === 'string' && data.category) {
+    starter.category = data.category;
+  }
+  return starter;
+}
+
+/** One of several assistants in one application (LOOP P-20). */
+function parseProfile(data: Data): AppProfileSpec {
+  return {
+    id: text(data.id),
+    label: text(data.label),
+    description: text(data.description),
+    instructions: text(data.instructions),
+    model: typeof data.model === 'string' && data.model ? data.model : null,
+    starters: records(data.starters).map(parseStarter),
+  };
+}
+
+/** Words by key, what is not a word left out. */
+function wordsBy(value: unknown): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(isData(value) ? value : {}).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
+  );
+}
+
+/** Records by key, what is not one left out. */
+function recordsBy(value: unknown): Record<string, Data> {
+  return Object.fromEntries(
+    Object.entries(isData(value) ? value : {}).filter(
+      (entry): entry is [string, Data] => isData(entry[1]),
+    ),
+  );
+}
+
+const mapValues = <T, U>(
+  value: Record<string, T>,
+  map: (item: T) => U,
+): Record<string, U> =>
+  Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, map(item)]),
+  );
+
+/** An application's words in one other language (LOOP P-26), every key present. */
+function parseTranslation(data: Data): AppTranslationSpec {
+  return {
+    name: text(data.name),
+    description: text(data.description),
+    welcome: text(data.welcome),
+    starters: mapValues(recordsBy(data.starters), starter => ({
+      label: text(starter.label),
+      message: text(starter.message),
+    })),
+    categories: wordsBy(data.categories),
+    settings: mapValues(recordsBy(data.settings), field => ({
+      title: text(field.title),
+      description: text(field.description),
+      options: wordsBy(field.options),
+    })),
+    commands: wordsBy(data.commands),
+    modes: mapValues(recordsBy(data.modes), mode => ({
+      label: text(mode.label),
+      options: mapValues(recordsBy(mode.options), option => ({
+        label: text(option.label),
+        description: text(option.description),
+      })),
+    })),
+    profiles: mapValues(recordsBy(data.profiles), profile => ({
+      label: text(profile.label),
+      description: text(profile.description),
+    })),
+  };
+}
+
 function parseSurface(data: Data): AppSurfaceSpec {
   return {
     protocol: text(data.protocol, DEFAULT_PROTOCOL),
@@ -429,12 +519,12 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     ),
     accent: oneOf(data.accent, APP_ACCENTS, 'green'),
     welcome: text(data.welcome),
-    starters: records(data.starters).map(starter => ({
-      label: text(starter.label),
-      message: text(starter.message),
-    })),
+    starters: records(data.starters).map(parseStarter),
     commands: records(data.commands).map(parseCommand),
     modes: records(data.modes).map(parseMode),
+    profiles: records(data.profiles).map(parseProfile),
+    language: text(data.language, DEFAULT_LANGUAGE),
+    translations: mapValues(recordsBy(data.translations), parseTranslation),
     components: texts(data.components),
     voice: parseVoice(data.voice),
     outputs: texts(data.outputs),
@@ -446,6 +536,11 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     parsed.settings = JSON.parse(
       JSON.stringify(data.settings),
     ) as AppFormSchema;
+  }
+  // How its settings' fields are drawn (P-20), kept as written: a wrong
+  // widget is said by the checks.
+  if (isData(data.settings_ui)) {
+    parsed.settingsUi = JSON.parse(JSON.stringify(data.settings_ui)) as Data;
   }
   if (isData(data.uploads)) {
     parsed.uploads = parseUploads(data.uploads);
@@ -787,19 +882,86 @@ function dumpSurface(surface: AppSurfaceSpec): Data {
     .text('composed_at', surface.composedAt).data;
 }
 
+function dumpStarter(starter: AppStarterSpec): Data {
+  return new Writer()
+    .text('label', starter.label, '\u0000')
+    .text('message', starter.message, '\u0000')
+    .text('category', starter.category ?? '').data;
+}
+
+/** Words by key, what is empty left out. */
+const saidWords = (words: Record<string, string>): Data =>
+  Object.fromEntries(Object.entries(words).filter(([, said]) => said !== ''));
+
+/** One translation as it is written (P-26): only what it says. */
+function dumpTranslation(words: AppTranslationSpec): Data {
+  const parts = <T>(value: Record<string, T>, dump: (item: T) => Data): Data =>
+    Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, dump(item)]),
+    );
+  return new Writer()
+    .text('name', words.name)
+    .text('description', words.description)
+    .text('welcome', words.welcome)
+    .part(
+      'starters',
+      parts(
+        words.starters,
+        starter =>
+          new Writer()
+            .text('label', starter.label)
+            .text('message', starter.message).data,
+      ),
+    )
+    .part('categories', saidWords(words.categories))
+    .part(
+      'settings',
+      parts(
+        words.settings,
+        field =>
+          new Writer()
+            .text('title', field.title)
+            .text('description', field.description)
+            .part('options', saidWords(field.options)).data,
+      ),
+    )
+    .part('commands', saidWords(words.commands))
+    .part(
+      'modes',
+      parts(
+        words.modes,
+        mode =>
+          new Writer().text('label', mode.label).part(
+            'options',
+            parts(
+              mode.options,
+              option =>
+                new Writer()
+                  .text('label', option.label)
+                  .text('description', option.description).data,
+            ),
+          ).data,
+      ),
+    )
+    .part(
+      'profiles',
+      parts(
+        words.profiles,
+        profile =>
+          new Writer()
+            .text('label', profile.label)
+            .text('description', profile.description).data,
+      ),
+    ).data;
+}
+
 function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   const writer = new Writer()
     // A layout is written when it is not the one its kind starts with.
     .value<string>('layout', spec.layout, DEFAULT_LAYOUTS[kind])
     .value<string>('accent', spec.accent, 'green')
     .text('welcome', spec.welcome)
-    .list(
-      'starters',
-      spec.starters.map(starter => ({
-        label: starter.label,
-        message: starter.message,
-      })),
-    )
+    .list('starters', spec.starters.map(dumpStarter))
     .list(
       'commands',
       spec.commands.map(command => ({
@@ -832,7 +994,27 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
         return written.data;
       }),
     )
+    .list(
+      'profiles',
+      (spec.profiles ?? []).map(
+        profile =>
+          new Writer()
+            .text('id', profile.id, '\u0000')
+            .text('label', profile.label, '\u0000')
+            .text('description', profile.description)
+            .text('instructions', profile.instructions)
+            .text('model', profile.model ?? '')
+            .list('starters', profile.starters.map(dumpStarter)).data,
+      ),
+    )
     .part('settings', spec.settings ? { ...spec.settings } : {});
+  // How its settings' fields are drawn (P-20): written when said.
+  if (spec.settingsUi) {
+    writer.data.settings_ui = { ...spec.settingsUi };
+  }
+  writer
+    .text('language', spec.language ?? DEFAULT_LANGUAGE, DEFAULT_LANGUAGE)
+    .part('translations', mapValues(spec.translations ?? {}, dumpTranslation));
   // What a person may send without being asked (P-21): written when said.
   if (spec.uploads) {
     writer.data.uploads = new Writer()

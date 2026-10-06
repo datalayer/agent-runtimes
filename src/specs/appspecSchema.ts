@@ -346,6 +346,35 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppDeployment',
       type: 'object',
     },
+    AppFieldTranslation: {
+      additionalProperties: false,
+      description: 'A field of the settings in another language.',
+      properties: {
+        title: {
+          default: '',
+          description: 'Its title',
+          title: 'Title',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it is for',
+          title: 'Description',
+          type: 'string',
+        },
+        options: {
+          additionalProperties: {
+            type: 'string',
+          },
+          description:
+            "What each value of its `enum` (or of its items') reads as, by the value; the value is sent",
+          title: 'Options',
+          type: 'object',
+        },
+      },
+      title: 'AppFieldTranslation',
+      type: 'object',
+    },
     AppInterface: {
       additionalProperties: false,
       description: 'What the user sees.',
@@ -412,6 +441,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Modes',
           type: 'array',
         },
+        profiles: {
+          description:
+            'Several assistants in one application, two at least: the person picks one before the conversation starts — the first unless they do — and keeps it to the end; its instructions, model and starters go with every run (LOOP P-20). None when unsaid',
+          items: {
+            $ref: '#/$defs/AppProfile',
+          },
+          title: 'Profiles',
+          type: 'array',
+        },
         settings: {
           anyOf: [
             {
@@ -426,6 +464,37 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description:
             "What the user may set: the JSON Schema of a form, an object of named fields, each with its `title` and its `default` (LOOP C-16). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card, its values go with every run and are checked by the runtime against the same schema. None when unsaid",
           title: 'Settings',
+        },
+        settings_ui: {
+          anyOf: [
+            {
+              additionalProperties: true,
+              type: 'object',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "How the settings' fields are drawn, as `@datalayer/primer-rjsf` reads a uiSchema: by field name, its `ui:` options — `ui:widget` one of `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`, `textarea`, `date`, `checkboxes`, `tags` — and `ui:order` (LOOP P-20). Each field's own widget when unsaid",
+          title: 'Settings Ui',
+        },
+        language: {
+          default: 'en',
+          description:
+            'The language its own words are in, as BCP 47 tags it (`en`, `fr`, `pt-BR`) (LOOP P-26)',
+          title: 'Language',
+          type: 'string',
+        },
+        translations: {
+          additionalProperties: {
+            $ref: '#/$defs/AppTranslation',
+          },
+          description:
+            "What a person reads of it in other languages, by BCP 47 tag: its name, welcome, starters and their categories, settings, commands, modes and profiles. The page shows the person's language when it has it, else its own words (LOOP P-26)",
+          title: 'Translations',
+          type: 'object',
         },
         uploads: {
           anyOf: [
@@ -609,6 +678,48 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppModeOption',
       type: 'object',
     },
+    AppModeTranslation: {
+      additionalProperties: false,
+      description: 'A mode in another language.',
+      properties: {
+        label: {
+          default: '',
+          description: 'What the switch is called',
+          title: 'Label',
+          type: 'string',
+        },
+        options: {
+          additionalProperties: {
+            $ref: '#/$defs/AppOptionTranslation',
+          },
+          description: 'Its options, by id',
+          title: 'Options',
+          type: 'object',
+        },
+      },
+      title: 'AppModeTranslation',
+      type: 'object',
+    },
+    AppOptionTranslation: {
+      additionalProperties: false,
+      description: 'An option of a mode in another language.',
+      properties: {
+        label: {
+          default: '',
+          description: 'What the switch says',
+          title: 'Label',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it changes',
+          title: 'Description',
+          type: 'string',
+        },
+      },
+      title: 'AppOptionTranslation',
+      type: 'object',
+    },
     AppPermissions: {
       additionalProperties: false,
       description:
@@ -628,6 +739,84 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
       },
       title: 'AppPermissions',
+      type: 'object',
+    },
+    AppProfile: {
+      additionalProperties: false,
+      description:
+        "One of several assistants in one application (LOOP P-20): a variant of its agent.\n\nThe person picks a profile before the conversation starts, and keeps it to\nthe end: its instructions are told to the agent on top of the\napplication's in every run, its model run in place of the application's\n(a mode's model wins over it), and its starters offered in place of the\napplication's.",
+      properties: {
+        id: {
+          description: 'Its id, what a conversation says it is with',
+          pattern: '^[a-z][a-z0-9_-]{0,39}$',
+          title: 'Id',
+          type: 'string',
+        },
+        label: {
+          description: 'What the person picks it by',
+          minLength: 1,
+          title: 'Label',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it is for, in a sentence, beside its label',
+          title: 'Description',
+          type: 'string',
+        },
+        instructions: {
+          default: '',
+          description:
+            'What the agent is told besides its instructions, in every run with this profile',
+          title: 'Instructions',
+          type: 'string',
+        },
+        model: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "The model it runs on, in place of the application's; a mode's model wins over it",
+          title: 'Model',
+        },
+        starters: {
+          description:
+            "The first messages it offers, in place of the application's; the application's when empty",
+          items: {
+            $ref: '#/$defs/AppStarter',
+          },
+          title: 'Starters',
+          type: 'array',
+        },
+      },
+      required: ['id', 'label'],
+      title: 'AppProfile',
+      type: 'object',
+    },
+    AppProfileTranslation: {
+      additionalProperties: false,
+      description: 'A profile in another language.',
+      properties: {
+        label: {
+          default: '',
+          description: 'What the person picks it by',
+          title: 'Label',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it is for',
+          title: 'Description',
+          type: 'string',
+        },
+      },
+      title: 'AppProfileTranslation',
       type: 'object',
     },
     AppRecord: {
@@ -751,9 +940,36 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Message',
           type: 'string',
         },
+        category: {
+          default: '',
+          description:
+            'The heading it is offered under: the starters of one category are shown together, those without one first (LOOP P-20)',
+          title: 'Category',
+          type: 'string',
+        },
       },
       required: ['label', 'message'],
       title: 'AppStarter',
+      type: 'object',
+    },
+    AppStarterTranslation: {
+      additionalProperties: false,
+      description: 'A starter in another language.',
+      properties: {
+        label: {
+          default: '',
+          description: 'What the button says',
+          title: 'Label',
+          type: 'string',
+        },
+        message: {
+          default: '',
+          description: 'What is sent when it is chosen',
+          title: 'Message',
+          type: 'string',
+        },
+      },
+      title: 'AppStarterTranslation',
       type: 'object',
     },
     AppSurface: {
@@ -923,6 +1139,81 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['name', 'description', 'does'],
       title: 'AppTool',
+      type: 'object',
+    },
+    AppTranslation: {
+      additionalProperties: false,
+      description:
+        "What a person reads of an application, in another language (LOOP P-26).\n\nEach part is keyed by what names it in the spec: a starter by its label,\na category by its words, a setting by its field, a command by its name,\na mode and a profile by their ids. What is not translated is shown in\nthe spec's own words; what is translated is shown, never sent, but a\nstarter's message — the agent is written to in the person's language.",
+      properties: {
+        name: {
+          default: '',
+          description: 'Its display name',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it does',
+          title: 'Description',
+          type: 'string',
+        },
+        welcome: {
+          default: '',
+          description: 'What it says first',
+          title: 'Welcome',
+          type: 'string',
+        },
+        starters: {
+          additionalProperties: {
+            $ref: '#/$defs/AppStarterTranslation',
+          },
+          description: "Its starters and its profiles', by their label",
+          title: 'Starters',
+          type: 'object',
+        },
+        categories: {
+          additionalProperties: {
+            type: 'string',
+          },
+          description: "The starters' categories, by their words",
+          title: 'Categories',
+          type: 'object',
+        },
+        settings: {
+          additionalProperties: {
+            $ref: '#/$defs/AppFieldTranslation',
+          },
+          description: 'The fields of its settings, by name',
+          title: 'Settings',
+          type: 'object',
+        },
+        commands: {
+          additionalProperties: {
+            type: 'string',
+          },
+          description: "Its commands' descriptions, by name",
+          title: 'Commands',
+          type: 'object',
+        },
+        modes: {
+          additionalProperties: {
+            $ref: '#/$defs/AppModeTranslation',
+          },
+          description: 'Its modes, by id',
+          title: 'Modes',
+          type: 'object',
+        },
+        profiles: {
+          additionalProperties: {
+            $ref: '#/$defs/AppProfileTranslation',
+          },
+          description: 'Its profiles, by id',
+          title: 'Profiles',
+          type: 'object',
+        },
+      },
+      title: 'AppTranslation',
       type: 'object',
     },
     AppTrigger: {

@@ -711,6 +711,8 @@ function settingsForm(app: Pick<AppSpec, 'interface'>): Component[] {
           id: 'settings',
           component: 'Form',
           schema: app.interface.settings,
+          // Drawn with the inputs its uiSchema names (P-20).
+          ...(app.interface.settingsUi ? { ui: app.interface.settingsUi } : {}),
           values: { path: '/inputs' },
         },
       ]

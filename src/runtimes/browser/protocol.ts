@@ -52,7 +52,10 @@ export type BrowserProtocolOptions = {
   /** Told what a delegated run does, as it does it — see `subagentTools`. */
   onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
   /** What the modes a run is sent in tell it (LOOP P-19); none when unsaid. */
-  modeEffect?: (chosen: Record<string, string>) => AppModeEffect;
+  modeEffect?: (
+    chosen: Record<string, string>,
+    profile?: string,
+  ) => AppModeEffect;
 };
 
 /**

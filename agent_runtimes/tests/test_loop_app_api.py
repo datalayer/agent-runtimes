@@ -1020,6 +1020,71 @@ def test_commands_and_modes_are_declared_in_the_spec():
         app.spec  # noqa: B018
 
 
+# --- P-20, P-26: profiles, starters, the nine inputs, translations -------------------
+
+
+async def test_profiles_starters_settings_inputs_and_translations_are_declared():
+    from agent_runtimes.loop.apps.composer import run_effect
+
+    app = interview()
+    app.starter("Hello", "Hello!", category="Start")
+    app.profile("support", "Support", instructions="Answer briefly.")
+    app.profile("sales", "Sales", description="Plans", model="alibaba:qwen-max")
+    app.starter("Pricing", "What does it cost?", category="Plans", profile="sales")
+    app.setting(
+        "seats",
+        {"type": "integer", "minimum": 1, "maximum": 50, "title": "Seats"},
+        widget="range",
+    )
+    app.setting("live", {"type": "boolean", "title": "Live"}, widget="switch")
+    app.setting(
+        "topics",
+        {"type": "array", "items": {"type": "string"}, "title": "Topics"},
+        widget="tags",
+    )
+    app.translation(
+        "fr",
+        {
+            "starters": {"Pricing": {"label": "Tarifs"}},
+            "categories": {"Plans": "Offres"},
+            "settings": {"seats": {"title": "Places"}},
+            "profiles": {"sales": {"label": "Ventes"}},
+        },
+    )
+    spec = app.spec
+    ui = spec.interface
+    assert [p.id for p in ui.profiles] == ["support", "sales"]
+    assert [(s.label, s.category) for s in ui.profiles[1].starters] == [
+        ("Pricing", "Plans")
+    ]
+    assert ui.starters[-1].category == "Start"
+    assert ui.settings_ui == {
+        "seats": {"ui:widget": "range"},
+        "live": {"ui:widget": "switch"},
+        "topics": {"ui:widget": "tags"},
+    }
+    assert ui.translations["fr"].profiles["sales"].label == "Ventes"
+    assert run_effect(spec, "sales").model == "alibaba:qwen-max"
+    assert run_effect(spec).instructions.startswith("Answer briefly.")
+    # The code reads the profile its session is with: the first when unsaid.
+    host, _, _ = hosted(app)
+    assert (await host.open()).profile == "support"
+    assert (await host.open(profile="sales")).profile == "sales"
+    with pytest.raises(ValueError, match="no profile 'buyer'"):
+        await host.open(profile="buyer")
+    with pytest.raises(ValueError, match="no profile 'buyer'"):
+        app.starter("Buy", "Buy it", profile="buyer")
+    with pytest.raises(ValueError, match="already has a profile 'sales'"):
+        app.profile("sales", "Again")
+    with pytest.raises(ValueError, match="already translated into 'fr'"):
+        app.translation("fr", {})
+    # What the spec refuses, it refuses here too: a slider without bounds,
+    # a translation of what it does not say.
+    app.setting("tone", {"type": "string", "title": "Tone"}, widget="range")
+    with pytest.raises(AppNotRunnable, match="is a slider"):
+        app.spec  # noqa: B018
+
+
 async def test_a_command_its_code_answers_runs_in_place_of_message():
     app = interview()
     seen: list = []

@@ -48,7 +48,7 @@ from typing import (
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilities
 from agent_runtimes.loop.apps.components import answer_components, component_node
-from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
+from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.forms import form_defaults, form_fields, refused_by
 from agent_runtimes.loop.apps.guards import AppCheckBlockedError, AppChecksCapability
@@ -563,6 +563,7 @@ class Session:
         settings: Optional[Mapping[str, Any]] = None,
         agent_maker: Optional[Callable[["Session"], AppAgent]] = None,
         modes: Optional[Mapping[str, Any]] = None,
+        profile: Optional[str] = None,
         toolsets: Sequence[Any] = (),
         capabilities: Sequence[Any] = (),
     ) -> None:
@@ -577,6 +578,8 @@ class Session:
         self.channel = channel
         self._settings = form_values(app.interface.settings, settings or {})
         self._modes = mode_choice(app, modes)
+        chosen = profile_choice(app, profile)
+        self._profile = chosen.id if chosen is not None else None
         self._agent_factory = agent_factory
         self._agent_maker = agent_maker
         self._recorder = recorder
@@ -603,6 +606,13 @@ class Session:
     def modes(self) -> Dict[str, str]:
         """The option of each of the application's modes the user is in, by mode id; a copy (LOOP P-19)."""
         return dict(self._modes)
+
+    @property
+    def profile(self) -> Optional[str]:
+        """The id of the profile the conversation is with (LOOP P-20); None
+        for an application without profiles. Kept to the end of the session.
+        """
+        return self._profile
 
     def _update_modes(self, chosen: Mapping[str, Any]) -> Dict[str, str]:
         """The modes the page sent with a run, checked and kept: the agent's next run is told them."""
@@ -1124,7 +1134,7 @@ class Session:
                 ),
                 toolsets=list(self._own_toolsets),
             )
-        self._agent.mode = mode_effect(self.app, self._modes)
+        self._agent.mode = run_effect(self.app, self._profile, self._modes)
         return self._agent
 
     async def _allowed(self, sentence: str) -> bool:

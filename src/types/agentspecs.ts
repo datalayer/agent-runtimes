@@ -487,6 +487,54 @@ export interface AppPermissionsSpec {
 export interface AppStarterSpec {
   label: string;
   message: string;
+  /**
+   * The heading it is offered under (LOOP P-20): the starters of one
+   * category together, those without one first. Absent when unsaid.
+   */
+  category?: string;
+}
+
+/**
+ * One of several assistants in one application (LOOP P-20): picked before
+ * the conversation starts — the first unless another is — and kept to its
+ * end. Its instructions are told in every run, its model run in place of the
+ * application's (a mode's wins over it), its starters offered in place of
+ * the application's.
+ */
+export interface AppProfileSpec {
+  id: string;
+  label: string;
+  description: string;
+  instructions: string;
+  model: string | null;
+  starters: AppStarterSpec[];
+}
+
+/**
+ * What a person reads of an application in another language (LOOP P-26):
+ * each part keyed by what names it in the spec — a starter by its label, a
+ * category by its words, a setting by its field, a command by its name, a
+ * mode and a profile by their ids. Every key present; empty is untranslated.
+ */
+export interface AppTranslationSpec {
+  name: string;
+  description: string;
+  welcome: string;
+  starters: Record<string, { label: string; message: string }>;
+  categories: Record<string, string>;
+  settings: Record<
+    string,
+    { title: string; description: string; options: Record<string, string> }
+  >;
+  commands: Record<string, string>;
+  modes: Record<
+    string,
+    {
+      label: string;
+      options: Record<string, { label: string; description: string }>;
+    }
+  >;
+  profiles: Record<string, { label: string; description: string }>;
 }
 
 /** A slash command the user picks in the composer (LOOP P-19). */
@@ -622,10 +670,26 @@ export interface AppInterfaceSpec {
   /** Mode switches in the composer, the option picked going with every run (P-19). */
   modes: AppModeSpec[];
   /**
+   * Several assistants in one application (P-20): two at least, or none.
+   * Absent from a spec made before profiles.
+   */
+  profiles?: AppProfileSpec[];
+  /**
    * What a person may set: the JSON Schema of a form (C-16), drawn beside the
    * conversation and on a deployment's Ship card; none when unsaid.
    */
   settings?: AppFormSchema;
+  /**
+   * How the settings' fields are drawn (P-20): a uiSchema as
+   * `@datalayer/primer-rjsf` reads it, by field name — `ui:widget` one of
+   * `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`,
+   * `textarea`, `date`, `checkboxes`, `tags`. Each field's own when unsaid.
+   */
+  settingsUi?: Record<string, unknown>;
+  /** The language its own words are in, BCP 47 (P-26); `en` when absent. */
+  language?: string;
+  /** Its words in other languages, by BCP 47 tag (P-26). */
+  translations?: Record<string, AppTranslationSpec>;
   /**
    * What a person may send in the composer without being asked (P-21): none
    * when unsaid — the composer offers no attachment, and the runtime refuses

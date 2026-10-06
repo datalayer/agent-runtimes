@@ -2216,6 +2216,9 @@ class AppStarterSpec(BaseModel):
 
     label: str
     message: str
+    category: str = Field(
+        default="", description="The heading it is offered under (LOOP P-20)"
+    )
 
 
 class AppCommandSpec(BaseModel):
@@ -2251,6 +2254,79 @@ class AppModeSpec(BaseModel):
     default: Optional[str] = Field(
         default=None, description="The option it starts on; the first when unsaid"
     )
+
+
+class AppProfileSpec(BaseModel):
+    """One of several assistants in one application (LOOP P-20)."""
+
+    id: str
+    label: str
+    description: str = ""
+    instructions: str = Field(
+        default="", description="What the agent is told in every run with this profile"
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="The model it runs on; a mode's model wins over it",
+    )
+    starters: List[AppStarterSpec] = Field(
+        default_factory=list,
+        description="Its first messages, in place of the application's",
+    )
+
+
+class AppStarterTranslationSpec(BaseModel):
+    """A starter in another language (LOOP P-26)."""
+
+    label: str = ""
+    message: str = ""
+
+
+class AppFieldTranslationSpec(BaseModel):
+    """A field of the settings in another language (LOOP P-26)."""
+
+    title: str = ""
+    description: str = ""
+    options: Dict[str, str] = Field(
+        default_factory=dict, description="What each value reads as, by the value"
+    )
+
+
+class AppOptionTranslationSpec(BaseModel):
+    """An option of a mode in another language (LOOP P-26)."""
+
+    label: str = ""
+    description: str = ""
+
+
+class AppModeTranslationSpec(BaseModel):
+    """A mode in another language (LOOP P-26)."""
+
+    label: str = ""
+    options: Dict[str, AppOptionTranslationSpec] = Field(default_factory=dict)
+
+
+class AppProfileTranslationSpec(BaseModel):
+    """A profile in another language (LOOP P-26)."""
+
+    label: str = ""
+    description: str = ""
+
+
+class AppTranslationSpec(BaseModel):
+    """What a person reads of an application in another language (LOOP P-26)."""
+
+    name: str = ""
+    description: str = ""
+    welcome: str = ""
+    starters: Dict[str, AppStarterTranslationSpec] = Field(
+        default_factory=dict, description="By the starter's label"
+    )
+    categories: Dict[str, str] = Field(default_factory=dict)
+    settings: Dict[str, AppFieldTranslationSpec] = Field(default_factory=dict)
+    commands: Dict[str, str] = Field(default_factory=dict)
+    modes: Dict[str, AppModeTranslationSpec] = Field(default_factory=dict)
+    profiles: Dict[str, AppProfileTranslationSpec] = Field(default_factory=dict)
 
 
 class AppSurfaceSpec(BaseModel):
@@ -2321,12 +2397,28 @@ class AppInterfaceSpec(BaseModel):
     modes: List[AppModeSpec] = Field(
         default_factory=list, description="Mode switches in the composer"
     )
+    profiles: List[AppProfileSpec] = Field(
+        default_factory=list,
+        description="Several assistants in one application, picked before the conversation (LOOP P-20)",
+    )
     settings: Optional[Dict[str, Any]] = Field(
         default=None,
         description=(
             "What the user may set: the JSON Schema of a form, an object of "
             "named fields (LOOP C-16); none when unsaid"
         ),
+    )
+    settings_ui: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="How the settings' fields are drawn: a uiSchema by field name (LOOP P-20)",
+    )
+    language: str = Field(
+        default="en",
+        description="The language its own words are in, BCP 47 (LOOP P-26)",
+    )
+    translations: Dict[str, AppTranslationSpec] = Field(
+        default_factory=dict,
+        description="Its words in other languages, by BCP 47 tag (LOOP P-26)",
     )
     uploads: Optional[AppUploadsSpec] = Field(
         default=None,

@@ -565,6 +565,9 @@ class StartSessionRequest(BaseModel):
     )
     opener: str = Field("", description="The first message, answered at once")
     settings: Dict[str, Any] = Field(default_factory=dict)
+    profile: str = Field(
+        "", description="The profile it is with (LOOP P-20); the first when unsaid"
+    )
     session: str = Field("", description="Its uid, when the caller names it")
     woken_by: Dict[str, Any] = Field(
         default_factory=dict, description="What woke it, when nobody opened it (R-14)"
@@ -817,6 +820,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
             acts_as=acts_as,
             settings=body.settings,
             uid=body.session,
+            profile=body.profile,
         )
         return _stream(
             live.open(

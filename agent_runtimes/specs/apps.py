@@ -77,7 +77,11 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,
@@ -201,6 +205,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": {
                 "type": "object",
                 "properties": {
@@ -219,6 +224,9 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,
@@ -326,7 +334,11 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -490,7 +502,11 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,
@@ -645,7 +661,11 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,
@@ -781,7 +801,11 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -1011,7 +1035,11 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -1238,6 +1266,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": {
                 "type": "object",
                 "properties": {
@@ -1262,6 +1291,9 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -1453,6 +1485,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": {
                 "type": "object",
                 "properties": {
@@ -1469,6 +1502,9 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             },
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -1665,7 +1701,11 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,
@@ -1772,7 +1812,11 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -1950,7 +1994,11 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [
                 "Card",
@@ -2116,18 +2164,22 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                 {
                     "label": "Reset my password",
                     "message": "How do I reset my password?",
+                    "category": "Account",
                 },
                 {
                     "label": "Returns",
                     "message": "Can I return a product I bought six weeks ago?",
+                    "category": "Orders",
                 },
                 {
                     "label": "Plans",
                     "message": "What is the difference between the Team and the Business plan?",
+                    "category": "Account",
                 },
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": {
                 "type": "object",
                 "properties": {
@@ -2138,6 +2190,40 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                         "default": "Cloud",
                     }
                 },
+            },
+            "settings_ui": {"product": {"ui:widget": "radio"}},
+            "language": "en",
+            "translations": {
+                "fr": {
+                    "name": "Service client",
+                    "description": "",
+                    "welcome": "Posez-moi vos questions sur le produit. Je réponds à partir de sa documentation et vous montre où ; quand elle ne le dit pas, je vous le dis.",
+                    "starters": {
+                        "Reset my password": {
+                            "label": "Réinitialiser mon mot de passe",
+                            "message": "Comment réinitialiser mon mot de passe ?",
+                        },
+                        "Returns": {
+                            "label": "Retours",
+                            "message": "Puis-je retourner un produit acheté il y a six semaines ?",
+                        },
+                        "Plans": {
+                            "label": "Offres",
+                            "message": "Quelle est la différence entre l'offre Team et l'offre Business ?",
+                        },
+                    },
+                    "categories": {"Account": "Compte", "Orders": "Commandes"},
+                    "settings": {
+                        "product": {
+                            "title": "Produit",
+                            "description": "",
+                            "options": {},
+                        }
+                    },
+                    "commands": {},
+                    "modes": {},
+                    "profiles": {},
+                }
             },
             "uploads": None,
             "components": [
@@ -2347,6 +2433,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
+            "profiles": [],
             "settings": {
                 "type": "object",
                 "properties": {
@@ -2358,6 +2445,9 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
                     }
                 },
             },
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
             "uploads": None,
             "components": [],
             "surface": None,

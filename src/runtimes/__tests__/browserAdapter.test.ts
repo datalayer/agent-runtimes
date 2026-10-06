@@ -430,7 +430,9 @@ describe('stopping a run in flight', () => {
 
 describe('an application’s modes, in the page (LOOP P-19)', () => {
   /** The system prompt and model each request to the inference service asked for. */
-  function recording(modeEffect?: (chosen: Record<string, string>) => any) {
+  function recording(
+    modeEffect?: (chosen: Record<string, string>, profile?: string) => any,
+  ) {
     const asked: Array<{ model: string; system?: string }> = [];
     const adapter = new BrowserAgentAdapter({
       protocol: 'browser-vercel-ai',
@@ -488,6 +490,32 @@ describe('an application’s modes, in the page (LOOP P-19)', () => {
     ]);
   });
 
+  it('tells a run the profile its conversation is with (LOOP P-20)', async () => {
+    const { adapter, asked } = recording((chosen, profile) =>
+      profile === 'sales'
+        ? { instructions: 'Talk plans.', model: 'bedrock:sales-one' }
+        : { instructions: `In ${profile ?? 'none'}.` },
+    );
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { profile: 'sales' } },
+    });
+    await adapter.sendMessage(userMessage('hello'), {
+      messages: [],
+      forwardedProps: { loop: { profile: 'support', modes: {} } },
+    });
+    expect(asked).toEqual([
+      {
+        model: 'bedrock:sales-one',
+        system: 'You keep the desk.\n\nTalk plans.',
+      },
+      {
+        model: 'bedrock:built-with',
+        system: 'You keep the desk.\n\nIn support.',
+      },
+    ]);
+  });
+
   it('refuses modes it does not have, rather than running without them', async () => {
     const { adapter, asked, events } = recording();
     await adapter.sendMessage(userMessage('hello'), {
@@ -496,7 +524,7 @@ describe('an application’s modes, in the page (LOOP P-19)', () => {
     });
     expect(asked).toEqual([]);
     expect(events.find(event => event.type === 'error').error.message).toBe(
-      'This agent has no modes: the options chosen in the composer cannot be applied to it.',
+      'This agent has no modes or profiles: what was chosen in the composer cannot be applied to it.',
     );
     expect(events.some(event => event.type === 'done')).toBe(true);
   });
@@ -529,7 +557,7 @@ describe('an application’s modes, in the page (LOOP P-19)', () => {
       forwardedProps: { loop: { modes: { depth: 'quick' } } },
     });
     expect(events.find(event => event.type === 'error').error.message).toBe(
-      "The mode chosen runs on bedrock:quick-one, and this agent's model is its host's own: it cannot run on another.",
+      "The mode or profile chosen runs on bedrock:quick-one, and this agent's model is its host's own: it cannot run on another.",
     );
     // Its instructions alone are told, on the host's model.
     const told: any[] = [];

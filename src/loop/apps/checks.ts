@@ -56,6 +56,8 @@ import { classesOf, splitRef, toolBehaviours } from './rules';
 import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
 import { HOST_NAME, hostToolsOf } from './hostTools';
 import { MAX_UPLOAD_MB, UPLOAD_KIND } from './uploads';
+import { formUiProblems } from './settingsInputs';
+import { translationProblems } from './language';
 
 export const NOT_READY = 'Not ready';
 export const NEEDS_ATTENTION = 'Needs attention';
@@ -232,6 +234,47 @@ function shapeProblems(app: AppSpec): string[] {
       `A ${app.kind} application starts when somebody opens it: \`triggers\` are a worker's.`,
     );
   }
+  // Its profiles (LOOP P-20): two at least, or none; each id slash-safe and
+  // said once, each with a label.
+  const profiles = app.interface.profiles ?? [];
+  if (profiles.length === 1) {
+    problems.push(
+      'One profile is the application itself: say two at least, or put its instructions, model and starters on the application.',
+    );
+  }
+  const profileIds = new Set<string>();
+  for (const profile of profiles) {
+    if (!MODE_ID.test(profile.id)) {
+      problems.push(
+        `Cannot use “${profile.id}” as a profile's id: lower-case letters, digits, \`_\` and \`-\`, a letter first.`,
+      );
+    }
+    if (!profile.label.trim()) {
+      problems.push(`The profile “${profile.id}” has no label.`);
+    }
+    if (profileIds.has(profile.id)) {
+      problems.push(`Two profiles are “${profile.id}”.`);
+    }
+    profileIds.add(profile.id);
+  }
+  // How its settings' fields are drawn (P-20): by a widget that draws each.
+  if (app.interface.settingsUi) {
+    if (!app.interface.settings) {
+      problems.push(
+        '`settings_ui` draws the settings’ fields: say `settings` first.',
+      );
+    } else {
+      problems.push(
+        ...formUiProblems(
+          'The form “settings”',
+          app.interface.settings as Record<string, unknown>,
+          app.interface.settingsUi,
+        ),
+      );
+    }
+  }
+  // Its words in other languages (P-26): of languages, of what it says.
+  problems.push(...translationProblems(app.interface));
   // What the host page passes and offers (D-10): named once each, in words
   // its agent's tools can carry, each function saying what it does.
   const host = app.deployment.embedded?.host;
@@ -343,6 +386,10 @@ export function formProblems(node: Record<string, unknown>): string[] {
       `${said} requires ${missing.map(name => `“${String(name)}”`).join(', ')}, which it does not ask.`,
     );
   }
+  // How its fields are drawn (P-20): by a widget that draws each.
+  if (node.ui !== undefined && node.ui !== null) {
+    problems.push(...formUiProblems(said, schema, node.ui));
+  }
   return problems;
 }
 
@@ -412,6 +459,14 @@ function referenceProblems(
   }
   if (app.model && !getModel(app.model)) {
     missing('model', app.model);
+  }
+  // The model a profile runs on is the catalogue's (LOOP P-20).
+  for (const profile of app.interface.profiles ?? []) {
+    if (profile.model && !getModel(profile.model)) {
+      problems.push(
+        `The profile “${profile.id}” runs on “${profile.model}”, which is no model.`,
+      );
+    }
   }
   // The model a mode runs on is the catalogue's (LOOP P-19).
   for (const mode of app.interface.modes ?? []) {
@@ -842,9 +897,56 @@ export function documentShapeProblems(document: unknown): string[] {
     }
     text(ui.welcome, 'interface.welcome');
     texts(ui.components, 'interface.components');
-    records(ui.starters, 'interface.starters', (item, where) => {
+    const starter = (item: Raw, where: string) => {
       required(item, 'label', where);
       required(item, 'message', where);
+      text(item.category, `${where}.category`);
+      unknownKeys(item, ['label', 'message', 'category'], where, 'a starter');
+    };
+    records(ui.starters, 'interface.starters', starter);
+    // Its profiles (LOOP P-20), as agentspecs refuses them: no key unknown.
+    records(ui.profiles, 'interface.profiles', (profile, where) => {
+      required(profile, 'id', where);
+      required(profile, 'label', where);
+      for (const key of [
+        'id',
+        'label',
+        'description',
+        'instructions',
+        'model',
+      ]) {
+        text(profile[key], `${where}.${key}`);
+      }
+      unknownKeys(
+        profile,
+        ['id', 'label', 'description', 'instructions', 'model', 'starters'],
+        where,
+        'a profile',
+      );
+      records(profile.starters, `${where}.starters`, starter);
+    });
+    text(ui.language, 'interface.language');
+    mapping(ui.translations, 'interface.translations', translations => {
+      for (const [tag, words] of Object.entries(translations)) {
+        mapping(words, `interface.translations.${tag}`, said =>
+          unknownKeys(
+            said,
+            [
+              'name',
+              'description',
+              'welcome',
+              'starters',
+              'categories',
+              'settings',
+              'commands',
+              'modes',
+              'profiles',
+            ],
+            `interface.translations.${tag}`,
+            'a translation',
+          ),
+        );
+      }
     });
     // Its commands and modes in the composer (LOOP P-19), as agentspecs
     // refuses them: names and ids slash-safe and said once, no key unknown.

@@ -1271,3 +1271,147 @@ def test_the_mode_a_run_says_is_told_to_its_agent_for_that_run(
     # Said once, the mode is kept for the runs that do not say it again.
     local.post(url, json={**run, "runId": "run-3"})
     assert forwarded[-1]["model"] == "alibaba:qwen-max"
+
+
+PROFILES = [
+    {"id": "support", "label": "Support", "instructions": "Answer briefly."},
+    {
+        "id": "sales",
+        "label": "Sales",
+        "instructions": "Talk about plans.",
+        "model": "alibaba:qwen3-32b",
+    },
+]
+
+
+def test_a_conversation_keeps_the_profile_it_started_with(
+    runtime: Runtime, local: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP P-20: ``forwardedProps.loop.profile`` — its instructions told before
+    the modes', its model run unless a mode names one; kept to the end."""
+    spec = {
+        **ASSISTANT,
+        "interface": {
+            **ASSISTANT["interface"],
+            "modes": [DEPTH],
+            "profiles": PROFILES,
+        },
+    }
+    runtime.make("notes-assistant", spec, {"app_uid": "app-1"})
+    forwarded: List[Dict[str, Any]] = []
+
+    async def forward(
+        self: Any, body: Dict[str, Any], *, bearer: str, instructions: str = ""
+    ) -> None:
+        forwarded.append({**body, "told": instructions})
+
+    monkeypatch.setattr(sessions.LiveSession, "forward", forward)
+    run = {
+        "threadId": "thread-profiles",
+        "runId": "run-1",
+        "state": None,
+        "messages": [{"id": "m1", "role": "user", "content": "Hi there"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {"loop": {"profile": "sales"}},
+    }
+    url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
+    local.post(url, json=run)
+    assert forwarded[-1]["told"] == "Talk about plans.\n\nAnswer in two sentences."
+    assert forwarded[-1]["model"] == "alibaba:qwen3-32b"
+    live = sessions.session_of("thread-profiles")
+    assert live.profile == "sales"
+    assert live.describe()["profile"] == "sales"
+    # A mode's model wins over the profile's.
+    local.post(
+        url,
+        json={
+            **run,
+            "runId": "run-2",
+            "forwardedProps": {
+                "loop": {"profile": "sales", "modes": {"depth": "thorough"}}
+            },
+        },
+    )
+    assert forwarded[-1]["model"] == "alibaba:qwen-max"
+    assert forwarded[-1]["told"] == "Talk about plans.\n\nCite what you read."
+    # Kept to the end: another is refused, an unknown one too.
+    changed = local.post(
+        url, json={**run, "forwardedProps": {"loop": {"profile": "support"}}}
+    )
+    assert changed.status_code == 409
+    assert changed.json()["detail"] == (
+        "This conversation is with Sales: start another to talk to Support."
+    )
+    for wrong, sentence in (
+        ("buyer", "Notes Assistant has no profile 'buyer'."),
+        (3, "The profile sent is not a profile's id."),
+    ):
+        refused = local.post(
+            url, json={**run, "forwardedProps": {"loop": {"profile": wrong}}}
+        )
+        assert refused.status_code == 422
+        assert refused.json()["detail"] == sentence
+    # Unsaid, a new conversation is with the first.
+    local.post(url, json={**run, "threadId": "thread-first", "forwardedProps": {}})
+    assert forwarded[-1]["told"] == "Answer briefly.\n\nAnswer in two sentences."
+    assert "model" not in forwarded[-1]
+    # A session started with a profile it does not have is refused.
+    refused = local.post(
+        "/api/v1/apps/sessions",
+        json={"agent": "notes-assistant", "profile": "buyer"},
+    )
+    assert refused.status_code == 422
+
+
+def test_its_code_is_told_the_settings_the_page_changed_and_the_profile(
+    runtime: Runtime, local: TestClient
+) -> None:
+    """LOOP P-20: settings changed in the page go with the next run; ``@app.settings``
+    runs on what changed, before the message, and ``session.profile`` says the profile."""
+    from agent_runtimes.loop.apps import Application
+
+    app = Application("notes-desk", agent="cog-crawler:0.0.1", name="Notes Desk")
+    app.setting(
+        "tone",
+        {
+            "type": "string",
+            "title": "Tone",
+            "enum": ["Plain", "Warm"],
+            "default": "Plain",
+        },
+        widget="radio",
+    )
+    app.profile("support", "Support")
+    app.profile("sales", "Sales")
+    told: List[Dict[str, Any]] = []
+
+    @app.settings
+    async def changed(session: Any, values: Dict[str, Any]) -> None:
+        told.append(dict(values))
+
+    @app.message
+    async def reply(session: Any, text: str) -> None:
+        await session.send(f"{session.profile}: {session.settings['tone']}: {text}")
+
+    sessions.serve_code(app)
+    runtime.make("notes-desk", app.document, {"app_uid": "app-9"})
+    run = {
+        "threadId": "thread-settings",
+        "runId": "run-1",
+        "state": None,
+        "messages": [{"id": "m1", "role": "user", "content": "Hello"}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {"loop": {"profile": "sales", "settings": {"tone": "Plain"}}},
+    }
+    url = "/api/v1/apps/agents/notes-desk/ag-ui/"
+    assert answer_of(events_of(local.post(url, json=run))) == "sales: Plain: Hello"
+    # Unchanged: its code is not told.
+    assert told == []
+    run["forwardedProps"] = {"loop": {"settings": {"tone": "Warm"}}}
+    assert (
+        answer_of(events_of(local.post(url, json={**run, "runId": "run-2"})))
+        == "sales: Warm: Hello"
+    )
+    assert told == [{"tone": "Warm"}]

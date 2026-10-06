@@ -979,6 +979,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const suggestionEntries = useContributions(LoopChatSuggestion);
   const hiddenOpeners = chatExtras.hiddenOpeners;
   const hideOpeners = chatExtras.hideOpeners;
+  const liveOpeners = chatExtras.openers;
   const suggestions = useMemo((): (AgentSuggestion & { group?: string })[] => {
     if (hideOpeners) {
       return [];
@@ -988,6 +989,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     const hidden = new Set(hiddenOpeners ?? []);
     const offered = <T extends { text: string }>(items: T[]): T[] =>
       hidden.size === 0 ? items : items.filter(item => !hidden.has(item.text));
+    // What a plugin offers live (an application's profile's starters,
+    // LOOP P-20) wins over what was contributed when the reactor was built.
+    if (liveOpeners) {
+      return offered(liveOpeners);
+    }
     const contributed = suggestionEntries.flatMap(
       entry => entry.value.suggestions,
     );
@@ -1018,6 +1024,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     agentId,
     hiddenOpeners,
     hideOpeners,
+    liveOpeners,
   ]);
 
   /*

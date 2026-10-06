@@ -33,6 +33,11 @@
  *   address and embedded;
  * - its **frame**, when the host asks (`frame`): the `window-frame` plugin's
  *   window, its title the application's face and name;
+ * - its **language** (LOOP P-26): what a person reads of it — its name,
+ *   welcome, starters, settings, commands, modes and profiles — in the first
+ *   language they prefer that its Appspec is translated into (`language`,
+ *   else the browser's), its own words otherwise (`translatedAppspec`);
+ *   what it does is the same in every language;
  * - its **sidebar**, when the host asks (`sidebar`, R-01b): its rules and
  *   the approvals waiting for the person (`app-rules`), what it did
  *   (`app-activity`), and its computer, live (`app-computer`, R-23), beside
@@ -74,8 +79,13 @@ import { AppElementsPlugin } from '../plugins/app-elements';
 import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
-import { defineAppComposerPlugin } from './AppComposer';
+import {
+  defineAppComposerPlugin,
+  needsAppComposer,
+  startersAsOpeners,
+} from './AppComposer';
 import { modeEffect } from './composer';
+import { preferredLanguages, translatedAppspec } from './language';
 import { defineAppFeedbackPlugin } from './AppFeedback';
 import { defineAppKeptPlugin } from './AppKept';
 import { keepsFeedback } from './feedback';
@@ -105,6 +115,7 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
  */
 export function defineAppPlugin(
   app: AppSpec,
+  shown: AppSpec = app,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   if (!app.agent) {
     throw new Error(
@@ -113,8 +124,10 @@ export function defineAppPlugin(
   }
   return defineAgentCapacityPlugin({
     key: `app-${app.id}`,
-    displayName: app.name,
-    description: app.description || `The ${app.name} application`,
+    // What a person reads is in their language (P-26); what it is created
+    // with is its own Appspec.
+    displayName: shown.name,
+    description: shown.description || `The ${shown.name} application`,
     specId: agentIdOf(app),
     emoji: app.emoji,
     createPayload: {
@@ -125,22 +138,22 @@ export function defineAppPlugin(
       enable_codemode: Boolean(app.permissions?.computer?.shell),
       ...(app.model ? { model: app.model } : {}),
     },
-    suggestions: app.interface.starters.map(starter => ({
-      text: starter.label,
-      message: starter.message,
-    })),
+    // Its starters, each under its category (P-20); with profiles, the
+    // composer offers the profile's in their place.
+    suggestions: startersAsOpeners(shown.interface.starters),
     // In the page, the agent is told what a runtime tells it: its own
     // spec's prompt, then the application's instructions; on the
     // application's model when it names one (`loop/apps/agent`).
     instructions: app.instructions,
     model: app.model,
-    // Its modes (LOOP P-19), as the session API applies them: the
-    // instructions of the options chosen and the model one names, for the
-    // run they are sent with.
-    ...((app.interface.modes ?? []).length > 0
+    // Its modes and its profiles (LOOP P-19, P-20), as the session API
+    // applies them: the profile's instructions and those of the options
+    // chosen, and the model one names, for the run they are sent with.
+    ...((app.interface.modes ?? []).length > 0 ||
+    (app.interface.profiles ?? []).length > 0
       ? {
-          modeEffect: (chosen: Record<string, string>) =>
-            modeEffect(app, chosen),
+          modeEffect: (chosen: Record<string, string>, profile?: string) =>
+            modeEffect(app, chosen, profile),
         }
       : {}),
   });
@@ -216,6 +229,12 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * Canvas's palette. Compared by content.
    */
   pluginsOff?: readonly string[];
+  /**
+   * The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`):
+   * the platform's setting when the host knows it. The browser's languages
+   * when unsaid (LOOP P-26).
+   */
+  language?: string;
 };
 
 /** What `interface.layout` sets on the workspace. */
@@ -306,6 +325,11 @@ export function appPreset(
     /** What its record is kept under: its activity's. */
     appUid?: string;
     /**
+     * The application as the person reads it (P-26): its words in their
+     * language. Its own when unsaid.
+     */
+    shown?: AppSpec;
+    /**
      * Say what it keeps before the first message (R-31): at its address and
      * embedded, not in its builder's Preview — to a `visitor` not signed
      * in, that nothing is kept (R-30).
@@ -329,21 +353,18 @@ export function appPreset(
     };
   }
   const withPage = hasAppPage(app);
+  const shown = options.shown ?? app;
   // The blocks its Canvas offers: those of the UI plugins not turned off.
   const off = new Set((options.pluginsOff ?? []).map(canvasBlocksPluginName));
   const blocks = CANVAS_BLOCK_PLUGINS.filter(plugin => !off.has(plugin.name));
   return {
     plugins: [
-      defineAppPlugin(app),
-      ...(withPage ? [defineAppPagePlugin(app), ...blocks] : []),
-      // Its commands in the composer's `/` menu, its modes beside the
-      // composer (LOOP P-19) and what a person may attach there (P-21):
-      // only for an application that has some.
-      ...((app.interface.commands ?? []).length > 0 ||
-      (app.interface.modes ?? []).length > 0 ||
-      app.interface.uploads
-        ? [defineAppComposerPlugin(app)]
-        : []),
+      defineAppPlugin(app, shown),
+      ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
+      // Its commands in the composer's `/` menu, its modes and its profiles
+      // beside the composer (LOOP P-19, P-20) and what a person may attach
+      // there (P-21): only for an application that has some.
+      ...(needsAppComposer(app) ? [defineAppComposerPlugin(shown)] : []),
       // A thumb and a comment on each answer, kept in its record (LOOP
       // V-18): only for an application whose record keeps feedback.
       ...(keepsFeedback(app) ? [defineAppFeedbackPlugin(app)] : []),
@@ -453,6 +474,7 @@ export function AppRenderer({
   frame = false,
   page,
   pluginsOff,
+  language,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
@@ -463,6 +485,16 @@ export function AppRenderer({
    */
   const source = JSON.stringify(dumpAppspec(app));
   const off = [...(pluginsOff ?? [])].sort().join(',');
+  /*
+   * What the person reads, in their language (P-26): the host's, else the
+   * browser's. Read once per language: a new one is a new workspace.
+   */
+  const preferred = (language ? [language] : preferredLanguages()).join(',');
+  const shown = useMemo(
+    () => translatedAppspec(app, preferred.split(',').filter(Boolean)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [source, preferred],
+  );
   /*
    * What it keeps, said before the first message (R-31): run as a
    * deployment — at its address, embedded — and not in its builder's
@@ -479,6 +511,7 @@ export function AppRenderer({
           sidebar,
           computer,
           appUid: instance?.appUid,
+          shown,
           ...(deployed ? { kept: { visitor } } : {}),
         });
       } catch (error) {
@@ -488,7 +521,17 @@ export function AppRenderer({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, page, off, sidebar, computer, instance?.appUid, deployed, visitor],
+    [
+      source,
+      shown,
+      page,
+      off,
+      sidebar,
+      computer,
+      instance?.appUid,
+      deployed,
+      visitor,
+    ],
   );
   const allPlugins = useMemo(
     () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
@@ -552,7 +595,7 @@ export function AppRenderer({
       {...preset.workspace}
       {...(frame
         ? {
-            frameTitle: [app.emoji, app.name].filter(Boolean).join(' '),
+            frameTitle: [app.emoji, shown.name].filter(Boolean).join(' '),
           }
         : {})}
       // Its rules, activity and computer on a rail, one at a time (T-07).
@@ -573,9 +616,9 @@ export function AppRenderer({
       // Its own face, name and welcome in the chat (T-08); no counters: a
       // person using an application is not asking about tokens.
       presence={{
-        name: app.name,
+        name: shown.name,
         face: app.emoji,
-        welcome: app.interface.welcome || app.description,
+        welcome: shown.interface.welcome || shown.description,
         paused,
         onPresence,
         onSaying,

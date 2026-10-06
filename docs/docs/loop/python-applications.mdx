@@ -192,13 +192,63 @@ What an application declares is its Appspec. Each call adds to it:
 
 | Call | Declares |
 | --- | --- |
-| `app.starter(label, message)` | A first message offered to the person. |
-| `app.setting(name, field, *, required=False)` | A setting of the session: a field of the settings' form (LOOP C-16), `interface.settings`, the JSON Schema of an object of named fields. `field` is the field's own schema — a `type`, the `title` the person reads, a `default`, and what it takes (`enum`, `minimum`, `maximum`…). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card. A field that is not a schema raises `TypeError`; the old `app.setting(id, type, label, …)` is gone. |
+| `app.starter(label, message, *, category="", profile=None)` | A first message offered to the person, under its `category` when it has one (LOOP P-20): the starters of a category together, under its name, those without one first. With `profile`, it is that profile's, offered in place of the application's. |
+| `app.profile(id, label, *, description="", instructions="", model=None)` | One of several assistants in one application (LOOP P-20): two at least, or none. The person picks one before the conversation starts — the first unless they pick another — and keeps it to the end: its `instructions` are told to the agent in every run, its `model` is run in place of the application's (a mode's model wins over it), its starters offered. `session.profile` says it. |
+| `app.setting(name, field, *, required=False, widget=None)` | A setting of the session: a field of the settings' form (LOOP C-16), `interface.settings`, the JSON Schema of an object of named fields. `field` is the field's own schema — a `type`, the `title` the person reads, a `default`, and what it takes (`enum`, `minimum`, `maximum`…). `widget` is the input it is drawn with when not its field's own (`interface.settings_ui`, LOOP P-20) — see [The nine inputs](#the-nine-inputs). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card. A field that is not a schema raises `TypeError`; the old `app.setting(id, type, label, …)` is gone. |
+| `app.translation(language, words)` | What a person reads of it in another language (LOOP P-26), by BCP 47 tag: `words` keyed as `interface.translations` are — `name`, `description`, `welcome`, `starters` by label, `categories`, `settings` by field, `commands` by name, `modes` and `profiles` by id. The page shows the person's language when it has it, else its own words. |
 | `app.rule(action, *, applies_to, behaviour)` | When it acts alone and when it asks: `applies_to` names classes of action (`send`, `write`…) or tools (`server.tool`); `behaviour` is `do_it`, `if_asked`, `ask_first` or `leave_to_me`. |
 | `app.connection(server, *, access="read", acts_as="owner", only=())` | An MCP server it reaches, read or write, in the owner's or the person's name, limited to the tools `only` names. |
 | `app.command(name, description, *, prompt="")` | A slash command in the composer (LOOP P-19): typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
 | `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer: `options` are two at least, each `{id, label, description?, instructions?, model?}`. The option the person picks goes with every run: `session.modes[id]` says it, and `session.agent` is told its `instructions` and runs on its `model`. |
 | `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui-plugins#typed-calls-from-python). |
+
+#### The nine inputs
+
+A setting is drawn with one of nine inputs (LOOP P-20), each a JSON Schema
+field and, where needed, the `widget` that draws it — the setting's
+`ui:widget` in the Appspec's `interface.settings_ui`:
+
+| Input | `field` | `widget` |
+| --- | --- | --- |
+| Select | `{"type": "string", "enum": [...]}` | — |
+| Slider | `{"type": "integer", "minimum": 1, "maximum": 10}` | `"range"` |
+| Switch | `{"type": "boolean"}` | `"switch"` |
+| TextInput | `{"type": "string"}` | — or `"textarea"` |
+| Checkbox | `{"type": "boolean"}` | — |
+| DatePicker | `{"type": "string", "format": "date"}` | — |
+| MultiSelect | `{"type": "array", "uniqueItems": True, "items": {"type": "string", "enum": [...]}}` | — or `"checkboxes"` |
+| RadioGroup | `{"type": "string", "enum": [...]}` | `"radio"` |
+| Tags | `{"type": "array", "items": {"type": "string"}}` | `"tags"` |
+
+```python
+app.setting("seats", {"type": "integer", "title": "Seats", "minimum": 1, "maximum": 50}, widget="range")
+app.setting("live", {"type": "boolean", "title": "Live data"}, widget="switch")
+app.setting("topics", {"type": "array", "title": "Topics", "items": {"type": "string"}}, widget="tags")
+```
+
+A widget that cannot draw its field is refused when the spec is read: a
+slider without a `minimum` and a `maximum`, a switch for a string.
+
+#### Profiles
+
+```python
+app.profile("support", "Support", instructions="Answer from the documentation, briefly.")
+app.profile("sales", "Sales", description="Plans and prices", model="anthropic:claude-sonnet-4-5-20250514")
+app.starter("Pricing", "What does the Business plan cost?", category="Plans", profile="sales")
+app.translation("fr", {"profiles": {"sales": {"label": "Ventes"}}, "starters": {"Pricing": {"label": "Tarifs"}}})
+
+@app.message
+async def reply(session: Session, text: str) -> None:
+    answer = await session.agent.run(text)  # told the profile's instructions
+    await session.send(f"[{session.profile}] {answer.text}")
+```
+
+The page offers the profiles in a picker beside the composer and sends the
+one picked with every run (`forwardedProps.loop.profile`); the empty chat
+offers its starters. Once the first message is sent, the conversation keeps
+its profile: a run naming another is refused (409, *This conversation is with
+Sales: start another to talk to Support.*), and one naming a profile the
+application does not have too (422).
 
 `app.spec` is the Appspec they amount to, **validated** as any Appspec is:
 an application that would not run raises `AppNotRunnable` with its reasons,
@@ -216,7 +266,7 @@ session always first:
 | `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
 | `@app.action(name)` | `(session, payload)` | The person presses the button of that name. The values a `Form` sends with it are checked against its schema first: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). |
 | `@app.file` | `(session, files, text)` | The person sends files with a message without being asked (LOOP P-21): the `UploadedFile`s, and the words sent with them. Which kinds and sizes may be sent is the Appspec's `interface.uploads`; the runtime refuses the rest before this runs. Without a handler, the words go to `message` and the files wait for what the code asks. See [What a person sends](#what-a-person-sends). |
-| `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. |
+| `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. A change made on the page goes with the next message, and this runs before that message's handler (LOOP P-20). |
 | `@app.window` | `(session, data)` | The page the application sits in posts a message (LOOP P-25): `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
@@ -522,6 +572,7 @@ made by that code.
 | `session.user` | Who the person is, when the host knows. |
 | `session.state` | A dict the application keeps across the turns of this session; each session has its own. |
 | `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
+| `session.profile` | The id of the profile the conversation is with (LOOP P-20): the first unless another was picked; `None` for an application without profiles. |
 | `session.app` | The application, as its Appspec says it. |
 
 ### Writing to the person

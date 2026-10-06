@@ -87,7 +87,10 @@ export interface BrowserAgentAdapterConfig
    * rules. Unsaid for an agent with no modes, which refuses a run sent in
    * some.
    */
-  modeEffect?: (chosen: Record<string, string>) => AppModeEffect;
+  modeEffect?: (
+    chosen: Record<string, string>,
+    profile?: string,
+  ) => AppModeEffect;
 }
 
 /** The text of a chat message, whatever shape it arrived in. */
@@ -216,32 +219,35 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
   }
 
   /**
-   * What the modes a run is sent in tell it, and the model it runs on (LOOP
-   * P-19) — the runtime's session API applies the same, for that run only.
+   * What the modes a run is sent in, and the profile its conversation is
+   * with, tell it, and the model it runs on (LOOP P-19, P-20) — the
+   * runtime's session API applies the same, for that run only.
    *
-   * Refused, in a sentence, rather than run without them: modes sent to an
-   * agent that has none, modes that are not the application's, and a mode
-   * naming a model for an agent whose model is the host's own.
+   * Refused, in a sentence, rather than run without them: modes or a profile
+   * sent to an agent that has none, modes or a profile that are not the
+   * application's, and a model chosen for an agent whose model is the host's
+   * own.
    */
   private runModes(
     forwardedProps?: Record<string, unknown>,
   ): AppModeEffect | undefined {
     const loop = forwardedProps?.loop as
-      { modes?: Record<string, string> } | undefined;
-    const chosen = loop?.modes;
-    if (!chosen || Object.keys(chosen).length === 0) {
+      { modes?: Record<string, string>; profile?: string } | undefined;
+    const chosen = loop?.modes ?? {};
+    const profile = loop?.profile || undefined;
+    if (Object.keys(chosen).length === 0 && !profile) {
       return undefined;
     }
     const { modeEffect, languageModel } = this.browserConfig;
     if (!modeEffect) {
       throw new Error(
-        'This agent has no modes: the options chosen in the composer cannot be applied to it.',
+        'This agent has no modes or profiles: what was chosen in the composer cannot be applied to it.',
       );
     }
-    const effect = modeEffect(chosen);
+    const effect = modeEffect(chosen, profile);
     if (effect.model && languageModel) {
       throw new Error(
-        `The mode chosen runs on ${effect.model}, and this agent's model is its host's own: it cannot run on another.`,
+        `The mode or profile chosen runs on ${effect.model}, and this agent's model is its host's own: it cannot run on another.`,
       );
     }
     return effect;

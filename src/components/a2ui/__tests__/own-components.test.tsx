@@ -551,6 +551,57 @@ describe('Datalayer’s own components', () => {
     expect(actions).toEqual([]);
   });
 
+  it('Form: its fields drawn with the inputs its ui names — a switch, tags, radio buttons, a slider (LOOP P-20)', async () => {
+    const { container, actions } = await draw(
+      [
+        {
+          id: 'settings',
+          component: 'Form',
+          schema: {
+            type: 'object',
+            properties: {
+              live: { type: 'boolean', title: 'Live data' },
+              topics: {
+                type: 'array',
+                title: 'Topics',
+                items: { type: 'string' },
+              },
+              tone: { type: 'string', title: 'Tone', enum: ['warm', 'dry'] },
+              seats: {
+                type: 'integer',
+                title: 'Seats',
+                minimum: 1,
+                maximum: 9,
+              },
+            },
+          },
+          ui: {
+            live: { 'ui:widget': 'switch' },
+            topics: { 'ui:widget': 'tags' },
+            tone: { 'ui:widget': 'radio', 'ui:enumNames': ['Warm', 'Dry'] },
+            seats: { 'ui:widget': 'range' },
+          },
+          values: { path: '/inputs' },
+        },
+      ],
+      { inputs: { live: false, topics: ['billing'], tone: 'warm', seats: 3 } },
+    );
+    const form = container.querySelector('[data-testid="a2ui-form"]')!;
+    const toggle = form.querySelector(
+      '[aria-labelledby$="-label"][aria-pressed]',
+    );
+    expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+    expect(form.textContent).toContain('billing');
+    expect(form.querySelectorAll('input[type="radio"]')).toHaveLength(2);
+    expect(form.textContent).toContain('Warm');
+    expect(form.querySelector('input[type="range"]')).not.toBeNull();
+    await click(toggle as HTMLElement);
+    expect(
+      form.querySelector('[aria-pressed]')?.getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(actions).toEqual([]);
+  });
+
   it('Table: a row chosen is shown chosen when nothing is bound to selected', async () => {
     const { container, actions } = await draw([
       {

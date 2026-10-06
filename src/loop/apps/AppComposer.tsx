@@ -20,6 +20,15 @@
  *   does not take is refused in a sentence and never read — and the files
  *   held go with the next message as `forwardedProps.loop.files`, then are
  *   let go. The runtime refuses again what was sent all the same.
+ * - Its **profiles** (LOOP P-20, `interface.profiles`): a picker beside the
+ *   composer, on the first unless another is picked. The profile picked goes
+ *   with every run as `forwardedProps.loop.profile`, and its starters (else
+ *   the application's) are what the empty chat offers, by category
+ *   (`LoopChatExtras.openers`). Once the first message is sent, the
+ *   conversation keeps its profile: the picker says so and picks no other.
+ *
+ * Given the application as the person reads it (`translatedAppspec`, LOOP
+ * P-26), its words are theirs; the composer's own, `language`'s.
  *
  * @module loop/apps/AppComposer
  */
@@ -27,15 +36,35 @@
 import { useRef, type JSX } from 'react';
 import { ActionList, ActionMenu, IconButton, Text, Token } from '@primer/react';
 import { PaperclipIcon } from '@primer/octicons-react';
-import { contribution, definePlugin, signal } from '@datalayer/reactor';
+import {
+  computed,
+  contribution,
+  definePlugin,
+  signal,
+} from '@datalayer/reactor';
 import { useSignalValue } from '@datalayer/reactor/react';
-import type { AppSpec } from '../../types/agentspecs';
+import type { AppSpec, AppStarterSpec } from '../../types/agentspecs';
 import {
   readFile,
   type GivenFile,
 } from '../../components/a2ui/datalayer/FileUpload';
-import { LoopCommand, LoopRunProps, LoopSlots } from '../core';
-import { commandPrompt, modeChoice, modeDefaults } from './composer';
+import {
+  LoopChatExtras,
+  LoopCommand,
+  LoopRunProps,
+  LoopSlots,
+  type ChatSuggestionItem,
+  type LoopChatExtrasValue,
+} from '../core';
+import {
+  commandPrompt,
+  modeChoice,
+  modeDefaults,
+  profileChoice,
+  startersFor,
+} from './composer';
+import { DEFAULT_LANGUAGE } from './appspec';
+import { interfaceWords } from './language';
 import { uploadsAccept, uploadsInWords, uploadsRefusal } from './uploads';
 
 /** What the composer holds to send: the files, and why the last were refused. */
@@ -72,12 +101,91 @@ export async function holdUploads(
 /** The plugin's name, before the application's id. */
 export const APP_COMPOSER_PLUGIN_NAME = '@datalayer/loop-plugin-app-composer';
 
+/** Starters as the empty chat offers them: each under its category (P-20). */
+export function startersAsOpeners(
+  starters: readonly AppStarterSpec[],
+): ChatSuggestionItem[] {
+  return starters.map(starter => ({
+    text: starter.label,
+    message: starter.message,
+    ...(starter.category ? { group: starter.category } : {}),
+  }));
+}
+
+/**
+ * Whether an application needs its composer plugin: commands, modes,
+ * uploads or profiles to offer there.
+ */
+export const needsAppComposer = (app: AppSpec): boolean =>
+  (app.interface.commands ?? []).length > 0 ||
+  (app.interface.modes ?? []).length > 0 ||
+  (app.interface.profiles ?? []).length > 0 ||
+  Boolean(app.interface.uploads);
+
 /**
  * The plugin that puts an application's commands in the composer's `/` menu
- * and its modes beside the composer. Nothing for an application with
- * neither: its plugin contributes nothing.
+ * and its modes, its profiles and its paper clip beside the composer.
+ * Nothing for an application with none: its plugin contributes nothing.
  */
 export function defineAppComposerPlugin(app: AppSpec) {
+  const words = interfaceWords(app.interface.language ?? DEFAULT_LANGUAGE);
+  const profiles = app.interface.profiles ?? [];
+  /** The profile picked, and whether the conversation has started with it. */
+  const profile = signal<string | undefined>(profileChoice(app)?.id);
+  const started = signal(false);
+  const openers = computed<LoopChatExtrasValue>(() => ({
+    openers: startersAsOpeners(startersFor(app, profile.value)),
+  }));
+
+  function ProfilePicker(): JSX.Element | null {
+    const now = profileChoice(app, useSignalValue(profile));
+    const kept = useSignalValue(started);
+    if (!now) {
+      return null;
+    }
+    const said = `${words.profile}: ${now.label}`;
+    if (kept) {
+      return (
+        <Text
+          title={`${said} (${words.profileKept})`}
+          sx={{ fontSize: 0, color: 'fg.muted', px: 2 }}
+        >
+          {said}
+        </Text>
+      );
+    }
+    return (
+      <ActionMenu>
+        <ActionMenu.Button size="small" variant="invisible" aria-label={said}>
+          {said}
+        </ActionMenu.Button>
+        <ActionMenu.Overlay width="medium">
+          <ActionList selectionVariant="single">
+            <ActionList.Group>
+              <ActionList.GroupHeading>{words.profile}</ActionList.GroupHeading>
+              {profiles.map(item => (
+                <ActionList.Item
+                  key={item.id}
+                  selected={item.id === now.id}
+                  onSelect={() => {
+                    profile.value = profileChoice(app, item.id)?.id;
+                  }}
+                >
+                  {item.label}
+                  {item.description ? (
+                    <ActionList.Description variant="block">
+                      {item.description}
+                    </ActionList.Description>
+                  ) : null}
+                </ActionList.Item>
+              ))}
+            </ActionList.Group>
+          </ActionList>
+        </ActionMenu.Overlay>
+      </ActionMenu>
+    );
+  }
+
   const modes = app.interface.modes ?? [];
   /** The option of each mode the person is in. */
   const chosen = signal<Record<string, string>>(modeDefaults(app));
@@ -150,7 +258,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
           icon={PaperclipIcon}
           size="small"
           variant="invisible"
-          aria-label={`Attach a file. ${uploadsInWords(uploads)}`}
+          aria-label={`${words.attach}. ${uploadsInWords(uploads)}`}
           onClick={() => input.current?.click()}
         />
         <input
@@ -159,7 +267,7 @@ export function defineAppComposerPlugin(app: AppSpec) {
           hidden
           multiple={uploads.maxFiles > 1}
           accept={uploadsAccept(uploads)}
-          aria-label="Attach a file"
+          aria-label={words.attach}
           onChange={event => {
             const chosen = Array.from(event.target.files ?? []);
             event.target.value = '';
@@ -192,11 +300,32 @@ export function defineAppComposerPlugin(app: AppSpec) {
 
   return definePlugin({
     name: `${APP_COMPOSER_PLUGIN_NAME}-${app.id}`,
-    displayName: `${app.name}: commands, modes and uploads`,
-    description: `The commands, modes and files ${app.name} takes in its composer.`,
+    displayName: `${app.name}: commands, modes, profiles and uploads`,
+    description: `The commands, modes, profiles and files ${app.name} takes in its composer.`,
     octicon: 'command-palette',
     emoji: '\u{2318}',
     contributes: [
+      ...(profiles.length > 0
+        ? [
+            contribution(
+              LoopRunProps,
+              {
+                id: 'app-profile',
+                // Sent with every run; from the first, the conversation keeps it.
+                props: () => {
+                  started.value = true;
+                  return { loop: { profile: profile.peek() } };
+                },
+              },
+              { id: 'app-profile' },
+            ),
+            contribution(
+              LoopChatExtras,
+              { id: 'app-profile-starters', extras: openers },
+              { id: 'app-profile-starters' },
+            ),
+          ]
+        : []),
       ...(app.interface.commands ?? []).map(command =>
         contribution(
           LoopCommand,
@@ -245,6 +374,16 @@ export function defineAppComposerPlugin(app: AppSpec) {
     ],
     build: () => ({
       components: [
+        ...(profiles.length > 0
+          ? [
+              {
+                id: 'app-profile',
+                slot: LoopSlots.promptAction,
+                order: 3,
+                Component: ProfilePicker,
+              },
+            ]
+          : []),
         ...(modes.length > 0
           ? [
               {

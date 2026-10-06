@@ -32,7 +32,7 @@ export function WebResearch() {
 ## Its props
 
 `AppRenderer` takes every prop of `LoopEmbed` but `agentId` (the agent is the
-application's own, created under its id), and eight of its own:
+application's own, created under its id), and nine of its own:
 
 | Prop         | What it says                                                                                                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -44,6 +44,7 @@ application's own, created under its id), and eight of its own:
 | `frame`      | Draw the application in the window-frame plugin's window, titled with its face and name. A host's own `frameTitle` wins.                                                                                     |
 | `page`       | The page a host draws for a kind the workspace has no page for — a decision's. A component defined once, outside the host's render (a new one is a new plugin, and restarts the workspace); it is given `{ app, workspace }`. |
 | `pluginsOff` | The UI plugins its organization has turned off (`plugins_off`, catalogue ids such as `a2ui`): their blocks are off its page as they are off its Canvas's palette. |
+| `language`   | The language the person reads it in, as BCP 47 tags it (`fr`, `pt-BR`): the platform's setting when the host knows it. The browser's languages (`navigator.languages`) when unsaid. See [In the person's language](#in-the-persons-language). |
 
 From the application, `AppRenderer` sets on `LoopEmbed`:
 
@@ -315,6 +316,67 @@ after the agent's for that run only, and asks the inference service for the
 refuses, in a sentence in the chat, rather than run without it: modes sent to
 an agent that has none, a mode or an option the application does not have,
 and a mode's model for an agent whose model its host chose itself.
+
+## Profiles and starters
+
+An application's Appspec may offer several **profiles** — assistants in one
+application, each with its instructions, its model and its starters
+(`interface.profiles`, LOOP P-20). The composer's plugin adds a picker beside
+the composer, *Profile: Support*, on the first unless another is picked; the
+profile picked goes with every run as `forwardedProps.loop.profile`, and the
+runtime tells the agent its `instructions` before the modes' and runs its
+`model` unless a mode names one. Once the first message is sent, the
+conversation keeps its profile: the picker says it and picks no other (the
+runtime refuses another with 409). An agent turned in the page applies the
+profile as it applies the modes (`modeEffect(app, modes, profile)`).
+
+**Starters** are offered by category: a starter's `category` is the heading
+it is shown under in the empty chat (`ChatSuggestionItem.group`), those
+without one first. With profiles, the empty chat offers the profile's
+starters — else the application's — and changes them when another profile is
+picked, through the chat's live extras (`LoopChatExtras.openers`), without
+rebuilding the workspace.
+
+## The nine inputs
+
+The settings' form (`interface.settings`, LOOP C-16) is drawn with the inputs
+`interface.settings_ui` names, a uiSchema by field name — the page's Form
+block takes it as `ui` (Form 1.1.0). Seven are `@datalayer/primer-rjsf`'s
+widgets: Select (a field with an `enum`), Slider (`range`), TextInput (a
+`string`, or `textarea`), Checkbox (a `boolean`), DatePicker (`format:
+date`), MultiSelect (an `array` of `enum` items, or `checkboxes`) and
+RadioGroup (`radio`); two are this package's (`formWidgets`): Switch
+(`switch`, Primer's toggle) and Tags (`tags`, words as tokens). The checks
+refuse a widget that cannot draw its field, and a field it does not ask
+(`formUiProblems`, as agentspecs' `form_ui_problems`).
+
+## In the person's language
+
+What a person reads of an application — its name, description and welcome,
+its starters and their categories, its settings' titles and their values'
+names, its commands' descriptions, its modes and its profiles — is shown in
+their language when its Appspec is translated into it
+(`interface.translations`, by BCP 47 tag, LOOP P-26), and in its own words
+otherwise. `AppRenderer` picks the language: its `language` prop, else the
+browser's; `fr-CA` reads `fr` (`pickLanguage`). `translatedAppspec(app,
+preferred)` is the application as they read it; the agent is still created
+with its own Appspec, and what it does — ids, values, prompts — is the same in
+every language. The composer's own words (the profile picker, the paper clip)
+are said in English, French, Spanish, German, Italian and Portuguese
+(`interfaceWords`). The chat's own words — its placeholder, its buttons — are
+not translated yet.
+
+```yaml
+interface:
+  translations:
+    fr:
+      welcome: Posez-moi vos questions sur le produit.
+      starters:
+        Returns: {label: Retours, message: Puis-je retourner un produit ?}
+      categories: {Orders: Commandes}
+      settings:
+        product: {title: Produit}
+```
 
 ## Feedback on its answers
 

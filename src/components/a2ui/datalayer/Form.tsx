@@ -17,6 +17,10 @@
  * written where `values` points as they are filled, for the next run to take;
  * the runtime checks them against the same schema.
  *
+ * Its `ui` says how its fields are drawn (LOOP P-20): a uiSchema by field
+ * name, `ui:widget` one of primer-rjsf's widgets or of `switch` and `tags`
+ * (`formWidgets`) — the nine inputs a setting is drawn with.
+ *
  * @module components/a2ui/datalayer/Form
  */
 
@@ -25,10 +29,13 @@ import { Form as SchemaForm } from '@datalayer/primer-rjsf';
 import validator from '@rjsf/validator-ajv8';
 import { BlockFrame, Problem, isRecord } from './parts';
 import { ownImplementation, type OwnCommon } from './implementation';
+import { FORM_WIDGETS } from './formWidgets';
 
 export type FormProps = OwnCommon & {
   title?: string;
   schema: Record<string, unknown>;
+  /** How its fields are drawn: a uiSchema by field name (P-20). */
+  ui?: Record<string, unknown>;
   submit_label?: string;
   values?: unknown;
   setValues: (values: Record<string, unknown>) => void;
@@ -52,13 +59,15 @@ export function FormView({ props }: { props: FormProps }) {
   }, [shownKey]);
   // Without an action, nothing is sent: no button, the values written as filled.
   const live = action === undefined;
+  const drawn = JSON.stringify(props.ui ?? {});
   const uiSchema = useMemo(
     () => ({
+      ...(JSON.parse(drawn) as Record<string, unknown>),
       'ui:submitButtonOptions': live
         ? { norender: true }
         : { submitText: submitLabel },
     }),
-    [live, submitLabel],
+    [drawn, live, submitLabel],
   );
   const problem =
     schema.type !== undefined && schema.type !== 'object'
@@ -77,6 +86,7 @@ export function FormView({ props }: { props: FormProps }) {
         <SchemaForm
           schema={schema as never}
           uiSchema={uiSchema}
+          widgets={FORM_WIDGETS as never}
           formData={values}
           validator={validator}
           liveValidate={touched}

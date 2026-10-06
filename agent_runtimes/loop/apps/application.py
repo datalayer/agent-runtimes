@@ -22,7 +22,7 @@ An `Application` is an Appspec and the code that reacts to its sessions::
             answer = await session.agent.run(text, goal=session.state["goal"])
         await session.send(answer.text)
 
-What it declares — starters, settings, rules, connections, schedules, the
+What it declares — starters, profiles, settings, translations, rules, connections, schedules, the
 components of its surface (``app.ui.table(...)``) — is its spec (`Application.spec`), validated as
 any Appspec is. What it reacts to —
 ``start``, ``message``, ``action``, ``settings``, ``stop``, ``resume``,
@@ -57,6 +57,7 @@ from agent_runtimes.types import (
     AppConnectionSpec,
     AppModeOptionSpec,
     AppModeSpec,
+    AppProfileSpec,
     AppRuleSpec,
     AppSpec,
     AppStarterSpec,
@@ -225,7 +226,14 @@ class Application:
 
     # --- declarations ----------------------------------------------------------
 
-    def starter(self, label: str, message: str) -> AppStarterSpec:
+    def starter(
+        self,
+        label: str,
+        message: str,
+        *,
+        category: str = "",
+        profile: Optional[str] = None,
+    ) -> AppStarterSpec:
         """Offer a first message to the user.
 
         Parameters
@@ -234,18 +242,143 @@ class Application:
             What the user reads on it.
         message : str
             What is sent when they pick it.
+        category : str
+            The heading it is offered under: the starters of one category
+            together, those without one first (LOOP P-20).
+        profile : str, optional
+            The profile that offers it, in place of the application's
+            starters (``app.profile`` first); the application's when unsaid.
 
         Returns
         -------
         AppStarterSpec
             The starter, as the spec holds it.
+
+        Raises
+        ------
+        ValueError
+            When the profile is not declared.
         """
-        starter = AppStarterSpec(label=label, message=message)
-        self._declare("starters", starter, under="interface")
+        starter = AppStarterSpec(label=label, message=message, category=category)
+        if profile is None:
+            self._declare("starters", starter, under="interface")
+            return starter
+        profiles = self._document.get("interface", {}).get("profiles", [])
+        declared = next((item for item in profiles if item.get("id") == profile), None)
+        if declared is None:
+            raise ValueError(
+                f"{self.id} has no profile {profile!r}: declare it with app.profile first."
+            )
+        declared.setdefault("starters", []).append(
+            starter.model_dump(exclude_defaults=True)
+        )
+        self._spec = None
         return starter
 
+    def profile(
+        self,
+        id: str,
+        label: str,
+        *,
+        description: str = "",
+        instructions: str = "",
+        model: Optional[str] = None,
+    ) -> AppProfileSpec:
+        """Offer one of several assistants in the application (LOOP P-20).
+
+        The person picks a profile before the conversation starts — the first
+        declared, unless they pick another — and keeps it to the end: its
+        ``instructions`` are told to the agent in every run, its ``model``
+        run in place of the application's (a mode's wins over it), and its
+        starters (``app.starter(..., profile=id)``) offered in place of the
+        application's. The code reads it as ``session.profile``::
+
+            app.profile("support", "Support", instructions="Answer briefly.")
+            app.profile("sales", "Sales", description="Plans and prices")
+            app.starter("Pricing", "What does it cost?", profile="sales")
+
+        Two at least, or none: one profile is the application itself.
+
+        Parameters
+        ----------
+        id : str
+            Its id: lower-case letters, digits, ``_`` and ``-``, a letter first.
+        label : str
+            What the person picks it by.
+        description : str
+            What it is for, beside its label.
+        instructions : str
+            What the agent is told besides its instructions.
+        model : str, optional
+            The model it runs on, in place of the application's.
+
+        Returns
+        -------
+        AppProfileSpec
+            The profile, as the spec holds it.
+        """
+        profiles = self._document.get("interface", {}).get("profiles", [])
+        if any(item.get("id") == id for item in profiles):
+            raise ValueError(f"{self.id} already has a profile {id!r}.")
+        profile = AppProfileSpec(
+            id=id,
+            label=label,
+            description=description,
+            instructions=instructions,
+            model=model,
+        )
+        interface = self._document.setdefault("interface", {})
+        interface.setdefault("profiles", []).append(
+            profile.model_dump(exclude_defaults=True, exclude_none=True)
+        )
+        self._spec = None
+        return profile
+
+    def translation(self, language: str, words: Mapping[str, Any]) -> Dict[str, Any]:
+        """Say what a person reads of the application in another language (LOOP P-26).
+
+        ``words`` is keyed as the Appspec's ``interface.translations`` are:
+        ``name``, ``description``, ``welcome``; ``starters`` by their label
+        (``{"label", "message"}``); ``categories`` by their words;
+        ``settings`` by field (``{"title", "description", "options"}``);
+        ``commands`` by name (their description); ``modes`` and ``profiles``
+        by id::
+
+            app.translation("fr", {
+                "welcome": "Bonjour !",
+                "starters": {"Pricing": {"label": "Tarifs", "message": "Combien ça coûte ?"}},
+            })
+
+        The page shows the person's language when the application is
+        translated into it, else its own words.
+
+        Parameters
+        ----------
+        language : str
+            The language, as BCP 47 tags it: ``fr``, ``pt-BR``.
+        words : mapping
+            What is said in it.
+
+        Returns
+        -------
+        dict
+            The translation, as the spec holds it.
+        """
+        interface = self._document.setdefault("interface", {})
+        translations = interface.setdefault("translations", {})
+        if language in translations:
+            raise ValueError(f"{self.id} is already translated into {language!r}.")
+        translations[language] = dict(words)
+        self._spec = None
+        return translations[language]
+
     def setting(
-        self, name: str, field: Mapping[str, Any], *, required: bool = False
+        self,
+        name: str,
+        field: Mapping[str, Any],
+        *,
+        required: bool = False,
+        widget: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Let the user set something for their session: a field of its settings' form.
 
@@ -264,6 +397,16 @@ class Application:
             ``maximum``…).
         required : bool
             Whether a run must be given it.
+        widget : str, optional
+            The input it is drawn with, when not its field's own (LOOP P-20):
+            ``range`` (a slider), ``switch``, ``radio``, ``textarea``,
+            ``checkboxes``, ``tags``, ``updown`` — its ``ui:widget`` in
+            ``interface.settings_ui``. The nine inputs are a field and,
+            where needed, a widget: Select (an ``enum``), Slider (``range``),
+            Switch (``switch``), TextInput (a ``string``), Checkbox (a
+            ``boolean``), DatePicker (``format: date``), MultiSelect (an
+            ``array`` of ``enum`` items), RadioGroup (``radio``), Tags
+            (``tags``).
 
         Returns
         -------
@@ -285,6 +428,9 @@ class Application:
         form["properties"][name] = dict(field)
         if required:
             form.setdefault("required", []).append(name)
+        if widget is not None:
+            drawn = interface.setdefault("settings_ui", {})
+            drawn.setdefault(name, {})["ui:widget"] = widget
         self._spec = None
         return form
 
@@ -1056,6 +1202,7 @@ class AppHost:
         settings: Optional[Mapping[str, Any]] = None,
         id: Optional[str] = None,
         modes: Optional[Mapping[str, Any]] = None,
+        profile: Optional[str] = None,
     ) -> Session:
         """Open a session, and run the application's ``start``.
 
@@ -1071,13 +1218,17 @@ class AppHost:
         modes : mapping, optional
             The option of each mode the user is in, by mode id; where each
             starts when unsaid (LOOP P-19).
+        profile : str, optional
+            The profile the conversation is with; the first when unsaid (LOOP P-20).
 
         Returns
         -------
         Session
             The session.
         """
-        session = self._session(user=user, settings=settings, id=id, modes=modes)
+        session = self._session(
+            user=user, settings=settings, id=id, modes=modes, profile=profile
+        )
         handler = self._reaction("start")
         if handler is not None:
             await self._react(session, handler)

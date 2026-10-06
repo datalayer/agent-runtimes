@@ -54,6 +54,7 @@ CAMEL = {
     "decision_model": "decisionModel",
     "backend_tools": "backendTools",
     "character_alone": "characterAlone",
+    "settings_ui": "settingsUi",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights by name.
@@ -110,6 +111,17 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 if isinstance(rule["applies_to"], str)
                 else rule["applies_to"]
             )
+        # A starter offered under a category names it; the others say nothing of it.
+        for starter in [
+            *spec["interface"]["starters"],
+            *(
+                item
+                for profile in spec["interface"]["profiles"]
+                for item in profile["starters"]
+            ),
+        ]:
+            if not starter.get("category"):
+                starter.pop("category", None)
         # A case decided by code names it; the others say nothing of it.
         for case in spec["tests"]["cases"]:
             if not case.get("code"):
