@@ -32,6 +32,8 @@
 
 import type {
   AppAccent,
+  AppThemeMode,
+  AppThemeVariant,
   AppAssistantCharacter,
   AppEmbedMode,
   AppConnectionSpec,
@@ -66,6 +68,25 @@ export const APP_ACCENTS: AppAccent[] = [
   'sun',
   'violet',
 ];
+
+/**
+ * The themes an application may run in (LOOP T-30): Appearance's, as
+ * primer-addons lists them (`themeVariants`), in its order.
+ */
+export const APP_THEME_VARIANTS: AppThemeVariant[] = [
+  'datalayer',
+  'spatial',
+  'lovely',
+  'matrix',
+  'earth',
+  'sand',
+  'ivory',
+  'sun',
+  'loop',
+];
+
+/** The colour modes a theme is worn in. */
+export const APP_THEME_MODES: AppThemeMode[] = ['light', 'dark', 'auto'];
 
 /** The four ways an application sits in another product's page (LOOP D-07). */
 export const APP_EMBED_MODES: AppEmbedMode[] = [
@@ -376,6 +397,16 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   }
   if (data.balloon === 'history' || data.balloon === 'current') {
     parsed.balloon = data.balloon;
+  }
+  // A theme of Appearance's, or none: an unknown one is said by the checks.
+  if (
+    isData(data.theme) &&
+    APP_THEME_VARIANTS.includes(data.theme.variant as AppThemeVariant)
+  ) {
+    parsed.theme = { variant: data.theme.variant as AppThemeVariant };
+    if (APP_THEME_MODES.includes(data.theme.mode as AppThemeMode)) {
+      parsed.theme.mode = data.theme.mode as AppThemeMode;
+    }
   }
   return parsed;
 }
@@ -716,6 +747,11 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   }
   if (spec.balloon) {
     writer.data.balloon = spec.balloon;
+  }
+  if (spec.theme) {
+    writer.data.theme = spec.theme.mode
+      ? { variant: spec.theme.variant, mode: spec.theme.mode }
+      : { variant: spec.theme.variant };
   }
   // Its voice, when it says one (VO-41): a spec made before voice has none.
   if (spec.voice) {

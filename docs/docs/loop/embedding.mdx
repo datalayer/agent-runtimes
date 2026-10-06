@@ -115,9 +115,13 @@ The theme travels inside the element. The application is drawn in the
 element's shadow root, which contains:
 
 - the bundle's stylesheet (`datalayer-app.css`, next to the script);
-- the `loop` theme as CSS custom properties, set on the theme's own element
-  inside the root, with the application's accent applied in light and dark
-  (`embedThemeStyles`);
+- the `loop` theme as CSS custom properties — or the theme the application
+  names in its Appspec (`interface.theme.variant`: `datalayer`, `spatial`,
+  `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `loop`) — set on the
+  theme's own element inside the root, with the application's accent applied
+  in light and dark over `loop` only (`embedThemeStyles`). The colour mode is
+  the host's `theme` attribute or CSS variable, else `interface.theme.mode`,
+  else the visitor's system;
 - the same accent and face laid over the conversation's own theme
   (`embedThemeOverrides`, the chat's `themeOverrides`): the chat sets the
   `loop` theme again inside it, and without them its bubbles and its button

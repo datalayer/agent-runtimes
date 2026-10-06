@@ -46,7 +46,12 @@ import type {
   ComponentSpec,
 } from '../../types/agentspecs';
 import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
-import { isAssistantCharacterId, parseAppspec } from './appspec';
+import {
+  APP_THEME_MODES,
+  APP_THEME_VARIANTS,
+  isAssistantCharacterId,
+  parseAppspec,
+} from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
 import { HOST_NAME, hostToolsOf } from './hostTools';
 
@@ -588,6 +593,8 @@ const ENUMS = {
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
   mode: ['inline', 'bubble', 'panel', 'assistant'],
   balloon: ['history', 'current'],
+  themeVariant: APP_THEME_VARIANTS,
+  themeMode: APP_THEME_MODES,
   trigger: ['schedule', 'event', 'once'],
   criterion: ['metric', 'noul', 'choice', 'score'],
   direction: ['higher', 'lower'],
@@ -712,6 +719,20 @@ export function documentShapeProblems(document: unknown): string[] {
     oneOf(ui.layout, ENUMS.layout, 'interface.layout');
     oneOf(ui.accent, ENUMS.accent, 'interface.accent');
     oneOf(ui.balloon, ENUMS.balloon, 'interface.balloon');
+    // The theme it runs in by default (T-30): a theme of Appearance's, a mode.
+    mapping(ui.theme, 'interface.theme', theme => {
+      required(theme, 'variant', 'interface.theme');
+      oneOf(theme.variant, ENUMS.themeVariant, 'interface.theme.variant');
+      oneOf(theme.mode, ENUMS.themeMode, 'interface.theme.mode');
+      for (const key of Object.keys(theme)) {
+        if (key !== 'variant' && key !== 'mode') {
+          at(
+            `interface.theme.${key}`,
+            'is not a key of a theme: variant, mode',
+          );
+        }
+      }
+    });
     if (ui.assistant !== undefined && !isAssistantCharacterId(ui.assistant)) {
       at(
         'interface.assistant',

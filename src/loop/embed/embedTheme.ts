@@ -24,55 +24,77 @@
 
 import type { CSSProperties } from 'react';
 import {
+  getThemeConfig,
   loopAccentStyles,
   loopFontFamily,
-  loopThemeStyles,
   scopeThemeCss,
   THEME_SCOPE_ATTRIBUTE,
   type ThemeStyles,
 } from '@datalayer/primer-addons';
-import type { AppAccent } from '../../types/agentspecs';
+import type { AppAccent, AppThemeVariant } from '../../types/agentspecs';
 import type { ThemeOverrides } from '../../types/chat';
 
 /** One mode's properties, with the theme's face replaced by the host's. */
 function withFace(
   styles: Record<string, unknown>,
   font: string,
+  own: string,
 ): Record<string, unknown> {
-  if (!font) {
+  if (!font || !own) {
     return styles;
   }
   return Object.fromEntries(
     Object.entries(styles).map(([name, value]) => [
       name,
-      typeof value === 'string'
-        ? value.split(loopFontFamily).join(font)
-        : value,
+      typeof value === 'string' ? value.split(own).join(font) : value,
     ]),
   );
 }
 
+/** The face a theme names in a mode: `loop`'s own, or the theme's `fontFamily`. */
+function faceOf(
+  variant: AppThemeVariant,
+  styles: Record<string, unknown>,
+): string {
+  if (variant === 'loop') {
+    return loopFontFamily;
+  }
+  return typeof styles.fontFamily === 'string' ? styles.fontFamily : '';
+}
+
+/** The accent over a theme: `loop`'s colours, over `loop` only (T-30). */
+const accentOver = (
+  variant: AppThemeVariant,
+  accent: AppAccent,
+  which: 'light' | 'dark',
+): Record<string, string> =>
+  variant === 'loop' ? loopAccentStyles(accent, which) : {};
+
 /**
- * The `loop` theme as the embed wears it: the application's accent over it
- * in both modes (T-05), and the host's face when it named one.
+ * The theme as the embed wears it — `loop`, or the one the application
+ * names (T-30) — with the application's accent over `loop` in both modes
+ * (T-05), and the host's face when it named one.
  */
 export function embedThemeStyles({
   accent,
   font = '',
+  variant = 'loop',
 }: {
   accent: AppAccent;
   font?: string;
+  variant?: AppThemeVariant;
 }): ThemeStyles {
-  const mode = (which: 'light' | 'dark') =>
-    withFace(
-      {
-        ...(loopThemeStyles[which] as Record<string, unknown>),
-        ...loopAccentStyles(accent, which),
-      },
+  const base = getThemeConfig(variant).themeStyles;
+  const mode = (which: 'light' | 'dark') => {
+    const theme = base[which] as Record<string, unknown>;
+    return withFace(
+      { ...theme, ...accentOver(variant, accent, which) },
       font,
+      faceOf(variant, theme),
     ) as CSSProperties;
+  };
   return {
-    ...loopThemeStyles,
+    ...base,
     light: mode('light'),
     dark: mode('dark'),
   };
@@ -80,26 +102,29 @@ export function embedThemeStyles({
 
 /**
  * The same accent and face laid over the conversation's own theme (T-05,
- * D-11): the chat sets the `loop` theme again inside it, which would put the
- * theme's mint and face back over what the embed set around it. The
- * accent's properties in each mode, and, when the host named a face, every
- * property of the theme that names its own.
+ * D-11): the chat sets its theme again inside it, which would put the
+ * theme's colours and face back over what the embed set around it. The
+ * accent's properties in each mode (over `loop` only), and, when the host
+ * named a face, every property of the theme that names its own.
  */
 export function embedThemeOverrides({
   accent,
   font = '',
+  variant = 'loop',
 }: {
   accent: AppAccent;
   font?: string;
+  variant?: AppThemeVariant;
 }): ThemeOverrides {
+  const base = getThemeConfig(variant).themeStyles;
   const mode = (which: 'light' | 'dark'): Record<string, string> => {
-    const theme = loopThemeStyles[which] as Record<string, unknown>;
+    const theme = base[which] as Record<string, unknown>;
     const faced = Object.fromEntries(
-      Object.entries(withFace(theme, font)).filter(
+      Object.entries(withFace(theme, font, faceOf(variant, theme))).filter(
         ([name, value]) => typeof value === 'string' && value !== theme[name],
       ),
     ) as Record<string, string>;
-    return { ...faced, ...loopAccentStyles(accent, which) };
+    return { ...faced, ...accentOver(variant, accent, which) };
   };
   return { light: mode('light'), dark: mode('dark') };
 }

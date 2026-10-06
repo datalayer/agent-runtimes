@@ -10,7 +10,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
-import { dumpAppspec, parseAppspec } from '../apps/appspec';
+import { themeVariants } from '@datalayer/primer-addons';
+import { APP_THEME_VARIANTS, dumpAppspec, parseAppspec } from '../apps/appspec';
 import {
   NEEDS_ATTENTION,
   NOT_READY,
@@ -352,6 +353,39 @@ describe('the instant checks', () => {
     expect(
       checkAppspec({ ...BASE, interface: { balloon: 'latest' } }).problems,
     ).toContain('interface.balloon: is one of history, current.');
+  });
+
+  it('reads the theme it runs in, and refuses one Appearance does not have (T-30)', () => {
+    expect(APP_THEME_VARIANTS).toEqual(themeVariants);
+    for (const theme of [
+      { variant: 'earth' },
+      { variant: 'matrix', mode: 'dark' },
+      { variant: 'loop', mode: 'auto' },
+    ] as const) {
+      const app = parseAppspec({ ...BASE, interface: { theme } }).app;
+      expect(app.interface.theme).toEqual(theme);
+      expect(dumpAppspec(app).interface).toEqual({ theme });
+      expect(parseAppspec(dumpAppspec(app)).app).toEqual(app);
+      expect(checkAppspec({ ...BASE, interface: { theme } }).problems).toEqual(
+        [],
+      );
+    }
+    expect(parseAppspec(BASE).app.interface.theme).toBeUndefined();
+    const said = (theme: unknown) =>
+      checkAppspec({ ...BASE, interface: { theme } }).problems;
+    expect(said({ variant: 'neon' })).toContain(
+      'interface.theme.variant: is one of datalayer, spatial, lovely, matrix, earth, sand, ivory, sun, loop.',
+    );
+    expect(said({ variant: 'sun', mode: 'night' })).toContain(
+      'interface.theme.mode: is one of light, dark, auto.',
+    );
+    expect(said({ mode: 'dark' })).toContain(
+      'interface.theme.variant: is missing.',
+    );
+    expect(said({ variant: 'sun', accent: 'sky' })).toContain(
+      'interface.theme.accent: is not a key of a theme: variant, mode.',
+    );
+    expect(said('earth')).toContain('interface.theme: is a mapping.');
   });
 
   it('checks a context of an organization’s own against the organization’s (LOOP U-32)', () => {

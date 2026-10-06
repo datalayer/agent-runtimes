@@ -47,7 +47,11 @@
 
 import { useMemo, type ComponentType } from 'react';
 import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
-import { loopAccentStyles } from '@datalayer/primer-addons';
+import {
+  loopAccentStyles,
+  useSystemColorMode,
+  useThemeStore,
+} from '@datalayer/primer-addons';
 import type { AppSpec } from '../../types/agentspecs';
 import type { ThemeOverrides } from '../../types/chat';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
@@ -396,11 +400,15 @@ const NO_PLUGINS: PluginRef[] = [];
  * The application's accent over the theme its conversation wears, in both
  * modes (LOOP T-05): its bubbles and its one button in its own colour, and
  * not in the theme's default — the chat sets its theme again inside it, so
- * what the page around it set does not reach in.
+ * what the page around it set does not reach in. The accents are `loop`'s
+ * colours: over another theme (T-30) nothing is laid, the theme's own rule.
  */
-export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
+export function appThemeOverrides(
+  app: AppSpec,
+  variant: string,
+): ThemeOverrides | undefined {
   const accent = app.interface?.accent;
-  return accent
+  return accent && variant === 'loop'
     ? {
         light: loopAccentStyles(accent, 'light'),
         dark: loopAccentStyles(accent, 'dark'),
@@ -480,11 +488,21 @@ export function AppRenderer({
       instance?.version,
     ],
   );
+  /*
+   * The theme it runs in (T-30): the one its host says, else the one its
+   * Appspec names, else the page's — the person's own. Its mode likewise;
+   * `auto` is the device's.
+   */
+  const pageTheme = useThemeStore(state => state.theme);
+  const system = useSystemColorMode();
+  const named = app.interface?.theme;
+  const worn = embed.themeVariant ?? named?.variant ?? pageTheme;
+  const namedMode = named?.mode === 'auto' ? system : named?.mode;
   const accent = app.interface?.accent;
   const themeOverrides = useMemo(
-    () => appThemeOverrides(app),
+    () => appThemeOverrides(app, worn),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accent],
+    [accent, worn],
   );
   if ('problem' in preset) {
     return (
@@ -517,9 +535,10 @@ export function AppRenderer({
       // Where an application runs is decided by its host — the Studio's
       // Preview, the hosted page — not offered to its user.
       targetFixed
-      // Applications first (LOOP T-12): an application's conversation wears
-      // the `loop` theme; a host may say otherwise.
-      themeVariant="loop"
+      // The theme its Appspec names (T-30), else the page's, the person's
+      // own; a host may say otherwise.
+      {...(named ? { themeVariant: named.variant } : {})}
+      {...(namedMode ? { colorMode: namedMode } : {})}
       themeOverrides={themeOverrides}
       // Its own face, name and welcome in the chat (T-08); no counters: a
       // person using an application is not asking about tokens.

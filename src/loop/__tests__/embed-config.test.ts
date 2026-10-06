@@ -12,6 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  getThemeConfig,
   loopAccentStyles,
   loopControlsCss,
   loopFontFamily,
@@ -27,7 +28,11 @@ import {
   floatingViewOf,
   inlineHeightOf,
 } from '../embed/embedConfig';
-import { embedShadowCss, embedThemeStyles } from '../embed/embedTheme';
+import {
+  embedShadowCss,
+  embedThemeOverrides,
+  embedThemeStyles,
+} from '../embed/embedTheme';
 
 const app = (() => {
   const spec = emptyAppspec('chat');
@@ -68,6 +73,7 @@ describe('what the host overrides', () => {
       accent: 'sky',
       colorMode: 'auto',
       font: '',
+      variant: 'loop',
     });
     expect(
       embedLookOf(
@@ -91,6 +97,23 @@ describe('what the host overrides', () => {
         app,
       ),
     ).toMatchObject({ accent: 'violet', colorMode: 'light', font: 'Inter' });
+  });
+
+  it('is the theme the application names (T-30), its mode below the host’s', () => {
+    const themed = {
+      ...app,
+      interface: {
+        ...app.interface,
+        theme: { variant: 'earth', mode: 'dark' },
+      },
+    } as typeof app;
+    expect(embedLookOf({ attributes: {} }, themed)).toMatchObject({
+      variant: 'earth',
+      colorMode: 'dark',
+    });
+    expect(
+      embedLookOf({ attributes: { theme: 'light' } }, themed),
+    ).toMatchObject({ variant: 'earth', colorMode: 'light' });
   });
 
   it('refuses an accent that is not one of the six, and a font that is not a family', () => {
@@ -170,6 +193,19 @@ describe('the theme inside the element', () => {
     expect(styles.light).toMatchObject(loopAccentStyles('violet', 'light'));
     expect(styles.dark).toMatchObject(loopAccentStyles('violet', 'dark'));
     expect(styles.css).toBe(loopThemeStyles.css);
+  });
+
+  it('is the theme the application names, without loop’s accent over it (T-30)', () => {
+    const styles = embedThemeStyles({ accent: 'violet', variant: 'earth' }) as {
+      light: Record<string, string>;
+      css?: string;
+    };
+    const earth = getThemeConfig('earth').themeStyles;
+    expect(styles.light).toEqual(earth.light);
+    expect(styles.css).toBe(earth.css);
+    expect(embedThemeOverrides({ accent: 'violet', variant: 'earth' })).toEqual(
+      { light: {}, dark: {} },
+    );
   });
 
   it('takes the host’s face wherever the theme names its own', () => {

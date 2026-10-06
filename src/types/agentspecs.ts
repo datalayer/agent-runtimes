@@ -416,6 +416,31 @@ export type AppLayout = 'chat' | 'page' | 'split';
 /** The one colour of an application; everything else is neutral. */
 export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
 
+/** A theme of Appearance's, which an application may run in (LOOP T-30). */
+export type AppThemeVariant =
+  | 'datalayer'
+  | 'spatial'
+  | 'lovely'
+  | 'matrix'
+  | 'earth'
+  | 'sand'
+  | 'ivory'
+  | 'sun'
+  | 'loop';
+
+/** The colour mode it is worn in: `auto` follows the device. */
+export type AppThemeMode = 'light' | 'dark' | 'auto';
+
+/**
+ * The theme an application runs in by default (LOOP T-30): at its address,
+ * embedded, in the Studio's Preview and as an example. The person's own
+ * when unsaid; the mode, when unsaid, is the person's.
+ */
+export interface AppThemeSpec {
+  variant: AppThemeVariant;
+  mode?: AppThemeMode;
+}
+
 /**
  * The character an application's floating assistant shows (LOOP T-24): the id
  * an enabled plugin contributes it under to `loop.assistant.character` —
@@ -504,7 +529,10 @@ export interface AppVoiceSpec {
 /** What the user of an application sees. */
 export interface AppInterfaceSpec {
   layout: AppLayout;
+  /** Its one colour, over the `loop` theme only. */
   accent: AppAccent;
+  /** The theme it runs in by default; the person's own when unsaid (T-30). */
+  theme?: AppThemeSpec;
   welcome: string;
   starters: AppStarterSpec[];
   settings: AppSettingSpec[];

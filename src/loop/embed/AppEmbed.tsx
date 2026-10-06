@@ -49,8 +49,16 @@ import type { PluginRef } from '@datalayer/reactor';
 import { Text, registerPortalRoot } from '@primer/react';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
-import { DatalayerThemeProvider, loopTheme } from '@datalayer/primer-addons';
-import type { AppAccent, AppEmbedMode, AppSpec } from '../../types/agentspecs';
+import {
+  DatalayerThemeProvider,
+  getThemeConfig,
+} from '@datalayer/primer-addons';
+import type {
+  AppAccent,
+  AppEmbedMode,
+  AppSpec,
+  AppThemeVariant,
+} from '../../types/agentspecs';
 import type { ThemeOverrides } from '../../types/chat';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
@@ -80,7 +88,10 @@ export type AppEmbedProps = {
   mode?: AppEmbedMode;
   /** The host's accent; the application's own by default. */
   accent?: AppAccent;
-  /** Light, dark, or the visitor's system. */
+  /**
+   * Light, dark, or the visitor's system: the host's, else the one the
+   * Appspec names (`interface.theme.mode`, T-30), else the system's.
+   */
   colorMode?: EmbedColorMode;
   /** The host's face, a CSS font family; the theme's by default. */
   font?: string;
@@ -216,6 +227,8 @@ export type AppFloatingProps = {
   app: AppSpec;
   view: 'floating-small' | 'panel' | 'assistant';
   colorMode: 'light' | 'dark';
+  /** The theme it is drawn in (T-30); the page's when unsaid. */
+  themeVariant?: AppThemeVariant;
   /** The accent and face inside the conversation. */
   themeOverrides: ThemeOverrides;
   /** The assistant's character, in the assistant mode. */
@@ -250,6 +263,7 @@ export function AppFloating({
   app,
   view,
   colorMode,
+  themeVariant,
   themeOverrides,
   character,
   serverUrl,
@@ -311,6 +325,7 @@ export function AppFloating({
             // its conversation too, in the embed's mode.
             themeOverrides={themeOverrides}
             colorMode={colorMode}
+            {...(themeVariant ? { themeVariant } : {})}
             // The window draws its face, its name and close.
             hideChatHeader
             // Mounted closed: the caret goes in when the window opens.
@@ -374,12 +389,13 @@ export function EmbedThemed({
   accent: AppAccent;
   colorMode: 'light' | 'dark';
   font?: string;
+  variant: AppThemeVariant;
   children: ReactNode;
   style?: CSSProperties;
 }): JSX.Element {
   const themeStyles = useMemo(
-    () => embedThemeStyles({ accent, font }),
-    [accent, font],
+    () => embedThemeStyles({ accent, font, variant }),
+    [accent, font, variant],
   );
   return (
     /*
@@ -391,7 +407,7 @@ export function EmbedThemed({
     <div data-color-mode={colorMode} style={{ display: 'contents' }}>
       <DatalayerThemeProvider
         colorMode={colorMode}
-        theme={loopTheme}
+        theme={getThemeConfig(variant).primerTheme}
         themeStyles={themeStyles}
         baseStyles={style}
       >
@@ -405,7 +421,7 @@ export function AppEmbed({
   app,
   mode,
   accent,
-  colorMode = 'auto',
+  colorMode,
   font,
   serverUrl,
   instance,
@@ -417,13 +433,17 @@ export function AppEmbed({
 }: AppEmbedProps): JSX.Element {
   const bridge = useHostBridge(app, host);
   const system = useSystemMode();
-  const resolvedMode = colorMode === 'auto' ? system : colorMode;
+  // The theme the application names (T-30), `loop` when none; its mode
+  // the host's, else the application's, else the visitor's system's.
+  const variant = app.interface.theme?.variant ?? 'loop';
+  const asked = colorMode ?? app.interface.theme?.mode ?? 'auto';
+  const resolvedMode = asked === 'auto' ? system : asked;
   const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
   const view = floatingViewOf(shownAs);
   const worn = accent ?? app.interface.accent;
   const themeOverrides = useMemo(
-    () => embedThemeOverrides({ accent: worn, font }),
-    [worn, font],
+    () => embedThemeOverrides({ accent: worn, font, variant }),
+    [worn, font, variant],
   );
   const named = app.interface.assistant;
   const assistant = useMemo(
@@ -445,6 +465,7 @@ export function AppEmbed({
       accent={worn}
       colorMode={resolvedMode}
       font={font}
+      variant={variant}
       style={
         view
           ? // Floating: nothing in the page's flow, nothing painted behind.
@@ -461,6 +482,7 @@ export function AppEmbed({
           instance={instance}
           embedToken={embedToken}
           colorMode={resolvedMode}
+          themeVariant={variant}
           themeOverrides={themeOverrides}
           character={character}
           host={host}
@@ -479,6 +501,7 @@ export function AppEmbed({
           // visitor's system's, not a Datalayer setting.
           themeOverrides={themeOverrides}
           colorMode={resolvedMode}
+          themeVariant={variant}
           // What the page gives it, and what it tells the page (D-10).
           plugins={bridge.plugins}
           onPresence={bridge.onPresence}

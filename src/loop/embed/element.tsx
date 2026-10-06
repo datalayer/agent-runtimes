@@ -43,7 +43,7 @@
 
 import { createRoot, type Root } from 'react-dom/client';
 import { StyleSheetManager } from 'styled-components';
-import { loopThemeStyles } from '@datalayer/primer-addons';
+import { getThemeConfig } from '@datalayer/primer-addons';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
@@ -509,7 +509,11 @@ export function defineDatalayerAppElement(
         }
       }
       this.setAttribute('data-embed-mode', look.mode);
-      const shadow = this.skeleton(loopThemeStyles.css);
+      // The theme's own stylesheet: `loop`'s, or the one the application
+      // names (T-30).
+      const shadow = this.skeleton(
+        getThemeConfig(look.variant).themeStyles.css,
+      );
       const mount = document.createElement('div');
       mount.className = 'datalayer-app-root';
       shadow.appendChild(mount);

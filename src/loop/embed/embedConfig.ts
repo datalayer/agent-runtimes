@@ -17,7 +17,12 @@
  * @module loop/embed/embedConfig
  */
 
-import type { AppAccent, AppEmbedMode, AppSpec } from '../../types/agentspecs';
+import type {
+  AppAccent,
+  AppEmbedMode,
+  AppSpec,
+  AppThemeVariant,
+} from '../../types/agentspecs';
 import { APP_ACCENTS, APP_EMBED_MODES } from '../apps/appspec';
 
 /** The element's name: the one a host writes. */
@@ -159,6 +164,8 @@ export type EmbedLook = {
   colorMode: EmbedColorMode;
   /** The host's face; empty for the theme's own. */
   font: string;
+  /** The theme the application names (T-30); `loop` when it names none. */
+  variant: AppThemeVariant;
 };
 
 /**
@@ -184,9 +191,11 @@ export function embedLookOf(
   const colorMode =
     oneOf(attributes.theme, EMBED_COLOR_MODES, 'a theme') ??
     oneOf(variables.theme, EMBED_COLOR_MODES, 'a theme') ??
+    app?.interface?.theme?.mode ??
     'auto';
   const font = checkedFont(attributes.font) || checkedFont(variables.font);
-  return { mode, accent, colorMode, font };
+  const variant = app?.interface?.theme?.variant ?? 'loop';
+  return { mode, accent, colorMode, font, variant };
 }
 
 /** The height of an inline application, in pixels. */
