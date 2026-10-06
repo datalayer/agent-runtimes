@@ -50,11 +50,12 @@ from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilit
 from agent_runtimes.loop.apps.components import answer_components, component_node
 from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
+from agent_runtimes.loop.apps.forms import form_defaults, form_fields, refused_by
 from agent_runtimes.loop.apps.guards import AppCheckBlockedError
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
 from agent_runtimes.loop.apps.rules import Decision
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
-from agent_runtimes.types import AppSettingSpec, AppSpec
+from agent_runtimes.types import AppSpec
 
 # --- what the user sees ---------------------------------------------------------
 
@@ -192,18 +193,23 @@ class FileQuestion:
 
 @dataclass(frozen=True)
 class FormQuestion:
-    """Ask for several values at once. The answer is a `dict` by field id.
+    """Ask for several values at once. The answer is a `dict` by field name.
 
-    Its fields are the inputs of an application's settings.
+    Its ``schema`` is the JSON Schema of a form (LOOP C-16), an object of named
+    fields, as an application's settings and a Form block say theirs: the page
+    draws it with ``@datalayer/primer-rjsf`` and the answer is checked against it.
     """
 
     prompt: str
-    fields: Tuple[AppSettingSpec, ...]
+    schema: Mapping[str, Any]
 
     def __post_init__(self) -> None:
-        if not self.fields:
-            raise ValueError(f"A form needs fields: {self.prompt!r} has none.")
-        object.__setattr__(self, "fields", tuple(self.fields))
+        from agentspecs.apps import form_problems
+
+        problems = form_problems({"id": self.prompt, "schema": self.schema})
+        if problems:
+            raise ValueError(" ".join(problems))
+        object.__setattr__(self, "schema", dict(self.schema))
 
 
 Question = Union[TextQuestion, ChoiceQuestion, FileQuestion, FormQuestion]
@@ -320,60 +326,42 @@ def _accepted(question: FileQuestion, upload: UploadedFile) -> bool:
     return False
 
 
-def _form_value(item: AppSettingSpec, value: Any) -> Any:
-    if item.type == "select":
-        if value not in item.options:
-            raise InvalidAnswer(f"{item.label} is one of {', '.join(item.options)}.")
-        return value
-    if item.type == "toggle":
-        if not isinstance(value, bool):
-            raise InvalidAnswer(f"{item.label} is on or off.")
-        return value
-    if item.type in ("slider", "number"):
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise InvalidAnswer(f"{item.label} is a number.")
-        if item.min is not None and value < item.min:
-            raise InvalidAnswer(f"{item.label} is at least {item.min:g}.")
-        if item.max is not None and value > item.max:
-            raise InvalidAnswer(f"{item.label} is at most {item.max:g}.")
-        return value
-    if not isinstance(value, str):
-        raise InvalidAnswer(f"{item.label} is text.")
-    return value
-
-
 def form_values(
-    fields: Sequence[AppSettingSpec], given: Mapping[str, Any]
+    schema: Optional[Mapping[str, Any]],
+    given: Mapping[str, Any],
+    title: str = "Its settings",
 ) -> Dict[str, Any]:
-    """Check values for fields against their inputs; the default for the rest.
+    """Check values against a form's schema; the default for the rest (LOOP C-16).
 
     Parameters
     ----------
-    fields : sequence of AppSettingSpec
-        The fields.
+    schema : mapping, optional
+        The JSON Schema of the form, an object of named fields; none for an
+        application without settings, which takes no value.
     given : mapping
-        The values given, by field id.
+        The values given, by field name.
+    title : str
+        The form, as a person reads it, in the refusal.
 
     Returns
     -------
     dict
-        A value for every field that has one, by id.
+        A value for every field that has one, by name.
 
     Raises
     ------
     InvalidAnswer
-        For a field that does not exist, or a value its input does not take.
+        For a field the form does not have, or a value its schema refuses.
     """
-    by_id = {item.id: item for item in fields}
-    unknown = [key for key in given if key not in by_id]
+    fields = form_fields(schema)
+    unknown = [key for key in given if key not in fields]
     if unknown:
         raise InvalidAnswer(f"There is no field {', '.join(sorted(unknown))}.")
-    values: Dict[str, Any] = {}
-    for item in fields:
-        if item.id in given:
-            values[item.id] = _form_value(item, given[item.id])
-        elif item.default is not None:
-            values[item.id] = item.default
+    values: Dict[str, Any] = {**form_defaults(schema), **given}
+    if schema is not None:
+        refused = refused_by(schema, values, title)
+        if refused:
+            raise InvalidAnswer(refused)
     return values
 
 
@@ -403,7 +391,7 @@ def _checked(question: Question, answer: Any) -> Any:
         return answer
     if not isinstance(answer, Mapping):
         raise InvalidAnswer(f"{question.prompt!r} is answered with a form.")
-    return form_values(question.fields, answer)
+    return form_values(question.schema, answer, question.prompt)
 
 
 async def _text_of(

@@ -524,6 +524,33 @@ describe('Datalayer’s own components', () => {
     expect(container.textContent).toContain('must have required property');
   });
 
+  it('Form: without an action, settings — no button, the values written as filled', async () => {
+    const { container, actions } = await draw(
+      [
+        { id: 'both', component: 'Column', children: ['settings', 'shown'] },
+        {
+          id: 'settings',
+          component: 'Form',
+          schema: {
+            type: 'object',
+            properties: {
+              seats: { type: 'integer', title: 'Seats', default: 10 },
+            },
+          },
+          values: { path: '/inputs' },
+        },
+        { id: 'shown', component: 'Text', text: { path: '/inputs/seats' } },
+      ],
+      { inputs: { seats: 10 } },
+    );
+    const form = container.querySelector('[data-testid="a2ui-form"]')!;
+    expect(form.querySelectorAll('button')).toHaveLength(0);
+    await type(form.querySelector('input') as HTMLInputElement, '12');
+    // Written where its values point, for the next run; nothing sent.
+    expect(container.textContent).toContain('12');
+    expect(actions).toEqual([]);
+  });
+
   it('Table: a row chosen is shown chosen when nothing is bound to selected', async () => {
     const { container, actions } = await draw([
       {

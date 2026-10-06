@@ -204,14 +204,16 @@ describe('writing into a file that exists', () => {
       },
       app => {
         app.interface.starters = [];
-        app.interface.settings = [
-          {
-            id: 'product',
-            type: 'select',
-            label: 'Product',
-            options: ['Cloud', 'Desktop'],
+        app.interface.settings = {
+          type: 'object',
+          properties: {
+            product: {
+              type: 'string',
+              title: 'Product',
+              enum: ['Cloud', 'Desktop'],
+            },
           },
-        ];
+        };
       },
     ];
     for (const change of changes) {

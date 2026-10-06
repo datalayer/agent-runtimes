@@ -12,6 +12,11 @@
  * its action is dispatched, so the action's context reads them. A form the
  * schema refuses says why beside each field and sends nothing.
  *
+ * A form without an action is a set of settings (C-16) — an application's
+ * `interface.settings` drawn beside its conversation: no button, its values
+ * written where `values` points as they are filled, for the next run to take;
+ * the runtime checks them against the same schema.
+ *
  * @module components/a2ui/datalayer/Form
  */
 
@@ -45,9 +50,15 @@ export function FormView({ props }: { props: FormProps }) {
   useEffect(() => {
     setLocal(JSON.parse(shownKey));
   }, [shownKey]);
+  // Without an action, nothing is sent: no button, the values written as filled.
+  const live = action === undefined;
   const uiSchema = useMemo(
-    () => ({ 'ui:submitButtonOptions': { submitText: submitLabel } }),
-    [submitLabel],
+    () => ({
+      'ui:submitButtonOptions': live
+        ? { norender: true }
+        : { submitText: submitLabel },
+    }),
+    [live, submitLabel],
   );
   const problem =
     schema.type !== undefined && schema.type !== 'object'
@@ -72,9 +83,13 @@ export function FormView({ props }: { props: FormProps }) {
           onBlur={() => setTouched(true)}
           onError={() => setTouched(true)}
           showErrorList={false}
-          onChange={event =>
-            setLocal((event.formData ?? {}) as Record<string, unknown>)
-          }
+          onChange={event => {
+            const filled = (event.formData ?? {}) as Record<string, unknown>;
+            setLocal(filled);
+            if (live) {
+              setValues(filled);
+            }
+          }}
           onSubmit={event => {
             setValues((event.formData ?? {}) as Record<string, unknown>);
             action?.();

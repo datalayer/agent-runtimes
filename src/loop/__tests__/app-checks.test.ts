@@ -240,6 +240,36 @@ describe('the instant checks', () => {
     ).toEqual(['The form “quote” requires “reason”, which it does not ask.']);
   });
 
+  it('read settings as a form, checked as a Form is, the old list refused (C-16)', () => {
+    const settings = (value: unknown) =>
+      checkAppspec({ ...BASE, interface: { settings: value } }).problems;
+    const tone = {
+      type: 'string',
+      title: 'Tone',
+      enum: ['warm', 'dry'],
+      default: 'warm',
+    };
+    expect(settings({ type: 'object', properties: { tone } })).toEqual([]);
+    expect(settings([{ id: 'tone', type: 'select', label: 'Tone' }])).toEqual([
+      'interface.settings: is the JSON Schema of a form, an object of named fields (LOOP C-16), not a list of settings: say each one as a property, its title and its default.',
+    ]);
+    expect(settings({ type: 'object', properties: {} })).toEqual([
+      'The form “settings” asks for no named field: its schema is an object with properties.',
+    ]);
+    expect(
+      settings({ type: 'object', required: ['depth'], properties: { tone } }),
+    ).toEqual(['The form “settings” requires “depth”, which it does not ask.']);
+    // Read as written, and written back as read.
+    const parsed = parseAppspec({
+      ...BASE,
+      interface: { settings: { type: 'object', properties: { tone } } },
+    }).app;
+    expect(parsed.interface.settings?.properties.tone).toEqual(tone);
+    expect(
+      (dumpAppspec(parsed).interface as Record<string, unknown>).settings,
+    ).toEqual({ type: 'object', properties: { tone } });
+  });
+
   it('need attention for a Guard the runtime does not run (R-06)', () => {
     const check = checkAppspec({
       ...BASE,

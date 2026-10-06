@@ -14,6 +14,7 @@ from typing import Dict, Literal
 
 from agent_runtimes.types import AppSpec
 
+
 # ============================================================================
 # Application Definitions
 # ============================================================================
@@ -76,7 +77,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [],
             "surface": None,
             "assistant": "wizard",
@@ -198,26 +199,24 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [
-                {
-                    "id": "language",
-                    "type": "select",
-                    "label": "Language",
-                    "options": ["English", "French"],
-                    "default": "English",
-                    "min": None,
-                    "max": None,
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "language": {
+                        "type": "string",
+                        "title": "Language",
+                        "enum": ["English", "French"],
+                        "default": "English",
+                    },
+                    "length": {
+                        "type": "integer",
+                        "title": "Questions",
+                        "minimum": 3,
+                        "maximum": 15,
+                        "default": 8,
+                    },
                 },
-                {
-                    "id": "length",
-                    "type": "slider",
-                    "label": "Questions",
-                    "options": [],
-                    "default": 8.0,
-                    "min": 3.0,
-                    "max": 15.0,
-                },
-            ],
+            },
             "components": [],
             "surface": None,
             "assistant": "cat",
@@ -323,7 +322,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [
                 "Card",
                 "Column",
@@ -485,7 +484,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [],
             "surface": None,
             "assistant": "wizard",
@@ -638,7 +637,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [],
             "surface": None,
             "assistant": None,
@@ -772,7 +771,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [
                 "Card",
                 "Column",
@@ -1000,7 +999,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [
                 "Card",
                 "Column",
@@ -1224,35 +1223,30 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [
-                {
-                    "id": "seats",
-                    "type": "slider",
-                    "label": "Seats",
-                    "options": [],
-                    "default": 10.0,
-                    "min": 1.0,
-                    "max": 1000.0,
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "seats": {
+                        "type": "integer",
+                        "title": "Seats",
+                        "minimum": 1,
+                        "maximum": 1000,
+                        "default": 10,
+                    },
+                    "plan": {
+                        "type": "string",
+                        "title": "Plan",
+                        "enum": ["Team", "Business", "Enterprise"],
+                        "default": "Team",
+                    },
+                    "term": {
+                        "type": "string",
+                        "title": "Term",
+                        "enum": ["Monthly", "Annual"],
+                        "default": "Annual",
+                    },
                 },
-                {
-                    "id": "plan",
-                    "type": "select",
-                    "label": "Plan",
-                    "options": ["Team", "Business", "Enterprise"],
-                    "default": "Team",
-                    "min": None,
-                    "max": None,
-                },
-                {
-                    "id": "term",
-                    "type": "select",
-                    "label": "Term",
-                    "options": ["Monthly", "Annual"],
-                    "default": "Annual",
-                    "min": None,
-                    "max": None,
-                },
-            ],
+            },
             "components": [
                 "Card",
                 "Column",
@@ -1442,26 +1436,22 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [
-                {
-                    "id": "report",
-                    "type": "select",
-                    "label": "Report",
-                    "options": ["Summary", "Full"],
-                    "default": "Summary",
-                    "min": None,
-                    "max": None,
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "report": {
+                        "type": "string",
+                        "title": "Report",
+                        "enum": ["Summary", "Full"],
+                        "default": "Summary",
+                    },
+                    "question": {
+                        "type": "string",
+                        "title": "What to look at",
+                        "default": "",
+                    },
                 },
-                {
-                    "id": "question",
-                    "type": "text",
-                    "label": "What to look at",
-                    "options": [],
-                    "default": "",
-                    "min": None,
-                    "max": None,
-                },
-            ],
+            },
             "components": [
                 "Card",
                 "Column",
@@ -1656,7 +1646,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [],
             "surface": None,
             "assistant": "paperclip",
@@ -1761,7 +1751,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [
                 "Card",
                 "Column",
@@ -1937,7 +1927,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             "starters": [],
             "commands": [],
             "modes": [],
-            "settings": [],
+            "settings": None,
             "components": [
                 "Card",
                 "Column",
@@ -2113,17 +2103,17 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [
-                {
-                    "id": "product",
-                    "type": "select",
-                    "label": "Product",
-                    "options": ["Cloud", "Desktop"],
-                    "default": "Cloud",
-                    "min": None,
-                    "max": None,
-                }
-            ],
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "product": {
+                        "type": "string",
+                        "title": "Product",
+                        "enum": ["Cloud", "Desktop"],
+                        "default": "Cloud",
+                    }
+                },
+            },
             "components": [
                 "Card",
                 "Column",
@@ -2330,17 +2320,17 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             ],
             "commands": [],
             "modes": [],
-            "settings": [
-                {
-                    "id": "depth",
-                    "type": "select",
-                    "label": "How far to look",
-                    "options": ["Quick", "Thorough"],
-                    "default": "Quick",
-                    "min": None,
-                    "max": None,
-                }
-            ],
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "depth": {
+                        "type": "string",
+                        "title": "How far to look",
+                        "enum": ["Quick", "Thorough"],
+                        "default": "Quick",
+                    }
+                },
+            },
             "components": [],
             "surface": None,
             "assistant": None,

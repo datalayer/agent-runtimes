@@ -602,7 +602,6 @@ const ENUMS = {
   behaviour: ['do_it', 'if_asked', 'ask_first', 'leave_to_me'],
   layout: ['chat', 'page', 'split'],
   accent: ['green', 'rose', 'sky', 'lime', 'sun', 'violet'],
-  settingType: ['select', 'text', 'toggle', 'slider', 'number'],
   record: [
     'conversations',
     'actions',
@@ -880,13 +879,18 @@ export function documentShapeProblems(document: unknown): string[] {
         `let only one mode choose the model, not ${choosingModel.join(', ')}`,
       );
     }
-    records(ui.settings, 'interface.settings', (item, where) => {
-      required(item, 'id', where);
-      required(item, 'type', where);
-      required(item, 'label', where);
-      oneOf(item.type, ENUMS.settingType, `${where}.type`);
-      texts(item.options, `${where}.options`);
-    });
+    // Its settings are the JSON Schema of a form (C-16), checked as a Form's
+    // schema is; the list of settings of earlier versions is refused.
+    if (Array.isArray(ui.settings)) {
+      at(
+        'interface.settings',
+        'is the JSON Schema of a form, an object of named fields (LOOP C-16), not a list of settings: say each one as a property, its title and its default',
+      );
+    } else {
+      mapping(ui.settings, 'interface.settings', settings => {
+        problems.push(...formProblems({ id: 'settings', schema: settings }));
+      });
+    }
     mapping(ui.surface, 'interface.surface', surface => {
       records(
         surface.components,

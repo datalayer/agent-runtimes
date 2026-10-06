@@ -42,15 +42,17 @@ ASSISTANT = {
     "kind": "chat",
     "agent": "cog-crawler:0.0.1",
     "interface": {
-        "settings": [
-            {
-                "id": "tone",
-                "type": "select",
-                "label": "Tone",
-                "options": ["Plain", "Warm"],
-                "default": "Plain",
-            }
-        ]
+        "settings": {
+            "type": "object",
+            "properties": {
+                "tone": {
+                    "type": "string",
+                    "title": "Tone",
+                    "enum": ["Plain", "Warm"],
+                    "default": "Plain",
+                }
+            },
+        }
     },
     "record": {"keep_for": "30_days", "include": ["conversations", "outputs"]},
 }
@@ -492,7 +494,11 @@ def test_the_chat_speaks_to_an_application_over_ag_ui_each_thread_a_session(
         json={**run, "forwardedProps": {"loop": {"settings": {"tone": "Loud"}}}},
     )
     assert wrong.status_code == 422
-    assert wrong.json()["detail"] == "Tone is one of Plain, Warm."
+    # Checked against the settings' form, the sentence a Form's check says (C-16).
+    assert wrong.json()["detail"] == (
+        "“Its settings” was sent what its fields refuse: "
+        "tone: 'Loud' is not one of ['Plain', 'Warm']."
+    )
 
 
 def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell(

@@ -24,7 +24,6 @@ from agent_runtimes.loop.apps.build import (
 from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
 from agent_runtimes.loop.apps.session import ChoiceQuestion, FormQuestion, Session
 from agent_runtimes.loop.apps.terminal import AppTux, TerminalChannel, ask_once
-from agent_runtimes.types import AppSettingSpec
 
 pytest.importorskip("agentspecs.apps")
 
@@ -365,12 +364,17 @@ def test_the_terminal_channel_asks_at_the_prompt() -> None:
             "s",
             FormQuestion(
                 "Settings",
-                (
-                    AppSettingSpec(
-                        id="tone", type="select", label="Tone", options=["warm", "dry"]
-                    ),
-                    AppSettingSpec(id="note", type="text", label="Note"),
-                ),
+                {
+                    "type": "object",
+                    "properties": {
+                        "tone": {
+                            "type": "string",
+                            "title": "Tone",
+                            "enum": ["warm", "dry"],
+                        },
+                        "note": {"type": "string", "title": "Note"},
+                    },
+                },
             ),
         )
     )

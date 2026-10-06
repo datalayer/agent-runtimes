@@ -2253,18 +2253,6 @@ class AppModeSpec(BaseModel):
     )
 
 
-class AppSettingSpec(BaseModel):
-    """Something the user may set for their session."""
-
-    id: str
-    type: str = Field(..., description="`select`, `text`, `toggle`, `slider`, `number`")
-    label: str
-    options: List[str] = Field(default_factory=list)
-    default: Optional[Union[str, bool, float]] = None
-    min: Optional[float] = None
-    max: Optional[float] = None
-
-
 class AppSurfaceSpec(BaseModel):
     """The component tree a user meets, over the approved catalog (A2UI)."""
 
@@ -2312,7 +2300,13 @@ class AppInterfaceSpec(BaseModel):
     modes: List[AppModeSpec] = Field(
         default_factory=list, description="Mode switches in the composer"
     )
-    settings: List[AppSettingSpec] = Field(default_factory=list)
+    settings: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What the user may set: the JSON Schema of a form, an object of "
+            "named fields (LOOP C-16); none when unsaid"
+        ),
+    )
     components: List[str] = Field(
         default_factory=list,
         description="The components of the catalog the surface may use",

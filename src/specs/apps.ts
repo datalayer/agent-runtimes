@@ -83,7 +83,6 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [],
     components: [],
     assistant: 'wizard',
     voice: {
@@ -215,24 +214,24 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [
-      {
-        id: 'language',
-        type: 'select',
-        label: 'Language',
-        options: ['English', 'French'],
-        default: 'English',
+    settings: {
+      type: 'object',
+      properties: {
+        language: {
+          type: 'string',
+          title: 'Language',
+          enum: ['English', 'French'],
+          default: 'English',
+        },
+        length: {
+          type: 'integer',
+          title: 'Questions',
+          minimum: 3,
+          maximum: 15,
+          default: 8,
+        },
       },
-      {
-        id: 'length',
-        type: 'slider',
-        label: 'Questions',
-        options: [],
-        default: 8.0,
-        min: 3.0,
-        max: 15.0,
-      },
-    ],
+    },
     components: [],
     assistant: 'cat',
     voice: {
@@ -346,7 +345,6 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [],
     components: [
       'Card',
       'Column',
@@ -525,7 +523,6 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [],
     components: [],
     assistant: 'wizard',
     voice: {
@@ -688,7 +685,6 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [],
     components: [],
     voice: {
       enabled: false,
@@ -831,7 +827,6 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [],
     components: [
       'Card',
       'Column',
@@ -1068,7 +1063,6 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [],
     components: [
       'Card',
       'Column',
@@ -1336,31 +1330,30 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [
-      {
-        id: 'seats',
-        type: 'slider',
-        label: 'Seats',
-        options: [],
-        default: 10.0,
-        min: 1.0,
-        max: 1000.0,
+    settings: {
+      type: 'object',
+      properties: {
+        seats: {
+          type: 'integer',
+          title: 'Seats',
+          minimum: 1,
+          maximum: 1000,
+          default: 10,
+        },
+        plan: {
+          type: 'string',
+          title: 'Plan',
+          enum: ['Team', 'Business', 'Enterprise'],
+          default: 'Team',
+        },
+        term: {
+          type: 'string',
+          title: 'Term',
+          enum: ['Monthly', 'Annual'],
+          default: 'Annual',
+        },
       },
-      {
-        id: 'plan',
-        type: 'select',
-        label: 'Plan',
-        options: ['Team', 'Business', 'Enterprise'],
-        default: 'Team',
-      },
-      {
-        id: 'term',
-        type: 'select',
-        label: 'Term',
-        options: ['Monthly', 'Annual'],
-        default: 'Annual',
-      },
-    ],
+    },
     components: [
       'Card',
       'Column',
@@ -1602,22 +1595,22 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [
-      {
-        id: 'report',
-        type: 'select',
-        label: 'Report',
-        options: ['Summary', 'Full'],
-        default: 'Summary',
+    settings: {
+      type: 'object',
+      properties: {
+        report: {
+          type: 'string',
+          title: 'Report',
+          enum: ['Summary', 'Full'],
+          default: 'Summary',
+        },
+        question: {
+          type: 'string',
+          title: 'What to look at',
+          default: '',
+        },
       },
-      {
-        id: 'question',
-        type: 'text',
-        label: 'What to look at',
-        options: [],
-        default: '',
-      },
-    ],
+    },
     components: [
       'Card',
       'Column',
@@ -1863,7 +1856,6 @@ export const SALES_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [],
     components: [],
     assistant: 'paperclip',
     voice: {
@@ -1976,7 +1968,6 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [],
     components: [
       'Card',
       'Column',
@@ -2158,7 +2149,6 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     starters: [],
     commands: [],
     modes: [],
-    settings: [],
     components: [
       'Card',
       'Column',
@@ -2345,15 +2335,17 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [
-      {
-        id: 'product',
-        type: 'select',
-        label: 'Product',
-        options: ['Cloud', 'Desktop'],
-        default: 'Cloud',
+    settings: {
+      type: 'object',
+      properties: {
+        product: {
+          type: 'string',
+          title: 'Product',
+          enum: ['Cloud', 'Desktop'],
+          default: 'Cloud',
+        },
       },
-    ],
+    },
     components: [
       'Card',
       'Column',
@@ -2614,15 +2606,17 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     ],
     commands: [],
     modes: [],
-    settings: [
-      {
-        id: 'depth',
-        type: 'select',
-        label: 'How far to look',
-        options: ['Quick', 'Thorough'],
-        default: 'Quick',
+    settings: {
+      type: 'object',
+      properties: {
+        depth: {
+          type: 'string',
+          title: 'How far to look',
+          enum: ['Quick', 'Thorough'],
+          default: 'Quick',
+        },
       },
-    ],
+    },
     components: [],
     voice: {
       enabled: false,
@@ -2859,23 +2853,24 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           message: 'Interview me about my first week with the product.',
         },
       ],
-      settings: [
-        {
-          id: 'language',
-          type: 'select',
-          label: 'Language',
-          options: ['English', 'French'],
-          default: 'English',
+      settings: {
+        type: 'object',
+        properties: {
+          language: {
+            type: 'string',
+            title: 'Language',
+            enum: ['English', 'French'],
+            default: 'English',
+          },
+          length: {
+            type: 'integer',
+            title: 'Questions',
+            minimum: 3,
+            maximum: 15,
+            default: 8,
+          },
         },
-        {
-          id: 'length',
-          type: 'slider',
-          label: 'Questions',
-          default: 8.0,
-          min: 3.0,
-          max: 15.0,
-        },
-      ],
+      },
       assistant: 'cat',
     },
     tests: {
@@ -3628,30 +3623,30 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     contents: ['Price list'],
     interface: {
       accent: 'sun',
-      settings: [
-        {
-          id: 'seats',
-          type: 'slider',
-          label: 'Seats',
-          default: 10.0,
-          min: 1.0,
-          max: 1000.0,
+      settings: {
+        type: 'object',
+        properties: {
+          seats: {
+            type: 'integer',
+            title: 'Seats',
+            minimum: 1,
+            maximum: 1000,
+            default: 10,
+          },
+          plan: {
+            type: 'string',
+            title: 'Plan',
+            enum: ['Team', 'Business', 'Enterprise'],
+            default: 'Team',
+          },
+          term: {
+            type: 'string',
+            title: 'Term',
+            enum: ['Monthly', 'Annual'],
+            default: 'Annual',
+          },
         },
-        {
-          id: 'plan',
-          type: 'select',
-          label: 'Plan',
-          options: ['Team', 'Business', 'Enterprise'],
-          default: 'Team',
-        },
-        {
-          id: 'term',
-          type: 'select',
-          label: 'Term',
-          options: ['Monthly', 'Annual'],
-          default: 'Annual',
-        },
-      ],
+      },
       components: [
         'Card',
         'Column',
@@ -3836,21 +3831,22 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     ],
     interface: {
       accent: 'sky',
-      settings: [
-        {
-          id: 'report',
-          type: 'select',
-          label: 'Report',
-          options: ['Summary', 'Full'],
-          default: 'Summary',
+      settings: {
+        type: 'object',
+        properties: {
+          report: {
+            type: 'string',
+            title: 'Report',
+            enum: ['Summary', 'Full'],
+            default: 'Summary',
+          },
+          question: {
+            type: 'string',
+            title: 'What to look at',
+            default: '',
+          },
         },
-        {
-          id: 'question',
-          type: 'text',
-          label: 'What to look at',
-          default: '',
-        },
-      ],
+      },
       components: [
         'Card',
         'Column',
@@ -4318,15 +4314,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'What is the difference between the Team and the Business plan?',
         },
       ],
-      settings: [
-        {
-          id: 'product',
-          type: 'select',
-          label: 'Product',
-          options: ['Cloud', 'Desktop'],
-          default: 'Cloud',
+      settings: {
+        type: 'object',
+        properties: {
+          product: {
+            type: 'string',
+            title: 'Product',
+            enum: ['Cloud', 'Desktop'],
+            default: 'Cloud',
+          },
         },
-      ],
+      },
       components: [
         'Card',
         'Column',
@@ -4528,15 +4526,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'Is it true that most data science projects never reach production? Find the primary source.',
         },
       ],
-      settings: [
-        {
-          id: 'depth',
-          type: 'select',
-          label: 'How far to look',
-          options: ['Quick', 'Thorough'],
-          default: 'Quick',
+      settings: {
+        type: 'object',
+        properties: {
+          depth: {
+            type: 'string',
+            title: 'How far to look',
+            enum: ['Quick', 'Thorough'],
+            default: 'Quick',
+          },
         },
-      ],
+      },
     },
     tests: {
       cases: [

@@ -88,7 +88,10 @@ listComponents().filter(c => !c.standard).map(c => c.id);
   sends with it against the same schema (`agent_runtimes.loop.apps.forms.form_values_refused`):
   refused, the session API answers 422 with the sentence —
   *“The quote” was sent what its fields refuse: seats: 0 is less than the minimum of 1.* —
-  and the application's handler is not called.
+  and the application's handler is not called. An application's settings are a form of
+  the same kind (`interface.settings`), checked by `checkAppspec` as the form “settings”
+  (a list of settings, their old shape, is refused) and by the runtime when a run or a
+  settings change carries them (`refused_by`, the same sentence).
 - **Tests** hold the catalogue to the plugins (`agent_runtimes/tests/test_ui_plugin_components.py`):
   the component catalog is A2UI's own, every component has a version and a schema,
   Datalayer's carry an example their schema meets, and an unknown name is `None`.
@@ -135,7 +138,7 @@ its `sends` binding points, then dispatches its `action`, whose context reads th
 | `FileUpload` | — | `files`: `[{name, type, size, data_url}]`, once each file is of a kind in `accept` and within `max_mb` |
 | `Chat` | `messages`: `{role: 'user' \| 'assistant', text}` or `{role: 'tool', name, args, result}` (shown while `show_tools`), drawn by the chat's `ChatMessageList`; `welcome` and `starters` before the first | `message`: what is written in the composer, or a starter chosen |
 | `Evidence` | `sources`: `{title, url, passage}`, the first `max_items` and the rest behind *more* | — (opening a source dispatches its action) |
-| `Form` | `values`: the record the form starts from, its fields generated from `schema` with `@datalayer/primer-rjsf` | `values`: the form's values when it is valid and sent |
+| `Form` | `values`: the record the form starts from, its fields generated from `schema` with `@datalayer/primer-rjsf` | `values`: the form's values when it is valid and sent; without an `action`, a set of settings, written as they are filled, no button |
 
 ```json
 {"id": "runs", "component": "Table", "columns": ["model", "cost"], "selectable": true,

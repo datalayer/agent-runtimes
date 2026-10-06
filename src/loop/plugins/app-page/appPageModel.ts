@@ -29,7 +29,11 @@
  * @module loop/plugins/app-page/appPageModel
  */
 
-import type { AppSettingSpec, AppSpec } from '../../../types/agentspecs';
+import type {
+  AppFormField,
+  AppFormSchema,
+  AppSpec,
+} from '../../../types/agentspecs';
 import type {
   ChatTurnSnapshot,
   ChatTurnStatus,
@@ -238,6 +242,38 @@ export const isAppPageKind = (kind: string): kind is AppPageKind =>
 export const inputPath = (id: string): string => `/inputs/${id}`;
 
 /**
+ * The fields of an application's settings (C-16), by name, in the order its
+ * form says them; none when it has no settings.
+ */
+export function settingFields(
+  settings: AppFormSchema | undefined,
+): Array<[string, AppFormField]> {
+  const properties = settings?.properties;
+  if (!properties || typeof properties !== 'object') {
+    return [];
+  }
+  return Object.entries(properties).filter(
+    (entry): entry is [string, AppFormField] =>
+      typeof entry[1] === 'object' && entry[1] !== null,
+  );
+}
+
+/** A setting as a person reads it: its field's `title`, else its name. */
+export const settingTitle = (id: string, field: AppFormField): string =>
+  typeof field.title === 'string' && field.title ? field.title : id;
+
+/** What each setting starts at: its field's `default`, for those that say one. */
+export function settingDefaults(
+  settings: AppFormSchema | undefined,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    settingFields(settings)
+      .filter(([, field]) => field.default !== undefined)
+      .map(([id, field]) => [id, field.default]),
+  );
+}
+
+/**
  * What an application publishes and takes, with its own settings: the kind's
  * list, and for a kind that has inputs each setting at `/inputs/<id>`, both
  * shown and written. Empty lists for a decision, or a kind not known.
@@ -252,10 +288,10 @@ export function appKindPaths(
   if (!kind.inputs) {
     return kind;
   }
-  const inputs = app.interface.settings.map(setting => ({
-    path: inputPath(setting.id),
-    meaning: `The setting “${setting.label || setting.id}”.`,
-    words: setting.label || setting.id,
+  const inputs = settingFields(app.interface.settings).map(([id, field]) => ({
+    path: inputPath(id),
+    meaning: `The setting “${settingTitle(id, field)}”.`,
+    words: settingTitle(id, field),
   }));
   return {
     ...kind,
@@ -309,25 +345,6 @@ const STATUS_WORDS: Record<ChatTurnStatus, string> = {
   error: 'Stopped',
 };
 
-/** A setting's first value, as its input holds it. */
-export function initialInput(setting: AppSettingSpec): unknown {
-  switch (setting.type) {
-    case 'toggle':
-      return Boolean(setting.default ?? false);
-    case 'select':
-      // A ChoicePicker holds a list of the values chosen.
-      return setting.default === undefined ? [] : [String(setting.default)];
-    case 'slider':
-      return Number(setting.default ?? setting.min ?? 0);
-    case 'number':
-      return setting.max === undefined
-        ? String(setting.default ?? '')
-        : Number(setting.default ?? setting.min ?? 0);
-    default:
-      return String(setting.default ?? '');
-  }
-}
-
 /**
  * What the conversation publishes to the page, by path, now: from its
  * current turn, and for a chat its whole conversation.
@@ -373,12 +390,21 @@ export function appPageInitialData(
   }
   const paths = appKindPaths(app);
   if (paths.inputs) {
-    tree.inputs = Object.fromEntries(
-      app.interface.settings.map(setting => [
-        setting.id,
-        initialInput(setting),
-      ]),
-    );
+    // Each setting at its default, as the settings' form holds it; a
+    // ChoicePicker a builder placed at a setting holds a list of the values
+    // chosen.
+    const inputs = settingDefaults(app.interface.settings);
+    for (const node of app.interface.surface?.components ?? []) {
+      const bound = (node.value as { path?: unknown } | undefined)?.path;
+      const id =
+        typeof bound === 'string' && bound.startsWith('/inputs/')
+          ? bound.slice('/inputs/'.length)
+          : undefined;
+      if (node.component === 'ChoicePicker' && id && id in inputs) {
+        inputs[id] = Array.isArray(inputs[id]) ? inputs[id] : [inputs[id]];
+      }
+    }
+    tree.inputs = inputs;
   }
   if (paths.accepts.some(entry => entry.path === DRAFT.path)) {
     tree.draft = '';
@@ -417,9 +443,9 @@ export function inputsInWords(
       : {};
   const lines: string[] = [];
   const seen = new Set<string>();
-  for (const setting of app.interface.settings) {
-    seen.add(setting.id);
-    lines.push(inputWords(setting.label || setting.id, values[setting.id]));
+  for (const [id, field] of settingFields(app.interface.settings)) {
+    seen.add(id);
+    lines.push(inputWords(settingTitle(id, field), values[id]));
   }
   for (const [id, value] of Object.entries(values)) {
     if (!seen.has(id)) {
@@ -486,8 +512,10 @@ export function givenFiles(
 
 /**
  * The application's settings as the page holds them, as the session API
- * takes them: a choice as the option chosen, a number as a number, a toggle
- * as on or off — each setting the page has a value for.
+ * takes them, each as its field's type says (C-16): a number as a number, a
+ * boolean as on or off, a word as the option chosen — a ChoicePicker holds a
+ * list of them — each setting the page has a value for. The runtime checks
+ * them against the settings' form.
  */
 export function settingsOf(
   app: Pick<AppSpec, 'interface'>,
@@ -498,30 +526,33 @@ export function settingsOf(
       ? (inputs as Record<string, unknown>)
       : {};
   const settings: Record<string, unknown> = {};
-  for (const setting of app.interface.settings) {
-    const value = values[setting.id];
+  for (const [id, field] of settingFields(app.interface.settings)) {
+    const held = values[id];
+    if (held === undefined || held === null) {
+      continue;
+    }
+    if (field.type === 'array' || field.type === 'object') {
+      settings[id] = held;
+      continue;
+    }
+    const value = Array.isArray(held) ? held[0] : held;
     if (value === undefined || value === null) {
       continue;
     }
-    switch (setting.type) {
-      case 'select': {
-        const chosen = Array.isArray(value) ? value[0] : value;
-        if (chosen !== undefined && chosen !== '') {
-          settings[setting.id] = String(chosen);
-        }
-        break;
-      }
-      case 'toggle':
-        settings[setting.id] = Boolean(value);
-        break;
-      case 'slider':
+    switch (field.type) {
+      case 'integer':
       case 'number':
         if (value !== '' && !Number.isNaN(Number(value))) {
-          settings[setting.id] = Number(value);
+          settings[id] = Number(value);
         }
         break;
+      case 'boolean':
+        settings[id] = Boolean(value);
+        break;
       default:
-        settings[setting.id] = String(value);
+        if (value !== '' || !Array.isArray(field.enum)) {
+          settings[id] = typeof value === 'string' ? value : String(value);
+        }
     }
   }
   return settings;
@@ -668,44 +699,22 @@ const button = (
   { id: `${id}-label`, component: 'Text', text: label },
 ];
 
-/** A setting as the input of the catalog that holds its value. */
-function settingInput(setting: AppSettingSpec): Component {
-  const base = {
-    id: `input-${setting.id}`,
-    label: setting.label || setting.id,
-    value: { path: inputPath(setting.id) },
-  };
-  switch (setting.type) {
-    case 'toggle':
-      return { ...base, component: 'CheckBox' };
-    case 'select':
-      return {
-        ...base,
-        component: 'ChoicePicker',
-        options: setting.options.map(option => ({
-          label: option,
-          value: option,
-        })),
-      };
-    case 'slider':
-      return {
-        ...base,
-        component: 'Slider',
-        min: setting.min ?? 0,
-        max: setting.max ?? 100,
-      };
-    case 'number':
-      return setting.max === undefined
-        ? { ...base, component: 'TextField', variant: 'number' }
-        : {
-            ...base,
-            component: 'Slider',
-            min: setting.min ?? 0,
-            max: setting.max,
-          };
-    default:
-      return { ...base, component: 'TextField' };
-  }
+/**
+ * The settings as one Form block (C-16): their form drawn with
+ * `@datalayer/primer-rjsf`, the values written at `/inputs` as they are
+ * filled — no action, no button: they go with the next run.
+ */
+function settingsForm(app: Pick<AppSpec, 'interface'>): Component[] {
+  return app.interface.settings && settingFields(app.interface.settings).length
+    ? [
+        {
+          id: 'settings',
+          component: 'Form',
+          schema: app.interface.settings,
+          values: { path: '/inputs' },
+        },
+      ]
+    : [];
 }
 
 /**
@@ -716,9 +725,7 @@ function settingInput(setting: AppSettingSpec): Component {
 export function defaultAppSurface(
   app: Pick<AppSpec, 'kind' | 'interface'>,
 ): Component[] {
-  const inputs = appKindPaths(app).inputs
-    ? app.interface.settings.map(settingInput)
-    : [];
+  const inputs = appKindPaths(app).inputs ? settingsForm(app) : [];
   const body: Component[] = [];
   switch (app.kind) {
     case 'chat':

@@ -48,7 +48,7 @@ import type {
   AppModeOptionSpec,
   AppModeSpec,
   AppRuleSpec,
-  AppSettingSpec,
+  AppFormSchema,
   AppSpec,
   AppSurfaceSpec,
   AppTriggerSpec,
@@ -215,7 +215,6 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       starters: [],
       commands: [],
       modes: [],
-      settings: [],
       components: [],
       outputs: [],
     },
@@ -344,29 +343,6 @@ function parseMode(data: Data): AppModeSpec {
   return mode;
 }
 
-function parseSetting(data: Data): AppSettingSpec {
-  const setting: AppSettingSpec = {
-    id: text(data.id),
-    type: oneOf(
-      data.type,
-      ['select', 'text', 'toggle', 'slider', 'number'] as const,
-      'text',
-    ),
-    label: text(data.label),
-    options: texts(data.options),
-  };
-  if (['string', 'boolean', 'number'].includes(typeof data.default)) {
-    setting.default = data.default as string | boolean | number;
-  }
-  if (typeof data.min === 'number') {
-    setting.min = data.min;
-  }
-  if (typeof data.max === 'number') {
-    setting.max = data.max;
-  }
-  return setting;
-}
-
 function parseSurface(data: Data): AppSurfaceSpec {
   return {
     protocol: text(data.protocol, DEFAULT_PROTOCOL),
@@ -429,11 +405,18 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     })),
     commands: records(data.commands).map(parseCommand),
     modes: records(data.modes).map(parseMode),
-    settings: records(data.settings).map(parseSetting),
     components: texts(data.components),
     voice: parseVoice(data.voice),
     outputs: texts(data.outputs),
   };
+  // Its settings are the JSON Schema of a form (C-16), kept as written: what
+  // is not one — the list of settings of earlier versions among it — is not
+  // read, and is said by the checks.
+  if (isData(data.settings)) {
+    parsed.settings = JSON.parse(
+      JSON.stringify(data.settings),
+    ) as AppFormSchema;
+  }
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
   }
@@ -800,22 +783,7 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
         return written.data;
       }),
     )
-    .list(
-      'settings',
-      spec.settings.map(setting => {
-        const written = new Writer()
-          .text('id', setting.id, '\u0000')
-          .text('type', setting.type, '\u0000')
-          .text('label', setting.label, '\u0000')
-          .list('options', setting.options);
-        for (const key of ['default', 'min', 'max'] as const) {
-          if (setting[key] !== undefined) {
-            written.data[key] = setting[key];
-          }
-        }
-        return written.data;
-      }),
-    )
+    .part('settings', spec.settings ? { ...spec.settings } : {})
     .list('components', spec.components);
   if (spec.surface) {
     writer.data.surface = dumpSurface(spec.surface);

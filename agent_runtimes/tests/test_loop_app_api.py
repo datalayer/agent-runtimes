@@ -32,15 +32,21 @@ from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.session import LoopSession
 from agent_runtimes.tests.test_apps_guards import scripted
-from agent_runtimes.types import AppSettingSpec, AppSpec
+from agent_runtimes.types import AppSpec
 
 
 def interview() -> Application:
     app = Application(id="customer-interview", kind="chat", agent="cog-crawler:0.0.1")
     app.starter("Onboarding", "Interview me about my onboarding.")
     app.rule("send the summary by email", applies_to="send", behaviour="ask_first")
-    app.setting("tone", "select", "Tone", options=["warm", "dry"], default="warm")
-    app.setting("depth", "slider", "Depth", default=3, min=1, max=5)
+    app.setting(
+        "tone",
+        {"type": "string", "title": "Tone", "enum": ["warm", "dry"], "default": "warm"},
+    )
+    app.setting(
+        "depth",
+        {"type": "integer", "title": "Depth", "minimum": 1, "maximum": 5, "default": 3},
+    )
     return app
 
 
@@ -81,7 +87,7 @@ def test_declarations_are_the_spec():
     assert [s.label for s in spec.interface.starters] == ["Onboarding"]
     assert spec.rules[0].applies_to == ["send"]
     assert spec.rules[0].behaviour == "ask_first"
-    assert [s.id for s in spec.interface.settings] == ["tone", "depth"]
+    assert list(spec.interface.settings["properties"]) == ["tone", "depth"]
 
 
 def test_a_connection_and_a_schedule_are_declared():
@@ -183,7 +189,10 @@ async def test_settings_are_checked_kept_and_reacted_to():
     assert session.settings == {"tone": "warm", "depth": 4}
     await host.settings(session, {"tone": "dry"})
     assert changed == [{"tone": "dry", "depth": 4}]
-    with pytest.raises(InvalidAnswer, match="at most 5"):
+    with pytest.raises(
+        InvalidAnswer,
+        match="“Its settings” was sent what its fields refuse: depth: 9 is greater than the maximum of 5",
+    ):
         await host.settings(session, {"depth": 9})
     with pytest.raises(InvalidAnswer, match="no field"):
         await host.settings(session, {"colour": "red"})
@@ -625,13 +634,22 @@ async def test_ask_text_choice_file_and_form():
 
     form = FormQuestion(
         "About you",
-        (
-            AppSettingSpec(id="name", type="text", label="Name"),
-            AppSettingSpec(id="team", type="toggle", label="Team", default=False),
-        ),
+        {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {"type": "string", "title": "Name"},
+                "team": {"type": "boolean", "title": "Team", "default": False},
+            },
+        },
     )
     channel.reply({"name": "Ada"})
     assert await session.ask(form) == {"name": "Ada", "team": False}
+    channel.reply({"team": True})
+    with pytest.raises(InvalidAnswer, match="'name' is a required property"):
+        await session.ask(form)
+    with pytest.raises(ValueError, match="asks for no named field"):
+        FormQuestion("Nothing", {"type": "object", "properties": {}})
 
     with pytest.raises(AskTimeout, match="was not answered in 0.01 seconds"):
         await session.ask("Still there?", timeout=0.01)

@@ -56,7 +56,6 @@ from agent_runtimes.types import (
     AppModeOptionSpec,
     AppModeSpec,
     AppRuleSpec,
-    AppSettingSpec,
     AppSpec,
     AppStarterSpec,
     AppTriggerSpec,
@@ -226,51 +225,48 @@ class Application:
         return starter
 
     def setting(
-        self,
-        id: str,
-        type: str,
-        label: str,
-        *,
-        options: Sequence[str] = (),
-        default: Optional[Union[str, bool, float]] = None,
-        min: Optional[float] = None,
-        max: Optional[float] = None,
-    ) -> AppSettingSpec:
-        """Let the user set something for their session.
+        self, name: str, field: Mapping[str, Any], *, required: bool = False
+    ) -> Dict[str, Any]:
+        """Let the user set something for their session: a field of its settings' form.
+
+        An application's settings are the JSON Schema of a form (LOOP C-16),
+        an object of named fields, drawn with ``@datalayer/primer-rjsf`` beside
+        the conversation and on a deployment's Ship card; what a run is given
+        is checked against it.
 
         Parameters
         ----------
-        id : str
-            The setting's id: its key in ``session.settings``.
-        type : str
-            ``select``, ``text``, ``toggle``, ``slider`` or ``number``.
-        label : str
-            What the user reads beside it.
-        options : sequence of str
-            For a ``select``, what may be chosen.
-        default : str, bool or float, optional
-            Its value until the user sets it.
-        min : float, optional
-            For a number, the least it may be.
-        max : float, optional
-            For a number, the most it may be.
+        name : str
+            The field's name: its key in ``session.settings``.
+        field : mapping
+            Its JSON Schema: a ``type``, a ``title`` the user reads, a
+            ``default``, and what it takes (``enum``, ``minimum``,
+            ``maximum``…).
+        required : bool
+            Whether a run must be given it.
 
         Returns
         -------
-        AppSettingSpec
-            The setting, as the spec holds it.
+        dict
+            The settings' form, as the spec holds it.
+
+        Raises
+        ------
+        TypeError
+            When the field is not a JSON Schema.
         """
-        setting = AppSettingSpec(
-            id=id,
-            type=type,
-            label=label,
-            options=list(options),
-            default=default,
-            min=min,
-            max=max,
-        )
-        self._declare("settings", setting, under="interface")
-        return setting
+        if not isinstance(field, Mapping):
+            raise TypeError(
+                f"The setting {name!r} is a field of the settings' form: its JSON "
+                "Schema, such as {'type': 'string', 'title': 'Tone', 'enum': [...]}."
+            )
+        interface = self._document.setdefault("interface", {})
+        form = interface.setdefault("settings", {"type": "object", "properties": {}})
+        form["properties"][name] = dict(field)
+        if required:
+            form.setdefault("required", []).append(name)
+        self._spec = None
+        return form
 
     def command(
         self, name: str, description: str, *, prompt: str = ""

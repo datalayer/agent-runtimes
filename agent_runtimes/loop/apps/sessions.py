@@ -68,7 +68,7 @@ from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import answer_surface
 from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
-from agent_runtimes.loop.apps.forms import form_values_refused
+from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -290,7 +290,7 @@ def question_of(question: Question) -> Dict[str, Any]:
         return {
             "kind": "form",
             "prompt": question.prompt,
-            "fields": [item.model_dump(exclude_none=True) for item in question.fields],
+            "schema": dict(question.schema),
         }
     return {"kind": "text", "prompt": question.prompt}
 
@@ -303,7 +303,9 @@ def question_in_words(question: Question) -> str:
         accepted = ", ".join(question.accept) or "any file"
         return f"{question.prompt} (a file: {accepted})"
     if isinstance(question, FormQuestion):
-        labels = ", ".join(item.label or item.id for item in question.fields)
+        labels = ", ".join(
+            field_title(question.schema, name) for name in form_fields(question.schema)
+        )
         return f"{question.prompt} ({labels})"
     return question.prompt
 
@@ -1077,7 +1079,7 @@ class LiveSession:
     def change_settings(
         self, values: Mapping[str, Any], *, head: str = ""
     ) -> AsyncIterator[str]:
-        """A settings change: checked against its inputs, kept, its code's ``settings`` run.
+        """A settings change: checked against its form's schema, kept, its code's ``settings`` run.
 
         A form the code is waiting on — its fields are the settings — is answered by it.
         """
@@ -1108,11 +1110,8 @@ class LiveSession:
         if self.settings == self._sent_settings:
             return ""
         self._sent_settings = dict(self.settings)
-        labels = {
-            item.id: item.label or item.id for item in self.app.interface.settings
-        }
         return "\n".join(
-            f"{labels.get(key, key)}: {value}"
+            f"{field_title(self.app.interface.settings, key)}: {value}"
             for key, value in self.settings.items()
             if str(value).strip()
         )

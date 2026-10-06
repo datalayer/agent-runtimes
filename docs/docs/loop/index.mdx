@@ -518,8 +518,12 @@ its words, and `appKindPaths(app)` adds the application's settings:
 | worker | `/app`, `/goal`, `/activity`, `/report`, `/status`          | `/draft`                           | `send`, `stop`     |
 
 `/status` is where the answer stands, in a word (Ready, Thinking, Answering,
-Answered, Stopped). `/inputs/<id>` is a setting of `interface.settings`, as the
-input that holds it does (a `ChoicePicker` holds a list). `send` sends the
+Answered, Stopped). `/inputs/<id>` is a field of `interface.settings`, the
+JSON Schema of the settings' form (LOOP C-16). A page with no surface composed
+draws them as one `Form` block, with `@datalayer/primer-rjsf`: a form without an
+action has no button and writes its values at `/inputs` as they are filled, for
+the next run. A `ChoicePicker` a builder placed at a setting holds a list, the
+first value sent. `send` sends the
 context's `message`, or what is written at `/draft`, and for a chat adds the
 settings in words when they changed since the last message; `run` sends every
 value written under `/inputs`, one `Label: value` per line.

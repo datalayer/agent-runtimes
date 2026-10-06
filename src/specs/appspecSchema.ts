@@ -372,12 +372,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
         },
         settings: {
-          description: 'What the user may set',
-          items: {
-            $ref: '#/$defs/AppSetting',
-          },
+          anyOf: [
+            {
+              additionalProperties: true,
+              type: 'object',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "What the user may set: the JSON Schema of a form, an object of named fields, each with its `title` and its `default` (LOOP C-16). Drawn with `@datalayer/primer-rjsf` beside the conversation and on a deployment's Ship card, its values go with every run and are checked by the runtime against the same schema. None when unsaid",
           title: 'Settings',
-          type: 'array',
         },
         components: {
           description:
@@ -655,82 +662,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['name'],
       title: 'AppScenario',
-      type: 'object',
-    },
-    AppSetting: {
-      additionalProperties: false,
-      description: 'Something the user may set for their session.',
-      properties: {
-        id: {
-          description: 'The name the application reads it by',
-          title: 'Id',
-          type: 'string',
-        },
-        type: {
-          $ref: '#/$defs/SettingType',
-          description: '`select`, `text`, `toggle`, `slider` or `number`',
-        },
-        label: {
-          description: 'What the user reads',
-          title: 'Label',
-          type: 'string',
-        },
-        options: {
-          description: 'For a select: its options',
-          items: {
-            type: 'string',
-          },
-          title: 'Options',
-          type: 'array',
-        },
-        default: {
-          anyOf: [
-            {
-              type: 'string',
-            },
-            {
-              type: 'boolean',
-            },
-            {
-              type: 'number',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description: 'Its value at the start',
-          title: 'Default',
-        },
-        min: {
-          anyOf: [
-            {
-              type: 'number',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description: 'For a slider or a number: the least',
-          title: 'Min',
-        },
-        max: {
-          anyOf: [
-            {
-              type: 'number',
-            },
-            {
-              type: 'null',
-            },
-          ],
-          default: null,
-          description: 'For a slider or a number: the most',
-          title: 'Max',
-        },
-      },
-      required: ['id', 'type', 'label'],
-      title: 'AppSetting',
       type: 'object',
     },
     AppSpaceGrant: {
@@ -1176,12 +1107,6 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'audio',
       ],
       title: 'RecordItem',
-      type: 'string',
-    },
-    SettingType: {
-      description: 'What a setting is set with.',
-      enum: ['select', 'text', 'toggle', 'slider', 'number'],
-      title: 'SettingType',
       type: 'string',
     },
     ThemeMode: {

@@ -531,15 +531,34 @@ export interface AppModeEffect {
   model?: string;
 }
 
-export interface AppSettingSpec {
-  id: string;
-  type: 'select' | 'text' | 'toggle' | 'slider' | 'number';
-  label: string;
-  options: string[];
-  default?: string | boolean | number;
-  min?: number;
-  max?: number;
-}
+/**
+ * One field of a form (LOOP C-16): its JSON Schema — a `type`, the `title` a
+ * person reads, its `default`, and what it takes (`enum`, `minimum`,
+ * `maximum`…).
+ */
+export type AppFormField = {
+  type?: string;
+  title?: string;
+  description?: string;
+  default?: unknown;
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  [keyword: string]: unknown;
+};
+
+/**
+ * The JSON Schema of a form (LOOP C-16): an object of named fields, drawn with
+ * `@datalayer/primer-rjsf` and checked by the runtime against the same schema.
+ * An application's settings are one (`interface.settings`), as a Form block's
+ * schema is.
+ */
+export type AppFormSchema = {
+  type: 'object';
+  properties: Record<string, AppFormField>;
+  required?: string[];
+  [keyword: string]: unknown;
+};
 
 /** The component tree a user meets, over the approved catalog (A2UI). */
 export interface AppSurfaceSpec {
@@ -581,7 +600,11 @@ export interface AppInterfaceSpec {
   commands: AppCommandSpec[];
   /** Mode switches in the composer, the option picked going with every run (P-19). */
   modes: AppModeSpec[];
-  settings: AppSettingSpec[];
+  /**
+   * What a person may set: the JSON Schema of a form (C-16), drawn beside the
+   * conversation and on a deployment's Ship card; none when unsaid.
+   */
+  settings?: AppFormSchema;
   /** The components of the catalog the surface may use. */
   components: string[];
   surface?: AppSurfaceSpec;

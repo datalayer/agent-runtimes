@@ -62,16 +62,18 @@ function appOf(
   };
 }
 
-const SETTINGS: AppSpec['interface']['settings'] = [
-  {
-    id: 'product',
-    type: 'select',
-    label: 'Product',
-    options: ['Cloud', 'Desktop'],
-    default: 'Cloud',
+const SETTINGS: AppSpec['interface']['settings'] = {
+  type: 'object',
+  properties: {
+    product: {
+      type: 'string',
+      title: 'Product',
+      enum: ['Cloud', 'Desktop'],
+      default: 'Cloud',
+    },
+    short: { type: 'boolean', title: 'Short answers' },
   },
-  { id: 'short', type: 'toggle', label: 'Short answers', options: [] },
-];
+};
 
 /** Every path a value-bound or text-bound component reads, in a tree. */
 const boundPaths = (components: Array<Record<string, unknown>>) =>
@@ -273,7 +275,7 @@ describe('what the conversation publishes', () => {
       appPageInitialData(appOf('chat', { settings: SETTINGS })),
     ).toMatchObject({
       app: 'A chat',
-      inputs: { product: ['Cloud'], short: false },
+      inputs: { product: 'Cloud' },
       draft: '',
     });
     expect(appPageInitialData(appOf('widget'))).not.toHaveProperty('draft');
@@ -444,11 +446,14 @@ describe('what a button does', () => {
 
   it('gives the session the settings as it takes them', () => {
     const app = appOf('widget', {
-      settings: [
-        ...SETTINGS,
-        { id: 'count', type: 'number', label: 'Count', options: [] },
-        { id: 'note', type: 'text', label: 'Note', options: [] },
-      ],
+      settings: {
+        ...SETTINGS!,
+        properties: {
+          ...SETTINGS!.properties,
+          count: { type: 'integer', title: 'Count' },
+          note: { type: 'string', title: 'Note' },
+        },
+      },
     });
     expect(
       settingsOf(app, { product: ['Desktop'], short: 0, count: '3', note: 7 }),
@@ -586,10 +591,18 @@ describe('the page drawn', () => {
     expect(run).toBeTruthy();
     await act(async () => run!.click());
     expect(actions.map(action => action.name)).toEqual(['run']);
+    // The settings are one form (C-16), drawn with primer-rjsf: no button of
+    // its own, its values at /inputs for the run.
+    const form = container.querySelector('[data-testid="a2ui-form"]');
+    expect(form).toBeTruthy();
+    expect(form!.textContent).toContain('Product');
+    expect(
+      [...form!.querySelectorAll('button')].some(button =>
+        /send|submit/i.test(button.textContent ?? ''),
+      ),
+    ).toBe(false);
     // What a block wrote is read from the surface the button is on.
-    expect(actions[0].surface?.dataModel.get('/inputs/product')).toEqual([
-      'Cloud',
-    ]);
+    expect(actions[0].surface?.dataModel.get('/inputs/product')).toBe('Cloud');
     await act(async () => root.unmount());
     container.remove();
   });

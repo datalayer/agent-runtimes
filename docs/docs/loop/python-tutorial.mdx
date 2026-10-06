@@ -44,8 +44,13 @@ checks that the two agree and that the spec passes the instant checks:
 ```python
 app = Application.from_spec({...})   # its spec: name, agent, instructions, page, tests, record
 app.starter("Trial churn", "Interview me about why I stopped after the trial.")
-app.setting("language", "select", "Language", options=["English", "French"], default="English")
-app.setting("length", "slider", "Questions", default=8, min=3, max=15)
+app.setting(
+    "language",
+    {"type": "string", "title": "Language", "enum": ["English", "French"], "default": "English"},
+)
+app.setting(
+    "length", {"type": "integer", "title": "Questions", "minimum": 3, "maximum": 15, "default": 8}
+)
 app.rule("Send the summary by email", applies_to="send", behaviour="ask_first")
 ```
 
@@ -147,8 +152,8 @@ A widget is a page with inputs and an output. Its settings are what the page
 asks before it runs — a report's kind and what to look at:
 
 ```python
-app.setting("report", "select", "Report", options=["Summary", "Full"], default="Summary")
-app.setting("question", "text", "What to look at", default="")
+app.setting("report", {"type": "string", "title": "Report", "enum": ["Summary", "Full"], "default": "Summary"})
+app.setting("question", {"type": "string", "title": "What to look at", "default": ""})
 app.rule("Send the report by email", applies_to="send", behaviour="leave_to_me")
 ```
 

@@ -22,13 +22,14 @@ import json
 import mimetypes
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 from rich.console import Console
 
 from agent_runtimes.chat.tux import CliTux
 from agent_runtimes.loop.apps.application import AppHost, Application
 from agent_runtimes.loop.apps.composer import command_called, command_prompt
+from agent_runtimes.loop.apps.forms import form_fields
 from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -43,6 +44,26 @@ from agent_runtimes.loop.apps.session import (
     Step,
     UploadedFile,
 )
+
+
+def typed(item: Mapping[str, Any], said: str) -> Any:
+    """What was typed for a form's field, as its schema's type takes it.
+
+    Left as typed when it is not that type, for the form's check to say why.
+    """
+    kind = item.get("type")
+    if kind == "boolean":
+        if said.lower() in ("y", "yes", "true", "on"):
+            return True
+        if said.lower() in ("n", "no", "false", "off"):
+            return False
+        return said
+    if kind in ("integer", "number"):
+        try:
+            return int(said) if kind == "integer" else float(said)
+        except ValueError:
+            return said
+    return said
 
 
 @dataclass
@@ -135,11 +156,12 @@ class TerminalChannel:
             return UploadedFile(path.name, media_type, content)
         if isinstance(question, FormQuestion):
             values: Dict[str, Any] = {}
-            for item in question.fields:
-                hint = f" ({' / '.join(item.options)})" if item.options else ""
-                said = await self._line(f"  {item.label}{hint} ❯ ")
+            for name, item in form_fields(question.schema).items():
+                options = [str(option) for option in item.get("enum") or []]
+                hint = f" ({' / '.join(options)})" if options else ""
+                said = await self._line(f"  {item.get('title') or name}{hint} ❯ ")
                 if said:
-                    values[item.id] = said
+                    values[name] = typed(item, said)
             return values
         return await self._line("  ❯ ")
 
