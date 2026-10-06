@@ -1,0 +1,192 @@
+---
+sidebar_position: 2
+title: Tutorial — two applications in Python
+---
+
+# Tutorial: two applications in Python
+
+The two examples of the catalogue written in Python are this tutorial:
+**Customer Interview**, a chat, and **Report from a File**, a widget. Each is
+an `app.py` beside the Appspec it builds, in agentspecs
+(`agentspecs/apps/<id>/app.py`); a test of agent-runtimes builds each again
+and compares, so the two never drift. Start one of them as your own, read
+what each part does, change it, then save it on Datalayer.
+
+The reference for every call is [Applications in Python](./python-applications).
+
+:::note What was verified
+
+Both run in process in agent-runtimes' tests, with a scripted model
+(`test_apps_examples.py`; `test_app_sessions.py` for Report from a File,
+which takes its file from the page through the [Session API](./session-api)),
+and `test_apps_init.py` starts an application from each. Both are switched off in the
+catalogue: neither has run with a real model, and each says so in its spec
+(`tests.verified`).
+
+:::
+
+## 1. Start from an example
+
+```bash
+loop apps init interview --from customer-interview
+cd interview
+```
+
+`init` writes a folder named by the new id: `app.py`, the source, under the
+new id; `app.yaml`, the Appspec it builds; and `tests/test_app.py`, which
+checks that the two agree and that the spec passes the instant checks:
+`pytest tests` runs it.
+
+## 2. Customer Interview: a chat
+
+### What it declares
+
+```python
+app = Application.from_spec({...})   # its spec: name, agent, instructions, page, tests, record
+app.starter("Trial churn", "Interview me about why I stopped after the trial.")
+app.setting("language", "select", "Language", options=["English", "French"], default="English")
+app.setting("length", "slider", "Questions", default=8, min=3, max=15)
+app.rule("Send the summary by email", applies_to="send", behaviour="ask_first")
+```
+
+`Application.from_spec` attaches code to a spec; the plain calls after it add
+to that spec what the Canvas would: suggested questions, settings, a rule.
+Everything declared is the Appspec `loop apps build` writes.
+
+### What it reacts to
+
+```python
+@app.start
+async def opening(session: Session) -> None:
+    consent = await session.ask(
+        ChoiceQuestion("May this interview be recorded, to be read by the team?", ("Yes", "No"))
+    )
+    session.state["consent"] = consent == "Yes"
+    if not session.state["consent"]:
+        await session.send("Understood: I ask nothing more. Thank you.")
+        return
+    session.state["goal"] = await session.ask("What do you want to learn from this interview?")
+    session.state["insights"] = []
+```
+
+- `@app.start` runs when a session opens. `session.ask` stops and asks the
+  person — here a choice, then text — and goes on with the answer.
+- `session.state` is what the application keeps across the turns of one
+  session.
+
+```python
+@app.message
+async def reply(session: Session, text: str) -> None:
+    ...
+    async with session.step("Choosing the next question", kind="model", input=text) as step:
+        answer = await session.agent.run(
+            text,
+            goal=session.state["goal"],
+            language=session.settings["language"],
+            questions=session.settings["length"],
+        )
+        step.output = answer.text
+    await session.send(answer.text)
+```
+
+- `@app.message` answers each message. `session.agent` is the application's
+  agent with its rules, checks and record on; what is given after the text
+  goes with the request.
+- `session.step` shows what it is doing while it does it: a row in the
+  conversation, and a `step` entry in the record (see
+  [Steps](./python-applications#steps)).
+
+```python
+@app.action("save")
+async def save(session: Session, payload: dict) -> None:
+    ...
+    await session.record(insight, summary="An insight", kind="feedback")
+
+@app.action("finish")
+async def finish(session: Session, payload: dict) -> None:
+    ...
+    await session.record(result, summary="The interview's result")
+    await session.send(answer.text)
+```
+
+`@app.action(name)` is what a button named so does — on the page, or in what
+an answer shows. `session.record` writes to the application's record, kept
+as its spec's `record.include` says.
+
+### Try it
+
+```bash
+loop apps run app.py --local --watch
+```
+
+The terminal is the application's host: `start` runs as the session opens,
+`session.ask` asks at the prompt, `/action save {"insight": "…", "quote":
+"…"}` presses a button, and `--watch` builds the file again when you change
+it, the session's state kept.
+
+### Change it: show the insights
+
+At the end of an interview, show the insights as a table under the answer
+(see [What an answer shows](./python-applications#what-an-answer-shows)):
+
+```python
+    await session.send(
+        answer.text,
+        show=[session.ui.table("insights", columns=["insight", "quote"], rows={"path": "/insights"})],
+        data={"insights": result["insights"]},
+    )
+```
+
+## 3. Report from a File: a widget
+
+```bash
+loop apps init report --from report-from-a-file
+```
+
+A widget is a page with inputs and an output. Its settings are what the page
+asks before it runs — a report's kind and what to look at:
+
+```python
+app.setting("report", "select", "Report", options=["Summary", "Full"], default="Summary")
+app.setting("question", "text", "What to look at", default="")
+app.rule("Send the report by email", applies_to="send", behaviour="leave_to_me")
+```
+
+Its one reaction asks for the file, has its agent analyse it in a step, and
+keeps the report in its record:
+
+```python
+@app.message
+async def run(session: Session, text: str) -> None:
+    file: UploadedFile = await session.ask(
+        FileQuestion("Which file?", accept=(".csv",), max_bytes=25 * 1024 * 1024)
+    )
+    async with session.step("Analysing the file in the sandbox", kind="run", input=file.name) as step:
+        answer = await session.agent.run(text or "Report on this file.", file=file.name, ...)
+        step.output = answer.text
+    await session.record({"file": file.name, ...}, summary=f"The report on {file.name}")
+    await session.send(answer.text)
+```
+
+- `FileQuestion` asks for a file of the kinds it accepts, up to a size; what
+  is not one of them is refused in a sentence. On its page, the file chosen
+  answers the question — given before it is asked, or after.
+- Its instructions have its agent read the file in code, in the sandbox,
+  rather than estimate from it: every number in the report is computed.
+
+## 4. Check it, and save it on Datalayer
+
+```bash
+loop apps validate app.py                 # the instant checks, on the spec it builds
+loop apps build app.py --out app.yaml     # its Appspec, its code marked at the top
+loop apps push app.py --app <its id>      # saved as the application's next version
+```
+
+`push` keeps the file itself in the application's item, beside its spec, and
+versions it with it; the Studio shows it in the **Python** tab, and the
+Canvas links what the code decides to its line. `loop apps pull <its id>`
+writes both back. See [Where the file lives](./python-applications#from-the-command-line).
+
+An application built by spec or on the Canvas comes to Python the other way:
+`loop apps eject app.yaml` writes the `app.py` that builds it — one way, and
+said before it is done.
