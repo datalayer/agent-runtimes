@@ -38,6 +38,33 @@ import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
+def _logging_levels_kept() -> Iterator[None]:
+    """Each test leaves the loggers' levels as it found them.
+
+    A command run in-process quiets the logs as it does in a terminal — the
+    chat's root at ERROR, ``apps validate`` its own at WARNING — and a test
+    after it that reads the log (``caplog``) would read nothing.
+
+    Yields
+    ------
+    None
+        While the test runs; the levels are put back after.
+    """
+    import logging
+
+    loggers = [logging.getLogger()] + [
+        each
+        for each in list(logging.Logger.manager.loggerDict.values())
+        if isinstance(each, logging.Logger)
+    ]
+    held = [(each, each.level) for each in loggers]
+    yield
+    for each, level in held:
+        if each.level != level:
+            each.setLevel(level)
+
+
+@pytest.fixture(autouse=True)
 def _ai_inference_not_asked(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """No test asks the real ai-inference which models it serves.
 
