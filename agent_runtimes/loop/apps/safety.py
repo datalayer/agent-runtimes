@@ -39,7 +39,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
@@ -565,18 +565,31 @@ async def _keep_nothing(_body: Dict[str, Any]) -> None:
     """A safety run's record is not sent: it is not anybody's session."""
 
 
-async def answer_in_process(
+@dataclass(frozen=True)
+class Conversed:
+    """One case's conversation in this process: what it showed, or why it did not."""
+
+    events: Tuple[Any, ...] = ()
+    """Everything its session delivered after it opened, in order."""
+    asked: str = ""
+    """What it asked the person, when it stopped to: its answer ends there."""
+    error: str = ""
+    """Why the turn failed, when it did."""
+
+
+async def converse_in_process(
     application: Any,
-    cases: Sequence[SafetyCase],
+    cases: Sequence[Any],
     *,
     agent: Optional[Callable[[AppSpec], Any]] = None,
-) -> List[Answered]:
-    """Each case asked of the application in this process, a session of its own each.
+) -> List[Conversed]:
+    """Each case's ``ask`` sent to the application in this process, a session of its own each.
 
     Its code answers when it takes messages, else its agent — with its rules,
-    checks and record attached, as `loop apps run --ask` asks it. A question
-    the application puts to the person ends its answer, said in it; a turn
-    that fails is that case not answered, with why, and the others are asked.
+    checks and record attached, and its code's own tools and checks (LOOP
+    P-06), as `loop apps run --ask` asks it. A question the application puts
+    to the person ends its conversation; a turn that fails is said, and the
+    other cases are asked. Its record is not sent: it is nobody's session.
 
     Raises
     ------
@@ -587,12 +600,11 @@ async def answer_in_process(
     from agent_runtimes.loop.apps.agent import local_agent
     from agent_runtimes.loop.apps.application import AppHost
     from agent_runtimes.loop.apps.record import AppRecorder
-    from agent_runtimes.loop.apps.session import Message
 
     factory = agent or local_agent
     if application.handler("message") is None:
         factory(application.spec)  # refused here, before any case is asked
-    answers: List[Answered] = []
+    conversed: List[Conversed] = []
     for case in cases:
         channel = _SafetyChannel()
         host = AppHost(
@@ -601,22 +613,49 @@ async def answer_in_process(
             agent=factory,
             recorder=AppRecorder(app=application.spec, send=_keep_nothing),
         )
+        opened = 0
         asked = ""
         try:
             session = await host.open()
             opened = len(channel.memory.events)
             await host.message(session, case.ask)
         except _AskedThePerson as question:
-            asked = f"(It asks the person: {question})"
+            asked = str(question)
         except Exception as error:  # noqa: BLE001 - a turn that fails is the outcome
-            answers.append(Answered("", _why(error)))
+            conversed.append(Conversed(error=_why(error)))
             continue
-        said = [
-            event.text
-            for event in channel.memory.events[opened:]
-            if isinstance(event, Message)
-        ]
-        answers.append(Answered("\n".join([*said, *([asked] if asked else [])])))
+        conversed.append(Conversed(tuple(channel.memory.events[opened:]), asked))
+    return conversed
+
+
+async def answer_in_process(
+    application: Any,
+    cases: Sequence[SafetyCase],
+    *,
+    agent: Optional[Callable[[AppSpec], Any]] = None,
+) -> List[Answered]:
+    """Each case asked of the application in this process, a session of its own each.
+
+    What it said, as `converse_in_process` had it: its messages, then what
+    it asked the person, when it did; a turn that failed is that case not
+    answered, with why.
+
+    Raises
+    ------
+    AppNotRunnable
+        When its agent cannot be built in this process.
+    """
+    from agent_runtimes.loop.apps.session import Message
+
+    answers: List[Answered] = []
+    for had in await converse_in_process(application, cases, agent=agent):
+        if had.error:
+            answers.append(Answered("", had.error))
+            continue
+        said = [event.text for event in had.events if isinstance(event, Message)]
+        if had.asked:
+            said.append(f"(It asks the person: {had.asked})")
+        answers.append(Answered("\n".join(said)))
     return answers
 
 

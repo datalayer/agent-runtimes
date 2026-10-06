@@ -33,6 +33,7 @@ from agent_runtimes.loop.apps.forms import form_fields
 from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
+    Closed,
     Delta,
     Event,
     FileQuestion,
@@ -41,6 +42,7 @@ from agent_runtimes.loop.apps.session import (
     Question,
     Removed,
     Session,
+    Shown,
     Step,
     UploadedFile,
 )
@@ -84,6 +86,8 @@ class TerminalChannel:
     """The application's name: a message by anybody else says its author."""
     _streaming: Dict[str, bool] = field(default_factory=dict)
     _shown: Set[str] = field(default_factory=set)
+    _elements: Dict[str, str] = field(default_factory=dict)
+    """The panels and pages open, by id: their titles (LOOP P-18)."""
 
     def _bullet(self, author: str) -> None:
         self.console.print("[green]●[/green] ", end="")
@@ -91,7 +95,8 @@ class TerminalChannel:
             self.console.print(f"[bold]{author}:[/bold] ", end="", highlight=False)
 
     async def deliver(self, event: Event) -> None:
-        """Show a message, a piece of one, a message changed or removed, or a step.
+        """Show a message, a piece of one, a message changed or removed, a step,
+        or an element of a side panel or a page, named.
 
         A terminal does not write over what it printed: a message changed is
         printed again, marked edited; one removed is said removed.
@@ -110,16 +115,21 @@ class TerminalChannel:
             else:
                 self._bullet(event.author)
                 self.console.print(event.text, markup=False, highlight=False)
-            for node in event.components:
-                # A terminal draws no surface: it names what the page shows.
-                if node.get("component") in ("Row", "Column", "Card", "List", "Tabs"):
-                    continue
-                said = node.get("title") or node.get("text") or node.get("label") or ""
-                line = f"  ▣ {node.get('component')} {node.get('id')}"
-                if isinstance(said, str) and said:
-                    line += f": {said}"
-                self.console.print(line, style="dim", markup=False, highlight=False)
+            self._name_components(event.components)
             self._shown.add(event.id)
+        elif isinstance(event, Shown):
+            # A panel or a page the terminal cannot open: said, its parts named (LOOP P-18).
+            where = "the side panel" if event.where == "panel" else "a page of its own"
+            verb = "changed in" if event.id in self._elements else "shown in"
+            self.console.print(
+                f"[dim]▸ {event.title}, {verb} {where}:[/dim]", highlight=False
+            )
+            self._name_components(event.components)
+            self._elements[event.id] = event.title
+        elif isinstance(event, Closed):
+            title = self._elements.pop(event.element_id, "")
+            if title:
+                self.console.print(f"[dim]▹ {title}, closed.[/dim]", highlight=False)
         elif isinstance(event, Removed):
             if event.message_id in self._shown:
                 self.console.print("[dim]✗ a message was removed.[/dim]")
@@ -129,6 +139,17 @@ class TerminalChannel:
                 self.console.print(f"{indent}[dim]◦ {event.name}…[/dim]")
             elif event.error:
                 self.console.print(f"{indent}[red]✗ {event.name}: {event.error}[/red]")
+
+    def _name_components(self, components: Any) -> None:
+        for node in components:
+            # A terminal draws no surface: it names what the page shows.
+            if node.get("component") in ("Row", "Column", "Card", "List", "Tabs"):
+                continue
+            said = node.get("title") or node.get("text") or node.get("label") or ""
+            line = f"  ▣ {node.get('component')} {node.get('id')}"
+            if isinstance(said, str) and said:
+                line += f": {said}"
+            self.console.print(line, style="dim", markup=False, highlight=False)
 
     async def _line(self, prompt: str) -> str:
         reader = self.read or input

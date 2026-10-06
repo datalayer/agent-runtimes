@@ -632,6 +632,12 @@ export interface AppInterfaceSpec {
 export interface AppTestCaseSpec {
   ask: string;
   expect: string;
+  /**
+   * The function of its code that decides the case, by name (LOOP P-06:
+   * `@app.test`); `expect` still says it in words, and decides it without
+   * the file. Empty, or absent, for a case in words alone.
+   */
+  code?: string;
 }
 
 /**
@@ -667,11 +673,41 @@ export interface AppRecordSpec {
   suggestTests: boolean;
 }
 
-/** Optional checks from the catalogue. */
+/** Where a check of an application's code runs (LOOP P-06). */
+export type AppCheckStage = 'answer' | 'tool_call';
+
+/** A check written in an application's code (LOOP P-06: `@app.check`). */
+export interface AppCodeCheckSpec {
+  /** The function of its code that checks. */
+  name: string;
+  /** On every answer, or every tool call the rules let through. */
+  on: AppCheckStage;
+  /** What it checks, in a sentence a person reads. */
+  description: string;
+}
+
+/** Optional checks from the catalogue, and its code's own. */
 export interface AppChecksSpec {
   guards: string[];
   gates: string[];
   track: string;
+  /** Checks written in its code (LOOP P-06); absent when it has none. */
+  code?: AppCodeCheckSpec[];
+}
+
+/**
+ * A tool of an application's own, written in its code (LOOP P-06:
+ * `@app.tool`): its agent calls it, and the rules decide each call by what
+ * it `does`, or by a rule that names it by its name alone.
+ */
+export interface AppToolSpec {
+  name: string;
+  /** What it does, for the agent. */
+  description: string;
+  /** The JSON Schema of its arguments, an object. */
+  parameters: Record<string, unknown>;
+  /** What it does, by class of action: `read`, `write`, `send`… */
+  does: string[];
 }
 
 /** A function of the host page the application's agent may call (LOOP D-10). */
@@ -774,6 +810,8 @@ export interface AppSpec {
   skills: string[];
   /** Backend tools (agentspecs/backend-tools) it adds to its agent's. */
   backendTools: string[];
+  /** Tools of its own, written in its code (LOOP P-06); absent when it has none. */
+  tools?: AppToolSpec[];
   /** The Frames it works under. */
   context: string[];
   /** The documents and datasets it answers from. */

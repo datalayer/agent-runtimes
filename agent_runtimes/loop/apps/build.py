@@ -11,6 +11,7 @@ the spec, in comments the YAML keeps and a reader sees::
     # loop:code start: opening (app.py:14)
     # loop:code message: reply (app.py:18)
     # loop:code action save: save (app.py:23)
+    # loop:code tool lookup_order: lookup_order (app.py:30)
 
 A spec forbids fields it does not define, so the marks are comments: the same
 file validates, is pushed and is deployed as any Appspec is, and a spec without
@@ -43,7 +44,9 @@ class CodeMark:
     """One thing the code decides: a moment, and the handler that decides it."""
 
     moment: str
-    """``start``, ``message``…, ``action <name>``, ``schedule <name>`` or ``command <name>``."""
+    """``start``, ``message``…, ``action <name>``, ``schedule <name>``,
+    ``command <name>``, or what its code adds (LOOP P-06): ``tool <name>``,
+    ``check <name>``, ``test <name>``."""
 
     handler: str
     """The handler's name."""
@@ -118,6 +121,15 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         marks.append(
             CodeMark(f"command {name}", handler.__name__, _where(handler, source))
         )
+    # Code where plain words are not enough (LOOP P-06), declared in the spec
+    # by name: here, where its code is.
+    for kind, named in (
+        ("tool", application.tools),
+        ("check", application.checks),
+        ("test", application.tests),
+    ):
+        for name, handler in named.items():
+            marks.append(CodeMark(f"{kind} {name}", name, _where(handler, source)))
     return marks
 
 

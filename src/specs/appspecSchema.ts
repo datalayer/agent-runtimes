@@ -37,6 +37,12 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Access',
       type: 'string',
     },
+    ActionClass: {
+      description: 'What a tool does to the world.',
+      enum: ['read', 'write', 'send', 'buy', 'delete', 'publish'],
+      title: 'ActionClass',
+      type: 'string',
+    },
     ActsAs: {
       description: 'In whose name a connection acts.',
       enum: ['owner', 'user'],
@@ -46,7 +52,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppChecks: {
       additionalProperties: false,
       description:
-        'Optional: checks from the catalogue, for a builder who wants them.',
+        "Optional: checks from the catalogue, for a builder who wants them — and its code's own.",
       properties: {
         guards: {
           description: 'Guards, `id` or `id:version`',
@@ -70,8 +76,43 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Track',
           type: 'string',
         },
+        code: {
+          description:
+            'Checks written in its code (`@app.check`), each run at its stage (LOOP P-06)',
+          items: {
+            $ref: '#/$defs/AppCodeCheck',
+          },
+          title: 'Code',
+          type: 'array',
+        },
       },
       title: 'AppChecks',
+      type: 'object',
+    },
+    AppCodeCheck: {
+      additionalProperties: false,
+      description:
+        "A check written in the application's code (LOOP P-06): `@app.check`.\n\nRun at its stage beside the built-in checks and the catalogue's Guards;\nwhat it refuses is said in its own sentence. Without its file nothing\nruns it, and validation says so.",
+      properties: {
+        name: {
+          description: 'The function of its code that checks, by name',
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+          title: 'Name',
+          type: 'string',
+        },
+        on: {
+          $ref: '#/$defs/CheckStage',
+          description: '`answer` or `tool_call`: where it runs',
+        },
+        description: {
+          description: 'What it checks, in a sentence a person reads',
+          minLength: 1,
+          title: 'Description',
+          type: 'string',
+        },
+      },
+      required: ['name', 'on', 'description'],
+      title: 'AppCodeCheck',
       type: 'object',
     },
     AppCommand: {
@@ -743,7 +784,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppTestCase: {
       additionalProperties: false,
       description:
-        'An example of what the application should do, in plain words.',
+        "An example of what the application should do, in plain words.\n\nWhen plain words are not enough, its code decides it (LOOP P-06): `code`\nnames the function of the application's `app.py` that is given the\nconversation and says whether it passed — `@app.test` writes it. `expect`\nstill says it in words: without its file, the case is judged by them.",
       properties: {
         ask: {
           description: 'What it is asked',
@@ -753,6 +794,14 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         expect: {
           description: 'What it should do',
           title: 'Expect',
+          type: 'string',
+        },
+        code: {
+          default: '',
+          description:
+            'The function of its code that decides the case, by name, when words are not enough; `expect` says it in words',
+          pattern: '^(?:[A-Za-z_][A-Za-z0-9_]*)?$',
+          title: 'Code',
           type: 'string',
         },
       },
@@ -822,6 +871,45 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['variant'],
       title: 'AppTheme',
+      type: 'object',
+    },
+    AppTool: {
+      additionalProperties: false,
+      description:
+        "A tool of the application's own, written in its code (LOOP P-06): `@app.tool`.\n\nIts agent calls it as any tool; the rules decide each call by what it\n`does` — a rule may name it, by its name alone — and the Canvas lists it.\nWithout its file the agent is not given it.",
+      properties: {
+        name: {
+          description: 'Its name: what the agent calls, and a rule names',
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          description: 'What it does, for the agent: when to call it',
+          minLength: 1,
+          title: 'Description',
+          type: 'string',
+        },
+        parameters: {
+          additionalProperties: true,
+          description:
+            'The JSON Schema of its arguments, an object; none when unsaid',
+          title: 'Parameters',
+          type: 'object',
+        },
+        does: {
+          description:
+            'What it does, by class of action (`read`, `write`, `send`…): what the rules decide',
+          items: {
+            $ref: '#/$defs/ActionClass',
+          },
+          minItems: 1,
+          title: 'Does',
+          type: 'array',
+        },
+      },
+      required: ['name', 'description', 'does'],
+      title: 'AppTool',
       type: 'object',
     },
     AppTrigger: {
@@ -960,6 +1048,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'What an application does when it meets an action: the four a person chooses from.',
       enum: ['do_it', 'if_asked', 'ask_first', 'leave_to_me'],
       title: 'Behaviour',
+      type: 'string',
+    },
+    CheckStage: {
+      description:
+        'Where a check of its code runs (LOOP P-06), as the built-in checks do (R-06).',
+      enum: ['answer', 'tool_call'],
+      title: 'CheckStage',
       type: 'string',
     },
     CriterionKind: {
@@ -1246,6 +1341,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         type: 'string',
       },
       title: 'Backend Tools',
+      type: 'array',
+    },
+    tools: {
+      description:
+        'Tools of its own, written in its code (`@app.tool`): the agent calls them, rules decide them',
+      items: {
+        $ref: '#/$defs/AppTool',
+      },
+      title: 'Tools',
       type: 'array',
     },
     context: {

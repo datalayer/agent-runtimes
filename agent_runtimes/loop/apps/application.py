@@ -45,12 +45,14 @@ from agent_runtimes.loop.apps.components import component_node
 from agent_runtimes.loop.apps.composer import COMMAND_INPUT, command_called
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.loop.apps.own import CHECK_STAGES, own_checks, own_toolset
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
-from agent_runtimes.loop.apps.session import Channel, Session, call
+from agent_runtimes.loop.apps.session import Channel, Session, Shown, call
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import (
+    AppCodeCheckSpec,
     AppCommandSpec,
     AppConnectionSpec,
     AppModeOptionSpec,
@@ -58,6 +60,8 @@ from agent_runtimes.types import (
     AppRuleSpec,
     AppSpec,
     AppStarterSpec,
+    AppTestCaseSpec,
+    AppToolSpec,
     AppTriggerSpec,
 )
 
@@ -134,6 +138,9 @@ class Application:
         self._schedule_crons: Dict[str, str] = {}
         self._schedule_positions: Dict[str, int] = {}
         self._commands: Dict[str, Handler] = {}
+        self._tools: Dict[str, Handler] = {}
+        self._checks: Dict[str, Handler] = {}
+        self._tests: Dict[str, Handler] = {}
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -166,6 +173,9 @@ class Application:
         application._schedule_crons = {}
         application._schedule_positions = {}
         application._commands = {}
+        application._tools = {}
+        application._checks = {}
+        application._tests = {}
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -596,6 +606,191 @@ class Application:
 
         return decorate
 
+    # --- code where plain words are not enough (LOOP P-06) ---------------------
+
+    def tool(
+        self,
+        handler: Optional[Handler] = None,
+        *,
+        does: Union[str, Sequence[str]] = (),
+        description: str = "",
+    ) -> Callable[[Handler], Handler]:
+        """Give the agent a tool written here: ``handler(**arguments)``.
+
+        Declared in the spec (``tools``), so that the Canvas lists it and a
+        rule can name it by its name; every call is decided by the rules, by
+        what it ``does``::
+
+            @app.tool(does="read")
+            def lookup_order(number: str) -> dict:
+                \"\"\"Find an order by its number.\"\"\"
+                return orders[number]
+
+        Its arguments are its parameters, typed (their JSON Schema is the
+        spec's ``parameters``); what it returns is what the agent reads. Sync
+        or async.
+
+        Parameters
+        ----------
+        does : str or sequence of str
+            What it does, by class of action: ``read``, ``write``, ``send``,
+            ``buy``, ``delete``, ``publish``. Required: what the rules decide.
+        description : str
+            What it does, for the agent; its docstring when unsaid.
+
+        Returns
+        -------
+        callable
+            The decorator. The tool is known by the function's name.
+        """
+        if handler is not None:
+            raise TypeError(
+                f"Say what the tool {getattr(handler, '__name__', handler)!r} does: "
+                "@app.tool(does='read'), or write, send, buy, delete, publish."
+            )
+        classes = [does] if isinstance(does, str) else list(does)
+        if not classes:
+            raise TypeError(
+                "Say what the tool does: @app.tool(does='read'), or write, send, "
+                "buy, delete, publish."
+            )
+
+        def decorate(function: Handler) -> Handler:
+            from pydantic_ai import Tool
+
+            name = function.__name__
+            if name in self._tools:
+                raise ValueError(f"{self.id} already has a tool {name!r}.")
+            definition = Tool(function, takes_ctx=False).tool_def
+            said = description or definition.description or ""
+            if not said.strip():
+                raise ValueError(
+                    f"Say what the tool {name!r} does, for the agent: a docstring, "
+                    "or description=."
+                )
+            schema = {
+                key: value
+                for key, value in definition.parameters_json_schema.items()
+                if key != "additionalProperties"
+            }
+            self._declare(
+                "tools",
+                AppToolSpec(
+                    name=name, description=said.strip(), parameters=schema, does=classes
+                ),
+            )
+            self._tools[name] = function
+            return function
+
+        return decorate
+
+    def check(self, on: str, *, description: str = "") -> Callable[[Handler], Handler]:
+        """Check every answer, or every tool call, with code (LOOP P-06).
+
+        Run at its stage beside the built-in checks (R-06): on ``answer``,
+        ``handler(text)`` before the answer is given — one it refuses is asked
+        again; on ``tool_call``, ``handler(tool, arguments)`` once the rules
+        let the call through — one it refuses is stopped. It returns ``None``
+        or ``True`` to let it pass, ``False`` or a sentence saying why not::
+
+            @app.check("answer")
+            def no_prices(text: str) -> str | None:
+                \"\"\"It never quotes a price.\"\"\"
+                if "$" in text:
+                    return "It quoted a price."
+
+        Parameters
+        ----------
+        on : str
+            ``answer`` or ``tool_call``.
+        description : str
+            What it checks, in a sentence a person reads; its docstring's
+            first line when unsaid.
+
+        Returns
+        -------
+        callable
+            The decorator. The check is known by the function's name.
+        """
+        if on not in CHECK_STAGES:
+            raise ValueError(
+                f"A check runs on {' or '.join(CHECK_STAGES)}, not {on!r}."
+            )
+
+        def decorate(function: Handler) -> Handler:
+            name = function.__name__
+            if name in self._checks:
+                raise ValueError(f"{self.id} already has a check {name!r}.")
+            said = description or _first_line(function)
+            if not said:
+                raise ValueError(
+                    f"Say what the check {name!r} checks: a docstring, or description=."
+                )
+            checks = self._document.setdefault("checks", {})
+            checks.setdefault("code", []).append(
+                AppCodeCheckSpec(name=name, on=on, description=said).model_dump()
+            )
+            self._spec = None
+            self._checks[name] = function
+            return function
+
+        return decorate
+
+    def test(self, expect: str, *, ask: str) -> Callable[[Handler], Handler]:
+        """A test whose verdict is code: ``handler(conversation)`` (LOOP P-06).
+
+        A case of the spec (``tests.cases``) — what it is asked, and what it
+        should do in words — decided by the function, given the
+        `Conversation` the case had; it returns ``True``, ``False`` or a
+        sentence saying why it failed. ``loop apps validate app.py --tests
+        --local`` runs it; without the file, the case is judged by its words::
+
+            @app.test("It never asks a leading question", ask="Interview me.")
+            def no_leading_question(conversation: Conversation) -> bool:
+                return "don't you think" not in conversation.answer
+
+        Parameters
+        ----------
+        expect : str
+            What it should do, in words.
+        ask : str
+            What it is asked.
+
+        Returns
+        -------
+        callable
+            The decorator. The test is known by the function's name.
+        """
+
+        def decorate(function: Handler) -> Handler:
+            name = function.__name__
+            if name in self._tests:
+                raise ValueError(f"{self.id} already has a test {name!r}.")
+            self._declare(
+                "cases",
+                AppTestCaseSpec(ask=ask, expect=expect, code=name),
+                under="tests",
+            )
+            self._tests[name] = function
+            return function
+
+        return decorate
+
+    @property
+    def tools(self) -> Dict[str, Handler]:
+        """The tools its code gives the agent, by name; a copy."""
+        return dict(self._tools)
+
+    @property
+    def checks(self) -> Dict[str, Handler]:
+        """The checks of its code, by name; a copy."""
+        return dict(self._checks)
+
+    @property
+    def tests(self) -> Dict[str, Handler]:
+        """The tests its code decides, by name; a copy."""
+        return dict(self._tests)
+
     def handler(self, event: str) -> Optional[Handler]:
         """The handler of a moment, if the application has one.
 
@@ -650,6 +845,12 @@ class Application:
     def commands(self) -> Dict[str, Handler]:
         """The commands its code answers, by name; a copy."""
         return dict(self._commands)
+
+
+def _first_line(function: Handler) -> str:
+    """The first line of a function's docstring, or nothing."""
+    doc = (getattr(function, "__doc__", None) or "").strip()
+    return doc.splitlines()[0].strip() if doc else ""
 
 
 async def _answer(session: Session, text: str) -> None:
@@ -707,12 +908,25 @@ class AppHost:
         self._ended: set[str] = set()
 
     def _session(self, **kwargs: Any) -> Session:
+        # What its code adds to its agent (LOOP P-06): its tools, and its
+        # checks at their stages — what the registry holds for each now.
+        tools = {
+            tool.name: self._reaction("tool", tool.name) for tool in self.spec.tools
+        }
+        checks = {
+            check.name: self._reaction("check", check.name)
+            for check in self.spec.checks.code
+        }
+        toolset = own_toolset(self.spec, tools)
+        capability = own_checks(self.spec, checks, record=self.recorder.checked)
         return Session(
             self.spec,
             self.channel,
             agent_factory=self._agent,
             recorder=self.recorder,
             agent_maker=self._agent_maker,
+            toolsets=[toolset] if toolset is not None else [],
+            capabilities=[capability] if capability is not None else [],
             **kwargs,
         )
 
@@ -863,6 +1077,7 @@ class AppHost:
         *,
         user: Optional[str] = None,
         settings: Optional[Mapping[str, Any]] = None,
+        elements: Sequence[Shown] = (),
     ) -> Session:
         """Reopen an earlier session with its state, and run ``resume`` — an
         ended one too.
@@ -877,6 +1092,9 @@ class AppHost:
             Who the user is.
         settings : mapping, optional
             Its settings, as they were.
+        elements : sequence of Shown
+            What was open in a side panel or on a page (LOOP P-18): open
+            again, for its code to change or close.
 
         Returns
         -------
@@ -888,6 +1106,7 @@ class AppHost:
         session = self._session(
             id=session_id, user=user, state=dict(state), settings=settings
         )
+        session._reopen(elements)
         handler = self._reaction("resume")
         if handler is not None:
             await self._react(session, handler)

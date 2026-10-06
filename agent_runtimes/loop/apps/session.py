@@ -51,7 +51,7 @@ from agent_runtimes.loop.apps.components import answer_components, component_nod
 from agent_runtimes.loop.apps.composer import mode_choice, mode_effect
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.forms import form_defaults, form_fields, refused_by
-from agent_runtimes.loop.apps.guards import AppCheckBlockedError
+from agent_runtimes.loop.apps.guards import AppCheckBlockedError, AppChecksCapability
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
 from agent_runtimes.loop.apps.rules import Decision
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
@@ -149,9 +149,103 @@ class Step:
     """Why it failed, when it did."""
 
 
+#: Where an element shows (LOOP P-18): in the conversation, in a side panel
+#: beside it, or on a page of its own over it.
+WHERE: Tuple[str, ...] = ("inline", "panel", "page")
+
+
+@dataclass(frozen=True)
+class Shown:
+    """An element shown in a side panel or on a page of its own (LOOP P-18).
+
+    Delivered again under its id, it is that element changed; `Closed` takes
+    it away. An element shown inline is a `Message`.
+    """
+
+    id: str
+    session_id: str
+    where: str
+    """``panel`` or ``page``."""
+    title: str
+    components: Tuple[Dict[str, Any], ...]
+    """What it shows: components of the catalog (LOOP P-04)."""
+    data: Mapping[str, Any] = field(default_factory=dict)
+    """What its components bound to a path read."""
+
+
+@dataclass(frozen=True)
+class Closed:
+    """An element of a side panel or a page closed by the code (LOOP P-18)."""
+
+    element_id: str
+    session_id: str
+
+
+@dataclass(frozen=True)
+class Element:
+    """What `Session.show` opened, where it opened it (LOOP P-18).
+
+    ``await element.update(...)`` changes it in place; ``await
+    element.close()`` takes it away — ``session.close(element.id)`` says the
+    same.
+    """
+
+    id: str
+    session_id: str
+    where: str
+    """``inline``, ``panel`` or ``page``."""
+    title: str
+    components: Tuple[Dict[str, Any], ...] = ()
+    data: Mapping[str, Any] = field(default_factory=dict)
+    message: Optional[Message] = None
+    """Inline, the message that carries it."""
+    _session: Optional["Session"] = field(default=None, compare=False, repr=False)
+
+    def _shown_by(self) -> "Session":
+        if self._session is None:
+            raise ValueError(f"Element {self.id} was not shown by a session.")
+        return self._session
+
+    async def update(
+        self,
+        show: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
+        *,
+        title: Optional[str] = None,
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> "Element":
+        """Change what it shows, where it is (LOOP P-18).
+
+        Parameters
+        ----------
+        show : component or sequence of components, optional
+            What it shows now; what it showed when unsaid.
+        title : str, optional
+            Its title now.
+        data : mapping, optional
+            What its components read now.
+
+        Returns
+        -------
+        Element
+            The element as it is now.
+        """
+        return await self._shown_by().show(
+            self.components if show is None else show,
+            where=self.where,
+            title=self.title if title is None else title,
+            data=self.data if data is None else data,
+            id=self.id,
+        )
+
+    async def close(self) -> None:
+        """Take it away (LOOP P-18)."""
+        await self._shown_by().close(self)
+
+
 #: What a session delivers to its channel. A step is delivered twice: when it
-#: starts, and when it ends (with `ended_at`); a message again when it changed.
-Event = Union[Message, Delta, Step, Removed]
+#: starts, and when it ends (with `ended_at`); a message again when it changed,
+#: an element of a panel or a page likewise.
+Event = Union[Message, Delta, Step, Removed, Shown, Closed]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
 
@@ -287,6 +381,17 @@ class MemoryChannel:
                 shown.pop(event.message_id, None)
         return list(shown.values())
 
+    @property
+    def shown(self) -> List[Shown]:
+        """The elements open in a side panel or on a page, as they are now (LOOP P-18)."""
+        open_: Dict[str, Shown] = {}
+        for event in self.events:
+            if isinstance(event, Shown):
+                open_[event.id] = event
+            elif isinstance(event, Closed):
+                open_.pop(event.element_id, None)
+        return list(open_.values())
+
     async def deliver(self, event: Event) -> None:
         """Keep what is shown."""
         self.events.append(event)
@@ -303,6 +408,30 @@ class MemoryChannel:
 _STEP: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "loop_app_step", default=None
 )
+
+
+#: Where an element is, in words.
+_WHERE_WORDS = {
+    "inline": "in the conversation",
+    "panel": "in the side panel",
+    "page": "on a page of its own",
+}
+
+
+def with_own_checks(capabilities: Sequence[Any], own: Sequence[Any]) -> List[Any]:
+    """An agent's capabilities with its code's checks (LOOP P-06) right after
+    its built-in ones: before its record, so that an answer they refuse is
+    not kept, and their refusals are."""
+    listed = list(capabilities)
+    at = next(
+        (
+            index + 1
+            for index, capability in enumerate(listed)
+            if isinstance(capability, AppChecksCapability)
+        ),
+        len(listed),
+    )
+    return [*listed[:at], *own, *listed[at:]]
 
 
 def _now() -> datetime:
@@ -429,6 +558,8 @@ class Session:
         settings: Optional[Mapping[str, Any]] = None,
         agent_maker: Optional[Callable[["Session"], AppAgent]] = None,
         modes: Optional[Mapping[str, Any]] = None,
+        toolsets: Sequence[Any] = (),
+        capabilities: Sequence[Any] = (),
     ) -> None:
         self.app = app
         """The application, as its spec says it."""
@@ -446,6 +577,10 @@ class Session:
         self._recorder = recorder
         self._agent: Optional[AppAgent] = None
         self._removed: set[str] = set()
+        # What its code adds to its agent (LOOP P-06): its tools, its checks.
+        self._own_toolsets = list(toolsets)
+        self._own_capabilities = list(capabilities)
+        self._elements: Dict[str, Element] = {}
 
     # --- what the user set -----------------------------------------------------
 
@@ -639,6 +774,142 @@ class Session:
         await self.channel.deliver(message)
         return message
 
+    # --- where an element shows (LOOP P-18) -------------------------------------
+
+    @property
+    def elements(self) -> Dict[str, Element]:
+        """The elements it shows now, by id: open, not closed; a copy."""
+        return dict(self._elements)
+
+    async def show(
+        self,
+        show: Union[Mapping[str, Any], Sequence[Mapping[str, Any]]],
+        *,
+        where: str = "inline",
+        title: Optional[str] = None,
+        data: Optional[Mapping[str, Any]] = None,
+        id: Optional[str] = None,
+    ) -> Element:
+        """Show an element where it belongs: in the conversation, in a side
+        panel beside it, or on a page of its own (LOOP P-18).
+
+        ``panel = await session.show(session.ui.table("runs", ...),
+        where="panel", title="Runs")``, then ``await panel.close()``. Shown
+        again under the same ``id``, an element is changed in place. Inline,
+        it is a message of the conversation, carrying it; in a panel or on a
+        page, it stays open until the code closes it — or the person does,
+        on their screen.
+
+        Parameters
+        ----------
+        show : component or sequence of components
+            What it shows: components of the catalog (``session.ui.<component>(...)``).
+        where : str
+            ``inline``, ``panel`` or ``page``.
+        title : str, optional
+            What it is called, over it; the application's name when unsaid.
+        data : mapping, optional
+            What its components bound to a path read.
+        id : str, optional
+            Its id, for the code to name it by; a new one when unsaid.
+
+        Returns
+        -------
+        Element
+            The element, as shown.
+
+        Raises
+        ------
+        ValueError
+            For a place that is none of the three, an element of that id open
+            elsewhere, or components the catalog refuses.
+        """
+        if where not in WHERE:
+            raise ValueError(
+                f"An element shows {', '.join(WHERE[:-1])} or {WHERE[-1]}, not {where!r}."
+            )
+        nodes = [show] if isinstance(show, Mapping) else list(show)
+        if not nodes:
+            raise ValueError("An element shows a component at least.")
+        components = answer_components(nodes)
+        said = self.app.name if title is None else title
+        open_ = self._elements.get(id) if id is not None else None
+        if open_ is not None and open_.where != where:
+            raise ValueError(
+                f"Element {id} is open {_WHERE_WORDS[open_.where]}: close it before "
+                f"showing it {_WHERE_WORDS[where]}."
+            )
+        if where == "inline":
+            if open_ is not None and open_.message is not None:
+                message = await self.update(
+                    open_.message, said, show=components, data=data or {}
+                )
+            else:
+                message = await self.send(said, show=components, data=data)
+            element = Element(
+                id or message.id,
+                self.id,
+                where,
+                said,
+                components,
+                dict(data or {}),
+                message,
+                self,
+            )
+        else:
+            element = Element(
+                id or _new_id(),
+                self.id,
+                where,
+                said,
+                components,
+                dict(data or {}),
+                None,
+                self,
+            )
+            await self.channel.deliver(
+                Shown(element.id, self.id, where, said, components, element.data)
+            )
+        self._elements[element.id] = element
+        return element
+
+    def _reopen(self, shown: Iterable[Shown]) -> None:
+        """What was open in a panel or on a page before a resume, open again (LOOP P-18)."""
+        for item in shown:
+            self._elements[item.id] = Element(
+                item.id,
+                self.id,
+                item.where,
+                item.title,
+                tuple(item.components),
+                dict(item.data),
+                None,
+                self,
+            )
+
+    async def close(self, element: Union[Element, str]) -> None:
+        """Close an element it shows (LOOP P-18): one inline is removed from
+        the conversation; a panel or a page goes.
+
+        Parameters
+        ----------
+        element : Element or str
+            The element, or its id.
+
+        Raises
+        ------
+        ValueError
+            For an element that is not open.
+        """
+        element_id = element if isinstance(element, str) else element.id
+        open_ = self._elements.pop(element_id, None)
+        if open_ is None:
+            raise ValueError(f"No element {element_id} is open in session {self.id}.")
+        if open_.message is not None:
+            await self.remove(open_.message)
+            return
+        await self.channel.deliver(Closed(element_id, self.id))
+
     @asynccontextmanager
     async def step(
         self, name: str, *, kind: str = "run", input: Any = None
@@ -793,19 +1064,29 @@ class Session:
         (``agent_maker``, LOOP R-04).
         """
         if self._agent is None and self._agent_maker is not None:
-            self._agent = self._agent_maker(self)
+            made = self._agent_maker(self)
+            # Its code's tools and checks, after what the runtime made it with.
+            made.toolsets = [*made.toolsets, *self._own_toolsets]
+            made.capabilities = with_own_checks(
+                made.capabilities, self._own_capabilities
+            )
+            self._agent = made
         if self._agent is None:
             self._agent = AppAgent(
                 app=self.app,
                 agent=self._agent_factory(self.app),
                 session_id=self.id,
-                capabilities=app_capabilities(
-                    self.app,
-                    recorder=self._recorder,
-                    agent_id=self.app.agent or None,
-                    ask_rule=self._ask_rule,
-                    ask_check=self._ask_check,
+                capabilities=with_own_checks(
+                    app_capabilities(
+                        self.app,
+                        recorder=self._recorder,
+                        agent_id=self.app.agent or None,
+                        ask_rule=self._ask_rule,
+                        ask_check=self._ask_check,
+                    ),
+                    self._own_capabilities,
                 ),
+                toolsets=list(self._own_toolsets),
             )
         self._agent.mode = mode_effect(self.app, self._modes)
         return self._agent
@@ -862,7 +1143,9 @@ __all__ = [
     "AskTimeout",
     "Channel",
     "ChoiceQuestion",
+    "Closed",
     "Delta",
+    "Element",
     "Event",
     "FileQuestion",
     "FormQuestion",
@@ -872,10 +1155,12 @@ __all__ = [
     "Question",
     "Removed",
     "Session",
+    "Shown",
     "Step",
     "StepOutput",
     "TextQuestion",
     "UploadedFile",
+    "WHERE",
     "call",
     "form_values",
 ]

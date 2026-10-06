@@ -54,7 +54,8 @@ RulesFactory = Callable[[AppSpec, Optional[str]], AppRulesCapability]
 
 #: The moments an application's code reacts to, one point each: a moment's
 #: contribution is known by the application's id, an action's, a
-#: schedule's and a command's (LOOP P-19) by ``<application id>/<name>``.
+#: schedule's and a command's (LOOP P-19) — and a tool's, a check's and a
+#: test's (P-06) — by ``<application id>/<name>``.
 REACTIONS: Tuple[str, ...] = (
     "start",
     "message",
@@ -66,10 +67,21 @@ REACTIONS: Tuple[str, ...] = (
     "action",
     "schedule",
     "command",
+    "tool",
+    "check",
+    "test",
 )
 
-#: The reactions known by a name besides the application's id.
-NAMED_REACTIONS: Tuple[str, ...] = ("action", "schedule", "command")
+#: The reactions known by a name besides the application's id; a tool's, a
+#: check's and a test's are its code's own (LOOP P-06).
+NAMED_REACTIONS: Tuple[str, ...] = (
+    "action",
+    "schedule",
+    "command",
+    "tool",
+    "check",
+    "test",
+)
 REACTION_POINTS: Dict[str, ContributionPoint[Callable[..., Any]]] = {
     reaction: define_contribution_point(f"loop.app.{reaction}")
     for reaction in REACTIONS
@@ -192,6 +204,9 @@ def register_application(
         ("action", application.actions),
         ("schedule", application.schedules),
         ("command", application.commands),
+        ("tool", application.tools),
+        ("check", application.checks),
+        ("test", application.tests),
     ):
         for name, handler in named.items():
             contributions.contribute(

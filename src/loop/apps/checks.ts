@@ -117,6 +117,68 @@ const matches = (name: string, pattern: string): boolean =>
       '$',
   ).test(name);
 
+/** The name of a function of an application's code (agentspecs' `CODE_NAME`). */
+const CODE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * What its code declares that agentspecs refuses (LOOP P-06): its tools,
+ * its checks and the tests it decides, each by a Python name, each name
+ * once; a tool says what it does, by class, each class once.
+ */
+export function ownCodeProblems(app: AppSpec): string[] {
+  const problems: string[] = [];
+  const tools = app.tools ?? [];
+  for (const tool of tools) {
+    if (!CODE_NAME.test(tool.name)) {
+      problems.push(
+        `Cannot use “${tool.name}” as a tool's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+    if (!tool.description.trim()) {
+      problems.push(
+        `The tool “${tool.name}” says what it does, for the agent.`,
+      );
+    }
+    if (tool.does.length === 0) {
+      problems.push(
+        `The tool “${tool.name}” says what it does: read, write, send, buy, delete or publish.`,
+      );
+    }
+    for (const action of tool.does) {
+      if (!CLASS_NAMES.has(action)) {
+        problems.push(
+          `The tool “${tool.name}” does “${action}”, which is no class of action.`,
+        );
+      }
+    }
+    if (new Set(tool.does).size !== tool.does.length) {
+      problems.push('A tool says each thing it does once.');
+    }
+  }
+  const names = tools.map(tool => tool.name);
+  if (new Set(names).size !== names.length) {
+    problems.push('Two of its tools have the same name.');
+  }
+  const checks = (app.checks.code ?? []).map(check => check.name);
+  for (const name of checks) {
+    if (!CODE_NAME.test(name)) {
+      problems.push(
+        `Cannot use “${name}” as a check's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+  }
+  if (new Set(checks).size !== checks.length) {
+    problems.push('Two checks of its code have the same name.');
+  }
+  const decided = app.tests.cases.flatMap(testCase =>
+    testCase.code ? [testCase.code] : [],
+  );
+  if (new Set(decided).size !== decided.length) {
+    problems.push('Two tests are decided by the same function of its code.');
+  }
+  return problems;
+}
+
 /** What the spec says of itself that the tolerant reader lets through. */
 function shapeProblems(app: AppSpec): string[] {
   const problems: string[] = [];
@@ -211,6 +273,8 @@ function shapeProblems(app: AppSpec): string[] {
       }
     }
   }
+  // What its code declares (LOOP P-06), as agentspecs refuses it.
+  problems.push(...ownCodeProblems(app));
   const servers = app.connections.map(connection => idOf(connection.server));
   if (new Set(servers).size !== servers.length) {
     problems.push('The application connects to the same server twice.');
@@ -412,6 +476,8 @@ function referenceProblems(
       const [server, name] = splitRef(target);
       if (server === undefined) {
         if (hostTools.includes(target)) continue;
+        // A tool of its own, written in its code (LOOP P-06).
+        if ((app.tools ?? []).some(tool => tool.name === target)) continue;
         if (!getBackendToolSpec(name)) {
           problems.push(
             `The rule “${rule.action}” names the tool “${target}”, which the catalogue does not have.`,

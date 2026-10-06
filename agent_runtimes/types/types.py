@@ -2348,6 +2348,13 @@ class AppTestCaseSpec(BaseModel):
 
     ask: str
     expect: str
+    code: str = Field(
+        default="",
+        description=(
+            "The function of its code that decides the case, by name (LOOP P-06); "
+            "`expect` says it in words"
+        ),
+    )
 
 
 class AppVerifiedSpec(BaseModel):
@@ -2385,12 +2392,37 @@ class AppRecordSpec(BaseModel):
     )
 
 
+class AppCodeCheckSpec(BaseModel):
+    """A check written in an application's code (LOOP P-06): `@app.check`."""
+
+    name: str = Field(..., description="The function of its code that checks")
+    on: str = Field(..., description="`answer` or `tool_call`: where it runs")
+    description: str = Field(..., description="What it checks, in a sentence")
+
+
 class AppChecksSpec(BaseModel):
-    """Optional checks from the catalogue."""
+    """Optional checks from the catalogue, and its code's own."""
 
     guards: List[str] = Field(default_factory=list)
     gates: List[str] = Field(default_factory=list)
     track: str = Field(default="")
+    code: List[AppCodeCheckSpec] = Field(
+        default_factory=list, description="Checks written in its code (LOOP P-06)"
+    )
+
+
+class AppToolSpec(BaseModel):
+    """A tool of an application's own, written in its code (LOOP P-06): `@app.tool`."""
+
+    name: str = Field(..., description="What the agent calls, and a rule names")
+    description: str = Field(..., description="What it does, for the agent")
+    parameters: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="The JSON Schema of its arguments",
+    )
+    does: List[str] = Field(
+        ..., description="What it does, by class of action: what the rules decide"
+    )
 
 
 class AppHostedSpec(BaseModel):
@@ -2483,6 +2515,10 @@ class AppSpec(BaseModel):
     model: str = Field(default="")
     skills: List[str] = Field(default_factory=list)
     backend_tools: List[str] = Field(default_factory=list)
+    tools: List[AppToolSpec] = Field(
+        default_factory=list,
+        description="Tools of its own, written in its code (LOOP P-06)",
+    )
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
     )
@@ -2528,6 +2564,13 @@ class AppSpec(BaseModel):
         default="",
         description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
     )
+
+    def tool(self, name: str) -> Optional[AppToolSpec]:
+        """Its own tool of that name (LOOP P-06), or None."""
+        for tool in self.tools:
+            if tool.name == name:
+                return tool
+        return None
 
 
 class TeamSubagentspec(BaseModel):

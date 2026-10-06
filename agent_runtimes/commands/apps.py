@@ -26,6 +26,10 @@ the instant checks pass, which is not yet *Ready*: that takes its tests.
 With ``--safety`` it also asks the safety set every application runs (LOOP
 V-09, `agent_runtimes.loop.apps.safety`) — listed alone, asked on this
 machine (``--local``) or on Datalayer through the Evals engine (``--cloud``).
+With ``--tests`` it also runs the tests an ``app.py``'s code decides (LOOP
+P-06, ``@app.test``) — listed alone, or run on this machine (``--local``),
+each case asked of the application and its conversation handed to its
+function: no judge, no model call but the application's own.
 
 An application written in Python, an ``app.py``, is built to its Appspec
 first (`loop apps build`, LOOP P-07): `validate`, `run` and `push` take one
@@ -84,6 +88,10 @@ class Report:
     safety_says: str = ""
     #: Where the plugins taken as off came from, in a sentence (LOOP C-12).
     plugins_off_says: str = ""
+    #: The tests its code decides (LOOP P-06): each test's name, case and outcome.
+    tests: List[Dict[str, str]] = field(default_factory=list)
+    #: *Its code's tests: 2 of 2 passed.*, once run.
+    tests_says: str = ""
 
 
 def _require_agentspecs() -> Any:
@@ -156,6 +164,32 @@ def safety_notes(module: Any, application: Any) -> List[str]:
             notes.append(
                 f"The {guard.name} is judged by {judge} the runtime does not run yet: "
                 "nothing is checked by it."
+            )
+    return notes
+
+
+def code_notes(application: Any) -> List[str]:
+    """What its spec says its code does, which nothing does without the file (LOOP P-06).
+
+    Said for a spec read alone; for an ``app.py``, its code is there, and
+    nothing is said.
+    """
+    notes: List[str] = []
+    for tool in application.tools:
+        notes.append(
+            f"Its tool {tool.name} is written in its code: run from this spec "
+            "alone, its agent is not given it."
+        )
+    for check in application.checks.code:
+        notes.append(
+            f"Its check {check.name} ({check.description}) is written in its code: "
+            "run from this spec alone, nothing checks it."
+        )
+    for case in application.tests.cases:
+        if case.code:
+            notes.append(
+                f"Its test “{case.expect}” is decided by its code ({case.code}): "
+                "run from this spec alone, it is judged by its words."
             )
     return notes
 
@@ -244,6 +278,10 @@ def validate_file(
             str(path), NOT_READY, problems=problems, setup=setup, plugins_off_says=says
         )
     attention = safety_notes(module, application)
+    from agent_runtimes.loop.apps.build import is_python
+
+    if not is_python(path):
+        attention += code_notes(application)
     return Report(
         str(path),
         NEEDS_ATTENTION if attention else PASSES,
@@ -276,8 +314,15 @@ def apps_validate(
         "--safety",
         help="Also the safety set every application runs: listed, or asked with --local or --cloud.",
     ),
+    tests: bool = typer.Option(
+        False,
+        "--tests",
+        help="Also the tests its code decides (@app.test): listed, or run here with --local.",
+    ),
     local: bool = typer.Option(
-        False, "--local", help="With --safety: ask it on this machine, judged here."
+        False,
+        "--local",
+        help="With --safety: ask it on this machine, judged here. With --tests: run them here.",
     ),
     cloud: bool = typer.Option(
         False,
@@ -305,13 +350,18 @@ def apps_validate(
 ) -> None:
     """Run the instant checks of one or more applications, and its safety set.
 
-    Exit 1 when one is not ready, or a safety test did not hold; with
-    --strict, exit 2 when one needs attention; exit 3 when the safety set was
-    asked but not judged.
+    Exit 1 when one is not ready, a safety test did not hold or a test of
+    its code failed; with --strict, exit 2 when one needs attention; exit 3
+    when the safety set was asked but not judged, or its code's tests could
+    not be run.
     """
-    if (local or cloud or judge or app_uid or yes) and not safety:
+    if local and not (safety or tests):
+        raise typer.BadParameter("--local goes with --safety or --tests.")
+    if (cloud or judge or app_uid or yes) and not safety:
+        raise typer.BadParameter("--cloud, --judge, --app and --yes go with --safety.")
+    if tests and cloud:
         raise typer.BadParameter(
-            "--local, --cloud, --judge, --app and --yes go with --safety."
+            "The tests its code decides run where its code is: here, with --local."
         )
     if local and cloud:
         raise typer.BadParameter("--local or --cloud: one place to ask it.")
@@ -344,6 +394,11 @@ def apps_validate(
                 )
                 or unjudged
             )
+    if tests:
+        for path, report in zip(paths, reports):
+            if report.verdict == NOT_READY:
+                continue
+            unjudged = _code_tests_of(path, report, local=local) or unjudged
     if as_json:
         typer.echo(json.dumps([asdict(report) for report in reports], indent=2))
     else:
@@ -375,14 +430,104 @@ def apps_validate(
                 console.print(f"  {mark} {check['title']}{said}", highlight=False)
             if report.safety_says:
                 console.print(f"  {report.safety_says}", highlight=False)
+            for test in report.tests:
+                mark = {"passed": "[green]✓[/green]", "failed": "[red]✗[/red]"}.get(
+                    test.get("state", ""), "·"
+                )
+                said = f" — {test['says']}" if test.get("says") else ""
+                console.print(
+                    f"  {mark} {test['expect']} ({test['name']}){said}", highlight=False
+                )
+            if report.tests_says:
+                console.print(f"  {report.tests_says}", highlight=False)
     if any(report.verdict == NOT_READY for report in reports):
         raise typer.Exit(1)
     if any(report.safety_says and _unsafe(report) for report in reports):
+        raise typer.Exit(1)
+    if any(test.get("state") == "failed" for r in reports for test in r.tests):
         raise typer.Exit(1)
     if strict and any(report.verdict == NEEDS_ATTENTION for report in reports):
         raise typer.Exit(2)
     if unjudged:
         raise typer.Exit(3)
+
+
+def _code_tests_of(path: Path, report: Report, *, local: bool) -> bool:
+    """List, or run here, the tests an app.py's code decides (LOOP P-06).
+
+    Returns whether they were asked but not all run (exit 3).
+    """
+    import asyncio
+    import logging
+
+    from agent_runtimes.loop.apps import own
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+
+    try:
+        application = _application_of(path)
+    except AppNotRunnable as refused:
+        report.tests_says = " ".join(refused.problems)
+        return True
+    cases = own.code_tests(application.spec)
+    listed = [
+        {
+            "name": case.code,
+            "expect": case.expect,
+            "ask": case.ask,
+            "state": "",
+            "says": "",
+        }
+        for case in cases
+    ]
+    if not cases:
+        report.tests_says = "Its code decides no test."
+        return False
+    if not application.tests:
+        report.tests = listed
+        report.tests_says = (
+            f"Its code's tests: {len(cases)}, decided by an app.py: validate the app.py "
+            "to run them; from this spec alone they are judged by their words."
+        )
+        return False
+    if not local:
+        report.tests = listed
+        report.tests_says = (
+            f"Its code's tests: {len(cases)}, not run. --local runs them here, "
+            "each decided by its code."
+        )
+        return False
+    for name in ("agent_runtimes", "botocore", "httpx", "httpx2"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+    try:
+        results = asyncio.run(own.run_code_tests(application))
+    except AppNotRunnable as refused:
+        report.tests = listed
+        report.tests_says = "Its code's tests: not run. " + " ".join(refused.problems)
+        return True
+    except Exception as refused:  # noqa: BLE001 - its agent cannot be built here
+        said = str(refused).strip().splitlines()
+        report.tests = listed
+        report.tests_says = (
+            "Its code's tests: not run. Its agent cannot be built here: "
+            + (said[0] if said else type(refused).__name__)
+        )
+        return True
+    report.tests = [
+        {
+            "name": result.name,
+            "expect": result.expect,
+            "ask": result.ask,
+            "state": result.state,
+            "says": result.says,
+        }
+        for result in results
+    ]
+    passed = sum(result.state == own.PASSED for result in results)
+    unrun = sum(result.state == own.NOT_RUN for result in results)
+    report.tests_says = f"Its code's tests: {passed} of {len(results)} passed." + (
+        f" {unrun} not run." if unrun else ""
+    )
+    return unrun > 0
 
 
 def _unsafe(report: Report) -> bool:

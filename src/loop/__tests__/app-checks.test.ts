@@ -467,3 +467,114 @@ describe('the instant checks', () => {
     expect(isOrganizationFrame('board-reporting')).toBe(false);
   });
 });
+
+describe('what its code declares (LOOP P-06)', () => {
+  const DECLARED = {
+    ...BASE,
+    tools: [
+      {
+        name: 'lookup_order',
+        description: 'Find an order by its number.',
+        parameters: {
+          type: 'object',
+          properties: { number: { type: 'string' } },
+          required: ['number'],
+        },
+        does: ['read'],
+      },
+      { name: 'refund', description: 'Refund an order.', does: ['write'] },
+    ],
+    rules: [
+      {
+        action: 'Refund an order',
+        applies_to: 'refund',
+        behaviour: 'ask_first',
+      },
+    ],
+    checks: {
+      code: [
+        {
+          name: 'no_prices',
+          on: 'answer',
+          description: 'It never quotes a price.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Interview me.',
+          expect: 'No leading question.',
+          code: 'no_leading',
+        },
+        { ask: 'Hi', expect: 'It greets.' },
+      ],
+    },
+  };
+
+  it('reads and writes its tools, checks and tests, a rule naming its tool by name', () => {
+    const { app, problems } = parseAppspec(DECLARED);
+    expect(problems).toEqual([]);
+    expect(app.tools?.map(tool => tool.name)).toEqual([
+      'lookup_order',
+      'refund',
+    ]);
+    expect(app.tools?.[1].parameters).toEqual({
+      type: 'object',
+      properties: {},
+    });
+    expect(app.checks.code).toEqual(DECLARED.checks.code);
+    expect(app.tests.cases.map(testCase => testCase.code)).toEqual([
+      'no_leading',
+      undefined,
+    ]);
+    const written = dumpAppspec(app);
+    expect(written.tools).toEqual(DECLARED.tools);
+    expect(written.checks).toEqual(DECLARED.checks);
+    expect(written.tests).toEqual(DECLARED.tests);
+    expect(checkAppspec(DECLARED).problems).toEqual([]);
+  });
+
+  it('refuses what agentspecs refuses', () => {
+    const wrong = {
+      ...DECLARED,
+      tools: [
+        { name: 'two words', description: '', does: [] },
+        { name: 'refund', description: 'Refund.', does: ['fly', 'fly'] },
+        { name: 'refund', description: 'Again.', does: ['read'] },
+      ],
+      checks: {
+        code: [
+          { name: 'no_prices', on: 'start', description: 'd' },
+          { name: 'no_prices', on: 'answer', description: 'd' },
+        ],
+      },
+      tests: {
+        cases: [
+          { ask: 'a', expect: 'b', code: 'same' },
+          { ask: 'c', expect: 'd', code: 'same' },
+        ],
+      },
+    };
+    expect(checkAppspec(wrong).problems).toEqual(
+      expect.arrayContaining([
+        'The check `no_prices` of its code runs on answer or tool_call, not `start`.',
+        "Cannot use “two words” as a tool's name: letters, digits and `_`, as in Python.",
+        'The tool “two words” says what it does, for the agent.',
+        'The tool “two words” says what it does: read, write, send, buy, delete or publish.',
+        'The tool “refund” does “fly”, which is no class of action.',
+        'A tool says each thing it does once.',
+        'Two of its tools have the same name.',
+        'Two checks of its code have the same name.',
+        'Two tests are decided by the same function of its code.',
+      ]),
+    );
+    const unknown = checkAppspec({
+      ...BASE,
+      rules: [{ action: 'Refund', applies_to: 'refund', behaviour: 'do_it' }],
+    });
+    expect(unknown.problems).toContain(
+      'The rule “Refund” names the tool “refund”, which the catalogue does not have.',
+    );
+  });
+});

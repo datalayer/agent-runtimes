@@ -72,6 +72,7 @@ from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
+    Closed,
     Delta,
     Event,
     FileQuestion,
@@ -81,6 +82,7 @@ from agent_runtimes.loop.apps.session import (
     Question,
     Removed,
     Session,
+    Shown,
     Step,
     TextQuestion,
     UploadedFile,
@@ -395,6 +397,23 @@ LOOP_MESSAGE = "loop.message"
 #: started_at, ended_at}``.
 LOOP_STEP = "loop.step"
 
+#: The ``CUSTOM`` event that opens, changes or closes an element of a side
+#: panel or a page of its own (LOOP P-18): ``{id, where, title, shows}`` —
+#: ``shows`` what an answer's surface is (`answer_surface`) — or
+#: ``{id, closed: true}``.
+LOOP_ELEMENT = "loop.element"
+
+
+def element_of(shown: Shown) -> Dict[str, Any]:
+    """An element as the ``loop.element`` event carries it."""
+    return {
+        "id": shown.id,
+        "where": shown.where,
+        "title": shown.title,
+        "shows": answer_surface(shown.id, shown.title, shown.components, shown.data),
+    }
+
+
 #: The longest input or output of a step the chat is sent, in characters.
 STEP_VALUE_LIMIT = 4000
 
@@ -481,6 +500,8 @@ class LiveSession:
     _streamed: Dict[str, List[str]] = field(
         default_factory=dict, init=False, repr=False
     )
+    _elements: Dict[str, Shown] = field(default_factory=dict, init=False, repr=False)
+    """The elements open in a side panel or on a page (LOOP P-18): drawn again on a resume."""
 
     # --- what the session is -----------------------------------------------------
 
@@ -781,6 +802,17 @@ class LiveSession:
             # kind, the step it is nested in, its input, output or error —
             # is said beside it (LOOP P-16).
             self.emit(CustomEvent(name=LOOP_STEP, value=step_of(event)))
+        elif isinstance(event, Shown):
+            # A side panel or a page of its own, opened or changed (LOOP P-18).
+            self._elements[event.id] = event
+            self.emit(CustomEvent(name=LOOP_ELEMENT, value=element_of(event)))
+        elif isinstance(event, Closed):
+            self._elements.pop(event.element_id, None)
+            self.emit(
+                CustomEvent(
+                    name=LOOP_ELEMENT, value={"id": event.element_id, "closed": True}
+                )
+            )
 
     async def ask(self, session_id: str, question: Question) -> Any:
         """What the code asks: a file already given answers a file; else the person is asked.
@@ -1161,7 +1193,7 @@ class LiveSession:
 
     def resume(self, *, head: str = "") -> AsyncIterator[str]:
         """Resume: the conversation so far, then the code's ``resume``; open again."""
-        from ag_ui.core import MessagesSnapshotEvent
+        from ag_ui.core import CustomEvent, MessagesSnapshotEvent
 
         if self.state != "stopped":
             raise SessionRefused(
@@ -1172,6 +1204,9 @@ class LiveSession:
         async def work() -> None:
             """The turn."""
             self.emit(MessagesSnapshotEvent(messages=_snapshot(self.messages)))
+            # What was open beside the conversation, open again (LOOP P-18).
+            for shown in self._elements.values():
+                self.emit(CustomEvent(name=LOOP_ELEMENT, value=element_of(shown)))
             self.recorder.start(self.uid, resumed=self.resumed)
             await self.recorder.flush(self.uid)
             if self.host is not None:
@@ -1181,6 +1216,7 @@ class LiveSession:
                     state,
                     user=self.opened_by.uid or None,
                     settings=self.settings,
+                    elements=list(self._elements.values()),
                 )
 
         return self._start_turn(work, wraps_run=True, head=head)

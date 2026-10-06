@@ -400,16 +400,20 @@ def decision_for(
 ) -> Decision:
     """What an application does when its agent calls a tool, and why.
 
-    `tool` is `server.tool` for a tool of an MCP server, or the id of a tool
-    of the catalogue. Its classes are the catalogue's, unless given — a tool
-    met at run time that the catalogue does not know is given none, and is
-    left to the person.
+    `tool` is `server.tool` for a tool of an MCP server, the id of a tool of
+    the catalogue, or the name of one of the application's own tools (LOOP
+    P-06). Its classes are the catalogue's — or, for its own, what it says it
+    `does` — unless given; a tool met at run time that the catalogue does not
+    know is given none, and is left to the person.
 
     Pass the `arguments` of the call: the decision is then for that call.
     Without them it is for the worst the tool can do.
     """
     server, name = split_ref(tool)
     wanted = f"{server}.{name}" if server is not None else name
+    own_tool = app.tool(name) if server is None and classes is None else None
+    if own_tool is not None:
+        classes = list(own_tool.does)
     if classes is not None:
         own, besides, possible = list(classes), [], list(classes)
     else:

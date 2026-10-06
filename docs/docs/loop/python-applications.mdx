@@ -39,7 +39,6 @@ What does **not** exist yet:
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
   [The agent](#the-agent)).
-- **Tests and checks in code** (`@app.test`, `@app.check`, `@app.tool`).
 - **A file to download in an answer.** The catalog has no such component
   yet; see [What an answer shows](#what-an-answer-shows).
 
@@ -224,6 +223,70 @@ session always first:
 
 A second handler for the same moment, action or schedule raises
 `ValueError`.
+
+### Code where plain words are not enough
+
+A rule, a test in words, a catalogue check say most of what an application
+needs. Where they cannot, its code says it (LOOP P-06) — and declares it in
+its Appspec, so that the Canvas shows it (*What its code decides*: its tool,
+its check, its test, each with the line that decides it) and validation runs
+it:
+
+```python
+from agent_runtimes.loop.apps import Application, Conversation
+
+app = Application(id="order-desk", kind="chat", agent="worker-support:0.0.1")
+app.rule("Refund an order", applies_to="refund", behaviour="ask_first")
+
+
+@app.tool(does="read")
+def lookup_order(number: str) -> dict:
+    """Find an order by its number."""
+    return ORDERS[number]
+
+
+@app.tool(does=["write", "buy"])
+async def refund(number: str, amount: float) -> str:
+    """Refund an order."""
+    return await PAYMENTS.refund(number, amount)
+
+
+@app.check("answer")
+def no_prices(text: str) -> str | None:
+    """It never quotes a price."""
+    return "It quoted a price." if "$" in text else None
+
+
+@app.check("tool_call", description="Refunds stay under 100.")
+def small_refunds(tool: str, arguments: dict) -> bool:
+    return tool != "refund" or arguments["amount"] < 100
+
+
+@app.test("It gives the order's status", ask="Where is order 42?")
+def gives_the_status(conversation: Conversation) -> bool | str:
+    return "shipped" in conversation.answer or "It did not say the status."
+```
+
+| Decorator | Declares in the spec | Runs |
+| --- | --- | --- |
+| `@app.tool(does=…, description="")` | `tools`: its name (the function's), its description (the docstring's when unsaid), its `parameters` — the JSON Schema of its arguments, from their types — and what it `does`, by class of action. | Its agent is given it beside its own tools; sync or async, called with its arguments, what it returns is what the agent reads. Every call is decided by the rules, as any tool's: by a rule that names it by its name alone (`applies_to="refund"`), else by what it does — reading needs no rule, anything that acts asks first. |
+| `@app.check(on, description="")` | `checks.code`: its name, its stage, what it checks in words (the docstring's first line when unsaid). | At its stage, after the built-in checks and before the record: `answer`, `handler(text)` before the answer is given — refused, the agent is asked again with why; `tool_call`, `handler(tool, arguments)` once the rules let the call through — refused, the call is stopped (`AppCheckBlockedError`). `None` or `True` lets it pass, `False` or a sentence refuses; anything else raises. Each refusal is a `check` entry of the record. |
+| `@app.test(expect, *, ask)` | A case of `tests.cases`, its `code` the function's name. | `loop apps validate app.py --tests --local`: the case asked of the application in this process, a session of its own, and its `Conversation` — `ask`, `answer` (its messages, one after the other), `messages`, `steps`, `asked` (what it stopped to ask the person, when it did) — handed to the function, which returns `True`, `False` or a sentence saying why it failed. `None` is not a pass: it is said, and the test is not run. Without the file — on Datalayer, through the Evals engine — the case is judged by its words. |
+
+`@app.tool` without `does` raises `TypeError`; a tool or a check that says
+nothing of itself, a stage that is neither `answer` nor `tool_call`, or a
+name used twice raise `ValueError`; what agentspecs refuses — a class of
+action that is none — raises `AppNotRunnable` from `app.spec`.
+
+`loop apps build` marks each as code, `# loop:code tool lookup_order:
+lookup_order (app.py:7)`, `check …`, `test …`. A spec validated alone — its
+`app.yaml` without the file — *needs attention* for each: its tools are not
+given, its checks check nothing, its tests are judged by their words.
+
+```bash
+loop apps validate app.py --tests           # lists them
+loop apps validate app.py --tests --local   # runs them here; exit 1 when one fails, 3 when one could not run
+```
 
 ### Schedules on the platform
 
@@ -504,6 +567,50 @@ On the channel, they are the `Message`'s `components` and `data`. Over the
 [Session API](./session-api) they are a surface under the message, drawn by
 the chat's A2UI renderer; a terminal names each (*▣ Table runs*).
 
+### Where an element shows
+
+An element — components of the catalog, as an answer shows them — shows
+where it belongs (LOOP P-18): in the conversation, in a side panel beside
+it, or on a page of its own over it. Its code opens it, changes it and
+closes it:
+
+```python
+panel = await session.show(
+    session.ui.table("runs", columns=["model", "cost"], rows={"path": "/runs"}),
+    where="panel",
+    title="Runs",
+    data={"runs": runs},
+)
+await panel.update(data={"runs": runs + [latest]})   # changed in place
+await panel.close()                                  # or session.close(panel.id)
+
+await session.show([session.ui.text("intro", text="The report"), ...], where="page", id="report")
+await session.close("report")
+```
+
+- `where` — `inline` (the default): a message of the conversation, carrying
+  it, its title the message's text; `panel`: the side panel on the trailing
+  edge, several stacked in the order they opened; `page`: a page of its own
+  over the workspace, the last opened shown.
+- `title` — over it; the application's name when unsaid. `id` — what the
+  code names it by; a new one when unsaid. Shown again under the same `id`,
+  it is changed in place; one open elsewhere is refused (`ValueError`):
+  close it first.
+- `data` — what its components bound to a path read, as an answer's.
+- A Button on it sends its action to `@app.action`, as an answer's does.
+- `session.elements` — what is open now, by id. Closing one that is not
+  open raises `ValueError`.
+- The person closes a panel or a page on their screen with its own button;
+  the code is not told, and may show it again.
+
+On the channel, a panel or a page is a `Shown` event, delivered again when it
+changes, and `Closed` when it goes (`MemoryChannel.shown` is what is open);
+inline, it is a `Message`. Over the [Session API](./session-api) it is a
+`loop.element` event, drawn by the `app-elements` plugin every application's
+workspace mounts; a resume draws again what was open, and its code can still
+close it. A terminal cannot open one: it names it (*▸ Runs, shown in the
+side panel*) and its components.
+
 ### Messages that change
 
 A message sent is not final:
@@ -769,7 +876,15 @@ above was run as printed. `agent_runtimes/tests/test_apps_build.py` covers
 `run` serving one, the terminal routing to the code — an author, an edit and
 a removal printed, `end` when the person leaves — and `--watch` rebuilding
 with the session's state kept; `loop apps run app.py --local --ask` was run
-against a local server.
+against a local server. `agent_runtimes/tests/test_app_own_code.py` covers
+`@app.tool`, `@app.check` and `@app.test`: declared in the spec, refused in
+sentences, marked by `build`, said by `validate` of a spec alone; a tool
+called by the agent and decided by the rules, by what it does or by a rule
+naming it; an answer refused and asked again, a tool call stopped, both
+recorded; tests run and decided by their code, from `validate --tests
+--local`. `agent_runtimes/tests/test_app_elements.py` covers `show` and
+`close` — a panel, a page, inline, what is refused, the terminal — and the
+`loop.element` events of the Session API, drawn again on a resume.
 
 **Not verified.** A Python application reached from a browser on a cloud
 runtime: the [Session API](./session-api) runs one in process in its tests

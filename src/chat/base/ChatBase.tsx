@@ -140,6 +140,7 @@ import {
 } from '../../components/inspector/chatInspect';
 import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 import { loopStepOf, withLoopStep } from './loopStep';
+import { applyLoopElement, loopElementChange } from './loopElement';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -3663,6 +3664,13 @@ function ChatBaseInner({
           const step = loopStepOf(event.activity);
           if (step) {
             setDisplayItems(prev => withLoopStep(prev, step));
+            break;
+          }
+          // An element its code opened in a side panel or on a page of its
+          // own, changed or closed (LOOP P-18): kept for whoever draws them.
+          const element = loopElementChange(event.activity);
+          if (element) {
+            applyLoopElement(element);
             break;
           }
           // An application's code changed a message it sent: its author

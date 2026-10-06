@@ -333,6 +333,11 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=classes)
             )
+        # A tool of its own, written in its code (LOOP P-06): decided by
+        # what it says it does, or by a rule that names it. After an MCP
+        # tool, so that no name of its own decides a server's tool.
+        if self.app.tool(tool_name) is not None:
+            return Enforced(tool_name, decision_for(self.app, tool_name))
         identities = self._catalogue_ids(tool_name)
         if identities:
             parts = tuple(

@@ -298,6 +298,16 @@ loop apps validate app.yaml --safety --local --judge anthropic:claude-haiku-4-5
 loop apps validate app.yaml --safety --cloud --app <id>  # on Datalayer, through the Evals engine
 ```
 
+An `app.py` whose code decides some of its tests (`@app.test`, see
+[Python applications](/loop/python-applications#code-where-plain-words-are-not-enough))
+runs them with `--tests`: listed alone, or run on this machine with
+`--local`, each case asked of the application in this process and decided by
+its function — no judge. A test that fails exits 1; one that could not run, 3.
+
+```bash
+loop apps validate app.py --tests --local
+```
+
 ```text
 app.yaml  Passes the instant checks
   Its tests decide whether it is ready.

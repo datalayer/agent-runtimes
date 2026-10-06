@@ -63,6 +63,7 @@ describe('the preset per kind', () => {
     expect(names(preset.plugins)).toEqual([
       '@datalayer/loop-plugin-agent-app-web-research',
       '@datalayer/loop-plugin-app-feedback-web-research',
+      '@datalayer/loop-plugin-app-elements',
     ]);
     expect(preset.workspace).toEqual({
       editors: false,

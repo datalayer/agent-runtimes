@@ -70,6 +70,7 @@ import { LoopEmbed, type LoopEmbedProps } from '../embed/LoopEmbed';
 import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
+import { AppElementsPlugin } from '../plugins/app-elements';
 import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
@@ -279,7 +280,8 @@ export type AppPreset = {
  *   but those of the UI plugins its organization turned off (`pluginsOff`),
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
  *   comment on each answer when its record keeps feedback (V-18); its
- *   commands in the composer's `/` menu and its modes beside it (P-19); what it
+ *   commands in the composer's `/` menu and its modes beside it (P-19); the
+ *   side panel and the pages its code opens (`app-elements`, P-18); what it
  *   keeps and for how long, under its prompt before the first message, when
  *   `kept` says it (R-31); with
  *   `sidebar`, its rules and approvals card, its activity feed and its
@@ -359,6 +361,9 @@ export function appPreset(
         : options.computer
           ? [defineAppComputerPlugin(app)]
           : []),
+      // What its code opens beside the conversation (LOOP P-18): a side
+      // panel, a page of its own; nothing drawn while nothing is open.
+      AppElementsPlugin,
     ],
     workspace: appLayoutOptions(app),
   };

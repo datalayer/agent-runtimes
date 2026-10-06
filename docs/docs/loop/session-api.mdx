@@ -251,6 +251,14 @@ refused (409), as is anything but `resume` on a stopped session.
   brings it back as that call and its result. A Button pressed on it sends its action
   the same way as a button of the page, `forwardedProps.loop.action` with
   the action's name and what it read, to the application's code.
+  An element its code opens beside the conversation (`session.show(...,
+  where="panel")` or `where="page"`, LOOP P-18) is a `CUSTOM` event named
+  `loop.element` — `{id, where, title, shows}`, `shows` the surface an
+  answer's components are drawn from, under `answer-<id>` — sent again
+  whole when it changes, and `{id, closed: true}` when its code closes it.
+  The `app-elements` plugin draws a panel on the workspace's trailing edge
+  and a page over it, each with its own Close; a resume sends again what is
+  open.
 
 ## Files
 

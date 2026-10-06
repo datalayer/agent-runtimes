@@ -51,6 +51,7 @@ import type {
   AppFormSchema,
   AppSpec,
   AppSurfaceSpec,
+  AppToolSpec,
   AppTriggerSpec,
 } from '../../types/agentspecs';
 import { BEHAVIOURS } from './rules';
@@ -263,6 +264,7 @@ const KNOWN_KEYS = [
   'model',
   'skills',
   'backend_tools',
+  'tools',
   'context',
   'contents',
   'connections',
@@ -286,6 +288,21 @@ const KNOWN_KEYS = [
   'avatar',
   'banner',
 ] as const;
+
+/** Where a check of its code runs (LOOP P-06). */
+const CHECK_STAGES = ['answer', 'tool_call'] as const;
+
+/** A tool of its own, written in its code (LOOP P-06); a wrong one is said by the checks. */
+function parseTool(data: Data): AppToolSpec {
+  return {
+    name: text(data.name),
+    description: text(data.description),
+    parameters: isData(data.parameters)
+      ? data.parameters
+      : { ...NO_HOST_PARAMETERS },
+    does: texts(data.does),
+  };
+}
 
 function parseConnection(data: Data): AppConnectionSpec {
   return {
@@ -574,6 +591,14 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   const verified = isData(tests.verified) ? tests.verified : {};
   const record = isData(data.record) ? data.record : {};
   const checks = isData(data.checks) ? data.checks : {};
+  // A check of its code runs on an answer or a tool call (LOOP P-06).
+  for (const check of records(checks.code)) {
+    if (!(CHECK_STAGES as readonly unknown[]).includes(check.on)) {
+      problems.push(
+        `The check \`${text(check.name)}\` of its code runs on answer or tool_call, not \`${String(check.on)}\`.`,
+      );
+    }
+  }
   const keepFor = text(record.keep_for, DEFAULT_KEEP_FOR);
   if (retentionDays(keepFor) === 0) {
     problems.push(
@@ -595,6 +620,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     model: text(data.model),
     skills: texts(data.skills),
     backendTools: texts(data.backend_tools),
+    tools: records(data.tools).map(parseTool),
     context: texts(data.context),
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
@@ -623,6 +649,8 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       cases: records(tests.cases).map(testCase => ({
         ask: text(testCase.ask),
         expect: text(testCase.expect),
+        // Decided by its code (LOOP P-06), when it names the function.
+        ...(text(testCase.code) ? { code: text(testCase.code) } : {}),
       })),
       verified: {
         live: texts(verified.live),
@@ -642,6 +670,11 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       guards: texts(checks.guards),
       gates: texts(checks.gates),
       track: text(checks.track),
+      code: records(checks.code).map(check => ({
+        name: text(check.name),
+        on: oneOf(check.on, CHECK_STAGES, 'answer'),
+        description: text(check.description),
+      })),
     },
     deployment: parseDeployment(isData(data.deployment) ? data.deployment : {}),
     goal: text(data.goal),
@@ -877,6 +910,19 @@ export function dumpAppspec(app: AppSpec): Data {
     .text('model', app.model)
     .list('skills', app.skills)
     .list('backend_tools', app.backendTools)
+    .list(
+      'tools',
+      (app.tools ?? []).map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        // No arguments is what it is unless said.
+        ...(JSON.stringify(tool.parameters) ===
+        JSON.stringify(NO_HOST_PARAMETERS)
+          ? {}
+          : { parameters: tool.parameters }),
+        does: tool.does,
+      })),
+    )
     .list('context', app.context)
     .list('contents', app.contents)
     .list(
@@ -928,6 +974,7 @@ export function dumpAppspec(app: AppSpec): Data {
           app.tests.cases.map(testCase => ({
             ask: testCase.ask,
             expect: testCase.expect,
+            ...(testCase.code ? { code: testCase.code } : {}),
           })),
         )
         .part(
@@ -950,7 +997,15 @@ export function dumpAppspec(app: AppSpec): Data {
       new Writer()
         .list('guards', app.checks.guards)
         .list('gates', app.checks.gates)
-        .text('track', app.checks.track).data,
+        .text('track', app.checks.track)
+        .list(
+          'code',
+          (app.checks.code ?? []).map(check => ({
+            name: check.name,
+            on: check.on,
+            description: check.description,
+          })),
+        ).data,
     )
     .part(
       'deployment',
