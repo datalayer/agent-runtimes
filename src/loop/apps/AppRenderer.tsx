@@ -177,6 +177,12 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    */
   sidebar?: boolean;
   /**
+   * Draw its computer alone beside its page (R-23): what a deployment's
+   * owner and the editors of its application see of it at its address — its
+   * runtime shows it to them only (decided 2026-10-06). Implied by `sidebar`.
+   */
+  computer?: boolean;
+  /**
    * Draw the application in a window (the `window-frame` plugin), its title
    * the application's face and name. A host's own `frameTitle` wins.
    */
@@ -261,7 +267,8 @@ export type AppPreset = {
  *   keeps and for how long, under its prompt before the first message, when
  *   `kept` says it (R-31); with
  *   `sidebar`, its rules and approvals card, its activity feed and its
- *   computer (R-01b, R-23);
+ *   computer (R-01b, R-23); with `computer`, its computer alone — at its
+ *   address, for its owner and the editors of its application;
  *   laid out as `interface.layout` says;
  * - a **decision**: the page its host draws (`page`), as the one view of a
  *   workspace without a conversation (R-02).
@@ -276,6 +283,8 @@ export function appPreset(
     pluginsOff?: readonly string[];
     /** Its rules and approvals, its activity and its computer, beside its page. */
     sidebar?: boolean;
+    /** Its computer alone beside its page (R-23): for its owner and editors at its address. */
+    computer?: boolean;
     /** What its record is kept under: its activity's. */
     appUid?: string;
     /**
@@ -325,7 +334,9 @@ export function appPreset(
             // Its computer, live (R-23).
             defineAppComputerPlugin(app),
           ]
-        : []),
+        : options.computer
+          ? [defineAppComputerPlugin(app)]
+          : []),
     ],
     workspace: appLayoutOptions(app),
   };
@@ -405,6 +416,7 @@ export function AppRenderer({
   onSaying,
   paused = false,
   sidebar = false,
+  computer = false,
   frame = false,
   page,
   pluginsOff,
@@ -432,6 +444,7 @@ export function AppRenderer({
           page,
           pluginsOff,
           sidebar,
+          computer,
           appUid: instance?.appUid,
           ...(deployed ? { kept: { visitor } } : {}),
         });
@@ -442,7 +455,7 @@ export function AppRenderer({
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [source, page, off, sidebar, instance?.appUid, deployed, visitor],
+    [source, page, off, sidebar, computer, instance?.appUid, deployed, visitor],
   );
   const allPlugins = useMemo(
     () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
@@ -495,7 +508,7 @@ export function AppRenderer({
           }
         : {})}
       // Its rules, activity and computer on a rail, one at a time (T-07).
-      sidebarRail={sidebar}
+      sidebarRail={sidebar || computer}
       teamPicker={false}
       showAgentVariants={false}
       graph={false}

@@ -2453,6 +2453,19 @@ async def create_agent(
                             deployment_uid=recorder.deployment_uid,
                         )
                     )
+                # What it learns (LOOP R-26): skills its conversations propose
+                # for its owner to review, and those approved, used — an
+                # application saved on Datalayer only.
+                if recorder.app_uid:
+                    from agent_runtimes.loop.apps.learning import AppLearningCapability
+
+                    capabilities.append(
+                        AppLearningCapability(
+                            app=running_app,
+                            app_uid=recorder.app_uid,
+                            deployment_uid=recorder.deployment_uid,
+                        )
+                    )
                 logger.info(
                     "Application %s on agent %s: its rules, checks and record attached.",
                     running_app.id,

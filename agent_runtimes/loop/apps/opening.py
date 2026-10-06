@@ -37,7 +37,9 @@ __all__ = [
     "SIGNED_OUT",
     "NotLetIn",
     "ensure_may_open",
+    "ensure_may_see_computer",
     "forget_openings",
+    "use_computer_asker",
     "use_opener",
 ]
 
@@ -81,9 +83,12 @@ _ANSWERS: Dict[Tuple[str, str], Tuple[Optional[NotLetIn], float]] = {}
 def forget_openings() -> None:
     """Forget every answer (a test)."""
     _ANSWERS.clear()
+    _COMPUTER_ANSWERS.clear()
 
 
-async def _ask_ai_agents(deployment_uid: str, bearer: str) -> Tuple[int, str]:
+async def _ask_ai_agents(
+    deployment_uid: str, bearer: str, route: str = "opens"
+) -> Tuple[int, str]:
     """What ai-agents answers the caller: its status, and its sentence when it refuses."""
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
@@ -94,7 +99,7 @@ async def _ask_ai_agents(deployment_uid: str, bearer: str) -> Tuple[int, str]:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/opens",
+                f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/{route}",
                 # A visitor is asked about as nobody: ai-agents does not take their token.
                 headers={
                     **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
@@ -178,3 +183,79 @@ async def ensure_may_open(deployment_uid: str, caller: Any, bearer: str) -> None
     if refusal.status != 503:
         _ANSWERS[key] = (refusal, time.monotonic() + REMEMBERED_SECONDS)
     raise refusal
+
+
+# ---------------------------------------------------------------------------
+# Who sees a deployment's computer (LOOP R-23, decided 2026-10-06)
+# ---------------------------------------------------------------------------
+
+#: (deployment uid, caller uid) -> (refusal or None, until).
+_COMPUTER_ANSWERS: Dict[Tuple[str, str], Tuple[Optional[NotLetIn], float]] = {}
+
+
+async def _ask_computer(deployment_uid: str, bearer: str) -> Tuple[int, str]:
+    return await _ask_ai_agents(deployment_uid, bearer, "computer")
+
+
+#: Who answers who sees a deployment's computer; replaced by a test.
+_computer_asker: Dict[str, Callable[[str, str], Awaitable[Tuple[int, str]]]] = {
+    "ask": _ask_computer
+}
+
+
+def use_computer_asker(
+    asker: Optional[Callable[[str, str], Awaitable[Tuple[int, str]]]],
+) -> None:
+    """Who answers who sees a deployment's computer: ai-agents, or a test; ``None`` for ai-agents."""
+    _computer_asker["ask"] = asker or _ask_computer
+    _COMPUTER_ANSWERS.clear()
+
+
+async def ensure_may_see_computer(
+    deployment_uid: str, caller: Any, bearer: str
+) -> None:
+    """
+    Show a deployment's computer to the caller, or refuse them.
+
+    Its owner and the editors of its application see it — ai-agents decides,
+    asked with the caller's own token (`GET /apps/deployments/{uid}/computer`)
+    — and nobody it acts for: an embed's visitor, a visitor nobody knows, a
+    person it lets talk to it. The machine itself is not asked about. An
+    answer is remembered for a minute, as an opening's is.
+
+    Raises
+    ------
+    NotLetIn
+        When the caller is not its owner or an editor, in ai-agents' sentence.
+    """
+    kind = getattr(caller, "kind", "")
+    if kind == "local":
+        return
+    if kind != "person":
+        raise NotLetIn(403, COMPUTER_NOT_SHOWN)
+    if not bearer:
+        raise NotLetIn(401, SIGNED_OUT)
+    key = (deployment_uid, str(getattr(caller, "uid", "") or bearer))
+    remembered = _COMPUTER_ANSWERS.get(key)
+    if remembered and remembered[1] > time.monotonic():
+        if remembered[0] is not None:
+            raise remembered[0]
+        return
+    status, detail = await _computer_asker["ask"](deployment_uid, bearer)
+    if status == 200:
+        _COMPUTER_ANSWERS[key] = (None, time.monotonic() + REMEMBERED_SECONDS)
+        return
+    refusal = NotLetIn(
+        status if status in (401, 403, 404) else 503,
+        detail or f"ai-agents did not say who sees its computer ({status}).",
+    )
+    if refusal.status != 503:
+        _COMPUTER_ANSWERS[key] = (refusal, time.monotonic() + REMEMBERED_SECONDS)
+    raise refusal
+
+
+#: Said to whoever a deployment's computer is not shown to, as ai-agents says it.
+COMPUTER_NOT_SHOWN = (
+    "Its computer is shown to its owner and the editors of its application, "
+    "not to the people it acts for."
+)

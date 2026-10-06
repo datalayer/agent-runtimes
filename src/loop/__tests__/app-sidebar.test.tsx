@@ -128,6 +128,16 @@ describe('the preset, asked for the sidebar', () => {
     expect(slots).toEqual(['app-rules', 'app-activity']);
   });
 
+  it('mounts its computer alone when asked for it alone (R-23: its owner and editors at its address)', () => {
+    const mounted = names(appPreset(app(), { computer: true }).plugins);
+    expect(mounted).toContain(
+      '@datalayer/loop-plugin-app-computer-web-research',
+    );
+    expect(mounted.some(name => /app-rules|app-activity/.test(name))).toBe(
+      false,
+    );
+  });
+
   it('mounts neither unless asked', () => {
     expect(
       names(appPreset(app()).plugins).some(name =>

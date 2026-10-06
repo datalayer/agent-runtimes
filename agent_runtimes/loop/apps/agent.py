@@ -77,8 +77,9 @@ def app_capabilities(
     list
         Its rules first, then its checks — a call the rules refuse is not
         checked, and a Guard reads what the rules decided — then its record,
-        the tool that searches its documents when it names some, and the
-        tool that saves a result when a Space is granted to write.
+        the tool that searches its documents when it names some, the
+        tool that saves a result when a Space is granted to write, and what
+        it learns when it is saved on Datalayer (R-26).
     """
     rules = rules_for(app, agent_id=agent_id, registry=registry)
     rules.record = recorder.decided
@@ -129,6 +130,18 @@ def app_capabilities(
                 # Who it acts for: who opened the session, or nobody (I-10).
                 person=recorder.opener,
                 woken=recorder.woken,
+            )
+        )
+    # What it learns (LOOP R-26): skills proposed for its owner to review,
+    # and those approved, used — an application saved on Datalayer only.
+    if recorder.app_uid:
+        from agent_runtimes.loop.apps.learning import AppLearningCapability
+
+        capabilities.append(
+            AppLearningCapability(
+                app=app,
+                app_uid=recorder.app_uid,
+                deployment_uid=recorder.deployment_uid,
             )
         )
     return capabilities

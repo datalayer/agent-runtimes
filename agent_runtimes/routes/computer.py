@@ -15,9 +15,12 @@ made for an application:
 - ``POST …/run``: code the person who took it over runs on it;
 - ``POST …/hand-back``: back to its agent, whose calls go on.
 
-Shown only to whoever talks to it in a Preview — the person who opened a
-session on the agent, or the machine itself. A deployment's computer is
-shared by everyone who opens it, and is shown to nobody yet.
+A Preview's computer is shown to whoever talks to it — the person who
+opened a session on the agent — or the machine itself. A deployment's,
+shared by everyone who opens it, is shown to its owner and the editors of
+its application only, never to the people it acts for (decided 2026-10-06):
+ai-agents decides, asked with the caller's own token
+(`opening.ensure_may_see_computer`).
 """
 
 from __future__ import annotations
@@ -68,12 +71,22 @@ async def _computer(agent: str, request: Request) -> Tuple[AppSpec, Caller]:
     except sessions.SessionRefused as refused:
         raise HTTPException(status_code=refused.status, detail=refused.reason) from None
     caller = (await _authorize(request, False, app)).caller
-    if deployment_of(instance):
-        raise HTTPException(
-            status_code=403,
-            detail=f"The computer of a deployment of {app.name} is shown to nobody: "
-            "everyone who opens it shares it.",
-        )
+    deployment = deployment_of(instance)
+    if deployment:
+        from agent_runtimes.loop.apps.callers import bearer_of
+        from agent_runtimes.loop.apps.opening import NotLetIn, ensure_may_see_computer
+
+        try:
+            await ensure_may_see_computer(
+                deployment,
+                caller,
+                bearer_of(request.headers.get("authorization")) or "",
+            )
+        except NotLetIn as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
+        return app, caller
     if caller.kind == "local":
         return app, caller
     talks = caller.kind == "person" and any(

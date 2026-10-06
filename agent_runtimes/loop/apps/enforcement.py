@@ -22,6 +22,8 @@ What a call is, before it is decided:
 - the tools of its files (`list_computer_files`…), which read or write;
 - a few tools of the runtime itself that only look (`search_tools`,
   `load_skill`…), which are reading;
+- proposing a skill and reading the approved ones (`propose_skill`,
+  `use_learned_skill`, LOOP R-26), which its owner decides, and are reading;
 - the tools that compose an output besides words (`write_notebook`), which
   touch nothing outside the run and are reading too — offered only in a run
   whose caller accepts their format (`agent_runtimes.output.formats`).

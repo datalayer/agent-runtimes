@@ -113,6 +113,11 @@ def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
     # The tool that saves a result writes (LOOP R-24), and is always asked.
     if saves(app):
         extra.update({name: list(classes) for name, classes in SAVING_CLASSES.items()})
+    # Proposing a skill and reading the approved ones act on nothing outside
+    # the platform: its owner decides (LOOP R-26).
+    from agent_runtimes.loop.apps.learning import LEARNING_CLASSES
+
+    extra.update({name: list(classes) for name, classes in LEARNING_CLASSES.items()})
     return AppRulesCapability(app=app, agent_id=agent_id, extra_classes=extra)
 
 

@@ -212,8 +212,17 @@ It reads the runtime its agent runs on (`sandbox.agentBaseUrl`, else
 A path that leaves its working directory — absolute, or with `..` — is
 refused. It is shown to whoever talks to it in a Preview: the person who
 opened a session on the agent, or the machine itself. A deployment's computer
-is shared by everyone who opens it and is shown to nobody (403); an
-application with no part on has nothing to show (409).
+is shared by everyone who opens it, and is shown to its owner and the editors
+of its application only — never to the people it acts for: the runtime asks
+ai-agents (`GET /api/ai-agents/v1/apps/deployments/{uid}/computer`, with the
+caller's own token; Spacer's `write` on the application's item makes an
+editor), remembers the answer for a minute, and refuses anybody else in
+ai-agents' sentence (403). An application with no part on has nothing to show
+(409).
+
+A host draws the card alone beside the page with `computer` (no rules card,
+no activity): the landing's address of a deployment passes it for its owner,
+and for an editor once ai-agents said they are one.
 
 ## The layouts
 
@@ -338,6 +347,31 @@ application and the person it acted for (`authorship`):
 
 On a deployment the page's creator is the application's principal; in a
 Preview, the person.
+
+## What it learns
+
+An application saved on Datalayer is given two more tools on the runtime
+(LOOP R-26, `agent_runtimes.loop.apps.learning`):
+
+- `propose_skill(name, description, instructions)` — what a conversation
+  worked out, written so that it can be done again: a name in lower-case
+  words joined by dashes, a line saying when it serves, and its instructions
+  in markdown. It is sent to ai-agents
+  (`POST /api/ai-agents/v1/apps/skills/proposals`) with the token of the run —
+  a deployment's application principal, to its owner's queue; a Preview's
+  person, to their own — and waits there. Proposing changes nothing.
+- `use_learned_skill(name?)` — the skills its owner **approved**, listed, or
+  one read in full to follow it. They are read from ai-agents on every call
+  (`POST …/apps/skills/approved`), so a skill declined stops being used at
+  once, and a skill nobody reviewed is never loaded.
+
+Its owner reviews the queue on the application's page in the Studio
+(*What it learns*): each proposal read in full, **Approve** or **Decline**;
+an approved one declined again with **Stop using it**
+(`GET …/apps/skills?app_uid=`, `POST …/apps/skills/{uid}/decision`). Neither
+tool acts outside the platform, so both are reading to its rules. A visitor
+without an account proposes nothing (R-30), and an application run from its
+file learns nothing.
 
 ## With nobody present
 

@@ -8,7 +8,8 @@ gate the tools its agent is given where its connections' are (U-15): a part
 off is never shown to the model. The tools of its files run on its sandbox,
 inside its working directory. A person takes it over — its agent's calls to
 it wait — runs code on it, and hands it back. The routes show it to whoever
-talks to it in a Preview, and to nobody for a deployment.
+talks to it in a Preview; a deployment's to its owner and the editors of
+its application only, as ai-agents answers (decided 2026-10-06).
 """
 
 import asyncio
@@ -312,13 +313,69 @@ def test_it_is_shown_only_to_whoever_talks_to_it(held: None) -> None:
         assert remote.post(f"{BASE}/hand-back", headers=ada).status_code == 200
 
 
-def test_a_deployments_computer_is_shown_to_nobody_and_none_is_none(
+def test_a_deployments_computer_is_shown_to_its_owner_and_editors_only(
     held: None,
 ) -> None:
+    from agent_runtimes.loop.apps import opening
+
+    asked: List[tuple] = []
+
+    async def ai_agents(deployment_uid: str, bearer: str) -> tuple:
+        asked.append((deployment_uid, bearer))
+        if bearer in ("ada", "eve"):
+            return 200, ""
+        return 403, opening.COMPUTER_NOT_SHOWN
+
+    opening.use_computer_asker(ai_agents)
+    shared = "/api/v1/apps/agents/shared-desk/computer"
+    try:
+        with _client("10.0.0.4") as remote:
+            # Its owner (ada) and an editor (eve), without a session on it.
+            assert (
+                remote.get(shared, headers={"Authorization": "Bearer ada"}).status_code
+                == 200
+            )
+            assert (
+                remote.get(shared, headers={"Authorization": "Bearer eve"}).status_code
+                == 200
+            )
+            # Somebody it acts for, even talking to it, is refused in ai-agents' words.
+            sessions._SESSIONS["s-3"] = Talking("shared-desk", "bob")  # type: ignore[assignment]
+            refused = remote.get(shared, headers={"Authorization": "Bearer bob"})
+            assert refused.status_code == 403
+            assert refused.json()["detail"] == opening.COMPUTER_NOT_SHOWN
+            # Remembered for a minute: asked once per caller.
+            remote.get(shared, headers={"Authorization": "Bearer ada"})
+            assert asked == [("dep-1", "ada"), ("dep-1", "eve"), ("dep-1", "bob")]
+        with _client("127.0.0.1") as local:
+            # The machine itself is not asked about.
+            assert local.get(shared).status_code == 200
+    finally:
+        opening.use_computer_asker(None)
+
+
+def test_an_embeds_visitor_never_sees_a_deployments_computer() -> None:
+    from agent_runtimes.loop.apps import opening
+    from agent_runtimes.loop.apps.callers import Caller
+
+    async def never(deployment_uid: str, bearer: str) -> tuple:
+        raise AssertionError("an embed is not asked about")
+
+    opening.use_computer_asker(never)
+    try:
+        for caller in (
+            Caller(kind="embed", uid="ada", app_uid="app-1"),
+            Caller(kind="visitor"),
+        ):
+            with pytest.raises(opening.NotLetIn) as refused:
+                asyncio.run(opening.ensure_may_see_computer("dep-1", caller, "token"))
+            assert refused.value.status == 403
+    finally:
+        opening.use_computer_asker(None)
+
+
+def test_none_is_none(held: None) -> None:
     with _client("127.0.0.1") as local:
-        shared = local.get("/api/v1/apps/agents/shared-desk/computer")
-        assert shared.status_code == 403
-        assert "everyone who opens it shares it" in shared.json()["detail"]
         bare = "/api/v1/apps/agents/bare-desk/computer"
         assert local.get(bare).json()["parts"] == {
             "browse": False,
