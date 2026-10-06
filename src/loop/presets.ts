@@ -55,7 +55,7 @@ import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
-import type { ThemeOverrides } from '../types/chat';
+import type { ChatThread, ThemeOverrides } from '../types/chat';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -188,6 +188,8 @@ export type LoopPresetOptions = {
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
+  /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
+  thread?: ChatThread;
   /**
    * The agentspec the local agent is created from, by id.
    *
@@ -304,6 +306,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     colorMode,
     presence,
     showTokenUsage,
+    thread,
     floatingPrompt = false,
     editorSelector = false,
     editors = true,
@@ -352,6 +355,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       colorMode,
       presence,
       showTokenUsage,
+      ...(thread ? { thread } : {}),
     }),
     // The composer and the title bar are plugins of their own: the chat
     // assembles their props, these render them. In the preset by default —

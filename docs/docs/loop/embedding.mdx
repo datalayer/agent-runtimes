@@ -97,9 +97,10 @@ The element looks in three places and uses the first one it finds:
 | `server`  | An agent-runtimes server that runs the application's agent. By default, a Datalayer runtime.    |
 | `api`     | Datalayer's API, where an application is read with its token. By default, the platform's.       |
 | `height`  | The height of an inline application in pixels. 640 by default; never less than 240.             |
+| `resume`  | `true` or `false`: pick the visit's conversation up again after a reload. `true` by default.     |
 
 The element reads its attributes again when they change. A new `mode`,
-`accent`, `theme`, `font` or `height` redraws the application. A new `token`
+`accent`, `theme`, `font`, `height` or `resume` redraws the application. A new `token`
 is handed to a framed run page, which keeps what the person has entered.
 Setting the element's `token` property sets the attribute.
 
@@ -201,6 +202,38 @@ when the token lapses. The host then sets a new one.
 - Allowed origins per deployment (`deployment.embedded.origins`) are not yet
   enforced on the server (LOOP D-12).
 
+## After a reload
+
+On your own agent-runtimes server (`server`) with an embed token, a
+visitor's conversation survives a page reload. The element keeps the
+session it opened in your page's `localStorage`, under
+`datalayer-app:session:<application id>:<visit>`: the visit is the one the
+token names. It keeps the session's uid only, never the conversation.
+
+After a reload, your server issues the page a token **for the same visit**
+(the `visit` you pass to `POST …/apps/<id>/embed-token`). The element asks
+the server for that session's conversation
+(`GET <server>/api/v1/apps/sessions/<uid>/messages`, see
+[the session API](./session-api.mdx#reading-a-conversation-again)), draws
+it again and continues it. A new token for the same visit (`token-expired`,
+then a new `token`) redraws the application on the same session.
+
+A session can be gone or refused. The runtime may have let it go (it is
+not resumed from its record), it may have restarted, or the token may name
+another visit. In that case the element forgets the stored uid, starts a new
+conversation and says so once above it: *Your earlier conversation with
+&lt;name&gt; has ended, so this is a new one.*
+
+To keep nothing in the page's storage, write `resume="false"`, or pass
+`resume={false}` to `AppEmbed`. The session then lasts only as long as the
+page: a renewed token keeps it, and a reload starts a new one. Without
+storage (blocked, or in a private window), the element behaves the same way.
+Nothing is kept for an application on a Datalayer runtime, or without a
+token.
+
+The conversation comes back as words: what was said and answered. A page
+that an answer drew is not drawn again until the next answer.
+
 ## In React
 
 ```tsx
@@ -213,6 +246,8 @@ import { AppEmbed } from '@datalayer/agent-runtimes/lib/loop';
   colorMode="auto"
   font="Georgia, serif"
   serverUrl="http://localhost:8765" // a Datalayer runtime when unset
+  embedToken={token} // the visit's, on serverUrl
+  resume={false} // keep nothing in the page's storage (on by default)
   plugins={[OwlCharacterPlugin]} // characters beside Datalayer's four
 />;
 ```
@@ -360,7 +395,18 @@ Serve both files from a Datalayer origin at `/embed/`.
 ## What is tested, and what is not
 
 Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
-`embed-element.test.tsx`):
+`embed-element.test.tsx`, `embed-session.test.tsx`,
+`src/chat/base/__tests__/chatThread.test.tsx`):
+
+- after a reload: the visit read from the token, the session kept under a
+  namespaced key (in storage, or in memory only with `resume="false"` or
+  without storage), asked for again on the host's server with the token,
+  its conversation handed to the chat and drawn, the next message sent on
+  its thread with it, the runtime's agent-wide snapshot never drawn over it;
+  a session that is gone or refused forgotten, a new one started, and said
+  once; a renewed token asking again. The runtime's side
+  (`test_app_embed_sessions.py`): a visit reads its session's conversation,
+  another visit and a session the runtime let go get a 404;
 
 - the modes and the chat each one floats in;
 - `AppFloating` as the character alone, on the visitors' runtime too;
@@ -387,6 +433,7 @@ Tested (vitest, `src/loop/__tests__/embed-config.test.ts`,
 
 Not done yet:
 
+- A reload has not been tried in a browser against a running server.
 - The script bundle has not been built.
 - The element has not been seen in a browser.
 - `@scope`, which scopes the theme's stylesheet, needs a recent browser. Where

@@ -831,6 +831,16 @@ async def get_session(uid: str, request: Request) -> Dict[str, Any]:
     return dict(live.describe())
 
 
+@router.get("/sessions/{uid}/messages")
+async def session_thread(uid: str, request: Request) -> Dict[str, Any]:
+    """What a session's conversation holds, as AG-UI messages: what a page
+    that reloaded draws again, for the caller that opened it — an embed's
+    visit, with a token renewed for it (LOOP D-13). A session this runtime
+    no longer holds, or somebody else's, is a 404."""
+    live, _ = await _held(uid, request)
+    return {"uid": live.uid, "messages": live.thread()}
+
+
 @router.post("/sessions/{uid}/messages")
 async def session_message(
     uid: str, body: SessionMessageRequest, request: Request

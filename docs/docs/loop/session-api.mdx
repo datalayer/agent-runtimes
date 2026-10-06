@@ -171,6 +171,7 @@ as `GET` says it — then the turn's events.
 | `POST /sessions/{uid}/end` | **End**: what runs is cancelled, a Python application's `end` runs, and the runtime no longer holds the session. Answers the session, `ended`, as JSON. Its record stays. |
 | `POST /sessions/logout` | **Sign out**: each of the caller's sessions here runs a Python application's `logout`, then ends. Answers `{ended: [uid, …]}`. |
 | `GET /sessions/{uid}` | What the session is. |
+| `GET /sessions/{uid}/messages` | **Its conversation**, as AG-UI messages: `{uid, messages}`. What a page that reloaded draws again. |
 | `GET /sessions` | The caller's sessions on this runtime (`?agent=`). |
 | `POST /agents/{agent}/ag-ui/` | The application's agent over **AG-UI**, each thread a session, opened at its first run. |
 
@@ -284,6 +285,22 @@ A session the runtime no longer holds — it restarted — is resumed from its
 become the conversation, and the record says *A session of … resumed* under
 the same uid. An application whose record keeps no conversations cannot be
 resumed so, and says it.
+
+## Reading a conversation again
+
+`GET /sessions/{uid}/messages` answers what an open session's conversation
+holds, as AG-UI messages, the way a `MESSAGES_SNAPSHOT` says them:
+`{"uid": "…", "messages": [{"id", "role", "content", …}]}`. It answers only
+the caller that opened the session. For an embed, that is its visit, with a
+token renewed for the same visit. Like every other route, it answers
+`404` for a session the runtime no longer holds or that belongs to someone
+else. Unlike resume, it changes nothing: the session stays open, and the
+next AG-UI run on its thread carries on from it.
+
+This is what an embedded application uses after its page reloads (LOOP D-13,
+[Embedding](./embedding.mdx#after-a-reload)): the element keeps the
+session's uid in the page's storage, reads the conversation with the visit's
+token, and the chat draws it again and continues the thread.
 
 ## End and sign out
 

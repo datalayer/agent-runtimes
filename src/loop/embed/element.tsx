@@ -38,6 +38,13 @@
  * when it called a function of the page, beside `decision` and
  * `token-expired`.
  *
+ * On the host's server (`server`) with the visit's embed token, the
+ * session the application opens is kept in the page's `localStorage`, under
+ * the application and the visit its token names, and picked up again after
+ * the page reloads — its conversation drawn again (LOOP D-13); a token
+ * renewed for the visit redraws the application on the same session.
+ * `resume="false"` keeps nothing in the page's storage.
+ *
  * @module loop/embed/element
  */
 
@@ -57,6 +64,7 @@ import {
   EmbedAttributeError,
   embedLookOf,
   inlineHeightOf,
+  resumeOf,
   type EmbedAttribute,
   type EmbedInputs,
   type EmbedLook,
@@ -330,7 +338,9 @@ export function defineDatalayerAppElement(
         return;
       }
       // How it looks is drawn again; what it is, read again.
-      if (['mode', 'accent', 'theme', 'font', 'height'].includes(name)) {
+      if (
+        ['mode', 'accent', 'theme', 'font', 'height', 'resume'].includes(name)
+      ) {
         this.draw();
         return;
       }
@@ -493,8 +503,10 @@ export function defineDatalayerAppElement(
         return;
       }
       let look: EmbedLook;
+      let resume: boolean;
       try {
         look = embedLookOf(this.inputs(), source.app);
+        resume = resumeOf(this.getAttribute('resume'));
       } catch (error) {
         this.say((error as Error).message);
         return;
@@ -534,6 +546,9 @@ export function defineDatalayerAppElement(
             height={inlineHeightOf(this.getAttribute('height'))}
             ownPortal
             host={this.host}
+            // The visit's session kept in the page's storage, and picked
+            // up again after a reload, unless the host says not (D-13).
+            resume={resume}
           />
         </StyleSheetManager>,
       );

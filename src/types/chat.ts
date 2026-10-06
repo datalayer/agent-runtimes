@@ -853,6 +853,22 @@ export type ThemeOverrides = {
   dark?: Record<string, string>;
 };
 
+/**
+ * A conversation the chat goes on with (LOOP D-13): an embedded
+ * application's session, reattached after its page reloaded.
+ */
+export type ChatThread = {
+  /** Its id, AG-UI's `threadId`: the session's uid. */
+  id: string;
+  /** What it holds already; none for a new one. */
+  messages: ChatMessage[];
+  /**
+   * Told the thread a message is first sent on — this one, or a new one
+   * after the header's + — so that its host keeps it. A stable function.
+   */
+  onStarted?: (threadId: string) => void;
+};
+
 export interface ChatBaseProps {
   /**
    * Hands an imperative send function to the host, once the chat is able to
@@ -1513,6 +1529,14 @@ export interface ChatBaseProps {
     userId?: string;
     accessToken?: string;
   }>;
+
+  /**
+   * The conversation to go on with (LOOP D-13): its AG-UI thread — an
+   * application's session — and what it holds, drawn in place of the
+   * runtime's history, which is its agent's and not one session's. Read
+   * when the chat mounts; a new thread (the header's +) is the chat's own.
+   */
+  thread?: ChatThread;
 
   /**
    * Runtime ID for conversation persistence.

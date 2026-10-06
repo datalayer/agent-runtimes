@@ -345,8 +345,15 @@ export {
   embedAssistantCharacter,
   type AppEmbedProps,
   type AppFloatingProps,
+  type EmbedSession,
+  useEmbedSession,
   useHostBridge,
 } from './embed/AppEmbed';
+export {
+  EMBED_SESSION_KEY_PREFIX,
+  embedSessionKey,
+  visitOfToken,
+} from './embed/embedSession';
 // The host page and an embedded application, talking (LOOP D-10).
 export {
   HOST_CONTEXT_TOOL,
@@ -371,6 +378,7 @@ export {
   embedLookOf,
   embedSnippetOf,
   floatingViewOf,
+  resumeOf,
   type EmbedLook,
   type EmbedSnippetOptions,
 } from './embed/embedConfig';

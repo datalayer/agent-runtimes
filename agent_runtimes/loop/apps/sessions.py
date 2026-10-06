@@ -521,6 +521,14 @@ class LiveSession:
             "resumed": self.resumed,
         }
 
+    def thread(self) -> List[Dict[str, Any]]:
+        """Its conversation as AG-UI messages, as a snapshot says it: what a
+        page reloaded draws again (LOOP D-13)."""
+        return [
+            message.model_dump(mode="json", by_alias=True, exclude_none=True)
+            for message in _snapshot(self.messages)
+        ]
+
     def answers_to(self, caller: Caller) -> bool:
         """Whether a caller may drive this session: who opened it, or the machine itself."""
         if caller.kind == "local":

@@ -135,6 +135,8 @@ export function LoopEmbed({
       preset.presence?.welcome,
       preset.presence?.paused,
       preset.showTokenUsage,
+      // The thread a reloaded embed goes on with, by its id (D-13).
+      preset.thread?.id,
       // By its content: an application's spec written inline is a new object each render.
       JSON.stringify(preset.datalayerCreatePayload ?? null),
       JSON.stringify(preset.datalayerVisitors ?? null),

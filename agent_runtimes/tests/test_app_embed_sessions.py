@@ -258,3 +258,31 @@ def test_the_page_an_embed_is_on_is_said_to_ai_agents(
         {"X-Datalayer-Embed-Origin": "https://host.example"},
         {"X-Datalayer-Embed-Origin": "https://other.example"},
     ]
+
+
+def test_a_visit_reads_its_thread_again_after_a_reload(
+    runtime: Runtime, remote: TestClient, embedded: Any
+) -> None:
+    """The page reloaded asks for its session's conversation with a token
+    renewed for the same visit, and draws it again (LOOP D-13); another
+    visit, or a session the runtime let go, is told nothing is there."""
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    events_of(start(remote, "embed:visit-a", "session-visa"))
+    thread = remote.get(
+        "/api/v1/apps/sessions/session-visa/messages", headers=as_("embed:visit-a")
+    )
+    assert thread.status_code == 200, thread.text
+    body = thread.json()
+    assert body["uid"] == "session-visa"
+    roles = [message["role"] for message in body["messages"]]
+    assert roles[0] == "user" and "assistant" in roles
+    assert body["messages"][0]["content"].startswith("Hello")
+    assert all(message["id"] for message in body["messages"])
+    other = remote.get(
+        "/api/v1/apps/sessions/session-visa/messages", headers=as_("embed:visit-b")
+    )
+    assert other.status_code == 404
+    gone = remote.get(
+        "/api/v1/apps/sessions/session-gone/messages", headers=as_("embed:visit-a")
+    )
+    assert gone.status_code == 404

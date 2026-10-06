@@ -906,6 +906,7 @@ function ChatBaseInner({
   connectedIdentities,
   // Conversation persistence
   runtimeId,
+  thread,
   historyEndpoint,
   historyAuthToken: _historyAuthToken,
   // Pending prompt
@@ -2235,7 +2236,22 @@ function ChatBaseInner({
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
-  const threadIdRef = useRef<string>(generateMessageId());
+  const threadIdRef = useRef<string>(thread?.id || generateMessageId());
+  /*
+   * The thread a host gave, kept as it was given at mount (LOOP D-13), and
+   * told when a message is first sent on a thread: the host keeps it.
+   */
+  const threadGivenRef = useRef(thread);
+  const threadStartedRef = useRef<string | null>(
+    thread?.messages.length ? thread.id : null,
+  );
+  const noteThreadStarted = useCallback(() => {
+    const id = threadIdRef.current;
+    if (threadStartedRef.current !== id) {
+      threadStartedRef.current = id;
+      threadGivenRef.current?.onStarted?.(id);
+    }
+  }, []);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -2940,6 +2956,8 @@ function ChatBaseInner({
   // Set when the next load must come from a fresh snapshot, not the one in
   // the store: what the store holds is the transcript before the change.
   const freshSnapshotRef = useRef(false);
+  // The given thread drawn, by its id: once.
+  const threadSeededRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (historyScopeId !== prevHistoryScopeRef.current) {
@@ -2953,6 +2971,25 @@ function ChatBaseInner({
     }
 
     if (!historyScopeId) return;
+
+    /*
+     * A thread the host gave (LOOP D-13): its session's conversation, drawn
+     * once, and never replaced by the runtime's snapshot, which is its
+     * agent's — every session's — not this one's.
+     */
+    const given = threadGivenRef.current;
+    if (given) {
+      if (threadSeededRef.current !== given.id) {
+        threadSeededRef.current = given.id;
+        useConversationStore
+          .getState()
+          .setMessages(historyScopeId, given.messages);
+        setDisplayItems(convertHistoryToDisplayItems(given.messages));
+        useConversationStore.getState().markFetched(historyScopeId);
+        setHistoryLoaded(true);
+      }
+      return;
+    }
 
     if (historyVersion !== historyVersionRef.current) {
       historyVersionRef.current = historyVersion;
@@ -4037,6 +4074,8 @@ function ChatBaseInner({
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 
+          // The thread is opened by this run: its host keeps it (D-13).
+          noteThreadStarted();
           await adapterRef.current.sendMessage(userMessage, {
             threadId: threadIdRef.current,
             messages: allMessages,
@@ -4085,6 +4124,7 @@ function ChatBaseInner({
       enableStreaming,
       getEnabledMcpToolNames,
       getEnabledSkillIds,
+      noteThreadStarted,
     ],
   );
 

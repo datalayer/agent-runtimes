@@ -52,6 +52,8 @@ export const EMBED_ATTRIBUTES = {
     'An agent-runtimes server the application’s agent runs on; a Datalayer runtime by default.',
   api: 'Datalayer’s API, where an application is read with its token; the platform’s by default.',
   height: 'The height of an inline application, in pixels; 640 by default.',
+  resume:
+    'true or false: whether a visit’s conversation is picked up again after the page reloads, kept in the page’s storage; true by default.',
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
@@ -196,6 +198,17 @@ export function embedLookOf(
   const font = checkedFont(attributes.font) || checkedFont(variables.font);
   const variant = app?.interface?.theme?.variant ?? 'loop';
   return { mode, accent, colorMode, font, variant };
+}
+
+/**
+ * Whether a visit's conversation is picked up again after a reload (LOOP
+ * D-13): on unless the host writes `resume="false"`. Anything else is
+ * refused in a sentence.
+ */
+export function resumeOf(value: string | null | undefined): boolean {
+  return (
+    oneOf(value, ['true', 'false'] as const, 'a value of resume') !== 'false'
+  );
 }
 
 /** The height of an inline application, in pixels. */

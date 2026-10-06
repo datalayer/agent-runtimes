@@ -33,6 +33,10 @@
  * host may override with the face and the mode (D-11) — around the
  * conversation and inside it, where the chat sets its theme again.
  *
+ * On the host's server with the visit's embed token, its session is kept
+ * in the host's storage and picked up again after the page reloads (D-13,
+ * `useEmbedSession`): its conversation drawn again, and gone on with.
+ *
  * @module loop/embed/AppEmbed
  */
 
@@ -59,7 +63,8 @@ import type {
   AppSpec,
   AppThemeVariant,
 } from '../../types/agentspecs';
-import type { ThemeOverrides } from '../../types/chat';
+import type { ChatThread, ThemeOverrides } from '../../types/chat';
+import { generateMessageId } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import { ChatFloating } from '../../chat/ChatFloating';
@@ -80,6 +85,13 @@ import { floatingViewOf, type EmbedColorMode } from './embedConfig';
 import { createChatExtrasPlugin } from '../plugins/chat-extras';
 import { hostFrontendTools, type AppEmbedHost } from './hostBridge';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
+import {
+  embedSessionKey,
+  reattachSession,
+  sessionGoneSentence,
+  sessionKeeper,
+  visitOfToken,
+} from './embedSession';
 
 export type AppEmbedProps = {
   /** The application. */
@@ -130,7 +142,119 @@ export type AppEmbedProps = {
    * gives under `deployment.embedded.host`.
    */
   host?: AppEmbedHost;
+  /**
+   * Keep the visit's session in the host's storage, and pick it up again
+   * after the page reloads (LOOP D-13); on by default. Off, the session
+   * lasts as long as the page.
+   */
+  resume?: boolean;
 };
+
+/** What `useEmbedSession` gives the conversation. */
+export type EmbedSession = {
+  /** Whether the kept session was asked for: nothing is drawn before. */
+  ready: boolean;
+  /** The thread the chat goes on with; none where no session is kept. */
+  thread?: ChatThread;
+  /** Said once, when the session kept is gone: a new one started. */
+  said?: string;
+};
+
+/**
+ * The visit's session, kept and picked up again (LOOP D-13): on the host's
+ * server with an embed token that names its visit, the session the chat
+ * opens is kept under the application and the visit — in the host's
+ * storage unless `resume` is off, in memory always — and, when the
+ * application is drawn again (the page reloaded, or a token renewed for the
+ * visit), its conversation is asked for and drawn again. One that is gone
+ * or refused is forgotten, said once, and a new one starts. Elsewhere —
+ * on a Datalayer runtime, without a token — nothing is kept.
+ */
+export function useEmbedSession({
+  app,
+  serverUrl,
+  embedToken,
+  resume = true,
+}: {
+  app: Pick<AppSpec, 'id' | 'name'>;
+  serverUrl?: string;
+  embedToken?: string;
+  resume?: boolean;
+}): EmbedSession {
+  const visit = serverUrl && embedToken ? visitOfToken(embedToken) : undefined;
+  const key = visit ? embedSessionKey(app.id, visit) : undefined;
+  const keeper = useMemo(() => sessionKeeper({ persist: resume }), [resume]);
+  // What was found, for the token it was found with: a renewed token asks again.
+  const [found, setFound] = useState<{
+    token: string;
+    thread: ChatThread;
+    said?: string;
+  }>();
+  useEffect(() => {
+    if (!key || !serverUrl || !embedToken) {
+      return undefined;
+    }
+    let cancelled = false;
+    const onStarted = (uid: string) => {
+      keeper.keep(key, uid);
+      setFound(before =>
+        before?.said ? { ...before, said: undefined } : before,
+      );
+    };
+    const fresh = (said?: string) =>
+      setFound({
+        token: embedToken,
+        thread: { id: generateMessageId(), messages: [], onStarted },
+        ...(said ? { said } : {}),
+      });
+    const kept = keeper.read(key);
+    if (!kept) {
+      fresh();
+      return undefined;
+    }
+    void reattachSession({ serverUrl, uid: kept, token: embedToken }).then(
+      reattached => {
+        if (cancelled) {
+          return;
+        }
+        if (reattached.kind === 'resumed') {
+          setFound({
+            token: embedToken,
+            thread: { id: kept, messages: reattached.messages, onStarted },
+          });
+          return;
+        }
+        keeper.forget(key);
+        fresh(sessionGoneSentence(app.name));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+    // The application's name is only said.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, serverUrl, embedToken, keeper]);
+  if (!key) {
+    return { ready: true };
+  }
+  if (!found || found.token !== embedToken) {
+    return { ready: false };
+  }
+  return {
+    ready: true,
+    thread: found.thread,
+    ...(found.said ? { said: found.said } : {}),
+  };
+}
+
+/** What the embed says once of its session, above the conversation. */
+function SessionSaid({ said }: { said?: string }): JSX.Element | null {
+  return said ? (
+    <Text as="p" role="status" sx={{ px: 3, py: 2, m: 0, fontSize: 1 }}>
+      {said}
+    </Text>
+  ) : null;
+}
 
 /** No plugins for the renderer: one array, so that it never reads as a change. */
 const NO_HOST_PLUGINS: PluginRef[] = [];
@@ -248,6 +372,8 @@ export type AppFloatingProps = {
   >;
   /** What the page gives the application (D-10). */
   host?: AppEmbedHost;
+  /** The visit's session, picked up again after a reload (D-13). */
+  session?: EmbedSession;
 };
 
 /**
@@ -271,6 +397,7 @@ export function AppFloating({
   embedToken,
   renderer,
   host,
+  session,
 }: AppFloatingProps): JSX.Element {
   const [presence, setPresence] = useState<PresenceState>('idle');
   const [said, setSaid] = useState<ChatSaid>({ answering: false });
@@ -314,27 +441,31 @@ export function AppFloating({
           <Text as="p" role="status" sx={{ p: 3, m: 0, fontSize: 1 }}>
             {signedOutSentence(app)}
           </Text>
-        ) : (
-          <AppRenderer
-            app={app}
-            target={serverUrl ? 'local' : 'datalayer'}
-            {...(serverUrl ? { serverUrl } : {})}
-            {...(serverUrl && embedToken ? { embedToken } : {})}
-            instance={instance}
-            // The host's accent and face over the application's own, inside
-            // its conversation too, in the embed's mode.
-            themeOverrides={themeOverrides}
-            colorMode={colorMode}
-            {...(themeVariant ? { themeVariant } : {})}
-            // The window draws its face, its name and close.
-            hideChatHeader
-            // Mounted closed: the caret goes in when the window opens.
-            autoFocusPrompt={false}
-            onPresence={onPresence}
-            onSaying={onSaying}
-            plugins={bridge.plugins}
-            {...renderer}
-          />
+        ) : session && !session.ready ? null : (
+          <>
+            <SessionSaid said={session?.said} />
+            <AppRenderer
+              app={app}
+              target={serverUrl ? 'local' : 'datalayer'}
+              {...(serverUrl ? { serverUrl } : {})}
+              {...(serverUrl && embedToken ? { embedToken } : {})}
+              instance={instance}
+              // The host's accent and face over the application's own, inside
+              // its conversation too, in the embed's mode.
+              themeOverrides={themeOverrides}
+              colorMode={colorMode}
+              {...(themeVariant ? { themeVariant } : {})}
+              // The window draws its face, its name and close.
+              hideChatHeader
+              // Mounted closed: the caret goes in when the window opens.
+              autoFocusPrompt={false}
+              onPresence={onPresence}
+              onSaying={onSaying}
+              plugins={bridge.plugins}
+              {...(session?.thread ? { thread: session.thread } : {})}
+              {...renderer}
+            />
+          </>
         ),
         presence,
         saying: said.saying,
@@ -431,8 +562,10 @@ export function AppEmbed({
   ownPortal = false,
   plugins = NO_PLUGINS,
   host,
+  resume = true,
 }: AppEmbedProps): JSX.Element {
   const bridge = useHostBridge(app, host);
+  const session = useEmbedSession({ app, serverUrl, embedToken, resume });
   const system = useSystemMode();
   // The theme the application names (T-30), `loop` when none; its mode
   // the host's, else the application's, else the visitor's system's.
@@ -487,27 +620,33 @@ export function AppEmbed({
           themeOverrides={themeOverrides}
           character={character}
           host={host}
+          session={session}
         />
-      ) : (
-        <AppRenderer
-          app={app}
-          target={serverUrl ? 'local' : 'datalayer'}
-          {...(serverUrl ? { serverUrl } : {})}
-          // Only on the host's server: a Datalayer runtime is launched with
-          // a person's credentials, which an embed token never stands for.
-          {...(serverUrl && embedToken ? { embedToken } : {})}
-          instance={instance}
-          // The host's accent and face over the application's own, inside
-          // its conversation too, in the embed's mode: the host's or its
-          // visitor's system's, not a Datalayer setting.
-          themeOverrides={themeOverrides}
-          colorMode={resolvedMode}
-          themeVariant={variant}
-          // What the page gives it, and what it tells the page (D-10).
-          plugins={bridge.plugins}
-          onPresence={bridge.onPresence}
-          onSaying={bridge.onSaying}
-        />
+      ) : !session.ready ? null : (
+        <>
+          <SessionSaid said={session.said} />
+          <AppRenderer
+            app={app}
+            target={serverUrl ? 'local' : 'datalayer'}
+            {...(serverUrl ? { serverUrl } : {})}
+            // Only on the host's server: a Datalayer runtime is launched with
+            // a person's credentials, which an embed token never stands for.
+            {...(serverUrl && embedToken ? { embedToken } : {})}
+            instance={instance}
+            // The host's accent and face over the application's own, inside
+            // its conversation too, in the embed's mode: the host's or its
+            // visitor's system's, not a Datalayer setting.
+            themeOverrides={themeOverrides}
+            colorMode={resolvedMode}
+            themeVariant={variant}
+            // What the page gives it, and what it tells the page (D-10).
+            plugins={bridge.plugins}
+            onPresence={bridge.onPresence}
+            onSaying={bridge.onSaying}
+            // Its session, picked up again after a reload (D-13).
+            {...(session.thread ? { thread: session.thread } : {})}
+          />
+        </>
       )}
     </EmbedThemed>
   );
