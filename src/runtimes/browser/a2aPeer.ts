@@ -59,7 +59,29 @@ export type A2APeer = {
   client: Client;
   card: AgentCard;
   skill: AgentSkill;
+  /** Its face, when its card carries one (`A2A_FACE_EXTENSION_URI`). */
+  face?: A2APeerFace;
 };
+
+/** The extension an agent card carries its face in: its name stays plain. */
+export const A2A_FACE_EXTENSION_URI = 'https://datalayer.ai/extensions/face/v1';
+
+/** A peer's face: its emoji and, when it has one, its avatar's name. */
+export type A2APeerFace = { emoji: string; avatar?: string };
+
+/** The face an agent card carries, if it carries one. */
+export function faceOfCard(card: AgentCard): A2APeerFace | undefined {
+  const extension = card.capabilities?.extensions?.find(
+    candidate => candidate.uri === A2A_FACE_EXTENSION_URI,
+  );
+  const params = (extension?.params ?? {}) as Record<string, unknown>;
+  if (typeof params.emoji !== 'string' || !params.emoji) {
+    return undefined;
+  }
+  return typeof params.avatar === 'string' && params.avatar
+    ? { emoji: params.emoji, avatar: params.avatar }
+    : { emoji: params.emoji };
+}
 
 export type ConnectA2APeerOptions = {
   /** Where the peer is served: `…/api/v1/a2a/agents/<application id>`. */
@@ -116,7 +138,8 @@ export async function connectA2APeer(
       `${card.name || root} offers no skill on its agent card: there is nothing to ask it.`,
     );
   }
-  return { client, card, skill };
+  const face = faceOfCard(card);
+  return face ? { client, card, skill, face } : { client, card, skill };
 }
 
 /**

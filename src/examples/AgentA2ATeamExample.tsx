@@ -306,7 +306,8 @@ function AgentA2ATeam(): JSX.Element {
           peer={{
             id: ACCOUNTING.id,
             name: ACCOUNTING.name,
-            emoji: ACCOUNTING.emoji,
+            // Its face as its card says it, once it is reached.
+            emoji: peer?.face?.emoji ?? ACCOUNTING.emoji,
             character: ACCOUNTING.interface.assistant ?? 'wizard',
             where: accountingWhere,
             persona: team.peerPersona,

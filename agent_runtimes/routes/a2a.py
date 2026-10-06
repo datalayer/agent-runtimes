@@ -57,6 +57,15 @@ class A2AAgentCard:
     #: accepts an output mode besides words gets it as an artifact.
     default_input_modes: list[str] | None = None
     default_output_modes: list[str] | None = None
+    #: Its face, for the clients that draw one: ``emoji`` and, when it has
+    #: one, ``avatar`` (a drawing's name). Carried by the face extension
+    #: (`FACE_EXTENSION_URI`); its name stays plain text.
+    face: dict[str, str] | None = None
+
+
+#: The extension an agent card carries its face in. Not required: a client
+#: that draws no face ignores it.
+FACE_EXTENSION_URI = "https://datalayer.ai/extensions/face/v1"
 
 
 @dataclass
@@ -286,7 +295,19 @@ def register_a2a_agent(
                         "pause": f"{_api_prefix}/a2a/pause",
                         "steer": f"{_api_prefix}/a2a/steer",
                     },
-                )
+                ),
+                *(
+                    [
+                        AgentExtension(
+                            uri=FACE_EXTENSION_URI,
+                            description="Its face: an emoji, and an avatar when it has one.",
+                            required=False,
+                            params=dict(card.face),
+                        )
+                    ]
+                    if card.face
+                    else []
+                ),
             ],
             security_schemes=card.security_schemes,
             security_requirements=card.security_requirements,

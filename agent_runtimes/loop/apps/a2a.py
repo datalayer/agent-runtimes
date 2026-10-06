@@ -188,7 +188,7 @@ def card_of(app: Any, url: str) -> Any:
         Its name, description and version, and one skill named for it: what
         it does, its tags, and its starters as examples. Text in; out, the
         formats its answers come in (``interface.outputs``), plain text when
-        it says none.
+        it says none. Its face (its emoji, its avatar) in the face extension.
     """
     from agent_runtimes.output.formats import card_output_modes
     from agent_runtimes.routes.a2a import A2AAgentCard
@@ -215,6 +215,7 @@ def card_of(app: Any, url: str) -> Any:
         security_requirements=SECURITY_REQUIREMENTS,
         default_input_modes=["text/plain"],
         default_output_modes=outputs,
+        face={"emoji": app.emoji, **({"avatar": app.avatar} if app.avatar else {})},
     )
 
 

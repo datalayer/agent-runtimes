@@ -60,6 +60,11 @@ request is text. An answer is text, and may come in other formats too — see
 [Output formats](#output-formats). fasta2a (2.1 and later) answers A2A
 1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`, `ROLE_*`) as its card
 says. The card also says that a bearer key is needed (`securitySchemes`).
+Its face — the Appspec's `emoji`, and its `avatar` when it has one — rides
+an extension of the card, `https://datalayer.ai/extensions/face/v1`, not
+required; its name stays plain text. `connectA2APeer` reads it as
+`peer.face` (`faceOfCard`), and the team draws the peer with it; a client
+that draws no face ignores it.
 
 **Who it answers** (`agent_runtimes.loop.apps.a2a.A2AGate`):
 

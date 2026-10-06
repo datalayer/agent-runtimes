@@ -23,6 +23,7 @@ import {
   a2aPeerTool,
   askA2APeer,
   connectA2APeer,
+  faceOfCard,
   offeredFormats,
   peerToolDescription,
   type A2APeerEvent,
@@ -86,6 +87,8 @@ describe('Sales asks Accounting over A2A', () => {
     const { fetch, seen } = accounting();
     const peer = await connectA2APeer({ url: `${URL}/`, key: KEY, fetch });
     expect(peer.card.name).toBe('Accounting');
+    // Its face rides the face extension; its name stays plain.
+    expect(peer.face).toEqual({ emoji: '🧾' });
     expect(peer.skill.id).toBe('accounting');
     expect(peer.skill.inputModes).toEqual(['text/plain']);
     expect(peer.skill.examples).toContain(
@@ -303,5 +306,26 @@ describe('Sales asks Accounting over A2A', () => {
     expect(request.body.params.configuration.acceptedOutputModes).toEqual([
       'text/markdown',
     ]);
+  });
+});
+
+describe('faceOfCard', () => {
+  it('reads nothing from a card that carries no face', () => {
+    const card = JSON.parse(CARD);
+    card.capabilities.extensions = [];
+    expect(faceOfCard(card)).toBeUndefined();
+  });
+
+  it('reads the avatar beside the emoji when the card names one', () => {
+    const card = JSON.parse(CARD);
+    card.capabilities.extensions = [
+      {
+        uri: 'https://datalayer.ai/extensions/face/v1',
+        description: '',
+        required: false,
+        params: { emoji: '🧾', avatar: 'wizard' },
+      },
+    ];
+    expect(faceOfCard(card)).toEqual({ emoji: '🧾', avatar: 'wizard' });
   });
 });

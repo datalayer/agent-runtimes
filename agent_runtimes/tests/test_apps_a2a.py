@@ -209,6 +209,14 @@ class TestTheCard:
             "scheme"
         ] == ("Bearer")
         assert card["securityRequirements"] == [{"schemes": {"datalayer": []}}]
+        # Its face, for the clients that draw one; its name stays plain.
+        faces = [
+            extension
+            for extension in card["capabilities"]["extensions"]
+            if extension["uri"] == "https://datalayer.ai/extensions/face/v1"
+        ]
+        assert [face["params"] for face in faces] == [{"emoji": "🧾"}]
+        assert card["name"] == "Accounting"
 
     @pytest.mark.asyncio
     async def test_the_browsers_fixture_is_the_card_the_runtime_serves(

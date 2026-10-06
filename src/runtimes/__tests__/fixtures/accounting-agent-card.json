@@ -38,6 +38,14 @@
           "pause": "/api/v1/a2a/pause",
           "steer": "/api/v1/a2a/steer"
         }
+      },
+      {
+        "uri": "https://datalayer.ai/extensions/face/v1",
+        "description": "Its face: an emoji, and an avatar when it has one.",
+        "required": false,
+        "params": {
+          "emoji": "🧾"
+        }
       }
     ]
   },
