@@ -29,6 +29,8 @@ from agent_runtimes.loop.apps.saving import (
     SAVE_TOOL,
     AppSavingCapability,
     NotSaved,
+    authorship,
+    byline,
     idempotency_key,
     link_of,
     saves,
@@ -71,8 +73,16 @@ class Written:
         self.pages: Dict[str, str] = {}
         self.fail = fail
 
-    async def __call__(self, space: str, title: str, state: Dict[str, Any], key: str):
+    async def __call__(
+        self,
+        space: str,
+        title: str,
+        state: Dict[str, Any],
+        key: str,
+        about: Dict[str, Any],
+    ):
         self.calls.append((space, title, state, key))
+        self.about = about
         uid = self.pages.setdefault(key, f"doc-{len(self.pages) + 1}")
         if self.fail:
             self.fail -= 1
@@ -171,7 +181,16 @@ async def test_approved_it_is_saved_as_a_page_of_the_space_and_its_link_answered
     ]
     [(space, title, state, key)] = written.calls
     assert (space, title) == ("sp-notes", "Weekly digest")
-    assert state == markdown_document("Weekly digest", DIGEST)
+    # Its byline closes the page (I-10).
+    assert state == markdown_document(
+        "Weekly digest", DIGEST + "\n\n*Written by 👀 Weekly Digest.*"
+    )
+    assert written.about["app"] == {
+        "id": "weekly-digest",
+        "uid": "app-1",
+        "name": "Weekly Digest",
+        "emoji": "👀",
+    }
     assert key.startswith("loop:app-1:")
     assert returned == ["Saved as “Weekly digest”: /eric/notes/documents/doc-1"]
 
@@ -258,7 +277,7 @@ async def test_it_writes_through_spacer_under_its_key(monkeypatch) -> None:
     monkeypatch.setenv("DATALAYER_SPACER_URL", "https://spacer.test")
     assert urls.DatalayerURLs.from_environment().spacer_url == "https://spacer.test"
     written = await write_on_spacer(
-        "sp-notes", "T", {"root": {}}, "loop:k", token="tok"
+        "sp-notes", "T", {"root": {}}, "loop:k", {"saved_by": "loop.app"}, token="tok"
     )
     assert written["document"]["uid"] == "doc-9"
     assert seen[0].url.path == "/api/spacer/v1/spaces/sp-notes"
@@ -267,6 +286,8 @@ async def test_it_writes_through_spacer_under_its_key(monkeypatch) -> None:
     body = post.content.decode()
     assert 'name="idempotencyKey"' in body and "loop:k" in body
     assert 'name="documentType"' in body and "lexical" in body
+    # Who wrote it, in the document's metadata (I-10).
+    assert 'name="metadata"' in body and "loop.app" in body
 
 
 async def test_a_refusal_of_spacer_is_said(monkeypatch) -> None:
@@ -287,7 +308,7 @@ async def test_a_refusal_of_spacer_is_said(monkeypatch) -> None:
     with pytest.raises(
         NotSaved, match="the Space sp-notes cannot be reached: Not authorized"
     ):
-        await write_on_spacer("sp-notes", "T", {}, "k", token="tok")
+        await write_on_spacer("sp-notes", "T", {}, "k", {}, token="tok")
 
 
 async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
@@ -298,7 +319,7 @@ async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
     )
     tokens: List[str] = []
 
-    async def write(space, title, state, key, *, token):
+    async def write(space, title, state, key, about, *, token):
         tokens.append(token)
         return {"document": {"uid": "doc-1"}, "space": {}}
 
@@ -307,3 +328,82 @@ async def test_on_a_deployment_it_saves_as_its_principal(monkeypatch) -> None:
         app=digest(), app_uid="app-1", deployment_uid="dep-1"
     ).save_to_space("T", "c")
     assert tokens == ["p-token"] and said == "Saved as “T”: /documents/doc-1"
+
+
+# What it writes says who wrote it (LOOP I-10).
+
+
+def test_its_byline_carries_its_face_and_says_when_it_wrote_on_its_own() -> None:
+    app = digest().model_copy(update={"emoji": "📬"})
+    assert byline(app, on_its_own=False) == "*Written by 📬 Weekly Digest.*"
+    assert byline(app, on_its_own=True) == "*Written by 📬 Weekly Digest, on its own.*"
+    # Until its builder chooses one, its face is the eyes.
+    assert byline(digest(), on_its_own=False) == "*Written by 👀 Weekly Digest.*"
+
+
+def test_the_page_names_the_application_and_the_person_it_acted_for() -> None:
+    app = digest().model_copy(update={"emoji": "📬"})
+    assert authorship(
+        app,
+        app_uid="app-1",
+        deployment_uid="dep-1",
+        person_uid="u-eric",
+        on_its_own=False,
+        session="s-1",
+    ) == {
+        "saved_by": "loop.app",
+        "app": {
+            "id": "weekly-digest",
+            "uid": "app-1",
+            "name": "Weekly Digest",
+            "emoji": "📬",
+        },
+        "deployment": "dep-1",
+        "for": "u-eric",
+        "on_its_own": False,
+        "session": "s-1",
+    }
+
+
+async def test_a_save_says_who_it_was_for_or_that_nobody_was_there() -> None:
+    from agent_runtimes.loop.apps.record import _SESSION
+
+    written = Written()
+    saving = AppSavingCapability(
+        app=digest(),
+        app_uid="app-1",
+        deployment_uid="dep-1",
+        write=written,
+        person=lambda session: "u-eric" if session == "s-1" else "",
+        woken=lambda session: {"trigger": "weekly"} if session == "s-2" else {},
+    )
+    token = _SESSION.set("s-1")
+    try:
+        await saving.save_to_space("Weekly digest", DIGEST)
+    finally:
+        _SESSION.reset(token)
+    assert (written.about["for"], written.about["on_its_own"]) == ("u-eric", False)
+    assert written.about["session"] == "s-1"
+    assert written.about["deployment"] == "dep-1"
+    token = _SESSION.set("s-2")
+    try:
+        await saving.save_to_space("Weekly digest", DIGEST)
+    finally:
+        _SESSION.reset(token)
+    assert (written.about["for"], written.about["on_its_own"]) == ("", True)
+    page = written.calls[-1][2]
+    assert page == markdown_document(
+        "Weekly digest", DIGEST + "\n\n*Written by 👀 Weekly Digest, on its own.*"
+    )
+
+
+def test_its_capability_knows_who_opened_each_session() -> None:
+    recorder = AppRecorder(app=digest())
+    [saving] = [
+        c
+        for c in app_capabilities(digest(), recorder=recorder)
+        if isinstance(c, AppSavingCapability)
+    ]
+    recorder.opened("s-1", "u-eric")
+    assert saving.person is not None and saving.person("s-1") == "u-eric"
+    assert saving.woken is not None and not saving.woken("s-1")

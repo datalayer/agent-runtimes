@@ -126,6 +126,9 @@ def app_capabilities(
                 app=app,
                 app_uid=recorder.app_uid,
                 deployment_uid=recorder.deployment_uid,
+                # Who it acts for: who opened the session, or nobody (I-10).
+                person=recorder.opener,
+                woken=recorder.woken,
             )
         )
     return capabilities

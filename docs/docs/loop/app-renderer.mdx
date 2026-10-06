@@ -319,6 +319,25 @@ Preview, the person. A visitor without an account only reads: the call is
 refused before anybody is asked. On a deployment the approval reaches its
 maker, as every approval of its rules does.
 
+**What it writes says who wrote it** (LOOP I-10). The page ends with its
+byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on its
+own.* in a session nobody opened — and the document's metadata names the
+application and the person it acted for (`authorship`):
+
+```json
+{
+  "saved_by": "loop.app",
+  "app": { "id": "inbox-triage", "uid": "…", "name": "Inbox Triage", "emoji": "📬" },
+  "deployment": "…",
+  "for": "<uid of the person who opened the session>",
+  "on_its_own": false,
+  "session": "…"
+}
+```
+
+On a deployment the page's creator is the application's principal; in a
+Preview, the person.
+
 ## With nobody present
 
 A session nobody opened — woken by one of its schedules (`woken_by`) — has

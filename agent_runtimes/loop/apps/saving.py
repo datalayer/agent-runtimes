@@ -25,6 +25,13 @@ It writes with the token of the run: a deployment's application principal,
 which the Space was shared with when it was deployed (LOOP I-13); a
 Preview's person. A visitor without an account only reads (R-30): the call is
 refused before anybody is asked.
+
+**What it writes says who wrote it** (LOOP I-10). The page ends with its
+byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on its
+own.* when nobody opened the session (R-16) — and the document's metadata
+names the application (its id, uid, name and face), its deployment, the
+person it acted for (who opened the session, by uid), whether it wrote it on
+its own, and the session (`authorship`).
 """
 
 from __future__ import annotations
@@ -59,7 +66,11 @@ TITLE_LIMIT = 200
 SAVE_TIMEOUT = 30.0
 
 #: What a write returns: Spacer's document and its space, or raises `NotSaved`.
-Write = Callable[[str, str, Dict[str, Any], str], Awaitable[Dict[str, Any]]]
+#: It is given the Space, the title, the page, the idempotency key and the
+#: document's metadata — who wrote it (`authorship`).
+Write = Callable[
+    [str, str, Dict[str, Any], str, Dict[str, Any]], Awaitable[Dict[str, Any]]
+]
 
 
 class NotSaved(RuntimeError):
@@ -91,6 +102,42 @@ def idempotency_key(
     return f"loop:{app}:{session or 'none'}:{digest}"[:200]
 
 
+def authorship(
+    app: AppSpec,
+    *,
+    app_uid: str,
+    deployment_uid: str,
+    person_uid: str,
+    on_its_own: bool,
+    session: str,
+) -> Dict[str, Any]:
+    """Who wrote a page it saves: the application, and the person it acted for (I-10).
+
+    ``person_uid`` is who opened the session, ``""`` when it is not known;
+    ``on_its_own`` when nobody did — a session woken by a schedule (R-16).
+    """
+    return {
+        "saved_by": "loop.app",
+        "app": {
+            "id": app.id,
+            "uid": app_uid,
+            "name": app.name or app.id,
+            "emoji": app.emoji or "",
+        },
+        "deployment": deployment_uid,
+        "for": person_uid,
+        "on_its_own": on_its_own,
+        "session": session,
+    }
+
+
+def byline(app: AppSpec, *, on_its_own: bool) -> str:
+    """The last line of a page it saves: its face and name, and *on its own* when nobody was there."""
+    face = f"{app.emoji} " if app.emoji else ""
+    who = f"{face}{app.name or app.id}"
+    return f"*Written by {who}, on its own.*" if on_its_own else f"*Written by {who}.*"
+
+
 def link_of(space: Mapping[str, Any], document_uid: str) -> str:
     """Where the saved page is opened on the site: under its Space's owner and handle."""
     owner = str(space.get("owner_handle_s") or space.get("owner_handle") or "")
@@ -104,9 +151,16 @@ def link_of(space: Mapping[str, Any], document_uid: str) -> str:
 
 
 async def write_on_spacer(
-    space: str, title: str, editor_state: Dict[str, Any], key: str, *, token: str
+    space: str,
+    title: str,
+    editor_state: Dict[str, Any],
+    key: str,
+    about: Dict[str, Any],
+    *,
+    token: str,
 ) -> Dict[str, Any]:
-    """Create the page in the Space through Spacer, under its idempotency key.
+    """Create the page in the Space through Spacer, under its idempotency key,
+    its metadata saying who wrote it (``about``, `authorship`).
 
     Answers ``{"document": …, "space": …}``; `NotSaved` in a sentence.
     """
@@ -135,7 +189,7 @@ async def write_on_spacer(
                     "documentType": "lexical",
                     "name": title,
                     "description": "",
-                    "metadata": json.dumps({"saved_by": "loop.app"}),
+                    "metadata": json.dumps(about),
                     "idempotencyKey": key,
                 },
                 files={
@@ -185,6 +239,12 @@ class AppSavingCapability(AbstractCapability[Any]):
     deployment_uid: str = ""
     """Its deployment, when it runs as one: then it saves as its principal."""
 
+    person: Optional[Callable[[str], str]] = None
+    """Who opened a session, by uid — the person it acts for; ``""`` when not known (I-10)."""
+
+    woken: Optional[Callable[[str], Any]] = None
+    """What woke a session, empty when a person opened it: then it writes on its own (I-10, R-16)."""
+
     write: Optional[Write] = None
     """How Spacer is written to; over HTTP, with the token of the run, when unsaid."""
 
@@ -224,13 +284,28 @@ class AppSavingCapability(AbstractCapability[Any]):
         from agent_runtimes.loop.apps.record import current_session
         from agent_runtimes.orchestration.documents import markdown_document
 
+        session = current_session()
         key = idempotency_key(
-            self.app_uid or self.app.id, current_session(), target, title, content
+            self.app_uid or self.app.id, session, target, title, content
         )
-        state = markdown_document(title, content)
+        # What it writes says who wrote it (I-10): its byline closes the page,
+        # and the document's metadata names it and the person it acted for.
+        person_uid = self.person(session) if self.person is not None else ""
+        on_its_own = bool(self.woken(session)) if self.woken is not None else False
+        about = authorship(
+            self.app,
+            app_uid=self.app_uid,
+            deployment_uid=self.deployment_uid,
+            person_uid=person_uid,
+            on_its_own=on_its_own,
+            session=session,
+        )
+        state = markdown_document(
+            title, f"{content}\n\n{byline(self.app, on_its_own=on_its_own)}"
+        )
         try:
             written = await (self.write or self._write_with_token)(
-                target, title, state, key
+                target, title, state, key, about
             )
         except NotSaved as error:
             logger.warning("%s could not save %r: %s", self.app.id, title, error)
@@ -240,14 +315,19 @@ class AppSavingCapability(AbstractCapability[Any]):
         return f"Saved as “{title}”: {link}"
 
     async def _write_with_token(
-        self, space: str, title: str, state: Dict[str, Any], key: str
+        self,
+        space: str,
+        title: str,
+        state: Dict[str, Any],
+        key: str,
+        about: Dict[str, Any],
     ) -> Dict[str, Any]:
         from agent_runtimes.loop.apps.record import token_for
 
         token, refusal = token_for(self.deployment_uid)
         if not token:
             raise NotSaved(f"there is no token to save it with: {refusal}")
-        return await write_on_spacer(space, title, state, key, token=token)
+        return await write_on_spacer(space, title, state, key, about, token=token)
 
     def get_toolset(self) -> Any:
         """The one tool, while a Space is granted to write; none otherwise."""
@@ -265,6 +345,8 @@ __all__ = [
     "SAVING_CLASSES",
     "AppSavingCapability",
     "NotSaved",
+    "authorship",
+    "byline",
     "idempotency_key",
     "link_of",
     "saves",
