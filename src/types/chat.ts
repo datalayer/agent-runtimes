@@ -857,7 +857,7 @@ export type ThemeOverrides = {
  * A conversation the chat goes on with (LOOP D-13): an embedded
  * application's session, reattached after its page reloaded.
  */
-export type ChatThread = {
+export type ResumedThread = {
   /** Its id, AG-UI's `threadId`: the session's uid. */
   id: string;
   /** What it holds already; none for a new one. */
@@ -1536,7 +1536,7 @@ export interface ChatBaseProps {
    * runtime's history, which is its agent's and not one session's. Read
    * when the chat mounts; a new thread (the header's +) is the chat's own.
    */
-  thread?: ChatThread;
+  thread?: ResumedThread;
 
   /**
    * Runtime ID for conversation persistence.

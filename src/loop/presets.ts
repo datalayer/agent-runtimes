@@ -55,7 +55,7 @@ import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
 import { DocumentExtension, NotebookExtension } from './extensions';
 import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
-import type { ChatThread, ThemeOverrides } from '../types/chat';
+import type { ResumedThread, ThemeOverrides } from '../types/chat';
 
 export type LoopPresetOptions = {
   /** Where the agent runtimes service is. */
@@ -189,7 +189,7 @@ export type LoopPresetOptions = {
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
   /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
-  thread?: ChatThread;
+  thread?: ResumedThread;
   /**
    * The agentspec the local agent is created from, by id.
    *

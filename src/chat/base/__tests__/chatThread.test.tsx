@@ -17,7 +17,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import { ChatBase } from '../ChatBase';
 import { agentRuntimeStore } from '../../../stores/agentRuntimeStore';
-import type { ChatThread } from '../../../types/chat';
+import type { ResumedThread } from '../../../types/chat';
 
 // The setup's stand-in lacks what the chat's notebook parts import.
 vi.mock('@jupyter/ydoc', async importOriginal => await importOriginal());
@@ -68,7 +68,7 @@ async function settle(): Promise<void> {
 
 let agents = 0;
 
-async function mountChat(thread: ChatThread, pendingPrompt?: string) {
+async function mountChat(thread: ResumedThread, pendingPrompt?: string) {
   const sent: Array<Record<string, any>> = [];
   globalThis.fetch = recordingServer(sent);
   const agentId = `thread-agent-${++agents}`;
@@ -100,7 +100,7 @@ async function mountChat(thread: ChatThread, pendingPrompt?: string) {
   };
 }
 
-const KEPT: ChatThread['messages'] = [
+const KEPT: ResumedThread['messages'] = [
   { id: 'u1', role: 'user', content: 'Where were we?', createdAt: new Date() },
   {
     id: 'a1',

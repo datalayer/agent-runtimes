@@ -34,7 +34,7 @@ import {
 import { createTurnFeed, feedWriters } from './turnState';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import type { AssistantSaying } from '../../../chat/assistant/state';
-import type { ChatThread, ThemeOverrides } from '../../../types/chat';
+import type { ResumedThread, ThemeOverrides } from '../../../types/chat';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -137,7 +137,7 @@ export type ChatPluginConfig = {
    * The conversation to go on with (LOOP D-13): an embedded application's
    * session, reattached after its page reloaded, and what it holds.
    */
-  thread?: ChatThread;
+  thread?: ResumedThread;
   /**
    * Whether the counters — tokens, context — are shown under the prompt.
    * On unless said: a person using an application is not asking.

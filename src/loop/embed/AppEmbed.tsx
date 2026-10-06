@@ -63,7 +63,7 @@ import type {
   AppSpec,
   AppThemeVariant,
 } from '../../types/agentspecs';
-import type { ChatThread, ThemeOverrides } from '../../types/chat';
+import type { ResumedThread, ThemeOverrides } from '../../types/chat';
 import { generateMessageId } from '../../types/messages';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
@@ -155,7 +155,7 @@ export type EmbedSession = {
   /** Whether the kept session was asked for: nothing is drawn before. */
   ready: boolean;
   /** The thread the chat goes on with; none where no session is kept. */
-  thread?: ChatThread;
+  thread?: ResumedThread;
   /** Said once, when the session kept is gone: a new one started. */
   said?: string;
 };
@@ -187,7 +187,7 @@ export function useEmbedSession({
   // What was found, for the token it was found with: a renewed token asks again.
   const [found, setFound] = useState<{
     token: string;
-    thread: ChatThread;
+    thread: ResumedThread;
     said?: string;
   }>();
   useEffect(() => {
