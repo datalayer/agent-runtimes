@@ -95,8 +95,8 @@ const PlanStepItem: React.FC<{
       transition="all 0.2s ease"
       textAlign="left"
       width="100%"
-      sx={{
-        '&:hover': isInteractive
+      hover={
+        isInteractive
           ? {
               backgroundColor:
                 step.status === 'completed'
@@ -104,8 +104,8 @@ const PlanStepItem: React.FC<{
                   : 'canvas.default',
               borderColor: 'accent.muted',
             }
-          : {},
-      }}
+          : {}
+      }
     >
       {/* Status/Checkbox indicator */}
       <Box

@@ -5108,22 +5108,22 @@ function ChatBaseInner({
         >
           {/* Left: in-memory companion surface (notebook or document). */}
           <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              ...(surfaceChatFloating
+            flex={1}
+            minWidth={0}
+            minHeight={0}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            sx={
+              surfaceChatFloating
                 ? null
                 : surfaceCollapsed
                   ? null
                   : {
                       borderRight: '1px solid',
                       borderColor: 'border.default',
-                    }),
-            }}
+                    }
+            }
           >
             {launching || overlay ? (
               <CompanionSurfaceSkeleton

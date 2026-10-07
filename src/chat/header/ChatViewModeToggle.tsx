@@ -115,14 +115,14 @@ export function ChatViewModeToggle({
               boxShadow={selected ? 'shadow.small' : 'none'}
               color={selected ? 'fg.default' : 'fg.muted'}
               transition="all 0.15s ease"
-              sx={{
-                '&:hover': disabled
+              hover={
+                disabled
                   ? {}
                   : {
                       color: 'fg.default',
                       bg: selected ? 'canvas.default' : 'neutral.subtle',
-                    },
-              }}
+                    }
+              }
             >
               <ModeIcon size={14} />
             </Box>

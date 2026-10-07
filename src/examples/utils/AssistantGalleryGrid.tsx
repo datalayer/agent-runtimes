@@ -160,21 +160,19 @@ export function GalleryObstacle({
     <Box
       data-chat-composer=""
       aria-label="A composer over the assistant"
-      sx={{
-        position: 'absolute',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '1px dashed',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        bg: 'canvas.subtle',
-        color: 'fg.muted',
-        fontSize: 0,
-        textAlign: 'center',
-        p: 1,
-        ...sx,
-      }}
+      position="absolute"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      border="1px dashed"
+      borderColor="border.default"
+      borderRadius={2}
+      bg="canvas.subtle"
+      color="fg.muted"
+      fontSize={0}
+      textAlign="center"
+      p={1}
+      sx={sx}
     >
       composer
     </Box>

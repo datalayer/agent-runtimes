@@ -154,11 +154,11 @@ export function TableView({ props }: { props: TableProps }) {
                       outlineColor: 'accent.fg',
                       outlineOffset: '-2px',
                     }}
-                    sx={{
-                      '&:hover': selectable
+                    hover={
+                      selectable
                         ? { bg: isSelected ? 'accent.subtle' : 'canvas.subtle' }
-                        : undefined,
-                    }}
+                        : undefined
+                    }
                   >
                     {columns.map(column => (
                       <td key={column}>{asWords(row[column])}</td>

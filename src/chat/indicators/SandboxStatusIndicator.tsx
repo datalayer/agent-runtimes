@@ -100,13 +100,13 @@ function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
   return (
     <Box
       as="span"
-      sx={{
-        display: 'inline-block',
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        bg: SANDBOX_INDICATOR_COLORS[aggregate],
-        ...(aggregate === 'executing' && {
+      display="inline-block"
+      width={10}
+      height={10}
+      borderRadius="50%"
+      bg={SANDBOX_INDICATOR_COLORS[aggregate]}
+      sx={
+        aggregate === 'executing' && {
           animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
           '@keyframes sandbox-busy-fade': {
             '0%': {
@@ -125,8 +125,8 @@ function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
               filter: 'saturate(1)',
             },
           },
-        }),
-      }}
+        }
+      }
     />
   );
 }

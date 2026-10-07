@@ -316,21 +316,11 @@ export function CurrentBalloonBody({
           aria-busy={speaking}
           ref={textRef}
           data-balloon-current-text={whole ? 'whole' : ''}
-          sx={
-            whole
-              ? {
-                  maxHeight: 240,
-                  overflowY: 'auto',
-                  overflowWrap: 'anywhere',
-                  pr: 1,
-                }
-              : {
-                  // About four lines; *more* shows the rest.
-                  maxHeight: '5.6em',
-                  overflow: 'hidden',
-                  overflowWrap: 'anywhere',
-                }
-          }
+          maxHeight={whole ? 240 : '5.6em'}
+          overflowY={whole ? 'auto' : undefined}
+          overflowWrap={whole ? 'anywhere' : 'anywhere'}
+          pr={whole ? 1 : undefined}
+          overflow={whole ? undefined : 'hidden'}
         >
           {/* The chat's own markdown: the words as written, whole. */}
           <ChatMarkdown

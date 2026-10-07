@@ -1161,38 +1161,40 @@ export function ChatMessageList({
 
             {/* Message bubble */}
             <Box
+              p={compact ? 1 : 2}
+              px={compact ? 2 : 2}
+              overflowX="auto"
+              // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
+              borderRadius="bubble"
+              // A message arriving, at the theme's pace (LOOP T-10): no
+              // motion in a theme that sets none, nor when motion is reduced.
+              animation="chatMessageArrive var(--theme-motion-message) var(--theme-motion-easing) both"
+              reducedMotion={{ animation: 'none' }}
+              backgroundColor={
+                isUser
+                  ? 'accent.emphasis'
+                  : speaker
+                    ? toneColorsOf(speaker.tone).subtle
+                    : 'canvas.subtle'
+              }
+              border={!isUser && speaker ? '1px solid' : undefined}
+              borderColor={
+                !isUser && speaker
+                  ? toneColorsOf(speaker.tone).muted
+                  : undefined
+              }
+              // Use primary-button text token for better contrast when
+              // accent.emphasis is bright (e.g. Matrix dark theme).
+              color={
+                isUser
+                  ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+                  : 'fg.default'
+              }
               sx={{
-                p: compact ? 1 : 2,
-                px: compact ? 2 : 2,
-                overflowX: 'auto',
-                // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
-                borderRadius: 'var(--theme-radius-bubble, 6px)',
-                // A message arriving, at the theme's pace (LOOP T-10): no
-                // motion in a theme that sets none, nor when motion is reduced.
-                animation:
-                  'chatMessageArrive var(--theme-motion-message, 0ms) var(--theme-motion-easing, ease) both',
                 '@keyframes chatMessageArrive': {
                   from: { opacity: 0, transform: 'translateY(4px)' },
                   to: { opacity: 1, transform: 'none' },
                 },
-                '@media (prefers-reduced-motion: reduce)': {
-                  animation: 'none',
-                },
-                backgroundColor: isUser
-                  ? 'accent.emphasis'
-                  : speaker
-                    ? toneColorsOf(speaker.tone).subtle
-                    : 'canvas.subtle',
-                border: !isUser && speaker ? '1px solid' : undefined,
-                borderColor:
-                  !isUser && speaker
-                    ? toneColorsOf(speaker.tone).muted
-                    : undefined,
-                // Use primary-button text token for better contrast when
-                // accent.emphasis is bright (e.g. Matrix dark theme).
-                color: isUser
-                  ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
-                  : 'fg.default',
                 ...streamdownCodeBlockStyles,
               }}
             >

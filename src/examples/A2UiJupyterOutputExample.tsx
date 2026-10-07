@@ -471,15 +471,13 @@ function Panel({
       </Box>
       <Box
         style={style}
-        sx={{
-          flex: '1 1 0',
-          minHeight: 0,
-          overflow: 'auto',
-          p: 3,
-          bg: 'canvas.default',
-          color: 'fg.default',
-          ...sx,
-        }}
+        flex="1 1 0"
+        minHeight={0}
+        overflow="auto"
+        p={3}
+        bg="canvas.default"
+        color="fg.default"
+        sx={sx}
       >
         {children}
       </Box>
@@ -928,7 +926,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
               >
                 A2UI surface
               </Box>
-              <Box sx={{ mt: 2, ...A2UI_RENDER_SCOPE_SX }} style={themeStyle}>
+              <Box mt={2} sx={A2UI_RENDER_SCOPE_SX} style={themeStyle}>
                 {surfaces.map(surface => (
                   <A2uiSurfaceComposed key={surface.id} surface={surface} />
                 ))}

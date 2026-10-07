@@ -118,18 +118,18 @@ export function SkillsStatusIndicator({
       >
         <Box
           as="span"
-          sx={{
-            display: 'inline-block',
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            bg: SKILLS_STATUS_COLORS[aggregate],
-            flexShrink: 0,
-            ...(aggregate === 'loading' && {
-              animation: 'skills-pulse 1.5s ease-in-out infinite',
-            }),
-            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-          }}
+          display="inline-block"
+          width={12}
+          height={12}
+          borderRadius="50%"
+          bg={SKILLS_STATUS_COLORS[aggregate]}
+          flexShrink={0}
+          animation={
+            aggregate === 'loading'
+              ? 'skills-pulse 1.5s ease-in-out infinite'
+              : undefined
+          }
+          reducedMotion={{ animation: 'none' }}
         />
       </button>
     </Tooltip>

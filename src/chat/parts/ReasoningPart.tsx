@@ -84,16 +84,14 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
       </Button>
       {isExpanded && (
         <Box
-          sx={{
-            marginTop: 2,
-            padding: 3,
-            backgroundColor: 'canvas.inset',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            color: 'fg.muted',
-            ...streamdownMarkdownStyles,
-          }}
+          marginTop={2}
+          padding={3}
+          backgroundColor="canvas.inset"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
+          color="fg.muted"
+          sx={streamdownMarkdownStyles}
         >
           <Streamdown>{text}</Streamdown>
         </Box>

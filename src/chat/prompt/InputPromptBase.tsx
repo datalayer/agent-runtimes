@@ -340,16 +340,10 @@ export function InputPromptBase({
   return (
     <Box sx={sx}>
       <Box
-        sx={{
-          p: padding,
-          ...(showBorderTop && {
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-          }),
-          ...(showBackground && {
-            bg: 'canvas.subtle',
-          }),
-        }}
+        p={padding}
+        borderTop={showBorderTop ? '1px solid' : undefined}
+        borderColor={showBorderTop ? 'border.default' : undefined}
+        bg={showBackground ? 'canvas.subtle' : undefined}
       >
         <Box
           // Named so the turn-end refocus can ask whether the caret is already

@@ -85,13 +85,11 @@ export function SceneTranscript({
         <Box
           as="ol"
           aria-label="Transcript"
-          sx={{
-            listStyle: 'none',
-            m: 0,
-            p: 0,
-            fontSize: 1,
-            ...(maxHeight ? { maxHeight, overflowY: 'auto' } : {}),
-          }}
+          listStyle="none"
+          m={0}
+          p={0}
+          fontSize={1}
+          sx={maxHeight ? { maxHeight, overflowY: 'auto' } : {}}
         >
           {lines.map(line => (
             <Box

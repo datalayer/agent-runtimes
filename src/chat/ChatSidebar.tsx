@@ -415,19 +415,19 @@ export function ChatSidebar({
                   : 'calc(100dvh - 8px)',
               }
         }
+        position="relative"
+        display="flex"
+        flexDirection="column"
+        alignSelf="stretch"
+        minHeight={0}
+        flex={isMobile ? '1 1 auto' : '0 0 auto'}
+        bg="canvas.default"
+        borderLeft={!isMobile && position === 'right' ? '1px solid' : 'none'}
+        borderRight={!isMobile && position === 'left' ? '1px solid' : 'none'}
+        borderColor="border.default"
+        overflow="hidden"
         sx={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignSelf: 'stretch',
-          minHeight: 0,
           marginBlock: isMobile ? 0 : '4px',
-          flex: isMobile ? '1 1 auto' : '0 0 auto',
-          bg: 'canvas.default',
-          borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
-          borderRight: !isMobile && position === 'left' ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          overflow: 'hidden',
           ...mobileStyles,
         }}
       >

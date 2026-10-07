@@ -662,27 +662,25 @@ function OpenConversation(): JSX.Element {
   return (
     <Box
       data-conversation-balloon=""
-      sx={{
-        position: 'fixed',
-        right: '48px',
-        bottom: `${48 + 88 + 16}px`,
-        width: `${CONVERSATION_BALLOON_WIDTH}px`,
-        height: `${height}px`,
-        zIndex: 1001,
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-        border: '1px solid',
-        borderColor: 'border.default',
-        boxShadow: 'shadow.extra-large',
-        ...conversationBalloonSx(
-          {
-            edge: 'bottom',
-            at: balloonTailAt(window.innerWidth - 48 - 44, left),
-          },
-          'canvas.subtle',
-        ),
-      }}
+      position="fixed"
+      right="48px"
+      bottom={`${48 + 88 + 16}px`}
+      width={`${CONVERSATION_BALLOON_WIDTH}px`}
+      height={`${height}px`}
+      zIndex={1001}
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
+      border="1px solid"
+      borderColor="border.default"
+      boxShadow="shadow.extra-large"
+      sx={conversationBalloonSx(
+        {
+          edge: 'bottom',
+          at: balloonTailAt(window.innerWidth - 48 - 44, left),
+        },
+        'canvas.subtle',
+      )}
     >
       <ConversationBalloonClose onClose={() => undefined} />
       <ConversationBalloonHeader count={OPEN_CONVERSATION.length - 1} />

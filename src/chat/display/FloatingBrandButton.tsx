@@ -72,14 +72,7 @@ export function FloatingBrandButton({
   const posStyle = positionStyles[position];
 
   const floatingButton = (
-    <Box
-      className={className}
-      sx={{
-        position: 'fixed',
-        zIndex: 1000,
-        ...posStyle,
-      }}
-    >
+    <Box className={className} position="fixed" zIndex={1000} sx={posStyle}>
       <Box
         position="relative"
         display="inline-flex"
