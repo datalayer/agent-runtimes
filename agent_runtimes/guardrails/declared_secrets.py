@@ -14,6 +14,13 @@ given is what the specs it is configured from **declare**, read off them:
   agentspec;
 - a deployment that takes a signed user (D-21) — its user secret,
   ``DATALAYER_APP_USER_SECRET_<UID>``;
+- what the code an MCP server's tools write reads in the code sandbox — its
+  ``sandbox_envvars`` (Earthdata's download script: ``EARTHDATA_USERNAME``,
+  ``EARTHDATA_PASSWORD``) — given to the sandbox when the account has them,
+  never to the server, never required;
+- the application the runtime was **launched for** (:func:`note_launched`):
+  the Operator passes its Appspec at launch, so its connections' secrets are
+  declared before its agent is made;
 - and :data:`PLATFORM_RUNTIME_SECRETS`, the runtime's own, which is empty:
   the runtime calls its models with its ai-inference token and acts with the
   person's token, each given in a field of its own, never from the secrets.
@@ -96,6 +103,21 @@ def server_env_names(server: Any) -> FrozenSet[str]:
     return frozenset(names)
 
 
+def sandbox_env_names(server: Any) -> FrozenSet[str]:
+    """What the code an MCP server's tools write reads in the sandbox: its ``sandbox_envvars``."""
+    return frozenset(
+        name
+        for name in (
+            env_name(ref)
+            for ref in _get(
+                server, "sandbox_env_vars", "sandboxEnvVars", "sandbox_envvars"
+            )
+            or []
+        )
+        if name
+    )
+
+
 def _catalog_server(server_id: str) -> Any:
     from agent_runtimes.mcp.catalog_mcp_servers import get_catalog_server
 
@@ -126,14 +148,37 @@ class DeclaredSecrets:
     #: Held by the process for its own checks, never required up front, never
     #: in the sandbox: a deployment's user secret (D-21, refused per session).
     held: FrozenSet[str] = frozenset()
+    #: Given when the account has them, never required: what an MCP server's
+    #: scripts read in the sandbox (``sandbox_envvars``), also in ``kernel``.
+    offered: FrozenSet[str] = frozenset()
 
     @property
     def runtime(self) -> FrozenSet[str]:
         """Every name the runtime's process may be given."""
-        names: Set[str] = set(PLATFORM_RUNTIME_SECRETS) | set(self.held)
+        names: Set[str] = (
+            set(PLATFORM_RUNTIME_SECRETS) | set(self.held) | set(self.offered)
+        )
         for needed in self.consumers.values():
             names |= needed
         return frozenset(names)
+
+    def merged(self, other: Optional["DeclaredSecrets"]) -> "DeclaredSecrets":
+        """These and ``other``'s: both sets of specs, declared together."""
+        if other is None:
+            return self
+        consumers = {key: frozenset(value) for key, value in self.consumers.items()}
+        for key, value in other.consumers.items():
+            consumers[key] = consumers.get(key, frozenset()) | value
+        servers = dict(self.servers)
+        for key, value in other.servers.items():
+            servers[key] = servers.get(key, frozenset()) | value
+        return DeclaredSecrets(
+            consumers=consumers,
+            servers=servers,
+            kernel=self.kernel | other.kernel,
+            held=self.held | other.held,
+            offered=self.offered | other.offered,
+        )
 
     def missing(self, available: Callable[[str], bool], who: str) -> List[str]:
         """Why ``who`` cannot be set up, a sentence per secret that is not there."""
@@ -182,6 +227,7 @@ def declared_secrets(
     servers: Dict[str, FrozenSet[str]] = {}
     kernel: Set[str] = set()
     held: Set[str] = set()
+    offered: Set[str] = set()
     seen_agents: Set[str] = set()
 
     def add_server(server: Any) -> None:
@@ -216,6 +262,9 @@ def declared_secrets(
         servers[server_id] = servers.get(server_id, frozenset()) | names
         if names:
             consumers.setdefault(f"the MCP server {server_id}", set()).update(names)
+        sandbox = sandbox_env_names(server)
+        kernel.update(sandbox)
+        offered.update(sandbox)
 
     def add_skill(skill: Any) -> None:
         names = _skill_env_names(skill)
@@ -284,6 +333,7 @@ def declared_secrets(
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
+        offered=frozenset(offered),
     )
 
 
@@ -294,6 +344,24 @@ _LOCK = threading.Lock()
 #: started without those it does not declare, and a later configure that no
 #: longer declares one takes it back.
 _GIVEN: Set[str] = set()
+
+
+#: What the application the runtime was launched for declares: the Operator
+#: passes its Appspec at launch, and the companion hands it on; every later
+#: configure declares it too, so its agent finds its connections' secrets.
+_LAUNCHED: List[Optional[DeclaredSecrets]] = [None]
+
+
+def note_launched(declared: Optional[DeclaredSecrets]) -> None:
+    """Remember what the application the runtime was launched for declares."""
+    with _LOCK:
+        _LAUNCHED[0] = declared
+
+
+def launched() -> Optional[DeclaredSecrets]:
+    """What the application the runtime was launched for declares, or None."""
+    with _LOCK:
+        return _LAUNCHED[0]
 
 
 def given_names() -> FrozenSet[str]:
@@ -338,6 +406,9 @@ __all__ = [
     "forget_given",
     "given_names",
     "keep_declared",
+    "launched",
     "note_given",
+    "note_launched",
+    "sandbox_env_names",
     "server_env_names",
 ]

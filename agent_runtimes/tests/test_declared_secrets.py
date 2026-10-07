@@ -200,10 +200,18 @@ class FakeSandboxManager:
 
     def __init__(self) -> None:
         self.kernel: Dict[str, str] = {}
+        self.unset: List[str] = []
         self.variant = "jupyter-server"
         self.config = SimpleNamespace(
-            mcp_proxy_url="http://127.0.0.1:8765/api/v1/mcp/proxy"
+            mcp_proxy_url="http://127.0.0.1:8765/api/v1/mcp/proxy",
+            env_vars=self.kernel,
         )
+
+    def withdraw_env_vars(self, names: Any) -> List[str]:
+        self.unset.extend(names)
+        for name in names:
+            self.kernel.pop(name, None)
+        return list(names)
 
     def configure_from_url(
         self, url: str, mcp_proxy_url: Any = None, env_vars: Any = None
@@ -427,3 +435,181 @@ def test_a_launch_waiting_for_its_set_up_says_why_it_was_refused(
     )
     with pytest.raises(launch.CloudRefused, match="needs DATALAYER_API_KEY"):
         launch.wait_until_set_up("http://relay.invalid", timeout=5)
+
+
+# --- an MCP server's scripts, run in the sandbox (sandbox_envvars) --------------
+
+
+def test_what_a_server_s_scripts_read_is_offered_to_the_kernel_never_required() -> (
+    None
+):
+    download = MCPServer(
+        id="r19-download",
+        name="R-19 download",
+        command="/nonexistent/r19-download",
+        required_env_vars=["R19_SERVER_TOKEN:0.0.1"],
+        sandbox_env_vars=["R19_LOGIN_USERNAME:0.0.1", "R19_LOGIN_PASSWORD:0.0.1"],
+    )
+    declared = declared_secrets(BARE_AGENT, mcp_servers=[download])
+    assert declared.kernel == {"R19_LOGIN_USERNAME", "R19_LOGIN_PASSWORD"}
+    assert {"R19_LOGIN_USERNAME", "R19_LOGIN_PASSWORD"} <= declared.runtime
+    # Never required: an account without them is not refused.
+    assert not declared.missing(lambda name: name == "R19_SERVER_TOKEN", "x")
+    # Never the server's: started without them.
+    note_given(["R19_SERVER_TOKEN", "R19_LOGIN_USERNAME", "R19_LOGIN_PASSWORD"])
+    env = {"R19_SERVER_TOKEN": SERVER_SECRET, "R19_LOGIN_PASSWORD": "pw-sentinel"}
+    assert env_for_server(env, download) == {"R19_SERVER_TOKEN": SERVER_SECRET}
+
+
+# --- the application the runtime was launched for ------------------------------
+
+WEB_APP = {
+    "schema": "loop.app/v1",
+    "id": "web-research",
+    "name": "Web Research",
+    "kind": "chat",
+    "agent": "cog-crawler:0.0.1",
+    "connections": [{"server": "tavily:0.0.1"}],
+}
+TAVILY = "r19-tavily-" + uuid.uuid4().hex
+
+
+@pytest.fixture()
+def launch_clean(monkeypatch: pytest.MonkeyPatch):
+    """No application launched for, no Tavily key on this machine."""
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    declared_module.note_launched(None)
+    yield
+    declared_module.note_launched(None)
+    os.environ.pop("TAVILY_API_KEY", None)
+
+
+def _launch_configure(client: Any, spec_id: str, env_vars: List[Dict[str, str]]) -> Any:
+    return client.post(
+        "/api/v1/agents/configure-from-spec",
+        json={
+            "agent_spec_id": spec_id,
+            "env_vars": env_vars,
+            "jupyter_sandbox": "http://127.0.0.1:2300?token=t",
+            "launch_app_spec": WEB_APP,
+            "launch_app_instance": {"app_uid": "app-1", "deployment_uid": "dep-1"},
+        },
+    )
+
+
+def test_the_companion_is_told_what_the_launched_application_declares(
+    runtime: Any, launch_clean: None
+) -> None:
+    answer = runtime.post(
+        "/api/v1/agents/declared-secrets",
+        json={"agent_spec_id": "r19-agent", "app_spec": WEB_APP},
+    ).json()
+    assert answer["runtime"] == ["R19_SERVER_TOKEN", "R19_SKILL_TOKEN", "TAVILY_API_KEY"]
+    # A connection's credential stays out of the kernel.
+    assert answer["kernel"] == ["R19_SKILL_TOKEN"]
+    # Launched with no agentspec (a deployment kept on its runtime).
+    alone = runtime.post(
+        "/api/v1/agents/declared-secrets", json={"app_spec": WEB_APP}
+    ).json()
+    assert "TAVILY_API_KEY" in alone["runtime"]
+    assert "TAVILY_API_KEY" not in alone["kernel"]
+    refused = runtime.post(
+        "/api/v1/agents/declared-secrets", json={"app_spec": {"id": "x"}}
+    )
+    assert refused.status_code == 422
+
+
+def test_a_runtime_launched_for_an_application_keeps_its_connection_s_secret(
+    runtime: Any, launch_clean: None
+) -> None:
+    account = [*ACCOUNT, {"name": "TAVILY_API_KEY", "value": TAVILY}]
+    response = _launch_configure(runtime, "r19-bare", account)
+    assert response.status_code == 200, response.text
+    _settle()
+    assert os.environ["TAVILY_API_KEY"] == TAVILY
+    assert "R19_UNDECLARED_TOKEN" not in os.environ
+    assert "TAVILY_API_KEY" not in runtime.sandbox.kernel
+    # The application's own configure, later, finds it and takes nothing back.
+    assert _configure(runtime, "r19-bare", []).status_code == 200
+    assert os.environ["TAVILY_API_KEY"] == TAVILY
+
+
+def test_a_launched_application_whose_secret_is_missing_is_refused_in_a_sentence(
+    runtime: Any, launch_clean: None
+) -> None:
+    response = _launch_configure(runtime, "r19-bare", ACCOUNT)
+    assert response.status_code == 422, response.text
+    [problem] = response.json()["detail"]["problems"]
+    assert problem.startswith(
+        "Web Research is not set up: the MCP server tavily needs TAVILY_API_KEY"
+    )
+
+
+def test_mcp_servers_start_sets_a_launched_application_s_secrets_before_its_agent(
+    runtime: Any, launch_clean: None
+) -> None:
+    from agent_runtimes.routes import agents
+
+    body = {
+        "env_vars": [*ACCOUNT, {"name": "TAVILY_API_KEY", "value": TAVILY}],
+        "jupyter_sandbox": "http://127.0.0.1:2300?token=t",
+        "launch_app_spec": WEB_APP,
+    }
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(agents, "_agents", {})
+        response = runtime.post("/api/v1/agents/mcp-servers/start", json=body)
+        assert response.status_code == 200, response.text
+        assert os.environ["TAVILY_API_KEY"] == TAVILY
+        assert "R19_UNDECLARED_TOKEN" not in os.environ
+        assert "TAVILY_API_KEY" not in runtime.sandbox.kernel
+        # Not given: refused, and its agent is refused in the same sentence.
+        os.environ.pop("TAVILY_API_KEY", None)
+        refused = runtime.post(
+            "/api/v1/agents/mcp-servers/start",
+            json={**body, "env_vars": ACCOUNT},
+        )
+        assert refused.status_code == 422, refused.text
+        assert "needs TAVILY_API_KEY" in agents.set_up_refused("web-research")
+
+
+# --- a running kernel gives back what a configure takes away -------------------
+
+
+def test_a_configure_that_takes_a_name_away_unsets_it_in_the_live_kernel(
+    runtime: Any,
+) -> None:
+    assert _configure(runtime, "r19-agent", ACCOUNT).status_code == 200
+    _settle()
+    assert runtime.sandbox.kernel == {"R19_SKILL_TOKEN": SKILL_SECRET}
+    assert _configure(runtime, "r19-bare", ACCOUNT).status_code == 200
+    assert "R19_SKILL_TOKEN" in runtime.sandbox.unset
+    assert runtime.sandbox.kernel == {}
+
+
+def test_the_sandbox_manager_unsets_names_in_every_live_kernel() -> None:
+    from agent_runtimes.services.code_sandbox_manager import CodeSandboxManager
+
+    manager = CodeSandboxManager()
+    manager.configure(env_vars={"R19_SKILL_TOKEN": SKILL_SECRET, "R19_KEPT": "k"})
+    ran: List[str] = []
+
+    class Kernel:
+        def run_code(self, code: str) -> Any:
+            ran.append(code)
+            return SimpleNamespace(execution_ok=True, execution_error=None)
+
+    manager._sandbox = Kernel()  # type: ignore[assignment]
+    manager._agent_sandboxes["r19"] = Kernel()  # type: ignore[assignment]
+    assert manager.withdraw_env_vars(["R19_SKILL_TOKEN", "R19_NEVER_GIVEN"]) == [
+        "R19_SKILL_TOKEN"
+    ]
+    # Not injected into a kernel started later.
+    assert manager.config.env_vars == {"R19_KEPT": "k"}
+    # Unset in both live kernels, by name: no value is sent.
+    assert len(ran) == 2
+    assert all(SKILL_SECRET not in code for code in ran)
+    os.environ["R19_SKILL_TOKEN"] = SKILL_SECRET
+    exec(ran[0], {})  # what the kernel runs
+    assert "R19_SKILL_TOKEN" not in os.environ
+    manager._sandbox = None
+    manager._agent_sandboxes.clear()

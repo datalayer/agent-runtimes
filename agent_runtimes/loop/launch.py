@@ -944,6 +944,7 @@ def launch_cloud(
     can_ask: Optional[bool] = None,
     status: Callable[[str], None] = lambda message: None,
     note: Callable[[str], None] = lambda message: None,
+    app_spec: Optional[dict[str, Any]] = None,
 ) -> CloudLaunch:
     """Launch a cloud runtime for an agent, or go back to one, and the relay that reaches it.
 
@@ -953,6 +954,11 @@ def launch_cloud(
     SDK's list and priced against the credits left. No agentspec is asked
     for: the runtime's agent is ``agent_id``, else `DEFAULT_CLOUD_AGENTSPEC`,
     said through ``note``.
+
+    ``app_spec`` is the Appspec of the application the runtime is launched
+    for (`loop apps run --cloud`): sent with the launch, so the runtime is
+    given the secrets its connections declare and a missing one is said
+    before the application is configured (LOOP R-19).
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
@@ -1005,7 +1011,10 @@ def launch_cloud(
         )
     try:
         created = client.create_runtime(
-            environment=chosen.name, time_reservation=reserved, agent_spec_id=agent_id
+            environment=chosen.name,
+            time_reservation=reserved,
+            agent_spec_id=agent_id,
+            **({"app_spec": dict(app_spec)} if app_spec else {}),
         )
     except (RuntimeError, ValueError) as error:
         raise CloudRefused(f"Datalayer refused the launch: {error}") from None

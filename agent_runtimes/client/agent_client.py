@@ -890,6 +890,7 @@ class AgentClient(
         from_snapshot_uid: Optional[str] = None,
         parent_reservation_uid: Optional[str] = None,
         version: Optional[Union[int, str]] = None,
+        app_spec: Optional[dict[str, Any]] = None,
     ) -> RuntimeService:
         """
         Create a new runtime (kernel) for code execution.
@@ -925,6 +926,10 @@ class AgentClient(
         parent_reservation_uid : Optional[str], optional
             The execution tree the runtime is metered against (ORCHESTRATOR.md,
             O1-07): its reservation gets no more than the tree has left.
+        app_spec : Optional[dict[str, Any]], optional
+            The Appspec of the application the runtime is launched for: its
+            connections' secrets are given to it before its agent is made
+            (LOOP R-19), as `loop apps run --cloud` launches one.
 
         Returns
         -------
@@ -997,6 +1002,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
+                **({"app_spec": app_spec} if app_spec else {}),
             )
         else:
             # Create runtime without snapshot
@@ -1013,6 +1019,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
+                **({"app_spec": app_spec} if app_spec else {}),
             )
 
         # Process the response and create RuntimesService object

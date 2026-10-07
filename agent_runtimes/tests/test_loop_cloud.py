@@ -302,6 +302,23 @@ def test_a_new_runtime_asks_for_an_environment_never_an_agentspec(
         started.relay.stop()
 
 
+def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -> None:
+    app = {"schema": "loop.app/v1", "id": "web-research"}
+    started = launch.launch_cloud(
+        "example-simple", reconnect=False, can_ask=False, minutes=5, app_spec=app
+    )
+    try:
+        # Its connections' secrets given at launch (LOOP R-19).
+        assert datalayer.created["app_spec"] == app
+    finally:
+        started.relay.stop()
+    started = launch.launch_cloud("crawler", reconnect=False, can_ask=False, minutes=5)
+    try:
+        assert "app_spec" not in datalayer.created
+    finally:
+        started.relay.stop()
+
+
 def test_refusals_launch_nothing(datalayer: FakeDatalayer) -> None:
     datalayer.credits = 0.0
     with pytest.raises(CloudRefused, match="No credits left"):

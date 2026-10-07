@@ -1406,6 +1406,8 @@ def apps_run(
                 minutes=minutes,
                 runtime=runtime,
                 status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+                # Its connections' secrets given at launch (R-19).
+                app_spec=dict(document),
             )
         except NotSignedIn:
             console.print(

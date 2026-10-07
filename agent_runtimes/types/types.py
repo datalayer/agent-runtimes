@@ -1254,6 +1254,15 @@ class MCPServer(BaseModel):
         description="Environment variables required for this server to work",
         alias="requiredEnvVars",
     )
+    sandbox_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variables the code its tools write reads in the code "
+            "sandbox (a download's script): given to the sandbox when the "
+            "account has them, never to the server, never required (LOOP R-19)"
+        ),
+        alias="sandboxEnvVars",
+    )
     is_available: bool = Field(
         default=False,
         description="Whether the server is available (based on env var presence)",

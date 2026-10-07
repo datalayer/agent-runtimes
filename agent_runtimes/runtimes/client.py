@@ -168,6 +168,7 @@ class RuntimesClient:
         environment_version: Optional[Union[int, str]] = None,
         app_uid: Optional[str] = None,
         deployment_uid: Optional[str] = None,
+        app_spec: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -208,6 +209,12 @@ class RuntimesClient:
             application and per deployment; they never change who pays. A
             deployment is always of an application: one named without
             ``app_uid`` is refused (`ValueError`).
+        app_spec : Optional[dict[str, Any]]
+            The Appspec of the application the runtime is launched for (LOOP
+            R-19). The Operator passes it to the runtime's companion, which
+            gives the runtime the secrets its connections declare before its
+            agent is made. An application's launch carries it: ``app_uid``
+            without it is refused (`ValueError`).
 
         Returns
         -------
@@ -217,6 +224,11 @@ class RuntimesClient:
         if deployment_uid and not app_uid:
             raise ValueError(
                 f"Deployment {deployment_uid} is named without its application: give app_uid."
+            )
+        if app_uid and not app_spec:
+            raise ValueError(
+                f"Application {app_uid} is launched without its Appspec: give app_spec, "
+                "so its runtime is given the secrets its connections declare."
             )
         # The launch contract is `environment: {name, version}`, and the
         # version is additive: absent, this is byte for byte the request every
@@ -302,6 +314,8 @@ class RuntimesClient:
                 body["app_uid"] = app_uid
             if deployment_uid:
                 body["deployment_uid"] = deployment_uid
+            if app_spec:
+                body["app_spec"] = dict(app_spec)
 
             if runtime_name:
                 body["runtime_name"] = runtime_name

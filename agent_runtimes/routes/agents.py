@@ -44,7 +44,9 @@ from ..guardrails.declared_secrets import (
     forget_given,
     given_names,
     keep_declared,
+    launched,
     note_given,
+    note_launched,
     server_env_names,
 )
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
@@ -1754,6 +1756,13 @@ async def create_agent(
                     status_code=422,
                     detail={"problems": refused.problems},
                 ) from None
+            # The runtime was launched for it and a secret it declares was not
+            # given (R-19): refused in the sentence its launch was.
+            launch_refused = _SET_UP_REFUSED.get(running_app.id)
+            if launch_refused:
+                raise HTTPException(
+                    status_code=422, detail={"problems": [launch_refused]}
+                )
             # A deployment's agent acts as its application's principal, with
             # the token ai-agents mints for it from the caller's: it is not
             # made without one (LOOP I-03).
@@ -3980,6 +3989,16 @@ class StartAgentMcpServersRequest(BaseModel):
         "If provided, the Jupyter kernel will call tools via HTTP to this URL "
         "instead of requiring direct stdio access to MCP servers.",
     )
+    launch_app_spec: dict[str, Any] | None = Field(
+        default=None,
+        description="The Appspec of the application the runtime was launched "
+        "for, passed by the Operator: its connections' secrets are declared "
+        "before its agent is made (LOOP R-19).",
+    )
+    launch_app_instance: dict[str, Any] | None = Field(
+        default=None,
+        description="Where that application runs: its app_uid and deployment_uid.",
+    )
 
 
 class AgentMcpServersResponse(BaseModel):
@@ -4345,7 +4364,44 @@ def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
         servers=servers,
         kernel=frozenset(kernel),
         held=frozenset(held),
+    ).merged(launched())
+
+
+def _declared_for_app(
+    app_spec: dict[str, Any], app_instance: dict[str, Any] | None = None
+) -> DeclaredSecrets:
+    """What an application declares as its agent will be made from it: its
+    agent's agentspec, its connections, its signed user's secret (R-19).
+
+    422 when the runtime's own loader refuses the Appspec.
+    """
+    from agent_runtimes.loop.apps.loading import AppNotRunnable, agent_id_of, load_app
+
+    try:
+        app = load_app(app_spec)
+    except AppNotRunnable as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": refused.problems}
+        ) from None
+    agent_id = agent_id_of(app) if app.agent else ""
+    return declared_secrets(
+        get_library_agent_spec(agent_id) if agent_id else None,
+        app_spec=app_spec,
+        app_instance=app_instance,
+        resolve_agent=get_library_agent_spec,
     )
+
+
+def _note_launched_app(
+    app_spec: dict[str, Any] | None, app_instance: dict[str, Any] | None
+) -> DeclaredSecrets | None:
+    """Remember the application the runtime was launched for, when the
+    companion names it: its secrets are declared from then on (R-19)."""
+    if not app_spec:
+        return None
+    declared = _declared_for_app(app_spec, app_instance)
+    note_launched(declared)
+    return declared
 
 
 async def _setup_env_and_sandbox(
@@ -4559,12 +4615,30 @@ async def start_all_agents_mcp_servers(
     Returns:
         Aggregated status of server start operations across all agents.
     """
-    if not _agents:
+    # The application the runtime was launched for (R-19): its secrets are
+    # set now, before its agent is made, and a missing one is refused here.
+    launch = _note_launched_app(body.launch_app_spec, body.launch_app_instance)
+    if not _agents and launch is None:
         return AgentMcpServersResponse(
             agent_id=None,
             agents_processed=[],
             message="No agents registered",
         )
+    if launch is not None:
+        given = {ev.name: ev.value for ev in body.env_vars if ev.name}
+        app_id = str((body.launch_app_spec or {}).get("id") or "")
+        problems = launch.missing(
+            lambda name: bool(
+                (given.get(name) or "").strip() or (os.environ.get(name) or "").strip()
+            ),
+            who=str((body.launch_app_spec or {}).get("name") or app_id),
+        )
+        if problems:
+            if app_id:
+                _SET_UP_REFUSED[app_id] = " ".join(problems)
+            raise HTTPException(status_code=422, detail={"problems": problems})
+        if app_id:
+            _SET_UP_REFUSED.pop(app_id, None)
 
     try:
         (
@@ -4985,6 +5059,12 @@ class ConfigureFromSpecRequest(BaseModel):
     """The model, when it is not the agent spec's own."""
     agent_id: str = "default"
     """The agent to (re)create: ``default``, or the one ``loop`` talks to."""
+    launch_app_spec: dict[str, Any] | None = None
+    """The Appspec of the application the runtime was launched for, passed by
+    the Operator: declared with this spec, so its agent made later finds its
+    connections' secrets (R-19). Not the agent's own ``app_spec``."""
+    launch_app_instance: dict[str, Any] | None = None
+    """Where that application runs: its app_uid and deployment_uid."""
 
 
 class DeclaredSecretsRequest(BaseModel):
@@ -4994,6 +5074,8 @@ class DeclaredSecretsRequest(BaseModel):
     """The agentspec it will configure; none: the agents running now."""
     agent_spec: dict[str, Any] | None = None
     app_spec: dict[str, Any] | None = None
+    """The application the runtime is launched for: its agent's agentspec and
+    its connections are declared too (R-19)."""
     app_instance: dict[str, Any] | None = None
 
 
@@ -5016,12 +5098,12 @@ async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, A
         declared = declared_secrets(
             spec,
             forwarded_spec=body.agent_spec,
-            app_spec=body.app_spec,
-            app_instance=body.app_instance,
             resolve_agent=get_library_agent_spec,
-        )
+        ).merged(launched())
     else:
         declared = _declared_for_agents(list(_agents))
+    if body.app_spec:
+        declared = declared.merged(_declared_for_app(body.app_spec, body.app_instance))
     return declared.as_names()
 
 
@@ -5085,13 +5167,14 @@ async def configure_from_spec_endpoint(
             detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
         )
     target_agent_name = body.agent_id
+    _note_launched_app(body.launch_app_spec, body.launch_app_instance)
     declared = declared_secrets(
         spec,
         forwarded_spec=body.agent_spec,
         app_spec=body.app_spec,
         app_instance=body.app_instance,
         resolve_agent=get_library_agent_spec,
-    )
+    ).merged(launched())
 
     # ── 2. Only the declared secrets are set; none other is kept ─────
     given = {
@@ -5114,11 +5197,25 @@ async def configure_from_spec_endpoint(
     forget_given(taken_back)
     if taken_back:
         logger.info("[configure-from-spec] no longer declared, unset: %s", taken_back)
+    # A live kernel keeps what it was given until it is unset there: what this
+    # configure no longer gives the sandbox is taken back from it too.
+    from ..services.code_sandbox_manager import get_code_sandbox_manager
+
+    in_kernel = set(get_code_sandbox_manager().config.env_vars or {})
+    no_longer_in_kernel = sorted((in_kernel | set(taken_back)) - declared.kernel)
+    if no_longer_in_kernel:
+        await asyncio.to_thread(
+            get_code_sandbox_manager().withdraw_env_vars, no_longer_in_kernel
+        )
     problems = declared.missing(
         lambda name: bool(
             (kept.get(name) or "").strip() or (os.environ.get(name) or "").strip()
         ),
-        who=str((body.app_spec or {}).get("name") or body.agent_spec_id),
+        who=str(
+            (body.app_spec or {}).get("name")
+            or (body.launch_app_spec or {}).get("name")
+            or body.agent_spec_id
+        ),
     )
     if problems:
         _SET_UP_REFUSED[target_agent_name] = " ".join(problems)

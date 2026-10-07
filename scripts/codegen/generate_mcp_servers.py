@@ -126,13 +126,17 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         if env_formatted:
             lines.append(f"    env={env_formatted},")
 
-        lines.extend(
-            [
-                f"    required_env_vars={envvars_formatted},",
-                ")",
-                "",
-            ]
-        )
+        lines.append(f"    required_env_vars={envvars_formatted},")
+        # What the code its tools write reads in the code sandbox: given there
+        # when the account has them, never required (LOOP R-19).
+        sandbox_envvars = spec.get("sandbox_envvars", [])
+        if sandbox_envvars:
+            lines.append(
+                "    sandbox_env_vars=["
+                + ", ".join(f'"{v}"' for v in sandbox_envvars)
+                + "],"
+            )
+        lines.extend([")", ""])
 
     # Generate catalog dictionary
     lines.extend(
