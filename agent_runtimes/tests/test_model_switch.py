@@ -76,6 +76,7 @@ def runtime(
         """No Jupyter server is started for the agent's sandbox."""
 
         variant = "jupyter-server"
+        config = SimpleNamespace(env_vars={}, jupyter_url=None, mcp_proxy_url=None)
 
         def __getattr__(self, name: str) -> Any:
             return lambda *args, **kwargs: SimpleNamespace()

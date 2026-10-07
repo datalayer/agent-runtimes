@@ -5,6 +5,7 @@
 
 import asyncio
 import os
+import re
 from pathlib import Path
 from typing import Any, List, TypeVar
 
@@ -342,8 +343,9 @@ def test_an_application_refused_on_a_runtime_attached_to_is_told_to_launch_one(
     )
     assert result.exit_code != 0
     assert launched[0]["runtime"] == "runtime-9"
-    # Typer boxes its error: the words, without the box.
-    said = " ".join(result.output.replace("│", " ").split())
+    # Typer boxes its error (styled on CI): the words, without the box.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    said = " ".join(plain.replace("│", " ").split())
     assert ("runtime-9 was not launched for" in said) is told
     if told:
         assert "Run it without --runtime to launch one for it." in said

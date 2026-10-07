@@ -55,6 +55,8 @@ def test_a_deployment_s_runtime_names_its_application_and_deployment() -> None:
         credits_limit=2.0,
         app_uid="app-1",
         deployment_uid="dep-1",
+        # An application's runtime is launched with its Appspec (R-19).
+        app_spec={"name": "Tick"},
     )
     [body] = transport.bodies
     assert (body["app_uid"], body["deployment_uid"]) == ("app-1", "dep-1")
