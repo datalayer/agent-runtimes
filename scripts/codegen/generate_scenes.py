@@ -16,6 +16,11 @@ filled from its application (``cast_of``) — its ``entry`` said, what each
 beat ``shows`` said, and what it names that is not enabled (``setup``).
 Empty optional lists are dropped, as ``generate_apps.py`` drops them.
 
+The scene spec's JSON Schema is written beside the TypeScript catalogue as
+``sceneSchema.ts`` (``agentspecs.scenes.json_schema``), the way
+``generate_apps.py`` writes ``appspecSchema.ts``: what an editor of the text
+completes and explains is what the spec accepts (LOOP S-01, A-03).
+
 Usage:
     python generate_scenes.py \\
       --specs-dir agentspecs/agentspecs/scenes \\
@@ -273,8 +278,41 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def generate_schema_typescript_code(specs_dir: Path) -> str:
+    """The scene spec's JSON Schema, for the editor of its text (LOOP S-01, A-03).
+
+    Taken from the agentspecs the catalogue is generated from, so that what
+    the editor completes and explains is what the spec accepts. The
+    ``JsonSchema`` type is ``appspecSchema.ts``'s.
+    """
+    scenes_module = import_from_clone(specs_dir, "scenes")
+    schema = json.dumps(
+        scenes_module.json_schema(), indent=2, ensure_ascii=False, sort_keys=False
+    )
+    return "\n".join(
+        [
+            "/*",
+            " * Copyright (c) 2025-2026 Datalayer, Inc.",
+            " * Distributed under the terms of the Modified BSD License.",
+            " */",
+            "",
+            "/**",
+            " * The scene spec's JSON Schema (`loop.scene/v1`), generated from agentspecs by",
+            " * `scripts/codegen/generate_scenes.py`. Do not edit.",
+            " *",
+            " * @module specs/sceneSchema",
+            " */",
+            "",
+            "import type { JsonSchema } from './appspecSchema';",
+            "",
+            f"export const SCENE_SCHEMA: JsonSchema = {schema};",
+            "",
+        ]
+    )
+
+
 def main() -> None:
-    """Generate the scene catalogue."""
+    """Generate the scene catalogue, and the scene spec's JSON Schema."""
     parser = argparse.ArgumentParser(
         description="Generate Python and TypeScript code from YAML scene specifications"
     )
@@ -290,6 +328,10 @@ def main() -> None:
     for path, text in (
         (args.python_output, generate_python_code(specs)),
         (args.typescript_output, generate_typescript_code(specs)),
+        (
+            args.typescript_output.with_name("sceneSchema.ts"),
+            generate_schema_typescript_code(args.specs_dir),
+        ),
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
