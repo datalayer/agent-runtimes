@@ -492,8 +492,6 @@ def generate_schema_typescript_code() -> str:
             " * @module specs/appspecSchema",
             " */",
             "",
-            "/* eslint-disable */",
-            "",
             "export type JsonSchema = {",
             "  [key: string]: unknown;",
             "  type?: string;",
