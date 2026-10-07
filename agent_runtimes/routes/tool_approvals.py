@@ -576,6 +576,11 @@ async def forward_approval_to_ai_agents(
             return None
         ai_agents_url = ai_agents_url.rstrip("/")
         remote_approval_id: str | None = None
+        # The session whose turn asks it: a host mapping that session is
+        # delivered it (plans/SLACK.md §4.3, 3).
+        from agent_runtimes.loop.apps.record import current_session
+
+        session_uid = current_session()
         async with httpx.AsyncClient(
             timeout=10.0,
             headers={"Authorization": f"Bearer {user_jwt_token}"},
@@ -588,6 +593,7 @@ async def forward_approval_to_ai_agents(
                     "tool_name": record.tool_name,
                     "tool_args": record.tool_args or {},
                     "tool_call_id": record.tool_call_id,
+                    **({"session_uid": session_uid} if session_uid else {}),
                 },
             )
             resp.raise_for_status()

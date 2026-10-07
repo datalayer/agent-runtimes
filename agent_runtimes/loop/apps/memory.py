@@ -108,7 +108,8 @@ def remember_for(caller: Any, token: str) -> None:
     kind, uid = getattr(caller, "kind", ""), str(getattr(caller, "uid", "") or "")
     if kind == "local" or (kind == "person" and uid and uid == identity.user_uid):
         who = Rememberer(user_id=identity.user_id, token=token)
-    elif kind == "person" and uid:
+    elif kind in ("person", "host") and uid:
+        # A host's person is that person, through a host (plans/SLACK.md §4.3).
         who = Rememberer(user_id=uid, token=token)
     elif kind == "embed":
         who = Rememberer(withheld=EMBEDDED)

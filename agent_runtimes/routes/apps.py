@@ -579,12 +579,25 @@ class StartSessionRequest(BaseModel):
             "what an application that says `user: signed` opens its session with"
         ),
     )
+    external_event_id: str = Field(
+        "",
+        max_length=255,
+        description=(
+            "The host's own id for the turn (a Slack event id): with or without an "
+            "`Idempotency-Key`, a retry answers the original session and turn (plans/SLACK.md §4.3)"
+        ),
+    )
 
 
 class SessionMessageRequest(BaseModel):
     """A message, or an answer."""
 
     text: str = Field(..., description="What the person says, or answers")
+    external_event_id: str = Field(
+        "",
+        max_length=255,
+        description="The host's own id for the turn: a retry answers the original turn",
+    )
 
 
 class SessionActionRequest(BaseModel):
@@ -675,6 +688,15 @@ async def _acts_as(
     from agent_runtimes.loop.apps.sessions import SessionRefused
 
     deployment = deployment_of(instance)
+    if caller.kind == "host":
+        # A host's person (plans/SLACK.md §4.3): the one deployment its host
+        # token was issued for, opened to them as to anybody, its principal
+        # acting — never a Preview, never another deployment.
+        if not deployment or deployment != caller.deployment_uid:
+            raise HTTPException(
+                status_code=403,
+                detail="This host token runs a session of the deployment it was issued for, and no other.",
+            )
     if caller.kind == "embed":
         # An embed token runs a session of its application's embedded
         # deployment, as that deployment's principal, and nothing beyond
@@ -821,6 +843,67 @@ async def _held(uid: str, request: Request) -> Tuple[Any, str]:
     return live, bearer
 
 
+#: The header a host names a turn in, to be answered it again on a retry.
+IDEMPOTENCY_HEADER = "Idempotency-Key"
+
+
+def _turn_key(
+    caller: Caller, request: Request, external_event_id: str
+) -> Optional[str]:
+    """What names an external turn for its caller, or None (plans/SLACK.md §4.3, 2)."""
+    from agent_runtimes.loop.apps.external_turns import TurnConflict, key_of
+
+    try:
+        return key_of(
+            caller, request.headers.get(IDEMPOTENCY_HEADER, ""), external_event_id
+        )
+    except TurnConflict as conflict:
+        raise HTTPException(status_code=422, detail=conflict.reason) from None
+
+
+def _peek_turn(key: str, asked: Dict[str, Any]) -> Any:
+    from agent_runtimes.loop.apps.external_turns import TurnConflict, peek
+
+    try:
+        return peek(key, request=asked)
+    except TurnConflict as conflict:
+        raise HTTPException(
+            status_code=conflict.status, detail=conflict.reason
+        ) from None
+
+
+def _replay(known: Any) -> Any:
+    """A retry: the original session and turn, nothing run."""
+    from agent_runtimes.loop.apps.external_turns import replayed
+    from agent_runtimes.loop.apps.sessions import session_of
+
+    live = session_of(known.session_uid)
+    return _stream(replayed(live.session_event() if live else "", known))
+
+
+def _external_turn(
+    key: str, asked: Dict[str, Any], live: Any, external_event_id: str, run: Any
+) -> Any:
+    """Run a turn a host named, once: its stream says which turn it is."""
+    from agent_runtimes.loop.apps.external_turns import (
+        claim,
+        release,
+        tracked,
+        turn_event,
+    )
+
+    turn, _ = claim(
+        key, request=asked, session_uid=live.uid, external_event_id=external_event_id
+    )
+    try:
+        chunks = run(live.session_event() + turn_event(turn, replayed=False))
+    except BaseException:
+        # Refused before it ran: not remembered, so that the host may try again.
+        release(key)
+        raise
+    return _stream(tracked(turn, chunks))
+
+
 @router.post("/sessions")
 async def start_session(body: StartSessionRequest, request: Request) -> Any:
     """Start a session of the application an agent of this runtime runs."""
@@ -842,6 +925,13 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     acts_as = await _acts_as(instance, authorized.caller, bearer, app)
     # Who its user is, embedded, when it takes only one its host signed (D-21).
     user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
+    # A host's retry is answered the original session and turn (plans/SLACK.md §4.3, 2).
+    turn_key = _turn_key(authorized.caller, request, body.external_event_id)
+    asked = body.model_dump(exclude={"user_token"})
+    if turn_key:
+        known = _peek_turn(turn_key, asked)
+        if known is not None:
+            return _replay(known)
     _prune()
     try:
         live = new_session(
@@ -855,6 +945,19 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
             profile=body.profile,
             user=user,
         )
+        if turn_key:
+            return _external_turn(
+                turn_key,
+                asked,
+                live,
+                body.external_event_id,
+                lambda head: live.open(
+                    opener=body.opener.strip(),
+                    woken_by=body.woken_by or None,
+                    head=head,
+                    bearer=bearer,
+                ),
+            )
         return _stream(
             live.open(
                 opener=body.opener.strip(),
@@ -909,7 +1012,21 @@ async def session_message(
     from agent_runtimes.loop.apps.sessions import SessionRefused
 
     live, bearer = await _held(uid, request)
+    # Whoever drives it is who opened it (`_held`): their turns, named.
+    turn_key = _turn_key(live.opened_by, request, body.external_event_id)
     try:
+        if turn_key:
+            asked = {"session": uid, **body.model_dump()}
+            known = _peek_turn(turn_key, asked)
+            if known is not None:
+                return _replay(known)
+            return _external_turn(
+                turn_key,
+                asked,
+                live,
+                body.external_event_id,
+                lambda head: live.message(body.text, bearer=bearer, head=head),
+            )
         return _stream(
             live.message(body.text, bearer=bearer, head=live.session_event())
         )

@@ -21,6 +21,13 @@ ai-inference's ``/anonymous/whoami`` accepts, and only the visitors' runtime
 answers it (LOOP R-30, `agent_runtimes.loop.apps.visitors`), which in turn
 answers nobody signed in.
 
+A host — Datalayer's Slack app, an editor, a desktop app — holds no person's
+token: it exchanged its installation's key and a linked user for a **host
+token** naming that person and one deployment (plans/SLACK.md §4.3). It is
+what ai-agents' ``/apps/hosts/whoami`` accepts, which checks that the
+installation, the link and the deployment's allowance still stand; it is
+remembered for a minute at most, so that a revocation stops it within one.
+
 A call from the machine itself — a developer's ``localhost``, the companion
 beside the runtime — needs no token. Every other call that cannot be verified
 is refused: a runtime that does not know where IAM is refuses, rather than
@@ -45,6 +52,13 @@ APP_EMBED_AUDIENCE = "datalayer:app:embed"
 #: What an embed token names when it runs a session of its application (LOOP R-20).
 SESSION_SCOPE = "session"
 
+#: The audience of a host token (`datalayer_common.authn.app_host`).
+APP_HOST_AUDIENCE = "datalayer:app:host"
+
+#: The longest a verified host token is trusted without asking again: a
+#: revoked link or installation stops it within this.
+HOST_CACHE_SECONDS = 60.0
+
 #: The longest a verified token is trusted without asking again.
 CACHE_SECONDS = 300.0
 
@@ -63,7 +77,7 @@ class Caller:
     ``at:<slug>`` for an application at its address (R-30).
     """
 
-    kind: str  # "person" | "embed" | "visitor" | "local"
+    kind: str  # "person" | "embed" | "visitor" | "host" | "local"
     uid: str = ""
     app_uid: str = ""
     #: For an embed: the visit its token was issued for — the host's, kept
@@ -73,6 +87,9 @@ class Caller:
     #: For an embed: what its token names it may do — `read`, `decide`,
     #: `session` — and nothing else (LOOP R-20).
     scopes: Tuple[str, ...] = ()
+    #: For a host: the one deployment its token was issued for; its
+    #: installation is its ``visit`` (plans/SLACK.md §4.3).
+    deployment_uid: str = ""
 
 
 LOCAL = Caller(kind="local")
@@ -114,6 +131,13 @@ def _unverified_claims(token: str) -> Dict[str, Any]:
     except jwt.PyJWTError:
         return {}
     return claims if isinstance(claims, dict) else {}
+
+
+def is_host_token(claims: Dict[str, Any]) -> bool:
+    audience = claims.get("aud")
+    return audience == APP_HOST_AUDIENCE or (
+        isinstance(audience, list) and APP_HOST_AUDIENCE in audience
+    )
 
 
 def is_embed_token(claims: Dict[str, Any]) -> bool:
@@ -171,6 +195,8 @@ class CallerVerifier:
             raise CallerRefused(403, NOT_HERE if visitor else ONLY_VISITORS)
         if visitor:
             return await self._visitor(token)
+        if is_host_token(claims):
+            return await self._host(token, claims)
         embed = is_embed_token(claims)
         if embed and not app_uid:
             raise CallerRefused(
@@ -246,6 +272,65 @@ class CallerVerifier:
             )
         return await self._visitor(token)
 
+    async def _host(self, token: str, claims: Dict[str, Any]) -> Caller:
+        """A host token, asked of ai-agents, which issued it and keeps what it
+        rests on (plans/SLACK.md §4.3): remembered a minute at most."""
+        key = (hashlib.sha256(token.encode()).hexdigest(), "host")
+        remembered = self._verified.get(key)
+        if remembered and remembered[1] > self._clock():
+            return remembered[0]
+        expires = claims.get("exp")
+        if isinstance(expires, (int, float)) and expires <= self._now():
+            raise CallerRefused(
+                401, "The host token has expired: the host asks for another."
+            )
+        url = _ai_agents_url()
+        if not url:
+            raise CallerRefused(
+                503,
+                "This runtime does not know where ai-agents is, so it cannot verify a host token.",
+            )
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+                response = await client.get(
+                    f"{url}/api/ai-agents/v1/apps/hosts/whoami",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+        except httpx.HTTPError as error:
+            raise CallerRefused(
+                503,
+                f"ai-agents could not be reached to verify the host token ({type(error).__name__}).",
+            ) from None
+        if response.status_code in (401, 403, 404, 409):
+            detail = ""
+            try:
+                detail = str((response.json() or {}).get("detail") or "")
+            except ValueError:
+                pass
+            raise CallerRefused(
+                401 if response.status_code == 401 else 403,
+                detail or "ai-agents does not accept this host token.",
+            )
+        if response.status_code != 200:
+            raise CallerRefused(
+                503,
+                f"ai-agents could not verify the host token ({response.status_code}).",
+            )
+        said = response.json()
+        caller = Caller(
+            kind="host",
+            uid=str(said.get("sub") or ""),
+            app_uid=str(said.get("app_uid") or ""),
+            visit=str(said.get("azp") or ""),
+            scopes=tuple(str(said.get("scope") or "").split()),
+            deployment_uid=str(said.get("deployment_uid") or ""),
+        )
+        if not caller.uid or not caller.deployment_uid:
+            raise CallerRefused(401, "The host token names nobody.")
+        lifetime = min(HOST_CACHE_SECONDS, max(0.0, float(said.get("expires_in") or 0)))
+        self._remember(key, caller, self._clock() + lifetime)
+        return caller
+
     async def _visitor(self, token: str) -> Caller:
         """A visitor's token, asked of ai-inference, which minted it (R-30).
 
@@ -312,6 +397,21 @@ class CallerVerifier:
                 503,
                 f"The platform could not be reached to verify the token ({type(error).__name__}).",
             ) from None
+
+
+def _ai_agents_url() -> str:
+    """Where ai-agents is, as the runtime's other calls to it say."""
+    named = _platform_url("DATALAYER_AI_AGENTS_URL")
+    if named:
+        return named
+    try:
+        from datalayer_core.utils.urls import DatalayerURLs
+
+        return str(
+            getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+        ).rstrip("/")
+    except Exception:  # noqa: BLE001 - no configuration is no ai-agents
+        return ""
 
 
 #: The runtime's verifier: one per process.

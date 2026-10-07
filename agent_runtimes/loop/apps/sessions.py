@@ -1926,7 +1926,8 @@ def new_session(
     )
     # Who opened it, on its record (LOOP R-31): a person the runtime
     # verified; an embed's visitor or one not signed in is nobody known.
-    recorder.opened(uid, opened_by.uid if opened_by.kind == "person" else "")
+    # A host's person opened it as themselves (plans/SLACK.md §4.3).
+    recorder.opened(uid, opened_by.uid if opened_by.kind in ("person", "host") else "")
     # Who it acts for, embedded, as the host's server signed them (D-21).
     recorder.signed(uid, {"sub": user.sub, "name": user.name} if user else None)
     live = LiveSession(
