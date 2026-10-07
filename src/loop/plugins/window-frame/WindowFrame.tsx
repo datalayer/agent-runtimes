@@ -77,22 +77,18 @@ export function WindowFrame({
 
   return (
     <Box
-      sx={{
-        position: 'relative',
-        // Filling is the default: with no height given the frame takes the
-        // space it was handed and the body gets the remainder.
-        ...(height === undefined
-          ? { height: '100%', display: 'flex', flexDirection: 'column' }
-          : null),
-        borderRadius: '14px',
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: 'border.default',
-        bg: 'canvas.default',
-        // Lifted off the field, so the workspace reads as a thing sitting on
-        // the page rather than a hole cut into it.
-        boxShadow: '0 24px 60px -28px rgba(0, 0, 0, 0.55)',
-      }}
+      position="relative"
+      borderRadius="14px"
+      overflow="hidden"
+      border="1px solid"
+      borderColor="border.default"
+      bg="canvas.default"
+      // Lifted off the field, so the workspace reads as a thing sitting on
+      // the page rather than a hole cut into it.
+      boxShadow="0 24px 60px -28px rgba(0, 0, 0, 0.55)"
+      height={height === undefined ? '100%' : undefined}
+      display={height === undefined ? 'flex' : undefined}
+      flexDirection={height === undefined ? 'column' : undefined}
     >
       <Box
         display="flex"

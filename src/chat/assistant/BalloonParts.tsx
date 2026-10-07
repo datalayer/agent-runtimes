@@ -160,7 +160,7 @@ export function ToolLineAnnouncer({
       role="status"
       aria-live="polite"
       data-balloon-announce=""
-      sx={VISUALLY_HIDDEN}
+      {...VISUALLY_HIDDEN}
     >
       {said}
     </Box>

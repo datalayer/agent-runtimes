@@ -39,22 +39,19 @@ export function BlockFrame({
       as="section"
       aria-label={title || label}
       data-testid={testId}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        minWidth: 0,
-        boxSizing: 'border-box',
-        p: 3,
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: CARD_RADIUS,
-        bg: 'canvas.default',
-        color: 'fg.default',
-        ...(typeof weight === 'number'
-          ? { flex: `${weight}`, minHeight: 0 }
-          : null),
-      }}
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      minWidth={0}
+      boxSizing="border-box"
+      p={3}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={CARD_RADIUS}
+      bg="canvas.default"
+      color="fg.default"
+      flex={typeof weight === 'number' ? `${weight}` : undefined}
+      minHeight={typeof weight === 'number' ? 0 : undefined}
     >
       {title ? (
         <Heading as="h3" sx={{ fontSize: 2, m: 0 }}>

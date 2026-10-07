@@ -103,7 +103,8 @@ export function DecisionAsk({
         type="button"
         data-balloon-ask-decision=""
         onClick={() => show(true)}
-        sx={{ ...LINK_SX, display: 'block' }}
+        {...LINK_SX}
+        display="block"
       >
         {DECISION_WORDS.ask}
       </Box>

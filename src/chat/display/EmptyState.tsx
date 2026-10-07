@@ -189,21 +189,15 @@ export function ChatEmptyState({
           sections.map((section, level) => (
             <Box
               key={section.group}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-                width: '100%',
-                ...(level > 0
-                  ? {
-                      mt: 3,
-                      pt: 3,
-                      borderTop: '1px solid',
-                      borderColor: 'border.muted',
-                    }
-                  : null),
-              }}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              gap={2}
+              width="100%"
+              mt={level > 0 ? 3 : undefined}
+              pt={level > 0 ? 3 : undefined}
+              borderTop={level > 0 ? '1px solid' : undefined}
+              borderColor={level > 0 ? 'border.muted' : undefined}
             >
               {section.icon}
               <Text

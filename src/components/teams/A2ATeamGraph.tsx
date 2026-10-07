@@ -1427,7 +1427,7 @@ export function A2ATeamGraph({
         '@keyframes a2aTeamPulse': {
           '0%, 100%': { boxShadow: '0 0 0 0 transparent' },
           '50%': {
-            boxShadow: '0 0 0 4px var(--bgColor-accent-muted, #ddf4ff)',
+            boxShadow: '0 0 0 4px var(--bgColor-accent-muted)',
           },
         },
         '& .a2a-team-call': {

@@ -360,35 +360,33 @@ export function SpeechBalloon({
     <Box
       data-speech-balloon=""
       data-balloon-display={display}
+      maxWidth={
+        wide || listed || offered || whole || (current && attachment)
+          ? 300
+          : current
+            ? 260
+            : 280
+      }
+      px={3}
+      py={2}
+      color="fg.default"
+      border="1px solid"
+      borderRadius="bubble"
+      boxShadow="shadow.medium"
+      fontSize={1}
+      textAlign="left"
+      bottom={side === 'above' ? `${above}px` : undefined}
+      top={side === 'above' ? undefined : `${above}px`}
       sx={{
         position: 'absolute',
-        // Pixels, as strings: a number here is read as the theme's space
-        // scale (`-7` would be `-space[7]`, 48px).
-        ...(side === 'above'
-          ? { bottom: `${above}px` }
-          : { top: `${above}px` }),
         [align]: 0,
-        maxWidth:
-          wide || listed || offered || whole || (current && attachment)
-            ? 300
-            : current
-              ? 260
-              : 280,
         width:
           wide || listed || offered || whole || (current && attachment)
             ? 300
             : 'max-content',
-        px: 3,
-        py: 2,
         bg: 'canvas.default',
-        color: 'fg.default',
-        border: '1px solid',
         // The current balloon is the agent's voice now: its accent's edge.
         borderColor: current ? 'accent.muted' : 'border.default',
-        borderRadius: 'var(--theme-radius-bubble, 16px)',
-        boxShadow: 'shadow.medium',
-        fontSize: 1,
-        textAlign: 'left',
         // The tail, toward what speaks.
         '&::after': {
           content: '""',

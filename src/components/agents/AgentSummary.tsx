@@ -198,21 +198,20 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
 
       {isHovering && (
         <Box
-          sx={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            ...(opensLeftward ? { right: 0 } : { left: 0 }),
-            width: OVERLAY_WIDTH,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.overlay',
-            boxShadow: 'shadow.large',
-            zIndex: 120,
-            fontSize: 0,
-            color: 'fg.default',
-          }}
+          position="absolute"
+          top="calc(100% + 8px)"
+          width={OVERLAY_WIDTH}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.overlay"
+          boxShadow="shadow.large"
+          zIndex={120}
+          fontSize={0}
+          color="fg.default"
+          right={opensLeftward ? 0 : undefined}
+          left={opensLeftward ? undefined : 0}
         >
           <Box mb={1} fontWeight={600}>
             {title}

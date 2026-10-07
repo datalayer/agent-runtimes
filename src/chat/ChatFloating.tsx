@@ -1671,17 +1671,11 @@ export function ChatFloating({
           ) : null}
           <Box
             data-floating-conversation
-            sx={{
-              flex: '1 1 auto',
-              minHeight: 0,
-              display: 'flex',
-              ...(conversationBalloon
-                ? {
-                    borderRadius: 'var(--theme-radius-bubble, 16px)',
-                    overflow: 'hidden',
-                  }
-                : {}),
-            }}
+            flex="1 1 auto"
+            minHeight={0}
+            display="flex"
+            borderRadius={conversationBalloon ? 'bubble' : undefined}
+            overflow={conversationBalloon ? 'hidden' : undefined}
           >
             {conversation.body}
           </Box>

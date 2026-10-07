@@ -297,18 +297,15 @@ export function ChatSidebar({
       <Box
         ref={sidebarRef}
         className={className}
-        sx={{
-          position: 'fixed',
-          top: 12,
-          ...(position === 'right'
-            ? { right: 'env(safe-area-inset-right)' }
-            : { left: 'env(safe-area-inset-left)' }),
-          zIndex: 1001,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2,
-        }}
+        position="fixed"
+        top={12}
+        zIndex={1001}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        gap={2}
+        right={position === 'right' ? 'env(safe-area-inset-right)' : undefined}
+        left={position === 'right' ? undefined : 'env(safe-area-inset-left)'}
       >
         <Box position="relative">
           <IconButton
