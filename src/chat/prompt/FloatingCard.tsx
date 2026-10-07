@@ -135,9 +135,7 @@ export function FloatingCard({
         borderBottom="1px solid"
         borderColor="border.muted"
         active={{ cursor: 'grabbing' }}
-        sx={{
-          touchAction: 'none',
-        }}
+        touchAction="none"
       >
         <GrabberIcon size={16} />
       </Box>

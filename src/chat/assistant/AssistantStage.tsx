@@ -1113,9 +1113,7 @@ export function AssistantStage({
           outlineOffset: 2,
           borderRadius: '50%',
         }}
-        sx={{
-          touchAction: 'none',
-        }}
+        touchAction="none"
       >
         {described && (
           <Box

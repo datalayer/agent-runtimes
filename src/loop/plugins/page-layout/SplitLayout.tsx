@@ -164,8 +164,8 @@ export function SplitLayout({
             display="flex"
             justifyContent="center"
             outline="none"
+            touchAction="none"
             sx={{
-              touchAction: 'none',
               '&::before': {
                 content: '""',
                 width: '1px',
@@ -175,7 +175,7 @@ export function SplitLayout({
               '&:hover::before, &:focus-visible::before': {
                 width: '3px',
                 bg: 'accent.emphasis',
-              },
+              }
             }}
           />
         ) : null}
