@@ -138,6 +138,12 @@ def test_the_library_s_crop_monitoring_declares_its_servers_and_skills() -> None
     assert declared.consumers["the MCP server earthdata"] == {"DATALAYER_API_KEY"}
     assert "TAVILY_API_KEY" in declared.kernel
     assert "DATALAYER_API_KEY" not in declared.kernel
+    # The download's script reads the Earthdata login in the sandbox: offered
+    # there when the account has it, never required (agentspecs 0.0.65).
+    assert {"EARTHDATA_USERNAME", "EARTHDATA_PASSWORD"} <= declared.kernel
+    assert not any(
+        "EARTHDATA" in name for names in declared.consumers.values() for name in names
+    )
 
 
 def test_an_application_s_connections_and_signed_user_are_declared() -> None:

@@ -99,6 +99,7 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
     enabled=True,
     tools=[],
     required_env_vars=["DATALAYER_API_KEY:0.0.1"],
+    sandbox_env_vars=["EARTHDATA_USERNAME:0.0.1", "EARTHDATA_PASSWORD:0.0.1"],
 )
 
 EURUS_MCP_SERVER_0_0_1 = MCPServer(
