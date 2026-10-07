@@ -90,8 +90,8 @@ function Session({
   return (
     <Box
       as="details"
-      onToggle={(event: React.SyntheticEvent<HTMLDetailsElement>) =>
-        setOpen(event.currentTarget.open)
+      onToggle={(event: React.SyntheticEvent<HTMLElement>) =>
+        setOpen((event.currentTarget as HTMLDetailsElement).open)
       }
       borderTop="1px solid"
       borderColor="border.muted"

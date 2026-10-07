@@ -907,8 +907,8 @@ const A2UiJupyterOutputExample: React.FC = () => {
               // above the fold, and what is left inside is the execution
               // detail the reader has already been shown once.
               open={openSurfaces[toolCallId] ?? false}
-              onToggle={(event: React.SyntheticEvent<HTMLDetailsElement>) => {
-                const isOpen = event.currentTarget.open;
+              onToggle={(event: React.SyntheticEvent<HTMLElement>) => {
+                const isOpen = (event.currentTarget as HTMLDetailsElement).open;
                 setOpenSurfaces(previous => ({
                   ...previous,
                   [toolCallId]: isOpen,
