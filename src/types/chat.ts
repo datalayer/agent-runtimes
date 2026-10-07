@@ -863,6 +863,12 @@ export type ResumedThread = {
   /** What it holds already; none for a new one. */
   messages: ChatMessage[];
   /**
+   * Opened from a person's history (LOOP P-24): its conversation is read
+   * from the runtime the application's chat runs on as the chat mounts —
+   * held there, else resumed from its record — in place of `messages`.
+   */
+  fromRuntime?: boolean;
+  /**
    * Told the thread a message is first sent on — this one, or a new one
    * after the header's + — so that its host keeps it. A stable function.
    */

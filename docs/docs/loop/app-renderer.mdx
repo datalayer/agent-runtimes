@@ -434,17 +434,37 @@ What is sent, to the runtime the conversation runs on:
 
 ```http
 POST /api/v1/apps/feedback
-{"session": "<the thread>", "liked": true, "comment": "Clear."}
+{"session": "<the thread>", "liked": true, "comment": "Clear.", "message": "answer-2"}
 ```
+
+`message` names the answer it is about by its place among the
+conversation's answers (`answerIdOf`, LOOP P-24). The answer says
+`{"kept": true, "summary": ..., "heard": ...}`: `heard` is whether the
+application's Python code ran its `@app.feedback`.
 
 The runtime writes it through the recorder that recorded that conversation
 (`recorder_of`), as a `feedback` entry of its session — `{"liked", "comment",
-"by"}`, the comment cut at 2000 characters and its secrets redacted — and
+"by", "message"}`, the comment cut at 2000 characters and its secrets redacted — and
 sends it to ai-agents at once, through the same `/api/ai-agents/v1/apps/records`
 every entry takes. It answers `404` for a conversation it did not record,
 `409` for an application that keeps no feedback, and `502` when the record
 could not be sent, with the reason; the strip says that sentence. The
 Studio's Readiness page counts what was kept (LOOP V-18).
+
+## A thread opened from the history
+
+A host that opens one of the person's earlier conversations (LOOP P-24)
+hands the chat its session's uid with `fromRuntime`:
+
+```tsx
+<AppRenderer app={app} thread={{ id: sessionUid, messages: [], fromRuntime: true }} />
+```
+
+Once the application's runtime answers, the chat reads the conversation
+(`openThread`: the session's messages where it is held, else the session
+resumed from its record), says *Opening your conversation…* meanwhile, then
+draws it and goes on with it on the same thread. One that cannot be opened
+is said, and a new conversation starts.
 
 ## Approve and save
 

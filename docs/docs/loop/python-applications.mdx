@@ -270,6 +270,7 @@ session always first:
 | `@app.window` | `(session, data)` | The page the application sits in posts a message (LOOP P-25): `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
 | `@app.stop` | `(session)` | The person presses Stop, after what was running is cancelled. |
 | `@app.resume` | `(session)` | An earlier session is reopened, its state back — an ended one too. |
+| `@app.feedback` | `(session, feedback)` | A person gave a thumb up or down on an answer, with a comment or not, and it is kept in the record (only when the Appspec's `record.include` names `feedback`). `feedback` is a `Feedback`: `liked`, `comment`, `message` (the answer it is about, `answer-<n>`) and `by`. See [Threads and feedback](#threads-and-feedback). |
 | `@app.end` | `(session)` | The conversation closes for good, after what was running is cancelled: the person left the terminal, or a client ended the session. The last thing it runs; nobody reads what it sends. |
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
@@ -968,6 +969,54 @@ is the Appspec's `record.suggest_tests` when the turn was had: whether the
 application let its conversations be used to suggest tests to its builder.
 Off unless said, and only a turn kept while it was on is ever sampled into a
 suggested test.
+
+### Threads and feedback
+
+A session is a **thread** in the history of the person who had it: listed
+newest first, found by its title or by what was asked, renamed and tagged
+by that person (at the application's address, *Your conversations*). Its
+code can name it too (LOOP P-24):
+
+```python
+@app.message
+async def reply(session, text):
+    if not session.title:
+        session.title = f"Order {text[:40]}"
+    session.tags = [*session.tags, "orders"]
+    session.metadata["customer"] = "c-42"
+    ...
+```
+
+- `session.title`: its title, at most 200 characters; `""` until said, and
+  the person's first question stands for it then.
+- `session.tags`: a tuple; set it whole. Each tag is said once, at most 40
+  characters, at most 20 of them.
+- `session.metadata`: a dict of names and JSON values, at most 10,000
+  characters written. Every change is kept.
+
+Each change is a `thread` entry of the record, always kept and sent at once;
+the latest one stands. The history lists the thread under the person's own
+word over the code's: their title over its, its tags and theirs, their
+metadata over its. A value too long or too many tags raises `ValueError`
+and nothing changes.
+
+**Feedback.** When `record.include` names `feedback`, a thumb up or down
+and a comment are offered under each answer. What a person says is kept as
+a `feedback` entry of the session — `{"liked", "comment", "message", "by"}`,
+`message` naming the answer by its place in the conversation (`answer-2`) —
+and then `@app.feedback(session, feedback)` runs; what it sends is kept in
+the conversation. Its owner lists a thread's feedback from the terminal:
+
+```bash
+loop apps threads <app> --search export --tag csv   # your threads, newest first, each with its id
+loop apps feedback <session>                       # 👎 on answer-2 by bob: Too long.
+```
+
+A thread is opened again from the history: the chat reads its conversation
+from the runtime that holds it (`GET /api/v1/apps/sessions/{uid}/messages`),
+else resumes it from its record (`POST …/sessions/{uid}/resume`), and goes on
+with it on the same thread (see the [Session API](./session-api)). A thread
+whose application keeps no conversations cannot be resumed from its record.
 
 ### The agent
 

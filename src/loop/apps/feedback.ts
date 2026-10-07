@@ -29,7 +29,16 @@ export type Feedback = {
   session: string;
   liked: boolean;
   comment: string;
+  /**
+   * The answer it is about (LOOP P-24): `answer-<n>`, its place among the
+   * conversation's answers; none for the conversation as a whole.
+   */
+  message?: string;
 };
+
+/** How an answer is named in feedback: its place among the conversation's answers, from 1. */
+export const answerIdOf = (answers: number): string | undefined =>
+  answers > 0 ? `answer-${answers}` : undefined;
 
 /** What the feedback strip says, in a person's words. */
 export const FEEDBACK_WORDS = {
@@ -92,6 +101,7 @@ export async function sendFeedback(
       session: feedback.session,
       liked: feedback.liked,
       comment: feedback.comment.trim(),
+      ...(feedback.message ? { message: feedback.message } : {}),
     }),
   });
   const body = (await response.json().catch(() => ({}))) as Record<

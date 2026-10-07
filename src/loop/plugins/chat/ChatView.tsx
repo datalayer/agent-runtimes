@@ -148,7 +148,9 @@ import {
   setEditorOptions,
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
-import type { ToolCallMessage } from '../../../types/chat';
+import { generateMessageId } from '../../../types/messages';
+import { openThread, THREAD_WORDS } from '../../apps/threads';
+import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
 import {
   FaceDrawing,
   PresenceFace,
@@ -1458,6 +1460,79 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const embedToken =
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
+  /*
+   * A thread opened from the person's history (LOOP P-24): its conversation
+   * read from the runtime once it answers — held there, else resumed from
+   * its record — then drawn and gone on with on the same thread. One that
+   * cannot be opened is said, and a new one starts.
+   */
+  const givenThread = config?.thread;
+  const [openedThread, setOpenedThread] = useState<{
+    given: string;
+    thread: ResumedThread;
+    said?: string;
+  } | null>(null);
+  const opening = Boolean(
+    givenThread?.fromRuntime && openedThread?.given !== givenThread.id,
+  );
+  useEffect(() => {
+    if (!givenThread?.fromRuntime || !runsApp || !agentServerUrl) {
+      return;
+    }
+    let current = true;
+    void (async () => {
+      let failure = '';
+      for (let attempt = 0; attempt < 4 && current; attempt += 1) {
+        try {
+          const messages = await openThread({
+            agentBaseUrl: agentServerUrl,
+            agentId,
+            uid: givenThread.id,
+            token: iamToken,
+          });
+          if (current) {
+            setOpenedThread({
+              given: givenThread.id,
+              thread: { ...givenThread, fromRuntime: false, messages },
+            });
+          }
+          return;
+        } catch (error) {
+          failure = error instanceof Error ? error.message : String(error);
+          // The runtime may still be making the application's agent.
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+      if (current) {
+        setOpenedThread({
+          given: givenThread.id,
+          thread: {
+            id: generateMessageId(),
+            messages: [],
+            onStarted: givenThread.onStarted,
+          },
+          said: THREAD_WORDS.notOpened(failure),
+        });
+      }
+    })();
+    return () => {
+      current = false;
+    };
+    // By the thread's id: its object is the host's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    givenThread?.id,
+    givenThread?.fromRuntime,
+    runsApp,
+    agentServerUrl,
+    agentId,
+    iamToken,
+  ]);
+  const chatThread = givenThread?.fromRuntime
+    ? openedThread?.given === givenThread.id
+      ? openedThread.thread
+      : undefined
+    : givenThread;
   const protocol = useMemo<ProtocolConfig>(
     () =>
       inPage
@@ -1972,21 +2047,41 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             {chatExtras.errorBanner.message}
           </Box>
         ) : null}
+        {openedThread?.said && openedThread.given === givenThread?.id ? (
+          <Text
+            as="p"
+            role="status"
+            sx={{ m: 0, px: 3, py: 2, fontSize: 1, color: 'fg.muted' }}
+          >
+            {openedThread.said}
+          </Text>
+        ) : null}
         <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-          <ChatBase
-            // The theme it wears, when the host names one (an application's).
-            themeVariant={config?.themeVariant}
-            themeOverrides={config?.themeOverrides}
-            colorMode={config?.colorMode}
-            // The session an embed goes on with after a reload (LOOP D-13).
-            thread={config?.thread}
-            // The header says why, beside the title, for the same reason the
-            // placeholder does: a dead control with no explanation is worse
-            // than an absent one.
-            disabled={chatDisabled}
-            disableReason={disabledReason}
-            protocol={protocol}
-            /*
+          {opening ? (
+            <Text
+              as="p"
+              role="status"
+              sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
+            >
+              {THREAD_WORDS.opening}
+            </Text>
+          ) : (
+            <ChatBase
+              // The theme it wears, when the host names one (an application's).
+              themeVariant={config?.themeVariant}
+              themeOverrides={config?.themeOverrides}
+              colorMode={config?.colorMode}
+              // The session an embed goes on with after a reload (LOOP D-13),
+              // or one opened from the person's history (P-24).
+              key={chatThread?.id}
+              thread={chatThread}
+              // The header says why, beside the title, for the same reason the
+              // placeholder does: a dead control with no explanation is worse
+              // than an absent one.
+              disabled={chatDisabled}
+              disableReason={disabledReason}
+              protocol={protocol}
+              /*
                 The model this view is on, as the chat's opening pick.
 
                 `ChatBase` keeps the model it sends with, and opened on the
@@ -1995,8 +2090,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 `activeModel`, said Claude. Told the same model, both agree
                 from the first message.
             */
-            initialModel={activeModel || undefined}
-            /*
+              initialModel={activeModel || undefined}
+              /*
                 Who is answering, in the words its spec uses.
 
                 `ChatBase` falls back to "Start a conversation with the AI
@@ -2004,9 +2099,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 nothing about this one. The empty state is the first thing a
                 person sees and the only place the agent introduces itself.
               */
-            title={presence?.name ?? member?.name ?? spec?.name ?? agentId}
-            description={presence?.welcome ?? spec?.description}
-            /*
+              title={presence?.name ?? member?.name ?? spec?.name ?? agentId}
+              description={presence?.welcome ?? spec?.description}
+              /*
                 Two sizes, because it is drawn in two places.
 
                 The header wants a mark beside a line of text; the empty state
@@ -2014,106 +2109,106 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 served both, so a 48px icon meant for the empty state sat in
                 the header at three times the height of the words next to it.
               */
-            // Big enough to read as the agent's mark rather than as
-            // punctuation before its name, and still short enough not to
-            // set the header's height.
-            brandIcon={
-              presence?.face ? (
-                <PresenceFace
-                  face={presence.face}
-                  size={20}
-                  state={presenceNow}
-                />
-              ) : (
-                <BrandIcon size={20} />
-              )
-            }
-            // An application says what it is doing, in plain words, beside
-            // its name (T-08); an agent's chat keeps its header as it is.
-            headerContent={
-              presence ? <PresenceLine state={presenceNow} /> : undefined
-            }
-            emptyState={{
-              // An application's own face, at the page's size of the three
-              // (LOOP T-08, T-19): the thing a person's eye lands on first.
-              icon: presence?.face ? (
-                <span
-                  aria-hidden
-                  style={{ fontSize: FACE_LARGE, lineHeight: 1 }}
-                >
-                  <FaceDrawing face={presence.face} size={FACE_LARGE} />
-                </span>
-              ) : (
-                <BrandIcon size={48} />
-              ),
-              // `ChatEmptyState` reads its heading from here and nowhere
-              // else — the `title` above reaches the header only — so
-              // without this the agent introduced itself as "Start a
-              // conversation".
-              title: presence?.name ?? member?.name ?? spec?.name ?? agentId,
-              /*
+              // Big enough to read as the agent's mark rather than as
+              // punctuation before its name, and still short enough not to
+              // set the header's height.
+              brandIcon={
+                presence?.face ? (
+                  <PresenceFace
+                    face={presence.face}
+                    size={20}
+                    state={presenceNow}
+                  />
+                ) : (
+                  <BrandIcon size={20} />
+                )
+              }
+              // An application says what it is doing, in plain words, beside
+              // its name (T-08); an agent's chat keeps its header as it is.
+              headerContent={
+                presence ? <PresenceLine state={presenceNow} /> : undefined
+              }
+              emptyState={{
+                // An application's own face, at the page's size of the three
+                // (LOOP T-08, T-19): the thing a person's eye lands on first.
+                icon: presence?.face ? (
+                  <span
+                    aria-hidden
+                    style={{ fontSize: FACE_LARGE, lineHeight: 1 }}
+                  >
+                    <FaceDrawing face={presence.face} size={FACE_LARGE} />
+                  </span>
+                ) : (
+                  <BrandIcon size={48} />
+                ),
+                // `ChatEmptyState` reads its heading from here and nowhere
+                // else — the `title` above reaches the header only — so
+                // without this the agent introduced itself as "Start a
+                // conversation".
+                title: presence?.name ?? member?.name ?? spec?.name ?? agentId,
+                /*
                 Two levels when there is a team: the team first — its name,
                 what it is for, what it can be asked — and under it the
                 member being addressed, with its own description and its
                 own openers. The groups match the ones the openers carry.
               */
-              ...(team && member
-                ? {
-                    sections: [
-                      {
-                        group: team.team.name,
-                        icon: <TeamIcon size={48} />,
-                        title: team.team.name,
-                        subtitle: team.team.description,
-                      },
-                      {
-                        group: member.name,
-                        icon: <BrandIcon size={32} />,
-                        title: member.name,
-                        subtitle: spec?.description,
-                      },
-                    ],
-                  }
-                : null),
-            }}
-            /*
+                ...(team && member
+                  ? {
+                      sections: [
+                        {
+                          group: team.team.name,
+                          icon: <TeamIcon size={48} />,
+                          title: team.team.name,
+                          subtitle: team.team.description,
+                        },
+                        {
+                          group: member.name,
+                          icon: <BrandIcon size={32} />,
+                          title: member.name,
+                          subtitle: spec?.description,
+                        },
+                      ],
+                    }
+                  : null),
+              }}
+              /*
                 And what it can be asked. From the team rather than the
                 member: the supervisor answers first, and somebody who has
                 just opened the workspace does not yet know there are two
                 agents behind it.
               */
-            // With the prompt on top the openers are already chips under
-            // it; the empty state repeating them was the same three buttons
-            // twice on one screen.
-            suggestions={
-              topPrompt || layout || config?.suggestionLabels === false
-                ? []
-                : chatSuggestions
-            }
-            /*
+              // With the prompt on top the openers are already chips under
+              // it; the empty state repeating them was the same three buttons
+              // twice on one screen.
+              suggestions={
+                topPrompt || layout || config?.suggestionLabels === false
+                  ? []
+                  : chatSuggestions
+              }
+              /*
                 The title bar arrives as a plugin: the chat-header plugin
                 contributes the component, this view hands it the assembled
                 props through `renderHeader`. No contribution — or a host
                 that set `hideHeader` — means no bar.
               */
-            showHeader={!config?.hideHeader && !!HeaderComponent}
-            // The `+` and the bin in the title bar, when the host asked for
-            // them; the header draws whatever `ChatBase` assembles here.
-            headerButtons={{
-              showNewChat: config?.headerButtons?.newChat ?? false,
-              showClear: config?.headerButtons?.clear ?? false,
-            }}
-            renderHeader={
-              HeaderComponent
-                ? headerProps => (
-                    <HeaderComponent
-                      workspace={workspace}
-                      header={headerProps}
-                    />
-                  )
-                : undefined
-            }
-            /*
+              showHeader={!config?.hideHeader && !!HeaderComponent}
+              // The `+` and the bin in the title bar, when the host asked for
+              // them; the header draws whatever `ChatBase` assembles here.
+              headerButtons={{
+                showNewChat: config?.headerButtons?.newChat ?? false,
+                showClear: config?.headerButtons?.clear ?? false,
+              }}
+              renderHeader={
+                HeaderComponent
+                  ? headerProps => (
+                      <HeaderComponent
+                        workspace={workspace}
+                        header={headerProps}
+                      />
+                    )
+                  : undefined
+              }
+              /*
                 The (i), which opens the agent's details over the transcript.
                 
                 Worth having here in particular: this workspace can be moved
@@ -2121,17 +2216,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 is the only place that says which one is actually answering
                 and where it is running.
               */
-            showInformation
-            /*
+              showInformation
+              /*
                 Full screen: this view, on the whole screen, editor and all.
                 See `toggleFullScreen` for why it is the browser's API rather
                 than a big box.
               */
-            headerActions={
-              <Box
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
-              >
-                {/* The host's own additions first, then the plugins', then
+              headerActions={
+                <Box
+                  sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
+                >
+                  {/* The host's own additions first, then the plugins', then
                       the chat's — so what belongs to the page reads as part of
                       the page and the chat's controls stay together at the
                       trailing edge, where a reader looks for them.
@@ -2139,30 +2234,30 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                       The slot is asked whether anyone filled it before it is
                       drawn: an empty `ReactorSlot` is still an element, and
                       three of them would space a header out around nothing. */}
-                {workspace.chatHeaderActions}
-                {chatHeaderItems.length > 0 ? (
-                  <ReactorSlot
-                    slot={LoopSlots.chatHeader}
-                    props={{ workspace }}
-                  />
-                ) : null}
-                <IconButton
-                  icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
-                  aria-label={
-                    fullScreen ? 'Exit full screen' : 'Enter full screen'
-                  }
-                  variant="invisible"
-                  size="small"
-                  onClick={() => {
-                    // Whether or not it takes, the hint has been answered:
-                    // they found the control, which is all it was for.
-                    setHintFullScreen(false);
-                    toggleFullScreen();
-                  }}
-                  sx={
-                    hintFullScreen
-                      ? {
-                          /*
+                  {workspace.chatHeaderActions}
+                  {chatHeaderItems.length > 0 ? (
+                    <ReactorSlot
+                      slot={LoopSlots.chatHeader}
+                      props={{ workspace }}
+                    />
+                  ) : null}
+                  <IconButton
+                    icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
+                    aria-label={
+                      fullScreen ? 'Exit full screen' : 'Enter full screen'
+                    }
+                    variant="invisible"
+                    size="small"
+                    onClick={() => {
+                      // Whether or not it takes, the hint has been answered:
+                      // they found the control, which is all it was for.
+                      setHintFullScreen(false);
+                      toggleFullScreen();
+                    }}
+                    sx={
+                      hintFullScreen
+                        ? {
+                            /*
                               Colour and opacity, never geometry.
 
                               The colour is the theme's own `primary` — the
@@ -2179,11 +2274,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                               controls beside it stay where a reader last saw
                               them.
                             */
-                          '@keyframes dla-fullscreen-hint': {
-                            '0%, 100%': { opacity: 1 },
-                            '50%': { opacity: 0.4 },
-                          },
-                          /* `&&` doubles the specificity, because Primer
+                            '@keyframes dla-fullscreen-hint': {
+                              '0%, 100%': { opacity: 1 },
+                              '50%': { opacity: 0.4 },
+                            },
+                            /* `&&` doubles the specificity, because Primer
                                ships Button as a CSS module and
                                `prc-Button-*` outranks a single generated
                                class — without it the keyframes register and
@@ -2197,8 +2292,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                which is exactly how the first version of this
                                silently did nothing. It ends when the reader
                                takes the offer, or arrives without it. */
-                          '&&': {
-                            /*
+                            '&&': {
+                              /*
                                 The brand on the box, not on the glyph.
 
                                 Painting the icon `palette.primary` was the
@@ -2219,28 +2314,28 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                                 rule that works for one fails for another. The
                                 glyph keeps the colour it can be read in.
                               */
-                            bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
-                            boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
-                            animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
-                          },
-                          // A reader who asked the machine to hold still
-                          // keeps the colour and loses the knocking: the
-                          // control is still the findable one, it just
-                          // holds still.
-                          '@media (prefers-reduced-motion: reduce)': {
-                            '&&': { animation: 'none' },
-                          },
-                        }
-                      : undefined
-                  }
-                />
-              </Box>
-            }
-            // This view owns the prompt, below, so the chat does not draw a
-            // second one: two input boxes on one screen is one too many.
-            showInput={false}
-            onSendReady={handleSendReady}
-            /*
+                              bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
+                              boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
+                              animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
+                            },
+                            // A reader who asked the machine to hold still
+                            // keeps the colour and loses the knocking: the
+                            // control is still the findable one, it just
+                            // holds still.
+                            '@media (prefers-reduced-motion: reduce)': {
+                              '&&': { animation: 'none' },
+                            },
+                          }
+                        : undefined
+                    }
+                  />
+                </Box>
+              }
+              // This view owns the prompt, below, so the chat does not draw a
+              // second one: two input boxes on one screen is one too many.
+              showInput={false}
+              onSendReady={handleSendReady}
+              /*
                 The notebook tools' results, drawn into the transcript — the
                 chat's own machinery, switched on only while no editor is on
                 screen: the hidden notebook is where the agent works, and the
@@ -2248,20 +2343,21 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 tool did. With an editor open the change is visible where it
                 happened, and the default tool row is enough.
               */
-            notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
-            // A host example's own tool-result renderer, when it feeds one
-            // through the extras channel — the A2UI examples draw their
-            // surface here. Wins over the notebook surfaces in ChatBase.
-            renderToolResult={chatExtras.renderToolResult}
-            showTurnFooter={
-              chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
-            }
-            onContextSnapshot={handleContextSnapshot}
-            onLoadingChange={handleLoadingChange}
-            onItemsChange={handleMessagesChange}
-            onDisplayItemsChange={handleDisplayItemsChange}
-            enableStreaming
-          />
+              notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
+              // A host example's own tool-result renderer, when it feeds one
+              // through the extras channel — the A2UI examples draw their
+              // surface here. Wins over the notebook surfaces in ChatBase.
+              renderToolResult={chatExtras.renderToolResult}
+              showTurnFooter={
+                chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
+              }
+              onContextSnapshot={handleContextSnapshot}
+              onLoadingChange={handleLoadingChange}
+              onItemsChange={handleMessagesChange}
+              onDisplayItemsChange={handleDisplayItemsChange}
+              enableStreaming
+            />
+          )}
         </Box>
         {besideChat && !promptHidden ? prompt : null}
       </Box>

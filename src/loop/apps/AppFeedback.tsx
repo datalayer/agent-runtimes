@@ -30,14 +30,16 @@ import {
   LoopChatTurn,
   LoopPromptPanel,
   type ChatTurnSnapshot,
+  type ConversationEntry,
   type LoopWorkspaceContext,
 } from '../core';
-import { FEEDBACK_WORDS, sendFeedback } from './feedback';
+import { answerIdOf, FEEDBACK_WORDS, sendFeedback } from './feedback';
 
 export const APP_FEEDBACK_PLUGIN_NAME = '@datalayer/loop-plugin-app-feedback';
 
 /* A signal to read when no chat contributed a turn: the hook needs one. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
+const NO_CONVERSATION = signal<ConversationEntry[]>([]);
 
 /** What was said of one turn: being sent, kept, or refused. */
 type Said = {
@@ -55,6 +57,13 @@ export function AppFeedback({
 }): JSX.Element | null {
   const turns = useContributions(LoopChatTurn);
   const turn = useSignalValue(turns[0]?.value.turn ?? NO_TURN);
+  // Which answer it is about (P-24): its place among the conversation's answers.
+  const conversation = useSignalValue(
+    turns[0]?.value.conversation ?? NO_CONVERSATION,
+  );
+  const answers = conversation.filter(
+    entry => entry.role === 'assistant',
+  ).length;
   const token = useIAMStore(state => state.token);
   const [liked, setLiked] = useState<{ turn: number; liked: boolean } | null>(
     null,
@@ -77,7 +86,12 @@ export function AppFeedback({
     setSaid({ turn: turn.id, state: 'sending', says: '' });
     try {
       await sendFeedback(
-        { session: thread, liked: choice, comment },
+        {
+          session: thread,
+          liked: choice,
+          comment,
+          message: answerIdOf(answers),
+        },
         { agentBaseUrl, token },
       );
       setSaid({

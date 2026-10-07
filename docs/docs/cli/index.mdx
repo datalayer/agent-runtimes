@@ -281,6 +281,14 @@ loop apps eject app.yaml --yes           # app.py, which builds it the same
 loop apps push app.py --app <id>         # the next version; the versions so far are kept
 ```
 
+Your conversations with an application, and what was said of their answers
+(LOOP P-24):
+
+```bash
+loop apps threads <id> [--search words] [--tag tag]   # newest first: title, turns, tags, session id
+loop apps feedback <session>                         # each thumb, the answer, who, the comment
+```
+
 ### An application's safety set
 
 `loop apps validate <file>` runs the instant checks of an application: no model is called, so it is quick and free in CI. Add `--safety` and it also takes the **safety set** every application runs, the same tests the Studio asks with every *Run its tests*:
