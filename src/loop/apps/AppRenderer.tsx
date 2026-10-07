@@ -76,6 +76,10 @@ import type { LoopPresetOptions } from '../presets';
 import { dumpAppspec } from './appspec';
 import { defineAppActivityPlugin } from '../plugins/app-activity';
 import { AppElementsPlugin } from '../plugins/app-elements';
+import {
+  defineAppComponentsPlugin,
+  hasCustomComponents,
+} from '../plugins/app-components';
 import { defineAppComputerPlugin } from '../plugins/app-computer';
 import { defineAppRulesPlugin } from '../plugins/app-rules';
 import type { ChatSaid } from '../plugins/chat';
@@ -301,7 +305,8 @@ export type AppPreset = {
  *   whose contributions are the blocks it may draw (R-01b); a thumb and a
  *   comment on each answer when its record keeps feedback (V-18); its
  *   commands in the composer's `/` menu and its modes beside it (P-19); the
- *   side panel and the pages its code opens (`app-elements`, P-18); what it
+ *   side panel and the pages its code opens (`app-elements`, P-18); the
+ *   components its developer wrote (`app-components`, P-17); what it
  *   keeps and for how long, under its prompt before the first message, when
  *   `kept` says it (R-31); with
  *   `sidebar`, its rules and approvals card, its activity feed and its
@@ -362,6 +367,9 @@ export function appPreset(
     plugins: [
       defineAppPlugin(app, shown),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
+      // The components its developer wrote (LOOP P-17): blocks of its page
+      // and renderers of its page, its elements and its answers — its own.
+      ...(hasCustomComponents(app) ? [defineAppComponentsPlugin(app)] : []),
       // Its commands in the composer's `/` menu, its modes and its profiles
       // beside the composer (LOOP P-19, P-20) and what a person may attach
       // there (P-21): only for an application that has some.

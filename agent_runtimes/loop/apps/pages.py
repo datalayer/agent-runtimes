@@ -251,8 +251,17 @@ def shown_value(output: AppPageOutputSpec, value: Any) -> Any:
     ValueError
         For a value its component does not draw, or that JSON does not write.
     """
-    if output.component in ("Table", "Chart"):
-        shown: Any = _records(value, output)
+    if output.component not in OUTPUT_SHOWS:
+        # A component its developer wrote (LOOP P-17): any value JSON writes,
+        # a table of pandas its rows.
+        to_dict = getattr(value, "to_dict", None)
+        shown: Any = (
+            to_dict(orient="records")
+            if callable(to_dict) and not isinstance(value, Mapping)
+            else value
+        )
+    elif output.component in ("Table", "Chart"):
+        shown = _records(value, output)
     elif output.component == "Image":
         if not isinstance(value, str):
             raise ValueError(

@@ -620,16 +620,47 @@ export interface AppSurfaceSpec {
   composedAt: string;
 }
 
-/** What a page's output is drawn with (LOOP P-05). */
+/** What a page's output is drawn with of the catalog (LOOP P-05). */
 export type AppPageOutputComponent = 'Text' | 'Image' | 'Table' | 'Chart';
+
+/**
+ * A component its developer wrote (LOOP P-17), of one application only: the
+ * catalog grows for it, it does not open. Reviewed as the catalog's own — its
+ * properties a JSON Schema, what it shows and sends bindings — and drawn in a
+ * sandboxed frame of no origin from the built ES module at `source`.
+ */
+export interface AppCustomComponentSpec {
+  /** Its name on a surface (`Gauge`); none of the catalog's own. */
+  name: string;
+  /** What it is for, in a sentence: what the palette says. */
+  description: string;
+  /** Its properties: the JSON Schema of an object. */
+  props: Record<string, unknown>;
+  /** What it shows from the page's data: bindings. */
+  shows: string[];
+  /** What it sends back: bindings it writes, then its action. */
+  sends: string[];
+  /** The address of its module: `https://`, or `http://localhost` while written. */
+  source: string;
+  /** Its Subresource Integrity hash (`sha384-…`); empty when unsaid. */
+  integrity: string;
+  /** Its height on the page, in pixels. */
+  height: number;
+  /** A configuration its schema accepts: what the palette previews. */
+  example?: Record<string, unknown>;
+}
 
 /** One thing a widget's page shows for its inputs (LOOP P-05), at `/outputs/<name>`. */
 export interface AppPageOutputSpec {
   name: string;
   /** What a person reads above it; none when empty. */
   title: string;
-  /** `Text` (words) unless said, `Image` (an address), `Table` (rows), `Chart` (points). */
-  component: AppPageOutputComponent;
+  /**
+   * `Text` (words) unless said, `Image` (an address), `Table` (rows), `Chart`
+   * (points) — an `AppPageOutputComponent` — or a component of the
+   * application's own (P-17), its value what it shows first.
+   */
+  component: string;
   /** The component's other properties: a Table's `columns`, a Chart's `kind`, `x`, `y`. */
   props: Record<string, unknown>;
 }
@@ -729,6 +760,8 @@ export interface AppInterfaceSpec {
   uploads?: AppUploadsSpec;
   /** The components of the catalog the surface may use. */
   components: string[];
+  /** Components its developer wrote (P-17); absent from a spec made before them. */
+  customComponents?: AppCustomComponentSpec[];
   surface?: AppSurfaceSpec;
   /** A widget's page written in its code (P-05); none when unsaid. */
   page?: AppPageSpec;

@@ -130,6 +130,19 @@ block no enabled plugin contributes is not drawn; it says, in its place,
 *This page places Chart, which no enabled plugin contributes: it is drawn once
 the plugin that contributes it is on.*
 
+The components its developer wrote (`interface.custom_components`, LOOP P-17)
+are among them: the application's own plugin (`app-components`,
+`defineAppComponentsPlugin`), in its preset only, contributes each as a block
+(`loop.canvas.block`) and as a renderer (`loop.a2ui.component`), which its
+page (`catalogOfBlocks(names, own)`), the elements its code shows and its
+answers (`catalogWithOwn`) draw with. Each is drawn in an
+`<iframe sandbox="allow-scripts">` — an origin of its own that is no one's,
+its document allowing its bootstrap and its module and nothing else — from
+the module the page fetched without credentials and checked against its
+`integrity`; its properties go in by message, and what it sends comes back
+only under a name it declares, written where its binding points before its
+action is dispatched. Another application's workspace has none of them.
+
 ## Beside its page: rules, approvals, activity, computer
 
 Asked for its `sidebar`, `AppRenderer` adds three plugins to the workspace's
@@ -558,7 +571,9 @@ Tested: the options per layout and the embed's inline mode
 (`app-layout.test.tsx`); the preset per kind, a workspace without a
 conversation, and a decision drawn by the real workspace as its host's page
 (`app-preset.test.tsx`); a page drawn with the blocks contributed, and what it
-says when one is not (`app-page-blocks.test.tsx`); the presence state (`presence-status.test.ts`); in
+says when one is not (`app-page-blocks.test.tsx`); components its developer
+wrote, reviewed, contributed by its own plugin and drawn in their frame
+(`app-custom-components.test.tsx`); the presence state (`presence-status.test.ts`); in
 the landing, the home page's line — the model resolved as the chat resolves
 it, the words of the line — and its *How it is built* (`homeLight.spec.ts`).
 With nobody present: reading goes on, acting without a rule refused, a rule

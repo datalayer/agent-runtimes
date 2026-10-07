@@ -42,6 +42,7 @@ import { getBackendToolSpec } from '../../specs/backendTools';
 import { getTrack } from '../../specs/tracks';
 import type {
   ActionClass,
+  AppPageOutputComponent,
   AppSpec,
   ComponentSpec,
 } from '../../types/agentspecs';
@@ -58,6 +59,12 @@ import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
 import { HOST_NAME, HOST_USERS, hostToolsOf } from './hostTools';
 import { MAX_UPLOAD_MB, UPLOAD_KIND } from './uploads';
 import { formUiProblems } from './settingsInputs';
+import {
+  customComponentOf,
+  customComponentsProblems,
+  customNodeRefused,
+  customPropsRefused,
+} from './customComponents';
 import { translationProblems } from './language';
 
 export const NOT_READY = 'Not ready';
@@ -181,6 +188,8 @@ export function ownCodeProblems(app: AppSpec): string[] {
     problems.push('Two tests are decided by the same function of its code.');
   }
   problems.push(...pageProblems(app));
+  // The components its developer wrote, reviewed as the catalog's (P-17).
+  problems.push(...customComponentsProblems(app));
   return problems;
 }
 
@@ -227,10 +236,29 @@ export function pageProblems(app: AppSpec): string[] {
         `Cannot use “${output.name}” as an output's name: letters, digits and \`_\`, as in Python.`,
       );
     }
-    const shows = PAGE_OUTPUT_SHOWS[output.component];
+    // A component its developer wrote (P-17): its value what it shows first.
+    const custom = output.component in PAGE_OUTPUT_SHOWS
+      ? undefined
+      : customComponentOf(app, output.component);
+    if (custom) {
+      if (custom.shows.length === 0) {
+        problems.push(
+          `The output “${output.name}” is drawn with ${output.component}, which shows nothing: its value is what it shows first, under \`shows\`.`,
+        );
+        continue;
+      }
+      const refused = customPropsRefused(custom, output.props);
+      if (refused.length > 0) {
+        problems.push(
+          `The output “${output.name}” is a ${output.component} its schema refuses: ${refused.join('; ')}.`,
+        );
+      }
+      continue;
+    }
+    const shows = PAGE_OUTPUT_SHOWS[output.component as AppPageOutputComponent];
     if (!shows) {
       problems.push(
-        `The output “${output.name}” is drawn with ${output.component}: an output is one of ${Object.keys(PAGE_OUTPUT_SHOWS).join(', ')}.`,
+        `The output “${output.name}” is drawn with ${output.component}: an output is one of ${Object.keys(PAGE_OUTPUT_SHOWS).join(', ')} or a component of its own (\`custom_components\`).`,
       );
       continue;
     }
@@ -565,13 +593,22 @@ function referenceProblems(
     }
   }
   // The components it may use, and those its surface uses, are the catalog's (C-13).
+  // Those its developer wrote are of the catalog for it alone (P-17).
   for (const name of app.interface.components ?? []) {
-    if (!componentNamed(name)) {
+    if (!componentNamed(name) && !customComponentOf(app, name)) {
       problems.push(`There is no component named “${name}” in the catalog.`);
     }
   }
   for (const node of app.interface.surface?.components ?? []) {
-    if (!componentNamed(String(node.component))) {
+    const custom = customComponentOf(app, String(node.component));
+    if (custom) {
+      const refused = customNodeRefused(custom, node);
+      if (refused.length > 0) {
+        problems.push(
+          `The surface's “${String(node.id)}” is a ${custom.name} its schema refuses: ${refused.join('; ')}.`,
+        );
+      }
+    } else if (!componentNamed(String(node.component))) {
       problems.push(
         `The surface's “${String(node.id)}” is a “${String(node.component)}”, which the catalog does not have.`,
       );

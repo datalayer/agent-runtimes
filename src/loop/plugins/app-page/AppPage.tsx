@@ -14,6 +14,8 @@
  * palette (`loop.canvas.block`, R-01b) and nothing else, so that what the
  * Canvas can place and what the page can draw are one list: a page that
  * uses a block no enabled plugin contributes says so, in place of the page.
+ * The components its developer wrote (LOOP P-17) are among them, contributed
+ * by its own plugin (`app-components`) with their renderers.
  *
  * A widget's page written in its code (LOOP P-05) runs in a session of its
  * own, beside the conversation: as an input changes, the page sends them all
@@ -44,6 +46,7 @@ import {
   SURFACE_CATALOG_ID,
   type InlineSurfaceModel,
 } from '../a2ui-surface/InlineSurface';
+import { useOwnComponents } from '../a2ui-surface/ownComponents';
 import {
   appPageAction,
   appPageData,
@@ -116,6 +119,8 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
   const blocks = useContributions(LoopCanvasBlock);
   const contributed = [...new Set(blocks.map(entry => entry.value.id))].sort();
   const drawnWith = contributed.join(',');
+  // The renderers of the components its developer wrote (P-17).
+  const own = useOwnComponents();
   const drawing = useMemo(():
     { catalog: ReturnType<typeof catalogOfBlocks> } | { problem: string } => {
     const missing = blocksMissing(componentsOnPage(messages), contributed);
@@ -123,14 +128,14 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
       return { problem: missing };
     }
     try {
-      return { catalog: catalogOfBlocks(contributed) };
+      return { catalog: catalogOfBlocks(contributed, own) };
     } catch (error) {
       return {
         problem: error instanceof Error ? error.message : String(error),
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, drawnWith]);
+  }, [messages, drawnWith, own]);
   const [refusal, setRefusal] = useState<string | null>(null);
   // A widget's page written in its code (P-05): its outputs, as last answered.
   const page = pageOf(app);

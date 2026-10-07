@@ -24,3 +24,4 @@ export * from './records';
 export * from './rules';
 export * from './saved';
 export * from './yaml';
+export * from './customComponents';

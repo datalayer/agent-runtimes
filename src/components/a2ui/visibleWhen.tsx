@@ -124,11 +124,30 @@ export const datalayerCatalog = new Catalog<ReactComponentImplementation>(
  * plugins contribute as blocks (LOOP R-01b, `loop.canvas.block`), so that an
  * application's page draws what its Canvas can place and nothing else. Under
  * the same id; a name the catalog does not draw is an error.
+ *
+ * `own` are the renderers of the components the application's developer
+ * wrote (LOOP P-17, `customImplementations`): drawn for that application's
+ * page alone, each behind `visible_when` as the catalog's are. One that
+ * takes the name of a component of the catalog is an error.
  */
 export function catalogOfBlocks(
   names: readonly string[],
+  own: readonly ReactComponentImplementation[] = [],
 ): Catalog<ReactComponentImplementation> {
-  const unknown = names.filter(name => !datalayerCatalog.components.has(name));
+  const custom = new Map(
+    own.map(component => [component.name, withVisibleWhen(component)]),
+  );
+  const taken = [...custom.keys()].filter(name =>
+    datalayerCatalog.components.has(name),
+  );
+  if (taken.length > 0) {
+    throw new Error(
+      `${taken.join(', ')} ${taken.length === 1 ? 'is a component' : 'are components'} of the catalog: a component of an application's own is named otherwise.`,
+    );
+  }
+  const unknown = names.filter(
+    name => !datalayerCatalog.components.has(name) && !custom.has(name),
+  );
   if (unknown.length > 0) {
     throw new Error(
       `No renderer draws ${unknown.join(', ')}: a block is contributed by a plugin whose component the catalog draws.`,
@@ -137,9 +156,28 @@ export function catalogOfBlocks(
   return new Catalog<ReactComponentImplementation>(
     datalayerCatalog.id,
     datalayerCatalog.protocolVersion,
-    names.map(name => datalayerCatalog.components.get(name)!),
+    names.map(
+      name => datalayerCatalog.components.get(name) ?? custom.get(name)!,
+    ),
     [...datalayerCatalog.functions.values()],
     datalayerCatalog.themeSchema,
     datalayerCatalog.instructions,
+  );
+}
+
+/**
+ * Datalayer's whole catalog with the components an application's developer
+ * wrote (LOOP P-17): what its answers and the elements its code shows are
+ * drawn with (P-04, P-18). Datalayer's catalog itself when it wrote none.
+ */
+export function catalogWithOwn(
+  own: readonly ReactComponentImplementation[],
+): Catalog<ReactComponentImplementation> {
+  if (own.length === 0) {
+    return datalayerCatalog;
+  }
+  return catalogOfBlocks(
+    [...datalayerCatalog.components.keys(), ...own.map(each => each.name)],
+    own,
   );
 }

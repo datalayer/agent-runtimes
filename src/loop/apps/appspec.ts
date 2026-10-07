@@ -40,6 +40,7 @@ import type {
   AppCommandSpec,
   AppConnectionSpec,
   AppCriterionSpec,
+  AppCustomComponentSpec,
   AppDecisionSpec,
   AppDeploymentSpec,
   AppInterfaceSpec,
@@ -521,6 +522,64 @@ export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
   Chart: 'points',
 };
 
+/** The height of a component its developer wrote (P-17), unless it says. */
+export const DEFAULT_CUSTOM_HEIGHT = 240;
+
+/**
+ * A component its developer wrote (LOOP P-17), as written: its schema and
+ * example kept whole, so that the checks say what is wrong with them.
+ */
+function parseCustomComponent(data: Data): AppCustomComponentSpec {
+  const component: AppCustomComponentSpec = {
+    name: text(data.name),
+    description: text(data.description),
+    props: isData(data.props)
+      ? (JSON.parse(JSON.stringify(data.props)) as Data)
+      : { type: 'object', properties: {} },
+    shows: texts(data.shows),
+    sends: texts(data.sends),
+    source: text(data.source),
+    integrity: text(data.integrity),
+    height: numberOf(data.height, DEFAULT_CUSTOM_HEIGHT),
+  };
+  if (isData(data.example)) {
+    component.example = JSON.parse(JSON.stringify(data.example)) as Data;
+  }
+  return component;
+}
+
+function dumpCustomComponent(component: AppCustomComponentSpec): Data {
+  const written = new Writer()
+    .text('name', component.name, '\u0000')
+    .text('description', component.description, '\u0000');
+  written.data.props = JSON.parse(JSON.stringify(component.props));
+  written
+    .list('shows', component.shows)
+    .list('sends', component.sends)
+    .text('source', component.source, '\u0000')
+    .text('integrity', component.integrity)
+    .value('height', component.height, DEFAULT_CUSTOM_HEIGHT);
+  if (component.example) {
+    written.data.example = JSON.parse(JSON.stringify(component.example));
+  }
+  return written.data;
+}
+
+/**
+ * The property a page's output fills with its value (P-05): a catalog
+ * component's (`PAGE_OUTPUT_SHOWS`), or what a component of the
+ * application's own shows first (P-17). Undefined for any other.
+ */
+export function pageOutputShows(
+  component: string,
+  own: readonly AppCustomComponentSpec[] = [],
+): string | undefined {
+  if (component in PAGE_OUTPUT_SHOWS) {
+    return PAGE_OUTPUT_SHOWS[component as AppPageOutputComponent];
+  }
+  return own.find(each => each.name === component)?.shows[0];
+}
+
 /**
  * A widget's page written in its code (P-05), as written: its inputs a form
  * kept whole, an output drawn with another component kept as written so that
@@ -535,7 +594,7 @@ function parsePage(data: Data): AppPageSpec {
     outputs: records(data.outputs).map(output => ({
       name: text(output.name),
       title: text(output.title),
-      component: text(output.component, 'Text') as AppPageOutputComponent,
+      component: text(output.component, 'Text'),
       props: isData(output.props)
         ? (JSON.parse(JSON.stringify(output.props)) as Data)
         : {},
@@ -602,6 +661,12 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   }
   if (isData(data.uploads)) {
     parsed.uploads = parseUploads(data.uploads);
+  }
+  // Components its developer wrote (P-17): absent when it has none.
+  if (Array.isArray(data.custom_components)) {
+    parsed.customComponents = records(data.custom_components).map(
+      parseCustomComponent,
+    );
   }
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
@@ -1096,6 +1161,10 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
       .value('max_files', spec.uploads.maxFiles, DEFAULT_MAX_FILES).data;
   }
   writer.list('components', spec.components);
+  writer.list(
+    'custom_components',
+    (spec.customComponents ?? []).map(dumpCustomComponent),
+  );
   if (spec.surface) {
     writer.data.surface = dumpSurface(spec.surface);
   }

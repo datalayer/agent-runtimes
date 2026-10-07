@@ -35,7 +35,7 @@ import type {
   AppPageSpec,
   AppSpec,
 } from '../../../types/agentspecs';
-import { PAGE_OUTPUT_SHOWS } from '../../apps/appspec';
+import { pageOutputShows } from '../../apps/appspec';
 import type {
   ChatTurnSnapshot,
   ChatTurnStatus,
@@ -834,7 +834,8 @@ function pageForm(
       ...output.props,
       id: `output-${output.name}`,
       component: output.component,
-      [PAGE_OUTPUT_SHOWS[output.component] ?? 'text']: {
+      [pageOutputShows(output.component, app.interface.customComponents) ??
+      'text']: {
         path: outputPath(output.name),
       },
     },

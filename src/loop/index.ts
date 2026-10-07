@@ -255,6 +255,11 @@ export {
   type AppPagePath,
 } from './plugins/app-page';
 export {
+  appComponentsPluginName,
+  defineAppComponentsPlugin,
+  hasCustomComponents,
+} from './plugins/app-components';
+export {
   APP_RULES_PLUGIN_NAME,
   APP_RULES_WORDS,
   AppRulesCard,
@@ -431,4 +436,10 @@ export {
   readAppspecYaml,
   writeAppspecYaml,
   type ParsedAppspec,
+  appComponents,
+  customComponentEntry,
+  customComponentOf,
+  customComponentProblems,
+  customComponentsProblems,
+  pageOutputShows,
 } from './apps';

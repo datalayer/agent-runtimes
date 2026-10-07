@@ -25,6 +25,7 @@ import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { encodeFormSubmission } from '../../../chat/messages/formSubmission';
 import { InlineSurface, SURFACE_CATALOG_ID } from './InlineSurface';
+import { useOwnCatalog } from './ownComponents';
 import {
   answerAction,
   readA2uiToolResult,
@@ -72,6 +73,8 @@ export function SurfaceToolResult({
   );
   const title = parsed?.title ?? 'the form';
   const [validationError, setValidationError] = useState<string | null>(null);
+  // With the components the application's developer wrote (LOOP P-17).
+  const catalog = useOwnCatalog();
 
   // Told once per result, when it is there to be told about.
   useEffect(() => {
@@ -151,6 +154,7 @@ export function SurfaceToolResult({
         messages={parsed.messages}
         onAction={handleAction}
         validationError={validationError}
+        catalog={catalog}
       />
     </Box>
   );

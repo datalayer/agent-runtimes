@@ -54,7 +54,11 @@ export const OWN_COMPONENTS: ReactComponentImplementation[] = (() => {
   return OWN_COMPONENT_IDS.map(id => RENDERERS[id as DrawnOwnComponent]);
 })();
 
-export { OWN_COMPONENT_IDS, ownComponentSchema } from './schema';
+export {
+  OWN_COMPONENT_IDS,
+  componentSchemaOf,
+  ownComponentSchema,
+} from './schema';
 export { DRAWN_OWN_COMPONENTS, type DrawnOwnComponent } from './drawn';
 export { chartOption, chartPoints, chartSeries } from './Chart';
 export { chatItems } from './Chat';

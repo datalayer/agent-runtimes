@@ -14,15 +14,40 @@ message they came with (`answer_surface`).
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 import jsonschema
 
 from agent_runtimes.specs.ui_plugins import get_component
+from agent_runtimes.types import AppCustomComponentSpec, ComponentSpec
+
+#: What every node of a surface may say besides a component's own properties.
+_EVERY_NODE = (
+    "id",
+    "component",
+    "action",
+    "weight",
+    "visible_when",
+    "children",
+    "child",
+)
 
 #: The catalog an answer's surface names; the page draws it with Datalayer's
 #: catalog whatever it is named (`readA2uiToolResult`).
 ANSWER_CATALOG_ID = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+
+
+def _spec_of(
+    component: str, own: Sequence[AppCustomComponentSpec]
+) -> Optional[ComponentSpec]:
+    """A component of the catalog, or of the application's own (LOOP P-17), by name."""
+    spec = get_component(component)
+    if spec is not None:
+        return spec
+    for custom in own:
+        if custom.name == component:
+            return custom.catalog_entry("")
+    return None
 
 
 def component_node(id: str, component: str, **properties: Any) -> Dict[str, Any]:
@@ -47,9 +72,31 @@ def component_node(id: str, component: str, **properties: Any) -> Dict[str, Any]
     ValueError
         For a component the catalog does not have, or properties its schema refuses.
     """
-    spec = get_component(component)
+    return _node(id, component, properties, ())
+
+
+def _node(
+    id: str,
+    component: str,
+    properties: Mapping[str, Any],
+    custom: Sequence[AppCustomComponentSpec],
+) -> Dict[str, Any]:
+    spec = _spec_of(component, custom)
     if spec is None:
         raise ValueError(f"The catalog has no component {component!r}.")
+    if spec.category == "custom" and spec.bindings is not None:
+        # Its developer's component says all it takes: nothing else is sent to it.
+        takes = {
+            *(spec.properties.get("properties") or {}),
+            *spec.bindings.shows,
+            *spec.bindings.sends,
+            *_EVERY_NODE,
+        }
+        unknown = sorted(set(properties) - takes)
+        if unknown:
+            raise ValueError(
+                f"{id} is a {spec.name}, which has no property {', '.join(unknown)}."
+            )
     own = {
         name: value
         for name, value in properties.items()
@@ -91,8 +138,22 @@ def _children_of(node: Mapping[str, Any]) -> List[str]:
     return named
 
 
-def answer_components(show: Sequence[Mapping[str, Any]]) -> tuple[Dict[str, Any], ...]:
-    """What an answer shows, checked: nodes of the catalog.
+def placer(own: Sequence[AppCustomComponentSpec]) -> Callable[..., Dict[str, Any]]:
+    """`component_node` for an application: the catalog's components and those
+    its developer wrote (LOOP P-17), each checked against its JSON Schema.
+    """
+
+    def place(id: str, component: str, **properties: Any) -> Dict[str, Any]:
+        return _node(id, component, properties, tuple(own))
+
+    return place
+
+
+def answer_components(
+    show: Sequence[Mapping[str, Any]], own: Sequence[AppCustomComponentSpec] = ()
+) -> tuple[Dict[str, Any], ...]:
+    """What an answer shows, checked: nodes of the catalog, or of the
+    components the application's developer wrote (``own``, LOOP P-17).
 
     A property bound to a path (a Table's ``rows``, a Chart's ``points``)
     reads the answer's own data (``session.send(..., data={...})``).
@@ -110,9 +171,7 @@ def answer_components(show: Sequence[Mapping[str, Any]]) -> tuple[Dict[str, Any]
                 f"(session.ui.<component>(...)); item {index + 1} is not one."
             )
         properties = {k: v for k, v in node.items() if k not in ("id", "component")}
-        nodes.append(
-            component_node(node["id"], str(node.get("component")), **properties)
-        )
+        nodes.append(_node(node["id"], str(node.get("component")), properties, own))
     ids = [node["id"] for node in nodes]
     twice = sorted({one for one in ids if ids.count(one) > 1})
     if twice:
@@ -198,4 +257,5 @@ __all__ = [
     "answer_components",
     "answer_surface",
     "component_node",
+    "placer",
 ]

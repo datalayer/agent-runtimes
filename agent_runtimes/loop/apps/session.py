@@ -47,7 +47,7 @@ from typing import (
 )
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilities
-from agent_runtimes.loop.apps.components import answer_components, component_node
+from agent_runtimes.loop.apps.components import answer_components, placer
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.forms import form_defaults, form_fields, refused_by
@@ -645,7 +645,29 @@ class Session:
         the same JSON Schema, as ``app.ui`` places on the application's
         surface and the Canvas places — one catalog for the three flavors.
         """
-        return SurfaceComponents(component_node)
+        return SurfaceComponents(self.component)
+
+    def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
+        """A component for an answer or an element to show, its properties checked
+        (LOOP P-04, P-17): one of the catalog, or one the application's developer
+        wrote (``interface.custom_components``), by its name.
+
+        ``await session.show(session.component("load", "Gauge", label="Load",
+        value=42), where="panel")``.
+
+        Raises
+        ------
+        ValueError
+            For a component neither the catalog nor the application has, or
+            properties its schema refuses.
+        """
+        return placer(self.app.interface.custom_components)(id, component, **properties)
+
+    def _components(
+        self, show: Sequence[Mapping[str, Any]]
+    ) -> tuple[Dict[str, Any], ...]:
+        """What it shows, checked against the catalog and its own components (P-17)."""
+        return answer_components(show, self.app.interface.custom_components)
 
     async def send(
         self,
@@ -688,7 +710,7 @@ class Session:
             self.id,
             text,
             author or self.app.name,
-            answer_components(show),
+            self._components(show),
             dict(data or {}),
             self,
         )
@@ -735,7 +757,7 @@ class Session:
         changed = replace(
             message,
             text=text,
-            components=message.components if show is None else answer_components(show),
+            components=message.components if show is None else self._components(show),
             data=message.data if data is None else dict(data),
             _session=self,
         )
@@ -786,7 +808,7 @@ class Session:
         Message
             The whole message, delivered after its last piece.
         """
-        components = answer_components(show)
+        components = self._components(show)
         message_id = _new_id()
         pieces: List[str] = []
         async for token in _text_of(tokens):
@@ -861,7 +883,7 @@ class Session:
         nodes = [show] if isinstance(show, Mapping) else list(show)
         if not nodes:
             raise ValueError("An element shows a component at least.")
-        components = answer_components(nodes)
+        components = self._components(nodes)
         said = self.app.name if title is None else title
         open_ = self._elements.get(id) if id is not None else None
         if open_ is not None and open_.where != where:

@@ -34,6 +34,7 @@ import {
   SURFACE_CATALOG_ID,
 } from '../a2ui-surface/InlineSurface';
 import { answerAction, readA2uiToolResult } from '../a2ui-surface/toolResult';
+import { useOwnCatalog } from '../a2ui-surface/ownComponents';
 
 /** How wide the side panel is, at most. */
 export const APP_PANEL_WIDTH = 380;
@@ -63,6 +64,8 @@ function ElementBody({
     () => readA2uiToolResult(element.shows, SURFACE_CATALOG_ID),
     [element.shows],
   );
+  // With the components its developer wrote (P-17).
+  const catalog = useOwnCatalog();
   const onAction = (action: A2uiClientAction): void => {
     // A button of what its code shows: its action goes to the application,
     // as a button of an answer does (LOOP P-04).
@@ -78,6 +81,7 @@ function ElementBody({
       key={JSON.stringify(element.shows)}
       messages={parsed.messages}
       onAction={onAction}
+      catalog={catalog}
     />
   );
 }

@@ -103,7 +103,19 @@ export function bindingNames(component: ComponentSpec): string[] {
  * catalog's are: a key it does not declare refuses the tree.
  */
 export function ownComponentSchema(id: string) {
-  const component = ownComponent(id);
+  return componentSchemaOf(ownComponent(id));
+}
+
+/**
+ * The A2UI schema of a component of Datalayer's own kind, from its entry in
+ * the catalog — one of Datalayer's own, or one an application's developer
+ * wrote (LOOP P-17), listed as the catalog lists a component.
+ */
+export function componentSchemaOf(component: ComponentSpec) {
+  const id = component.id;
+  if (!component.bindings) {
+    throw new Error(`${id} says nothing of what it shows or sends.`);
+  }
   const json = component.properties as {
     properties?: Record<string, JsonProperty>;
     required?: string[];

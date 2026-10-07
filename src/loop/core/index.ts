@@ -715,6 +715,13 @@ export const LoopAssistantMenu =
 // the palette is read without the rest of the contracts.
 export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
 
+// A component an application adds to the catalog it is drawn with (LOOP
+// P-17): the components its developer wrote, for its workspace alone.
+export {
+  LoopA2uiComponent,
+  type A2uiComponentContribution,
+} from './a2uiComponents';
+
 /**
  * The per-example chat extras a host feeds the loop's conversation live.
  *

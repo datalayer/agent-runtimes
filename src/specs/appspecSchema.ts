@@ -261,6 +261,90 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppCriterion',
       type: 'object',
     },
+    AppCustomComponent: {
+      additionalProperties: false,
+      description:
+        "A component the developer writes (LOOP P-17), an A2UI component of this\napplication only: the catalog grows for it, it does not open.\n\nReviewed like any component of the catalog — its properties a JSON\nSchema, what it shows and sends bindings into the page's data — and drawn\nin a sandboxed frame of no origin, its module loaded from `source` and\nnothing else: what it is given is its properties and data, and what it\ngives back is what it sends.",
+      properties: {
+        name: {
+          description:
+            "Its name on a surface, as a catalog component's (`Gauge`); none of the catalog's own",
+          pattern: '^[A-Z][A-Za-z0-9]{0,63}$',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          description: 'What it is for, in a sentence: what the palette says',
+          minLength: 1,
+          title: 'Description',
+          type: 'string',
+        },
+        props: {
+          additionalProperties: true,
+          description:
+            'Its properties, as the JSON Schema of an object: each typed `string`, `integer`, `number`, `boolean`, `array` or `object`, or an `enum` of words, with its `title`, `description` and `default`; `required` among them',
+          title: 'Props',
+          type: 'object',
+        },
+        shows: {
+          description:
+            "What it shows from the page's data: each a binding, given a path or a value in place",
+          items: {
+            type: 'string',
+          },
+          title: 'Shows',
+          type: 'array',
+        },
+        sends: {
+          description:
+            'What it sends back: each a binding it writes, then its `action` dispatched',
+          items: {
+            type: 'string',
+          },
+          title: 'Sends',
+          type: 'array',
+        },
+        source: {
+          description:
+            "The address of its module, a built ES module whose default export draws it (`export default function (root, {props, send})`): over `https://`, or `http://localhost` while it is written. A module of the application's folder waits for its packaging (LOOP P-29)",
+          title: 'Source',
+          type: 'string',
+        },
+        integrity: {
+          default: '',
+          description:
+            'The module as it was reviewed: its Subresource Integrity hash (`sha384-…`); a module that differs is not drawn. Any module at the address when unsaid',
+          title: 'Integrity',
+          type: 'string',
+        },
+        height: {
+          default: 240,
+          description: 'Its height on the page, in pixels',
+          maximum: 2000,
+          minimum: 40,
+          title: 'Height',
+          type: 'integer',
+        },
+        example: {
+          anyOf: [
+            {
+              additionalProperties: true,
+              type: 'object',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'A configuration of it its schema accepts: what the palette previews',
+          title: 'Example',
+        },
+      },
+      required: ['name', 'description', 'source'],
+      title: 'AppCustomComponent',
+      type: 'object',
+    },
     AppDecision: {
       additionalProperties: false,
       description: 'What a decision application decides.',
@@ -516,6 +600,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             type: 'string',
           },
           title: 'Components',
+          type: 'array',
+        },
+        custom_components: {
+          description:
+            "Components its developer wrote (LOOP P-17), of this application only: each named, its props a JSON Schema, its module's address; placed, shown and drawn as the catalog's own",
+          items: {
+            $ref: '#/$defs/AppCustomComponent',
+          },
+          title: 'Custom Components',
           type: 'array',
         },
         surface: {
@@ -809,7 +902,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         component: {
           default: 'Text',
           description:
-            'What draws it: `Text` (words, unless said), `Image` (an address), `Table` (rows) or `Chart` (points)',
+            "What draws it: `Text` (words, unless said), `Image` (an address), `Table` (rows) or `Chart` (points), or a component of the application's own (`interface.custom_components`, LOOP P-17), its value what it shows first",
           title: 'Component',
           type: 'string',
         },

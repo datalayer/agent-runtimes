@@ -2384,13 +2384,63 @@ class AppUploadsSpec(BaseModel):
     )
 
 
+class AppCustomComponentSpec(BaseModel):
+    """A component its developer wrote (LOOP P-17), of one application only.
+
+    Reviewed as the catalog's own — its properties a JSON Schema, what it
+    shows and sends bindings — and drawn in a sandboxed frame of no origin
+    from the built ES module at ``source``.
+    """
+
+    name: str = Field(..., description="Its name on a surface (`Gauge`)")
+    description: str = Field(..., description="What it is for, in a sentence")
+    props: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="Its properties: the JSON Schema of an object",
+    )
+    shows: List[str] = Field(
+        default_factory=list, description="What it shows: bindings"
+    )
+    sends: List[str] = Field(
+        default_factory=list, description="What it sends back: bindings"
+    )
+    source: str = Field(..., description="The address of its built ES module")
+    integrity: str = Field(
+        default="", description="Its Subresource Integrity hash (`sha384-…`)"
+    )
+    height: int = Field(default=240, description="Its height on the page, in pixels")
+    example: Optional[Dict[str, Any]] = Field(
+        default=None, description="A configuration its schema accepts"
+    )
+
+    def catalog_entry(self, version: str) -> ComponentSpec:
+        """It as the catalog lists a component (LOOP C-13)."""
+        return ComponentSpec(
+            id=self.name,
+            name=self.name,
+            description=self.description,
+            category="custom",
+            emoji="\N{JIGSAW PUZZLE PIECE}",
+            version=version,
+            standard=False,
+            properties=self.props,
+            bindings=ComponentBindingsSpec(shows=self.shows, sends=self.sends),
+            events=["send"] if self.sends else [],
+            example=self.example,
+        )
+
+
 class AppPageOutputSpec(BaseModel):
     """One thing a widget's page shows for its inputs (LOOP P-05)."""
 
     name: str = Field(..., description="Where the page shows it: `/outputs/<name>`")
     title: str = Field(default="", description="What a person reads above it")
     component: str = Field(
-        default="Text", description="`Text`, `Image`, `Table` or `Chart`"
+        default="Text",
+        description=(
+            "`Text`, `Image`, `Table` or `Chart`, or a component of the "
+            "application's own (LOOP P-17)"
+        ),
     )
     props: Dict[str, Any] = Field(
         default_factory=dict, description="The component's other properties"
@@ -2462,6 +2512,10 @@ class AppInterfaceSpec(BaseModel):
     components: List[str] = Field(
         default_factory=list,
         description="The components of the catalog the surface may use",
+    )
+    custom_components: List[AppCustomComponentSpec] = Field(
+        default_factory=list,
+        description="Components its developer wrote (LOOP P-17), of it alone",
     )
     surface: Optional[AppSurfaceSpec] = None
     page: Optional[AppPageSpec] = Field(
