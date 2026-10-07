@@ -40,7 +40,8 @@ from agent_runtimes.specs.apps import APP_CATALOGUE
 
 def _pair(manifest) -> tuple:
     """What a manifest says of the pair: its name, the page plugin it needs,
-    and the extension that delivers both."""
+    and the extension that delivers both.
+    """
     return (manifest.name, tuple(manifest.frontend_dependencies), manifest.extension)
 
 
@@ -122,8 +123,12 @@ def test_a_spec_and_the_app_py_eject_writes_give_the_same_pair(tmp_path: Path) -
     from_spec = manifest_of(load_app(yaml.safe_load(spec_path.read_text())))
     application = load_application(eject(spec_path))
     from_python = register_application(application, ContributionRegistry())
-    assert _pair(from_spec) == _pair(from_python) == (
-        "loop-app-desk",
-        ("loop-app-desk",),
-        "loop-app-desk",
+    assert (
+        _pair(from_spec)
+        == _pair(from_python)
+        == (
+            "loop-app-desk",
+            ("loop-app-desk",),
+            "loop-app-desk",
+        )
     )

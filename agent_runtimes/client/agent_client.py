@@ -1002,7 +1002,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
-                **({"app_spec": app_spec} if app_spec else {}),
+                app_spec=app_spec or None,
             )
         else:
             # Create runtime without snapshot
@@ -1019,7 +1019,7 @@ class AgentClient(
                 runtime_name=runtime_name,
                 content_attachment_uids=content_attachment_uids,
                 parent_reservation_uid=parent_reservation_uid,
-                **({"app_spec": app_spec} if app_spec else {}),
+                app_spec=app_spec or None,
             )
 
         # Process the response and create RuntimesService object

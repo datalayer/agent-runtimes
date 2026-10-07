@@ -437,7 +437,10 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup() -> None:
     )
     assert "Sales in the browser → accounting" in result.output
     assert "Accounting on a runtime; Odoo via MCP" in result.output
-    assert "Beats: open-invoices, aged-receivables, largest-balance, payment-reminders" in result.output
+    assert (
+        "Beats: open-invoices, aged-receivables, largest-balance, payment-reminders"
+        in result.output
+    )
     assert (
         "· To set up: The MCP server 'odoo-accounting:0.0.1' is not enabled."
         in result.output

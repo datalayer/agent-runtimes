@@ -1073,8 +1073,8 @@ def launch_cloud(
         missing = library_has(relay.url, agent_id) is False
         launch.stop()
         if missing:
-            refused = unavailable(agent_id, launch.runtime_name)
-            raise CloudRefused(f"{refused} The runtime was stopped.")
+            why = unavailable(agent_id, launch.runtime_name)
+            raise CloudRefused(f"{why} The runtime was stopped.")
         raise RuntimeError(
             f"The agent of {launch.runtime_name} did not come up; the runtime was stopped."
         )

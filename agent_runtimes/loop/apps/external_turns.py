@@ -84,7 +84,8 @@ def _caller_key(caller: Any) -> str:
 
 def key_of(caller: Any, idempotency_key: str, external_event_id: str) -> Optional[str]:
     """What names a turn for its caller: the key, else the external event id,
-    else nothing (an ordinary turn, not remembered)."""
+    else nothing (an ordinary turn, not remembered).
+    """
     key = str(idempotency_key or "").strip()
     event = str(external_event_id or "").strip()
     if len(key) > KEY_LIMIT or len(event) > KEY_LIMIT:
@@ -120,7 +121,8 @@ def claim(
 ) -> Tuple[ExternalTurn, bool]:
     """The turn a key names: `(turn, True)` when it was already taken — the
     original, to be answered again — `(new turn, False)` the first time.
-    `TurnConflict` for the same key with another request."""
+    `TurnConflict` for the same key with another request.
+    """
     at = time.time() if now is None else now
     _prune(at)
     print_ = fingerprint(request)
@@ -146,7 +148,8 @@ def peek(
     key: str, *, request: Dict[str, Any], now: Optional[float] = None
 ) -> Optional[ExternalTurn]:
     """The turn a key already names, or `None`: before anything is made for it.
-    `TurnConflict` for the same key with another request."""
+    `TurnConflict` for the same key with another request.
+    """
     _prune(time.time() if now is None else now)
     known = _TURNS.get(key)
     if known is not None and known.fingerprint != fingerprint(request):
@@ -197,7 +200,13 @@ async def tracked(turn: ExternalTurn, chunks: AsyncIterator[str]) -> AsyncIterat
 
 
 async def replayed(head: str, turn: ExternalTurn) -> AsyncIterator[str]:
-    """What a retry is answered: the session, the original turn, nothing run."""
+    """What a retry is answered: the session, the original turn, nothing run.
+
+    Yields
+    ------
+    str
+        The session's head, then the original turn's event.
+    """
     if head:
         yield head
     yield turn_event(turn, replayed=True)

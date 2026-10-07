@@ -59,7 +59,8 @@ def _prompt_of(messages: List[ModelMessage]) -> str:
 
 def by_prompt(script: Dict[str, Any]) -> FunctionModel:
     """A model answering each prompt as the script says: a text, a tool call
-    as ``(name, args)``, or a list of turns in order (the last repeated)."""
+    as ``(name, args)``, or a list of turns in order (the last repeated).
+    """
 
     def turn_of(messages: List[ModelMessage]) -> Any:
         turns = script.get(_prompt_of(messages), "…")
@@ -441,17 +442,12 @@ def test_validate_judges_a_worded_test_here_with_a_judge_and_attaches_the_report
         version = 4
         model = {"spec": __import__("yaml").safe_load(spec.read_text())}
 
+    def keep(request: httpx.Request) -> httpx.Response:
+        kept.append(json.loads(request.content))
+        return httpx.Response(200, json={"success": True, "validation": {"version": 4}})
+
     class Store:
-        http = httpx.Client(
-            transport=httpx.MockTransport(
-                lambda request: (
-                    kept.append(json.loads(request.content)),
-                    httpx.Response(
-                        200, json={"success": True, "validation": {"version": 4}}
-                    ),
-                )[1]
-            )
-        )
+        http = httpx.Client(transport=httpx.MockTransport(keep))
         base = "https://prod1.datalayer.run/api/spacer/v1"
 
         def item(self, uid: str) -> Item:

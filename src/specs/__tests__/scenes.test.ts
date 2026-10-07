@@ -91,7 +91,7 @@ describe('the scene catalogue', () => {
 
   it('says each beat’s cue, its moves and what it shows', () => {
     for (const scene of listSceneSpecs()) {
-      expect(scene.script).toHaveLength(3);
+      expect(scene.script).toHaveLength(4);
       for (const beat of scene.script) {
         expect(beat.cue.say).toBeTruthy();
         expect(beat.moves.length).toBeGreaterThan(0);

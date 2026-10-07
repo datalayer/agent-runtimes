@@ -80,7 +80,13 @@ NAMES = (
 
 @pytest.fixture(autouse=True)
 def clean(monkeypatch: pytest.MonkeyPatch):
-    """No real Datalayer credential, no sentinel left behind, a skill to declare."""
+    """No real Datalayer credential, no sentinel left behind, a skill to declare.
+
+    Yields
+    ------
+    None
+        Control to the test.
+    """
     for name in [n for n in os.environ if n.startswith("DATALAYER_")]:
         monkeypatch.delenv(name, raising=False)
     for name in NAMES:
@@ -446,9 +452,7 @@ def test_a_launch_waiting_for_its_set_up_says_why_it_was_refused(
 # --- an MCP server's scripts, run in the sandbox (sandbox_envvars) --------------
 
 
-def test_what_a_server_s_scripts_read_is_offered_to_the_kernel_never_required() -> (
-    None
-):
+def test_what_a_server_s_scripts_read_is_offered_to_the_kernel_never_required() -> None:
     download = MCPServer(
         id="r19-download",
         name="R-19 download",
@@ -482,7 +486,13 @@ TAVILY = "r19-tavily-" + uuid.uuid4().hex
 
 @pytest.fixture()
 def launch_clean(monkeypatch: pytest.MonkeyPatch):
-    """No application launched for, no Tavily key on this machine."""
+    """No application launched for, no Tavily key on this machine.
+
+    Yields
+    ------
+    None
+        Control to the test.
+    """
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     declared_module.note_launched(None)
     yield
@@ -510,7 +520,11 @@ def test_the_companion_is_told_what_the_launched_application_declares(
         "/api/v1/agents/declared-secrets",
         json={"agent_spec_id": "r19-agent", "app_spec": WEB_APP},
     ).json()
-    assert answer["runtime"] == ["R19_SERVER_TOKEN", "R19_SKILL_TOKEN", "TAVILY_API_KEY"]
+    assert answer["runtime"] == [
+        "R19_SERVER_TOKEN",
+        "R19_SKILL_TOKEN",
+        "TAVILY_API_KEY",
+    ]
     # A connection's credential stays out of the kernel.
     assert answer["kernel"] == ["R19_SKILL_TOKEN"]
     # Launched with no agentspec (a deployment kept on its runtime).
@@ -575,7 +589,7 @@ def test_mcp_servers_start_sets_a_launched_application_s_secrets_before_its_agen
             json={**body, "env_vars": ACCOUNT},
         )
         assert refused.status_code == 422, refused.text
-        assert "needs TAVILY_API_KEY" in agents.set_up_refused("web-research")
+        assert "needs TAVILY_API_KEY" in (agents.set_up_refused("web-research") or "")
 
 
 # --- a running kernel gives back what a configure takes away -------------------
@@ -604,8 +618,8 @@ def test_the_sandbox_manager_unsets_names_in_every_live_kernel() -> None:
             ran.append(code)
             return SimpleNamespace(execution_ok=True, execution_error=None)
 
-    manager._sandbox = Kernel()  # type: ignore[assignment]
-    manager._agent_sandboxes["r19"] = Kernel()  # type: ignore[assignment]
+    manager._sandbox = Kernel()  # type: ignore[assignment, unused-ignore]
+    manager._agent_sandboxes["r19"] = Kernel()  # type: ignore[assignment, unused-ignore]
     assert manager.withdraw_env_vars(["R19_SKILL_TOKEN", "R19_NEVER_GIVEN"]) == [
         "R19_SKILL_TOKEN"
     ]

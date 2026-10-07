@@ -101,7 +101,9 @@ class TestAnApplicationIsLaunchedWithItsAppspec:
         return posted["json"]
 
     def test_it_carries_the_appspec(self) -> None:
-        posted = self._posted(app_uid="app-1", deployment_uid="dep-1", app_spec=self.APP)
+        posted = self._posted(
+            app_uid="app-1", deployment_uid="dep-1", app_spec=self.APP
+        )
         assert posted["app_spec"] == self.APP
         assert (posted["app_uid"], posted["deployment_uid"]) == ("app-1", "dep-1")
 

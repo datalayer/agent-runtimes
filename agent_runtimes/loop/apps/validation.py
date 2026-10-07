@@ -124,7 +124,8 @@ def _value_of(answer: str) -> Any:
 def guard_failures(checks: AppChecks, answer: str) -> List[Tuple[str, str]]:
     """Each catalogue Guard the application names that this runtime executes,
     run on the answer — its fields when it is JSON — the Guards whose signal
-    is raised, with why."""
+    is raised, with why.
+    """
     failed: List[Tuple[str, str]] = []
     value = _value_of(answer)
     for guard in checks.guards:
@@ -300,7 +301,7 @@ class ValidationReport:
 
     @property
     def says(self) -> str:
-        """*Its tests: 2 of 3 passed; 1 stopped by a check. 1 not run.*"""
+        """Say the tests, as *Its tests: 2 of 3 passed. 1 not run.* does."""
         if not self.cases:
             return "It has no test."
         said = f"Its tests: {self.passed} of {self.total} passed"
@@ -443,7 +444,8 @@ async def result_of(
     model: str = "",
 ) -> CaseResult:
     """One case read: stopped on the way, then the built-in checks and the
-    Guards on its answer, then the test itself."""
+    Guards on its answer, then the test itself.
+    """
     from agent_runtimes.loop.apps.session import call
 
     ask, expect, code = case.ask, case.expect, getattr(case, "code", "") or ""
@@ -574,7 +576,7 @@ async def run_tests(
 
 
 class AttachRefused(Exception):
-    """ai-agents would not keep the report, in its own sentence."""
+    """The ai-agents service would not keep the report, in its own sentence."""
 
 
 def attach_path(app_uid: str) -> str:

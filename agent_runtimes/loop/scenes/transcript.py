@@ -137,7 +137,7 @@ def message_text(value: Any) -> str:
         return ""
     parts = parsed[0].get("parts") or []
     return "".join(
-        part.get("content")
+        part["content"]
         for part in parts
         if isinstance(part, dict) and isinstance(part.get("content"), str)
     ).strip()

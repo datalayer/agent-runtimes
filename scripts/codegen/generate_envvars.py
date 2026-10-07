@@ -57,7 +57,6 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from agent_runtimes.types import EnvvarSpec",
         "",
-        "",
         "# " + "=" * 76,
         "# Environment Variable Definitions",
         "# " + "=" * 76,

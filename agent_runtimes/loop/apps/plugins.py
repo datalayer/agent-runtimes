@@ -129,14 +129,16 @@ def revision_of(registry: Optional[ContributionRegistry] = None) -> int:
 
 def app_plugin_name(app_id: str) -> str:
     """The one name of an application's two plugins, the page's and the runtime's
-    (LOOP F-15): ``src/loop/apps/pluginPair.ts`` says the same."""
+    (LOOP F-15): ``src/loop/apps/pluginPair.ts`` says the same.
+    """
     return f"loop-app-{app_id}"
 
 
 def manifest_of(app: AppSpec) -> PluginManifest:
     """An application's identity, as its plugin says it: the page plugin of the
     same name is what it cannot be used without, and both are delivered as
-    one extension of that name — the application (LOOP F-15)."""
+    one extension of that name — the application (LOOP F-15).
+    """
     name = app_plugin_name(app.id)
     return PluginManifest(
         name=name,

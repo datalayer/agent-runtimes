@@ -599,7 +599,8 @@ NO_TEST = "It has no test."
 
 def _judge_here(model: Optional[str]) -> Tuple[Any, str]:
     """The judge of the worded tests on this machine: the model named, or the
-    one configured (`default_judge`); None when there is none."""
+    one configured (`default_judge`); None when there is none.
+    """
     from agent_runtimes.evals.remote.evaluators import default_judge
     from agent_runtimes.loop.apps import safety as _safety
 
@@ -610,7 +611,8 @@ def _judge_here(model: Optional[str]) -> Tuple[Any, str]:
 
 def _agent_here() -> Any:
     """How the application's agent is built in this process: from its spec
-    (`local_agent`) when None; stood in for in tests."""
+    (`local_agent`) when None; stood in for in tests.
+    """
     return None
 
 
@@ -706,7 +708,8 @@ def _case_tests_of(
 def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
     """Hand the run's report to ai-agents, which keeps it against the saved
     version the file is (LOOP V-08). Returns whether it was kept; what
-    refused it is said in `tests_says`."""
+    refused it is said in `tests_says`.
+    """
     import httpx
 
     from agent_runtimes.loop.apps import validation

@@ -61,7 +61,13 @@ SHAPED = "ghp_" + "A1b2C3d4E5" * 4
 
 @pytest.fixture()
 def secret(monkeypatch: pytest.MonkeyPatch):
-    """The sentinel, as the value of a secret's environment variable."""
+    """The sentinel, as the value of a secret's environment variable.
+
+    Yields
+    ------
+    str
+        The sentinel.
+    """
     monkeypatch.setenv("R19_PROBE_TOKEN", SENTINEL)
     yield SENTINEL
     release(SENTINEL)
@@ -69,7 +75,13 @@ def secret(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.fixture()
 def held():
-    """The sentinel, held by the runtime though no variable names it."""
+    """The sentinel, held by the runtime though no variable names it.
+
+    Yields
+    ------
+    str
+        The sentinel.
+    """
     hold(SENTINEL)
     yield SENTINEL
     release(SENTINEL)

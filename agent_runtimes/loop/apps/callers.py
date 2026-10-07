@@ -274,7 +274,8 @@ class CallerVerifier:
 
     async def _host(self, token: str, claims: Dict[str, Any]) -> Caller:
         """A host token, asked of ai-agents, which issued it and keeps what it
-        rests on (plans/SLACK.md §4.3): remembered a minute at most."""
+        rests on (plans/SLACK.md §4.3): remembered a minute at most.
+        """
         key = (hashlib.sha256(token.encode()).hexdigest(), "host")
         remembered = self._verified.get(key)
         if remembered and remembered[1] > self._clock():

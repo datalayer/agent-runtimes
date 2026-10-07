@@ -83,7 +83,7 @@ def _span_id() -> str:
 def shown_kinds(
     text: str, components: Sequence[Mapping[str, Any]] = ()
 ) -> Tuple[str, ...]:
-    """What an answer shows, read off its words and its components: ``table``, ``chart``…
+    """What an answer shows, read off its words and its components (``table``, ``chart``).
 
     Words always; a markdown table, an image; a component of the catalog
     named after a kind (``Table``, ``Chart``, ``Notebook``, ``Map``, ``Image``, ``File``).
@@ -693,8 +693,10 @@ class Stage:
                     call["start_time"] = step.at
                 open_steps[step.name] = call
             else:
-                call = open_steps.pop(step.name, None)
-                if call is None:
+                opened = open_steps.pop(step.name, None)
+                if opened is not None:
+                    call = opened
+                else:
                     call = recording.start(
                         f"execute_tool {step.name}",
                         member.name,

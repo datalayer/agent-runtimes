@@ -447,7 +447,7 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
         # `creation_spy` holds no agent: one is put there for the route).
         from agent_runtimes.routes.acp import _agents
 
-        _agents["r14-tick-agent"] = (None, None)
+        _agents["r14-tick-agent"] = (None, None)  # type: ignore[assignment, unused-ignore]
         asyncio.run(delete_agent("r14-tick-agent"))
         _agents.pop("r14-tick-agent", None)
         assert sessions.code_of(load_app(spec), "r14-tick-agent") is None
@@ -535,7 +535,7 @@ def test_the_stream_of_a_turn_ends_only_once_its_record_is_sent(
 
     recorder = agent_recorder("digest")
     assert recorder is not None
-    recorder.send = send  # type: ignore[assignment]
+    recorder.send = send  # type: ignore[assignment, unused-ignore]
     events = events_of(
         start(
             remote,

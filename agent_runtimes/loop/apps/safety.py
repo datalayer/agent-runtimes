@@ -586,7 +586,8 @@ class Conversed:
 
 class _WatchedRecorder(AppRecorderBase):
     """A recorder that sends nothing and keeps what the checks and the rules
-    said, for the run that asked (LOOP V-08)."""
+    said, for the run that asked (LOOP V-08).
+    """
 
     def __init__(self, app: AppSpec) -> None:
         super().__init__(app=app, send=_keep_nothing)

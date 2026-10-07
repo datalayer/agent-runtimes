@@ -27,7 +27,7 @@ RECORDS_PATH = "/api/ai-agents/v1/apps/records"
 
 
 class ThreadsRefused(RuntimeError):
-    """ai-agents did not answer, in a sentence."""
+    """The ai-agents service did not answer, in a sentence."""
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,7 @@ class Thread:
 
     @property
     def shown_title(self) -> str:
-        """Its title, else what was first asked, else its uid."""
+        """Give its title, else what was first asked, else its uid."""
         return self.title or self.first_asked or self.session_uid
 
 

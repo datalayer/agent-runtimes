@@ -190,7 +190,8 @@ SENDS_CREDENTIAL = re.compile(
 def hold_expansion(raw: str, name: str, value: str) -> None:
     """Hold what ``${name}`` expanded to in ``raw`` when it is a credential:
     the variable's name says so, or ``raw`` sends one (``Authorization: Bearer
-    ${…}``)."""
+    ${…}``).
+    """
     if value and (is_secret_name(name) or SENDS_CREDENTIAL.search(raw)):
         hold(value)
 
@@ -235,7 +236,8 @@ def withhold(text: str) -> str:
 
 def redact(text: str) -> str:
     """A text with every credential in it withheld: the secrets this runtime
-    holds, by their value, then what looks like one; a key block to its end."""
+    holds, by their value, then what looks like one; a key block to its end.
+    """
     text = withhold(text)
     text = _PRIVATE_KEY_BLOCK.sub(WITHHELD, text)
     for kind, pattern in CREDENTIALS.items():

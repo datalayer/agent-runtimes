@@ -4396,7 +4396,8 @@ def _note_launched_app(
     app_spec: dict[str, Any] | None, app_instance: dict[str, Any] | None
 ) -> DeclaredSecrets | None:
     """Remember the application the runtime was launched for, when the
-    companion names it: its secrets are declared from then on (R-19)."""
+    companion names it: its secrets are declared from then on (R-19).
+    """
     if not app_spec:
         return None
     declared = _declared_for_app(app_spec, app_instance)

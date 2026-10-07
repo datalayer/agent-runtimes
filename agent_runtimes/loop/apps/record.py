@@ -139,7 +139,8 @@ _SENDING: Dict[str, Set[Any]] = {}
 def send_later(session: str, sending: Any) -> Any:
     """Send ``session``'s record in a task of its own, held until done — a
     task nothing refers to may be collected — and counted among what
-    `AppRecorder.settled` waits for."""
+    `AppRecorder.settled` waits for.
+    """
     task = asyncio.get_running_loop().create_task(sending)
     held = _SENDING.setdefault(session, set())
     held.add(task)

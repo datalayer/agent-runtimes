@@ -773,7 +773,13 @@ class A2AWorker(_FastA2AWorker):
 
 
 async def _said(text: str) -> AsyncIterator[Any]:
-    """An answer given in words without a model: one text event."""
+    """An answer given in words without a model: one text event.
+
+    Yields
+    ------
+    Any
+        The one text event.
+    """
     from types import SimpleNamespace
 
     yield SimpleNamespace(type="text", data=text)

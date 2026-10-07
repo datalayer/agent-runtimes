@@ -152,7 +152,8 @@ class Step:
 
 def shown_step(step: Step) -> Step:
     """A step as it is shown: what it read, wrote and failed with, a
-    credential withheld (LOOP R-19)."""
+    credential withheld (LOOP R-19).
+    """
     from agent_runtimes.guardrails.credentials import redact, redacted
 
     return replace(
@@ -385,7 +386,7 @@ THREAD_METADATA_LIMIT = 10_000
 
 
 def thread_tags(tags: Iterable[Any]) -> List[str]:
-    """Tags as a conversation keeps them: said, each once, in order.
+    """Keep tags as a conversation keeps them: said, each once, in order.
 
     Raises
     ------
@@ -416,7 +417,8 @@ def thread_tags(tags: Iterable[Any]) -> List[str]:
 class ThreadMetadata(Dict[str, Any]):
     """A conversation's metadata (LOOP P-24): a dict whose every change is
     kept with the conversation, in its record — ``session.metadata["plan"] =
-    "pro"``. Its values are written as JSON; at most 10,000 characters."""
+    "pro"``. Its values are written as JSON; at most 10,000 characters.
+    """
 
     def __init__(self, changed: Callable[[], None]) -> None:
         super().__init__()
@@ -448,13 +450,13 @@ class ThreadMetadata(Dict[str, Any]):
     def __delitem__(self, key: str) -> None:
         self._try(lambda: super(ThreadMetadata, self).__delitem__(key))
 
-    def update(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override]
+    def update(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override, unused-ignore]
         self._try(lambda: super(ThreadMetadata, self).update(*args, **kwargs))
 
-    def pop(self, key: str, *default: Any) -> Any:  # type: ignore[override]
+    def pop(self, key: str, *default: Any) -> Any:  # type: ignore[override, unused-ignore]
         return self._try(lambda: super(ThreadMetadata, self).pop(key, *default))
 
-    def setdefault(self, key: str, default: Any = None) -> Any:  # type: ignore[override]
+    def setdefault(self, key: str, default: Any = None) -> Any:  # type: ignore[override, unused-ignore]
         return self._try(lambda: super(ThreadMetadata, self).setdefault(key, default))
 
     def clear(self) -> None:
@@ -767,7 +769,8 @@ class Session:
     @property
     def metadata(self) -> ThreadMetadata:
         """What its code keeps with the conversation, by name, as JSON: kept
-        in its record as it changes, listed with the person's thread."""
+        in its record as it changes, listed with the person's thread.
+        """
         return self._metadata
 
     @metadata.setter
