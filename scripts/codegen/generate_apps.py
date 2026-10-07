@@ -55,6 +55,7 @@ CAMEL = {
     "backend_tools": "backendTools",
     "character_alone": "characterAlone",
     "settings_ui": "settingsUi",
+    "custom_components": "customComponents",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights by name.
