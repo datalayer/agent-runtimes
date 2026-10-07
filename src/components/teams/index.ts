@@ -22,5 +22,6 @@ export * from './NotebookPreview';
 export * from './sceneTranscript';
 export * from './SceneTranscript';
 export * from './SceneView';
+export * from './useBalloonRoom';
 export * from './sceneStage';
 export * from './AnswerSurfaces';

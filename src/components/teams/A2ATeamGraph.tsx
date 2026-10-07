@@ -85,6 +85,7 @@ import {
 import type { A2ATeamPersona } from './useA2ATeam';
 import { NotebookPreview } from './NotebookPreview';
 import { notebookBalloonVisual } from './TeamNotebook';
+import { useBalloonRoom } from './useBalloonRoom';
 import type { BalloonExpandTarget } from '../../chat/assistant/BalloonVisual';
 import { toolLineText } from '../../chat/assistant/toolLine';
 import type { BalloonDisplay } from '../../chat/assistant/toolLine';
@@ -201,9 +202,10 @@ export type A2ATeamGraphProps = {
   /** The tool calls running now, to the members' connections (`useA2ATeam`). */
   calls?: A2ATeamCall[];
   /**
-   * The room above the members for their balloons, in pixels at full scale:
-   * a page that shows suggestions, *more* and a notebook in them gives more.
-   * A notebook in a balloon gets at least its own.
+   * The least room above the members for their balloons, in pixels at full
+   * scale: the graph keeps what its balloons take now (`useBalloonRoom`) —
+   * suggestions, *more* unfolded — and never less than this. A notebook in
+   * a balloon gets at least its own.
    */
   balloonRoom?: number;
 };
@@ -1162,10 +1164,16 @@ export function A2ATeamGraph({
     connections: (member.connections ?? []).map(connection => connection.id),
   }));
   const placedKey = JSON.stringify(placed);
-  // A notebook in a balloon: more room above the members.
+  // What the balloons take now, at least the room the page gives; a
+  // notebook in a balloon, at least its own.
+  const measured = useBalloonRoom(box, {
+    anchor: '[data-team-member]',
+    zoom: viewport.zoom,
+    floor: balloonRoom,
+  });
   const room = members.some(member => member.persona.notebook)
-    ? Math.max(NOTEBOOK_BALLOON_ROOM, balloonRoom)
-    : balloonRoom;
+    ? Math.max(NOTEBOOK_BALLOON_ROOM, measured)
+    : measured;
   // Beside a member, its connections may reach below it: the row takes them.
   const reach = Math.max(
     0,
