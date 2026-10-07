@@ -61,7 +61,10 @@ describe('the preset per kind', () => {
   it('runs a chat as its agent and the feedback its record keeps, laid out as a conversation', () => {
     const preset = appPreset(APP_CATALOGUE['web-research']);
     expect(names(preset.plugins)).toEqual([
-      '@datalayer/loop-plugin-agent-app-web-research',
+      // Its page plugin, named as its runtime's is (F-15), and what tells
+      // it which of them its runtime holds.
+      'loop-app-web-research',
+      '@datalayer/loop-plugin-app-runtime',
       '@datalayer/loop-plugin-app-feedback-web-research',
       '@datalayer/loop-plugin-app-elements',
     ]);

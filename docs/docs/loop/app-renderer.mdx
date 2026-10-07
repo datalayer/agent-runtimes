@@ -118,6 +118,56 @@ What the host knows that the application does not — the record it read, who
 is signed in, a visitor's key — reaches the page through the host's own React
 context: the view is drawn inside the host's tree.
 
+## One application, two plugins of one name
+
+An application is two [Reactor](/loop) plugins of one name, `loop-app-<id>`:
+the page's (`defineAppPlugin`) and its runtime's (`manifest_of` in
+`agent_runtimes.loop.apps.plugins`). Whichever editor wrote it — a spec, the
+Canvas, an `app.py` — the pair is the same, and each half declares the other,
+with Reactor's cross-tier declaration:
+
+| Tier    | The plugin       | Says it needs                                   | Delivered by     |
+| ------- | ---------------- | ----------------------------------------------- | ---------------- |
+| Page    | `loop-app-<id>`  | `requiredBackendPlugins: ['loop-app-<id>']`     | `loop-app-<id>`  |
+| Runtime | `loop-app-<id>`  | `frontend_dependencies=['loop-app-<id>']`       | `loop-app-<id>`  |
+
+`AppRenderer` delivers the page's plugins as one extension named so
+(`appExtension`), and the runtime's manifest names the same `extension`: in
+Reactor's plugins manager ("Delivered by") and its graph, the page's plugins
+and the runtime's are one application. `appPluginPair(id)` says the whole pair.
+
+### The page follows its runtime
+
+The page's plugin stands down while its runtime does not hold the
+application, and comes back when it does: its starters, its modes and the
+agent it is created from go with it, and nothing it offers is left pointing at
+a runtime that no longer runs it. Every place an application appears — the
+Studio's Preview, its address, an embed, the browser alone — draws it with
+`AppRenderer`, which mounts `defineAppRuntimePlugin(id)` for all of them: a
+plugin of its own, never stood down, that tells the page what its runtime
+holds.
+
+- **On a runtime** — Datalayer's, where its agent was made (its address, an
+  embed, the visitors' runtime), or the workspace's server once the agent was
+  made there — it follows the runtime with Reactor's `useBackendPluginStream`,
+  on `GET /api/v1/apps/<id>/plugins/state` and its stream,
+  `GET /api/v1/apps/<id>/events/stream`.
+- **In the browser alone**, or while a runtime starts, there is no runtime to
+  follow: the page is its own, the pair is whole, and nothing is blank.
+
+The runtime answers about the one application it is asked for — whoever asks
+already knows its id — so a runtime several applications share says nothing
+of the others; it answers anybody, as Reactor's own routes do, since a
+browser's stream sends no token. A runtime from before this answers `404`,
+which the page reads as nothing said: nothing stands down.
+
+```json
+{"revision": 3, "plugins": [{"name": "loop-app-web-research", "enabled": true,
+  "activated": true, "display_name": "Web Research", "emoji": "🔎",
+  "extension": "loop-app-web-research",
+  "frontend_dependencies": ["loop-app-web-research"]}]}
+```
+
 ## The blocks a page draws
 
 An application's page draws the blocks the workspace's plugins contribute to

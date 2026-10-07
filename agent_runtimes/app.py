@@ -56,6 +56,7 @@ from .routes import (
     agent_node_router,
     agents_router,
     agui_router,
+    app_plugins_router,
     apps_router,
     checkpoints_router,
     configure_router,
@@ -1541,6 +1542,9 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # the router existed and nothing mounted it.
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
+    # Which of an application's plugins this runtime holds, followed by the
+    # page's plugin of the same name (LOOP F-15).
+    app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
     # An application's computer, shown where the person is (LOOP R-23).
     app.include_router(computer_router, prefix=config.api_prefix)

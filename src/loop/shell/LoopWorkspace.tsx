@@ -33,6 +33,7 @@ import { Box } from '@primer/react';
 import {
   buildReactorFromPlugins,
   onView,
+  type PlatformInput,
   type PluginRef,
   type ReactorPlatform,
 } from '@datalayer/reactor';
@@ -163,8 +164,8 @@ export type LoopWorkspaceProps = {
   sidebarRail?: boolean;
 };
 
-/** Build the platform for a set of plugins. */
-export function buildLoopReactor(extensions: PluginRef[]): ReactorPlatform {
+/** Build the platform for a set of plugins, and of extensions grouping them. */
+export function buildLoopReactor(extensions: PlatformInput[]): ReactorPlatform {
   return buildReactorFromPlugins(extensions);
 }
 

@@ -3,8 +3,13 @@
 
 """Applications as Reactor plugins, on the runtime's side (LOOP §5.4, F-12, F-13).
 
-An application runs as two Reactor plugins of one name: the page's
-(`defineAppPlugin`, in `src/loop/apps/AppRenderer.tsx`) and this one. Whichever
+An application runs as two Reactor plugins of one name, ``loop-app-<id>``
+(LOOP F-15): the page's (`defineAppPlugin`, in `src/loop/apps/AppRenderer.tsx`)
+and this one. Each declares the other — the page's ``requiredBackendPlugins``,
+this manifest's ``frontend_dependencies`` — and both say the same
+``extension``, which is how Reactor's manager and graph show the pair as one
+application. The page follows what this runtime holds through
+`app_plugins_state` (``GET /api/v1/apps/<id>/plugins/state``). Whichever
 editor wrote it — a spec, the Canvas, an `app.py` — the runtime knows an
 application only as a contribution to the ``loop.app`` point:
 
@@ -31,6 +36,7 @@ answers in its place.
 
 from __future__ import annotations
 
+import weakref
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from reactor import (
@@ -105,21 +111,77 @@ def _the(registry: Optional[ContributionRegistry]) -> ContributionRegistry:
     return REGISTRY if registry is None else registry
 
 
+#: How many times each registry's applications' own plugins changed: what
+#: ``/plugins/state`` answers as its ``revision``, and what its stream watches.
+_REVISIONS: "weakref.WeakKeyDictionary[ContributionRegistry, int]" = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _changed(registry: ContributionRegistry) -> None:
+    _REVISIONS[registry] = _REVISIONS.get(registry, 0) + 1
+
+
+def revision_of(registry: Optional[ContributionRegistry] = None) -> int:
+    """How many times the applications' own plugins of a registry changed."""
+    return _REVISIONS.get(_the(registry), 0)
+
+
 def app_plugin_name(app_id: str) -> str:
-    """The name of an application's runtime plugin."""
+    """The one name of an application's two plugins, the page's and the runtime's
+    (LOOP F-15): ``src/loop/apps/pluginPair.ts`` says the same."""
     return f"loop-app-{app_id}"
 
 
 def manifest_of(app: AppSpec) -> PluginManifest:
-    """An application's identity, as its plugin says it."""
+    """An application's identity, as its plugin says it: the page plugin of the
+    same name is what it cannot be used without, and both are delivered as
+    one extension of that name — the application (LOOP F-15)."""
+    name = app_plugin_name(app.id)
     return PluginManifest(
-        name=app_plugin_name(app.id),
+        name=name,
         version=app.version,
         description=app.description,
         display_name=app.name,
         emoji=app.emoji,
         tags=["loop", "app", app.kind],
+        extension=name,
+        frontend_dependencies=[name],
     )
+
+
+def app_plugins_state(
+    app_id: str, registry: Optional[ContributionRegistry] = None
+) -> Dict[str, Any]:
+    """Which of an application's plugins this runtime holds, as Reactor's
+    ``GET /plugins/state`` says it (LOOP F-15).
+
+    Asked for one application, by whoever already knows its id — the page
+    running it — so that a runtime shared by several (the visitors' runtime)
+    says nothing of the others. Its own plugin, ``loop-app-<id>``, when the
+    runtime was configured with it; nothing otherwise: the page's plugin of
+    that name then stands down until it is.
+    """
+    registry = _the(registry)
+    name = app_plugin_name(app_id)
+    held = registry.get(APP_POINT, plugins=[name])
+    plugins: List[Dict[str, Any]] = []
+    if held:
+        # Reactor's three fields, and what a graph draws of the pair: the
+        # page plugin it needs, and the extension that delivers both.
+        manifest = manifest_of(held[-1].value)
+        plugins.append(
+            {
+                "name": name,
+                "enabled": True,
+                "activated": True,
+                "display_name": manifest.display_name,
+                "emoji": manifest.emoji,
+                "extension": manifest.extension,
+                "frontend_dependencies": list(manifest.frontend_dependencies),
+            }
+        )
+    return {"revision": revision_of(registry), "plugins": plugins}
 
 
 def _rules(app: AppSpec, agent_id: Optional[str] = None) -> AppRulesCapability:
@@ -170,6 +232,7 @@ def register_app(
     _ensure_catalogue(registry)
     registry.dispose_plugin(manifest.name)
     _contribute(PluginContributions(registry, manifest.name), app)
+    _changed(registry)
     return manifest
 
 
@@ -228,6 +291,7 @@ def register_application(
             framework_agent_maker(code_agent),
             contribution_id=app.id,
         )
+    _changed(registry)
     return manifest
 
 
@@ -284,7 +348,10 @@ def unregister_app(
 ) -> bool:
     """Take an application's own plugin away. Whether it had contributed."""
     registry = _the(registry)
-    return registry.dispose_plugin(app_plugin_name(app_id)) > 0
+    removed = registry.dispose_plugin(app_plugin_name(app_id)) > 0
+    if removed:
+        _changed(registry)
+    return removed
 
 
 def _ensure_catalogue(registry: ContributionRegistry) -> None:

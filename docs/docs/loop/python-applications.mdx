@@ -615,7 +615,12 @@ a file with none, or more than one, raises `ValueError`.
 
 An application written in Python is a [Reactor](/loop) plugin, as one
 written as a spec is: `loop-app-<id>`, its manifest the application's
-identity (name, version, description, emoji, kind). Each decorator is a
+identity (name, version, description, emoji, kind) — the name its page's
+plugin has too, which the manifest names as what it cannot be used without
+(`frontend_dependencies`), both delivered as one extension of that name
+([one application, two plugins](./app-renderer#one-application-two-plugins-of-one-name)).
+`loop apps eject` changes nothing of it: the `app.py` it writes is the same
+pair as the spec it was written from. Each decorator is a
 contribution of that plugin to a point of its own — `loop.app.start`,
 `loop.app.message`, `loop.app.settings`, `loop.app.stop`, `loop.app.resume`,
 `loop.app.end`, `loop.app.logout`, and `loop.app.action` and

@@ -76,7 +76,9 @@ describe('the application plugin', () => {
       interface: { ...research.interface, starters: [] },
     });
     expect(contributed(plain, LoopChatSuggestion)).toEqual([]);
-    expect(plugin.name).toBe('@datalayer/loop-plugin-agent-app-web-research');
+    // The name of the pair, which the runtime's plugin has too (F-15).
+    expect(plugin.name).toBe('loop-app-web-research');
+    expect(plugin.requiredBackendPlugins).toEqual(['loop-app-web-research']);
     expect(plugin.displayName).toBe('Web Research');
   });
 

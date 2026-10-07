@@ -56,6 +56,13 @@ export type AgentCapacityOptions = {
   model?: string;
   /** What its modes tell a run turned in the page (LOOP P-19). */
   modeEffect?: AgentBlueprintContribution['modeEffect'];
+  /**
+   * Its own name in place of `@datalayer/loop-plugin-agent-<key>`: an
+   * application's, the name its runtime's plugin has too (LOOP F-15).
+   */
+  name?: string;
+  /** The runtime plugins it cannot work without (Reactor's cross-tier declaration). */
+  requiredBackendPlugins?: string[];
 };
 
 export function defineAgentCapacityPlugin(
@@ -74,9 +81,12 @@ export function defineAgentCapacityPlugin(
     instructions,
     model,
     modeEffect,
+    name,
+    requiredBackendPlugins,
   } = options;
   return definePlugin({
-    name: `@datalayer/loop-plugin-agent-${key}`,
+    name: name ?? `@datalayer/loop-plugin-agent-${key}`,
+    ...(requiredBackendPlugins ? { requiredBackendPlugins } : {}),
     displayName,
     description,
     octicon: octicon ?? 'dependabot',

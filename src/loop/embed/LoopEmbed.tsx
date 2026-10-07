@@ -24,7 +24,7 @@
  */
 
 import { useMemo, useRef, type ReactNode } from 'react';
-import type { PluginRef } from '@datalayer/reactor';
+import type { PlatformInput } from '@datalayer/reactor';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor } from '@datalayer/reactor/react';
 import { Box } from '@datalayer/primer-addons';
@@ -72,9 +72,10 @@ export type LoopEmbedProps = LoopPresetOptions & {
    * How a page adds something to Loop rather than around it — a button in the
    * window's title bar, a panel of its own, a command. Without this a host
    * would have to rebuild the plugin list to add one thing to it, which is the
-   * assembly this component exists to save.
+   * assembly this component exists to save. An extension groups some of
+   * them, as an application's own plugins are (`AppRenderer`, LOOP F-15).
    */
-  plugins?: PluginRef[];
+  plugins?: PlatformInput[];
 };
 
 export function LoopEmbed({

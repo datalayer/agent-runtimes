@@ -51,7 +51,13 @@
  */
 
 import { useMemo, type ComponentType } from 'react';
-import type { PluginRef, ReactorPlugin } from '@datalayer/reactor';
+import {
+  defineExtension,
+  type PlatformInput,
+  type PluginRef,
+  type ReactorExtension,
+  type ReactorPlugin,
+} from '@datalayer/reactor';
 import {
   loopAccentStyles,
   useSystemColorMode,
@@ -96,6 +102,8 @@ import { keepsFeedback } from './feedback';
 import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import { ChatLanguage } from '../../chat/ChatLanguage';
+import { defineAppRuntimePlugin } from './AppRuntimePlugins';
+import { appPluginPair } from './pluginPair';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -108,6 +116,11 @@ export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
 
 /**
  * The plugin that makes a LOOP workspace run an application.
+ *
+ * Its page plugin of the pair (LOOP F-15): named `loop-app-<id>`, as its
+ * runtime's plugin is, and requiring it — so that it stands down while its
+ * runtime does not hold the application, and comes back when it does
+ * (`AppRuntimePlugins` follows the runtime).
  *
  * The agent is created with the application's own document (`app_spec`) in
  * its payload; a runtime that knows applications configures the agent from
@@ -127,8 +140,11 @@ export function defineAppPlugin(
       `“${app.name}” is run by a team, which the workspace does not run as an application yet.`,
     );
   }
+  const pair = appPluginPair(app.id);
   return defineAgentCapacityPlugin({
     key: `app-${app.id}`,
+    name: pair.page.name,
+    requiredBackendPlugins: pair.page.requiredBackendPlugins,
     // What a person reads is in their language (P-26); what it is created
     // with is its own Appspec.
     displayName: shown.name,
@@ -161,6 +177,27 @@ export function defineAppPlugin(
             modeEffect(app, chosen, profile),
         }
       : {}),
+  });
+}
+
+/**
+ * The application on the page: its plugins delivered as one extension named
+ * as its plugin pair is, `loop-app-<id>` — the extension its runtime's plugin
+ * says too, so that Reactor's manager ("Delivered by") and graph show the
+ * page's plugins and the runtime's as one application (LOOP F-15).
+ */
+export function appExtension(
+  app: AppSpec,
+  shown: AppSpec,
+  plugins: PluginRef[],
+): ReactorExtension {
+  return defineExtension({
+    name: appPluginPair(app.id).extension,
+    displayName: shown.name,
+    description: shown.description || `The ${shown.name} application`,
+    emoji: app.emoji,
+    version: app.version,
+    plugins,
   });
 }
 
@@ -366,6 +403,8 @@ export function appPreset(
   return {
     plugins: [
       defineAppPlugin(app, shown),
+      // What its runtime holds, told to the page (F-15).
+      defineAppRuntimePlugin(app.id),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
       // The components its developer wrote (LOOP P-17): blocks of its page
       // and renderers of its page, its elements and its answers — its own.
@@ -543,7 +582,11 @@ export function AppRenderer({
     ],
   );
   const allPlugins = useMemo(
-    () => ('problem' in preset ? plugins : [...preset.plugins, ...plugins]),
+    (): PlatformInput[] =>
+      'problem' in preset
+        ? plugins
+        : [appExtension(app, shown, preset.plugins), ...plugins],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [preset, plugins],
   );
   /*
