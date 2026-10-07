@@ -287,3 +287,19 @@ describe('Inspect the agent…', () => {
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 });
+
+describe('a suggestion’s description in the menu', () => {
+  it('keeps to one line, whole words and an ellipsis, the full text in its tooltip', async () => {
+    const { shortDescription, MENU_DESCRIPTION_MAX } = await import(
+      '../assistant/AssistantContextMenu'
+    );
+    expect(shortDescription('Chart the aged receivables as of today, by customer.')).toBe(
+      'Chart the aged receivables as of today, by customer.',
+    );
+    const long =
+      'Show me the open customer invoices as a notebook: the invoices, the total due, and a chart of what each customer owes.';
+    const short = shortDescription(long);
+    expect(short).toBe('Show me the open customer invoices as a notebook: the…');
+    expect(short.length).toBeLessThanOrEqual(MENU_DESCRIPTION_MAX + 1);
+  });
+});

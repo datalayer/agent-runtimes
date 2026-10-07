@@ -25,6 +25,24 @@ import { createPortal } from 'react-dom';
 import { ActionList, ActionMenu } from '@primer/react';
 import type { Icon } from '@primer/octicons-react';
 
+/** The longest a description is drawn in the menu, in characters. */
+export const MENU_DESCRIPTION_MAX = 60;
+
+/**
+ * A description short enough for one line of the menu: whole words up to
+ * {@link MENU_DESCRIPTION_MAX} characters, then an ellipsis. The full text
+ * stays in its tooltip.
+ */
+export function shortDescription(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  if (flat.length <= MENU_DESCRIPTION_MAX) {
+    return flat;
+  }
+  const cut = flat.slice(0, MENU_DESCRIPTION_MAX);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > MENU_DESCRIPTION_MAX / 2 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?—-]+$/, '')}…`;
+}
+
 /** One entry of the assistant's menu. */
 export type AssistantMenuItem = {
   /** Stable id: `inspect`, `stop`, a plugin's own. */
@@ -169,7 +187,9 @@ export function AssistantContextMenu({
                   {item.label}
                   {item.description && (
                     <ActionList.Description variant="block">
-                      {item.description}
+                      <span title={item.description}>
+                        {shortDescription(item.description)}
+                      </span>
                     </ActionList.Description>
                   )}
                 </ActionList.Item>
