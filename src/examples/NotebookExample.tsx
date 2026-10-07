@@ -30,23 +30,19 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        padding: 3,
-      }}
+      flex={1}
+      display="flex"
+      flexDirection="column"
+      overflow="auto"
+      padding={3}
     >
       <Box
-        sx={{
-          marginBottom: 3,
-          paddingBottom: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
+        marginBottom={3}
+        paddingBottom={3}
+        borderBottom="1px solid"
+        borderColor="border.default"
       >
-        <Box as="h1" sx={{ margin: 0 }}>
+        <Box as="h1" margin={0}>
           Notebook Example
         </Box>
         <p>
@@ -56,13 +52,11 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
       </Box>
 
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          padding: 3,
-          backgroundColor: 'canvas.default',
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        padding={3}
+        backgroundColor="canvas.default"
       >
         {serviceManager ? (
           <ThemedJupyterProvider>
@@ -78,7 +72,7 @@ export const JupyterNotebookExample = (props: IJupyterNotebookExampleProps) => {
             />
           </ThemedJupyterProvider>
         ) : (
-          <Box sx={{ padding: 3 }}>
+          <Box padding={3}>
             <p>Loading service manager...</p>
           </Box>
         )}

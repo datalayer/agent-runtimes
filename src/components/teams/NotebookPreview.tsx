@@ -92,23 +92,24 @@ export function NotebookPreview({
   return (
     <Box
       data-notebook-preview=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}
+      display="flex"
+      flexDirection="column"
+      gap={1}
+      minWidth={0}
     >
       <Box
         role="region"
         aria-label={`${title}, read-only`}
         onClick={onOpen}
         data-notebook-preview-cells={doc.cells.length}
-        sx={{
-          position: 'relative',
-          height: maxHeight,
-          overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'border.muted',
-          borderRadius: 2,
-          bg: 'canvas.default',
-          cursor: onOpen ? 'pointer' : 'default',
-        }}
+        position="relative"
+        height={maxHeight}
+        overflow="hidden"
+        border="1px solid"
+        borderColor="border.muted"
+        borderRadius={2}
+        bg="canvas.default"
+        cursor={onOpen ? 'pointer' : 'default'}
       >
         <Suspense
           fallback={

@@ -125,15 +125,8 @@ export function TeamNotebookView({
 
   return (
     <QueryClientProvider client={queries}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            flexWrap: 'wrap',
-          }}
-        >
+      <Box display="flex" flexDirection="column" gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Text sx={{ color: 'fg.muted', fontSize: 1, flex: '1 1 auto' }}>
             {running
               ? 'It runs in your browser, with Python (Pyodide): run its cells, change them, add your own.'
@@ -151,14 +144,14 @@ export function TeamNotebookView({
         {failed && <Flash variant="warning">{failed}</Flash>}
         <Box
           data-team-notebook-sheet=""
+          position="relative"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          overflow="hidden"
           sx={{
-            position: 'relative',
             height,
             minHeight: 0,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            overflow: 'hidden',
             // As the loop's notebook view pins them: Lumino sizes these
             // itself, and a resize it never hears of leaves them at zero.
             '& .jp-NotebookPanel': {

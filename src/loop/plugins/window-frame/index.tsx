@@ -59,7 +59,10 @@ function WindowControls(): React.JSX.Element {
         token => (
           <Box
             key={token}
-            sx={{ width: 10, height: 10, borderRadius: '50%', bg: token }}
+            width={10}
+            height={10}
+            borderRadius="50%"
+            bg={token}
           />
         ),
       )}

@@ -42,7 +42,7 @@ const DECK_PLUGINS = [LoopDecksPlugin, DeckViewPlugin];
 
 const DecksAgent: React.FC = () => (
   <ThemedProvider>
-    <Box sx={{ height: '100vh', minHeight: 0 }}>
+    <Box height="100vh" minHeight={0}>
       <LoopEmbed
         target="browser"
         agentId="example-decks"

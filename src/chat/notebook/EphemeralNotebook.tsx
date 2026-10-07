@@ -25,13 +25,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { ServerConnection, ServiceManager } from '@jupyterlab/services';
 import {
+  Box,
   DatalayerThemeProvider,
   getThemeConfig,
   useSystemColorMode,
   useThemeStore,
   type ToolbarItem,
 } from '@datalayer/primer-addons';
-import { Box } from '@primer/react';
 import {
   Notebook,
   NotebookToolbar,
@@ -641,14 +641,12 @@ export function EphemeralNotebook({
 
   return (
     <Box
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        bg: 'canvas.default',
-      }}
+      flex={1}
+      minHeight={0}
+      height="100%"
+      position="relative"
+      overflow="hidden"
+      bg="canvas.default"
     >
       {activeServiceManager && notebookReady ? (
         <ThemeRoot

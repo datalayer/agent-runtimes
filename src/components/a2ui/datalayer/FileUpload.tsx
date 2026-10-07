@@ -128,18 +128,16 @@ export function FileUploadView({ props }: { props: FileUploadProps }) {
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
         data-testid="a2ui-fileupload-drop"
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2,
-          p: 3,
-          border: '1px dashed',
-          borderColor: over ? 'accent.fg' : 'border.default',
-          borderRadius: CARD_RADIUS,
-          bg: over ? 'accent.subtle' : 'canvas.subtle',
-          textAlign: 'center',
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        gap={2}
+        p={3}
+        border="1px dashed"
+        borderColor={over ? 'accent.fg' : 'border.default'}
+        borderRadius={CARD_RADIUS}
+        bg={over ? 'accent.subtle' : 'canvas.subtle'}
+        textAlign="center"
       >
         <Text sx={{ fontWeight: 'semibold' }}>{label}</Text>
         <Button

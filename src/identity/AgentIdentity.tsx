@@ -11,15 +11,8 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import {
-  Box,
-  Text,
-  Button,
-  Label,
-  Avatar,
-  Flash,
-  Tooltip,
-} from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text, Button, Label, Avatar, Flash, Tooltip } from '@primer/react';
 import {
   MarkGithubIcon,
   LinkIcon,
@@ -270,43 +263,43 @@ export function IdentityCard({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        p: 3,
-        border: '1px solid',
-        borderColor: tokenStatus.isExpired
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      p={3}
+      border="1px solid"
+      borderColor={
+        tokenStatus.isExpired
           ? 'danger.muted'
           : tokenStatus.isExpiringSoon
             ? 'attention.muted'
-            : 'success.muted',
-        borderRadius: 2,
-        backgroundColor: tokenStatus.isExpired
+            : 'success.muted'
+      }
+      borderRadius={2}
+      backgroundColor={
+        tokenStatus.isExpired
           ? 'danger.subtle'
           : tokenStatus.isExpiringSoon
             ? 'attention.subtle'
-            : 'success.subtle',
-      }}
+            : 'success.subtle'
+      }
     >
       {/* Header row with provider info */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" gap={2}>
         {/* Provider Icon */}
         <Box
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: display.color,
-            color: 'white',
-          }}
+          width={32}
+          height={32}
+          borderRadius={2}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          backgroundColor={display.color}
+          color="white"
         >
           <display.icon size={16} />
         </Box>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box flex={1} display="flex" alignItems="center" gap={2}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
             {display.name}
           </Text>
@@ -317,19 +310,19 @@ export function IdentityCard({
         </Box>
         {tokenStatus.isExpired ? (
           <Label variant="danger" size="small">
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+            <Box display="inline-flex" alignItems="center" gap={1}>
               <AlertIcon size={12} /> Expired
             </Box>
           </Label>
         ) : tokenStatus.isExpiringSoon ? (
           <Label variant="attention" size="small">
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+            <Box display="inline-flex" alignItems="center" gap={1}>
               <ClockIcon size={12} /> Expiring Soon
             </Box>
           </Label>
         ) : (
           <Label variant="success" size="small">
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+            <Box display="inline-flex" alignItems="center" gap={1}>
               <CheckCircleFillIcon size={12} /> Connected
             </Box>
           </Label>
@@ -337,7 +330,7 @@ export function IdentityCard({
       </Box>
 
       {/* User info row with avatar */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" gap={2}>
         {/* Avatar */}
         {identity.userInfo?.avatarUrl && (
           <a
@@ -365,7 +358,7 @@ export function IdentityCard({
         )}
 
         {/* Identity Info */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           {/* Name */}
           {identity.userInfo?.name && (
             <Text
@@ -407,13 +400,7 @@ export function IdentityCard({
 
       {/* Expiration Details */}
       {showExpirationDetails && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
+        <Box display="flex" alignItems="center" gap={1}>
           <ClockIcon size={12} />
           <Text
             sx={{
@@ -432,13 +419,7 @@ export function IdentityCard({
 
       {/* Scopes */}
       {identity.scopes && identity.scopes.length > 0 && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 1,
-          }}
-        >
+        <Box display="flex" flexWrap="wrap" gap={1}>
           {identity.scopes.map(scope => (
             <Label key={scope} size="small" variant="secondary">
               {scope}
@@ -448,13 +429,7 @@ export function IdentityCard({
       )}
 
       {/* Actions */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          mt: 1,
-        }}
-      >
+      <Box display="flex" gap={2} mt={1}>
         {tokenStatus.isExpired &&
           allowReconnect &&
           providerConfig?.clientId && (
@@ -590,14 +565,7 @@ export function AgentIdentity({
   return (
     <Box>
       {showHeader && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            mb: 2,
-          }}
-        >
+        <Box display="flex" alignItems="center" gap={2} mb={2}>
           <KeyIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'semibold', color: 'fg.muted' }}>
             {title}
@@ -606,13 +574,11 @@ export function AgentIdentity({
       )}
 
       <Box
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
       >
         {showDescription && (
           <Text
@@ -634,7 +600,7 @@ export function AgentIdentity({
         )}
 
         {displayIdentities.length > 0 ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box display="flex" flexDirection="column" gap={2}>
             {displayIdentities.map(identity => (
               <IdentityCard
                 key={identity.provider}
@@ -649,14 +615,7 @@ export function AgentIdentity({
             ))}
           </Box>
         ) : !hasUnconnected ? (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              color: 'fg.muted',
-            }}
-          >
+          <Box display="flex" alignItems="center" gap={2} color="fg.muted">
             <LinkIcon size={16} />
             <Text sx={{ fontSize: 1 }}>No connected accounts</Text>
           </Box>
@@ -664,7 +623,7 @@ export function AgentIdentity({
 
         {/* Show connect buttons for unconnected providers */}
         {hasUnconnected && (
-          <Box sx={{ mt: displayIdentities.length > 0 ? 3 : 0 }}>
+          <Box mt={displayIdentities.length > 0 ? 3 : 0}>
             {displayIdentities.length > 0 && (
               <Text
                 sx={{
@@ -677,7 +636,7 @@ export function AgentIdentity({
                 Connect additional accounts:
               </Text>
             )}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
               {(Object.keys(unconnectedProviders) as OAuthProvider[]).map(
                 provider => {
                   const config = unconnectedProviders[provider]!;

@@ -136,13 +136,11 @@ export function ToolPart({ part }: ToolPartProps) {
 
   return (
     <Box
-      sx={{
-        marginBottom: 2,
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        overflow: 'hidden',
-      }}
+      marginBottom={2}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      overflow="hidden"
     >
       {/* Tool Header - Collapsible Trigger */}
       <Button
@@ -165,24 +163,22 @@ export function ToolPart({ part }: ToolPartProps) {
           },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           {hasMark(marks) && (
-            <Box sx={{ display: 'flex', color: 'fg.muted' }}>
+            <Box display="flex" color="fg.muted">
               <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={14} />
             </Box>
           )}
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>{toolName}</Text>
           <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1,
-              paddingX: 2,
-              paddingY: 1,
-              borderRadius: 2,
-              backgroundColor: 'neutral.subtle',
-              fontSize: 0,
-            }}
+            display="inline-flex"
+            alignItems="center"
+            gap={1}
+            paddingX={2}
+            paddingY={1}
+            borderRadius={2}
+            backgroundColor="neutral.subtle"
+            fontSize={0}
           >
             <Text sx={{ color: statusInfo.color }}>{statusInfo.icon}</Text>
             <Text sx={{ color: statusInfo.color, fontWeight: 'semibold' }}>
@@ -192,11 +188,9 @@ export function ToolPart({ part }: ToolPartProps) {
         </Box>
         <Box
           as="span"
-          sx={{
-            display: 'inline-flex',
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s',
-          }}
+          display="inline-flex"
+          transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'}
+          transition="transform 0.2s"
         >
           <ChevronDownIcon />
         </Box>
@@ -207,15 +201,13 @@ export function ToolPart({ part }: ToolPartProps) {
         <Box>
           {/* Tool Input */}
           <Box
-            sx={{
-              padding: 3,
-              borderBottom:
-                part.state === 'output-available' ||
-                part.state === 'output-error'
-                  ? '1px solid'
-                  : 'none',
-              borderColor: 'border.default',
-            }}
+            padding={3}
+            borderBottom={
+              part.state === 'output-available' || part.state === 'output-error'
+                ? '1px solid'
+                : 'none'
+            }
+            borderColor="border.default"
           >
             <Text
               sx={{
@@ -231,13 +223,11 @@ export function ToolPart({ part }: ToolPartProps) {
               Parameters
             </Text>
             <Box
-              sx={{
-                backgroundColor: 'canvas.inset',
-                borderRadius: 2,
-                overflow: 'auto',
-                border: '1px solid',
-                borderColor: 'border.default',
-              }}
+              backgroundColor="canvas.inset"
+              borderRadius={2}
+              overflow="auto"
+              border="1px solid"
+              borderColor="border.default"
             >
               <pre
                 style={{
@@ -256,7 +246,7 @@ export function ToolPart({ part }: ToolPartProps) {
 
           {/* Tool Output */}
           {part.state === 'output-available' && (
-            <Box sx={{ padding: 3 }}>
+            <Box padding={3}>
               <Text
                 sx={{
                   display: 'block',
@@ -271,13 +261,11 @@ export function ToolPart({ part }: ToolPartProps) {
                 Result
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'canvas.default',
-                  borderRadius: 2,
-                  overflow: 'auto',
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                backgroundColor="canvas.default"
+                borderRadius={2}
+                overflow="auto"
+                border="1px solid"
+                borderColor="border.default"
               >
                 <pre
                   style={{
@@ -301,7 +289,7 @@ export function ToolPart({ part }: ToolPartProps) {
 
           {/* Execution Error (infrastructure failure) */}
           {executionResult && !executionResult.execution_ok && (
-            <Box sx={{ padding: 3 }}>
+            <Box padding={3}>
               <Text
                 sx={{
                   display: 'block',
@@ -316,14 +304,12 @@ export function ToolPart({ part }: ToolPartProps) {
                 <AlertIcon size={12} /> Execution Error
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'danger.subtle',
-                  borderRadius: 2,
-                  overflow: 'auto',
-                  border: '1px solid',
-                  borderColor: 'danger.muted',
-                  padding: 2,
-                }}
+                backgroundColor="danger.subtle"
+                borderRadius={2}
+                overflow="auto"
+                border="1px solid"
+                borderColor="danger.muted"
+                padding={2}
               >
                 <Text sx={{ fontSize: 0, color: 'danger.fg' }}>
                   {executionResult.execution_error ||
@@ -347,7 +333,7 @@ export function ToolPart({ part }: ToolPartProps) {
           {executionResult &&
             executionResult.execution_ok &&
             executionResult.code_error && (
-              <Box sx={{ padding: 3 }}>
+              <Box padding={3}>
                 <Text
                   sx={{
                     display: 'block',
@@ -362,26 +348,22 @@ export function ToolPart({ part }: ToolPartProps) {
                   Code Error: {executionResult.code_error.name}
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'severe.subtle',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: 'severe.muted',
-                  }}
+                  backgroundColor="severe.subtle"
+                  borderRadius={2}
+                  overflow="hidden"
+                  border="1px solid"
+                  borderColor="severe.muted"
                 >
-                  <Box sx={{ padding: 2 }}>
+                  <Box padding={2}>
                     <Text sx={{ fontSize: 0, color: 'severe.fg' }}>
                       {executionResult.code_error.value}
                     </Text>
                   </Box>
                   {executionResult.code_error.traceback && (
                     <Box
-                      sx={{
-                        borderTop: '1px solid',
-                        borderColor: 'severe.muted',
-                        backgroundColor: 'canvas.inset',
-                      }}
+                      borderTop="1px solid"
+                      borderColor="severe.muted"
+                      backgroundColor="canvas.inset"
                     >
                       <pre
                         style={{
@@ -410,7 +392,7 @@ export function ToolPart({ part }: ToolPartProps) {
             !executionResult.code_error &&
             executionResult.exit_code != null &&
             executionResult.exit_code !== 0 && (
-              <Box sx={{ padding: 3 }}>
+              <Box padding={3}>
                 <Text
                   sx={{
                     display: 'block',
@@ -425,14 +407,12 @@ export function ToolPart({ part }: ToolPartProps) {
                   Process Exited
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'attention.subtle',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '1px solid',
-                    borderColor: 'attention.muted',
-                    padding: 2,
-                  }}
+                  backgroundColor="attention.subtle"
+                  borderRadius={2}
+                  overflow="hidden"
+                  border="1px solid"
+                  borderColor="attention.muted"
+                  padding={2}
                 >
                   <Text sx={{ fontSize: 0, color: 'attention.fg' }}>
                     Process exited with code {executionResult.exit_code}
@@ -449,14 +429,12 @@ export function ToolPart({ part }: ToolPartProps) {
                   </Text>
                   {effectiveExitOutput && (
                     <Box
-                      sx={{
-                        mt: 2,
-                        backgroundColor: 'canvas.inset',
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'attention.muted',
-                        overflow: 'auto',
-                      }}
+                      mt={2}
+                      backgroundColor="canvas.inset"
+                      borderRadius={2}
+                      border="1px solid"
+                      borderColor="attention.muted"
+                      overflow="auto"
                     >
                       <pre
                         style={{
@@ -483,7 +461,7 @@ export function ToolPart({ part }: ToolPartProps) {
             'errorText' in part &&
             part.errorText &&
             !executionResult && (
-              <Box sx={{ padding: 3 }}>
+              <Box padding={3}>
                 <Text
                   sx={{
                     display: 'block',
@@ -498,14 +476,12 @@ export function ToolPart({ part }: ToolPartProps) {
                   Error
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'danger.subtle',
-                    borderRadius: 2,
-                    overflow: 'auto',
-                    border: '1px solid',
-                    borderColor: 'danger.muted',
-                    padding: 2,
-                  }}
+                  backgroundColor="danger.subtle"
+                  borderRadius={2}
+                  overflow="auto"
+                  border="1px solid"
+                  borderColor="danger.muted"
+                  padding={2}
                 >
                   <Text sx={{ fontSize: 0, color: 'danger.fg' }}>
                     {part.errorText}

@@ -124,7 +124,10 @@ export function ConversationBalloonClose({
   return (
     <Box
       data-conversation-balloon-close=""
-      sx={{ position: 'absolute', top: '6px', right: '6px', zIndex: 30 }}
+      position="absolute"
+      top="6px"
+      right="6px"
+      zIndex={30}
     >
       <IconButton
         icon={XIcon}
@@ -161,19 +164,19 @@ export function BalloonApprovalMessage({
     <Box
       ref={ref}
       data-balloon-approval={approval.id}
-      sx={{ px: 3, py: 2, display: 'flex' }}
+      px={3}
+      py={2}
+      display="flex"
     >
       <Box
-        sx={{
-          maxWidth: '90%',
-          px: 3,
-          py: 2,
-          bg: 'attention.subtle',
-          border: '1px solid',
-          borderColor: 'attention.muted',
-          borderRadius: 'var(--theme-radius-bubble, 16px)',
-          fontSize: 1,
-        }}
+        maxWidth="90%"
+        px={3}
+        py={2}
+        bg="attention.subtle"
+        border="1px solid"
+        borderColor="attention.muted"
+        borderRadius="var(--theme-radius-bubble, 16px)"
+        fontSize={1}
       >
         <Text as="p" sx={{ m: 0, color: 'fg.muted', fontSize: 0 }}>
           {chatText.waitingForYou}
@@ -186,7 +189,7 @@ export function BalloonApprovalMessage({
             {approval.why}
           </Text>
         ) : null}
-        <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
+        <Box display="flex" gap={2} mt={2} alignItems="center">
           <Button
             size="small"
             variant="primary"

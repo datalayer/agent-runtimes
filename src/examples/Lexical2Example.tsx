@@ -159,13 +159,11 @@ function LexicalEditor({
       contentEditable={null}
     >
       <Box
-        sx={{
-          position: 'relative',
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        position="relative"
+        flex={1}
+        display="flex"
+        flexDirection="column"
+        overflow="hidden"
       >
         <div
           ref={onRef}
@@ -270,25 +268,21 @@ export function ChatLexicalExampleInner({
       <CustomToolsRegistrar />
 
       <Box
-        sx={{
-          height: '100vh',
-          width: '100vw',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        height="100vh"
+        width="100vw"
+        display="flex"
+        flexDirection="column"
+        overflow="hidden"
       >
         {/* Header */}
         <Box
-          sx={{
-            p: 3,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.default',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+          p={3}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          bg="canvas.default"
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
         >
           <div>
             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
@@ -298,13 +292,7 @@ export function ChatLexicalExampleInner({
               Sidebar popup chat with Lexical editor integration.
             </p>
           </div>
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              alignItems: 'center',
-            }}
-          >
+          <Box display="flex" gap={2} alignItems="center">
             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
               Press{' '}
               <kbd
@@ -325,14 +313,7 @@ export function ChatLexicalExampleInner({
         </Box>
 
         {/* Editor */}
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            overflow: 'hidden',
-            bg: 'canvas.default',
-          }}
-        >
+        <Box flex={1} display="flex" overflow="hidden" bg="canvas.default">
           <LexicalEditor serviceManager={serviceManager} />
         </Box>
       </Box>

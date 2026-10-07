@@ -103,15 +103,15 @@ export function TableView({ props }: { props: TableProps }) {
       {'problem' in read ? (
         <Problem>{read.problem}</Problem>
       ) : (
-        <Box sx={{ overflowX: 'auto' }}>
+        <Box overflowX="auto">
           <Box
             as="table"
             role={selectable ? 'grid' : undefined}
             aria-label={title || 'Table'}
+            width="100%"
+            borderCollapse="collapse"
+            fontSize={1}
             sx={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: 1,
               '& th, & td': {
                 textAlign: 'left',
                 px: 2,
@@ -147,17 +147,17 @@ export function TableView({ props }: { props: TableProps }) {
                             onKey(event, row),
                         }
                       : null)}
+                    cursor={selectable ? 'pointer' : undefined}
+                    bg={isSelected ? 'accent.subtle' : undefined}
+                    focusVisible={{
+                      outline: '2px solid',
+                      outlineColor: 'accent.fg',
+                      outlineOffset: '-2px',
+                    }}
                     sx={{
-                      cursor: selectable ? 'pointer' : undefined,
-                      bg: isSelected ? 'accent.subtle' : undefined,
                       '&:hover': selectable
                         ? { bg: isSelected ? 'accent.subtle' : 'canvas.subtle' }
                         : undefined,
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'accent.fg',
-                        outlineOffset: '-2px',
-                      },
                     }}
                   >
                     {columns.map(column => (
@@ -175,7 +175,9 @@ export function TableView({ props }: { props: TableProps }) {
         <Box
           as="nav"
           aria-label="Pages"
-          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+          display="flex"
+          alignItems="center"
+          gap={2}
         >
           <Button
             size="small"

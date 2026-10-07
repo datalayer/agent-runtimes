@@ -218,9 +218,11 @@ export function CheckpointsSidebar({
     <Box
       data-checkpoints-sidebar={agentId || undefined}
       data-checkpoints-count={checkpoints.length}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+      display="flex"
+      flexDirection="column"
+      gap={4}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box display="flex" alignItems="center" gap={2}>
         <VersionsIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, m: 0, flex: 1 }}>
           Checkpoints
@@ -247,13 +249,11 @@ export function CheckpointsSidebar({
           </Text>
         ) : (
           <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'max-content 1fr',
-              columnGap: 3,
-              rowGap: 1,
-              fontSize: 0,
-            }}
+            display="grid"
+            gridTemplateColumns="max-content 1fr"
+            columnGap={3}
+            rowGap={1}
+            fontSize={0}
           >
             <Text sx={{ color: 'fg.muted' }}>Snapshot</Text>
             <Text>
@@ -273,7 +273,7 @@ export function CheckpointsSidebar({
       {enabled ? (
         <Box>
           <SectionHeading>Save one now</SectionHeading>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box display="flex" gap={2}>
             <TextInput
               size="small"
               sx={{ flex: 1 }}
@@ -330,12 +330,10 @@ export function CheckpointsSidebar({
                   </Timeline.Badge>
                   <Timeline.Body>
                     <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        flexWrap: 'wrap',
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
+                      flexWrap="wrap"
                     >
                       <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
                         {checkpoint.label}
@@ -355,7 +353,7 @@ export function CheckpointsSidebar({
                       {checkpoint.messageCount === 1 ? '' : 's'} ·{' '}
                       {ago(checkpoint.createdAt, now)}
                     </Text>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box display="flex" gap={2} alignItems="center">
                       <Button
                         size="small"
                         leadingVisual={HistoryIcon}

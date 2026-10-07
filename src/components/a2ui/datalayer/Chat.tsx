@@ -135,13 +135,7 @@ export function ChatView({ props }: { props: ChatProps }) {
       {'problem' in read ? (
         <Problem>{read.problem}</Problem>
       ) : (
-        <Box
-          sx={{
-            maxHeight: 420,
-            overflowY: 'auto',
-            borderRadius: CARD_RADIUS,
-          }}
-        >
+        <Box maxHeight={420} overflowY="auto" borderRadius={CARD_RADIUS}>
           <ChatMessageList
             displayItems={read.items}
             isLoading={false}
@@ -166,14 +160,8 @@ export function ChatView({ props }: { props: ChatProps }) {
           />
         </Box>
       )}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 2,
-        }}
-      >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box display="flex" alignItems="flex-end" gap={2}>
+        <Box flex={1} minWidth={0}>
           <InputPromptText
             value={draft}
             onChange={setDraft}

@@ -649,24 +649,6 @@ export default defineConfig(({ mode, command }) => {
           : []),
         { find: '@', replacement: path.resolve(__dirname, './src') },
         { find: /^~(.*)$/, replacement: '$1' },
-        // primer-addons Box (styled-components) forwards `sx` to DOM in the
-        // current linked setup. Route Box module to a shim backed by
-        // @primer/react Box so `sx` is consumed instead of rendered as an
-        // attribute (e.g. sx="[object Object]").
-        {
-          find: /@datalayer\/primer-addons\/lib\/components\/box\/Box(\.js)?$/,
-          replacement: path.resolve(
-            __dirname,
-            './src/shims/primerAddonsBox.tsx',
-          ),
-        },
-        {
-          find: /\/src\/tech\/primer\/addons\/lib\/components\/box\/Box\.js$/,
-          replacement: path.resolve(
-            __dirname,
-            './src/shims/primerAddonsBox.tsx',
-          ),
-        },
         // json5 v2 ESM default export may not expose named exports expected by
         // @datalayer/jupyter-react; route through a shim that re-exports
         // parse/stringify explicitly.

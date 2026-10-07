@@ -20,25 +20,24 @@ export function TypingDots({ size = 8 }: { size?: number }): ReactElement {
     <Box
       aria-hidden="true"
       data-typing-dots=""
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+      display="inline-flex"
+      alignItems="center"
+      gap="4px"
     >
       {[0, 0.2, 0.4].map((delay, index) => (
         <Box
           key={index}
+          width={size}
+          height={size}
+          borderRadius="50%"
+          bg="fg.muted"
+          animation="typingPulse 1.4s ease-in-out infinite"
+          animationDelay={`${delay}s`}
+          reducedMotion={{ animation: 'none', opacity: 0.7 }}
           sx={{
-            width: size,
-            height: size,
-            borderRadius: '50%',
-            bg: 'fg.muted',
-            animation: 'typingPulse 1.4s ease-in-out infinite',
-            animationDelay: `${delay}s`,
             '@keyframes typingPulse': {
               '0%, 60%, 100%': { transform: 'scale(0.6)', opacity: 0.4 },
               '30%': { transform: 'scale(1)', opacity: 1 },
-            },
-            '@media (prefers-reduced-motion: reduce)': {
-              animation: 'none',
-              opacity: 0.7,
             },
           }}
         />

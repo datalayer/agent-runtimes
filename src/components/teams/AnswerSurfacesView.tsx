@@ -75,7 +75,10 @@ function OneSurface({
       as="section"
       aria-label={name ? `${name}: ${title}` : title}
       data-answer-surface={surface.id}
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      minWidth={0}
     >
       <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
         {name ? `${name} · ${title}` : title}
@@ -91,11 +94,14 @@ function OneSurface({
         <Box
           role="status"
           data-answer-reply=""
-          sx={{ display: 'flex', flexDirection: 'column', gap: 1, fontSize: 1 }}
+          display="flex"
+          flexDirection="column"
+          gap={1}
+          fontSize={1}
         >
           <Text sx={{ color: 'fg.muted' }}>You chose: {answered.chose}</Text>
           {answered.waiting ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" alignItems="center" gap={2}>
               <Spinner size="small" />
               <Text sx={{ color: 'fg.muted' }}>
                 {name ? `Asking ${name}…` : 'Asking…'}
@@ -118,7 +124,10 @@ export function AnswerSurfacesView({
   return (
     <Box
       data-answer-surfaces=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      minWidth={0}
     >
       {surfaces.map(surface => (
         <OneSurface

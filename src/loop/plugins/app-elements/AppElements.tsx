@@ -89,13 +89,11 @@ function ElementBody({
 function ElementHeader({ element }: { element: LoopElement }): JSX.Element {
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 2,
-        mb: 2,
-      }}
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={2}
+      mb={2}
     >
       <Text as="h2" sx={{ fontSize: 2, fontWeight: 'bold', m: 0 }}>
         {element.title}
@@ -131,23 +129,21 @@ export function AppElements({
         <Box
           as="aside"
           aria-label="Side panel"
-          sx={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: `min(${APP_PANEL_WIDTH}px, 100%)`,
-            zIndex: 1,
-            overflowY: 'auto',
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.subtle',
-            boxShadow: 'shadow.medium',
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
+          position="absolute"
+          top={0}
+          right={0}
+          bottom={0}
+          width={`min(${APP_PANEL_WIDTH}px, 100%)`}
+          zIndex={1}
+          overflowY="auto"
+          borderLeft="1px solid"
+          borderColor="border.default"
+          bg="canvas.subtle"
+          boxShadow="shadow.medium"
+          p={3}
+          display="flex"
+          flexDirection="column"
+          gap={3}
         >
           {panels.map(element => (
             <Box as="section" key={element.id} aria-label={element.title}>
@@ -161,14 +157,12 @@ export function AppElements({
         <Box
           role="dialog"
           aria-label={page.title}
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            overflowY: 'auto',
-            bg: 'canvas.default',
-            p: [3, 4],
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={2}
+          overflowY="auto"
+          bg="canvas.default"
+          p={[3, 4]}
         >
           <ElementHeader element={page} />
           <ElementBody element={page} send={send} />

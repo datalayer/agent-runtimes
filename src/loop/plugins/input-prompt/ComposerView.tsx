@@ -57,7 +57,7 @@ export function ComposerView({
     ) : undefined;
 
   return (
-    <Box sx={{ flex: '0 0 auto' }}>
+    <Box flex="0 0 auto">
       <InputPrompt
         {...composer}
         leadingPanel={stack(above)}

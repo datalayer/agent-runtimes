@@ -94,7 +94,7 @@ const PENDING = { status: 'pending' as const };
 /** A result it wants to keep, shown whole before it is (LOOP R-24). */
 export function DraftShown({ draft }: { draft: Draft }): JSX.Element {
   return (
-    <Box data-testid="app-draft" sx={{ mt: 1 }}>
+    <Box data-testid="app-draft" mt={1}>
       <Text as="p" sx={{ m: 0, fontSize: 0, color: 'fg.muted' }}>
         {SAVE_WORDS.where(draft.space)}
       </Text>
@@ -103,18 +103,16 @@ export function DraftShown({ draft }: { draft: Draft }): JSX.Element {
       </Text>
       <Box
         as="pre"
-        sx={{
-          m: 0,
-          mt: 1,
-          p: 2,
-          maxHeight: 240,
-          overflow: 'auto',
-          whiteSpace: 'pre-wrap',
-          fontFamily: 'inherit',
-          fontSize: 0,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-        }}
+        m={0}
+        mt={1}
+        p={2}
+        maxHeight={240}
+        overflow="auto"
+        whiteSpace="pre-wrap"
+        fontFamily="inherit"
+        fontSize={0}
+        bg="canvas.subtle"
+        borderRadius={2}
       >
         {draft.content}
       </Box>
@@ -145,19 +143,17 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
           {APP_RULES_WORDS.nothingWaiting}
         </Text>
       ) : (
-        <Box as="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+        <Box as="ul" listStyle="none" p={0} m={0}>
           {waiting.map(approval => {
             const draft = draftOfApproval(approval);
             return (
               <Box
                 as="li"
                 key={approval.id}
-                sx={{
-                  py: 2,
-                  borderTop: '1px solid',
-                  borderColor: 'border.muted',
-                  fontSize: 1,
-                }}
+                py={2}
+                borderTop="1px solid"
+                borderColor="border.muted"
+                fontSize={1}
               >
                 <Text sx={{ fontWeight: 'semibold' }}>
                   {approval.tool_name}
@@ -168,7 +164,7 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
                   </Text>
                 ) : null}
                 {draft ? <DraftShown draft={draft} /> : null}
-                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                <Box display="flex" gap={2} mt={1}>
                   <Button
                     size="small"
                     variant="primary"
@@ -197,7 +193,7 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
 export function AppRulesCard({ app }: { app: AppSpec }): JSX.Element {
   const signedIn = Boolean(useIAMStore(state => state.token));
   return (
-    <Box data-testid="app-rules" sx={{ mb: 4 }}>
+    <Box data-testid="app-rules" mb={4}>
       <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
         {APP_RULES_WORDS.title}
       </Heading>
@@ -206,9 +202,9 @@ export function AppRulesCard({ app }: { app: AppSpec }): JSX.Element {
           {APP_RULES_WORDS.none}
         </Text>
       ) : (
-        <Box as="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+        <Box as="ul" listStyle="none" p={0} m={0}>
           {app.rules.map(ruleInWords).map((rule, index) => (
-            <Box as="li" key={index} sx={{ py: 1, fontSize: 1 }}>
+            <Box as="li" key={index} py={1} fontSize={1}>
               <Text>{rule.action}</Text>{' '}
               <Label title={rule.means}>{rule.says}</Label>
               <Text as="p" sx={{ m: 0, color: 'fg.muted', fontSize: 0 }}>

@@ -61,7 +61,7 @@ const LoopAppComputerExample: React.FC = () => {
   const app = useMemo(computerDesk, []);
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <AppRenderer
           app={app}
           // The examples Vite server has no /api proxy.

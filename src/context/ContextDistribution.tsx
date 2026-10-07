@@ -5,7 +5,8 @@
  * ContextDistribution component - Shows context distribution as a treemap.
  */
 
-import { Box, Text, Spinner, Button } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text, Spinner, Button } from '@primer/react';
 import { ListUnorderedIcon } from '@primer/octicons-react';
 import ReactECharts from 'echarts-for-react';
 import { useState } from 'react';
@@ -167,13 +168,11 @@ export function ContextDistribution({
   if (showLoading) {
     return (
       <Box
-        sx={{
-          p: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height,
-        }}
+        p={3}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height={height}
       >
         <Spinner size="small" />
         <Text sx={{ ml: 2, fontSize: 1, color: 'fg.muted' }}>
@@ -186,13 +185,11 @@ export function ContextDistribution({
   if (hasError || !snapshotData) {
     return (
       <Box
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
       >
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
           Failed to load context distribution
@@ -256,12 +253,10 @@ export function ContextDistribution({
     <Box>
       {/* Header with title and controls */}
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
       >
         <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
           Current Context ({formatTokens(totalTokens)} total)
@@ -285,16 +280,14 @@ export function ContextDistribution({
         />
       ) : (
         <Box
-          sx={{
-            p: 4,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            textAlign: 'center',
-            height,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          p={4}
+          bg="canvas.subtle"
+          borderRadius={2}
+          textAlign="center"
+          height={height}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
         >
           <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
             No context data yet. Start a conversation to see context
@@ -306,16 +299,14 @@ export function ContextDistribution({
       {/* Details panel */}
       {showDetails && hasData && (
         <Box
-          sx={{
-            mt: 3,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-            fontFamily: 'mono',
-            fontSize: 0,
-          }}
+          mt={3}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.default"
+          fontFamily="mono"
+          fontSize={0}
         >
           <Text sx={{ fontWeight: 'bold', display: 'block', mb: 2 }}>
             Context Breakdown:
@@ -323,7 +314,7 @@ export function ContextDistribution({
 
           {/* System prompts */}
           {snapshotData.systemPromptTokens > 0 && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>
                 System Prompts: {formatTokens(snapshotData.systemPromptTokens)}{' '}
                 tokens
@@ -342,12 +333,12 @@ export function ContextDistribution({
 
           {/* Tool definitions */}
           {snapshotData.toolTokens > 0 && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>
                 Tool Definitions: {formatTokens(snapshotData.toolTokens)} tokens
                 ({snapshotData.tools.length} tools)
               </Text>
-              <Box sx={{ ml: 3, mt: 1 }}>
+              <Box ml={3} mt={1}>
                 {snapshotData.tools.slice(0, 5).map((tool, idx) => (
                   <Text key={idx} sx={{ display: 'block', color: 'fg.muted' }}>
                     • {tool.name}: {formatTokens(tool.totalTokens)} tokens
@@ -372,7 +363,7 @@ export function ContextDistribution({
           {(snapshotData.historyUserTokens > 0 ||
             snapshotData.historyAssistantTokens > 0 ||
             snapshotData.historyToolCallTokens > 0) && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>
                 History:{' '}
                 {formatTokens(
@@ -383,7 +374,7 @@ export function ContextDistribution({
                 )}{' '}
                 tokens
               </Text>
-              <Box sx={{ ml: 3, mt: 1 }}>
+              <Box ml={3} mt={1}>
                 <Text sx={{ display: 'block' }}>
                   • User Messages:{' '}
                   {formatTokens(snapshotData.historyUserTokens)} tokens
@@ -410,7 +401,7 @@ export function ContextDistribution({
 
           {/* Current turn */}
           {snapshotData.currentUserTokens > 0 && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>
                 Current User: {formatTokens(snapshotData.currentUserTokens)}{' '}
                 tokens
@@ -420,11 +411,11 @@ export function ContextDistribution({
 
           {/* Turn usage (model-reported) */}
           {snapshotData.turnUsage && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>
                 Turn Usage (model-reported):
               </Text>
-              <Box sx={{ ml: 3, mt: 1 }}>
+              <Box ml={3} mt={1}>
                 <Text sx={{ display: 'block' }}>
                   • Input: {formatTokens(snapshotData.turnUsage.inputTokens)}{' '}
                   tokens
@@ -450,9 +441,9 @@ export function ContextDistribution({
 
           {/* Session usage */}
           {snapshotData.sessionUsage && (
-            <Box sx={{ mb: 2 }}>
+            <Box mb={2}>
               <Text sx={{ fontWeight: 'bold' }}>Session Totals:</Text>
-              <Box sx={{ ml: 3, mt: 1 }}>
+              <Box ml={3} mt={1}>
                 <Text sx={{ display: 'block' }}>
                   • Total Input:{' '}
                   {formatTokens(snapshotData.sessionUsage.inputTokens)} tokens

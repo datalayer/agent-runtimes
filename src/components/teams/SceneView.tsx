@@ -78,14 +78,12 @@ export function SceneView({
   return (
     <Box data-scene-view={shown}>
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 2,
-          flexWrap: 'wrap',
-          mb: 2,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={2}
+        flexWrap="wrap"
+        mb={2}
       >
         <SegmentedControl aria-label="Scene view" size="small">
           <SegmentedControl.Button

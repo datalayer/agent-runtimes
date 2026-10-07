@@ -376,14 +376,14 @@ export function InputPromptBase({
               setFocused(false);
             }
           }}
+          border="1px solid"
+          // The theme's card (LOOP T-03, T-06): today's 6px elsewhere.
+          borderRadius="var(--theme-radius-card, 6px)"
+          bg="canvas.default"
+          overflow="hidden"
+          transition="border-color 0.2s ease"
           sx={{
-            border: '1px solid',
             borderColor: 'border.default',
-            // The theme's card (LOOP T-03, T-06): today's 6px elsewhere.
-            borderRadius: 'var(--theme-radius-card, 6px)',
-            bg: 'canvas.default',
-            overflow: 'hidden',
-            transition: 'border-color 0.2s ease',
             '&:focus-within': {
               borderColor: 'accent.fg',
               boxShadow: (t: Record<string, unknown>) =>

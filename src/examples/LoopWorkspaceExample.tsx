@@ -31,7 +31,7 @@
 
 import type { JSX } from 'react';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
@@ -329,12 +329,10 @@ export function LoopWorkspaceExample({
          * The room around it is what makes the frame read as a window sitting
          * on a page rather than as a border drawn at the edges of the screen.
          */
-        <Box
-          sx={{ height: '100%', minHeight: 0, p: 3, boxSizing: 'border-box' }}
-        >
+        <Box height="100%" minHeight={0} p={3} boxSizing="border-box">
           <WindowFrame
             title={
-              <Box as="span" sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+              <Box as="span" fontSize={1} fontWeight="semibold">
                 Loop
               </Box>
             }
@@ -343,7 +341,9 @@ export function LoopWorkspaceExample({
           </WindowFrame>
         </Box>
       ) : (
-        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+        <Box height="100%" minHeight={0}>
+          {shell}
+        </Box>
       )}
     </QueryClientProvider>
   );

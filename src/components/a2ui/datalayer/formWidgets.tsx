@@ -20,8 +20,8 @@
  */
 
 import { useState } from 'react';
+import { Box } from '@datalayer/primer-addons';
 import {
-  Box,
   FormControl,
   Text,
   TextInputWithTokens,
@@ -49,7 +49,7 @@ export function SwitchWidget({
   onChange,
 }: WidgetProps) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box display="flex" flexDirection="column" gap={1}>
       <Text as="span" id={`${id}-label`} sx={{ fontWeight: 'semibold' }}>
         {label}
       </Text>

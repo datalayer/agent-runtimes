@@ -12,13 +12,13 @@
  */
 
 import type { JSX } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { DecksView } from '@datalayer/decks/plugin';
 import type { ChatSurfaceProps } from '../../core';
 
 export default function DeckSurface(_: ChatSurfaceProps): JSX.Element {
   return (
-    <Box sx={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
+    <Box height="100%" minHeight={0} overflow="auto">
       <DecksView />
     </Box>
   );

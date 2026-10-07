@@ -66,14 +66,12 @@ export function ChatViewModeToggle({
       role="group"
       aria-label="Display mode"
       data-chat-view-mode-toggle=""
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        bg: 'neutral.muted',
-        borderRadius: '6px',
-        p: '2px',
-        gap: '1px',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      bg="neutral.muted"
+      borderRadius="6px"
+      p="2px"
+      gap="1px"
     >
       {CHAT_VIEW_MODES.map(({ mode, label }) => {
         const ModeIcon = VIEW_MODE_ICONS[mode];
@@ -104,20 +102,20 @@ export function ChatViewModeToggle({
                   onChange(mode);
                 }
               }}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              width={26}
+              height={24}
+              borderRadius="4px"
+              border="none"
+              cursor={disabled ? 'not-allowed' : 'pointer'}
+              opacity={disabled ? 0.45 : 1}
+              bg={selected ? 'canvas.default' : 'transparent'}
+              boxShadow={selected ? 'shadow.small' : 'none'}
+              color={selected ? 'fg.default' : 'fg.muted'}
+              transition="all 0.15s ease"
               sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 26,
-                height: 24,
-                borderRadius: '4px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.45 : 1,
-                bg: selected ? 'canvas.default' : 'transparent',
-                boxShadow: selected ? 'shadow.small' : 'none',
-                color: selected ? 'fg.default' : 'fg.muted',
-                transition: 'all 0.15s ease',
                 '&:hover': disabled
                   ? {}
                   : {

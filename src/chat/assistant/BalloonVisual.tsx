@@ -111,9 +111,10 @@ export function ExpandedVisual({
       <Box
         data-balloon-expanded="target"
         data-balloon-visual={visual.id}
-        sx={{ position: 'relative', minWidth: 0 }}
+        position="relative"
+        minWidth={0}
       >
-        <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
+        <Box position="absolute" top={0} right={0} zIndex={1}>
           <IconButton
             icon={visual.shrink ? ScreenNormalIcon : XIcon}
             size="small"
@@ -144,7 +145,7 @@ export function ExpandedVisual({
       <Box
         data-balloon-expanded="overlay"
         data-balloon-visual={visual.id}
-        sx={{ minWidth: 0 }}
+        minWidth={0}
       >
         {visual.render('overlay')}
       </Box>

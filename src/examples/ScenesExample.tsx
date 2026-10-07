@@ -275,7 +275,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
         {stage.assumes}
       </Text>
       {anonymous.status === 'active' && anonymous.expiresAt && (
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <AnonymousKeyTimer
             expiresAt={anonymous.expiresAt}
             grantedMs={anonymous.grantedMs}
@@ -285,7 +285,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
         </Box>
       )}
       {anonymous.status === 'expired' && (
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <AnonymousKeyExpired
             agentName={entry.app.name}
             onSignedIn={() => useAnonymousSessionStore.getState().clear()}
@@ -325,15 +325,13 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
       ))}
 
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          bg: 'canvas.subtle',
-          px: 2,
-          pt: 2,
-          mb: 3,
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        bg="canvas.subtle"
+        px={2}
+        pt={2}
+        mb={3}
       >
         <SceneView
           members={transcriptMembers}
@@ -419,12 +417,12 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
       {/* The notebook a member gave, right under the scene, to run here. */}
       <Box
         ref={notebookArea}
-        sx={{ mb: team.notebook ? 3 : 0 }}
+        mb={team.notebook ? 3 : 0}
         data-team-notebook-placement="under-graph"
       />
 
-      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ flex: '1 1 420px', minWidth: 0 }}>
+      <Box display="flex" gap={3} flexWrap="wrap">
+        <Box flex="1 1 420px" minWidth={0}>
           <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
             Ask {entry.app.name}
           </Heading>
@@ -446,7 +444,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
               }
             }}
           />
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+          <Box display="flex" gap={2} mt={2}>
             <Button
               variant="primary"
               disabled={!team.ready || team.busy || !draft.trim()}
@@ -456,16 +454,14 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             </Button>
             {team.busy && <Button onClick={team.stop}>Stop</Button>}
           </Box>
-          <Box sx={{ mt: 3 }} data-team-conversation="">
+          <Box mt={3} data-team-conversation="">
             {team.turns.map((turn, index) => (
               <Box
                 key={index}
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  borderRadius: 2,
-                  bg: turn.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-                }}
+                p={2}
+                mb={2}
+                borderRadius={2}
+                bg={turn.role === 'user' ? 'accent.subtle' : 'canvas.subtle'}
               >
                 <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
                   {turn.role === 'user' ? PERSON : entry.app.name}
@@ -475,20 +471,18 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             ))}
           </Box>
         </Box>
-        <Box sx={{ flex: '1 1 360px', minWidth: 0 }}>
+        <Box flex="1 1 360px" minWidth={0}>
           {!team.notebook && stage.peers.length > 0 && (
             <>
               <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
                 The report
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  minHeight: 120,
-                }}
+                p={3}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                minHeight={120}
                 data-team-report=""
               >
                 {team.report ? (
@@ -503,7 +497,7 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
             </>
           )}
           {scene.setup.length > 0 && (
-            <Box sx={{ mt: 3 }} data-scene-setup="">
+            <Box mt={3} data-scene-setup="">
               <Heading as="h3" sx={{ fontSize: 1, mb: 1 }}>
                 What this scene needs
               </Heading>
@@ -529,7 +523,7 @@ function Scenes(): JSX.Element {
   const [selected, setSelected] = useState(scenes[0]?.id ?? '');
   const scene = scenes.find(one => one.id === selected) ?? scenes[0];
   return (
-    <Box sx={{ p: 4, maxWidth: 1080, mx: 'auto' }}>
+    <Box p={4} maxWidth={1080} mx="auto">
       <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
         Scenes
       </Heading>

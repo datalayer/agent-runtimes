@@ -62,7 +62,7 @@ export function NotebookPreviewView({
   return (
     <Box
       data-notebook-preview-theme={mode}
-      sx={{ height }}
+      height={height}
       // JupyterLab writes its theme for the whole page, so two previews in
       // two modes would share the last one written: each carries its own
       // mode's variables on its own subtree.
@@ -82,8 +82,8 @@ export function NotebookPreviewView({
       <JupyterReactTheme colormode={mode}>
         <Box
           data-notebook-preview-view={id}
+          height={height}
           sx={{
-            height,
             // No toolbar: no room kept for one.
             '& .datalayer-NotebookPanel-header': {
               display: 'none',

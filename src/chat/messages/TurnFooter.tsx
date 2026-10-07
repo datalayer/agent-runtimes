@@ -124,15 +124,15 @@ export function TurnFooter({
   return (
     <Box
       data-turn-footer=""
+      display="flex"
+      alignItems="center"
+      gap={1}
+      px={padding}
+      // Tucked against the turn it accounts for, not opening a new band.
+      mt={-1}
+      pb={1}
+      minHeight={24}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1,
-        px: padding,
-        // Tucked against the turn it accounts for, not opening a new band.
-        mt: -1,
-        pb: 1,
-        minHeight: 24,
         // Barely there until wanted.
         opacity: 0.55,
         transition: 'opacity 0.15s ease',
@@ -168,10 +168,7 @@ export function TurnFooter({
         </Text>
       )}
       {!live && (
-        <Box
-          data-turn-actions=""
-          sx={{ display: 'flex', alignItems: 'center' }}
-        >
+        <Box data-turn-actions="" display="flex" alignItems="center">
           <IconButton
             data-turn-copy=""
             icon={copied ? CheckIcon : CopyIcon}

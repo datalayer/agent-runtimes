@@ -16,7 +16,8 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import type { ReactComponentImplementation } from '@a2ui/react/v0_9';
 import {
   MessageProcessor,
@@ -151,10 +152,7 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
   }
 
   return (
-    <Box
-      sx={{ height: '100%', overflowY: 'auto', px: 4, py: 3 }}
-      style={INHERIT_THEME}
-    >
+    <Box height="100%" overflowY="auto" px={4} py={3} style={INHERIT_THEME}>
       {surfaces.map(surface => (
         <A2uiSurfaceComposed key={surface.id} surface={surface} />
       ))}
@@ -165,16 +163,14 @@ export default function A2uiView({ workspace }: LoopViewProps): JSX.Element {
 function Centered({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'fg.muted',
-        fontSize: 1,
-        px: 4,
-        textAlign: 'center',
-      }}
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      color="fg.muted"
+      fontSize={1}
+      px={4}
+      textAlign="center"
     >
       {children}
     </Box>

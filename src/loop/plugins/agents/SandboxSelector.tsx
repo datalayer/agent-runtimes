@@ -18,7 +18,8 @@
 
 import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
-import { Box, SegmentedControl, Spinner, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { SegmentedControl, Spinner, Text } from '@primer/react';
 import { KernelIndicator } from '@datalayer/jupyter-react/kernel-indicator';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopWorkspaceContext } from '../../core';
@@ -75,18 +76,11 @@ export function SandboxSelector(_props: {
   const index = Math.max(0, SANDBOX_TARGETS.indexOf(target));
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+    <Box display="flex" alignItems="center" gap={2} minWidth={0}>
       {/* The spinner's room is held whether or not it is spinning: appearing
           and disappearing mid-switch reflowed the whole header, so the control
           a person had just clicked moved out from under the pointer. */}
-      <Box
-        sx={{
-          width: 16,
-          flexShrink: 0,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
+      <Box width={16} flexShrink={0} display="flex" justifyContent="center">
         {moving ? <Spinner size="small" /> : null}
       </Box>
       <KernelIndicator

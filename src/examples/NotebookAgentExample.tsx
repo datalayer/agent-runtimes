@@ -56,23 +56,19 @@ const NotebookUI = React.memo(function NotebookUI({
 }: NotebookUIProps): JSX.Element {
   return (
     <Box
-      sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'auto',
-        padding: 3,
-      }}
+      flex={1}
+      display="flex"
+      flexDirection="column"
+      overflow="auto"
+      padding={3}
     >
       <Box
-        sx={{
-          marginBottom: 3,
-          paddingBottom: 3,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
+        marginBottom={3}
+        paddingBottom={3}
+        borderBottom="1px solid"
+        borderColor="border.default"
       >
-        <Box as="h1" sx={{ margin: 0 }}>
+        <Box as="h1" margin={0}>
           Notebook Agent Example
         </Box>
         <p>
@@ -82,13 +78,11 @@ const NotebookUI = React.memo(function NotebookUI({
       </Box>
 
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          padding: 3,
-          backgroundColor: 'canvas.default',
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        padding={3}
+        backgroundColor="canvas.default"
       >
         {serviceManager ? (
           <ThemedJupyterProvider>
@@ -104,7 +98,7 @@ const NotebookUI = React.memo(function NotebookUI({
             />
           </ThemedJupyterProvider>
         ) : (
-          <Box sx={{ padding: 3 }}>
+          <Box padding={3}>
             <p>Loading service manager...</p>
           </Box>
         )}
@@ -160,14 +154,7 @@ function NotebookWithChat({
   );
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        overflow: 'hidden',
-      }}
-    >
+    <Box height="100%" width="100%" display="flex" overflow="hidden">
       <NotebookUI
         serviceManager={serviceManager}
         onSessionConnection={handleSessionConnection}
@@ -175,16 +162,14 @@ function NotebookWithChat({
 
       {chatError && (
         <Box
-          sx={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            padding: 3,
-            backgroundColor: 'danger.subtle',
-            color: 'danger.fg',
-            borderRadius: 2,
-            maxWidth: 300,
-          }}
+          position="fixed"
+          bottom={20}
+          right={20}
+          padding={3}
+          backgroundColor="danger.subtle"
+          color="danger.fg"
+          borderRadius={2}
+          maxWidth={300}
         >
           <strong>Error:</strong> {chatError}
         </Box>

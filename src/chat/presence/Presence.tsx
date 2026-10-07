@@ -15,7 +15,8 @@
  */
 
 import type { ReactNode } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
 import { PRESENCE_LINES, type PresenceState } from './presenceStatus';
 
@@ -54,51 +55,43 @@ export function PresenceFace({
       as="span"
       aria-hidden
       data-presence={state}
-      sx={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: size + 8,
-        height: size + 8,
-        flexShrink: 0,
-        fontSize: size,
-        lineHeight: 1,
-      }}
+      position="relative"
+      display="inline-flex"
+      alignItems="center"
+      justifyContent="center"
+      width={size + 8}
+      height={size + 8}
+      flexShrink={0}
+      fontSize={size}
+      lineHeight={1}
     >
       <Box
         as="span"
+        position="absolute"
+        inset={0}
+        borderRadius="50%"
+        boxShadow={paused ? 'none' : `0 0 0 2px ${ACCENT}`}
+        border={paused ? '2px dashed' : 'none'}
+        borderColor="border.default"
+        opacity={active || state === 'waiting' || paused ? 0.9 : 0}
+        transition="opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)"
+        animation={
+          active ? 'loopPresenceBreath 1.8s ease-in-out infinite' : 'none'
+        }
+        reducedMotion={{ animation: 'none' }}
         sx={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: '50%',
-          boxShadow: paused ? 'none' : `0 0 0 2px ${ACCENT}`,
-          border: paused ? '2px dashed' : 'none',
-          borderColor: 'border.default',
-          opacity: active || state === 'waiting' || paused ? 0.9 : 0,
-          transition:
-            'opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)',
-          animation: active
-            ? 'loopPresenceBreath 1.8s ease-in-out infinite'
-            : 'none',
           '@keyframes loopPresenceBreath': {
             '0%, 100%': { transform: 'scale(0.92)', opacity: 0.35 },
             '50%': { transform: 'scale(1.06)', opacity: 0.9 },
-          },
-          '@media (prefers-reduced-motion: reduce)': {
-            animation: 'none',
           },
         }}
       />
       <Box
         as="span"
-        sx={{
-          display: 'inline-flex',
-          opacity: paused ? 0.55 : 1,
-          filter: paused ? 'grayscale(0.6)' : 'none',
-          transition:
-            'opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)',
-        }}
+        display="inline-flex"
+        opacity={paused ? 0.55 : 1}
+        filter={paused ? 'grayscale(0.6)' : 'none'}
+        transition="opacity var(--theme-motion-status, 0ms) var(--theme-motion-easing, ease)"
       >
         <FaceDrawing face={face} size={size} />
       </Box>

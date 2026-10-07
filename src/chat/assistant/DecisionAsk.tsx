@@ -112,7 +112,7 @@ export function DecisionAsk({
 
   if (answer !== undefined) {
     return (
-      <Box data-balloon-decision="answered" sx={{ mt: 2 }}>
+      <Box data-balloon-decision="answered" mt={2}>
         <Text
           as="p"
           data-decision-answer=""
@@ -120,7 +120,7 @@ export function DecisionAsk({
         >
           {answer}
         </Text>
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+        <Box display="flex" gap={2} mt={2}>
           <Button size="small" onClick={() => setAnswer(undefined)}>
             {DECISION_WORDS.again}
           </Button>
@@ -175,7 +175,10 @@ export function DecisionAsk({
           close();
         }
       }}
-      sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}
+      mt={2}
+      display="flex"
+      flexDirection="column"
+      gap={2}
     >
       <FormControl>
         <FormControl.Label>Situation</FormControl.Label>
@@ -200,7 +203,7 @@ export function DecisionAsk({
           onChange={event => setQuestion(event.target.value)}
         />
       </FormControl>
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box display="flex" gap={2}>
         <FormControl sx={{ flex: 1 }}>
           <FormControl.Label>Type</FormControl.Label>
           <Select
@@ -246,7 +249,7 @@ export function DecisionAsk({
         </FormControl>
       )}
       {type === 'score' && (
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box display="flex" gap={2}>
           <FormControl sx={{ flex: 1 }}>
             <FormControl.Label>From</FormControl.Label>
             <TextInput
@@ -280,7 +283,7 @@ export function DecisionAsk({
           {problem}
         </Text>
       ) : null}
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box display="flex" gap={2}>
         <Button size="small" variant="primary" type="submit" disabled={asking}>
           {asking ? DECISION_WORDS.asking : DECISION_WORDS.submit}
         </Button>

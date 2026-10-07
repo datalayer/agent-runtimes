@@ -1404,13 +1404,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
           {leftPaneVisible ? (
             <>
               <Box
-                sx={{
-                  position: 'fixed',
-                  left: 0,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 100,
-                }}
+                position="fixed"
+                left={0}
+                top="50%"
+                transform="translateY(-50%)"
+                zIndex={100}
               >
                 <IconButton
                   icon={SidebarCollapseIcon}
@@ -1439,7 +1437,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                       <AiAgentIcon colored size={48} />
                     </Blankslate.Visual>
                     <Blankslate.Heading>Agent Runtimes</Blankslate.Heading>
-                    <Box sx={{ textAlign: 'center' }}>
+                    <Box textAlign="center">
                       <Blankslate.Description>
                         Expose AI Agents through multiple protocols.
                       </Blankslate.Description>
@@ -1452,13 +1450,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
             </>
           ) : (
             <Box
-              sx={{
-                position: 'fixed',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 100,
-              }}
+              position="fixed"
+              left={0}
+              top="50%"
+              transform="translateY(-50%)"
+              zIndex={100}
             >
               <IconButton
                 icon={SidebarExpandIcon}
@@ -1505,22 +1501,13 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                 width={RIGHT_PANE_WIDTH}
                 sticky
               >
-                <Box
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    p: 2,
-                  }}
-                >
+                <Box height="100%" display="flex" flexDirection="column" p={2}>
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 2,
-                      gap: 2,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={2}
+                    gap={2}
                   >
                     <IconButton
                       icon={SidebarCollapseIcon}
@@ -1603,7 +1590,7 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                     />
                   ) : (
                     /* Chat Interface */
-                    <Box sx={{ flex: 1, minHeight: 0 }}>
+                    <Box flex={1} minHeight={0}>
                       <ChatWithJupyterStatus
                         baseUrl={effectiveBaseUrl}
                         isConfigured={isConfigured}
@@ -1671,13 +1658,11 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
             </>
           ) : (
             <Box
-              sx={{
-                position: 'fixed',
-                right: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 100,
-              }}
+              position="fixed"
+              right={0}
+              top="50%"
+              transform="translateY(-50%)"
+              zIndex={100}
             >
               <IconButton
                 icon={SidebarExpandIcon}
@@ -1698,29 +1683,25 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
 
         {showSpecOverlay && (
           <Box
-            sx={{
-              position: 'fixed',
-              inset: 24,
-              zIndex: 300,
-              bg: 'canvas.default',
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 1,
-              boxShadow: 'shadow.large',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
+            position="fixed"
+            inset={24}
+            zIndex={300}
+            bg="canvas.default"
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={1}
+            boxShadow="shadow.large"
+            display="flex"
+            flexDirection="column"
           >
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 3,
-                py: 2,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              px={3}
+              py={2}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
               <Text sx={{ fontWeight: 'bold' }}>
                 Spec Payload Preview (YAML)
@@ -1733,16 +1714,14 @@ const AgentspecsExample: React.FC<AgentRuntimeFormExampleProps> = ({
                 onClick={() => setShowSpecOverlay(false)}
               />
             </Box>
-            <Box sx={{ p: 3, overflow: 'auto', flex: 1 }}>
+            <Box p={3} overflow="auto" flex={1}>
               <Box
                 as="pre"
-                sx={{
-                  m: 0,
-                  whiteSpace: 'pre',
-                  fontFamily: 'monospace',
-                  fontSize: 0,
-                  lineHeight: '20px',
-                }}
+                m={0}
+                whiteSpace="pre"
+                fontFamily="monospace"
+                fontSize={0}
+                lineHeight="20px"
               >
                 {specYamlPreview}
               </Box>

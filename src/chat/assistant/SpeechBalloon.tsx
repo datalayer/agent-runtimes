@@ -74,7 +74,10 @@ export function BalloonSuggestions({
       role="group"
       aria-label={chatText.suggestions}
       data-balloon-suggestions=""
-      sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}
+      display="flex"
+      flexWrap="wrap"
+      gap={1}
+      mt={2}
     >
       {suggestions.map(suggestion => (
         <Button
@@ -194,7 +197,9 @@ export function BalloonHistoryLarge({
       role="log"
       aria-label={chatText.conversation}
       data-balloon-history-large=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+      display="flex"
+      flexDirection="column"
+      gap={2}
     >
       <BalloonChatItems
         items={withToolCall(history, tool)}
@@ -249,7 +254,10 @@ function BalloonHistory({
   return (
     <Box
       data-balloon-history=""
-      sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
+      flex={1}
+      minWidth={0}
+      display="flex"
+      flexDirection="column"
     >
       <Box
         as="button"
@@ -257,20 +265,18 @@ function BalloonHistory({
         data-balloon-peek=""
         data-balloon-header=""
         onClick={onOpen}
-        sx={{
-          m: 0,
-          p: 0,
-          pb: 1,
-          border: 0,
-          bg: 'transparent',
-          font: 'inherit',
-          textAlign: 'left',
-          cursor: 'pointer',
-          fontSize: 0,
-          fontWeight: 'semibold',
-          color: 'fg.muted',
-          '&:hover': { textDecoration: 'underline' },
-        }}
+        m={0}
+        p={0}
+        pb={1}
+        border={0}
+        bg="transparent"
+        font="inherit"
+        textAlign="left"
+        cursor="pointer"
+        fontSize={0}
+        fontWeight="semibold"
+        color="fg.muted"
+        hover={{ textDecoration: 'underline' }}
       >
         {conversationHeaderText(conversationCount(history), chatText)}
       </Box>
@@ -290,13 +296,11 @@ function BalloonHistory({
         role="log"
         aria-label={chatText.conversation}
         data-balloon-history-list=""
-        sx={{
-          maxHeight,
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          pr: 1,
-        }}
+        maxHeight={maxHeight}
+        overflowY="auto"
+        display="flex"
+        flexDirection="column"
+        pr={1}
       >
         <BalloonChatItems
           items={withToolCall(history, tool)}
@@ -401,7 +405,7 @@ export function SpeechBalloon({
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+      <Box display="flex" alignItems="flex-start" gap={1}>
         {current && !approval ? (
           // Not a <button>: the body draws the chat's tool card, a button of
           // its own, and a click on that card is the card's alone.
@@ -425,18 +429,16 @@ export function SpeechBalloon({
                 onOpen();
               }
             }}
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              m: 0,
-              p: 0,
-              border: 0,
-              bg: 'transparent',
-              color: 'inherit',
-              font: 'inherit',
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
+            flex={1}
+            minWidth={0}
+            m={0}
+            p={0}
+            border={0}
+            bg="transparent"
+            color="inherit"
+            font="inherit"
+            textAlign="left"
+            cursor="pointer"
           >
             <CurrentBalloonBody
               text={text}
@@ -465,7 +467,7 @@ export function SpeechBalloon({
         ) : tool ? (
           // The tool being called: the chat's card, not inside the peek's
           // button (the card is a button of its own).
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box flex={1} minWidth={0}>
             <BalloonToolCall line={tool} />
           </Box>
         ) : (
@@ -475,19 +477,17 @@ export function SpeechBalloon({
             data-balloon-peek=""
             data-balloon-more={more ? '' : undefined}
             onClick={onOpen}
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              m: 0,
-              p: 0,
-              border: 0,
-              bg: 'transparent',
-              color: 'inherit',
-              font: 'inherit',
-              textAlign: 'left',
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' },
-            }}
+            flex={1}
+            minWidth={0}
+            m={0}
+            p={0}
+            border={0}
+            bg="transparent"
+            color="inherit"
+            font="inherit"
+            textAlign="left"
+            cursor="pointer"
+            hover={{ textDecoration: 'underline' }}
           >
             <Box as="span" role="status" aria-live="polite">
               {text}
@@ -513,30 +513,28 @@ export function SpeechBalloon({
           aria-expanded={whole}
           data-balloon-whole={whole ? 'less' : 'more'}
           onClick={() => setWhole(!whole)}
-          sx={{
-            m: 0,
-            mt: 1,
-            p: 0,
-            border: 0,
-            bg: 'transparent',
-            color: 'accent.fg',
-            font: 'inherit',
-            fontSize: 0,
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
-          }}
+          m={0}
+          mt={1}
+          p={0}
+          border={0}
+          bg="transparent"
+          color="accent.fg"
+          font="inherit"
+          fontSize={0}
+          cursor="pointer"
+          hover={{ textDecoration: 'underline' }}
         >
           {whole ? chatText.showLess : chatText.showMore}
         </Box>
       ) : null}
       {/* No history listed, at work with nothing written yet: the dots. */}
       {!current && !listed && waiting ? (
-        <Box data-balloon-waiting="" sx={{ mt: 1 }}>
+        <Box data-balloon-waiting="" mt={1}>
           <BalloonChatItems items={[]} waiting />
         </Box>
       ) : null}
       {approval && (
-        <Box data-balloon-approval={approval.id} sx={{ mt: 1 }}>
+        <Box data-balloon-approval={approval.id} mt={1}>
           <Text as="p" sx={{ m: 0, fontWeight: 'semibold' }}>
             {approval.asks}
           </Text>
@@ -545,7 +543,7 @@ export function SpeechBalloon({
               {approval.why}
             </Text>
           ) : null}
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+          <Box display="flex" gap={2} mt={2}>
             <Button
               size="small"
               variant="primary"
@@ -576,7 +574,10 @@ export function SpeechBalloon({
       {attachment ? (
         <Box
           data-balloon-attachment=""
-          sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}
+          mt={2}
+          display="flex"
+          flexDirection="column"
+          gap={1}
         >
           {attachment}
           {onExpand ? (

@@ -66,19 +66,17 @@ export function SubagentPulse(): JSX.Element | null {
           type="button"
           aria-label={label}
           data-subagent-pulse={name}
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            p: 0,
-            border: 0,
-            bg: 'transparent',
-            color: 'accent.fg',
-            cursor: 'default',
-            animation: `${PULSE_ANIMATION} 1.4s ease-in-out infinite`,
-          }}
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          width={28}
+          height={28}
+          p={0}
+          border={0}
+          bg="transparent"
+          color="accent.fg"
+          cursor="default"
+          animation={`${PULSE_ANIMATION} 1.4s ease-in-out infinite`}
         >
           <Icon size={16} />
         </Box>

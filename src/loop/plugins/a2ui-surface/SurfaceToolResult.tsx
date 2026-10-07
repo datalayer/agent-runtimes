@@ -127,17 +127,15 @@ export function SurfaceToolResult({
   if (!parsed?.messages || parsed.messages.length === 0) {
     return (
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          px: 3,
-          py: 2,
-          bg: 'canvas.default',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        px={3}
+        py={2}
+        bg="canvas.default"
+        display="flex"
+        alignItems="center"
+        gap={2}
       >
         <Spinner size="small" />
         <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
@@ -148,7 +146,7 @@ export function SurfaceToolResult({
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box display="flex" flexDirection="column" gap={2}>
       <Text sx={{ fontWeight: 'bold' }}>{title}</Text>
       <InlineSurface
         messages={parsed.messages}

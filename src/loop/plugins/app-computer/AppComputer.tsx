@@ -74,7 +74,7 @@ function Parts({ app }: { app: AppSpec }): JSX.Element {
   const off = partsOff(parts);
   return (
     <Box data-testid="computer-parts">
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+      <Box display="flex" gap={1} flexWrap="wrap" mb={1}>
         {COMPUTER_PARTS.map(part => (
           <Label
             key={part}
@@ -113,18 +113,16 @@ function Terminal({
         </Text>
       ) : (
         <Box
-          sx={{
-            bg: 'canvas.inset',
-            border: '1px solid',
-            borderColor: 'border.muted',
-            borderRadius: 2,
-            p: 2,
-            maxHeight: 320,
-            overflow: 'auto',
-          }}
+          bg="canvas.inset"
+          border="1px solid"
+          borderColor="border.muted"
+          borderRadius={2}
+          p={2}
+          maxHeight={320}
+          overflow="auto"
         >
           {entries.map((entry, index) => (
-            <Box key={index} sx={{ mb: 2 }}>
+            <Box key={index} mb={2}>
               <Text as="p" sx={{ ...MONO, fontWeight: 'semibold' }}>
                 {`$ ${entry.tool}${entry.command ? `: ${entry.command}` : ''}`}
               </Text>
@@ -213,7 +211,7 @@ function Files({
       ) : !entries ? (
         <Spinner size="small" />
       ) : (
-        <Box as="ul" sx={{ listStyle: 'none', p: 0, m: 0 }}>
+        <Box as="ul" listStyle="none" p={0} m={0}>
           {path !== '.' ? (
             <Box as="li">
               <Button
@@ -235,15 +233,13 @@ function Files({
               as="li"
               key={entry.path}
               data-path={entry.path}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                fontSize: 1,
-                py: 1,
-                borderTop: '1px solid',
-                borderColor: 'border.muted',
-              }}
+              display="flex"
+              alignItems="center"
+              gap={2}
+              fontSize={1}
+              py={1}
+              borderTop="1px solid"
+              borderColor="border.muted"
             >
               {entry.type === 'directory' ? (
                 <Button
@@ -319,9 +315,9 @@ function YourTerminal({ context }: { context: ComputerContext }): JSX.Element {
     );
   };
   return (
-    <Box data-testid="computer-your-terminal" sx={{ mt: 2 }}>
+    <Box data-testid="computer-your-terminal" mt={2}>
       {outputs.map((each, index) => (
-        <Box key={index} sx={{ mb: 2 }}>
+        <Box key={index} mb={2}>
           <Text as="p" sx={{ ...MONO, fontWeight: 'semibold' }}>
             {`>>> ${each.code}`}
           </Text>
@@ -449,7 +445,7 @@ export function AppComputer({
             </Text>
           ) : null}
           {state ? (
-            <Box sx={{ mt: 2 }} data-testid="computer-holder">
+            <Box mt={2} data-testid="computer-holder">
               <Text as="p" sx={{ fontSize: 1, m: 0, mb: 1 }}>
                 {!state.held
                   ? COMPUTER_WORDS.agentHas

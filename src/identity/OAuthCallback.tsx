@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Box, Text, Spinner, Flash, Button } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text, Spinner, Flash, Button } from '@primer/react';
 import {
   CheckCircleFillIcon,
   AlertIcon,
@@ -249,27 +250,23 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: 4,
-        backgroundColor: 'canvas.default',
-      }}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      minHeight="100vh"
+      padding={4}
+      backgroundColor="canvas.default"
     >
       <Box
-        sx={{
-          maxWidth: 400,
-          width: '100%',
-          padding: 4,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-          backgroundColor: 'canvas.subtle',
-          textAlign: 'center',
-        }}
+        maxWidth={400}
+        width="100%"
+        padding={4}
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
+        backgroundColor="canvas.subtle"
+        textAlign="center"
       >
         {status === 'processing' && (
           <>
@@ -293,18 +290,16 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
         {status === 'success' && (
           <>
             <Box
-              sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                backgroundColor: 'success.subtle',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-              }}
+              width={64}
+              height={64}
+              borderRadius="50%"
+              backgroundColor="success.subtle"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              margin="0 auto"
             >
-              <Box sx={{ color: 'success.fg' }}>
+              <Box color="success.fg">
                 <CheckCircleFillIcon size={32} />
               </Box>
             </Box>
@@ -353,18 +348,16 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
         {status === 'error' && (
           <>
             <Box
-              sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                backgroundColor: 'danger.subtle',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-              }}
+              width={64}
+              height={64}
+              borderRadius="50%"
+              backgroundColor="danger.subtle"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              margin="0 auto"
             >
-              <Box sx={{ color: 'danger.fg' }}>
+              <Box color="danger.fg">
                 <XCircleIcon size={32} />
               </Box>
             </Box>
@@ -382,11 +375,9 @@ export const OAuthCallback: React.FC<OAuthCallbackProps> = ({
             <Flash variant="danger" sx={{ marginTop: 3, textAlign: 'left' }}>
               <Box
                 as="span"
-                sx={{
-                  mr: 2,
-                  display: 'inline-flex',
-                  verticalAlign: 'text-bottom',
-                }}
+                mr={2}
+                display="inline-flex"
+                verticalAlign="text-bottom"
               >
                 <AlertIcon size={16} />
               </Box>

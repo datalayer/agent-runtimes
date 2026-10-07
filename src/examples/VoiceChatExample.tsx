@@ -74,8 +74,8 @@ const VoiceChatExample: React.FC = () => {
   );
   return (
     <ThemedProvider>
-      <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
-        <Box sx={{ maxWidth: 720, mx: 'auto' }}>
+      <Box minHeight="100vh" bg="canvas.default" p={4}>
+        <Box maxWidth={720} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Voice chat
           </Heading>
@@ -87,7 +87,7 @@ const VoiceChatExample: React.FC = () => {
             they are written, by Datalayer&rsquo;s speech service, and not kept.{' '}
             <kbd>Esc</kbd> stops its voice.
           </Text>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
+          <Box display="flex" alignItems="center" gap={3} mb={3}>
             <SegmentedControl aria-label="Language">
               {LANGUAGES.map(option => (
                 <SegmentedControl.Button

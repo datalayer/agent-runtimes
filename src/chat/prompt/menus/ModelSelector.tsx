@@ -66,13 +66,7 @@ export function ModelSelector({
     : `${active?.name ?? 'none selected'} · ${models.length} to choose from`;
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-      }}
-    >
+    <Box display="flex" flexDirection="column" alignItems="flex-end">
       <ActionMenu>
         <ActionMenu.Anchor>
           <Tooltip text={`Model — ${summary}`} direction="n">

@@ -88,11 +88,11 @@ export function DownloadView({ props }: { props: DownloadProps }) {
       {'problem' in offered ? (
         <Problem>{offered.problem}</Problem>
       ) : (
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          <Box sx={{ color: 'fg.muted', pt: '2px' }}>
+        <Box display="flex" gap={2} alignItems="flex-start">
+          <Box color="fg.muted" pt="2px">
             <DownloadIcon size={16} aria-hidden="true" />
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Box display="flex" flexDirection="column" minWidth={0}>
             <Box>
               <Link
                 href={offered.url}

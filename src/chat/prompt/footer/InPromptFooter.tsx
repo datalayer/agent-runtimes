@@ -64,22 +64,20 @@ export function InPromptFooter({
 
       <Box
         data-prompt-stack="controls"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 2,
-          pt: 1,
-          pb: 2,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={2}
+        pt={1}
+        pb={2}
       >
         {/* Left slot — dropdowns / indicators */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+        <Box display="flex" alignItems="center" gap={2} flex={1}>
           {children}
         </Box>
 
         {/* Right — indicators + submit / stop */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
           {rightContent}
           {isLoading ? (
             <IconButton

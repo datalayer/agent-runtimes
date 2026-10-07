@@ -216,42 +216,34 @@ export function ChatBaseHeader({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
+      borderBottom="1px solid"
+      borderColor="border.default"
     >
       {/* Title row */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          p: padding,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        p={padding}
       >
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            minWidth: 0,
-            flex: '1 1 auto',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          minWidth={0}
+          flex="1 1 auto"
         >
           {kernelIndicatorPlacement === 'left' && kernelIndicatorElement}
           {brandIcon || <AiAgentIcon colored size={20} />}
           {(title || subtitle) && (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-                maxWidth: '100%',
-              }}
+              display="flex"
+              flexDirection="column"
+              minWidth={0}
+              maxWidth="100%"
             >
               {title && (
                 <Heading
@@ -305,9 +297,7 @@ export function ChatBaseHeader({
           {kernelIndicatorPlacement === 'center' && kernelIndicatorElement}
         </Box>
 
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-        >
+        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
           {kernelIndicatorPlacement === 'right' && kernelIndicatorElement}
           {/* Header buttons */}
           {headerButtons?.showNewChat && (

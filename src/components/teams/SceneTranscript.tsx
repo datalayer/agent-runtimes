@@ -101,15 +101,13 @@ export function SceneTranscript({
               data-transcript-from={line.from}
               data-transcript-to={line.to}
               aria-busy={line.open ? 'true' : undefined}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'auto 1fr',
-                gap: 2,
-                py: 1,
-                borderBottom: '1px solid',
-                borderColor: 'border.muted',
-                opacity: line.open ? 0.75 : 1,
-              }}
+              display="grid"
+              gridTemplateColumns="auto 1fr"
+              gap={2}
+              py={1}
+              borderBottom="1px solid"
+              borderColor="border.muted"
+              opacity={line.open ? 0.75 : 1}
             >
               <Text
                 as="time"
@@ -124,7 +122,7 @@ export function SceneTranscript({
               >
                 {timeText(line.at)}
               </Text>
-              <Box sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <Box minWidth={0} overflowWrap="anywhere">
                 <Text sx={{ fontWeight: 600 }}>{lineHeading(line)}: </Text>
                 <Text
                   sx={{
@@ -142,7 +140,7 @@ export function SceneTranscript({
         </Box>
       )}
       {copy && lines.length > 0 && (
-        <Box sx={{ mt: 2 }}>
+        <Box mt={2}>
           <Button
             size="small"
             onClick={() => void onCopy()}

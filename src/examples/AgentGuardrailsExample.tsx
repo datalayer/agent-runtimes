@@ -592,32 +592,24 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         : 'success.fg';
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Guardrails header bar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 3,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={3}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         {isReconnectedAgent && (
           <Label variant="secondary" size="small">
             Reconnected
           </Label>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box display="flex" alignItems="center" gap={1}>
           <ShieldCheckIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2 }}>
             Guardrails Demo — {runtimeName}
@@ -628,14 +620,12 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
         </Label>
 
         {/* Cost tracker */}
-        <Box sx={{ flex: 1, maxWidth: 300 }}>
+        <Box flex={1} maxWidth={300}>
           <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 0,
-              mb: 1,
-            }}
+            display="flex"
+            justifyContent="space-between"
+            fontSize={0}
+            mb={1}
           >
             <Text sx={{ color: costColor, fontWeight: 'semibold' }}>
               ${runCostUsd.toFixed(4)}
@@ -668,24 +658,22 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
             />
           </ProgressBar>
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-              mt: 1,
-            }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            flexWrap="wrap"
+            mt={1}
             role="presentation"
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
               <DotFillIcon size={12} fill="var(--bgColor-success-emphasis)" />
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>0-50%</Text>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
               <DotFillIcon size={12} fill="var(--bgColor-accent-emphasis)" />
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>50-80%</Text>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
               <DotFillIcon size={12} fill="var(--bgColor-danger-emphasis)" />
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>80-100%</Text>
             </Box>
@@ -727,7 +715,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       {/* Tool approval banners */}
       {approvals.map(req => (
         <Flash key={req.id} variant="warning" sx={{ mx: 3, mt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             <Text sx={{ flex: 1, fontSize: 1 }}>
               <strong>{req.tool_name}</strong> requests approval
               {req.tool_args
@@ -759,7 +747,7 @@ const AgentGuardrailsInner: React.FC<{ onLogout: () => void }> = ({
       {/* Chat — the shared loop on the guardrails capacity plugin; the cost
           gauge and approval cards above are the example's own. The live
           over-budget banner rides the chat-extras channel. */}
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box flex={1} minHeight={0}>
         <LoopEmbed
           serverUrl={agentBaseUrl}
           target="local"

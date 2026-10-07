@@ -30,21 +30,19 @@ export function MentionChip({
       // it a person can put the cursor between the icon and the name and type
       // into a mention.
       contentEditable={false}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        px: 1,
-        py: '1px',
-        mx: '1px',
-        borderRadius: 6,
-        bg: 'accent.subtle',
-        color: 'accent.fg',
-        fontSize: 1,
-        lineHeight: 1.4,
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      px={1}
+      py="1px"
+      mx="1px"
+      borderRadius={6}
+      bg="accent.subtle"
+      color="accent.fg"
+      fontSize={1}
+      lineHeight={1.4}
+      whiteSpace="nowrap"
+      userSelect="none"
     >
       {IconComponent ? <IconComponent size={12} /> : null}
       {name}

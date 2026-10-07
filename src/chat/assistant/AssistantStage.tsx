@@ -1098,37 +1098,35 @@ export function AssistantStage({
           }
           (onCharacterClick ?? onToggle)();
         }}
+        display="block"
+        width={size}
+        height={size}
+        p={0}
+        border={0}
+        bg="transparent"
+        cursor="grab"
+        filter="drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18))"
+        active={{ cursor: 'grabbing' }}
+        focusVisible={{
+          outline: '2px solid',
+          outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+          outlineOffset: 2,
+          borderRadius: '50%',
+        }}
         sx={{
-          display: 'block',
-          width: size,
-          height: size,
-          p: 0,
-          border: 0,
-          bg: 'transparent',
-          cursor: 'grab',
           touchAction: 'none',
-          filter: 'drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18))',
-          '&:active': { cursor: 'grabbing' },
-          '&:focus-visible': {
-            outline: '2px solid',
-            outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
-            outlineOffset: 2,
-            borderRadius: '50%',
-          },
         }}
       >
         {described && (
           <Box
             as="span"
             id={describedBy}
-            sx={{
-              position: 'absolute',
-              width: 1,
-              height: 1,
-              overflow: 'hidden',
-              clip: 'rect(0 0 0 0)',
-              whiteSpace: 'nowrap',
-            }}
+            position="absolute"
+            width={1}
+            height={1}
+            overflow="hidden"
+            clip="rect(0 0 0 0)"
+            whiteSpace="nowrap"
           >
             {`Its character: ${characterName}`}
           </Box>
@@ -1146,7 +1144,7 @@ export function AssistantStage({
         )}
       </Box>
       {(hovered || menuOpen) && !aside && state !== 'goodbye' && (
-        <Box sx={{ position: 'absolute', top: '-6px', right: '-6px' }}>
+        <Box position="absolute" top="-6px" right="-6px">
           <ActionMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <ActionMenu.Anchor>
               <IconButton

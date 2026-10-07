@@ -25,7 +25,8 @@
 
 import type { JSX, ReactNode } from 'react';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { getEditorChoice, subscribeEditorChoice } from './editorChoice';
 
 /*
@@ -82,7 +83,10 @@ function PreviewList({
         rows.map((row, index) => (
           <Box
             key={index}
-            sx={{ display: 'flex', gap: 2, py: '2px', alignItems: 'baseline' }}
+            display="flex"
+            gap={2}
+            py="2px"
+            alignItems="baseline"
           >
             <Text sx={{ color: 'fg.muted', flexShrink: 0, fontFamily: 'mono' }}>
               {index} · {row.kind}

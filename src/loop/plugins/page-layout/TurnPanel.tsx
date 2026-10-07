@@ -25,7 +25,8 @@
 
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, IconButton, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { IconButton, Text } from '@primer/react';
 import {
   CheckIcon,
   CommentDiscussionIcon,
@@ -58,10 +59,10 @@ function Thinking(): JSX.Element {
     <Box
       as="span"
       aria-label="The agent is thinking"
+      display="inline-flex"
+      gap="4px"
+      alignItems="center"
       sx={{
-        display: 'inline-flex',
-        gap: '4px',
-        alignItems: 'center',
         height: '1.5em',
         '& > i': {
           width: 5,
@@ -139,21 +140,19 @@ export function TurnPanel({
   return (
     <Box
       data-turn-panel=""
-      sx={{
-        borderTop: '1px solid',
-        borderColor: 'border.muted',
-        px: 3,
-        pt: 2,
-        pb: footer === 'none' ? 2 : 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        bg: 'canvas.default',
-      }}
+      borderTop="1px solid"
+      borderColor="border.muted"
+      px={3}
+      pt={2}
+      pb={footer === 'none' ? 2 : 1}
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      bg="canvas.default"
     >
       {/* What was asked, as a compact line on the trailing edge — the same
           side a transcript puts the person on. */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <Box display="flex" justifyContent="flex-end">
         <Text
           sx={{
             fontSize: 0,
@@ -175,22 +174,20 @@ export function TurnPanel({
       </Box>
 
       {/* The reply so far — or what the agent is doing, or the dots. */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+      <Box display="flex" gap={2} alignItems="flex-start">
         <Box
           ref={replyRef}
-          sx={{
-            flex: '1 1 auto',
-            minWidth: 0,
-            maxHeight: MAX_HEIGHT,
-            overflowY: 'auto',
-            fontSize: 0,
-            lineHeight: 1.5,
-            color: turn.assistant ? 'fg.default' : 'fg.muted',
-            // Rendered markdown brings its own flow; the plain fallbacks
-            // below keep their line breaks.
-            whiteSpace: turn.assistant ? 'normal' : 'pre-wrap',
-            overflowWrap: 'anywhere',
-          }}
+          flex="1 1 auto"
+          minWidth={0}
+          maxHeight={MAX_HEIGHT}
+          overflowY="auto"
+          fontSize={0}
+          lineHeight={1.5}
+          color={turn.assistant ? 'fg.default' : 'fg.muted'}
+          // Rendered markdown brings its own flow; the plain fallbacks
+          // below keep their line breaks.
+          whiteSpace={turn.assistant ? 'normal' : 'pre-wrap'}
+          overflowWrap="anywhere"
         >
           {turn.assistant ? (
             <Box sx={{ ...streamdownMarkdownStyles, fontSize: 0 }}>
@@ -243,14 +240,7 @@ export function TurnPanel({
       ) : footer === 'actions' ? (
         // The actions without the counters, for a host whose readers are not
         // asking about tokens.
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 1,
-            mt: -1,
-          }}
-        >
+        <Box display="flex" justifyContent="flex-end" gap={1} mt={-1}>
           <IconButton
             icon={copied ? CheckIcon : CopyIcon}
             size="small"

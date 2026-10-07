@@ -19,7 +19,8 @@
 
 import type { JSX } from 'react';
 import { useCallback, useSyncExternalStore } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { useReactorPlatform } from '@datalayer/reactor/react';
 
 export type PluginTogglesProps = {
@@ -57,31 +58,27 @@ export function PluginToggles({
 
   return (
     <Box
-      sx={{
-        p: 3,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-        bg: 'canvas.subtle',
-      }}
+      p={3}
+      borderBottom="1px solid"
+      borderColor="border.default"
+      bg="canvas.subtle"
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
         {title}
       </Text>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 2 }}>
+      <Box display="flex" flexWrap="wrap" gap={3} mt={2}>
         {reactor.listPlugins().map(name => {
           const isLocked = locked.includes(name);
           return (
             <Box
               as="label"
               key={name}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 1,
-                fontSize: 1,
-                cursor: isLocked ? 'not-allowed' : 'pointer',
-                opacity: isLocked ? 0.6 : 1,
-              }}
+              display="inline-flex"
+              alignItems="center"
+              gap={1}
+              fontSize={1}
+              cursor={isLocked ? 'not-allowed' : 'pointer'}
+              opacity={isLocked ? 0.6 : 1}
             >
               <input
                 type="checkbox"

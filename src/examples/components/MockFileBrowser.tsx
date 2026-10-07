@@ -24,11 +24,9 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
   const [activeTab, setActiveTab] = useState<'sandbox' | 'tools'>('sandbox');
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Navigation Tabs */}
-      <Box
-        sx={{ p: 2, borderBottom: '1px solid', borderColor: 'border.default' }}
-      >
+      <Box p={2} borderBottom="1px solid" borderColor="border.default">
         <SegmentedControl aria-label="Left pane navigation">
           <SegmentedControl.Button
             selected={activeTab === 'sandbox'}
@@ -46,11 +44,11 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
       </Box>
 
       {/* Tab Content */}
-      <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
+      <Box p={2} flex={1} overflow="auto">
         {activeTab === 'sandbox' ? (
           <>
             {/* Data Browser Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box mb={4}>
               <Text
                 sx={{
                   fontSize: 1,
@@ -74,71 +72,45 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
               >
                 Documents
               </Text>
-              <Box sx={{ fontSize: 0, mb: 2 }}>
-                <Box
-                  sx={{
-                    py: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
-                >
+              <Box fontSize={0} mb={2}>
+                <Box py={1} cursor="pointer" hover={{ bg: 'canvas.default' }}>
                   📁 notebooks/
                 </Box>
                 <Box
-                  sx={{
-                    py: 1,
-                    pl: 3,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
+                  py={1}
+                  pl={3}
+                  cursor="pointer"
+                  hover={{ bg: 'canvas.default' }}
                 >
                   📓 analysis.ipynb
                 </Box>
                 <Box
-                  sx={{
-                    py: 1,
-                    pl: 3,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
+                  py={1}
+                  pl={3}
+                  cursor="pointer"
+                  hover={{ bg: 'canvas.default' }}
                 >
                   📓 demo.ipynb
                 </Box>
-                <Box
-                  sx={{
-                    py: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
-                >
+                <Box py={1} cursor="pointer" hover={{ bg: 'canvas.default' }}>
                   📁 data/
                 </Box>
                 <Box
-                  sx={{
-                    py: 1,
-                    pl: 3,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
+                  py={1}
+                  pl={3}
+                  cursor="pointer"
+                  hover={{ bg: 'canvas.default' }}
                 >
                   📄 dataset.csv
                 </Box>
-                <Box
-                  sx={{
-                    py: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
-                >
+                <Box py={1} cursor="pointer" hover={{ bg: 'canvas.default' }}>
                   📁 models/
                 </Box>
                 <Box
-                  sx={{
-                    py: 1,
-                    pl: 3,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
+                  py={1}
+                  pl={3}
+                  cursor="pointer"
+                  hover={{ bg: 'canvas.default' }}
                 >
                   📄 agent.py
                 </Box>
@@ -156,14 +128,8 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
               >
                 Buckets
               </Text>
-              <Box sx={{ fontSize: 0 }}>
-                <Box
-                  sx={{
-                    py: 1,
-                    cursor: 'pointer',
-                    '&:hover': { bg: 'canvas.default' },
-                  }}
-                >
+              <Box fontSize={0}>
+                <Box py={1} cursor="pointer" hover={{ bg: 'canvas.default' }}>
                   🪣 s3://nasa-1
                 </Box>
               </Box>
@@ -215,7 +181,7 @@ export const MockFileBrowser: React.FC<MockFileBrowserProps> = ({
         ) : (
           <>
             {/* Tools Section - Conditional based on codemode */}
-            <Box sx={{ mb: 4 }}>
+            <Box mb={4}>
               <Text
                 sx={{
                   fontSize: 1,

@@ -15,7 +15,8 @@
 
 import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { ActionList, ActionMenu, Box, Spinner } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { ActionList, ActionMenu, Spinner } from '@primer/react';
 import type { LoopWorkspaceContext } from '../../core';
 import { getAgentspecs } from '../../../specs/agents';
 
@@ -129,7 +130,7 @@ export function AgentspecPicker({
   }
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box display="flex" alignItems="center" gap={1}>
       {switching ? <Spinner size="small" /> : null}
       <ActionMenu>
         <ActionMenu.Button variant="invisible" size="small">

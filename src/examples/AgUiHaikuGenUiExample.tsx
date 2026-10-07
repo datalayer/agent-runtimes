@@ -184,20 +184,9 @@ const AgUiHaikuGenUiExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -222,14 +211,12 @@ const AgUiHaikuGenUiExample: React.FC = () => {
 
           {/* Main haiku display area */}
           <Box
-            sx={{
-              padding: 5,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-            }}
+            padding={5}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
           >
             <HaikuDisplayWithRef
               ref={displayRef}
@@ -239,13 +226,11 @@ const AgUiHaikuGenUiExample: React.FC = () => {
 
           {/* About section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -260,16 +245,14 @@ const AgUiHaikuGenUiExample: React.FC = () => {
               beautiful card both in the chat and in the main display area
               above.
             </Text>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>Features:</Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>🎨 Beautiful gradient backgrounds matching mood</li>
                 <li>🇯🇵 Japanese text with English translation</li>
@@ -278,18 +261,16 @@ const AgUiHaikuGenUiExample: React.FC = () => {
                 <li>✨ Synchronized display between chat and main view</li>
               </Box>
             </Box>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>
                 Try these prompts:
               </Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>&quot;Write me a haiku about cherry blossoms&quot;</li>
                 <li>&quot;Create a haiku about coding late at night&quot;</li>

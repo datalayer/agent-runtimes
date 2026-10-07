@@ -81,16 +81,7 @@ export function EvidenceView({ props }: { props: EvidenceProps }) {
       ) : sources.length === 0 ? (
         <Quiet>Nothing cited yet.</Quiet>
       ) : (
-        <Box
-          as="ol"
-          sx={{
-            m: 0,
-            pl: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-          }}
-        >
+        <Box as="ol" m={0} pl={3} display="flex" flexDirection="column" gap={2}>
           {shown.map((source, index) => (
             <li key={`${source.url}-${index}`}>
               {source.url ? (
@@ -110,15 +101,13 @@ export function EvidenceView({ props }: { props: EvidenceProps }) {
               {showPassages && source.passage ? (
                 <Box
                   as="blockquote"
-                  sx={{
-                    m: 0,
-                    mt: 1,
-                    pl: 2,
-                    borderLeft: '3px solid',
-                    borderColor: 'border.default',
-                    color: 'fg.muted',
-                    fontSize: 1,
-                  }}
+                  m={0}
+                  mt={1}
+                  pl={2}
+                  borderLeft="3px solid"
+                  borderColor="border.default"
+                  color="fg.muted"
+                  fontSize={1}
                 >
                   {source.passage}
                 </Box>

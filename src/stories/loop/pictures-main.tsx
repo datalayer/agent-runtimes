@@ -97,7 +97,7 @@ function Ready(): null {
 function GalleryScreen(): JSX.Element {
   const { characters, ready } = useGalleryCharacters();
   return (
-    <Box sx={{ flex: 1, bg: 'canvas.default', p: 2, overflow: 'hidden' }}>
+    <Box flex={1} bg="canvas.default" p={2} overflow="hidden">
       <AssistantGalleryGrid characters={characters} />
       {ready && <Ready />}
     </Box>

@@ -14,7 +14,8 @@
  */
 
 import type { JSX } from 'react';
-import { Box, Tooltip } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Tooltip } from '@primer/react';
 import type { Contribution } from '@datalayer/reactor';
 import {
   canOpenView,
@@ -48,14 +49,12 @@ export function ViewSwitcher({
     <Box
       role="tablist"
       aria-label="Workspace views"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        bg: 'neutral.muted',
-        borderRadius: '6px',
-        p: '2px',
-        gap: '1px',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      bg="neutral.muted"
+      borderRadius="6px"
+      p="2px"
+      gap="1px"
     >
       {views.map(entry => {
         const view = entry.value;
@@ -83,21 +82,19 @@ export function ViewSwitcher({
               // tooltip explains, and the handler declines.
               aria-disabled={!open}
               onClick={() => open && workspace.setActiveViewType(view.viewType)}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 1,
-                border: 'none',
-                borderRadius: '5px',
-                px: 2,
-                py: '4px',
-                fontSize: 0,
-                cursor: open ? 'pointer' : 'not-allowed',
-                opacity: open ? 1 : 0.5,
-                bg: active ? 'canvas.default' : 'transparent',
-                color: active ? 'fg.default' : 'fg.muted',
-                boxShadow: active ? 'shadow.small' : 'none',
-              }}
+              display="inline-flex"
+              alignItems="center"
+              gap={1}
+              border="none"
+              borderRadius="5px"
+              px={2}
+              py="4px"
+              fontSize={0}
+              cursor={open ? 'pointer' : 'not-allowed'}
+              opacity={open ? 1 : 0.5}
+              bg={active ? 'canvas.default' : 'transparent'}
+              color={active ? 'fg.default' : 'fg.muted'}
+              boxShadow={active ? 'shadow.small' : 'none'}
             >
               {Icon ? <Icon size={14} /> : null}
               {compact && Icon ? null : view.title}

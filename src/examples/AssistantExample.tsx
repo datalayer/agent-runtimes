@@ -202,8 +202,8 @@ const AssistantExample: React.FC = () => {
     Object.values(clippyJs).includes(character);
   return (
     <ThemedProvider>
-      <Box sx={{ minHeight: '100vh', bg: 'canvas.default', p: 4 }}>
-        <Box sx={{ maxWidth: 720, mx: 'auto' }}>
+      <Box minHeight="100vh" bg="canvas.default" p={4}>
+        <Box maxWidth={720} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Assistant
           </Heading>
@@ -213,7 +213,7 @@ const AssistantExample: React.FC = () => {
             while the conversation is closed. Click it to talk, drag it to move
             it, hover it to send it away.
           </Text>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box display="flex" gap={2} flexWrap="wrap">
             {CATALOGUE.map(option => (
               <Button
                 key={option.id}
@@ -242,7 +242,7 @@ const AssistantExample: React.FC = () => {
               </Button>
             )}
           </Box>
-          <Box as="section" sx={{ mt: 4 }}>
+          <Box as="section" mt={4}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
               The balloon
             </Heading>
@@ -255,7 +255,9 @@ const AssistantExample: React.FC = () => {
               Either way, a tool call is said in the balloon.
             </Text>
             <Box
-              sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+              display="flex"
+              alignItems="center"
+              gap={2}
               data-assistant-balloon-toggle=""
             >
               <Text
@@ -282,7 +284,7 @@ const AssistantExample: React.FC = () => {
               </Text>
             </Box>
           </Box>
-          <Box as="section" sx={{ mt: 4 }}>
+          <Box as="section" mt={4}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
               The clippy.js characters
             </Heading>
@@ -293,7 +295,7 @@ const AssistantExample: React.FC = () => {
               clippy.js&rsquo;s licence covers its code only, and the characters
               are Microsoft&rsquo;s.
             </Text>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box display="flex" gap={2} flexWrap="wrap">
               {CLIPPY_JS_CHARACTERS.map(name => {
                 const picked =
                   clippyJs[name] !== undefined && character === clippyJs[name];
@@ -312,7 +314,7 @@ const AssistantExample: React.FC = () => {
               })}
             </Box>
           </Box>
-          <Box as="section" sx={{ mt: 4 }}>
+          <Box as="section" mt={4}>
             <Heading as="h2" sx={{ fontSize: 2, mb: 1 }}>
               A character you bring
             </Heading>
@@ -358,7 +360,7 @@ const AssistantExample: React.FC = () => {
           </Box>
         </Box>
         {agentError && (
-          <Box sx={{ maxWidth: 720, mx: 'auto', mt: 3 }}>
+          <Box maxWidth={720} mx="auto" mt={3}>
             <Text as="p" role="alert" sx={{ color: 'danger.fg' }}>
               {agentError}
             </Text>

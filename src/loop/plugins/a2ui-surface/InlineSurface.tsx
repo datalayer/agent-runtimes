@@ -182,16 +182,14 @@ export function InlineSurface({
         {notice ? (
           <Box
             role="alert"
-            sx={{
-              px: 3,
-              py: 2,
-              borderRadius: 2,
-              bg: 'danger.subtle',
-              border: '1px solid',
-              borderColor: 'danger.muted',
-              color: 'danger.fg',
-              fontSize: 1,
-            }}
+            px={3}
+            py={2}
+            borderRadius={2}
+            bg="danger.subtle"
+            border="1px solid"
+            borderColor="danger.muted"
+            color="danger.fg"
+            fontSize={1}
           >
             {notice}
           </Box>
@@ -199,13 +197,11 @@ export function InlineSurface({
         {surfaces.map(surface => (
           <Box
             key={surface.id}
-            sx={{
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              p: 3,
-              bg: 'canvas.default',
-            }}
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={2}
+            p={3}
+            bg="canvas.default"
           >
             <A2uiSurfaceComposed surface={surface} />
           </Box>

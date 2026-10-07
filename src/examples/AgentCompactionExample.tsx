@@ -61,18 +61,12 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
   const compaction = useAgentRuntimeCompaction();
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
-    >
+    <Box p={3} borderBottom="1px solid" borderColor="border.default">
       <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
         Compaction
       </Heading>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+      <Box display="flex" alignItems="center" gap={2} mb={2}>
         <StackIcon size={14} />
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           Budget: {numberFmt.format(maxTokens)} tokens
@@ -88,16 +82,14 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
 
       {compaction?.phase === 'start' && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'attention.emphasis',
-            borderRadius: 2,
-            bg: 'attention.subtle',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          p={2}
+          border="1px solid"
+          borderColor="attention.emphasis"
+          borderRadius={2}
+          bg="attention.subtle"
         >
           <Spinner size="small" />
           <Box>
@@ -112,32 +104,23 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
 
       {compaction?.phase === 'end' && (
         <Box
-          sx={{
-            p: 2,
-            border: '1px solid',
-            borderColor: compaction.reduced
-              ? 'success.emphasis'
-              : 'border.default',
-            borderRadius: 2,
-            bg: compaction.reduced ? 'success.subtle' : 'canvas.subtle',
-          }}
+          p={2}
+          border="1px solid"
+          borderColor={
+            compaction.reduced ? 'success.emphasis' : 'border.default'
+          }
+          borderRadius={2}
+          bg={compaction.reduced ? 'success.subtle' : 'canvas.subtle'}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
             <CheckCircleIcon size={14} />
             <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
               {compaction.reduced ? 'Compacted' : 'History already minimal'}
             </Text>
           </Box>
 
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              fontSize: 0,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box display="flex" flexDirection="column" gap={1} fontSize={0}>
+            <Box display="flex" alignItems="center" gap={1}>
               <Text sx={{ color: 'fg.muted', minWidth: 64 }}>Tokens</Text>
               <Text sx={{ fontFamily: 'mono' }}>
                 {numberFmt.format(compaction.beforeTokens)}
@@ -149,7 +132,7 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
                 )}
               </Text>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
               <Text sx={{ color: 'fg.muted', minWidth: 64 }}>Messages</Text>
               <Text sx={{ fontFamily: 'mono' }}>
                 {numberFmt.format(compaction.beforeMessages)}
@@ -161,7 +144,7 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
                 )}
               </Text>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box display="flex" alignItems="center" gap={1}>
               <ClockIcon size={12} />
               <Text sx={{ color: 'fg.muted', minWidth: 52 }}>Time</Text>
               <Text sx={{ fontFamily: 'mono' }}>
@@ -169,7 +152,7 @@ const CompactionPanel: React.FC<{ maxTokens: number }> = ({ maxTokens }) => {
               </Text>
             </Box>
             {typeof compaction.compactionCount === 'number' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box display="flex" alignItems="center" gap={1}>
                 <Text sx={{ color: 'fg.muted', minWidth: 64 }}>Total runs</Text>
                 <Text sx={{ fontFamily: 'mono' }}>
                   {numberFmt.format(compaction.compactionCount)}
@@ -212,26 +195,22 @@ const AgentCompactionInner: React.FC = () => {
   if (launchedMaxTokens === null) {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          bg: 'canvas.default',
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            width: 460,
-            maxWidth: '90%',
-            p: 4,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.subtle',
-          }}
+          width={460}
+          maxWidth="90%"
+          p={4}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.subtle"
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
             <HistoryIcon size={20} />
             <Heading as="h3" sx={{ fontSize: 3 }}>
               History Compaction
@@ -247,7 +226,7 @@ const AgentCompactionInner: React.FC = () => {
             <FormControl.Label>
               Max context tokens: {numberFmt.format(maxTokensInput)}
             </FormControl.Label>
-            <Box sx={{ mt: 2 }}>
+            <Box mt={2}>
               <input
                 type="range"
                 min={MIN_MAX_TOKENS}
@@ -263,7 +242,7 @@ const AgentCompactionInner: React.FC = () => {
             </FormControl.Caption>
           </FormControl>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+          <Box display="flex" justifyContent="flex-end" mt={3}>
             <Button
               variant="primary"
               leadingVisual={HistoryIcon}
@@ -284,24 +263,20 @@ const AgentCompactionInner: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-      }}
+      height="100%"
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <HistoryIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -313,8 +288,8 @@ const AgentCompactionInner: React.FC = () => {
         </Label>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box flex={1} minHeight={0} display="flex">
+        <Box flex={1} minWidth={0}>
           {/* The variants stay visible: hidden, the Loop pins the agent to
               the page, and compaction happens in the server-side loop. */}
           <LoopEmbed
@@ -330,18 +305,16 @@ const AgentCompactionInner: React.FC = () => {
         </Box>
 
         <Box
-          sx={{
-            width: 320,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-          }}
+          width={320}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="auto"
         >
           <CompactionPanel maxTokens={launchedMaxTokens} />
 
-          <Box sx={{ p: 3 }}>
+          <Box p={3}>
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               How It Works
             </Heading>

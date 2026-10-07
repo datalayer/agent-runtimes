@@ -150,26 +150,26 @@ function StatusBadge({
   switch (status) {
     case 'done':
       return (
-        <Box sx={{ color: 'success.fg', display: 'flex' }}>
+        <Box color="success.fg" display="flex">
           <CheckCircleIcon />
         </Box>
       );
     case 'stopped':
       return (
-        <Box sx={{ color: 'attention.fg', display: 'flex' }}>
+        <Box color="attention.fg" display="flex">
           <AlertIcon />
         </Box>
       );
     case 'failed':
       return (
-        <Box sx={{ color: 'danger.fg', display: 'flex' }}>
+        <Box color="danger.fg" display="flex">
           <AlertIcon />
         </Box>
       );
     case 'launching':
     case 'working':
       return (
-        <Box sx={{ color: 'accent.fg', display: 'flex' }}>
+        <Box color="accent.fg" display="flex">
           <DependabotIcon />
         </Box>
       );
@@ -192,13 +192,11 @@ function LaunchChip({
         : BroadcastIcon;
   return (
     <Box
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        fontSize: 0,
-        color: 'fg.muted',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      fontSize={0}
+      color="fg.muted"
     >
       <Icon size={12} />
       <Text sx={{ fontSize: 0 }}>{launch}</Text>
@@ -239,11 +237,8 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
     (activity[activeKey] ?? []).some(event => event.transport === 'a2a');
 
   return (
-    <Box
-      data-a2a-sidebar
-      sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box data-a2a-sidebar display="flex" flexDirection="column" gap={4}>
+      <Box display="flex" alignItems="center" gap={2}>
         <BroadcastIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, m: 0, flex: 1 }}>
           A2A agents
@@ -261,16 +256,14 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
         ) : (
           <Box
             data-a2a-sidebar-idle
-            sx={{
-              height: A2A_ACTIVE_PANEL_HEIGHT,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid',
-              borderColor: 'border.muted',
-              borderRadius: 2,
-              bg: 'canvas.default',
-            }}
+            height={A2A_ACTIVE_PANEL_HEIGHT}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            border="1px solid"
+            borderColor="border.muted"
+            borderRadius={2}
+            bg="canvas.default"
           >
             <Text sx={{ fontSize: 0, color: 'fg.muted', m: 0 }}>
               No A2A agent running
@@ -296,13 +289,11 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
                   </Timeline.Badge>
                   <Timeline.Body>
                     <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 1,
-                        flexWrap: 'wrap',
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
+                      mb={1}
+                      flexWrap="wrap"
                     >
                       <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
                         {agent.name}
@@ -321,13 +312,11 @@ export function A2ASidebar(_props: A2ASidebarProps): React.ReactElement {
                       </Text>
                     ) : null}
                     <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px',
-                        fontSize: 0,
-                        color: 'fg.muted',
-                      }}
+                      display="flex"
+                      flexDirection="column"
+                      gap="2px"
+                      fontSize={0}
+                      color="fg.muted"
                     >
                       {agent.card?.name ? (
                         <Text sx={{ fontSize: 0 }}>

@@ -92,7 +92,7 @@ function StatusLabel({ status }: { status: string }): JSX.Element {
 function UrlValue({ url }: { url: string }): JSX.Element {
   const [copied, setCopied] = useState(false);
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+    <Box display="flex" alignItems="center" gap={1} minWidth={0}>
       <Link
         href={url}
         target="_blank"
@@ -369,19 +369,19 @@ export function SandboxDetailsDialog({
     >
       <Box
         data-assistant-sandbox-details=""
-        sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Box
           data-sandbox-summary=""
-          sx={{
-            p: 3,
-            bg: 'canvas.subtle',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-          }}
+          p={3}
+          bg="canvas.subtle"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
             <Text
               sx={{ fontWeight: 'semibold' }}
               data-sandbox-kind={sandbox.kind}
@@ -395,22 +395,20 @@ export function SandboxDetailsDialog({
           </Box>
           <Box
             as="dl"
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'max-content minmax(0, 1fr)',
-              columnGap: 3,
-              rowGap: 1,
-              m: 0,
-              fontSize: 1,
-              alignItems: 'center',
-            }}
+            display="grid"
+            gridTemplateColumns="max-content minmax(0, 1fr)"
+            columnGap={3}
+            rowGap={1}
+            m={0}
+            fontSize={1}
+            alignItems="center"
           >
             {facts.map(([key, value]) => (
-              <Box key={key} sx={{ display: 'contents' }}>
-                <Box as="dt" sx={{ color: 'fg.muted' }}>
+              <Box key={key} display="contents">
+                <Box as="dt" color="fg.muted">
                   {key}
                 </Box>
-                <Box as="dd" sx={{ m: 0, minWidth: 0 }} data-sandbox-fact={key}>
+                <Box as="dd" m={0} minWidth={0} data-sandbox-fact={key}>
                   {value}
                 </Box>
               </Box>

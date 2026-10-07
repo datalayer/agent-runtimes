@@ -90,7 +90,7 @@ export function BalloonChatItems({
 }): JSX.Element {
   const end = useRef<HTMLDivElement>(null);
   return (
-    <Box data-balloon-chat-items="" sx={{ minWidth: 0 }}>
+    <Box data-balloon-chat-items="" minWidth={0}>
       <ChatMessageList
         displayItems={items as DisplayItem[]}
         isLoading={waiting}
@@ -125,7 +125,8 @@ export function BalloonToolCall({
       aria-hidden="true"
       data-balloon-tool={line.phase}
       data-balloon-tool-name={line.tool || undefined}
-      sx={{ minWidth: 0, width: '100%' }}
+      minWidth={0}
+      width="100%"
     >
       <BalloonChatItems items={[displayItemOfLine(line)]} waiting={waiting} />
     </Box>
@@ -176,15 +177,15 @@ export function BalloonNow({ busy = false }: { busy?: boolean }): JSX.Element {
     <Box
       as="span"
       data-balloon-now={busy ? 'busy' : ''}
+      display="inline-flex"
+      alignItems="center"
+      gap="6px"
+      fontSize={0}
+      fontWeight="semibold"
+      color="accent.fg"
+      textTransform="uppercase"
+      letterSpacing="0.04em"
       sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: 0,
-        fontWeight: 'semibold',
-        color: 'accent.fg',
-        textTransform: 'uppercase',
-        letterSpacing: '0.04em',
         '@keyframes balloonNowBreathe': {
           '0%, 100%': { opacity: 1, transform: 'scale(1)' },
           '50%': { opacity: 0.35, transform: 'scale(0.7)' },
@@ -232,21 +233,19 @@ export function ConversationBalloonHeader({
   return (
     <Box
       data-balloon-header=""
-      sx={{
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        // Room for the close control over the corner.
-        pl: 3,
-        pr: 6,
-        py: 2,
-        borderBottom: '1px solid',
-        borderColor: 'border.muted',
-        bg: 'canvas.default',
-        borderTopLeftRadius: 'var(--theme-radius-bubble, 16px)',
-        borderTopRightRadius: 'var(--theme-radius-bubble, 16px)',
-      }}
+      flexShrink={0}
+      display="flex"
+      alignItems="center"
+      gap={2}
+      // Room for the close control over the corner.
+      pl={3}
+      pr={6}
+      py={2}
+      borderBottom="1px solid"
+      borderColor="border.muted"
+      bg="canvas.default"
+      borderTopLeftRadius="var(--theme-radius-bubble, 16px)"
+      borderTopRightRadius="var(--theme-radius-bubble, 16px)"
     >
       <Text sx={{ fontSize: 0, fontWeight: 'semibold', color: 'fg.muted' }}>
         {conversationHeaderText(count, chatText)}
@@ -303,7 +302,10 @@ export function CurrentBalloonBody({
   return (
     <Box
       data-balloon-current=""
-      sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}
+      display="flex"
+      flexDirection="column"
+      gap={1}
+      minWidth={0}
     >
       <BalloonNow busy={busy} />
       {tool ? (
@@ -336,7 +338,7 @@ export function CurrentBalloonBody({
             text={whole ? (fullText ?? text) : text}
           />
           {waiting && (
-            <Box as="span" sx={{ ml: 2, display: 'inline-flex' }}>
+            <Box as="span" ml={2} display="inline-flex">
               <TypingDots size={5} />
             </Box>
           )}

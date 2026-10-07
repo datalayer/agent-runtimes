@@ -75,15 +75,13 @@ const AgentRuntimeChatExample: React.FC = () => {
     return (
       <ThemedProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>

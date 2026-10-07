@@ -263,40 +263,34 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-      }}
+      height="100%"
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
     >
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <DatabaseIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
           Durable Memory — {runtimeName}
         </Heading>
       </Box>
-      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <Box display="flex" flex={1} minHeight={0}>
         {/* Left: Chat */}
         <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            borderRight: '1px solid',
-            borderColor: 'border.default',
-          }}
+          flex={1}
+          minWidth={0}
+          borderRight="1px solid"
+          borderColor="border.default"
         >
           <LoopEmbed
             serverUrl={agentBaseUrl}
@@ -311,23 +305,19 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
         {/* Right: Memory inspector */}
         <Box
-          sx={{
-            width: 340,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            bg: 'canvas.default',
-          }}
+          width={340}
+          flexShrink={0}
+          display="flex"
+          flexDirection="column"
+          bg="canvas.default"
         >
           <Box
-            sx={{
-              px: 3,
-              py: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
+            px={3}
+            py={2}
+            borderBottom="1px solid"
+            borderColor="border.default"
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Box display="flex" alignItems="center" gap={2} mb={2}>
               <DatabaseIcon size={16} />
               <Heading as="h3" sx={{ fontSize: 2 }}>
                 Memory Inspector
@@ -345,7 +335,7 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               are saved when the model emits a remember action (not every turn).
             </Flash>
 
-            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+            <Box display="flex" gap={1} mt={2}>
               <TextInput
                 size="small"
                 value={searchQuery}
@@ -375,12 +365,10 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           {/* Search results */}
           {searchResults.length > 0 && (
             <Box
-              sx={{
-                px: 3,
-                py: 2,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              px={3}
+              py={2}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
               <Text
                 sx={{
@@ -395,15 +383,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {searchResults.map((entry, i) => (
                 <Box
                   key={entry.id || i}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bg: 'canvas.default',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'border.muted',
-                    fontSize: 0,
-                  }}
+                  p={2}
+                  mb={1}
+                  bg="canvas.default"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="border.muted"
+                  fontSize={0}
                 >
                   <Text sx={{ display: 'block' }}>{entry.content}</Text>
                   {entry.score != null && (
@@ -421,12 +407,10 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             searchQuery.trim() &&
             searchResults.length === 0 && (
               <Box
-                sx={{
-                  px: 3,
-                  py: 2,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                px={3}
+                py={2}
+                borderBottom="1px solid"
+                borderColor="border.default"
               >
                 <Flash variant="default" sx={{ fontSize: 0 }}>
                   No matching memories found for this query yet.
@@ -435,14 +419,12 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             )}
 
           {/* All memories */}
-          <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2 }}>
+          <Box flex={1} overflow="auto" px={3} py={2}>
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 2,
-              }}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={2}
             >
               <Text sx={{ fontWeight: 'semibold', fontSize: 0 }}>
                 Stored Memories ({memories.length})
@@ -460,22 +442,20 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               memories.map((entry, i) => (
                 <Box
                   key={entry.id || i}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bg: 'canvas.default',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'border.muted',
-                    fontSize: 0,
-                  }}
+                  p={2}
+                  mb={1}
+                  bg="canvas.default"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="border.muted"
+                  fontSize={0}
                 >
                   <Text sx={{ display: 'block' }}>{entry.content}</Text>
                 </Box>
               ))
             )}
 
-            <Box sx={{ mt: 3 }}>
+            <Box mt={3}>
               <Text
                 sx={{
                   fontWeight: 'semibold',
@@ -506,15 +486,13 @@ const AgentMemoryInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                 accountMemories.map((entry, i) => (
                   <Box
                     key={`runtime-${entry.id || i}`}
-                    sx={{
-                      p: 2,
-                      mb: 1,
-                      bg: 'canvas.default',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'border.muted',
-                      fontSize: 0,
-                    }}
+                    p={2}
+                    mb={1}
+                    bg="canvas.default"
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="border.muted"
+                    fontSize={0}
                   >
                     <Text sx={{ display: 'block' }}>{entry.content}</Text>
                   </Box>

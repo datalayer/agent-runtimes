@@ -13,14 +13,15 @@
  */
 
 import type { JSX } from 'react';
-import { Box, Label, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Label, Text } from '@primer/react';
 import { useSignalValue } from '@datalayer/reactor/react';
 import type { LoopViewProps } from '../../core';
 import { useSandboxService } from './useSandboxService';
 
 function Row({ label, value }: { label: string; value?: string }): JSX.Element {
   return (
-    <Box sx={{ display: 'flex', gap: 3, py: 1, fontSize: 1 }}>
+    <Box display="flex" gap={3} py={1} fontSize={1}>
       <Text sx={{ color: 'fg.muted', minWidth: '140px' }}>{label}</Text>
       <Text sx={{ fontFamily: 'mono', wordBreak: 'break-all' }}>
         {value || <Text sx={{ color: 'fg.subtle' }}>—</Text>}
@@ -43,8 +44,8 @@ export default function SandboxView(_props: LoopViewProps): JSX.Element {
         : 'attention';
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', px: 4, py: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+    <Box height="100%" overflowY="auto" px={4} py={3}>
+      <Box display="flex" alignItems="center" gap={2} mb={3}>
         <Text sx={{ fontSize: 3, fontWeight: 'bold' }}>Code Sandbox</Text>
         <Label variant={tone}>{snapshot.state}</Label>
       </Box>
@@ -56,57 +57,33 @@ export default function SandboxView(_props: LoopViewProps): JSX.Element {
       <Row label="Execution state" value={status?.execution_state} />
 
       {snapshot.state !== 'running' ? (
-        <Box
-          sx={{
-            mt: 3,
-            p: 3,
-            bg: 'attention.subtle',
-            borderRadius: 2,
-            fontSize: 1,
-          }}
-        >
+        <Box mt={3} p={3} bg="attention.subtle" borderRadius={2} fontSize={1}>
           No sandbox is attached. Views that need one — the notebook, the
           document — stay unavailable until there is a kernel to bind to.
         </Box>
       ) : null}
 
       {lastExecution ? (
-        <Box sx={{ mt: 4 }}>
+        <Box mt={4}>
           <Text sx={{ fontSize: 2, fontWeight: 'bold' }}>Last execution</Text>
           <Box
-            sx={{
-              mt: 2,
-              p: 2,
-              bg: 'canvas.subtle',
-              borderRadius: 2,
-              fontFamily: 'mono',
-              fontSize: 0,
-              whiteSpace: 'pre-wrap',
-            }}
+            mt={2}
+            p={2}
+            bg="canvas.subtle"
+            borderRadius={2}
+            fontFamily="mono"
+            fontSize={0}
+            whiteSpace="pre-wrap"
           >
             {lastExecution.code}
           </Box>
           {lastExecution.stdout ? (
-            <Box
-              sx={{
-                mt: 1,
-                fontFamily: 'mono',
-                fontSize: 0,
-                whiteSpace: 'pre-wrap',
-              }}
-            >
+            <Box mt={1} fontFamily="mono" fontSize={0} whiteSpace="pre-wrap">
               {lastExecution.stdout}
             </Box>
           ) : null}
           {lastExecution.error ? (
-            <Box
-              sx={{
-                mt: 1,
-                color: 'danger.fg',
-                fontFamily: 'mono',
-                fontSize: 0,
-              }}
-            >
+            <Box mt={1} color="danger.fg" fontFamily="mono" fontSize={0}>
               {lastExecution.error}
             </Box>
           ) : null}

@@ -110,39 +110,33 @@ export function SplitLayout({
   return (
     <Box
       data-testid="loop-split-layout"
-      sx={{
-        flex: '1 1 auto',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      flex="1 1 auto"
+      minHeight={0}
+      display="flex"
+      flexDirection="column"
     >
       {picker}
       <Box
         ref={row}
-        sx={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          display: 'flex',
-          // The hidden editors position themselves against this row.
-          position: 'relative',
-          overflow: 'hidden',
-        }}
+        flex="1 1 auto"
+        minHeight={0}
+        display="flex"
+        // The hidden editors position themselves against this row.
+        position="relative"
+        overflow="hidden"
       >
         <Box
           data-testid="loop-split-conversation"
-          sx={{
-            flex: hasEditor ? `0 0 ${percent}%` : '1 1 auto',
-            minWidth: 0,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            // The transcript draws a rule on its left when an editor is on
-            // screen, for the split it sits on the right of. Here it is on
-            // the left, and the hairline is the separator: the rule is
-            // pushed out of the row, which clips it.
-            ml: hasEditor ? '-1px' : 0,
-          }}
+          flex={hasEditor ? `0 0 ${percent}%` : '1 1 auto'}
+          minWidth={0}
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
+          // The transcript draws a rule on its left when an editor is on
+          // screen, for the split it sits on the right of. Here it is on
+          // the left, and the hairline is the separator: the rule is
+          // pushed out of the row, which clips it.
+          ml={hasEditor ? '-1px' : 0}
         >
           {transcript}
           {chips}
@@ -162,16 +156,16 @@ export function SplitLayout({
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onKeyDown={onKeyDown}
+            // A hairline to the eye, a few pixels to the pointer.
+            flex="0 0 7px"
+            mx="-3px"
+            zIndex={1}
+            cursor="col-resize"
+            display="flex"
+            justifyContent="center"
+            outline="none"
             sx={{
-              // A hairline to the eye, a few pixels to the pointer.
-              flex: '0 0 7px',
-              mx: '-3px',
-              zIndex: 1,
-              cursor: 'col-resize',
               touchAction: 'none',
-              display: 'flex',
-              justifyContent: 'center',
-              outline: 'none',
               '&::before': {
                 content: '""',
                 width: '1px',

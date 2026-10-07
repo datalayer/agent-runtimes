@@ -167,19 +167,17 @@ export function ChatEmptyState({
   return (
     <ThemeProvider>
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          // Centred across the column, anchored to its top: the introduction
-          // is where a conversation starts, and the first message should
-          // appear under it rather than push it around the canvas.
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          p: 4,
-          color: 'fg.muted',
-          textAlign: 'center',
-          gap: 2,
-        }}
+        display="flex"
+        flexDirection="column"
+        // Centred across the column, anchored to its top: the introduction
+        // is where a conversation starts, and the first message should
+        // appear under it rather than push it around the canvas.
+        alignItems="center"
+        justifyContent="flex-start"
+        p={4}
+        color="fg.muted"
+        textAlign="center"
+        gap={2}
       >
         {sections.length > 0 ? (
           /*
@@ -245,13 +243,11 @@ export function ChatEmptyState({
         {blocks.map(block => (
           <Box
             key={block.group ?? ''}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 1,
-              mt: 2,
-            }}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={1}
+            mt={2}
           >
             {block.group ? (
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{block.group}</Text>

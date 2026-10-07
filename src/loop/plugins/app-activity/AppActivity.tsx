@@ -93,9 +93,11 @@ function Session({
       onToggle={(event: React.SyntheticEvent<HTMLDetailsElement>) =>
         setOpen(event.currentTarget.open)
       }
-      sx={{ borderTop: '1px solid', borderColor: 'border.muted', py: 2 }}
+      borderTop="1px solid"
+      borderColor="border.muted"
+      py={2}
     >
-      <Box as="summary" sx={{ cursor: 'pointer', fontSize: 1 }}>
+      <Box as="summary" cursor="pointer" fontSize={1}>
         {session.createdAt ? (
           <RelativeTime datetime={session.createdAt} />
         ) : (
@@ -111,9 +113,9 @@ function Session({
           {entries.error}
         </Text>
       ) : (
-        <Box as="ol" sx={{ pl: 3, mt: 2, mb: 0, fontSize: 1 }}>
+        <Box as="ol" pl={3} mt={2} mb={0} fontSize={1}>
           {(entries.value ?? []).map(entry => (
-            <Box as="li" key={entry.uid} sx={{ mb: 1 }}>
+            <Box as="li" key={entry.uid} mb={1}>
               <Label sx={{ mr: 2 }}>
                 {RECORD_KIND_WORDS[entry.kind] ?? entry.kind}
               </Label>

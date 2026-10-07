@@ -52,21 +52,18 @@ export function TextPart({
 
   return (
     <Box
-      sx={{
-        padding: 3,
-        borderRadius: 2,
-        backgroundColor:
-          message.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-        marginBottom: 2,
-      }}
+      padding={3}
+      borderRadius={2}
+      backgroundColor={
+        message.role === 'user' ? 'accent.subtle' : 'canvas.subtle'
+      }
+      marginBottom={2}
     >
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 2,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        marginBottom={2}
       >
         <Text
           sx={{
@@ -79,7 +76,7 @@ export function TextPart({
           {message.role === 'user' ? 'You' : 'Assistant'}
         </Text>
         {message.role === 'assistant' && isLastPart && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box display="flex" gap={1}>
             <IconButton
               icon={SyncIcon}
               aria-label="Regenerate"

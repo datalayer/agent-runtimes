@@ -93,16 +93,14 @@ const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
 
   return (
     <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        p: 2,
-        mb: 2,
-        bg: 'canvas.default',
-      }}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      p={2}
+      mb={2}
+      bg="canvas.default"
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+      <Box display="flex" alignItems="center" gap={1} mb={1}>
         <ToolsIcon size={14} />
         <Text sx={{ fontWeight: 600, fontSize: 1 }}>{tool.name}</Text>
       </Box>
@@ -122,7 +120,7 @@ const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
         server: {tool.serverName}
       </Text>
       {paramNames.length > 0 && (
-        <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box mt={1} display="flex" gap={1} flexWrap="wrap">
           {paramNames.map(p => (
             <PrimerToken key={p} text={p} size="small" />
           ))}
@@ -136,16 +134,14 @@ const McpToolCard: React.FC<{ tool: McpToolInfo }> = ({ tool }) => {
 
 const McpServerCard: React.FC<{ server: McpServerInfo }> = ({ server }) => (
   <Box
-    sx={{
-      p: 2,
-      mb: 2,
-      border: '1px solid',
-      borderColor: 'border.default',
-      borderRadius: 2,
-      bg: 'canvas.default',
-    }}
+    p={2}
+    mb={2}
+    border="1px solid"
+    borderColor="border.default"
+    borderRadius={2}
+    bg="canvas.default"
   >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+    <Box display="flex" alignItems="center" gap={1} mb={1}>
       {server.emoji && <Text sx={{ fontSize: 2 }}>{server.emoji}</Text>}
       <Text sx={{ fontWeight: 600, fontSize: 1 }}>{server.name}</Text>
       <Label
@@ -183,15 +179,13 @@ const McpStatusPanel: React.FC<{
   if (aggregate === 'none') {
     return (
       <Box
-        sx={{
-          p: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
+        p={2}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        display="flex"
+        alignItems="center"
+        gap={2}
       >
         <ServerIcon size={16} />
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
@@ -202,42 +196,32 @@ const McpStatusPanel: React.FC<{
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
-      >
+    <Box display="flex" flexDirection="column" gap={2}>
+      <Box display="flex" alignItems="center" gap={2}>
         <Box
           as="span"
-          sx={{
-            display: 'inline-block',
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            bg: MCP_STATUS_COLORS[aggregate],
-            flexShrink: 0,
-          }}
+          display="inline-block"
+          width={10}
+          height={10}
+          borderRadius="50%"
+          bg={MCP_STATUS_COLORS[aggregate]}
+          flexShrink={0}
         />
         <Text sx={{ fontSize: 1 }}>{MCP_STATUS_LABELS[aggregate]}</Text>
       </Box>
       {servers.map(s => (
         <Box
           key={s.id}
-          sx={{
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          display="flex"
+          alignItems="center"
+          gap={2}
         >
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box flex={1} minWidth={0}>
+            <Box display="flex" alignItems="center" gap={1}>
               {s.status === 'started' ? (
                 <CheckCircleIcon size={14} fill="success.fg" />
               ) : s.status === 'failed' ? (
@@ -245,15 +229,14 @@ const McpStatusPanel: React.FC<{
               ) : (
                 <Box
                   as="span"
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bg:
-                      MCP_STATUS_COLORS[s.status as McpAggregateStatus] ??
-                      MCP_STATUS_COLORS.not_started,
-                    display: 'inline-block',
-                  }}
+                  width={8}
+                  height={8}
+                  borderRadius="50%"
+                  bg={
+                    MCP_STATUS_COLORS[s.status as McpAggregateStatus] ??
+                    MCP_STATUS_COLORS.not_started
+                  }
+                  display="inline-block"
                 />
               )}
               <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>{s.id}</Text>
@@ -579,21 +562,13 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {isReconnectedAgent && (
         <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
+          px={3}
+          py={1}
+          borderBottom="1px solid"
+          borderColor="border.default"
         >
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
             Agent already running - reconnected.
@@ -601,8 +576,8 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         </Box>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box flex={1} minHeight={0} display="flex">
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -616,44 +591,32 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
         {/* MCP tools panel */}
         <Box
-          sx={{
-            width: 320,
-            minWidth: 260,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            bg: 'canvas.default',
-          }}
+          width={320}
+          minWidth={260}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
+          bg="canvas.default"
         >
           {/* Header */}
-          <Box
-            sx={{
-              p: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={2} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
-              <Box
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
-              >
+              <Box display="inline-flex" alignItems="center" gap={1}>
                 <ServerIcon size={16} />
                 MCP Servers &amp; Tools
               </Box>
             </Heading>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" alignItems="center" gap={2}>
               <Box
                 as="span"
-                sx={{
-                  display: 'inline-block',
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bg: MCP_STATUS_COLORS[aggregate],
-                  flexShrink: 0,
-                }}
+                display="inline-block"
+                width={8}
+                height={8}
+                borderRadius="50%"
+                bg={MCP_STATUS_COLORS[aggregate]}
+                flexShrink={0}
               />
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                 {MCP_STATUS_LABELS[aggregate]} · {totalTools} tool
@@ -663,8 +626,8 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           </Box>
 
           {/* Body */}
-          <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
-            <Box sx={{ mb: 3 }}>
+          <Box p={2} overflow="auto" flex={1}>
+            <Box mb={3}>
               <Heading as="h5" sx={{ fontSize: 1, mb: 2 }}>
                 MCP Servers
               </Heading>
@@ -673,13 +636,11 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
             {mcpServers.length === 0 ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 2,
-                  py: 4,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap={2}
+                py={4}
               >
                 <Spinner size="medium" />
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
@@ -692,7 +653,7 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   <Box key={server.id}>
                     <McpServerCard server={server} />
                     {server.tools.length > 0 && (
-                      <Box sx={{ pl: 2 }}>
+                      <Box pl={2}>
                         {server.tools.map(tool => (
                           <McpToolCard
                             key={`${tool.serverId}-${tool.name}`}
@@ -706,40 +667,25 @@ const AgentMCPInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
                 {/* Info box */}
                 <Box
-                  sx={{
-                    mt: 3,
-                    p: 2,
-                    borderRadius: 2,
-                    bg: 'canvas.default',
-                    border: '1px solid',
-                    borderColor: 'border.muted',
-                  }}
+                  mt={3}
+                  p={2}
+                  borderRadius={2}
+                  bg="canvas.default"
+                  border="1px solid"
+                  borderColor="border.muted"
                 >
                   <Heading as="h5" sx={{ fontSize: 0, mb: 1 }}>
                     MCP (Model Context Protocol)
                   </Heading>
-                  <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                      }}
-                    >
+                  <Box fontSize={0} color="fg.muted">
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
                       <GlobeIcon size={12} />
                       <Text>
                         <strong>Servers:</strong> Discover and start MCP servers
                         that expose tools to the agent
                       </Text>
                     </Box>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
+                    <Box display="flex" alignItems="center" gap={1}>
                       <ToolsIcon size={12} />
                       <Text>
                         <strong>Tools:</strong> Individual capabilities exposed

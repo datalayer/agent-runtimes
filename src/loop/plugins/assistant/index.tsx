@@ -337,19 +337,17 @@ export function LoopAssistant({
       <Box
         role="status"
         data-assistant-problem={chosen.saidBy}
-        sx={{
-          position: 'fixed',
-          right: 24,
-          bottom: 24,
-          zIndex: 1000,
-          maxWidth: 320,
-          p: 2,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'attention.muted',
-          bg: 'attention.subtle',
-          boxShadow: 'shadow.medium',
-        }}
+        position="fixed"
+        right={24}
+        bottom={24}
+        zIndex={1000}
+        maxWidth={320}
+        p={2}
+        borderRadius={2}
+        border="1px solid"
+        borderColor="attention.muted"
+        bg="attention.subtle"
+        boxShadow="shadow.medium"
       >
         <Text sx={{ fontSize: 1 }}>{chosen.problem}</Text>
       </Box>

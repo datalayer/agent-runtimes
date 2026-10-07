@@ -26,7 +26,7 @@
 
 import type { JSX } from 'react';
 import { useMemo } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor } from '@datalayer/reactor/react';
 import { registerDeckComponents, registerDecks } from '@datalayer/decks';
@@ -113,7 +113,7 @@ export function LoopShellExample({
 
   const shell = (
     <QueryClientProvider client={internalQueryClient}>
-      <Box sx={{ height: '100%', minHeight: 0 }}>
+      <Box height="100%" minHeight={0}>
         <LoopWorkspace
           serverUrl={serverUrl}
           agentId={agentId}

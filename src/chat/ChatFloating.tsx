@@ -1441,13 +1441,13 @@ export function ChatFloating({
         footerContent: assistantDecide ? (
           <Box
             data-balloon-decisions=""
+            px={3}
+            pb={1}
+            display="flex"
+            flexDirection="column"
+            alignItems="flex-end"
+            fontSize={0}
             sx={{
-              px: 3,
-              pb: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              fontSize: 0,
               '& form': { alignSelf: 'stretch' },
               '& [data-balloon-decision="answered"]': { alignSelf: 'stretch' },
             }}
@@ -1620,19 +1620,19 @@ export function ChatFloating({
         <Box
           onPointerDown={drag.onHandlePointerDown}
           aria-label="Move the chat"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          flexShrink={0}
+          height={18}
+          cursor="grab"
+          color="fg.subtle"
+          bg="canvas.subtle"
+          borderBottom="1px solid"
+          borderColor="border.muted"
+          active={{ cursor: 'grabbing' }}
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            height: 18,
-            cursor: 'grab',
-            color: 'fg.subtle',
-            bg: 'canvas.subtle',
-            borderBottom: '1px solid',
-            borderColor: 'border.muted',
             touchAction: 'none',
-            '&:active': { cursor: 'grabbing' },
           }}
         >
           <GrabberIcon size={16} />
@@ -1644,16 +1644,14 @@ export function ChatFloating({
               the assistant's balloon, which closes from its corner. */}
           {showHeader && !conversationBalloon ? (
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                flexShrink: 0,
-                px: 3,
-                py: 2,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              display="flex"
+              alignItems="center"
+              gap={2}
+              flexShrink={0}
+              px={3}
+              py={2}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
               {brandIcon || <AiAgentIcon colored size={20} />}
               <Text
@@ -1767,7 +1765,7 @@ export function ChatFloating({
         >
           {conversationBalloon && currentOpen ? (
             // Current: the one thing said or done now, over the composer.
-            <Box sx={{ px: 3, pt: 3, pb: 2, overflow: 'hidden' }}>
+            <Box px={3} pt={3} pb={2} overflow="hidden">
               <CurrentBalloonBody
                 text={toolSaid ? undefined : (currentWords ?? description)}
                 fullText={toolSaid ? undefined : currentWhole}
@@ -1910,12 +1908,10 @@ export function ChatFloating({
           }}
         >
           <Box
-            sx={{
-              position: 'relative',
-              display: 'inline-flex',
-              // The glow's halos go behind the button, not behind the page.
-              isolation: 'isolate',
-            }}
+            position="relative"
+            display="inline-flex"
+            // The glow's halos go behind the button, not behind the page.
+            isolation="isolate"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -1950,23 +1946,21 @@ export function ChatFloating({
             {/* Unread badge */}
             {messages.length > 0 && (
               <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  minWidth: 18,
-                  height: 18,
-                  px: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bg: 'danger.emphasis',
-                  color: 'fg.onEmphasis',
-                  borderRadius: '50%',
-                  fontSize: 0,
-                  fontWeight: 'bold',
-                  pointerEvents: 'none',
-                }}
+                position="absolute"
+                top={0}
+                right={0}
+                minWidth={18}
+                height={18}
+                px={1}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                bg="danger.emphasis"
+                color="fg.onEmphasis"
+                borderRadius="50%"
+                fontSize={0}
+                fontWeight="bold"
+                pointerEvents="none"
               >
                 <Text sx={{ fontSize: 0 }}>
                   {messages.length > 99 ? '99+' : messages.length}
@@ -1977,17 +1971,24 @@ export function ChatFloating({
             {/* A ring going out while words are not yet heard */}
             {unheard && (
               <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                borderRadius="50%"
+                border="2px solid"
+                borderColor={brandColor || 'accent.emphasis'}
+                animation="pulse 2s infinite"
+                pointerEvents="none"
+                // Still, as a ring held around the button, for a reader
+                // who asks the system for reduced motion (T-28).
+                reducedMotion={{
+                  animation: 'none',
+                  transform: 'scale(1.15)',
+                  opacity: 0.6,
+                }}
                 sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: brandColor || 'accent.emphasis',
-                  animation: 'pulse 2s infinite',
-                  pointerEvents: 'none',
                   '@keyframes pulse': {
                     '0%': {
                       transform: 'scale(1)',
@@ -1997,13 +1998,6 @@ export function ChatFloating({
                       transform: 'scale(1.5)',
                       opacity: 0,
                     },
-                  },
-                  // Still, as a ring held around the button, for a reader
-                  // who asks the system for reduced motion (T-28).
-                  '@media (prefers-reduced-motion: reduce)': {
-                    animation: 'none',
-                    transform: 'scale(1.15)',
-                    opacity: 0.6,
                   },
                 }}
               />
@@ -2015,16 +2009,14 @@ export function ChatFloating({
       {/* Mobile overlay backdrop */}
       {isMobile && isOpen && (
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bg: 'neutral.muted',
-            opacity: 0.5,
-            zIndex: 999,
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="neutral.muted"
+          opacity={0.5}
+          zIndex={999}
           onClick={handleToggle}
         />
       )}
@@ -2032,16 +2024,14 @@ export function ChatFloating({
       {/* Panel mode backdrop overlay - only shown when showPanelBackdrop is true */}
       {showPanelBackdrop && viewMode === 'panel' && isOpen && !isMobile && (
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bg: 'neutral.muted',
-            opacity: 0.3,
-            zIndex: 1000,
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="neutral.muted"
+          opacity={0.3}
+          zIndex={1000}
           onClick={handleToggle}
         />
       )}

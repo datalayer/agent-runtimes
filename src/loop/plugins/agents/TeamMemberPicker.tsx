@@ -93,7 +93,7 @@ function TeamMemberMenu({
           rather than ten. `ActionList.Description` lays one out on a single
           line and lets the overlay grow to hold it, so the width is set here
           or by whichever description happens to be longest. */}
-      <Box sx={{ width: 440, maxWidth: 'calc(100vw - 16px)' }}>
+      <Box width={440} maxWidth="calc(100vw - 16px)">
         {/*
           `role="listbox"`, stated rather than left to default.
           
@@ -140,10 +140,7 @@ function TeamMemberMenu({
                     like. */}
                 <MemberIcon icon={member.icon} />
               </ActionList.LeadingVisual>
-              <Box
-                as="span"
-                sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-              >
+              <Box as="span" display="flex" alignItems="center" gap={2}>
                 {member.name}
                 {member.isSupervisor ? (
                   <Text sx={{ fontSize: 0, color: 'fg.muted' }}>

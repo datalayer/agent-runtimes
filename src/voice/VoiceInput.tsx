@@ -228,12 +228,10 @@ export function VoiceInput({
   return (
     <Box
       data-voice-input={state}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        position: 'relative',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      position="relative"
     >
       {speaking && onStopSpeaking && (
         <Tooltip text="Stop speaking (Esc)" direction="n">
@@ -250,23 +248,19 @@ export function VoiceInput({
       {listening && (
         <Box
           aria-hidden="true"
-          sx={{
-            width: 40,
-            height: 4,
-            borderRadius: 2,
-            bg: 'neutral.muted',
-            overflow: 'hidden',
-          }}
+          width={40}
+          height={4}
+          borderRadius={2}
+          bg="neutral.muted"
+          overflow="hidden"
         >
           <Box
             ref={meter}
-            sx={{
-              width: '100%',
-              height: '100%',
-              bg: 'danger.emphasis',
-              transformOrigin: 'left',
-              transform: prefersStill() ? 'scaleX(1)' : 'scaleX(0.04)',
-            }}
+            width="100%"
+            height="100%"
+            bg="danger.emphasis"
+            transformOrigin="left"
+            transform={prefersStill() ? 'scaleX(1)' : 'scaleX(0.04)'}
           />
         </Box>
       )}
@@ -323,25 +317,23 @@ export function VoiceInput({
           role="dialog"
           aria-label="Talk instead of typing"
           data-voice-consent=""
-          sx={{
-            position: 'absolute',
-            bottom: '100%',
-            right: 0,
-            mb: 2,
-            width: 280,
-            p: 3,
-            bg: 'canvas.overlay',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            boxShadow: 'shadow.large',
-            zIndex: 10,
-          }}
+          position="absolute"
+          bottom="100%"
+          right={0}
+          mb={2}
+          width={280}
+          p={3}
+          bg="canvas.overlay"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          boxShadow="shadow.large"
+          zIndex={10}
         >
           <Text as="p" sx={{ fontSize: 1, mb: 2 }}>
             {CONSENT_SENTENCE}
           </Text>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box display="flex" gap={2} justifyContent="flex-end">
             <Button size="small" onClick={() => setState('idle')}>
               Not now
             </Button>
@@ -367,13 +359,11 @@ export function VoiceInput({
         as="span"
         role="status"
         aria-live="polite"
-        sx={{
-          position: 'absolute',
-          width: 1,
-          height: 1,
-          overflow: 'hidden',
-          clip: 'rect(0 0 0 0)',
-        }}
+        position="absolute"
+        width={1}
+        height={1}
+        overflow="hidden"
+        clip="rect(0 0 0 0)"
       >
         {WORDS[state] || said}
       </Box>

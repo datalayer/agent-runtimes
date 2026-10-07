@@ -48,7 +48,7 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
   }, [isStreaming, isExpanded]);
 
   return (
-    <Box sx={{ marginBottom: 3 }}>
+    <Box marginBottom={3}>
       <Button
         variant="invisible"
         size="small"
@@ -74,12 +74,10 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
         </Text>
         <Box
           as="span"
-          sx={{
-            display: 'inline-flex',
-            marginLeft: 'auto',
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s',
-          }}
+          display="inline-flex"
+          marginLeft="auto"
+          transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'}
+          transition="transform 0.2s"
         >
           <ChevronDownIcon />
         </Box>

@@ -187,24 +187,23 @@ export function ContextPie({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        gap: 2,
-        py: 1,
-        px: padding,
-        bg: 'canvas.subtle',
-        flexWrap: 'nowrap',
-        overflow: 'visible',
-        whiteSpace: 'nowrap',
-        minWidth: 0,
-      }}
+      display="flex"
+      alignItems="center"
+      justifyContent="flex-start"
+      gap={2}
+      py={1}
+      px={padding}
+      bg="canvas.subtle"
+      flexWrap="nowrap"
+      overflow="visible"
+      whiteSpace="nowrap"
+      minWidth={0}
     >
       {/* Tiny pie chart with hover overlay */}
       {showContextRing && (
         <Box
-          sx={{ position: 'relative', flexShrink: 0 }}
+          position="relative"
+          flexShrink={0}
           onMouseEnter={() => {
             if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
             hoverTimeoutRef.current = setTimeout(
@@ -222,17 +221,15 @@ export function ContextPie({
         >
           <Box
             ref={contextAnchorRef}
-            sx={{
-              cursor: 'pointer',
-              width: 20,
-              height: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: '50%',
-            }}
+            cursor="pointer"
+            width={20}
+            height={20}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius="50%"
           >
             <ReactECharts
               option={miniPieOption}
@@ -242,20 +239,18 @@ export function ContextPie({
           </Box>
           {contextOverlayOpen && (
             <Box
-              sx={{
-                position: 'absolute',
-                bottom: '100%',
-                left: 0,
-                mb: 1,
-                p: 3,
-                width: 260,
-                bg: 'canvas.overlay',
-                borderRadius: 2,
-                boxShadow: 'shadow.large',
-                border: '1px solid',
-                borderColor: 'border.default',
-                zIndex: 100,
-              }}
+              position="absolute"
+              bottom="100%"
+              left={0}
+              mb={1}
+              p={3}
+              width={260}
+              bg="canvas.overlay"
+              borderRadius={2}
+              boxShadow="shadow.large"
+              border="1px solid"
+              borderColor="border.default"
+              zIndex={100}
             >
               {/* Header */}
               <Text
@@ -328,7 +323,7 @@ export function ContextPie({
                 {pct.toFixed(0)}%
               </Text>
               {/* Category donut in overlay */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box display="flex" justifyContent="center" mb={2}>
                 <ReactECharts
                   option={overlayPieOption}
                   style={{ width: 80, height: 80 }}
@@ -336,23 +331,23 @@ export function ContextPie({
                 />
               </Box>
               {/* Category breakdown */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box display="flex" flexDirection="column" gap={1}>
                 {categories.map(cat => {
                   const catPct =
                     usedTokens > 0 ? (cat.value / usedTokens) * 100 : 0;
                   return (
                     <Box
                       key={cat.name}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
                     >
                       <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bg: cat.color,
-                          flexShrink: 0,
-                        }}
+                        width={8}
+                        height={8}
+                        borderRadius="50%"
+                        bg={cat.color}
+                        flexShrink={0}
                       />
                       <Text sx={{ fontSize: 0, color: 'fg.muted', flex: 1 }}>
                         {cat.name}

@@ -194,14 +194,12 @@ function GalleryCell({
   return (
     <Box
       data-gallery-cell={`${character.id}-${pose}`}
-      sx={{
-        position: 'relative',
-        width: size + 16,
-        height: size + 16,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      position="relative"
+      width={size + 16}
+      height={size + 16}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
     >
       <AssistantStage
         character={character.character}
@@ -231,8 +229,8 @@ export function AssistantGalleryGrid({
     <Box
       as="table"
       data-assistant-gallery-grid=""
+      borderCollapse="collapse"
       sx={{
-        borderCollapse: 'collapse',
         color: 'fg.default',
         '& th': {
           fontSize: 0,
@@ -262,7 +260,8 @@ export function AssistantGalleryGrid({
             <Box
               as="th"
               scope="row"
-              sx={{ textAlign: 'left !important', pr: '12px !important' }}
+              textAlign="left !important"
+              pr="12px !important"
             >
               <Text sx={{ display: 'block', color: 'fg.default' }}>
                 {character.name}
@@ -330,14 +329,12 @@ function BalloonCell({
   return (
     <Box
       data-gallery-cell={`balloon-${label.toLowerCase().replace(/\W+/g, '-')}`}
-      sx={{
-        position: 'relative',
-        width: 330,
-        height,
-        border: '1px solid',
-        borderColor: 'border.muted',
-        borderRadius: 2,
-      }}
+      position="relative"
+      width={330}
+      height={height}
+      border="1px solid"
+      borderColor="border.muted"
+      borderRadius={2}
     >
       <Text
         sx={{
@@ -380,10 +377,7 @@ export function GalleryBalloons({
   character: GalleryCharacter;
 }): JSX.Element {
   return (
-    <Box
-      data-gallery-balloons=""
-      sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mt: 3 }}
-    >
+    <Box data-gallery-balloons="" display="flex" gap={3} flexWrap="wrap" mt={3}>
       <BalloonCell
         character={character}
         label="History"

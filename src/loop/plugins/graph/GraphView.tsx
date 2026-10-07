@@ -19,12 +19,12 @@
  */
 
 import type { JSX } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { ReactorSlot } from '@datalayer/reactor/react';
 
 export default function GraphView(): JSX.Element {
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', px: 4, py: 3 }}>
+    <Box height="100%" overflowY="auto" px={4} py={3}>
       <ReactorSlot slot="graph" />
     </Box>
   );

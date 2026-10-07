@@ -94,20 +94,20 @@ export function SidebarRail({
     <Box
       as="aside"
       data-loop-rail-sidebar=""
-      sx={{ flex: '0 0 auto', display: 'flex', minHeight: 0 }}
+      flex="0 0 auto"
+      display="flex"
+      minHeight={0}
     >
       <Box
         data-loop-rail-panel={open ?? undefined}
-        sx={{
-          display: open ? 'block' : 'none',
-          width: `${width}px`,
-          minWidth: 0,
-          borderLeft: 'var(--theme-hairline, 1px) solid',
-          borderColor: 'border.default',
-          overflowY: 'auto',
-          px: 3,
-          py: 3,
-        }}
+        display={open ? 'block' : 'none'}
+        width={`${width}px`}
+        minWidth={0}
+        borderLeft="var(--theme-hairline, 1px) solid"
+        borderColor="border.default"
+        overflowY="auto"
+        px={3}
+        py={3}
       >
         {components.map(component => {
           const { Component } = component;
@@ -129,17 +129,15 @@ export function SidebarRail({
       <Box
         as="nav"
         aria-label="Panels"
-        sx={{
-          width: `${RAIL_WIDTH}px`,
-          flex: `0 0 ${RAIL_WIDTH}px`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 1,
-          py: 2,
-          borderLeft: 'var(--theme-hairline, 1px) solid',
-          borderColor: 'border.default',
-        }}
+        width={`${RAIL_WIDTH}px`}
+        flex={`0 0 ${RAIL_WIDTH}px`}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        gap={1}
+        py={2}
+        borderLeft="var(--theme-hairline, 1px) solid"
+        borderColor="border.default"
       >
         {items.map(item => {
           const Icon = item.icon;
@@ -155,25 +153,23 @@ export function SidebarRail({
               aria-pressed={active}
               aria-controls={`loop-rail-panel-${item.id}`}
               onClick={() => setChosen(railChoiceAfter(open, item.id))}
-              sx={{
-                width: 32,
-                height: 32,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                p: 0,
-                border: 'none',
-                borderRadius: 2,
-                cursor: 'pointer',
-                // One weight, no colour: the ink, quieter when not chosen.
-                color: active ? 'fg.default' : 'fg.muted',
-                bg: active ? 'neutral.muted' : 'transparent',
-                '&:hover': { color: 'fg.default', bg: 'neutral.subtle' },
-                '&:focus-visible': {
-                  outline: '2px solid',
-                  outlineColor: 'var(--focus-outlineColor, #0969da)',
-                  outlineOffset: '1px',
-                },
+              width={32}
+              height={32}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              p={0}
+              border="none"
+              borderRadius={2}
+              cursor="pointer"
+              // One weight, no colour: the ink, quieter when not chosen.
+              color={active ? 'fg.default' : 'fg.muted'}
+              bg={active ? 'neutral.muted' : 'transparent'}
+              hover={{ color: 'fg.default', bg: 'neutral.subtle' }}
+              focusVisible={{
+                outline: '2px solid',
+                outlineColor: 'var(--focus-outlineColor, #0969da)',
+                outlineOffset: '1px',
               }}
             >
               <Icon size={16} />

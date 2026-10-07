@@ -666,12 +666,10 @@ export function InputPrompt({
                           {/* Whatever the host brought; see `footerExtras`. */}
                           {extrasOffered && (
                             <Box
-                              sx={{
-                                marginLeft: 'auto',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 1,
-                              }}
+                              marginLeft="auto"
+                              display="inline-flex"
+                              alignItems="center"
+                              gap={1}
                             >
                               {footerExtras}
                             </Box>

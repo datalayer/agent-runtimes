@@ -906,19 +906,17 @@ function GalleryContent({
   }, [currentScene, showScene]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 3 }}>
+    <Box display="flex" flexDirection="column" gap={3} p={3}>
       <Box
-        sx={{
-          width: '100%',
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          p: 3,
-          backgroundColor: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-        }}
+        width="100%"
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        p={3}
+        backgroundColor="canvas.default"
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Text sx={{ fontSize: 2, fontWeight: 'bold' }}>Scenes</Text>
         <SegmentedControl aria-label="A2UI gallery scene picker" fullWidth>
@@ -935,7 +933,7 @@ function GalleryContent({
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
           {currentScene.description}
         </Text>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box display="flex" gap={2} flexWrap="wrap">
           <Button
             size="small"
             variant="primary"
@@ -988,7 +986,7 @@ function GalleryContent({
         }}
       >
         {surfaces.map(surface => (
-          <Box key={surface.id} sx={{ width: '100%' }}>
+          <Box key={surface.id} width="100%">
             <A2uiSurfaceComposed surface={surface} />
           </Box>
         ))}
@@ -1009,21 +1007,17 @@ const A2UiComponentsGalleryScene: React.FC = () => {
     <>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            height: '100%',
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          height="100%"
+          overflow="auto"
+          display="flex"
+          flexDirection="column"
         >
           <Box
-            sx={{
-              px: 3,
-              py: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              backgroundColor: 'canvas.default',
-            }}
+            px={3}
+            py={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            backgroundColor="canvas.default"
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
               🎨 A2UI Components Gallery
@@ -1037,17 +1031,15 @@ const A2UiComponentsGalleryScene: React.FC = () => {
           <GalleryContent onAction={handleAction} />
 
           <Box
-            sx={{
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              p: 3,
-              fontFamily: 'mono',
-              fontSize: 0,
-              backgroundColor: 'canvas.default',
-              whiteSpace: 'pre-wrap',
-              maxHeight: 220,
-              overflow: 'auto',
-            }}
+            borderTop="1px solid"
+            borderColor="border.default"
+            p={3}
+            fontFamily="mono"
+            fontSize={0}
+            backgroundColor="canvas.default"
+            whiteSpace="pre-wrap"
+            maxHeight={220}
+            overflow="auto"
           >
             {lastAction
               ? JSON.stringify(lastAction, null, 2)

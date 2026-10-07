@@ -33,7 +33,7 @@ const AgentHooksExample: React.FC = () => {
   const plugins = useMemo(() => [AgentHooksPlugin], []);
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <LoopEmbed
           // The examples Vite server has no /api proxy; the page origin would
           // send agent creation to port 3000 and fail loudly.

@@ -111,23 +111,21 @@ export function ToolsMenu({
         </Tooltip>
       </ActionMenu.Anchor>
       <ActionMenu.Overlay side="outside-top" align="start" width="large">
-        <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <Box maxHeight="60vh" overflowY="auto">
           <ActionList>
             {/* Codemode toggle — always visible at the top */}
             <ActionList.Group title="Codemode">
               <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 3,
-                  py: 2,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.muted',
-                  gap: 2,
-                }}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                px={3}
+                py={2}
+                borderBottom="1px solid"
+                borderColor="border.muted"
+                gap={2}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box flex={1} minWidth={0}>
                   <Text
                     id="toggle-codemode"
                     sx={{ fontWeight: 'semibold', display: 'block' }}
@@ -207,23 +205,15 @@ export function ToolsMenu({
                     {/* Server-level toggle */}
                     {server.isAvailable && server.tools.length > 0 && (
                       <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          px: 3,
-                          py: 2,
-                          borderBottom: '1px solid',
-                          borderColor: 'border.muted',
-                        }}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        px={3}
+                        py={2}
+                        borderBottom="1px solid"
+                        borderColor="border.muted"
                       >
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                          }}
-                        >
+                        <Box display="flex" alignItems="center" gap={2}>
                           {hasMark(serverMarks) && (
                             <SpecMark
                               icon={serverMarks.icon}
@@ -267,18 +257,14 @@ export function ToolsMenu({
                         return (
                           <Box
                             key={`${server.id}-${tool.name}`}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              px: 3,
-                              py: 2,
-                              '&:hover': {
-                                backgroundColor: 'canvas.subtle',
-                              },
-                            }}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            px={3}
+                            py={2}
+                            hover={{ backgroundColor: 'canvas.subtle' }}
                           >
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box flex={1} minWidth={0}>
                               <Text
                                 id={`toggle-tool-${server.id}-${tool.name}`}
                                 sx={{ fontWeight: 'semibold' }}
@@ -300,20 +286,12 @@ export function ToolsMenu({
                                 </Text>
                               )}
                             </Box>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 3,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={3}>
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                }}
+                                display="flex"
+                                flexDirection="column"
+                                alignItems="center"
+                                gap="2px"
                               >
                                 <Text
                                   sx={{ fontSize: '10px', color: 'fg.muted' }}
@@ -330,12 +308,10 @@ export function ToolsMenu({
                                 />
                               </Box>
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                }}
+                                display="flex"
+                                flexDirection="column"
+                                alignItems="center"
+                                gap="2px"
                               >
                                 <Text
                                   sx={{ fontSize: '10px', color: 'fg.muted' }}

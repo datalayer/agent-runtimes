@@ -568,15 +568,13 @@ export function Chat({
         <QueryClientProvider client={queryClient}>
           <Box
             className={className}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height,
-              p: 4,
-              bg: 'canvas.default',
-            }}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            height={height}
+            p={4}
+            bg="canvas.default"
           >
             <AlertIcon size={48} />
             <Text sx={{ mt: 3, color: 'danger.fg', fontSize: 2 }}>
@@ -604,15 +602,13 @@ export function Chat({
         <QueryClientProvider client={queryClient}>
           <Box
             className={className}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height,
-              p: 4,
-              bg: 'canvas.default',
-            }}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            height={height}
+            p={4}
+            bg="canvas.default"
           >
             <Spinner size="large" />
             <Text sx={{ mt: 3, color: 'fg.muted' }}>
@@ -630,21 +626,17 @@ export function Chat({
       <QueryClientProvider client={queryClient}>
         <Box
           className={className}
-          sx={{
-            position: 'relative',
-            height,
-            bg: 'canvas.default',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          position="relative"
+          height={height}
+          bg="canvas.default"
+          display="flex"
+          flexDirection="column"
         >
           {/* Agent details view - shown/hidden via CSS to preserve chat state */}
           <Box
-            sx={{
-              display: showDetails ? 'flex' : 'none',
-              flexDirection: 'column',
-              height: '100%',
-            }}
+            display={showDetails ? 'flex' : 'none'}
+            flexDirection="column"
+            height="100%"
           >
             <AgentDetails
               name={title || 'AI Agent'}
@@ -664,31 +656,29 @@ export function Chat({
           </Box>
           {/* Chat view - shown/hidden via CSS to preserve message state */}
           <Box
-            sx={{
-              display: showDetails ? 'none' : 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
+            display={showDetails ? 'none' : 'flex'}
+            flexDirection="column"
+            height="100%"
           >
             {/* Error banner for sandbox/connection issues */}
             {errorBanner && (
               <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  px: 3,
-                  py: 2,
-                  bg:
-                    errorBanner.variant === 'warning'
-                      ? 'attention.subtle'
-                      : 'danger.subtle',
-                  borderBottom: '1px solid',
-                  borderColor:
-                    errorBanner.variant === 'warning'
-                      ? 'attention.muted'
-                      : 'danger.muted',
-                }}
+                display="flex"
+                alignItems="center"
+                gap={2}
+                px={3}
+                py={2}
+                bg={
+                  errorBanner.variant === 'warning'
+                    ? 'attention.subtle'
+                    : 'danger.subtle'
+                }
+                borderBottom="1px solid"
+                borderColor={
+                  errorBanner.variant === 'warning'
+                    ? 'attention.muted'
+                    : 'danger.muted'
+                }
               >
                 <AlertIcon
                   size={16}

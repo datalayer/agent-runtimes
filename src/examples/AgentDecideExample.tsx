@@ -72,15 +72,8 @@ const AgentDecideExample: React.FC = () => {
   );
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          height: '100vh',
-          minHeight: 0,
-          display: 'flex',
-          bg: 'canvas.default',
-        }}
-      >
-        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      <Box height="100vh" minHeight={0} display="flex" bg="canvas.default">
+        <Box flex={1} minWidth={0} minHeight={0}>
           <AppRenderer
             app={app}
             serverUrl={serverUrl}
@@ -91,14 +84,12 @@ const AgentDecideExample: React.FC = () => {
         </Box>
         <Box
           as="aside"
-          sx={{
-            width: 320,
-            flexShrink: 0,
-            p: 3,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            overflowY: 'auto',
-          }}
+          width={320}
+          flexShrink={0}
+          p={3}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          overflowY="auto"
         >
           <Heading as="h2" sx={{ fontSize: 2, mb: 2 }}>
             {app.emoji} Decide

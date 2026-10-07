@@ -125,18 +125,18 @@ export function FloatingCard({
       <Box
         onPointerDown={onHandlePointerDown}
         aria-label="Move the prompt"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height={18}
+        cursor="grab"
+        color="fg.subtle"
+        bg="canvas.subtle"
+        borderBottom="1px solid"
+        borderColor="border.muted"
+        active={{ cursor: 'grabbing' }}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 18,
-          cursor: 'grab',
-          color: 'fg.subtle',
-          bg: 'canvas.subtle',
-          borderBottom: '1px solid',
-          borderColor: 'border.muted',
           touchAction: 'none',
-          '&:active': { cursor: 'grabbing' },
         }}
       >
         <GrabberIcon size={16} />

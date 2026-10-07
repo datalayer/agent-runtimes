@@ -69,27 +69,25 @@ export class ExampleErrorBoundary extends React.Component<
       return this.props.children;
     }
     return (
-      <Box sx={{ p: 4 }}>
+      <Box p={4}>
         <Box
-          sx={{
-            p: 3,
-            border: '1px solid',
-            borderColor: 'danger.muted',
-            borderRadius: 2,
-            bg: 'danger.subtle',
-            color: 'danger.fg',
-          }}
+          p={3}
+          border="1px solid"
+          borderColor="danger.muted"
+          borderRadius={2}
+          bg="danger.subtle"
+          color="danger.fg"
         >
-          <Box sx={{ fontWeight: 600, mb: 2 }}>This example failed to load</Box>
+          <Box fontWeight={600} mb={2}>
+            This example failed to load
+          </Box>
           <Box
             as="pre"
-            sx={{
-              m: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: 'mono',
-              fontSize: 0,
-            }}
+            m={0}
+            whiteSpace="pre-wrap"
+            wordBreak="break-word"
+            fontFamily="mono"
+            fontSize={0}
           >
             {error.message || String(error)}
           </Box>

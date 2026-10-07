@@ -113,36 +113,24 @@ export function NotificationEventCard({
 
   return (
     <Box
-      sx={{
-        minWidth: 0,
-        maxWidth: '100%',
-        overflow: 'hidden',
-        p: 3,
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: event.read ? 'border.default' : 'accent.muted',
-        bg: event.read ? 'canvas.default' : 'accent.subtle',
-      }}
+      minWidth={0}
+      maxWidth="100%"
+      overflow="hidden"
+      p={3}
+      borderRadius={2}
+      border="1px solid"
+      borderColor={event.read ? 'border.default' : 'accent.muted'}
+      bg={event.read ? 'canvas.default' : 'accent.subtle'}
     >
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 2,
-          mb: 1,
-          minWidth: 0,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        gap={2}
+        mb={1}
+        minWidth={0}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
+        <Box display="flex" alignItems="center" gap={2} minWidth={0} flex={1}>
           <Label variant={EVENT_KIND_VARIANT[eventKind] ?? 'secondary'}>
             {eventKind}
           </Label>
@@ -174,9 +162,7 @@ export function NotificationEventCard({
             </Label>
           )}
         </Box>
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}
-        >
+        <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
           {hasAgentRoute && (
             <Button
               size="small"
@@ -211,13 +197,11 @@ export function NotificationEventCard({
       </Box>
       {event.payload && (
         <Box
-          sx={{
-            fontSize: 0,
-            color: 'fg.muted',
-            mt: 1,
-            minWidth: 0,
-            overflowWrap: 'anywhere',
-          }}
+          fontSize={0}
+          color="fg.muted"
+          mt={1}
+          minWidth={0}
+          overflowWrap="anywhere"
         >
           {(startedAt ||
             endedAt ||
@@ -250,17 +234,15 @@ export function NotificationEventCard({
           )}
           {outputText && (
             <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.muted',
-                bg: 'canvas.subtle',
-              }}
+              mt={2}
+              p={2}
+              borderRadius={2}
+              border="1px solid"
+              borderColor="border.muted"
+              bg="canvas.subtle"
             >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box display="flex" alignItems="flex-start" gap={1}>
+                <Box flex={1} minWidth={0}>
                   <details open={isOutputExpanded}>
                     <summary
                       onClick={e => {
@@ -275,26 +257,22 @@ export function NotificationEventCard({
                       }}
                     >
                       <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          minWidth: 0,
-                          width: '100%',
-                          flexWrap: 'nowrap',
-                        }}
+                        display="flex"
+                        alignItems="center"
+                        gap={2}
+                        minWidth={0}
+                        width="100%"
+                        flexWrap="nowrap"
                       >
                         <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: 'fg.muted',
-                            flexShrink: 0,
-                            transition: 'transform 0.15s ease',
-                            transform: isOutputExpanded
-                              ? 'rotate(180deg)'
-                              : 'rotate(0deg)',
-                          }}
+                          display="flex"
+                          alignItems="center"
+                          color="fg.muted"
+                          flexShrink={0}
+                          transition="transform 0.15s ease"
+                          transform={
+                            isOutputExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                          }
                         >
                           <ChevronDownIcon size={12} />
                         </Box>
@@ -321,7 +299,7 @@ export function NotificationEventCard({
                         </Truncate>
                       </Box>
                     </summary>
-                    <Box sx={{ mt: 2 }}>
+                    <Box mt={2}>
                       <Box sx={streamdownMarkdownStyles}>
                         <Streamdown>{outputText}</Streamdown>
                       </Box>
@@ -348,14 +326,12 @@ export function NotificationEventCard({
             </Box>
           )}
           <Box
-            sx={{
-              mt: 2,
-              p: 2,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.muted',
-              bg: 'canvas.subtle',
-            }}
+            mt={2}
+            p={2}
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.muted"
+            bg="canvas.subtle"
           >
             <details open={isDetailsExpanded}>
               <summary
@@ -369,17 +345,15 @@ export function NotificationEventCard({
                   alignItems: 'center',
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'fg.muted',
-                      transition: 'transform 0.15s ease',
-                      transform: isDetailsExpanded
-                        ? 'rotate(180deg)'
-                        : 'rotate(0deg)',
-                    }}
+                    display="flex"
+                    alignItems="center"
+                    color="fg.muted"
+                    transition="transform 0.15s ease"
+                    transform={
+                      isDetailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }
                   >
                     <ChevronDownIcon size={12} />
                   </Box>
@@ -388,7 +362,7 @@ export function NotificationEventCard({
                   </Text>
                 </Box>
               </summary>
-              <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
+              <Box mt={2} display="grid" gap={1}>
                 {detailEntries.map(({ label, value }) => (
                   <Text key={label} sx={detailLineSx}>
                     <Text as="span" sx={detailLabelSx}>

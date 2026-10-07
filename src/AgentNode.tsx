@@ -15,6 +15,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { AiAgentIcon, AlienIcon } from '@datalayer/icons-react';
 import {
+  Box,
   DatalayerLogoText,
   DatalayerThemeProvider,
   getColorPalette,
@@ -26,7 +27,6 @@ import { AppearanceMenu } from '@datalayer/primer-addons/lib/components/appearan
 import {
   ActionList,
   ActionMenu,
-  Box,
   Button,
   Heading,
   Label,
@@ -329,15 +329,13 @@ function AgentNodeProfileView({
 
   return (
     <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        p: 4,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-      }}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      p={4}
+      display="flex"
+      flexDirection="column"
+      gap={3}
     >
       {!token ? (
         <Text sx={{ color: 'fg.muted' }}>Sign in to view your profile.</Text>
@@ -347,36 +345,32 @@ function AgentNodeProfileView({
         <>
           <Heading sx={{ fontSize: 2, mb: 2 }}>Profile</Heading>
           <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: [
-                '1fr',
-                null,
-                'minmax(280px, 1fr) minmax(320px, 2fr)',
-              ],
-              gap: 4,
-              alignItems: 'start',
-            }}
+            display="grid"
+            gridTemplateColumns={[
+              '1fr',
+              null,
+              'minmax(280px, 1fr) minmax(320px, 2fr)',
+            ]}
+            gap={4}
+            alignItems="start"
           >
             <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                p: 3,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3,
-              }}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              p={3}
+              display="flex"
+              flexDirection="column"
+              gap={3}
             >
-              <Box sx={{ textAlign: 'left' }}>
+              <Box textAlign="left">
                 <UserBadge
                   token={token}
                   variant="small"
                   onTokenExpired={onTokenExpired}
                 />
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Box display="flex" alignItems="center" gap={3}>
                 {hasRealAvatar(display.avatarUrl) ? (
                   <UserAvatar
                     avatarUrl={display.avatarUrl}
@@ -385,14 +379,14 @@ function AgentNodeProfileView({
                   />
                 ) : (
                   <Box
+                    width={72}
+                    height={72}
+                    borderRadius="50%"
+                    bg={avatarFallbackBackground || 'accent.subtle'}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
                     sx={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: '50%',
-                      bg: avatarFallbackBackground || 'accent.subtle',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                       '--datalayer-icon-fg':
                         avatarFallbackForeground || 'accent.fg',
                     }}
@@ -400,7 +394,7 @@ function AgentNodeProfileView({
                     <AlienIcon size={34} themed colormode />
                   </Box>
                 )}
-                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Box display="flex" flexDirection="column">
                   <Heading sx={{ fontSize: 3, mb: 1 }}>
                     {display.headingDisplayName}
                   </Heading>
@@ -419,16 +413,14 @@ function AgentNodeProfileView({
             </Box>
 
             <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                p: 3,
-                display: 'grid',
-                gridTemplateColumns: '1fr 2fr',
-                rowGap: 2,
-                columnGap: 3,
-              }}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              p={3}
+              display="grid"
+              gridTemplateColumns="1fr 2fr"
+              rowGap={2}
+              columnGap={3}
             >
               <Text sx={{ fontWeight: 'bold' }}>Username</Text>
               <Text>{display.username || '-'}</Text>
@@ -441,7 +433,7 @@ function AgentNodeProfileView({
               <Text sx={{ fontWeight: 'bold' }}>Origin</Text>
               <Text>{display.origin || '-'}</Text>
               <Text sx={{ fontWeight: 'bold' }}>Roles</Text>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Box display="flex" gap={1} flexWrap="wrap">
                 {display.roles.length > 0 ? (
                   display.roles.map(role => (
                     <Label key={role} size="small" variant="secondary">
@@ -1459,13 +1451,7 @@ export function AgentNode() {
       theme={cfg.primerTheme}
       themeStyles={cfg.themeStyles}
     >
-      <Box
-        sx={{
-          minHeight: '100vh',
-          bg: 'canvas.default',
-          color: 'fg.default',
-        }}
-      >
+      <Box minHeight="100vh" bg="canvas.default" color="fg.default">
         <PageLayout
           containerWidth="full"
           padding="normal"
@@ -1482,7 +1468,8 @@ export function AgentNode() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Open Datalayer website"
-                    sx={{ display: 'inline-flex', alignItems: 'center' }}
+                    display="inline-flex"
+                    alignItems="center"
                   >
                     <DatalayerLogoText
                       size={24}
@@ -1501,13 +1488,11 @@ export function AgentNode() {
               </PageHeader.TitleArea>
               <PageHeader.Actions>
                 <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    fontSize: 2,
-                    lineHeight: '22px',
-                  }}
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                  fontSize={2}
+                  lineHeight="22px"
                 >
                   {token && (
                     <>
@@ -1561,51 +1546,51 @@ export function AgentNode() {
           <PageLayout.Content>
             <Box
               aria-live="polite"
-              sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                zIndex: 1000,
-                pointerEvents: 'none',
-                display: 'flex',
-                justifyContent: 'stretch',
-              }}
+              position="fixed"
+              top={0}
+              left={0}
+              right={0}
+              zIndex={1000}
+              pointerEvents="none"
+              display="flex"
+              justifyContent="stretch"
             >
               <Box
                 role={banner?.kind === 'error' ? 'alert' : 'status'}
-                sx={{
-                  pointerEvents: banner ? 'auto' : 'none',
-                  width: '100%',
-                  px: 4,
-                  py: 4,
-                  borderRadius: 0,
-                  borderBottom: '1px solid',
-                  borderColor:
-                    banner?.kind === 'error'
-                      ? 'danger.emphasis'
-                      : banner?.kind === 'warning'
-                        ? 'attention.emphasis'
-                        : banner?.kind === 'success'
-                          ? 'success.emphasis'
-                          : 'accent.emphasis',
-                  bg:
-                    banner?.kind === 'error'
-                      ? 'danger.subtle'
-                      : banner?.kind === 'warning'
-                        ? 'attention.subtle'
-                        : banner?.kind === 'success'
-                          ? 'success.subtle'
-                          : 'accent.subtle',
-                  color: 'fg.default',
-                  boxShadow: banner ? '0 4px 16px rgba(0, 0, 0, 0.12)' : 'none',
-                  opacity: banner ? 1 : 0,
-                  transform: banner ? 'translateY(0)' : 'translateY(-100%)',
-                  transition: banner
+                pointerEvents={banner ? 'auto' : 'none'}
+                width="100%"
+                px={4}
+                py={4}
+                borderRadius={0}
+                borderBottom="1px solid"
+                borderColor={
+                  banner?.kind === 'error'
+                    ? 'danger.emphasis'
+                    : banner?.kind === 'warning'
+                      ? 'attention.emphasis'
+                      : banner?.kind === 'success'
+                        ? 'success.emphasis'
+                        : 'accent.emphasis'
+                }
+                bg={
+                  banner?.kind === 'error'
+                    ? 'danger.subtle'
+                    : banner?.kind === 'warning'
+                      ? 'attention.subtle'
+                      : banner?.kind === 'success'
+                        ? 'success.subtle'
+                        : 'accent.subtle'
+                }
+                color="fg.default"
+                boxShadow={banner ? '0 4px 16px rgba(0, 0, 0, 0.12)' : 'none'}
+                opacity={banner ? 1 : 0}
+                transform={banner ? 'translateY(0)' : 'translateY(-100%)'}
+                transition={
+                  banner
                     ? 'opacity 600ms ease, transform 700ms cubic-bezier(0.16, 1, 0.3, 1)'
-                    : 'opacity 250ms ease, transform 350ms cubic-bezier(0.16, 1, 0.3, 1)',
-                  textAlign: 'center',
-                }}
+                    : 'opacity 250ms ease, transform 350ms cubic-bezier(0.16, 1, 0.3, 1)'
+                }
+                textAlign="center"
               >
                 <Text sx={{ fontSize: 3, fontWeight: 'bold' }}>
                   {banner?.message ?? ''}
@@ -1613,11 +1598,9 @@ export function AgentNode() {
               </Box>
             </Box>
             {!token && (
-              <Box sx={{ mb: 3 }}>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}
-                >
-                  <Box sx={{ color: 'fg.muted', display: 'inline-flex' }}>
+              <Box mb={3}>
+                <Box display="flex" alignItems="center" gap={2} mb={1}>
+                  <Box color="fg.muted" display="inline-flex">
                     <KeyAsteriskIcon size={18} />
                   </Box>
                   <Heading sx={{ fontSize: 3, m: 0 }}>Agent Node</Heading>
@@ -1631,20 +1614,18 @@ export function AgentNode() {
 
             {step === 'auth' && (
               <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderTop: '3px solid',
-                  borderTopColor: cfg.brandColor,
-                  borderRadius: 2,
-                  p: 4,
-                  backgroundImage: `linear-gradient(135deg, ${authGradient.from}1A 0%, ${authGradient.to}1A 100%)`,
-                }}
+                border="1px solid"
+                borderColor="border.default"
+                borderTop="3px solid"
+                borderTopColor={cfg.brandColor}
+                borderRadius={2}
+                p={4}
+                backgroundImage={`linear-gradient(135deg, ${authGradient.from}1A 0%, ${authGradient.to}1A 100%)`}
               >
                 <Box
+                  maxWidth={640}
+                  mx="auto"
                   sx={{
-                    maxWidth: 640,
-                    mx: 'auto',
                     // SignInSimple renders a full-height shell; scope overrides
                     // here so the auth view inherits this page layout/theme.
                     '& > div': {
@@ -1675,9 +1656,7 @@ export function AgentNode() {
                     title="Agent Node"
                     description="Sign in to configure node settings and run authenticated chat sessions."
                     leadingIcon={
-                      <Box
-                        sx={{ color: cfg.brandColor, display: 'inline-flex' }}
-                      >
+                      <Box color={cfg.brandColor} display="inline-flex">
                         <HomeIcon size={24} />
                       </Box>
                     }
@@ -1688,46 +1667,32 @@ export function AgentNode() {
 
             {step === 'config' && (
               <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 3,
-                }}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                p={3}
+                display="flex"
+                flexDirection="column"
+                gap={3}
               >
                 <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: ['1fr', null, '1fr 1fr'],
-                    gap: 4,
-                    alignItems: 'start',
-                  }}
+                  display="grid"
+                  gridTemplateColumns={['1fr', null, '1fr 1fr']}
+                  gap={4}
+                  alignItems="start"
                 >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 3,
-                    }}
-                  >
+                  <Box display="flex" flexDirection="column" gap={3}>
                     <Box
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'border.default',
-                        borderRadius: 2,
-                        p: 3,
-                      }}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius={2}
+                      p={3}
                     >
                       <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Mode</Heading>
                       <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(3, 1fr)',
-                          gap: 3,
-                        }}
+                        display="grid"
+                        gridTemplateColumns="repeat(3, 1fr)"
+                        gap={3}
                       >
                         {MODE_CARDS.map(card => {
                           const isSelected = configuration.mode === card.mode;
@@ -1744,39 +1709,35 @@ export function AgentNode() {
                                 }))
                               }
                               aria-pressed={isSelected}
-                              sx={{
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 2,
-                                p: 3,
-                                borderRadius: 2,
-                                border: '1px solid',
-                                borderColor: isSelected
-                                  ? cfg.brandColor
-                                  : 'border.default',
-                                bg: isSelected
-                                  ? 'canvas.subtle'
-                                  : 'canvas.default',
-                                color: 'fg.default',
-                                boxShadow: isSelected
+                              textAlign="left"
+                              cursor="pointer"
+                              display="flex"
+                              flexDirection="column"
+                              gap={2}
+                              p={3}
+                              borderRadius={2}
+                              border="1px solid"
+                              borderColor={
+                                isSelected ? cfg.brandColor : 'border.default'
+                              }
+                              bg={
+                                isSelected ? 'canvas.subtle' : 'canvas.default'
+                              }
+                              color="fg.default"
+                              boxShadow={
+                                isSelected
                                   ? `0 0 0 1px ${cfg.brandColor}`
-                                  : 'none',
-                                '&:hover': {
-                                  borderColor: cfg.brandColor,
-                                },
-                              }}
+                                  : 'none'
+                              }
+                              hover={{ borderColor: cfg.brandColor }}
                             >
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                  color: isSelected
-                                    ? cfg.brandColor
-                                    : 'fg.default',
-                                }}
+                                display="flex"
+                                alignItems="center"
+                                gap={2}
+                                color={
+                                  isSelected ? cfg.brandColor : 'fg.default'
+                                }
                               >
                                 <Icon size={20} />
                                 <Text sx={{ fontWeight: 'bold' }}>
@@ -1793,12 +1754,10 @@ export function AgentNode() {
                     </Box>
 
                     <Box
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'border.default',
-                        borderRadius: 2,
-                        p: 3,
-                      }}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius={2}
+                      p={3}
                     >
                       <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
                         Inference
@@ -1808,12 +1767,10 @@ export function AgentNode() {
                         sessions.
                       </Text>
                       <Box
-                        sx={{
-                          display: 'flex',
-                          gap: 2,
-                          flexWrap: 'wrap',
-                          mb: inferenceProvider === 'datalayer' ? 2 : 0,
-                        }}
+                        display="flex"
+                        gap={2}
+                        flexWrap="wrap"
+                        mb={inferenceProvider === 'datalayer' ? 2 : 0}
                       >
                         <Button
                           size="small"
@@ -1840,16 +1797,14 @@ export function AgentNode() {
                       </Box>
                       {inferenceProvider === 'datalayer' && (
                         <Box
-                          sx={{
-                            border: '1px solid',
-                            borderColor: 'border.default',
-                            borderRadius: 2,
-                            p: 2,
-                            bg: 'canvas.subtle',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                          }}
+                          border="1px solid"
+                          borderColor="border.default"
+                          borderRadius={2}
+                          p={2}
+                          bg="canvas.subtle"
+                          display="flex"
+                          flexDirection="column"
+                          gap={1}
                         >
                           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                             Models ai-inference serves
@@ -1886,12 +1841,10 @@ export function AgentNode() {
 
                     {iamUser ? (
                       <Box
-                        sx={{
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                          borderRadius: 2,
-                          p: 3,
-                        }}
+                        border="1px solid"
+                        borderColor="border.default"
+                        borderRadius={2}
+                        p={3}
                       >
                         <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
                           Billing Entity
@@ -1905,19 +1858,15 @@ export function AgentNode() {
                       </Box>
                     ) : (
                       <Box
-                        sx={{
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                          borderRadius: 2,
-                          p: 3,
-                        }}
+                        border="1px solid"
+                        borderColor="border.default"
+                        borderRadius={2}
+                        p={3}
                       >
                         <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>
                           Billing Entity
                         </Heading>
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                        <Box display="flex" alignItems="center" gap={2}>
                           <Spinner size="small" />
                           <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                             Loading billing entities...
@@ -1927,20 +1876,12 @@ export function AgentNode() {
                     )}
                   </Box>
 
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 2,
-                    }}
-                  >
+                  <Box display="flex" flexDirection="column" gap={2}>
                     <Box
-                      sx={{
-                        border: '1px solid',
-                        borderColor: 'border.default',
-                        borderRadius: 2,
-                        p: 3,
-                      }}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius={2}
+                      p={3}
                     >
                       <Heading sx={{ fontSize: 2, m: 0, mb: 2 }}>Share</Heading>
                       <ShareAccessComponent
@@ -1957,7 +1898,7 @@ export function AgentNode() {
 
                 {error && <Text sx={{ color: 'danger.fg' }}>{error}</Text>}
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Box display="flex" justifyContent="flex-end">
                   <Button
                     variant="primary"
                     onClick={saveConfiguration}
@@ -2034,15 +1975,13 @@ export function AgentNode() {
 
             {step === 'chat' && (
               <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                }}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                overflow="hidden"
               >
                 {isSaasOnlyChat ? (
-                  <Box sx={{ p: 4 }}>
+                  <Box p={4}>
                     <Heading sx={{ fontSize: 2, mb: 2 }}>
                       Chat From SaaS
                     </Heading>

@@ -24,14 +24,8 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  Box,
-  IconButton,
-  SegmentedControl,
-  Text,
-  Truncate,
-} from '@primer/react';
-import { loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
+import { IconButton, SegmentedControl, Text, Truncate } from '@primer/react';
+import { Box, loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
 import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
 import { computed, signal } from '@datalayer/reactor';
 import type { ChatLayoutContribution } from '../../core';
@@ -1987,7 +1981,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         );
       })}
       {!active && waiting ? (
-        <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0 }}>
+        <Box flex="1 1 0" minWidth={0} minHeight={0}>
           <Centered>Starting {waiting.title}…</Centered>
         </Box>
       ) : null}
@@ -2000,49 +1994,48 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             goes on this side for the same reason, and only when there is
             something to its left to be separated from. */}
       <Box
-        sx={{
-          /*
+        /*
               Beside an editor, with the prompt on top, the conversation is
               the narrower column: the editor is what a `top` host put the
               prompt over, and the transcript reads fine at a third of the
               width. Every other placement splits the row evenly.
             */
-          flex: topPrompt && active ? '0 0 34%' : '1 1 0',
-          maxWidth: topPrompt && active ? 460 : undefined,
-          minWidth: 0,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          borderLeft: active ? '1px solid' : undefined,
-          borderColor: 'border.default',
-          // So the expired-key panel below can cover exactly this column and
-          // nothing else: the notebook beside it still works.
-          position: 'relative',
-        }}
+        flex={topPrompt && active ? '0 0 34%' : '1 1 0'}
+        maxWidth={topPrompt && active ? 460 : undefined}
+        minWidth={0}
+        minHeight={0}
+        display="flex"
+        flexDirection="column"
+        borderLeft={active ? '1px solid' : undefined}
+        borderColor="border.default"
+        // So the expired-key panel below can cover exactly this column and
+        // nothing else: the notebook beside it still works.
+        position="relative"
       >
         {/* The host example's own banner, when it feeds one through the
               live chat-extras channel: its diagnostics, above the transcript. */}
         {chatExtras.errorBanner ? (
           <Box
-            sx={{
-              flexShrink: 0,
-              px: 3,
-              py: 2,
-              fontSize: 1,
-              borderBottom: '1px solid',
-              bg:
-                chatExtras.errorBanner.variant === 'warning'
-                  ? 'attention.subtle'
-                  : 'danger.subtle',
-              color:
-                chatExtras.errorBanner.variant === 'warning'
-                  ? 'attention.fg'
-                  : 'danger.fg',
-              borderColor:
-                chatExtras.errorBanner.variant === 'warning'
-                  ? 'attention.muted'
-                  : 'danger.muted',
-            }}
+            flexShrink={0}
+            px={3}
+            py={2}
+            fontSize={1}
+            borderBottom="1px solid"
+            bg={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.subtle'
+                : 'danger.subtle'
+            }
+            color={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.fg'
+                : 'danger.fg'
+            }
+            borderColor={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.muted'
+                : 'danger.muted'
+            }
           >
             {chatExtras.errorBanner.message}
           </Box>
@@ -2056,7 +2049,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             {openedThread.said}
           </Text>
         ) : null}
-        <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
+        <Box flex="1 1 auto" minHeight={0} display="flex">
           {opening ? (
             <Text
               as="p"
@@ -2223,9 +2216,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 than a big box.
               */
               headerActions={
-                <Box
-                  sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
-                >
+                <Box display="inline-flex" alignItems="center" gap={2}>
                   {/* The host's own additions first, then the plugins', then
                       the chat's — so what belongs to the page reads as part of
                       the page and the chat's controls stay together at the
@@ -2369,7 +2360,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     config?.suggestionLabels !== false && chatSuggestions.length > 0 ? (
       <Box
         aria-label={chatText.suggestedPrompts}
-        sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, pb: '6px' }}
+        display="flex"
+        flexWrap="wrap"
+        gap={2}
+        px={2}
+        pb="6px"
       >
         {chatSuggestions.map(item => (
           <Box
@@ -2380,26 +2375,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             title={item.message}
             disabled={busy || chatDisabled}
             onClick={() => void handleSend(item.message)}
+            appearance="none"
+            font="inherit"
+            fontSize={0}
+            fontWeight="semibold"
+            // Room for descenders: the truncated span clips what falls
+            // below its line, and at a line-height of one that is the
+            // tail of every "y".
+            lineHeight={1.25}
+            px="10px"
+            py="5px"
+            width={SUGGESTION_CHIP_WIDTH}
+            flex={`0 0 ${SUGGESTION_CHIP_WIDTH}px`}
+            borderRadius="999px"
+            border="1px solid"
+            bg="canvas.subtle"
+            whiteSpace="nowrap"
             sx={{
-              appearance: 'none',
-              font: 'inherit',
-              fontSize: 0,
-              fontWeight: 'semibold',
-              // Room for descenders: the truncated span clips what falls
-              // below its line, and at a line-height of one that is the
-              // tail of every "y".
-              lineHeight: 1.25,
-              px: '10px',
-              py: '5px',
-              width: SUGGESTION_CHIP_WIDTH,
-              flex: `0 0 ${SUGGESTION_CHIP_WIDTH}px`,
-              borderRadius: '999px',
-              border: '1px solid',
               borderColor: 'border.default',
-              bg: 'canvas.subtle',
               color: 'fg.default',
               cursor: 'pointer',
-              whiteSpace: 'nowrap',
               '&:hover:not(:disabled)': {
                 borderColor: 'accent.fg',
                 color: 'accent.fg',
@@ -2417,17 +2412,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     ) : null;
   const transientEl = transient ? (
     <Box
-      sx={{
-        flex: '0 0 auto',
-        px: 3,
-        py: 2,
-        borderTop: '1px solid',
-        borderColor: 'border.default',
-        bg: 'canvas.subtle',
-        fontSize: 1,
-        maxHeight: '40%',
-        overflowY: 'auto',
-      }}
+      flex="0 0 auto"
+      px={3}
+      py={2}
+      borderTop="1px solid"
+      borderColor="border.default"
+      bg="canvas.subtle"
+      fontSize={1}
+      maxHeight="40%"
+      overflowY="auto"
     >
       {transient}
     </Box>
@@ -2492,11 +2485,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           */}
           {topPrompt && !promptHidden ? (
             <Box
-              sx={{
-                flex: '0 0 auto',
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              flex="0 0 auto"
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
               {prompt}
               {chipsEl}
@@ -2504,13 +2495,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
           ) : null}
           {pickerEl}
           <Box
-            sx={{
-              flex: '1 1 auto',
-              minHeight: 0,
-              display: 'flex',
-              // The hidden editors position themselves against this row.
-              position: 'relative',
-            }}
+            flex="1 1 auto"
+            minHeight={0}
+            display="flex"
+            // The hidden editors position themselves against this row.
+            position="relative"
           >
             {editorsEl}
             {transcriptEl}
@@ -2537,15 +2526,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       */}
       {keyExpired ? (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 5,
-            bg: 'canvas.default',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={5}
+          bg="canvas.default"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
         >
           <AnonymousKeyExpired
             agentName={member?.name ?? spec?.name}
@@ -2587,16 +2574,14 @@ function SurfacePicker({
 
   return (
     <Box
-      sx={{
-        flex: '0 0 auto',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        px: 3,
-        py: 2,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-      }}
+      flex="0 0 auto"
+      display="flex"
+      alignItems="center"
+      gap={2}
+      px={3}
+      py={2}
+      borderBottom="1px solid"
+      borderColor="border.default"
     >
       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Beside the chat</Text>
       <SegmentedControl aria-label="Editor beside the chat" size="small">
@@ -2648,16 +2633,14 @@ function SurfacePicker({
 function Centered({ children }: { children: ReactNode }): JSX.Element {
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'fg.muted',
-        fontSize: 1,
-        px: 3,
-        textAlign: 'center',
-      }}
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      color="fg.muted"
+      fontSize={1}
+      px={3}
+      textAlign="center"
     >
       {children}
     </Box>

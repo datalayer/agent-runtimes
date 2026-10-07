@@ -66,16 +66,14 @@ const SkillCard: React.FC<{
   return (
     <>
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          p: 2,
-          mb: 2,
-          bg: 'canvas.default',
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        p={2}
+        mb={2}
+        bg="canvas.default"
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Text sx={{ fontWeight: 600, fontSize: 1 }}>{skill.name}</Text>
           {skill.status && (
             <Label
@@ -108,9 +106,7 @@ const SkillCard: React.FC<{
               SKILL.md
             </Button>
           )}
-          <Box
-            sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}
-          >
+          <Box ml="auto" display="flex" alignItems="center" gap={1}>
             <Button
               size="small"
               variant="invisible"
@@ -134,7 +130,7 @@ const SkillCard: React.FC<{
             {skill.description}
           </Text>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box display="flex" alignItems="center" gap={1} mb={1}>
           <Label size="small" variant="secondary">
             {sourceLabel}
           </Label>
@@ -143,7 +139,7 @@ const SkillCard: React.FC<{
           )}
         </Box>
         {skill.tags && skill.tags.length > 0 && (
-          <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Box mt={1} display="flex" gap={1} flexWrap="wrap">
             {skill.tags.map(tag => (
               <PrimerToken key={tag} text={tag} size="small" />
             ))}
@@ -157,21 +153,19 @@ const SkillCard: React.FC<{
           onClose={() => setShowDefinition(false)}
           width="xlarge"
         >
-          <Box sx={{ p: 3, maxHeight: '70vh', overflow: 'auto' }}>
+          <Box p={3} maxHeight="70vh" overflow="auto">
             <Box
               as="pre"
-              sx={{
-                fontFamily: 'mono',
-                fontSize: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                m: 0,
-                p: 3,
-                bg: 'canvas.default',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.muted',
-              }}
+              fontFamily="mono"
+              fontSize={0}
+              whiteSpace="pre-wrap"
+              wordBreak="break-word"
+              m={0}
+              p={3}
+              bg="canvas.default"
+              borderRadius={2}
+              border="1px solid"
+              borderColor="border.muted"
             >
               {skill.skill_definition}
             </Box>
@@ -250,15 +244,9 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+    <Box height="100%" display="flex" flexDirection="column">
+      <Box flex={1} minHeight={0} display="flex">
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -272,28 +260,18 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
         {/* Skills info panel */}
         <Box
-          sx={{
-            width: 320,
-            minWidth: 280,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            bg: 'canvas.default',
-          }}
+          width={320}
+          minWidth={280}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
+          bg="canvas.default"
         >
-          <Box
-            sx={{
-              p: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={2} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
-              <Box
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}
-              >
+              <Box display="inline-flex" alignItems="center" gap={1}>
                 <BriefcaseIcon size={16} />
                 Agent Skills
               </Box>
@@ -311,7 +289,7 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               {moduleBasedSkills.length} module-based
             </Text>
           </Box>
-          <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
+          <Box p={2} overflow="auto" flex={1}>
             {skills.length === 0 ? (
               <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                 Waiting for skills snapshot...
@@ -328,36 +306,30 @@ const AgentSkillsInner: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             )}
 
             <Box
-              sx={{
-                mt: 3,
-                p: 2,
-                borderRadius: 2,
-                bg: 'canvas.default',
-                border: '1px solid',
-                borderColor: 'border.muted',
-              }}
+              mt={3}
+              p={2}
+              borderRadius={2}
+              bg="canvas.default"
+              border="1px solid"
+              borderColor="border.muted"
             >
               <Heading as="h5" sx={{ fontSize: 0, mb: 1 }}>
                 Skill Statuses
               </Heading>
-              <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
-                >
+              <Box fontSize={0} color="fg.muted">
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
                   <Label size="small" variant="secondary">
                     available
                   </Label>
                   <Text>In catalog, not yet enabled</Text>
                 </Box>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
-                >
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
                   <Label size="small" variant="attention">
                     enabled
                   </Label>
                   <Text>Enabled, loading pending</Text>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Label size="small" variant="success">
                     loaded
                   </Label>

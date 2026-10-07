@@ -159,7 +159,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
   return (
     <Box
       ref={badgeRef}
-      sx={{ position: 'relative' }}
+      position="relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -167,34 +167,30 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
         as="button"
         type="button"
         title={badgeLabel}
-        sx={{
-          px: 2,
-          py: '6px',
-          maxWidth: 280,
-          minWidth: 0,
-          border: '1px solid',
-          borderColor: hasError ? 'danger.emphasis' : 'border.default',
-          borderRadius: 2,
-          bg: hasError ? 'danger.subtle' : 'canvas.default',
-          color: hasError ? 'danger.fg' : 'fg.default',
-          fontSize: 0,
-          cursor: 'default',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-        }}
+        px={2}
+        py="6px"
+        maxWidth={280}
+        minWidth={0}
+        border="1px solid"
+        borderColor={hasError ? 'danger.emphasis' : 'border.default'}
+        borderRadius={2}
+        bg={hasError ? 'danger.subtle' : 'canvas.default'}
+        color={hasError ? 'danger.fg' : 'fg.default'}
+        fontSize={0}
+        cursor="default"
+        display="flex"
+        alignItems="center"
+        gap={1}
       >
         {isCreating && <Spinner size="small" sx={{ width: 12, height: 12 }} />}
         {hasError && <span aria-hidden>⚠</span>}
         <Box
           as="span"
-          sx={{
-            display: 'block',
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
+          display="block"
+          minWidth={0}
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
         >
           {badgeLabelShort}
         </Box>
@@ -218,23 +214,21 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             color: 'fg.default',
           }}
         >
-          <Box sx={{ mb: 1, fontWeight: 600 }}>{title}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Name: {summary.agentName}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Location: {summary.location}</Box>
-          <Box sx={{ color: 'fg.muted' }}>Spec: {summary.specId || '—'}</Box>
-          <Box sx={{ color: 'fg.muted' }}>
-            Harness: {summary.harness || '—'}
+          <Box mb={1} fontWeight={600}>
+            {title}
           </Box>
-          <Box sx={{ color: 'fg.muted' }}>
-            Variant: {summary.variant || '—'}
-          </Box>
-          <Box sx={{ color: 'fg.muted' }}>
+          <Box color="fg.muted">Name: {summary.agentName}</Box>
+          <Box color="fg.muted">Location: {summary.location}</Box>
+          <Box color="fg.muted">Spec: {summary.specId || '—'}</Box>
+          <Box color="fg.muted">Harness: {summary.harness || '—'}</Box>
+          <Box color="fg.muted">Variant: {summary.variant || '—'}</Box>
+          <Box color="fg.muted">
             Status: {isCreating ? 'creating' : summary.status || '—'}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Agent base URL: {summary.baseUrl || '—'}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Code sandbox base URL:{' '}
             {summary.sandboxBaseUrl ? (
               <Box
@@ -242,7 +236,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={summary.sandboxBaseUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {summary.sandboxBaseUrl}
               </Box>
@@ -251,13 +246,11 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
             )}
           </Box>
           <Box
-            sx={{
-              color: 'fg.muted',
-              wordBreak: 'break-all',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
+            color="fg.muted"
+            wordBreak="break-all"
+            display="flex"
+            alignItems="center"
+            gap={1}
           >
             Agent ID:{' '}
             {summary.agentId ? (
@@ -271,7 +264,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
               '—'
             )}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Agent status:{' '}
             {hasAgent && agentStatusUrl ? (
               <Box
@@ -279,7 +272,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={agentStatusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {agentStatusUrl}
               </Box>
@@ -287,7 +281,7 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
               'n/a'
             )}
           </Box>
-          <Box sx={{ color: 'fg.muted', wordBreak: 'break-all' }}>
+          <Box color="fg.muted" wordBreak="break-all">
             Code sandbox status:{' '}
             {sandboxStatusUrl ? (
               <Box
@@ -295,7 +289,8 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
                 href={sandboxStatusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                sx={{ color: 'accent.fg', textDecoration: 'underline' }}
+                color="accent.fg"
+                textDecoration="underline"
               >
                 {sandboxStatusUrl}
               </Box>
@@ -305,16 +300,14 @@ export const AgentSummary: React.FC<AgentSummaryProps> = ({
           </Box>
           {hasError && (
             <Box
-              sx={{
-                mt: 1,
-                p: 1,
-                border: '1px solid',
-                borderColor: 'danger.muted',
-                borderRadius: 2,
-                bg: 'danger.subtle',
-                color: 'danger.fg',
-                wordBreak: 'break-word',
-              }}
+              mt={1}
+              p={1}
+              border="1px solid"
+              borderColor="danger.muted"
+              borderRadius={2}
+              bg="danger.subtle"
+              color="danger.fg"
+              wordBreak="break-word"
             >
               Error: {summary.error}
             </Box>

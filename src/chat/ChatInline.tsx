@@ -403,24 +403,15 @@ ${selectedText || ''}
   }, [onClose]);
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-        width: '100%',
-      }}
-    >
+    <Box display="flex" flexDirection="column" gap={1} width="100%">
       {/* Main Input Panel */}
       <Box
-        sx={{
-          borderRadius: '12px',
-          border: '1px solid',
-          borderColor: 'border.default',
-          boxShadow: 'shadow.large',
-          bg: 'canvas.default',
-          overflow: 'hidden',
-        }}
+        borderRadius="12px"
+        border="1px solid"
+        borderColor="border.default"
+        boxShadow="shadow.large"
+        bg="canvas.default"
+        overflow="hidden"
         onMouseDown={e => {
           e.preventDefault();
           onSaveSelection?.();
@@ -432,22 +423,14 @@ ${selectedText || ''}
         {/* AI Response Display */}
         {aiResponse && (
           <Box
-            sx={{
-              p: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              maxHeight: '130px',
-              overflow: 'auto',
-              position: 'relative',
-            }}
+            p={2}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            maxHeight="130px"
+            overflow="auto"
+            position="relative"
           >
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 1,
-                right: 1,
-              }}
-            >
+            <Box position="absolute" top={1} right={1}>
               <IconButton
                 icon={CopyIcon}
                 aria-label="Copy"
@@ -473,12 +456,10 @@ ${selectedText || ''}
         <Box
           as="form"
           onSubmit={handleSubmit}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            p: 1,
-          }}
+          display="flex"
+          alignItems="center"
+          gap={1}
+          p={1}
         >
           <TextInput
             value={input}
@@ -507,7 +488,7 @@ ${selectedText || ''}
 
         {/* Error Display */}
         {error && (
-          <Box sx={{ px: 2, pb: 2 }}>
+          <Box px={2} pb={2}>
             <Text sx={{ color: 'danger.fg', fontSize: 0 }}>{error}</Text>
           </Box>
         )}
@@ -516,16 +497,14 @@ ${selectedText || ''}
       {/* Options Panel - Show when not loading */}
       {aiState !== 'loading' && (
         <Box
-          sx={{
-            borderRadius: '12px',
-            border: '1px solid',
-            borderColor: 'border.default',
-            boxShadow: 'shadow.large',
-            bg: 'canvas.default',
-            maxWidth: '220px',
-            maxHeight: '360px',
-            overflow: 'auto',
-          }}
+          borderRadius="12px"
+          border="1px solid"
+          borderColor="border.default"
+          boxShadow="shadow.large"
+          bg="canvas.default"
+          maxWidth="220px"
+          maxHeight="360px"
+          overflow="auto"
           onMouseDown={e => e.preventDefault()}
         >
           <ActionList>
@@ -662,14 +641,7 @@ ${selectedText || ''}
 
       {/* Loading indicator */}
       {aiState === 'loading' && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            py: 2,
-          }}
-        >
+        <Box display="flex" alignItems="center" justifyContent="center" py={2}>
           <Spinner size="small" />
           <Text sx={{ ml: 2, color: 'fg.muted', fontSize: 1 }}>
             Generating...

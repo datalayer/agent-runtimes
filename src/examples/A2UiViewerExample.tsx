@@ -54,7 +54,7 @@ const A2UiViewerExample: React.FC = () => {
   const serverUrl = useExampleAgentRuntimesUrl();
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <LoopEmbed
           target={target}
           // An in-page agent has no server to ask; the others need to know

@@ -300,25 +300,17 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
   };
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <BellIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -331,11 +323,11 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
         )}
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         {/* Left: the conversation, as the shared loop on the notifications
             capacity plugin. The channel panel on the right is the example's
             own, kept verbatim. */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -349,24 +341,16 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
 
         {/* Right: Notification panel */}
         <Box
-          sx={{
-            width: 380,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-          }}
+          width={380}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="auto"
         >
           {/* Channel config */}
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
               <BellIcon size={16} />
               <Heading as="h3" sx={{ fontSize: 2 }}>
                 Channels
@@ -378,23 +362,19 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
               return (
                 <Box
                   key={ch.channel}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
+                  p={2}
+                  mb={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: ch.channel !== 'in-app' ? 1 : 0,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={ch.channel !== 'in-app' ? 1 : 0}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box display="flex" alignItems="center" gap={1}>
                       <Icon size={14} />
                       <Text sx={{ fontWeight: 'bold', fontSize: 1 }}>
                         {ch.channel}
@@ -452,28 +432,20 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
           </Box>
 
           {/* Notification history */}
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Recent Alerts
             </Heading>
 
             {recentAlerts.length === 0 ? (
               <Box
-                sx={{
-                  p: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
+                p={2}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                display="flex"
+                alignItems="center"
+                gap={2}
               >
                 <CheckCircleIcon size={16} />
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
@@ -484,21 +456,17 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
               recentAlerts.map(alert => (
                 <Box
                   key={alert.id}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
+                  p={2}
+                  mb={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
                   >
                     <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
                       {alert.title}
@@ -516,7 +484,7 @@ const AgentNotificationsInner: React.FC<{ onLogout: () => void }> = ({
           </Box>
 
           {/* Notification history */}
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+          <Box p={3} flex={1} overflow="auto">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Recent Notifications
             </Heading>

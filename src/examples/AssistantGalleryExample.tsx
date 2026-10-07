@@ -142,18 +142,16 @@ function ModePanel({
     <Box
       ref={panelRef}
       data-gallery-mode={mode}
-      sx={{
-        position: 'relative',
-        flex: '1 1 320px',
-        minWidth: 0,
-        height: PANEL_HEIGHT,
-        bg: 'canvas.default',
-        color: 'fg.default',
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        overflow: 'visible',
-      }}
+      position="relative"
+      flex="1 1 320px"
+      minWidth={0}
+      height={PANEL_HEIGHT}
+      bg="canvas.default"
+      color="fg.default"
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      overflow="visible"
     >
       <Text
         sx={{
@@ -171,11 +169,9 @@ function ModePanel({
       </Text>
       {presence === 'away' ? (
         <Box
-          sx={{
-            position: 'absolute',
-            left: spot.left,
-            top: spot.top + STAGE_SIZE / 2 - 16,
-          }}
+          position="absolute"
+          left={spot.left}
+          top={spot.top + STAGE_SIZE / 2 - 16}
         >
           <Button size="small" onClick={onCallBack} data-gallery-call-back="">
             Call {character.name} back
@@ -233,7 +229,7 @@ function GalleryToggle({
   state: string;
 } & Record<`data-${string}`, string>): JSX.Element {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }} {...rest}>
+    <Box display="flex" alignItems="center" gap={2} {...rest}>
       <Text id={id} sx={{ fontSize: 1, fontWeight: 'semibold' }}>
         {label}
       </Text>
@@ -272,15 +268,13 @@ function InModes({
     modes === 'both' ? ['light', 'dark'] : [modes];
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: stacked ? 'column' : 'row',
-        gap: 3,
-        flexWrap: 'wrap',
-      }}
+      display="flex"
+      flexDirection={stacked ? 'column' : 'row'}
+      gap={3}
+      flexWrap="wrap"
     >
       {shown.map(mode => (
-        <Box key={mode} sx={{ flex: '1 1 320px', minWidth: 0 }}>
+        <Box key={mode} flex="1 1 320px" minWidth={0}>
           <DatalayerThemeProvider
             colorMode={mode}
             theme={config.primerTheme}
@@ -387,15 +381,8 @@ const AssistantGalleryExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          bg: 'canvas.default',
-          color: 'fg.default',
-          p: 4,
-        }}
-      >
-        <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Box minHeight="100vh" bg="canvas.default" color="fg.default" p={4}>
+        <Box maxWidth={1200} mx="auto">
           <Heading as="h1" sx={{ mb: 2 }}>
             Assistant gallery
           </Heading>
@@ -419,25 +406,16 @@ const AssistantGalleryExample: React.FC = () => {
           <Box
             as="section"
             aria-label="Gallery controls"
-            sx={{
-              display: 'grid',
-              gap: 3,
-              mb: 4,
-              p: 3,
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              bg: 'canvas.subtle',
-            }}
+            display="grid"
+            gap={3}
+            mb={4}
+            p={3}
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={2}
+            bg="canvas.subtle"
           >
-            <Box
-              sx={{
-                display: 'flex',
-                gap: 3,
-                flexWrap: 'wrap',
-                alignItems: 'center',
-              }}
-            >
+            <Box display="flex" gap={3} flexWrap="wrap" alignItems="center">
               <SegmentedControl aria-label="View">
                 <SegmentedControl.Button
                   selected={view === 'stage'}
@@ -495,7 +473,9 @@ const AssistantGalleryExample: React.FC = () => {
                 <Box
                   role="group"
                   aria-label="Character"
-                  sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
+                  display="flex"
+                  gap={2}
+                  flexWrap="wrap"
                 >
                   {characters.map(option => (
                     <Button
@@ -515,7 +495,9 @@ const AssistantGalleryExample: React.FC = () => {
                 <Box
                   role="group"
                   aria-label="State"
-                  sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}
+                  display="flex"
+                  gap={2}
+                  flexWrap="wrap"
                 >
                   {GALLERY_POSES.map(option => (
                     <Button
@@ -534,14 +516,7 @@ const AssistantGalleryExample: React.FC = () => {
                     </Button>
                   ))}
                 </Box>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    gap: 2,
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                  }}
-                >
+                <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
                   <GalleryToggle
                     id="gallery-balloon-history"
                     label="History"
@@ -662,14 +637,12 @@ const AssistantGalleryExample: React.FC = () => {
                 {mode => (
                   <Box
                     data-gallery-mode={mode}
-                    sx={{
-                      bg: 'canvas.default',
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      borderRadius: 2,
-                      p: 2,
-                      overflowX: 'auto',
-                    }}
+                    bg="canvas.default"
+                    border="1px solid"
+                    borderColor="border.default"
+                    borderRadius={2}
+                    p={2}
+                    overflowX="auto"
                   >
                     <AssistantGalleryGrid
                       key={replay}
@@ -687,13 +660,11 @@ const AssistantGalleryExample: React.FC = () => {
             <Box
               as="section"
               aria-label="Expanded here"
-              sx={{
-                mt: 4,
-                p: 3,
-                border: '1px dashed',
-                borderColor: 'border.default',
-                borderRadius: 2,
-              }}
+              mt={4}
+              p={3}
+              border="1px dashed"
+              borderColor="border.default"
+              borderRadius={2}
             >
               <Text as="p" sx={{ m: 0, mb: 2, color: 'fg.muted', fontSize: 1 }}>
                 Expanded here: what the balloon&rsquo;s <em>Expand</em> draws

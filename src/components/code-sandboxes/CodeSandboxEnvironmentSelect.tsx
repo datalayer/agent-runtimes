@@ -21,7 +21,8 @@
  */
 
 import type { JSX } from 'react';
-import { ActionList, ActionMenu, Box, Label, Link, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { ActionList, ActionMenu, Label, Link, Text } from '@primer/react';
 
 /** One choice of the dropdown. */
 export type ICodeSandboxEnvironmentOption = {
@@ -96,12 +97,10 @@ function OptionLabels(props: {
   return (
     <Box
       as="span"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        whiteSpace: 'nowrap',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      whiteSpace="nowrap"
     >
       {option.burningRate ? (
         <Label size="small" variant="sponsors">
@@ -233,13 +232,11 @@ export function CodeSandboxEnvironmentSelect(
         {selected ? (
           <Box
             as="span"
-            sx={{
-              display: 'flex',
-              width: '100%',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 2,
-            }}
+            display="flex"
+            width="100%"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={2}
           >
             <Text>{selected.title}</Text>
             <OptionLabels option={selected} />

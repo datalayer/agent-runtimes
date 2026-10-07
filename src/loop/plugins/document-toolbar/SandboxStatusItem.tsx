@@ -19,7 +19,8 @@
 
 import type { JSX } from 'react';
 import { useSignalValue } from '@datalayer/reactor/react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { useOptionalSandboxService } from '../agents';
 import { IDLE_SANDBOX_SNAPSHOT_SIGNAL } from '../../core';
 
@@ -46,15 +47,13 @@ export function SandboxStatusItem(): JSX.Element | null {
   const appearance = APPEARANCE[snapshot.state] ?? APPEARANCE.idle;
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2 }}>
+    <Box display="flex" alignItems="center" gap={1} px={2}>
       <Box
-        sx={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          bg: appearance.color,
-          flexShrink: 0,
-        }}
+        width={8}
+        height={8}
+        borderRadius="50%"
+        bg={appearance.color}
+        flexShrink={0}
       />
       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{appearance.label}</Text>
     </Box>

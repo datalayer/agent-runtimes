@@ -17,7 +17,8 @@ import type { JSX } from 'react';
 import { useMemo } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { EphemeralDocument } from '../../../chat/document/EphemeralDocument';
 import {
   LoopDocumentToolbar,
@@ -66,16 +67,14 @@ export default function DocumentView({
   if (snapshot.state !== 'running') {
     return (
       <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'fg.muted',
-          fontSize: 1,
-          px: 4,
-          textAlign: 'center',
-        }}
+        height="100%"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        color="fg.muted"
+        fontSize={1}
+        px={4}
+        textAlign="center"
       >
         <Text>
           The document needs a running sandbox for its code blocks. Open the
@@ -95,7 +94,7 @@ export default function DocumentView({
     undefined;
 
   return (
-    <Box sx={{ height: '100%', minHeight: 0 }}>
+    <Box height="100%" minHeight={0}>
       <EphemeralDocument
         // The entry point owns the theme; a second provider here would fight
         // it over BaseStyles and font tokens (§3.5, §3.6).

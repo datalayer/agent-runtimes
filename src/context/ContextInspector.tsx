@@ -129,25 +129,21 @@ function CollapsibleSection({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box mb={2}>
       <Box
         as="button"
         onClick={() => setExpanded(!expanded)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          width: '100%',
-          p: 2,
-          bg: 'canvas.subtle',
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          cursor: 'pointer',
-          '&:hover': {
-            bg: 'canvas.inset',
-          },
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        width="100%"
+        p={2}
+        bg="canvas.subtle"
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        cursor="pointer"
+        hover={{ bg: 'canvas.inset' }}
       >
         {expanded ? (
           <ChevronDownIcon size={16} />
@@ -171,13 +167,11 @@ function CollapsibleSection({
       </Box>
       {expanded && (
         <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderTop: 'none',
-            borderRadius: '0 0 6px 6px',
-            p: 2,
-          }}
+          border="1px solid"
+          borderColor="border.default"
+          borderTop="none"
+          borderRadius="0 0 6px 6px"
+          p={2}
         >
           {children}
         </Box>
@@ -195,16 +189,14 @@ function ToolDetailView({ tool }: { tool: ToolDetail }) {
 
   return (
     <Box
-      sx={{
-        p: 2,
-        mb: 2,
-        bg: 'canvas.default',
-        border: '1px solid',
-        borderColor: 'border.muted',
-        borderRadius: 2,
-      }}
+      p={2}
+      mb={2}
+      bg="canvas.default"
+      border="1px solid"
+      borderColor="border.muted"
+      borderRadius={2}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Box display="flex" alignItems="center" gap={2} mb={1}>
         <Text sx={{ fontWeight: 'bold', fontFamily: 'mono', fontSize: 1 }}>
           {tool.name}
         </Text>
@@ -232,7 +224,7 @@ function ToolDetailView({ tool }: { tool: ToolDetail }) {
         </Text>
       )}
 
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box display="flex" gap={2}>
         <Button
           size="small"
           variant="invisible"
@@ -254,15 +246,13 @@ function ToolDetailView({ tool }: { tool: ToolDetail }) {
       {showSchema && (
         <Box
           as="pre"
-          sx={{
-            mt: 2,
-            p: 2,
-            bg: 'canvas.inset',
-            borderRadius: 2,
-            fontSize: 0,
-            overflow: 'auto',
-            maxHeight: 200,
-          }}
+          mt={2}
+          p={2}
+          bg="canvas.inset"
+          borderRadius={2}
+          fontSize={0}
+          overflow="auto"
+          maxHeight={200}
         >
           {JSON.stringify(tool.parametersSchema, null, 2)}
         </Box>
@@ -271,15 +261,13 @@ function ToolDetailView({ tool }: { tool: ToolDetail }) {
       {showSource && tool.sourceCode && (
         <Box
           as="pre"
-          sx={{
-            mt: 2,
-            p: 2,
-            bg: 'canvas.inset',
-            borderRadius: 2,
-            fontSize: 0,
-            overflow: 'auto',
-            maxHeight: 300,
-          }}
+          mt={2}
+          p={2}
+          bg="canvas.inset"
+          borderRadius={2}
+          fontSize={0}
+          overflow="auto"
+          maxHeight={300}
         >
           {tool.sourceCode}
         </Box>
@@ -303,14 +291,7 @@ export function ContextInspector({
 
   if (!hasLiveData) {
     return (
-      <Box
-        sx={{
-          p: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <Box p={3} display="flex" alignItems="center" justifyContent="center">
         <Text sx={{ color: 'fg.muted' }}>
           Waiting for context data from WebSocket stream...
         </Text>
@@ -321,13 +302,11 @@ export function ContextInspector({
   if (!contextData) {
     return (
       <Box
-        sx={{
-          p: 3,
-          bg: 'attention.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'attention.muted',
-        }}
+        p={3}
+        bg="attention.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="attention.muted"
       >
         <Text sx={{ color: 'attention.fg' }}>No context data available.</Text>
       </Box>
@@ -337,13 +316,11 @@ export function ContextInspector({
   if (contextData.error) {
     return (
       <Box
-        sx={{
-          p: 3,
-          bg: 'attention.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'attention.muted',
-        }}
+        p={3}
+        bg="attention.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="attention.muted"
       >
         <Text sx={{ color: 'attention.fg' }}>{contextData.error}</Text>
       </Box>
@@ -355,7 +332,7 @@ export function ContextInspector({
   return (
     <Box>
       {/* Token Usage Summary */}
-      <Box sx={{ mb: 3 }}>
+      <Box mb={3}>
         <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
           Total usage: {formatTokens(tokenSummary.total)} /{' '}
           {formatTokens(tokenSummary.contextWindow)} (
@@ -373,14 +350,12 @@ export function ContextInspector({
           }
         />
         <Box
-          sx={{
-            display: 'flex',
-            gap: 3,
-            mt: 2,
-            flexWrap: 'wrap',
-            fontSize: 0,
-            color: 'fg.muted',
-          }}
+          display="flex"
+          gap={3}
+          mt={2}
+          flexWrap="wrap"
+          fontSize={0}
+          color="fg.muted"
         >
           <Text>System: {formatTokens(tokenSummary.systemPrompts)}</Text>
           <Text>Tools: {formatTokens(tokenSummary.tools)}</Text>
@@ -398,7 +373,7 @@ export function ContextInspector({
         icon={AiModelIcon}
         defaultExpanded={false}
       >
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+        <Box display="grid" gridTemplateColumns="1fr 2fr" gap={2}>
           <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>Model:</Text>
           <Text sx={{ fontSize: 1, fontFamily: 'mono' }}>
             {modelConfiguration.modelName || 'Not specified'}
@@ -418,13 +393,11 @@ export function ContextInspector({
               </Text>
               <Box
                 as="pre"
-                sx={{
-                  fontSize: 0,
-                  p: 2,
-                  bg: 'canvas.inset',
-                  borderRadius: 2,
-                  overflow: 'auto',
-                }}
+                fontSize={0}
+                p={2}
+                bg="canvas.inset"
+                borderRadius={2}
+                overflow="auto"
               >
                 {JSON.stringify(modelConfiguration.settings, null, 2)}
               </Box>
@@ -448,22 +421,14 @@ export function ContextInspector({
           contextData.systemPrompts.map((prompt, idx) => (
             <Box
               key={idx}
-              sx={{
-                p: 2,
-                mb: 2,
-                bg: 'canvas.inset',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.muted',
-              }}
+              p={2}
+              mb={2}
+              bg="canvas.inset"
+              borderRadius={2}
+              border="1px solid"
+              borderColor="border.muted"
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  mb: 1,
-                }}
-              >
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Text sx={{ fontWeight: 'semibold', fontSize: 0 }}>
                   Prompt {idx + 1}
                 </Text>
@@ -518,14 +483,12 @@ export function ContextInspector({
             <Box
               key={idx}
               as="pre"
-              sx={{
-                p: 2,
-                mb: 2,
-                bg: 'canvas.inset',
-                borderRadius: 2,
-                fontSize: 0,
-                overflow: 'auto',
-              }}
+              p={2}
+              mb={2}
+              bg="canvas.inset"
+              borderRadius={2}
+              fontSize={0}
+              overflow="auto"
             >
               {JSON.stringify(block, null, 2)}
             </Box>
@@ -540,7 +503,7 @@ export function ContextInspector({
           icon={KeyIcon}
           count={Object.keys(contextData.toolEnvironment).length}
         >
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 2 }}>
+          <Box display="grid" gridTemplateColumns="1fr 2fr" gap={2}>
             {Object.entries(contextData.toolEnvironment).map(([key, value]) => (
               <React.Fragment key={key}>
                 <Text
@@ -574,14 +537,12 @@ export function ContextInspector({
             <Box
               key={idx}
               as="pre"
-              sx={{
-                p: 2,
-                mb: 2,
-                bg: 'canvas.inset',
-                borderRadius: 2,
-                fontSize: 0,
-                overflow: 'auto',
-              }}
+              p={2}
+              mb={2}
+              bg="canvas.inset"
+              borderRadius={2}
+              fontSize={0}
+              overflow="auto"
             >
               {JSON.stringify(rule, null, 2)}
             </Box>

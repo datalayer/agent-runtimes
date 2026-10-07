@@ -34,8 +34,8 @@ import type { JSX } from 'react';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Box } from '@primer/react';
 import {
+  Box,
   DatalayerThemeProvider,
   setupPrimerPortals,
   themeConfigs,
@@ -155,7 +155,7 @@ function LoopPage(): JSX.Element {
       themeStyles={themeConfig.themeStyles}
     >
       <QueryClientProvider client={internalQueryClient}>
-        <Box sx={{ height: '100vh', overflow: 'hidden' }}>
+        <Box height="100vh" overflow="hidden">
           {session ? (
             <LoopWorkspace
               serverUrl={session.serverUrl}

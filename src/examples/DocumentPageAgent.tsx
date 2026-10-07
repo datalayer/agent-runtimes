@@ -27,7 +27,7 @@ import { LoopEmbed } from '../loop';
 
 const DocumentPageAgent: React.FC = () => (
   <ThemedProvider>
-    <Box sx={{ height: '100vh', minHeight: 0 }}>
+    <Box height="100vh" minHeight={0}>
       <LoopEmbed
         target="browser"
         /* The Loop Shell's agent: it drives the document tools — insert a

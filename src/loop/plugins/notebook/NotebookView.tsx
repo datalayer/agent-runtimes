@@ -14,7 +14,8 @@ import type { JSX } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { ServiceManager } from '@jupyterlab/services';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import { EphemeralNotebook } from '../../../chat/notebook/EphemeralNotebook';
 import {
   LoopNotebookToolbar,
@@ -133,16 +134,14 @@ export default function NotebookView({
   if (snapshot.state !== 'running') {
     return (
       <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'fg.muted',
-          fontSize: 1,
-          px: 4,
-          textAlign: 'center',
-        }}
+        height="100%"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        color="fg.muted"
+        fontSize={1}
+        px={4}
+        textAlign="center"
       >
         <Text>
           The notebook needs a running sandbox. Open the Sandbox view to see

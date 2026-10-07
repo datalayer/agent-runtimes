@@ -21,7 +21,8 @@
  */
 
 import type { JSX } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 
 /* Both by file rather than through their barrels. The barrels reach the
    sign-in form and the whole in-page harness, and a plugin that only draws a
@@ -51,7 +52,7 @@ export function AnonymousKeyHeaderBadge({
   workspace: LoopWorkspaceContext;
 }): JSX.Element {
   return (
-    <Box sx={{ order: 1, display: 'inline-flex', alignItems: 'center' }}>
+    <Box order={1} display="inline-flex" alignItems="center">
       <AnonymousKeyBadge workspace={workspace} />
     </Box>
   );

@@ -24,7 +24,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Box, Text, Spinner, IconButton } from '@primer/react';
+import { Text, Spinner, IconButton } from '@primer/react';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -32,6 +32,7 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
+  Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
@@ -185,15 +186,13 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
       aria-label={
         mode === 'notebook' ? 'Preparing notebook…' : 'Preparing document…'
       }
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-        p: 4,
-      }}
+      flex={1}
+      minHeight={0}
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      p={4}
     >
       {mode === 'notebook' ? (
         <>
@@ -201,16 +200,14 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
           {[0, 1, 2].map(i => (
             <Box
               key={i}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'border.muted',
-                borderRadius: 2,
-                bg: 'canvas.subtle',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
+              p={3}
+              border="1px solid"
+              borderColor="border.muted"
+              borderRadius={2}
+              bg="canvas.subtle"
+              display="flex"
+              flexDirection="column"
+              gap={2}
             >
               <SkeletonText lines={1} />
               <SkeletonText lines={i === 0 ? 2 : 3} />
@@ -219,14 +216,12 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
         </>
       ) : (
         <Box
-          sx={{
-            maxWidth: 860,
-            width: '100%',
-            mx: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
+          maxWidth={860}
+          width="100%"
+          mx="auto"
+          display="flex"
+          flexDirection="column"
+          gap={3}
         >
           <SkeletonText lines={1} />
           <SkeletonText lines={4} />
@@ -4674,18 +4669,16 @@ function ChatBaseInner({
     return (
       <Box
         className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          p: 4,
-          borderRadius,
-          bg: backgroundColor || 'canvas.default',
-          border,
-          boxShadow,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        p={4}
+        borderRadius={borderRadius}
+        bg={backgroundColor || 'canvas.default'}
+        border={border}
+        boxShadow={boxShadow}
       >
         {loadingState || (
           <>
@@ -4774,11 +4767,10 @@ function ChatBaseInner({
     children
   ) : (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        /*
+      display="flex"
+      flexDirection="column"
+      minHeight={0}
+      /*
           A reading column, not a full-bleed sheet.
 
           The transcript keeps a book-page width and centres itself; on a
@@ -4786,11 +4778,10 @@ function ChatBaseInner({
           rows inside carry their own horizontal padding, which becomes the
           margin once the cap does bind.
         */
-        width: '100%',
-        maxWidth: 920,
-        mx: 'auto',
-        bg: 'canvas.default',
-      }}
+      width="100%"
+      maxWidth={920}
+      mx="auto"
+      bg="canvas.default"
     >
       <ChatMessageList
         displayItems={welcomedItems}
@@ -5007,14 +4998,13 @@ function ChatBaseInner({
   return (
     <Box
       className={className}
-      sx={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        /*
+      position="relative"
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      maxHeight="100%"
+      minHeight={0}
+      /*
           As wide as the host, always.
 
           The root set its height and said nothing about width, so mounted in
@@ -5025,15 +5015,14 @@ function ChatBaseInner({
           bubble drift while the agent answered. A chat fills the column it
           is given; the column decides the width, not the transcript.
         */
-        flex: '1 1 auto',
-        width: '100%',
-        minWidth: 0,
-        bg: backgroundColor || 'canvas.default',
-        borderRadius,
-        border,
-        boxShadow,
-        overflow: 'hidden',
-      }}
+      flex="1 1 auto"
+      width="100%"
+      minWidth={0}
+      bg={backgroundColor || 'canvas.default'}
+      borderRadius={borderRadius}
+      border={border}
+      boxShadow={boxShadow}
+      overflow="hidden"
     >
       {/* Header — shown at the top only when no companion surface is visible.
           When a surface (notebook/document) is visible the header is rendered
@@ -5063,12 +5052,10 @@ function ChatBaseInner({
           the same way and has always looked right for exactly this reason.
         */
         <Box
-          sx={{
-            flex: '1 1 auto',
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          flex="1 1 auto"
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
         >
           <AgentDetails
             name={title || 'AI Agent'}
@@ -5097,15 +5084,13 @@ function ChatBaseInner({
       {/* Error banner */}
       {showErrors && error && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: padding,
-            bg: 'danger.subtle',
-            borderBottom: '1px solid',
-            borderColor: 'danger.muted',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          p={padding}
+          bg="danger.subtle"
+          borderBottom="1px solid"
+          borderColor="danger.muted"
         >
           <AlertIcon size={16} />
           <Text sx={{ color: 'danger.fg', fontSize: 1 }}>{error.message}</Text>
@@ -5115,13 +5100,11 @@ function ChatBaseInner({
       {/* Messages area */}
       {surfaceVisible ? (
         <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
+          flex={1}
+          minHeight={0}
+          display="flex"
+          overflow="hidden"
+          position="relative"
         >
           {/* Left: in-memory companion surface (notebook or document). */}
           <Box
@@ -5221,12 +5204,10 @@ function ChatBaseInner({
               {chatHeaderElement}
               <Box
                 ref={messagesContainerRef}
-                sx={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: 'auto',
-                  bg: 'canvas.default',
-                }}
+                flex={1}
+                minHeight={0}
+                overflow="auto"
+                bg="canvas.default"
               >
                 {messagesContent}
               </Box>
@@ -5238,14 +5219,7 @@ function ChatBaseInner({
           {surfaceCollapsed &&
             onExpandFromCollapsed &&
             (chatViewMode === 'sidebar' ? (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 6,
-                }}
-              >
+              <Box position="absolute" top={8} right={8} zIndex={6}>
                 <IconButton
                   icon={SidebarExpandIcon}
                   aria-label="Open chat"
@@ -5268,13 +5242,11 @@ function ChatBaseInner({
           <Box
             ref={messagesContainerRef}
             data-chat-history=""
-            sx={{
-              flex: 1,
-              flexGrow: 1,
-              minHeight: 0,
-              overflow: 'auto',
-              bg: 'canvas.default',
-            }}
+            flex={1}
+            flexGrow={1}
+            minHeight={0}
+            overflow="auto"
+            bg="canvas.default"
           >
             {messagesContent}
           </Box>
@@ -5296,30 +5268,26 @@ function ChatBaseInner({
           selectors are force-disabled while an overlay is set. */}
       {overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-            overflow: 'auto',
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={20}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
+          overflow="auto"
         >
           {/* Translucent dim layer (kept separate so the card stays opaque). */}
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.4,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.4}
+            backdropFilter="blur(1px)"
           />
           {/* Foreground gate content (opaque, above the dim layer). */}
-          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
+          <Box position="relative" zIndex={1} maxWidth="100%">
             {overlay}
           </Box>
         </Box>
@@ -5332,35 +5300,29 @@ function ChatBaseInner({
           own inline skeletons underneath. */}
       {launching && !overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={15}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
         >
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.35,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.35}
+            backdropFilter="blur(1px)"
           />
           <Box
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 3,
-            }}
+            position="relative"
+            zIndex={1}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={3}
           >
             <Spinner size="large" />
             <Text sx={{ color: 'fg.muted' }}>

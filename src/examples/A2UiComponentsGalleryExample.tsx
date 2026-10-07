@@ -33,7 +33,7 @@ const A2UiComponentsGalleryExample: React.FC = () => {
   const plugins = useMemo(() => [ScenePlugin], []);
   return (
     <ThemedProvider>
-      <Box sx={{ height: '100vh', minHeight: 0 }}>
+      <Box height="100vh" minHeight={0}>
         <LoopEmbed
           target="browser"
           agentId="loop-shell"

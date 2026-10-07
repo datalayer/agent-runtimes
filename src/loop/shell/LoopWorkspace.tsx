@@ -29,7 +29,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import {
   buildReactorFromPlugins,
   onView,
@@ -420,19 +420,17 @@ function WorkspaceBody({
         the shell should not have to publish one to be found.
       */
       data-loop-workspace=""
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        minHeight: 0,
-        // The containing block for anything in the root slot that positions
-        // itself absolutely — the floating prompt does. Without this it would
-        // resolve against whatever ancestor happens to be positioned, and
-        // float over the host's page instead of over the workspace.
-        position: 'relative',
-        bg: 'canvas.default',
-        color: 'fg.default',
-      }}
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      minHeight={0}
+      // The containing block for anything in the root slot that positions
+      // itself absolutely — the floating prompt does. Without this it would
+      // resolve against whatever ancestor happens to be positioned, and
+      // float over the host's page instead of over the workspace.
+      position="relative"
+      bg="canvas.default"
+      color="fg.default"
     >
       {/*
         Not rendered at all when the host asked for no header.
@@ -445,14 +443,7 @@ function WorkspaceBody({
       */}
       {showHeader && headerContainer
         ? createPortal(
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 2,
-              }}
-            >
+            <Box display="flex" alignItems="center" flexWrap="wrap" gap={2}>
               {headerControls}
             </Box>,
             headerContainer,
@@ -462,13 +453,12 @@ function WorkspaceBody({
       {showHeader && headerContainer === undefined ? (
         <Box
           as="header"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            // In a column there is no room for a row: the header wraps rather
-            // than pushing the model chip off the edge.
-            justifyContent: compact ? 'flex-start' : 'space-between',
-            /*
+          display="flex"
+          alignItems="center"
+          // In a column there is no room for a row: the header wraps rather
+          // than pushing the model chip off the edge.
+          justifyContent={compact ? 'flex-start' : 'space-between'}
+          /*
               Allowed to wrap at any width.
               
               `nowrap` meant the row absorbed whatever a plugin put in it by
@@ -477,14 +467,13 @@ function WorkspaceBody({
               on one row and got narrower, which is the wrong trade: a header
               two lines tall is legible, a compressed one is not.
             */
-            flexWrap: 'wrap',
-            gap: 2,
-            px: compact ? 2 : 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flex: '0 0 auto',
-          }}
+          flexWrap="wrap"
+          gap={2}
+          px={compact ? 2 : 3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flex="0 0 auto"
         >
           {/* The plugins first, the switcher last.
               
@@ -500,15 +489,8 @@ function WorkspaceBody({
         </Box>
       ) : null}
 
-      <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex' }}>
-        <Box
-          sx={{
-            flex: '1 1 auto',
-            minWidth: 0,
-            minHeight: 0,
-            position: 'relative',
-          }}
-        >
+      <Box flex="1 1 auto" minHeight={0} display="flex">
+        <Box flex="1 1 auto" minWidth={0} minHeight={0} position="relative">
           <ReactorViewHost
             point={LoopViewType}
             active={effectiveViewType}
@@ -529,26 +511,24 @@ function WorkspaceBody({
         ) : sidebar.length > 0 ? (
           <Box
             as="aside"
-            sx={{
-              flex: '0 0 auto',
-              // Wide enough for a plugin's name, its description and a switch
-              // on one line. The panel truncates to the same number, and takes
-              // it from `SIDEBAR_WIDTH` so the two cannot drift.
-              width: compact ? '100%' : `${SIDEBAR_WIDTH}px`,
-              minWidth: 0,
-              // On the trailing edge: the work is what a person reads first,
-              // and the switches belong beside it rather than in front of it.
-              borderLeft: compact ? 'none' : '1px solid',
-              borderTop: compact ? '1px solid' : 'none',
-              borderColor: 'border.default',
-              bg: 'canvas.subtle',
-              overflowY: 'auto',
-              // The shell's chrome, not the plugins': a contributed panel
-              // should not have to guess how far its host keeps things from
-              // the edge, and two of them would guess differently.
-              px: 3,
-              py: 3,
-            }}
+            flex="0 0 auto"
+            // Wide enough for a plugin's name, its description and a switch
+            // on one line. The panel truncates to the same number, and takes
+            // it from `SIDEBAR_WIDTH` so the two cannot drift.
+            width={compact ? '100%' : `${SIDEBAR_WIDTH}px`}
+            minWidth={0}
+            // On the trailing edge: the work is what a person reads first,
+            // and the switches belong beside it rather than in front of it.
+            borderLeft={compact ? 'none' : '1px solid'}
+            borderTop={compact ? '1px solid' : 'none'}
+            borderColor="border.default"
+            bg="canvas.subtle"
+            overflowY="auto"
+            // The shell's chrome, not the plugins': a contributed panel
+            // should not have to guess how far its host keeps things from
+            // the edge, and two of them would guess differently.
+            px={3}
+            py={3}
           >
             <ReactorSlot slot={LoopSlots.sidebar} props={{ workspace }} />
           </Box>
@@ -556,7 +536,7 @@ function WorkspaceBody({
       </Box>
 
       {/* Whatever a plugin puts under the view: the chat's prompt lands here. */}
-      <Box sx={{ flex: '0 0 auto' }}>
+      <Box flex="0 0 auto">
         <ReactorSlot slot={LoopSlots.footer} props={{ workspace }} />
         <ReactorSlot slot={LoopSlots.status} props={{ workspace }} />
       </Box>
@@ -573,16 +553,14 @@ function WorkspaceBody({
 function Centered({ children }: { children: ReactNode }): JSX.Element {
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'fg.muted',
-        fontSize: 1,
-        px: 3,
-        textAlign: 'center',
-      }}
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      color="fg.muted"
+      fontSize={1}
+      px={3}
+      textAlign="center"
     >
       {children}
     </Box>

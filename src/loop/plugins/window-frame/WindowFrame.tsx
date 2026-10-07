@@ -95,50 +95,40 @@ export function WindowFrame({
       }}
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          bg: 'canvas.subtle',
-          // The bar may be the page's first line of type as well as its
-          // chrome, so it takes a second row on a narrow screen rather than
-          // shedding its actions off the edge.
-          flexWrap: 'wrap',
-          rowGap: 2,
-          // Never squeezed by the body beside it.
-          flex: '0 0 auto',
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        bg="canvas.subtle"
+        // The bar may be the page's first line of type as well as its
+        // chrome, so it takes a second row on a narrow screen rather than
+        // shedding its actions off the edge.
+        flexWrap="wrap"
+        rowGap={2}
+        // Never squeezed by the body beside it.
+        flex="0 0 auto"
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            mr: 1,
-            flexShrink: 0,
-          }}
-        >
+        <Box display="flex" alignItems="center" gap="6px" mr={1} flexShrink={0}>
           <ReactorSlot slot={WINDOW_CONTROLS_SLOT} props={slotProps} />
         </Box>
 
         {/* Allowed to shrink to nothing before the actions do: a title that
             truncates is still a title, and a button pushed off the edge is not
             a button. */}
-        <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>{title}</Box>
+        <Box minWidth={0} flex="1 1 auto">
+          {title}
+        </Box>
 
         {actions.length > 0 ? (
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexShrink: 0,
-              ml: 'auto',
-            }}
+            display="flex"
+            alignItems="center"
+            gap={2}
+            flexShrink={0}
+            ml="auto"
           >
             <ReactorSlot slot={WINDOW_ACTIONS_SLOT} props={slotProps} />
           </Box>

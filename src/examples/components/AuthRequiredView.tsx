@@ -31,15 +31,13 @@ export const AuthRequiredView: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 3,
-      }}
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      p={3}
     >
-      <Box sx={{ width: '100%', maxWidth: 640 }}>
+      <Box width="100%" maxWidth={640}>
         <SignInSimple
           onSignIn={handleSignIn}
           onApiKeySignIn={apiKey => handleSignIn(apiKey, 'api-key-user')}

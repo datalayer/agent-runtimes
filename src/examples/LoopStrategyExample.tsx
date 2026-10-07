@@ -120,13 +120,11 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
   if (!serviceManager) {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: 'fg.muted',
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        color="fg.muted"
       >
         Loading Simple services...
       </Box>
@@ -164,43 +162,39 @@ function NotebookUI({ serviceManager }: NotebookUIProps) {
 function StrategySummary({ strategy }: { strategy: StrategySpec }) {
   return (
     <Box
-      sx={{
-        mt: 2,
-        p: 2,
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        bg: 'canvas.default',
-        fontSize: 0,
-      }}
+      mt={2}
+      p={2}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      bg="canvas.default"
+      fontSize={0}
     >
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 1 }}>
+      <Box display="flex" flexWrap="wrap" gap={2} mb={1}>
         {strategy.phases.map((phase, index) => (
           <Box
             key={phase}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 2,
-              py: '2px',
-              borderRadius: 6,
-              bg: 'neutral.muted',
-              color: 'fg.default',
-              fontWeight: 'bold',
-            }}
+            display="flex"
+            alignItems="center"
+            gap={1}
+            px={2}
+            py="2px"
+            borderRadius={6}
+            bg="neutral.muted"
+            color="fg.default"
+            fontWeight="bold"
           >
             {index + 1}. {phase}
           </Box>
         ))}
       </Box>
       {strategy.objective && (
-        <Box sx={{ color: 'fg.muted' }}>
+        <Box color="fg.muted">
           <strong>Objective:</strong> {strategy.objective}
         </Box>
       )}
       {strategy.termination && (
-        <Box sx={{ color: 'fg.muted', mt: 1 }}>
+        <Box color="fg.muted" mt={1}>
           <strong>Max iterations:</strong> {strategy.termination.maxIterations}{' '}
           · <strong>On blocked:</strong> {strategy.termination.onBlocked}
         </Box>
@@ -292,45 +286,32 @@ export function LoopStrategyExampleInner({
   return (
     <>
       <Box
-        sx={{
-          // The wrapper is the viewport, not the window: it sits below the
-          // header and beside the sidebar, so viewport units size this box to
-          // an area it is not in — and the wrapper paints no background of its
-          // own, so wherever this box failed to reach showed through white.
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          overflow: 'hidden',
-          bg: 'canvas.default',
-          color: 'fg.default',
-        }}
+        // The wrapper is the viewport, not the window: it sits below the
+        // header and beside the sidebar, so viewport units size this box to
+        // an area it is not in — and the wrapper paints no background of its
+        // own, so wherever this box failed to reach showed through white.
+        height="100%"
+        width="100%"
+        display="flex"
+        overflow="hidden"
+        bg="canvas.default"
+        color="fg.default"
       >
         {/* Main content area */}
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+        <Box flex={1} display="flex" flexDirection="column" overflow="hidden">
           {/* Header */}
           <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              bg: 'canvas.default',
-            }}
+            p={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            bg="canvas.default"
           >
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 3,
-                flexWrap: 'wrap',
-              }}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={3}
+              flexWrap="wrap"
             >
               <Box>
                 <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
@@ -344,14 +325,16 @@ export function LoopStrategyExampleInner({
 
               {/* Strategy selector (generic, driven by the strategy catalogue) */}
               <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                display="flex"
+                alignItems="center"
+                gap={2}
                 title={
                   isStrategySelectorDisabled
                     ? 'Strategy selector is temporarily disabled while launching the agent'
                     : 'Choose a strategy'
                 }
               >
-                <Box as="label" sx={{ fontSize: 1, fontWeight: 'bold' }}>
+                <Box as="label" fontSize={1} fontWeight="bold">
                   Strategy
                 </Box>
                 <Box
@@ -362,16 +345,14 @@ export function LoopStrategyExampleInner({
                   }
                   disabled={isStrategySelectorDisabled}
                   aria-label="Strategy specification"
-                  sx={{
-                    px: 2,
-                    py: '6px',
-                    fontSize: 1,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    bg: 'canvas.default',
-                    color: 'fg.default',
-                  }}
+                  px={2}
+                  py="6px"
+                  fontSize={1}
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  bg="canvas.default"
+                  color="fg.default"
                 >
                   {strategies.map(strategy => (
                     <option key={strategy.id} value={strategy.id}>
@@ -387,22 +368,18 @@ export function LoopStrategyExampleInner({
 
           {/* Notebook */}
           <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              overflow: 'hidden',
-              bg: 'canvas.default',
-              p: 3,
-            }}
+            flex={1}
+            display="flex"
+            overflow="hidden"
+            bg="canvas.default"
+            p={3}
           >
             <Box
-              sx={{
-                flex: 1,
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                overflow: 'hidden',
-              }}
+              flex={1}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              overflow="hidden"
             >
               <NotebookUI serviceManager={serviceManager} />
             </Box>
@@ -435,17 +412,15 @@ export function LoopStrategyExampleInner({
 
         {chatError && (
           <Box
-            sx={{
-              position: 'fixed',
-              bottom: 20,
-              right: 20,
-              padding: 3,
-              backgroundColor: 'danger.subtle',
-              color: 'danger.fg',
-              borderRadius: 2,
-              maxWidth: 320,
-              zIndex: 999,
-            }}
+            position="fixed"
+            bottom={20}
+            right={20}
+            padding={3}
+            backgroundColor="danger.subtle"
+            color="danger.fg"
+            borderRadius={2}
+            maxWidth={320}
+            zIndex={999}
           >
             <strong>Error:</strong> {chatError}
           </Box>

@@ -210,7 +210,7 @@ export function ChartView({ props }: { props: ChartProps }) {
         ) : points.length === 0 ? (
           <Quiet>No points yet.</Quiet>
         ) : (
-          <Box as="figure" aria-label={label} sx={{ m: 0 }}>
+          <Box as="figure" aria-label={label} m={0}>
             <div aria-hidden="true">
               <ReactECharts
                 option={option}
@@ -220,25 +220,23 @@ export function ChartView({ props }: { props: ChartProps }) {
                 lazyUpdate
               />
             </div>
-            <Box as="details" sx={{ fontSize: 1 }}>
+            <Box as="details" fontSize={1}>
               <Box
                 as="summary"
-                sx={{
-                  cursor: 'pointer',
-                  color: 'fg.muted',
-                  '&:focus-visible': {
-                    outline: '2px solid',
-                    outlineColor: 'accent.fg',
-                  },
+                cursor="pointer"
+                color="fg.muted"
+                focusVisible={{
+                  outline: '2px solid',
+                  outlineColor: 'accent.fg',
                 }}
               >
                 <Text>The numbers</Text>
               </Box>
               <Box
                 as="table"
+                mt={1}
+                borderCollapse="collapse"
                 sx={{
-                  mt: 1,
-                  borderCollapse: 'collapse',
                   '& th, & td': {
                     textAlign: 'left',
                     pr: 3,

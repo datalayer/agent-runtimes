@@ -443,30 +443,26 @@ function Panel({
 }): JSX.Element {
   return (
     <Box
-      sx={{
-        flex: '1 1 0',
-        height: '100%',
-        minWidth: 0,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        bg: 'canvas.default',
-        color: 'fg.default',
-        overflow: 'hidden',
-      }}
+      flex="1 1 0"
+      height="100%"
+      minWidth={0}
+      minHeight={0}
+      display="flex"
+      flexDirection="column"
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      bg="canvas.default"
+      color="fg.default"
+      overflow="hidden"
     >
       <Box
-        sx={{
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          bg: 'canvas.default',
-          color: 'fg.default',
-        }}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        bg="canvas.default"
+        color="fg.default"
       >
         <Text sx={{ fontWeight: 'semibold' }}>{title}</Text>
         <Text sx={{ display: 'block', fontSize: 0, color: 'fg.muted' }}>
@@ -857,13 +853,13 @@ const A2UiJupyterOutputExample: React.FC = () => {
             here and a press there are the same event.
           */}
           {demoActions.length > 0 ? (
-            <Box sx={{ mt: 2 }}>
+            <Box mt={2}>
               <Text
                 sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
               >
                 Choose an action
               </Text>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              <Box display="flex" flexWrap="wrap" gap={2}>
                 {demoActions.map((action, index) => (
                   <Button
                     key={action.name}
@@ -918,19 +914,17 @@ const A2UiJupyterOutputExample: React.FC = () => {
                   [toolCallId]: isOpen,
                 }));
               }}
-              sx={{ mt: 2 }}
+              mt={2}
             >
               <Box
                 as="summary"
-                sx={{
-                  cursor: 'pointer',
-                  fontSize: 0,
-                  color: 'fg.muted',
-                  // The marker is the affordance; without a list-style the
-                  // triangle disappears in some browsers.
-                  listStyle: 'revert',
-                  '&:hover': { color: 'fg.default' },
-                }}
+                cursor="pointer"
+                fontSize={0}
+                color="fg.muted"
+                // The marker is the affordance; without a list-style the
+                // triangle disappears in some browsers.
+                listStyle="revert"
+                hover={{ color: 'fg.default' }}
               >
                 A2UI surface
               </Box>
@@ -941,7 +935,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
               </Box>
             </Box>
           ) : null}
-          <Box sx={{ mt: 2 }}>
+          <Box mt={2}>
             <Text
               sx={{ display: 'block', mb: 1, fontSize: 0, color: 'fg.muted' }}
             >
@@ -1023,25 +1017,23 @@ const A2UiJupyterOutputExample: React.FC = () => {
 
   const outputPanels = (
     <Box
-      sx={{
-        flex: '1 1 0',
-        minHeight: 0,
-        height: '100%',
-        display: 'grid',
-        gridTemplateColumns: [
-          'minmax(0, 1fr)',
-          'minmax(0, 1fr)',
-          'repeat(2, minmax(0, 1fr))',
-        ],
-        gridTemplateRows: [
-          'repeat(2, minmax(280px, auto))',
-          'repeat(2, minmax(280px, auto))',
-          'minmax(0, 1fr)',
-        ],
-        gap: 3,
-        alignItems: 'stretch',
-        overflow: ['auto', 'auto', 'hidden'],
-      }}
+      flex="1 1 0"
+      minHeight={0}
+      height="100%"
+      display="grid"
+      gridTemplateColumns={[
+        'minmax(0, 1fr)',
+        'minmax(0, 1fr)',
+        'repeat(2, minmax(0, 1fr))',
+      ]}
+      gridTemplateRows={[
+        'repeat(2, minmax(280px, auto))',
+        'repeat(2, minmax(280px, auto))',
+        'minmax(0, 1fr)',
+      ]}
+      gap={3}
+      alignItems="stretch"
+      overflow={['auto', 'auto', 'hidden']}
     >
       <Panel
         title="A2UI Surface"
@@ -1074,25 +1066,21 @@ const A2UiJupyterOutputExample: React.FC = () => {
     <ThemedProvider>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            overflow: 'hidden',
-            bg: 'canvas.default',
-            color: 'fg.default',
-          }}
+          height="100%"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
+          overflow="hidden"
+          bg="canvas.default"
+          color="fg.default"
         >
           <Box
-            sx={{
-              px: 3,
-              py: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              bg: 'canvas.default',
-              color: 'fg.default',
-            }}
+            px={3}
+            py={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            bg="canvas.default"
+            color="fg.default"
           >
             <Text as="h1" sx={{ fontSize: 3, fontWeight: 'bold' }}>
               📓 Jupyter Output as a A2UI Surface
@@ -1106,7 +1094,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
           </Box>
 
           {!hasAgent || unavailableReason || agentError ? (
-            <Box sx={{ p: 3, bg: 'canvas.default', color: 'fg.default' }}>
+            <Box p={3} bg="canvas.default" color="fg.default">
               <Text sx={{ color: 'fg.muted' }}>
                 {unavailableReason || agentError || (
                   <>
@@ -1120,18 +1108,16 @@ const A2UiJupyterOutputExample: React.FC = () => {
             </Box>
           ) : (
             <Box
-              sx={{
-                flex: '1 1 0',
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3,
-                p: 3,
-                bg: 'canvas.default',
-                color: 'fg.default',
-              }}
+              flex="1 1 0"
+              minHeight={0}
+              display="flex"
+              flexDirection="column"
+              gap={3}
+              p={3}
+              bg="canvas.default"
+              color="fg.default"
             >
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box display="flex" flexDirection="column" gap={2}>
                 <SegmentedControl aria-label="Output kind" fullWidth>
                   {SNIPPETS.map(entry => (
                     <SegmentedControl.Button
@@ -1150,33 +1136,29 @@ const A2UiJupyterOutputExample: React.FC = () => {
 
               {snippet.chat ? (
                 <Box
-                  sx={{
-                    flex: '1 1 0',
-                    minHeight: 0,
-                    display: 'grid',
-                    gridTemplateColumns: [
-                      'minmax(0, 1fr)',
-                      'minmax(0, 1fr)',
-                      'minmax(320px, 0.7fr) minmax(0, 1.3fr)',
-                    ],
-                    gridTemplateRows: [
-                      'minmax(420px, auto) minmax(560px, auto)',
-                      'minmax(420px, auto) minmax(560px, auto)',
-                      'minmax(0, 1fr)',
-                    ],
-                    gap: 3,
-                    overflow: ['auto', 'auto', 'hidden'],
-                  }}
+                  flex="1 1 0"
+                  minHeight={0}
+                  display="grid"
+                  gridTemplateColumns={[
+                    'minmax(0, 1fr)',
+                    'minmax(0, 1fr)',
+                    'minmax(320px, 0.7fr) minmax(0, 1.3fr)',
+                  ]}
+                  gridTemplateRows={[
+                    'minmax(420px, auto) minmax(560px, auto)',
+                    'minmax(420px, auto) minmax(560px, auto)',
+                    'minmax(0, 1fr)',
+                  ]}
+                  gap={3}
+                  overflow={['auto', 'auto', 'hidden']}
                 >
                   <Box
-                    sx={{
-                      minHeight: 0,
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      bg: 'canvas.default',
-                    }}
+                    minHeight={0}
+                    border="1px solid"
+                    borderColor="border.default"
+                    borderRadius={2}
+                    overflow="hidden"
+                    bg="canvas.default"
                   >
                     {agentReady && agentId ? (
                       <LoopEmbed
@@ -1198,13 +1180,11 @@ const A2UiJupyterOutputExample: React.FC = () => {
                       />
                     ) : (
                       <Box
-                        sx={{
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 2,
-                        }}
+                        height="100%"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        gap={2}
                       >
                         <Spinner size="small" />
                         <Text sx={{ color: 'fg.muted' }}>
@@ -1225,22 +1205,20 @@ const A2UiJupyterOutputExample: React.FC = () => {
                     }
                     spellCheck={false}
                     aria-label="Code to run"
-                    sx={{
-                      width: '100%',
-                      minHeight: '150px',
-                      p: 2,
-                      fontFamily: 'mono',
-                      fontSize: 1,
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      bg: 'canvas.default',
-                      color: 'fg.default',
-                      resize: 'vertical',
-                    }}
+                    width="100%"
+                    minHeight="150px"
+                    p={2}
+                    fontFamily="mono"
+                    fontSize={1}
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="border.default"
+                    bg="canvas.default"
+                    color="fg.default"
+                    resize="vertical"
                   />
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Button
                       variant="primary"
                       leadingVisual={PlayIcon}

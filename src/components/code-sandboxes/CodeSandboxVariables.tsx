@@ -275,7 +275,7 @@ export function CodeSandboxVariables(
     },
   ];
   return (
-    <Box className={className} sx={{ paddingTop: '10px' }}>
+    <Box className={className} paddingTop="10px">
       <FormControl layout="horizontal">
         <FormControl.Label>{trans.__('Transfer variables')}</FormControl.Label>
         <ToggleSwitch
@@ -305,7 +305,7 @@ export function CodeSandboxVariables(
                 cellPadding="condensed"
               />
             ) : (
-              <Box sx={{ gridArea: 'table' }}>
+              <Box gridArea="table">
                 <Blankslate border>
                   <Blankslate.Heading>
                     {trans.__('No eligible variables.')}

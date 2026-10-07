@@ -293,10 +293,13 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
   return (
     <Box
       data-testid="app-page"
-      sx={{ height: '100%', minHeight: 0, overflow: 'auto', p: 3 }}
+      height="100%"
+      minHeight={0}
+      overflow="auto"
+      p={3}
     >
       {'problem' in drawing ? (
-        <Box role="status" sx={{ color: 'fg.muted', fontSize: 1 }}>
+        <Box role="status" color="fg.muted" fontSize={1}>
           {drawing.problem}
         </Box>
       ) : (

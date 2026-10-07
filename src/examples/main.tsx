@@ -632,15 +632,13 @@ const AgentRuntimesIAMCallback: React.FC = () => {
   return (
     <JupyterReactTheme>
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          p: 3,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="100vh"
+        p={3}
       >
-        <Box sx={{ textAlign: 'center' }}>
+        <Box textAlign="center">
           {status === 'processing' ? <Spinner size="large" /> : null}
           <Text
             as="p"
@@ -1560,35 +1558,31 @@ const ExampleAppThemed: React.FC<{
       themeStyles={cfg.themeStyles}
     >
       <Box
-        sx={{
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
-          bg: 'canvas.default',
-          color: 'fg.default',
-        }}
+        width="100vw"
+        height="100vh"
+        overflow="hidden"
+        bg="canvas.default"
+        color="fg.default"
       >
         {/* ── Header bar ─────────────────────────────────── */}
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            px: 3,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 3,
-            height: '60px',
-            bg: 'canvas.default',
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          zIndex={100}
+          px={3}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={3}
+          height="60px"
+          bg="canvas.default"
+          borderBottom="1px solid"
+          borderColor="border.default"
         >
           {/* Left: home button + example selector */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             <Box
               as="button"
               onClick={() => {
@@ -1600,19 +1594,17 @@ const ExampleAppThemed: React.FC<{
               }}
               title="Home"
               aria-label="Go to examples home"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '32px',
-                height: '32px',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-              }}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              width="32px"
+              height="32px"
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
+              color="fg.default"
+              cursor={isChangingExample ? 'not-allowed' : 'pointer'}
               disabled={isChangingExample}
             >
               <HomeIcon size={16} />
@@ -1636,11 +1628,9 @@ const ExampleAppThemed: React.FC<{
                   }}
                 >
                   <Box
-                    sx={{
-                      p: 2,
-                      borderBottom: '1px solid',
-                      borderColor: 'border.default',
-                    }}
+                    p={2}
+                    borderBottom="1px solid"
+                    borderColor="border.default"
                   >
                     <TextInput
                       autoFocus
@@ -1695,10 +1685,8 @@ const ExampleAppThemed: React.FC<{
             {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
               <Box
                 aria-label="Where the example runs"
-                sx={{
-                  minWidth: '320px',
-                  opacity: isHome || isChangingExample ? 0.6 : 1,
-                }}
+                minWidth="320px"
+                opacity={isHome || isChangingExample ? 0.6 : 1}
               >
                 <SegmentedControl
                   aria-label="Where the example runs"
@@ -1748,16 +1736,16 @@ const ExampleAppThemed: React.FC<{
               <AgentSummary summary={agentSummary} />
             )}
             {isChangingExample && (
-              <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
+              <Box as="span" color="fg.muted" fontSize={0}>
                 Loading…
               </Box>
             )}
           </Box>
 
           {/* Right: theme picker + color mode + logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box display="flex" alignItems="center" gap={3}>
             <AppearanceControlsWithStore useStore={useExampleThemeStore} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" alignItems="center" gap={2}>
               {token ? (
                 <>
                   <UserBadge
@@ -1796,7 +1784,8 @@ const ExampleAppThemed: React.FC<{
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open Datalayer website"
-              sx={{ display: 'inline-flex', alignItems: 'center' }}
+              display="inline-flex"
+              alignItems="center"
             >
               <DatalayerLogoText
                 size={24}
@@ -1814,13 +1803,7 @@ const ExampleAppThemed: React.FC<{
         </Box>
 
         {/* ── Content area ───────────────────────────────── */}
-        <Box
-          sx={{
-            marginTop: '60px',
-            height: 'calc(100vh - 60px)',
-            overflow: 'hidden',
-          }}
-        >
+        <Box marginTop="60px" height="calc(100vh - 60px)" overflow="hidden">
           {shouldShowAuthScreen ? (
             /*
               Signing in, beside what can be seen without it.
@@ -1832,26 +1815,22 @@ const ExampleAppThemed: React.FC<{
               the rest, or try this one now.
             */
             <Box
-              sx={{
-                width: '100%',
-                height: '100%',
-                bg: 'canvas.backdrop',
-                p: 3,
-                overflow: 'auto',
-              }}
+              width="100%"
+              height="100%"
+              bg="canvas.backdrop"
+              p={3}
+              overflow="auto"
             >
               <Box
-                sx={{
-                  display: 'grid',
-                  // Stacked on a narrow window, sign-in first: it is what the
-                  // reader came here for, and a column of cards above the form
-                  // would bury it.
-                  gridTemplateColumns: ['1fr', '1fr', '440px minmax(0, 1fr)'],
-                  gap: 4,
-                  maxWidth: 1400,
-                  mx: 'auto',
-                  alignItems: 'start',
-                }}
+                display="grid"
+                // Stacked on a narrow window, sign-in first: it is what the
+                // reader came here for, and a column of cards above the form
+                // would bury it.
+                gridTemplateColumns={['1fr', '1fr', '440px minmax(0, 1fr)']}
+                gap={4}
+                maxWidth={1400}
+                mx="auto"
+                alignItems="start"
               >
                 <SignInSimple
                   onSignIn={handleHeaderSignIn}
@@ -1870,13 +1849,11 @@ const ExampleAppThemed: React.FC<{
                     rather than reimplemented so an example added here looks
                     the same on both sides of the sign-in. */}
                 <Box
-                  sx={{
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                  }}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
+                  overflow="hidden"
+                  bg="canvas.default"
                 >
                   <HomeExample
                     examples={anonymousExampleEntries}
@@ -1887,7 +1864,7 @@ const ExampleAppThemed: React.FC<{
               </Box>
             </Box>
           ) : isChangingExample ? (
-            <Box sx={{ p: 5, textAlign: 'center', color: 'fg.muted' }}>
+            <Box p={5} textAlign="center" color="fg.muted">
               <h3>Loading {selectedExample}…</h3>
               <p>Please wait while the example loads.</p>
             </Box>

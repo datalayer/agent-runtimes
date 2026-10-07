@@ -292,38 +292,32 @@ export function ToolCallDisplay({
     <Box
       data-tool-call={toolName}
       data-tool-call-status={status}
-      sx={{
-        width: '100%',
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: compact ? '8px' : '12px',
-        overflow: 'hidden',
-        backgroundColor: 'canvas.default',
-      }}
+      width="100%"
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={compact ? '8px' : '12px'}
+      overflow="hidden"
+      backgroundColor="canvas.default"
     >
       {/* Header - Always visible, clickable to expand */}
       <Box
         as="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        sx={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: compact ? 1 : 2,
-          padding: compact ? 1 : 2,
-          backgroundColor: 'canvas.subtle',
-          border: 'none',
-          borderBottom: isExpanded ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          cursor: 'pointer',
-          textAlign: 'left',
-          '&:hover': {
-            backgroundColor: 'neutral.muted',
-          },
-        }}
+        width="100%"
+        display="flex"
+        alignItems="center"
+        gap={compact ? 1 : 2}
+        padding={compact ? 1 : 2}
+        backgroundColor="canvas.subtle"
+        border="none"
+        borderBottom={isExpanded ? '1px solid' : 'none'}
+        borderColor="border.default"
+        cursor="pointer"
+        textAlign="left"
+        hover={{ backgroundColor: 'neutral.muted' }}
       >
         {/* Expand/Collapse icon */}
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
+        <Box color="fg.muted" flexShrink={0}>
           {isExpanded ? (
             <ChevronDownIcon size={16} />
           ) : (
@@ -333,7 +327,7 @@ export function ToolCallDisplay({
 
         {/* Whose tool it is: the icon, else the emoji, else nothing */}
         {hasMark(marks) && (
-          <Box sx={{ color: 'fg.muted', flexShrink: 0, display: 'flex' }}>
+          <Box color="fg.muted" flexShrink={0} display="flex">
             <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={16} />
           </Box>
         )}
@@ -352,18 +346,16 @@ export function ToolCallDisplay({
 
         {/* Status badge */}
         <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 2,
-            py: '2px',
-            borderRadius: 2,
-            backgroundColor: statusDisplay.bgColor,
-            flexShrink: 0,
-          }}
+          display="inline-flex"
+          alignItems="center"
+          gap={1}
+          px={2}
+          py="2px"
+          borderRadius={2}
+          backgroundColor={statusDisplay.bgColor}
+          flexShrink={0}
         >
-          <Box sx={{ color: statusDisplay.color, display: 'flex' }}>
+          <Box color={statusDisplay.color} display="flex">
             {statusDisplay.icon}
           </Box>
           <Text
@@ -399,9 +391,9 @@ export function ToolCallDisplay({
 
       {/* Expanded content */}
       {isExpanded && (
-        <Box sx={{ p: 3 }}>
+        <Box p={3}>
           {/* Parameters section */}
-          <Box sx={{ mb: result !== undefined || error ? 3 : 0 }}>
+          <Box mb={result !== undefined || error ? 3 : 0}>
             <Text
               sx={{
                 display: 'block',
@@ -416,14 +408,12 @@ export function ToolCallDisplay({
               {chatText.parameters}
             </Text>
             <Box
-              sx={{
-                backgroundColor: 'canvas.inset',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.default',
-                overflow: 'auto',
-                maxHeight: '200px',
-              }}
+              backgroundColor="canvas.inset"
+              borderRadius={2}
+              border="1px solid"
+              borderColor="border.default"
+              overflow="auto"
+              maxHeight="200px"
             >
               <pre
                 style={{
@@ -461,14 +451,12 @@ export function ToolCallDisplay({
                 {chatText.result}
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'success.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'success.muted',
-                  overflow: 'auto',
-                  maxHeight: '300px',
-                }}
+                backgroundColor="success.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="success.muted"
+                overflow="auto"
+                maxHeight="300px"
               >
                 <pre
                   style={{
@@ -492,9 +480,7 @@ export function ToolCallDisplay({
 
           {/* Approval section */}
           {approvalRequired && (
-            <Box
-              sx={{ mt: status === 'complete' && result !== undefined ? 3 : 0 }}
-            >
+            <Box mt={status === 'complete' && result !== undefined ? 3 : 0}>
               {approvalState === 'approved' ? (
                 <Box>
                   <Text
@@ -530,7 +516,7 @@ export function ToolCallDisplay({
                   <Text sx={{ fontSize: 1, color: 'fg.default' }}>
                     {chatText.approvalNeeded}
                   </Text>
-                  <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                  <Box mt={2} display="flex" gap={2}>
                     <Button
                       size="small"
                       onClick={onApprove}
@@ -569,13 +555,11 @@ export function ToolCallDisplay({
                 <AlertIcon size={12} /> {chatText.executionError}
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'danger.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'danger.muted',
-                  p: 2,
-                }}
+                backgroundColor="danger.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="danger.muted"
+                p={2}
               >
                 <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
                   {effectiveExecutionError}
@@ -611,26 +595,22 @@ export function ToolCallDisplay({
                 {chatText.toolCodeError}: {effectiveCodeError.name}
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'severe.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'severe.muted',
-                  overflow: 'hidden',
-                }}
+                backgroundColor="severe.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="severe.muted"
+                overflow="hidden"
               >
-                <Box sx={{ p: 2 }}>
+                <Box p={2}>
                   <Text sx={{ fontSize: 1, color: 'severe.fg' }}>
                     {effectiveCodeError.value}
                   </Text>
                 </Box>
                 {effectiveCodeError.traceback && (
                   <Box
-                    sx={{
-                      borderTop: '1px solid',
-                      borderColor: 'severe.muted',
-                      backgroundColor: 'canvas.inset',
-                    }}
+                    borderTop="1px solid"
+                    borderColor="severe.muted"
+                    backgroundColor="canvas.inset"
                   >
                     <pre
                       style={{
@@ -675,13 +655,11 @@ export function ToolCallDisplay({
                   {chatText.errorHeading}
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'danger.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'danger.muted',
-                    p: 2,
-                  }}
+                  backgroundColor="danger.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="danger.muted"
+                  p={2}
                 >
                   <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
                     {effectiveError}
@@ -709,13 +687,11 @@ export function ToolCallDisplay({
                   <AlertIcon size={12} /> {chatText.processExited}
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'attention.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'attention.muted',
-                    p: 2,
-                  }}
+                  backgroundColor="attention.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="attention.muted"
+                  p={2}
                 >
                   <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
                     {chatText.exitedWithCode(String(effectiveExitCode))}
@@ -733,14 +709,12 @@ export function ToolCallDisplay({
                 </Box>
                 {effectiveExitOutput && (
                   <Box
-                    sx={{
-                      mt: 2,
-                      backgroundColor: 'canvas.inset',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'attention.muted',
-                      overflow: 'auto',
-                    }}
+                    mt={2}
+                    backgroundColor="canvas.inset"
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="attention.muted"
+                    overflow="auto"
                   >
                     <pre
                       style={{
@@ -763,14 +737,7 @@ export function ToolCallDisplay({
             )}
 
           {/* Tool call ID (for debugging) */}
-          <Box
-            sx={{
-              mt: 3,
-              pt: 2,
-              borderTop: '1px solid',
-              borderColor: 'border.muted',
-            }}
-          >
+          <Box mt={3} pt={2} borderTop="1px solid" borderColor="border.muted">
             <Text
               sx={{ fontSize: 0, color: 'fg.subtle', fontFamily: 'monospace' }}
             >

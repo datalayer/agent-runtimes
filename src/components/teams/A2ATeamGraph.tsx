@@ -454,15 +454,13 @@ const MemberNode = memo(function MemberNode({
       // its balloon and its menu take it back, and are left to themselves —
       // no drag, no pan, no wheel.
       className="nodrag nopan nowheel"
-      sx={{
-        width: NODE_WIDTH,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 1,
-        cursor: 'default',
-        pointerEvents: 'all',
-      }}
+      width={NODE_WIDTH}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      gap={1}
+      cursor="default"
+      pointerEvents="all"
       data-team-member={member.id}
       data-member-balloon={shown}
       data-member-moved={
@@ -500,7 +498,7 @@ const MemberNode = memo(function MemberNode({
         style={{ ...HANDLE(size), top: size }}
         isConnectable={false}
       />
-      <Box sx={{ width: size, height: size, position: 'relative' }}>
+      <Box width={size} height={size} position="relative">
         {persona.away ? (
           <Button
             size="small"
@@ -726,15 +724,13 @@ const ConnectionNode = memo(function ConnectionNode({
   return (
     <Box
       className="nodrag nopan nowheel"
-      sx={{
-        width: CONNECTION_WIDTH,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '2px',
-        cursor: 'default',
-        pointerEvents: 'all',
-      }}
+      width={CONNECTION_WIDTH}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      gap="2px"
+      cursor="default"
+      pointerEvents="all"
       title={connection.name}
       data-team-connection={connection.id}
       data-connection-busy={tool ? 'true' : 'false'}
@@ -760,23 +756,21 @@ const ConnectionNode = memo(function ConnectionNode({
             setTold(false);
           }
         }}
-        sx={{
-          width: size,
-          height: size,
-          p: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: tool ? 'accent.emphasis' : 'border.default',
-          bg: 'canvas.default',
-          cursor: 'pointer',
-          '&:focus-visible': {
-            outline: '2px solid',
-            outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
-            outlineOffset: 2,
-          },
+        width={size}
+        height={size}
+        p={0}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        borderRadius={2}
+        border="1px solid"
+        borderColor={tool ? 'accent.emphasis' : 'border.default'}
+        bg="canvas.default"
+        cursor="pointer"
+        focusVisible={{
+          outline: '2px solid',
+          outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+          outlineOffset: 2,
         }}
       >
         <SpecMark
@@ -800,12 +794,10 @@ const ConnectionNode = memo(function ConnectionNode({
         id={detailsId}
         hidden={!told}
         data-connection-details=""
-        sx={{
-          fontSize: '10px',
-          color: 'fg.muted',
-          textAlign: 'center',
-          maxWidth: CONNECTION_WIDTH + 40,
-        }}
+        fontSize="10px"
+        color="fg.muted"
+        textAlign="center"
+        maxWidth={CONNECTION_WIDTH + 40}
       >
         {connectionDetails(connection, owner?.name, tool)}
       </Box>
@@ -916,12 +908,10 @@ const LinkEdge = memo(function LinkEdge({
       <EdgeLabelRenderer>
         <Box
           className="nodrag nopan"
-          sx={{
-            position: 'absolute',
-            transform: `translate(-50%, 12px) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`,
-            pointerEvents: 'none',
-            textAlign: 'center',
-          }}
+          position="absolute"
+          transform={`translate(-50%, 12px) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
+          pointerEvents="none"
+          textAlign="center"
         >
           <Label variant={data?.connected ? 'accent' : 'secondary'}>
             {data?.label}
@@ -978,13 +968,11 @@ export const CallEdge = memo(function CallEdge({
         <EdgeLabelRenderer>
           <Box
             className="nodrag nopan"
-            sx={{
-              position: 'absolute',
-              // Beside the edge, toward the middle of the graph.
-              transform: `translate(calc(-100% - 10px), -50%) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`,
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-            }}
+            position="absolute"
+            // Beside the edge, toward the middle of the graph.
+            transform={`translate(calc(-100% - 10px), -50%) translate(${(sourceX + targetX) / 2}px, ${(sourceY + targetY) / 2}px)`}
+            pointerEvents="none"
+            whiteSpace="nowrap"
           >
             <Label variant="accent">{data?.calling}</Label>
           </Box>
@@ -1418,10 +1406,10 @@ export function A2ATeamGraph({
       data-a2a-flow={flowNow}
       data-a2a-calls={calls.length}
       data-a2a-members={members.length}
+      width="100%"
+      height={height}
+      position="relative"
       sx={{
-        width: '100%',
-        height,
-        position: 'relative',
         '@keyframes a2aTeamFlow': {
           from: { strokeDashoffset: 24 },
           to: { strokeDashoffset: 0 },
@@ -1469,14 +1457,12 @@ export function A2ATeamGraph({
       <Box
         as="span"
         aria-live="polite"
-        sx={{
-          position: 'absolute',
-          width: 1,
-          height: 1,
-          overflow: 'hidden',
-          clip: 'rect(0 0 0 0)',
-          whiteSpace: 'nowrap',
-        }}
+        position="absolute"
+        width={1}
+        height={1}
+        overflow="hidden"
+        clip="rect(0 0 0 0)"
+        whiteSpace="nowrap"
       >
         {heard}
       </Box>

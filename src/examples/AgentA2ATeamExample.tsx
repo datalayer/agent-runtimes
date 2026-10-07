@@ -215,7 +215,7 @@ function AgentA2ATeam(): JSX.Element {
     : `on a runtime, ${new URL(accountingUrl).host}`;
 
   return (
-    <Box sx={{ p: 4, maxWidth: 1080, mx: 'auto' }}>
+    <Box p={4} maxWidth={1080} mx="auto">
       <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
         Agents A2A Team
       </Heading>
@@ -224,7 +224,7 @@ function AgentA2ATeam(): JSX.Element {
       </Text>
       {((anonymous.status === 'active' && anonymous.expiresAt) ||
         (accountingKeyClock && !accountingKeyEnded)) && (
-        <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', mb: 3 }}>
+        <Box display="flex" gap={4} flexWrap="wrap" mb={3}>
           {anonymous.status === 'active' && anonymous.expiresAt && (
             <AnonymousKeyTimer
               expiresAt={anonymous.expiresAt}
@@ -244,7 +244,7 @@ function AgentA2ATeam(): JSX.Element {
         </Box>
       )}
       {anonymous.status === 'expired' && (
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <AnonymousKeyExpired
             agentName={SALES.name}
             // Sales runs in this page: what ended is its model's key, and
@@ -279,15 +279,13 @@ function AgentA2ATeam(): JSX.Element {
       )}
 
       <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          bg: 'canvas.subtle',
-          px: 2,
-          pt: 2,
-          mb: 3,
-        }}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        bg="canvas.subtle"
+        px={2}
+        pt={2}
+        mb={3}
       >
         {/* The scene: its graph, and its transcript read from the same
             tracer the inspectors read, behind Graph · Transcript (A-06). */}
@@ -366,26 +364,20 @@ function AgentA2ATeam(): JSX.Element {
           Sales' balloon shows it read-only, a click there coming here. */}
       <Box
         ref={notebookArea}
-        sx={{ mb: team.notebook ? 3 : 0 }}
+        mb={team.notebook ? 3 : 0}
         data-team-notebook-placement="under-graph"
       />
 
       {/* Each member's Agent Inspector, under it: Sales on the left. */}
       <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: ['1fr', '1fr', '1fr 1fr'],
-          gap: 3,
-          mb: 3,
-        }}
+        display="grid"
+        gridTemplateColumns={['1fr', '1fr', '1fr 1fr']}
+        gap={3}
+        mb={3}
         data-team-inspectors=""
       >
         {[SALES, ACCOUNTING].map(member => (
-          <Box
-            key={member.id}
-            sx={{ minWidth: 0 }}
-            data-team-inspector={member.id}
-          >
+          <Box key={member.id} minWidth={0} data-team-inspector={member.id}>
             <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
               {member.emoji} {member.name}&rsquo;s Agent Inspector
             </Heading>
@@ -405,8 +397,8 @@ function AgentA2ATeam(): JSX.Element {
         ))}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-        <Box sx={{ flex: '1 1 420px', minWidth: 0 }}>
+      <Box display="flex" gap={3} flexWrap="wrap">
+        <Box flex="1 1 420px" minWidth={0}>
           <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
             Ask {SALES.name}
           </Heading>
@@ -427,7 +419,7 @@ function AgentA2ATeam(): JSX.Element {
               }
             }}
           />
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+          <Box display="flex" gap={2} mt={2}>
             <Button
               variant="primary"
               disabled={!team.ready || team.busy || !draft.trim()}
@@ -437,16 +429,14 @@ function AgentA2ATeam(): JSX.Element {
             </Button>
             {team.busy && <Button onClick={team.stop}>Stop</Button>}
           </Box>
-          <Box sx={{ mt: 3 }} data-team-conversation="">
+          <Box mt={3} data-team-conversation="">
             {team.turns.map((turn, index) => (
               <Box
                 key={index}
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  borderRadius: 2,
-                  bg: turn.role === 'user' ? 'accent.subtle' : 'canvas.subtle',
-                }}
+                p={2}
+                mb={2}
+                borderRadius={2}
+                bg={turn.role === 'user' ? 'accent.subtle' : 'canvas.subtle'}
               >
                 <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
                   {turn.role === 'user' ? 'You' : SALES.name}
@@ -456,7 +446,7 @@ function AgentA2ATeam(): JSX.Element {
             ))}
           </Box>
         </Box>
-        <Box sx={{ flex: '1 1 360px', minWidth: 0 }}>
+        <Box flex="1 1 360px" minWidth={0}>
           {/* The notebook, when Accounting gave one, takes the report's place. */}
           {!team.notebook && (
             <>
@@ -464,13 +454,11 @@ function AgentA2ATeam(): JSX.Element {
                 The report
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  minHeight: 120,
-                }}
+                p={3}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                minHeight={120}
                 data-team-report=""
               >
                 {team.report ? (

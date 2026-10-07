@@ -22,8 +22,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
-import { Box, Button, Heading, Text } from '@primer/react';
+import { Button, Heading, Text } from '@primer/react';
 import {
+  Box,
   DatalayerThemeProvider,
   loopAccentStyles,
   setupPrimerPortals,
@@ -141,14 +142,12 @@ export function ReferenceTheme({
     >
       <Box
         data-reference-stage=""
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          p: 4,
-          bg: 'var(--loop-stage, var(--bgColor-muted))',
-          color: 'fg.default',
-          display: 'flex',
-        }}
+        position="fixed"
+        inset={0}
+        p={4}
+        bg="var(--loop-stage, var(--bgColor-muted))"
+        color="fg.default"
+        display="flex"
       >
         {children}
       </Box>
@@ -160,17 +159,15 @@ export function ReferenceTheme({
 function Frame({ children }: { children: ReactNode }): JSX.Element {
   return (
     <Box
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        display: 'flex',
-        overflow: 'hidden',
-        bg: 'canvas.default',
-        borderRadius: 'var(--theme-radius-frame, 12px)',
-        border: 'var(--theme-hairline, 1px) solid',
-        borderColor: 'border.muted',
-        boxShadow: 'var(--theme-shadow, none)',
-      }}
+      flex={1}
+      minWidth={0}
+      display="flex"
+      overflow="hidden"
+      bg="canvas.default"
+      borderRadius="var(--theme-radius-frame, 12px)"
+      border="var(--theme-hairline, 1px) solid"
+      borderColor="border.muted"
+      boxShadow="var(--theme-shadow, none)"
     >
       {children}
     </Box>
@@ -339,13 +336,11 @@ function Conversation({
   const [input, setInput] = useState('');
   return (
     <Box
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-      }}
+      flex={1}
+      minWidth={0}
+      display="flex"
+      flexDirection="column"
+      height="100%"
     >
       <ChatBaseHeader
         title={name}
@@ -356,7 +351,7 @@ function Conversation({
         onNewChat={() => undefined}
         onClear={() => undefined}
       />
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Box flex={1} minHeight={0} overflow="hidden">
         <ChatMessageList
           displayItems={items}
           isLoading={false}
@@ -404,8 +399,8 @@ function Conversation({
 export function ConversationScreen(): JSX.Element {
   return (
     <Frame>
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 640, display: 'flex' }}>
+      <Box flex={1} display="flex" justifyContent="center">
+        <Box width="100%" maxWidth={640} display="flex">
           <Conversation
             name="Support desk"
             face="🦊"
@@ -422,7 +417,7 @@ export function ConversationScreen(): JSX.Element {
 export function BesideWorkScreen(): JSX.Element {
   return (
     <Frame>
-      <Box sx={{ width: 400, flexShrink: 0, display: 'flex' }}>
+      <Box width={400} flexShrink={0} display="flex">
         <Conversation
           name="Support desk"
           face="🦊"
@@ -431,29 +426,25 @@ export function BesideWorkScreen(): JSX.Element {
         />
       </Box>
       <Box
-        sx={{
-          width: 'var(--theme-hairline, 1px)',
-          bg: 'border.muted',
-          flexShrink: 0,
-        }}
+        width="var(--theme-hairline, 1px)"
+        bg="border.muted"
+        flexShrink={0}
       />
       <Box
         data-reference-work=""
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          p: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3,
-        }}
+        flex={1}
+        minWidth={0}
+        p={4}
+        display="flex"
+        flexDirection="column"
+        gap={3}
       >
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>Draft · reply</Text>
         <Heading as="h2" sx={{ fontSize: 3, fontWeight: 600 }}>
           Your order 1042
         </Heading>
         <Text sx={{ color: 'fg.muted', fontSize: 1 }}>To ada@example.com</Text>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           <Text as="p" sx={{ m: 0 }}>
             Dear Ada,
           </Text>
@@ -468,7 +459,7 @@ export function BesideWorkScreen(): JSX.Element {
             The support desk
           </Text>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
+        <Box display="flex" gap={2} mt="auto">
           <Button variant="primary">Send</Button>
           <Button>Edit</Button>
         </Box>
@@ -481,8 +472,8 @@ export function BesideWorkScreen(): JSX.Element {
 export function WorkerActivityScreen(): JSX.Element {
   return (
     <Frame>
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 680, display: 'flex' }}>
+      <Box flex={1} display="flex" justifyContent="center">
+        <Box width="100%" maxWidth={680} display="flex">
           <Conversation
             name="Inbox triage"
             face="📬"
@@ -500,8 +491,8 @@ export function WorkerActivityScreen(): JSX.Element {
 export function ApprovalScreen(): JSX.Element {
   return (
     <Frame>
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 640, display: 'flex' }}>
+      <Box flex={1} display="flex" justifyContent="center">
+        <Box width="100%" maxWidth={640} display="flex">
           <Conversation
             name="Support desk"
             face="🦊"
@@ -518,8 +509,8 @@ export function ApprovalScreen(): JSX.Element {
 export function ToolMarksScreen(): JSX.Element {
   return (
     <Frame>
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <Box sx={{ width: '100%', maxWidth: 680, display: 'flex' }}>
+      <Box flex={1} display="flex" justifyContent="center">
+        <Box width="100%" maxWidth={680} display="flex">
           <Conversation
             name="Bookkeeper"
             face="🧮"
@@ -604,26 +595,24 @@ export function AssistantScreen({
         : picture;
   const balloon = BALLOONS[picture];
   return (
-    <Box sx={{ flex: 1, position: 'relative' }}>
+    <Box flex={1} position="relative">
       {picture === 'open' && <OpenConversation />}
       {picture === 'aside' && (
         <Box
           role="dialog"
           aria-label="A dialog over the assistant"
-          sx={{
-            position: 'fixed',
-            right: 24,
-            bottom: 24,
-            width: 280,
-            height: 160,
-            p: 3,
-            zIndex: 2000,
-            bg: 'canvas.overlay',
-            border: 'var(--theme-hairline, 1px) solid',
-            borderColor: 'border.default',
-            borderRadius: 'var(--theme-radius-card, 6px)',
-            boxShadow: 'var(--theme-shadow, none)',
-          }}
+          position="fixed"
+          right={24}
+          bottom={24}
+          width={280}
+          height={160}
+          p={3}
+          zIndex={2000}
+          bg="canvas.overlay"
+          border="var(--theme-hairline, 1px) solid"
+          borderColor="border.default"
+          borderRadius="var(--theme-radius-card, 6px)"
+          boxShadow="var(--theme-shadow, none)"
         >
           <Text sx={{ fontWeight: 600 }}>A dialog</Text>
           <Text as="p" sx={{ color: 'fg.muted', fontSize: 1 }}>
@@ -698,16 +687,14 @@ function OpenConversation(): JSX.Element {
       <ConversationBalloonClose onClose={() => undefined} />
       <ConversationBalloonHeader count={OPEN_CONVERSATION.length - 1} />
       <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: 'var(--theme-radius-bubble, 16px)',
-          overflow: 'hidden',
-        }}
+        flex={1}
+        minHeight={0}
+        display="flex"
+        flexDirection="column"
+        borderRadius="var(--theme-radius-bubble, 16px)"
+        overflow="hidden"
       >
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <Box flex={1} minHeight={0} overflow="auto">
           <ChatMessageList
             displayItems={OPEN_CONVERSATION}
             isLoading={false}
@@ -722,13 +709,11 @@ function OpenConversation(): JSX.Element {
           />
         </Box>
         <Box
-          sx={{
-            px: 3,
-            pb: 1,
-            display: 'flex',
-            justifyContent: 'flex-end',
-            fontSize: 0,
-          }}
+          px={3}
+          pb={1}
+          display="flex"
+          justifyContent="flex-end"
+          fontSize={0}
         >
           <DecisionAsk ask={async () => ({})} />
         </Box>
@@ -783,7 +768,7 @@ export function CharacterScreen({
   const stageRef = useRef<HTMLDivElement>(null);
   const drawn = assistantCharacterNamed(characterReactor, character);
   return (
-    <Box sx={{ flex: 1, position: 'relative' }}>
+    <Box flex={1} position="relative">
       <AssistantStage
         character={drawn}
         state="idle"

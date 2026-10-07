@@ -116,17 +116,15 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
   if (isConnected) {
     return (
       <Box
-        sx={{
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          flexShrink: 0,
-          bg: 'success.subtle',
-        }}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        display="flex"
+        alignItems="center"
+        gap={2}
+        flexShrink={0}
+        bg="success.subtle"
       >
         <PlugIcon size={14} />
         <Text sx={{ fontSize: 1, flex: 1, color: 'success.fg' }}>
@@ -147,24 +145,22 @@ const AgentLaunchPanel: React.FC<AgentLaunchPanelProps> = ({
 
   return (
     <Box
-      sx={{
-        px: 3,
-        py: 2,
-        borderBottom: '1px solid',
-        borderColor: 'border.default',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        flexShrink: 0,
-        bg: 'canvas.default',
-      }}
+      px={3}
+      py={2}
+      borderBottom="1px solid"
+      borderColor="border.default"
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      flexShrink={0}
+      bg="canvas.default"
     >
       <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.muted' }}>
         AGENT
       </Text>
 
       {loading ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           <Spinner size="small" />
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
             Launching {AGENTSPEC_ID}…
@@ -274,14 +270,12 @@ const AgentOtelExampleInner: React.FC<{
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'hidden',
-        bg: 'canvas.default',
-        color: 'fg.default',
-      }}
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      overflow="hidden"
+      bg="canvas.default"
+      color="fg.default"
     >
       {/* ── Header ── */}
       <OtelHeader
@@ -291,7 +285,7 @@ const AgentOtelExampleInner: React.FC<{
         showGenerateButtons
         showAccountControls={false}
         trailing={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             <TelescopeIcon size={16} />
             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>{otelBaseUrl}</Text>
           </Box>
@@ -299,35 +293,24 @@ const AgentOtelExampleInner: React.FC<{
       />
 
       {/* ── Content row ─────────────────────────────────────────────── */}
-      <Box
-        sx={{
-          display: 'flex',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
+      <Box display="flex" flex={1} minHeight={0} overflow="hidden">
         {/* ── Main OTEL area ──────────────────────────────────────── */}
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minWidth: 0,
-            overflow: 'hidden',
-          }}
+          display="flex"
+          flexDirection="column"
+          flex={1}
+          minWidth={0}
+          overflow="hidden"
         >
           {/* Tab bar */}
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              px: 2,
-              bg: 'canvas.default',
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              flexShrink: 0,
-            }}
+            display="flex"
+            alignItems="center"
+            px={2}
+            bg="canvas.default"
+            borderBottom="1px solid"
+            borderColor="border.default"
+            flexShrink={0}
           >
             {(['dashboard', 'sql', 'system'] as OtelView[]).map(v => (
               <Box key={v} sx={TAB_SX(view === v)} onClick={() => setView(v)}>
@@ -339,14 +322,7 @@ const AgentOtelExampleInner: React.FC<{
           </Box>
 
           {/* View */}
-          <Box
-            sx={{
-              display: 'flex',
-              flex: 1,
-              minHeight: 0,
-              overflow: 'hidden',
-            }}
-          >
+          <Box display="flex" flex={1} minHeight={0} overflow="hidden">
             {view === 'dashboard' ? (
               <DashboardView
                 baseUrl={otelBaseUrl}
@@ -367,16 +343,14 @@ const AgentOtelExampleInner: React.FC<{
 
         {/* ── Agent sidebar: the example's launcher over the shared loop ── */}
         <Box
-          sx={{
-            width: 380,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            bg: 'canvas.default',
-            minHeight: 0,
-          }}
+          width={380}
+          flexShrink={0}
+          display="flex"
+          flexDirection="column"
+          borderLeft="1px solid"
+          borderColor="border.default"
+          bg="canvas.default"
+          minHeight={0}
         >
           {/* Agent launcher — kept verbatim, above the chat. */}
           <AgentLaunchPanel
@@ -389,7 +363,7 @@ const AgentOtelExampleInner: React.FC<{
           {/* The conversation, as the shared loop. Local target on the
               launched agent id; the otel capacity plugin carries its spec and
               its telemetry openers. */}
-          <Box sx={{ flex: 1, minHeight: 0 }}>
+          <Box flex={1} minHeight={0}>
             {connectedAgentId ? (
               <LoopEmbed
                 key={connectedAgentId}
@@ -402,16 +376,14 @@ const AgentOtelExampleInner: React.FC<{
               />
             ) : (
               <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  px: 3,
-                  color: 'fg.muted',
-                  fontSize: 1,
-                  textAlign: 'center',
-                }}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                height="100%"
+                px={3}
+                color="fg.muted"
+                fontSize={1}
+                textAlign="center"
               >
                 Connect an agent to start chatting about your traces, logs, and
                 metrics.

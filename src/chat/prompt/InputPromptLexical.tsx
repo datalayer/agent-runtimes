@@ -421,8 +421,7 @@ export function InputPromptLexical({
   const chatText = useChatWords();
   return (
     <Box
-      sx={{
-        /*
+      /*
           The placeholder is positioned against this box.
 
           It is `position: absolute` and this was `static`, so it resolved
@@ -430,24 +429,25 @@ export function InputPromptLexical({
           "Type a message..." up in the header, nowhere near the box it
           describes. A containing block is the whole fix.
         */
-        position: 'relative',
-        px: 2,
-        // A little more above than the 2px it had: the text sat hard against
-        // the edge of the box, which reads as clipped rather than as tight.
-        // Still less than below, where the footer's own padding follows.
-        pt: '6px',
-        pb: 1,
-        /*
-         * Greyed while it cannot be typed in.
-         *
-         * `contenteditable=false` stops the caret and nothing else — the text
-         * kept the same weight and colour as a live prompt, so a person had to
-         * try typing to discover the box was inert. The colour is set on the
-         * container and inherited, because the editable element deliberately
-         * declares no colour of its own.
-         */
-        color: disabled || readOnly ? 'fg.subtle' : undefined,
-        cursor: disabled || readOnly ? 'not-allowed' : undefined,
+      position="relative"
+      px={2}
+      // A little more above than the 2px it had: the text sat hard against
+      // the edge of the box, which reads as clipped rather than as tight.
+      // Still less than below, where the footer's own padding follows.
+      pt="6px"
+      pb={1}
+      /*
+       * Greyed while it cannot be typed in.
+       *
+       * `contenteditable=false` stops the caret and nothing else — the text
+       * kept the same weight and colour as a live prompt, so a person had to
+       * try typing to discover the box was inert. The colour is set on the
+       * container and inherited, because the editable element deliberately
+       * declares no colour of its own.
+       */
+      color={disabled || readOnly ? 'fg.subtle' : undefined}
+      cursor={disabled || readOnly ? 'not-allowed' : undefined}
+      sx={{
         '& .input-prompt-lexical-p': {
           margin: 0,
         },
@@ -460,9 +460,8 @@ export function InputPromptLexical({
         <ContentEditable
           placeholder={
             <Box
-              sx={{
-                position: 'absolute',
-                /*
+              position="absolute"
+              /*
                   Level with the first line of typing.
 
                   Relative to the box above, which establishes the containing
@@ -471,13 +470,12 @@ export function InputPromptLexical({
                   matching it here is what stops the placeholder floating
                   above the text it stands in for.
                 */
-                top: '8px',
-                left: '8px',
-                color: 'fg.subtle',
-                fontSize: 1,
-                pointerEvents: 'none',
-                userSelect: 'none',
-              }}
+              top="8px"
+              left="8px"
+              color="fg.subtle"
+              fontSize={1}
+              pointerEvents="none"
+              userSelect="none"
             >
               {placeholder}
             </Box>

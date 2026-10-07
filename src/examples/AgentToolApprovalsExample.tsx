@@ -211,22 +211,13 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" minHeight={0} display="flex" flexDirection="column">
       {isReconnectedAgent && (
         <Box
-          sx={{
-            px: 3,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
+          px={3}
+          py={1}
+          borderBottom="1px solid"
+          borderColor="border.default"
         >
           <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
             Agent already running - reconnected.
@@ -234,8 +225,8 @@ const AgentToolApprovalsInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box flex={1} minHeight={0} display="flex">
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             key={agentName}
             serverUrl={agentBaseUrl}

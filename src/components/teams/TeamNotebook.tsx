@@ -69,19 +69,17 @@ export function TeamNotebook({
       data-team-notebook=""
       // Focused when the notebook in a balloon is clicked (`focusExpanded`).
       tabIndex={-1}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        minWidth: 0,
-        scrollMarginTop: '16px',
-        '&:focus': { outline: 'none' },
-        '&:focus-visible': {
-          outline: '2px solid',
-          outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
-          outlineOffset: 4,
-          borderRadius: 2,
-        },
+      display="flex"
+      flexDirection="column"
+      gap={2}
+      minWidth={0}
+      scrollMarginTop="16px"
+      focus={{ outline: 'none' }}
+      focusVisible={{
+        outline: '2px solid',
+        outlineColor: 'var(--focus-outlineColor, var(--fgColor-accent))',
+        outlineOffset: 4,
+        borderRadius: 2,
       }}
     >
       {!hideTitle && (

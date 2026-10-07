@@ -460,25 +460,21 @@ export function AgentDetails({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        bg: 'canvas.default',
-        overflow: 'auto',
-      }}
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      bg="canvas.default"
+      overflow="auto"
     >
       {/* Header */}
       {showBackHeader && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: 3,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          p={3}
+          borderBottom="1px solid"
+          borderColor="border.default"
         >
           <IconButton
             icon={ArrowLeftIcon}
@@ -493,36 +489,21 @@ export function AgentDetails({
       )}
 
       {/* Content */}
-      <Box
-        sx={{
-          p: padded ? 3 : 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-        }}
-      >
+      <Box p={padded ? 3 : 0} display="flex" flexDirection="column" gap={4}>
         {/* Agent Info Section */}
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3,
-            p: 3,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={3}
+          p={3}
+          bg="canvas.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
         >
-          <Box
-            sx={{
-              p: 2,
-              bg: 'accent.subtle',
-              borderRadius: 2,
-            }}
-          >
+          <Box p={2} bg="accent.subtle" borderRadius={2}>
             {icon ? (
-              <Box sx={{ display: 'inline-flex', color: 'accent.fg' }}>
+              <Box display="inline-flex" color="accent.fg">
                 {icon}
               </Box>
             ) : emoji ? (
@@ -531,7 +512,7 @@ export function AgentDetails({
               <AiAgentIcon colored size={32} />
             )}
           </Box>
-          <Box sx={{ flex: 1 }}>
+          <Box flex={1}>
             <Heading
               as="h3"
               sx={{ fontSize: 2, fontWeight: 'semibold', mb: 1 }}
@@ -564,16 +545,14 @@ export function AgentDetails({
                 Agent
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  bg: 'canvas.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1,
-                }}
+                p={3}
+                bg="canvas.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.default"
+                display="flex"
+                flexDirection="column"
+                gap={1}
               >
                 {summary.description && (
                   <Text as="p" sx={{ fontSize: 1, m: 0, mb: 1 }}>
@@ -589,10 +568,7 @@ export function AgentDetails({
                 )
                   .filter(([, value]) => value)
                   .map(([key, value]) => (
-                    <Box
-                      key={key}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                    >
+                    <Box key={key} display="flex" alignItems="center" gap={2}>
                       <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
                         {key}:
                       </Text>
@@ -602,11 +578,11 @@ export function AgentDetails({
                     </Box>
                   ))}
                 {summary.skills && summary.skills.length > 0 && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
                       Skills:
                     </Text>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Box display="flex" gap={1} flexWrap="wrap">
                       {summary.skills.map(skill => (
                         <Label key={skill} variant="secondary" size="small">
                           {skill}
@@ -635,15 +611,13 @@ export function AgentDetails({
                 Connection
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  bg: 'canvas.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                p={3}
+                bg="canvas.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.default"
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box display="flex" alignItems="center" gap={2}>
                   <Label variant="accent" size="small">
                     {protocol.toUpperCase().replace(/-/g, ' ')}
                   </Label>
@@ -678,25 +652,21 @@ export function AgentDetails({
                 Agentspec
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  bg: 'canvas.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                p={3}
+                bg="canvas.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.default"
               >
                 {specLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Spinner size="small" />
                     <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                       Loading agent spec...
                     </Text>
                   </Box>
                 ) : agentSpec ? (
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-                  >
+                  <Box display="flex" flexDirection="column" gap={3}>
                     {/* The whole spec, for a reader who wants more than the six
                     fields summarised below. The same panel the agentspecs
                     example shows before launching one, so what was configured
@@ -711,12 +681,8 @@ export function AgentDetails({
                       </Button>
                     </Box>
                     {/* Key Attributes */}
-                    <Box
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                    >
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                    <Box display="flex" flexDirection="column" gap={1}>
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}
                         >
@@ -732,9 +698,7 @@ export function AgentDetails({
                           {agentSpec.model}
                         </Text>
                       </Box>
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}
                         >
@@ -744,9 +708,7 @@ export function AgentDetails({
                           {agentSpec.agent_library}
                         </Label>
                       </Box>
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}
                         >
@@ -763,13 +725,7 @@ export function AgentDetails({
                       </Box>
                       {agentSpec.enable_skills &&
                         agentSpec.skills.length > 0 && (
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                            }}
-                          >
+                          <Box display="flex" alignItems="center" gap={2}>
                             <Text
                               sx={{
                                 fontSize: 0,
@@ -779,9 +735,7 @@ export function AgentDetails({
                             >
                               Skills:
                             </Text>
-                            <Box
-                              sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}
-                            >
+                            <Box display="flex" gap={1} flexWrap="wrap">
                               {agentSpec.skills.map(skill => (
                                 <Label
                                   key={skill}
@@ -797,12 +751,8 @@ export function AgentDetails({
                     </Box>
 
                     {/* Base System Prompt */}
-                    <Box
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
-                    >
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                    <Box display="flex" flexDirection="column" gap={1}>
+                      <Box display="flex" alignItems="center" gap={2}>
                         <NoteIcon size={16} />
                         <Text
                           sx={{
@@ -815,15 +765,13 @@ export function AgentDetails({
                         </Text>
                       </Box>
                       <Box
-                        sx={{
-                          p: 2,
-                          bg: 'canvas.default',
-                          borderRadius: 2,
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                          maxHeight: 200,
-                          overflow: 'auto',
-                        }}
+                        p={2}
+                        bg="canvas.default"
+                        borderRadius={2}
+                        border="1px solid"
+                        borderColor="border.default"
+                        maxHeight={200}
+                        overflow="auto"
                       >
                         <Text
                           sx={{
@@ -841,16 +789,8 @@ export function AgentDetails({
 
                     {/* Codemode Addon System Prompt */}
                     {agentSpec.system_prompt_codemode_addons && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1,
-                        }}
-                      >
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                      <Box display="flex" flexDirection="column" gap={1}>
+                        <Box display="flex" alignItems="center" gap={2}>
                           <CodeIcon size={16} />
                           <Text
                             sx={{
@@ -872,15 +812,13 @@ export function AgentDetails({
                           )}
                         </Box>
                         <Box
-                          sx={{
-                            p: 2,
-                            bg: 'canvas.default',
-                            borderRadius: 2,
-                            border: '1px solid',
-                            borderColor: 'border.default',
-                            maxHeight: 200,
-                            overflow: 'auto',
-                          }}
+                          p={2}
+                          bg="canvas.default"
+                          borderRadius={2}
+                          border="1px solid"
+                          borderColor="border.default"
+                          maxHeight={200}
+                          overflow="auto"
                         >
                           <Text
                             sx={{
@@ -920,19 +858,15 @@ export function AgentDetails({
                   Code Sandbox
                 </Heading>
                 <Box
-                  sx={{
-                    p: 3,
-                    bg: 'canvas.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                  }}
+                  p={3}
+                  bg="canvas.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="border.default"
                 >
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                  >
+                  <Box display="flex" flexDirection="column" gap={2}>
                     {/* Variant */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box display="flex" alignItems="center" gap={2}>
                       <ServerIcon size={16} />
                       <Text sx={{ fontSize: 0, color: 'fg.muted', width: 100 }}>
                         Variant:
@@ -950,7 +884,7 @@ export function AgentDetails({
                     </Box>
 
                     {/* Running */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box display="flex" alignItems="center" gap={2}>
                       <Text
                         sx={{
                           fontSize: 0,
@@ -962,26 +896,14 @@ export function AgentDetails({
                         Running:
                       </Text>
                       {agentSpec.sandbox.sandbox_running ? (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                          }}
-                        >
+                        <Box display="flex" alignItems="center" gap={1}>
                           <CheckCircleIcon size={12} fill="success.fg" />
                           <Text sx={{ fontSize: 0, color: 'success.fg' }}>
                             Yes
                           </Text>
                         </Box>
                       ) : (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                          }}
-                        >
+                        <Box display="flex" alignItems="center" gap={1}>
                           <XCircleIcon size={12} fill="fg.muted" />
                           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                             No
@@ -993,9 +915,7 @@ export function AgentDetails({
                     {/* Jupyter details (for jupyter variant) */}
                     {agentSpec.sandbox.variant === 'jupyter-server' && (
                       <>
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                        <Box display="flex" alignItems="center" gap={2}>
                           <Text
                             sx={{
                               fontSize: 0,
@@ -1021,9 +941,7 @@ export function AgentDetails({
                               'Not configured'}
                           </Text>
                         </Box>
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                        <Box display="flex" alignItems="center" gap={2}>
                           <Text
                             sx={{
                               fontSize: 0,
@@ -1035,33 +953,15 @@ export function AgentDetails({
                             Connection:
                           </Text>
                           {agentSpec.sandbox.jupyter_connected ? (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={1}>
                               <CheckCircleIcon size={12} fill="success.fg" />
                               <Text sx={{ fontSize: 0, color: 'success.fg' }}>
                                 Connected
                               </Text>
                             </Box>
                           ) : (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 1,
-                              }}
-                            >
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                }}
-                              >
+                            <Box display="flex" flexDirection="column" gap={1}>
+                              <Box display="flex" alignItems="center" gap={1}>
                                 <XCircleIcon size={12} fill="danger.fg" />
                                 <Text sx={{ fontSize: 0, color: 'danger.fg' }}>
                                   Not Connected
@@ -1088,9 +988,7 @@ export function AgentDetails({
 
                     {/* Generated Path */}
                     {agentSpec.sandbox.generated_path && (
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -1119,9 +1017,7 @@ export function AgentDetails({
 
                     {/* Skills Path */}
                     {agentSpec.sandbox.skills_path && (
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -1150,9 +1046,7 @@ export function AgentDetails({
 
                     {/* Python Path */}
                     {agentSpec.sandbox.python_path && (
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -1197,26 +1091,22 @@ export function AgentDetails({
                 Config MCP Servers
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  bg: 'canvas.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                p={3}
+                bg="canvas.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.default"
               >
                 {!hasMcpLiveData && mcpLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Spinner size="small" />
                     <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                       Loading MCP status...
                     </Text>
                   </Box>
                 ) : mcpStatus ? (
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" flexDirection="column" gap={2}>
+                    <Box display="flex" alignItems="center" gap={2}>
                       <Text sx={{ fontSize: 1 }}>
                         <Text as="span" sx={{ fontWeight: 'semibold' }}>
                           {mcpStatus.ready_count}
@@ -1229,13 +1119,7 @@ export function AgentDetails({
                       </Text>
                     </Box>
                     {mcpStatus.ready_servers.length > 0 && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1,
-                        }}
-                      >
+                      <Box display="flex" flexDirection="column" gap={1}>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -1248,12 +1132,10 @@ export function AgentDetails({
                         {mcpStatus.ready_servers.map(server => (
                           <Box
                             key={server}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                              pl: 2,
-                            }}
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                            pl={2}
                           >
                             <CheckCircleIcon size={16} fill="success.fg" />
                             <Text sx={{ fontSize: 1 }}>{server}</Text>
@@ -1262,13 +1144,7 @@ export function AgentDetails({
                       </Box>
                     )}
                     {Object.keys(mcpStatus.failed_servers).length > 0 && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1,
-                        }}
-                      >
+                      <Box display="flex" flexDirection="column" gap={1}>
                         <Text
                           sx={{
                             fontSize: 0,
@@ -1282,20 +1158,12 @@ export function AgentDetails({
                           ([server, error]) => (
                             <Box
                               key={server}
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 1,
-                                pl: 2,
-                              }}
+                              display="flex"
+                              flexDirection="column"
+                              gap={1}
+                              pl={2}
                             >
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                }}
-                              >
+                              <Box display="flex" alignItems="center" gap={2}>
                                 <XCircleIcon size={16} fill="danger.fg" />
                                 <Text sx={{ fontSize: 1 }}>{server}</Text>
                               </Box>
@@ -1343,36 +1211,28 @@ export function AgentDetails({
                 Codemode
               </Heading>
               <Box
-                sx={{
-                  p: 3,
-                  bg: 'canvas.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                p={3}
+                bg="canvas.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.default"
               >
                 {!hasCodemodeLiveData && codemodeLoading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box display="flex" alignItems="center" gap={2}>
                     <Spinner size="small" />
                     <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
                       Loading Codemode status...
                     </Text>
                   </Box>
                 ) : codemodeStatus ? (
-                  <Box
-                    sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-                  >
+                  <Box display="flex" flexDirection="column" gap={3}>
                     {/* Codemode Toggle */}
                     <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
                     >
-                      <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2}>
                         <CodeIcon size={16} />
                         <Box>
                           <Text
@@ -1406,20 +1266,16 @@ export function AgentDetails({
                     {/* Sandbox Status */}
                     {codemodeStatus.sandbox && (
                       <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                          p: 2,
-                          bg: 'canvas.default',
-                          borderRadius: 2,
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                        }}
+                        display="flex"
+                        flexDirection="column"
+                        gap={2}
+                        p={2}
+                        bg="canvas.default"
+                        borderRadius={2}
+                        border="1px solid"
+                        borderColor="border.default"
                       >
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                        <Box display="flex" alignItems="center" gap={2}>
                           <CodeIcon size={16} />
                           <Text
                             sx={{
@@ -1432,20 +1288,12 @@ export function AgentDetails({
                           </Text>
                         </Box>
                         <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                            pl: 4,
-                          }}
+                          display="flex"
+                          flexDirection="column"
+                          gap={1}
+                          pl={4}
                         >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                            }}
-                          >
+                          <Box display="flex" alignItems="center" gap={2}>
                             <Text
                               sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
                             >
@@ -1466,13 +1314,7 @@ export function AgentDetails({
                           {codemodeStatus.sandbox.variant ===
                             'jupyter-server' && (
                             <>
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                }}
-                              >
+                              <Box display="flex" alignItems="center" gap={2}>
                                 <Text
                                   sx={{
                                     fontSize: 0,
@@ -1496,13 +1338,7 @@ export function AgentDetails({
                                     'Not configured'}
                                 </Text>
                               </Box>
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                }}
-                              >
+                              <Box display="flex" alignItems="center" gap={2}>
                                 <Text
                                   sx={{
                                     fontSize: 0,
@@ -1514,11 +1350,9 @@ export function AgentDetails({
                                 </Text>
                                 {codemodeStatus.sandbox.jupyter_connected ? (
                                   <Box
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 1,
-                                    }}
+                                    display="flex"
+                                    alignItems="center"
+                                    gap={1}
                                   >
                                     <CheckCircleIcon
                                       size={12}
@@ -1532,18 +1366,14 @@ export function AgentDetails({
                                   </Box>
                                 ) : (
                                   <Box
-                                    sx={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: 1,
-                                    }}
+                                    display="flex"
+                                    flexDirection="column"
+                                    gap={1}
                                   >
                                     <Box
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                      }}
+                                      display="flex"
+                                      alignItems="center"
+                                      gap={1}
                                     >
                                       <XCircleIcon size={12} fill="danger.fg" />
                                       <Text
@@ -1570,39 +1400,21 @@ export function AgentDetails({
                               </Box>
                             </>
                           )}
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                            }}
-                          >
+                          <Box display="flex" alignItems="center" gap={2}>
                             <Text
                               sx={{ fontSize: 0, color: 'fg.muted', width: 80 }}
                             >
                               Running:
                             </Text>
                             {codemodeStatus.sandbox.sandbox_running ? (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                }}
-                              >
+                              <Box display="flex" alignItems="center" gap={1}>
                                 <CheckCircleIcon size={12} fill="success.fg" />
                                 <Text sx={{ fontSize: 0, color: 'success.fg' }}>
                                   Yes
                                 </Text>
                               </Box>
                             ) : (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                }}
-                              >
+                              <Box display="flex" alignItems="center" gap={1}>
                                 <XCircleIcon size={12} fill="fg.muted" />
                                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                                   No
@@ -1612,13 +1424,7 @@ export function AgentDetails({
                           </Box>
                           {/* Generated Path */}
                           {codemodeStatus.sandbox.generated_path && (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={2}>
                               <Text
                                 sx={{
                                   fontSize: 0,
@@ -1645,13 +1451,7 @@ export function AgentDetails({
                           )}
                           {/* Skills Path */}
                           {codemodeStatus.sandbox.skills_path && (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={2}>
                               <Text
                                 sx={{
                                   fontSize: 0,
@@ -1678,13 +1478,7 @@ export function AgentDetails({
                           )}
                           {/* Python Path */}
                           {codemodeStatus.sandbox.python_path && (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={2}>
                               <Text
                                 sx={{
                                   fontSize: 0,
@@ -1715,16 +1509,8 @@ export function AgentDetails({
 
                     {/* Active Skills */}
                     {codemodeStatus.skills.length > 0 && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1,
-                        }}
-                      >
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-                        >
+                      <Box display="flex" flexDirection="column" gap={1}>
+                        <Box display="flex" alignItems="center" gap={2}>
                           <BriefcaseIcon size={16} />
                           <Text
                             sx={{
@@ -1739,15 +1525,13 @@ export function AgentDetails({
                         {codemodeStatus.skills.map(skill => (
                           <Box
                             key={skill.name}
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 1,
-                              pl: 4,
-                              py: 1,
-                              borderLeft: '2px solid',
-                              borderColor: 'accent.emphasis',
-                            }}
+                            display="flex"
+                            flexDirection="column"
+                            gap={1}
+                            pl={4}
+                            py={1}
+                            borderLeft="2px solid"
+                            borderColor="accent.emphasis"
                           >
                             <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
                               {skill.name}
@@ -1758,13 +1542,7 @@ export function AgentDetails({
                               </Text>
                             )}
                             {skill.tags && skill.tags.length > 0 && (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  gap: 1,
-                                  flexWrap: 'wrap',
-                                }}
-                              >
+                              <Box display="flex" gap={1} flexWrap="wrap">
                                 {skill.tags.map(tag => (
                                   <Label
                                     key={tag}
@@ -1784,13 +1562,7 @@ export function AgentDetails({
                     {/* Available Skills (when codemode disabled or no active skills) */}
                     {codemodeStatus.available_skills.length > 0 &&
                       codemodeStatus.skills.length === 0 && (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1,
-                          }}
-                        >
+                        <Box display="flex" flexDirection="column" gap={1}>
                           <Text
                             sx={{
                               fontSize: 0,
@@ -1804,14 +1576,7 @@ export function AgentDetails({
                           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                             Enable skills via CLI with --skills flag
                           </Text>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              gap: 1,
-                              flexWrap: 'wrap',
-                              mt: 1,
-                            }}
-                          >
+                          <Box display="flex" gap={1} flexWrap="wrap" mt={1}>
                             {codemodeStatus.available_skills.map(skill => (
                               <Label
                                 key={skill.name}
@@ -1858,14 +1623,12 @@ export function AgentDetails({
 
             {/* Context Snapshot - detailed inspection of agent context */}
             {showUsage && agentId && (
-              <Box sx={{ mt: 3 }}>
+              <Box mt={3}>
                 <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    mb: 2,
-                  }}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  mb={2}
                 >
                   <Heading
                     as="h4"
@@ -1893,13 +1656,11 @@ export function AgentDetails({
                   </Button>
                 </Box>
                 <Box
-                  sx={{
-                    p: 3,
-                    bg: 'canvas.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                  }}
+                  p={3}
+                  bg="canvas.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="border.default"
                 >
                   <ContextInspector
                     agentId={agentId}
@@ -1927,7 +1688,7 @@ export function AgentDetails({
 
         {/* Back button */}
         {showBackHeader && (
-          <Box sx={{ mt: 2 }}>
+          <Box mt={2}>
             <Button variant="primary" onClick={onBack} sx={{ width: '100%' }}>
               Back to Chat
             </Button>
