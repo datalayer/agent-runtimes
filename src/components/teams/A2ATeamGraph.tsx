@@ -25,7 +25,7 @@
  * values the rows, top to bottom.
  *
  * A member's connections — the MCP servers it reaches, Odoo for Accounting —
- * hang under it, each a node half a member's size with the server's mark
+ * stand to its right, each a node half a member's size with the server's mark
  * (`SpecMark`), linked to it by an edge of its own. That edge is still until
  * the member calls one of the connection's tools: then it flows toward the
  * connection for as long as the call runs ({@link A2ATeamCall}), with the
@@ -103,7 +103,7 @@ export type A2ATeamGraphMember = {
   onToggle?: () => void;
   /** It was sent away, or called back. */
   onAway?: (away: boolean) => void;
-  /** The MCP servers it reaches, drawn under it (`teamConnectionsOf`). */
+  /** The MCP servers it reaches, drawn to its right (`teamConnectionsOf`). */
   connections?: A2ATeamConnection[];
   /**
    * How its balloon shows what it says (LOOP T-23): only what it says or
@@ -221,9 +221,15 @@ const WIDTH = NODE_WIDTH * 2 + GAP;
 const ROW_GAP = 48;
 /** A connection's node: half a member's. */
 const CONNECTION_WIDTH = NODE_WIDTH / 2;
-/** Between a member and its connections. */
+/** Between a member and its connections, to its right. */
 const CONNECTION_GAP = 44;
 const CONNECTIONS_APART = 16;
+/** Where a member's connections start: right of it. */
+const CONNECTION_X = NODE_WIDTH + CONNECTION_GAP;
+/** Below the character's middle, so the A2A edge leaving it passes above. */
+const CONNECTION_DROP = 12;
+/** What a member's connections take beside it. */
+const CONNECTIONS_BESIDE = CONNECTION_GAP + CONNECTION_WIDTH;
 
 /** Where the edge leaves and reaches a member: the middle of its character. */
 const HANDLE = (size: number) => ({
@@ -355,7 +361,7 @@ const Moving = createContext<{
   reset: () => undefined,
 });
 
-/** A connection's node id: under its member. */
+/** A connection's node id: beside its member. */
 const connectionNodeId = (member: string, connection: string) =>
   `${member}/${connection}`;
 
@@ -666,8 +672,8 @@ const MemberNode = memo(function MemberNode({
         <Handle
           id={MEMBER_HANDLES.connections}
           type="source"
-          position={Position.Bottom}
-          style={{ ...HANDLE(size), top: 'auto', bottom: 0 }}
+          position={Position.Right}
+          style={{ ...HANDLE(size), left: 'auto', right: 0 }}
           isConnectable={false}
         />
       ) : null}
@@ -733,8 +739,8 @@ const ConnectionNode = memo(function ConnectionNode({
     >
       <Handle
         type="target"
-        position={Position.Top}
-        style={{ ...HANDLE(0), top: 0 }}
+        position={Position.Left}
+        style={{ ...HANDLE(size), left: 0 }}
         isConnectable={false}
       />
       <Box
@@ -989,14 +995,32 @@ export const CallEdge = memo(function CallEdge({
 const NODE_TYPES = { member: MemberNode, connection: ConnectionNode };
 const EDGE_TYPES = { a2a: LinkEdge, mcp: CallEdge };
 
-/** Where a member's connections sit: under it, side by side, centred. */
-function connectionsX(memberX: number, count: number): number[] {
-  const row = count * CONNECTION_WIDTH + (count - 1) * CONNECTIONS_APART;
-  const left = memberX + (NODE_WIDTH - row) / 2;
+/** Where a member's connections sit: right of it, one under another from its character's middle. */
+function connectionsY(
+  memberY: number,
+  size: number,
+  count: number,
+  connectionHeight: number,
+): number[] {
+  const top = memberY + size / 2 + CONNECTION_DROP;
   return Array.from(
     { length: count },
-    (_, at) => left + at * (CONNECTION_WIDTH + CONNECTIONS_APART),
+    (_, at) => top + at * (connectionHeight + CONNECTIONS_APART),
   );
+}
+
+/** How far down a member's connections reach, from its top; none, 0. */
+function connectionsReach(
+  size: number,
+  count: number,
+  connectionHeight: number,
+): number {
+  return count
+    ? size / 2 +
+        CONNECTION_DROP +
+        count * connectionHeight +
+        (count - 1) * CONNECTIONS_APART
+    : 0;
 }
 
 /** What a member's call says, on its edge and to a screen reader. */
@@ -1114,9 +1138,13 @@ export function A2ATeamGraph({
   // Where the members stand, as columns and rows, and the width that takes.
   const peerIds = peers.map(one => one.id);
   const placing = placeMembers(entry.id, peerIds, positions);
+  const hasConnections = members.some(member => member.connections?.length);
+  // The last column's connections sit beside it, inside the graph.
   const drawn = Math.max(
     WIDTH,
-    placing.columns * NODE_WIDTH + (placing.columns - 1) * GAP,
+    placing.columns * NODE_WIDTH +
+      (placing.columns - 1) * GAP +
+      (hasConnections ? CONNECTIONS_BESIDE : 0),
   );
   const viewport = useMemo(
     () => teamViewport(width || drawn, drawn),
@@ -1134,14 +1162,18 @@ export function A2ATeamGraph({
     connections: (member.connections ?? []).map(connection => connection.id),
   }));
   const placedKey = JSON.stringify(placed);
-  const hasConnections = placed.some(({ connections }) => connections.length);
   // A notebook in a balloon: more room above the members.
   const room = members.some(member => member.persona.notebook)
     ? Math.max(NOTEBOOK_BALLOON_ROOM, balloonRoom)
     : balloonRoom;
-  // Under a member: its connections, when any member has some.
-  const below = hasConnections ? CONNECTION_GAP + connectionHeight : 0;
-  const rowHeight = memberHeight + below;
+  // Beside a member, its connections may reach below it: the row takes them.
+  const reach = Math.max(
+    0,
+    ...placed.map(({ connections }) =>
+      connectionsReach(size, connections.length, connectionHeight),
+    ),
+  );
+  const rowHeight = Math.max(memberHeight, reach);
   const total = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
   const height = Math.ceil(total * viewport.zoom);
   // Where each member is laid out, before it is moved.
@@ -1156,14 +1188,18 @@ export function A2ATeamGraph({
   // Where the members were moved, kept inside the graph's box.
   const boundsOf = (id: string): MemberBounds => {
     const layout = layoutOf(id);
-    const under = placed.find(({ member }) => member === id)?.connections.length
-      ? CONNECTION_GAP + connectionHeight
-      : 0;
+    const count =
+      placed.find(({ member }) => member === id)?.connections.length ?? 0;
+    const beside = count ? CONNECTIONS_BESIDE : 0;
+    const tall = Math.max(
+      memberHeight,
+      connectionsReach(size, count, connectionHeight),
+    );
     return {
       minDx: -layout.x,
-      maxDx: drawn - NODE_WIDTH - layout.x,
+      maxDx: drawn - NODE_WIDTH - beside - layout.x,
       minDy: -layout.y,
-      maxDy: total - layout.y - memberHeight - under,
+      maxDy: total - layout.y - tall,
     };
   };
   const [moved, setMoved] = useState<Record<string, MemberOffset>>(() =>
@@ -1226,13 +1262,18 @@ export function A2ATeamGraph({
           } as Node<MemberData>,
           // A member's connections move with it.
           ...connections.map((connection, at) => {
-            const xs = connectionsX(x, connections.length);
+            const ys = connectionsY(
+              y,
+              size,
+              connections.length,
+              connectionHeight,
+            );
             return {
               id: connectionNodeId(id, connection),
               type: 'connection',
               position: {
-                x: xs[at],
-                y: y + memberHeight + CONNECTION_GAP,
+                x: x + CONNECTION_X,
+                y: ys[at],
               },
               width: CONNECTION_WIDTH,
               height: connectionHeight,

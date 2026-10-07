@@ -321,7 +321,7 @@ function DrivenByEvents({ events }: { events: A2APeerEvent[] }) {
 }
 
 describe('A2ATeamGraph with a connection', () => {
-  it('draws Odoo under Accounting: its mark, its name and how it is reached', () => {
+  it('draws Odoo beside Accounting, to its right: its mark, its name and how it is reached', () => {
     const { container } = render(<TeamWithOdoo calls={[]} />);
     const odoo = container.querySelector(
       '[data-team-connection="odoo-accounting"]',
