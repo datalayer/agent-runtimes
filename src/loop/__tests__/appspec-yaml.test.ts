@@ -297,6 +297,20 @@ describe('writing a file afresh', () => {
     );
   });
 
+  it('assumes no accent when it names none, and writes one when it does (2026-10-07)', () => {
+    const plain = parseAppspec({ id: 'a', name: 'A', kind: 'chat' }).app;
+    expect(plain.interface.accent).toBeUndefined();
+    expect(writeAppspecYaml(plain)).not.toContain('accent:');
+    const green = parseAppspec({
+      id: 'a',
+      name: 'A',
+      kind: 'chat',
+      interface: { accent: 'green' },
+    }).app;
+    expect(green.interface.accent).toBe('green');
+    expect(writeAppspecYaml(green)).toContain('accent: green');
+  });
+
   it('writes afresh when what was there cannot be read', () => {
     const app = parseAppspec({ id: 'a', name: 'A', kind: 'chat' }).app;
     const fresh = writeAppspecYaml(app);

@@ -117,6 +117,21 @@ describe('what the host overrides', () => {
     ).toMatchObject({ variant: 'earth', colorMode: 'light' });
   });
 
+  it('names no accent when neither the host nor the application does: the theme’s own colours (2026-10-07)', () => {
+    const plain = {
+      ...app,
+      interface: { ...app.interface, accent: undefined },
+    } as typeof app;
+    expect(embedLookOf({ attributes: {} }, plain).accent).toBeUndefined();
+    const earth = getThemeConfig('earth').themeStyles;
+    expect(
+      embedThemeStyles({ accent: undefined, variant: 'earth' }).light,
+    ).toEqual(earth.light);
+    expect(
+      embedThemeOverrides({ accent: undefined, variant: 'earth' }),
+    ).toEqual({ light: {}, dark: {} });
+  });
+
   it('refuses an accent that is not one of the six, and a font that is not a family', () => {
     expect(() => embedLookOf({ attributes: { accent: 'red' } }, app)).toThrow(
       /"red" is not an accent; it is green, rose, sky, lime, sun or violet/,

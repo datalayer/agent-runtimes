@@ -223,7 +223,6 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     },
     interface: {
       layout: DEFAULT_LAYOUTS[kind],
-      accent: 'green',
       welcome: '',
       starters: [],
       commands: [],
@@ -634,7 +633,11 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
       ['chat', 'page', 'split'] as const,
       DEFAULT_LAYOUTS[kind],
     ),
-    accent: oneOf(data.accent, APP_ACCENTS, 'green'),
+    // Unsaid, the theme's own colours: no accent is assumed. A name that is
+    // not one of the six is refused by `checkAppspec`.
+    accent: APP_ACCENTS.includes(data.accent as AppAccent)
+      ? (data.accent as AppAccent)
+      : undefined,
     welcome: text(data.welcome),
     starters: records(data.starters).map(parseStarter),
     commands: records(data.commands).map(parseCommand),
@@ -1090,7 +1093,7 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   const writer = new Writer()
     // A layout is written when it is not the one its kind starts with.
     .value<string>('layout', spec.layout, DEFAULT_LAYOUTS[kind])
-    .value<string>('accent', spec.accent, 'green')
+    .value<string | undefined>('accent', spec.accent, undefined)
     .text('welcome', spec.welcome)
     .list('starters', spec.starters.map(dumpStarter))
     .list(

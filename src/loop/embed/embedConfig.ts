@@ -46,7 +46,7 @@ export const EMBED_ATTRIBUTES = {
   spec: 'The address of an Appspec (YAML or JSON) to run, in place of `app`.',
   mode: 'inline, bubble, panel or assistant; the Appspec’s `deployment.embedded.mode` by default, then inline.',
   accent:
-    'green, rose, sky, lime, sun or violet; the Appspec’s `interface.accent` by default.',
+    'green, rose, sky, lime, sun or violet; the Appspec’s `interface.accent` by default, else the theme’s own colours.',
   theme: 'light, dark or auto (the visitor’s system); auto by default.',
   font: 'A CSS font family for the application’s text; Inter, then the system’s sans-serif, by default.',
   server:
@@ -166,8 +166,8 @@ export type EmbedInputs = {
 /** How an application is shown and dressed in a host's page. */
 export type EmbedLook = {
   mode: AppEmbedMode;
-  /** The accent the host chose, or the application's own. */
-  accent: AppAccent;
+  /** The accent the host chose, or the application's own; none: the theme's own colours. */
+  accent?: AppAccent;
   colorMode: EmbedColorMode;
   /** The host's face; empty for the theme's own. */
   font: string;
@@ -193,8 +193,7 @@ export function embedLookOf(
   const accent =
     oneOf(attributes.accent, APP_ACCENTS, 'an accent') ??
     oneOf(variables.accent, APP_ACCENTS, 'an accent') ??
-    app?.interface?.accent ??
-    'green';
+    app?.interface?.accent;
   const colorMode =
     oneOf(attributes.theme, EMBED_COLOR_MODES, 'a theme') ??
     oneOf(variables.theme, EMBED_COLOR_MODES, 'a theme') ??

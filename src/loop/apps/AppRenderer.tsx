@@ -492,6 +492,7 @@ const NO_PLUGINS: PluginRef[] = [];
  * not in the theme's default — the chat sets its theme again inside it, so
  * what the page around it set does not reach in. The accents are the theme
  * system's: laid over whatever theme it wears (T-30; decided 2026-10-07).
+ * Naming none, it wears the theme's own colours: nothing is laid.
  */
 export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
   const accent = app.interface?.accent;

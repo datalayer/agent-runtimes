@@ -3685,6 +3685,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       },
     ],
     interface: {
+      accent: 'green',
       welcome:
         "Ask me for a report from the books: open invoices, aged balances, a trial balance or a customer's ledger. I read Odoo; I change nothing.",
       starters: [
@@ -4070,6 +4071,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     agent: 'jupyter-data-analyst:0.0.1',
     contents: ['The dataset under investigation'],
     interface: {
+      accent: 'green',
       components: [
         'Card',
         'Column',
@@ -4464,6 +4466,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       },
     ],
     interface: {
+      accent: 'green',
       welcome:
         'I sort your mail and draft the replies. I ask before I send, and I never delete.',
       starters: [
@@ -4562,6 +4565,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'The Models page: how each model is billed (standard or credits) and who hosts it',
     ],
     interface: {
+      accent: 'green',
       components: [
         'Card',
         'Column',
@@ -5525,6 +5529,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     agent: 'jupyter-data-analyst:0.0.1',
     contents: ['The benchmark run: task results, traces, cost and latency'],
     interface: {
+      accent: 'green',
       components: [
         'Card',
         'Column',
@@ -5635,6 +5640,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     agent: 'jupyter-data-analyst:0.0.1',
     contents: ['Order history', 'Supplier price lists', 'Delivery records'],
     interface: {
+      accent: 'green',
       components: [
         'Card',
         'Column',

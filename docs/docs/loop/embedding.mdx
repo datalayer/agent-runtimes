@@ -91,7 +91,7 @@ The element looks in three places and uses the first one it finds:
 | `token`   | An embed token for an application that is not public, issued to your server for each visit.     |
 | `spec`    | The address of an Appspec (YAML or JSON) to run, instead of `app`.                              |
 | `mode`    | `inline`, `bubble`, `panel` or `assistant`. By default, the Appspec's, then `inline`.           |
-| `accent`  | `green`, `rose`, `sky`, `lime`, `sun` or `violet`. By default, the Appspec's `interface.accent`. |
+| `accent`  | `green`, `rose`, `sky`, `lime`, `sun` or `violet`. By default, the Appspec's `interface.accent`; when neither names one, the theme's own colours. |
 | `theme`   | `light`, `dark` or `auto` (the visitor's system setting). `auto` by default.                    |
 | `font`    | A CSS font family for the application's text. By default, Inter, then the system's sans-serif.  |
 | `server`  | An agent-runtimes server that runs the application's agent. By default, a Datalayer runtime.    |
@@ -121,7 +121,7 @@ element's shadow root, which contains:
 - the `loop` theme as CSS custom properties — or the theme the application
   names in its Appspec (`interface.theme.variant`: `datalayer`, `spatial`,
   `lovely`, `matrix`, `earth`, `sand`, `ivory`, `sun`, `loop`) — set on the
-  theme's own element inside the root, with the application's accent applied
+  theme's own element inside the root, with the accent, when one is named, applied
   in light and dark over whichever theme it is (`embedThemeStyles`). The colour mode is
   the host's `theme` attribute or CSS variable, else `interface.theme.mode`,
   else the visitor's system;

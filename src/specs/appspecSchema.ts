@@ -476,9 +476,17 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           description: "`chat`, `page` or `split`; the kind's own when unsaid",
         },
         accent: {
-          $ref: '#/$defs/Accent',
-          default: 'green',
-          description: "The application's one colour",
+          anyOf: [
+            {
+              $ref: '#/$defs/Accent',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "The application's one colour, over whichever theme it runs in; unsaid, it wears the theme's own colours",
         },
         theme: {
           anyOf: [
@@ -491,7 +499,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           ],
           default: null,
           description:
-            "The theme it runs in by default, at its address, embedded, in the Studio's Preview and as an example: a `variant` and, optionally, a colour `mode`. The person's own when unsaid. Its `accent` colours the `loop` theme only",
+            "The theme it runs in by default, at its address, embedded, in the Studio's Preview and as an example: a `variant` and, optionally, a colour `mode`. The person's own when unsaid. Its `accent`, when it names one, colours it, whichever theme it is",
         },
         welcome: {
           default: '',

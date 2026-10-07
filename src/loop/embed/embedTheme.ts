@@ -62,11 +62,15 @@ function faceOf(
   return typeof styles.fontFamily === 'string' ? styles.fontFamily : '';
 }
 
-/** The accent over a theme, whichever theme (T-05, T-30; every theme since 2026-10-07). */
+/**
+ * The accent over a theme, whichever theme (T-05, T-30; every theme since
+ * 2026-10-07); none when neither the application nor the host names one —
+ * the theme's own colours.
+ */
 const accentOver = (
-  accent: AppAccent,
+  accent: AppAccent | undefined,
   which: 'light' | 'dark',
-): Record<string, string> => themeAccentVars(accent, which);
+): Record<string, string> => (accent ? themeAccentVars(accent, which) : {});
 
 /**
  * The theme as the embed wears it — `loop`, or the one the application
@@ -78,7 +82,7 @@ export function embedThemeStyles({
   font = '',
   variant = 'loop',
 }: {
-  accent: AppAccent;
+  accent?: AppAccent;
   font?: string;
   variant?: AppThemeVariant;
 }): ThemeStyles {
@@ -110,7 +114,7 @@ export function embedThemeOverrides({
   font = '',
   variant = 'loop',
 }: {
-  accent: AppAccent;
+  accent?: AppAccent;
   font?: string;
   variant?: AppThemeVariant;
 }): ThemeOverrides {

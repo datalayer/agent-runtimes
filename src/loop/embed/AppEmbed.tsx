@@ -642,7 +642,7 @@ export function EmbedThemed({
   children,
   style,
 }: {
-  accent: AppAccent;
+  accent?: AppAccent;
   colorMode: 'light' | 'dark';
   font?: string;
   variant: AppThemeVariant;

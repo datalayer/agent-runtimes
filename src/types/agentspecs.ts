@@ -721,8 +721,11 @@ export interface AppUploadsSpec {
 /** What the user of an application sees. */
 export interface AppInterfaceSpec {
   layout: AppLayout;
-  /** Its one colour, over the `loop` theme only. */
-  accent: AppAccent;
+  /**
+   * Its one colour, over whichever theme it runs in; unsaid, it wears the
+   * theme's own colours (decided 2026-10-07).
+   */
+  accent?: AppAccent;
   /** The theme it runs in by default; the person's own when unsaid (T-30). */
   theme?: AppThemeSpec;
   welcome: string;
