@@ -110,10 +110,16 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
     }
     assert set(reports) == {
         "accounting",
+        # The scenes' members (agentspecs 0.0.60, LOOP A-04).
+        "change-detection",
+        "crop-monitoring",
         "customer-interview",
         "data-quality",
         "decide",
+        "disaster-assessment",
+        "event-response",
         "inbox-triage",
+        "month-end-close",
         "model-choice",
         "pipeline-report",
         "quote-calculator",
