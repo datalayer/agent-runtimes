@@ -275,3 +275,165 @@ class TestTheApplicationsRules:
         finally:
             leave_run_outputs(token)
         assert WRITE_NOTEBOOK in rules.get_toolset().tools
+
+
+class TestTheComponents:
+    """STUDIO H-02: components of the catalog beside the answer, as an A2UI surface."""
+
+    def test_the_sources_a_table_a_chart_and_a_choice_are_the_catalogs(self) -> None:
+        surface = formats.surface_of_components(
+            "Aged receivables",
+            sources=[
+                {"title": "INV/2026/0007", "passage": "1,200.00 EUR due"},
+                {"title": "MOD13Q1", "url": "https://cmr.earthdata.nasa.gov/x"},
+            ],
+            table={
+                "columns": ["customer", "due"],
+                "rows": [{"customer": "Ada", "due": 1200}],
+            },
+            chart={
+                "x": "customer",
+                "y": "due",
+                "points": [{"customer": "Ada", "due": 1200}],
+            },
+            choice={
+                "question": "Remind Ada?",
+                "options": [{"label": "Send", "does": "send"}, {"label": "Not now"}],
+            },
+        )
+        assert surface["surfaceId"].startswith("answer-")
+        [created, components, data] = surface["messages"]
+        assert created["createSurface"]["surfaceId"] == surface["surfaceId"]
+        nodes = {
+            node["id"]: node for node in components["updateComponents"]["components"]
+        }
+        assert nodes["root"]["children"] == [
+            "sources",
+            "table",
+            "chart",
+            "choice-question",
+            "choice",
+        ]
+        assert nodes["sources"]["component"] == "Evidence"
+        assert nodes["chart"]["points"] == {"path": "/points"}
+        assert nodes["choice"]["children"] == ["option-0", "option-1"]
+        assert nodes["option-1"]["action"]["event"] == {
+            "name": "Not now",
+            "context": {"does": "read"},
+        }
+        model = data["updateDataModel"]["value"]
+        assert model["rows"] == [{"customer": "Ada", "due": 1200}]
+        assert model["sources"][0] == {
+            "title": "INV/2026/0007",
+            "url": "",
+            "passage": "1,200.00 EUR due",
+        }
+
+    @pytest.mark.parametrize(
+        "given, refusal",
+        [
+            ({}, "Nothing to show"),
+            ({"sources": [{"title": "", "url": ""}]}, "neither a title nor a link"),
+            ({"sources": [{"title": "x", "url": "file:///etc"}]}, "not a web address"),
+            ({"table": {"columns": ["a"], "rows": []}}, "has nothing in it"),
+            ({"chart": {"x": "m", "y": "v", "points": [{"m": 1}]}}, "no 'm' or no 'v'"),
+            (
+                {"choice": {"question": "?", "options": [{"label": "Yes"}]}},
+                "two to four",
+            ),
+        ],
+    )
+    def test_what_the_catalog_would_not_draw_is_refused_in_a_sentence(
+        self, given: dict[str, Any], refusal: str
+    ) -> None:
+        with pytest.raises(formats.SurfaceRefused, match=refusal):
+            formats.surface_of_components("x", **given)
+
+    def test_shown_only_to_a_caller_that_draws_them_and_carried_as_an_artifact(
+        self,
+    ) -> None:
+        assert tool_given(formats.SHOW_COMPONENTS) is False
+        assert "does not draw" in formats.show_components("x", choice=None)
+        outputs = RunOutputs(accepted=(formats.A2UI_MEDIA_TYPE,))
+        assert formats.SHOW_COMPONENTS in outputs_instructions(outputs)
+        assert WRITE_NOTEBOOK not in outputs_instructions(outputs)
+        token = enter_run_outputs(outputs)
+        try:
+            assert tool_given(formats.SHOW_COMPONENTS) is True
+            assert tool_given(WRITE_NOTEBOOK) is False
+            said = formats.show_components(
+                "Open invoices",
+                table=formats.ShownTable(columns=["n"], rows=[{"n": 1}]),
+            )
+        finally:
+            leave_run_outputs(token)
+        assert said.startswith("Shown")
+        [artifact] = artifacts_of(outputs)
+        [part] = artifact["parts"]
+        assert part["media_type"] == formats.A2UI_MEDIA_TYPE
+        assert part["data"]["title"] == "Open invoices"
+
+    def test_both_tools_for_an_agent_that_gives_both(self) -> None:
+        toolset = outputs_toolset(
+            ["text/markdown", NOTEBOOK_MEDIA_TYPE, formats.A2UI_MEDIA_TYPE]
+        )
+        assert {WRITE_NOTEBOOK, formats.SHOW_COMPONENTS} <= set(toolset.tools)
+        assert set(
+            outputs_toolset(["text/markdown", formats.A2UI_MEDIA_TYPE]).tools
+        ) == {formats.SHOW_COMPONENTS}
+
+    def test_an_approval_pressed_by_a_visitor_is_refused_and_by_a_person_asked(
+        self,
+    ) -> None:
+        from agent_runtimes.loop.apps.visitors import (
+            enter_visitor_run,
+            leave_visitor_run,
+        )
+
+        def pressed(does: str) -> dict[str, Any]:
+            return {
+                "metadata": {
+                    "loop": {"action": {"name": "Post them", "payload": {"does": does}}}
+                }
+            }
+
+        # Outside a visitor's run the agent is asked, and its rules apply.
+        assert formats.refused_action(pressed("write")) == ""
+        token = enter_visitor_run("tab-ada")
+        try:
+            refused = formats.refused_action(pressed("write"))
+            assert refused.startswith("Without an account it only reads: `Post them`")
+            assert formats.refused_action(pressed("read")) == ""
+            assert formats.refused_action({"metadata": {}}) == ""
+        finally:
+            leave_visitor_run(token)
+
+    def test_showing_is_reading_for_the_applications_rules(self) -> None:
+        from agent_runtimes.loop.apps.enforcement import AppRulesCapability
+        from agent_runtimes.specs.apps import APP_CATALOGUE
+
+        rules = AppRulesCapability(app=APP_CATALOGUE["accounting"])
+        decision = rules.decide(formats.SHOW_COMPONENTS, {}).decision
+        assert decision.classes == ("read",) and decision.behaviour == "do_it"
+        assert formats.SHOW_COMPONENTS in rules.get_toolset().tools
+
+    def test_the_rehearsal_reads_the_kinds_the_components_show(self) -> None:
+        from agent_runtimes.loop.scenes.stage import kind_of_words, shown_kinds
+
+        surface = formats.surface_of_components(
+            "x",
+            sources=[{"title": "a"}],
+            choice={
+                "question": "?",
+                "options": [{"label": "Send", "does": "send"}, {"label": "No"}],
+            },
+        )
+        nodes = surface["messages"][1]["updateComponents"]["components"]
+        assert set(shown_kinds("Shown.", nodes)) >= {
+            "words",
+            "sources",
+            "choice",
+            "approval",
+        }
+        assert kind_of_words("an approval") == "approval"
+        assert kind_of_words("sources") == "sources"

@@ -23,7 +23,10 @@
  * and the way each link carries a message as its flow ({@link flowAfter}).
  * What a peer gives besides words — the formats the page accepts
  * (`accept`), such as a Jupyter notebook — is kept as its artifacts, and
- * the latest notebook kept until another one comes ({@link A2ATeam.notebook}).
+ * the latest notebook kept until another one comes ({@link A2ATeam.notebook}),
+ * and each surface of components of the catalog a peer shows
+ * (`application/json+a2ui`) kept with the peer that gave it, in the order
+ * they came ({@link A2ATeam.surfaces}, STUDIO H-02).
  * The tools a peer calls on its connections (its MCP servers), told over
  * A2A as it calls them, are kept as the calls running now ({@link callsAfter}).
  *
@@ -50,6 +53,7 @@ import {
 import {
   a2aPeerTool,
   askA2APeer,
+  A2UI_MEDIA_TYPE,
   NOTEBOOK_MEDIA_TYPE,
   type A2APeer,
   type A2APeerArtifact,
@@ -117,12 +121,62 @@ export const NOTEBOOK_AND_WORDS: readonly string[] = [
   'text/markdown',
 ];
 
+/**
+ * What a page that draws an answer's components accepts besides: the
+ * catalog's surfaces, a notebook, and words in Markdown (STUDIO H-02).
+ */
+export const COMPONENTS_NOTEBOOK_AND_WORDS: readonly string[] = [
+  A2UI_MEDIA_TYPE,
+  ...NOTEBOOK_AND_WORDS,
+];
+
+/** A surface of components a member showed with an answer: who gave it, and the surface. */
+export type A2ATeamSurface = {
+  /** Its surface's id: `answer-…`. */
+  id: string;
+  /** The member that showed it, by its id. */
+  giver: string;
+  artifact: A2APeerArtifact;
+};
+
+/**
+ * The surfaces among what a member gave, each once by its surface's id,
+ * after those already kept.
+ */
+export function surfacesAfter(
+  kept: A2ATeamSurface[],
+  giver: string,
+  artifacts: A2APeerArtifact[],
+): A2ATeamSurface[] {
+  const found = artifacts
+    .filter(artifact => artifact.mediaType === A2UI_MEDIA_TYPE)
+    .map(artifact => {
+      const data = artifact.data as { surfaceId?: unknown } | null;
+      return {
+        id:
+          data && typeof data.surfaceId === 'string'
+            ? data.surfaceId
+            : `${giver}-${kept.length}`,
+        giver,
+        artifact,
+      };
+    })
+    .filter(
+      (surface, index, all) =>
+        !kept.some(one => one.id === surface.id) &&
+        all.findIndex(one => one.id === surface.id) === index,
+    );
+  return found.length ? [...kept, ...found] : kept;
+}
+
 /** What the peer gave, in words: its words, and each of its artifacts. */
 export function answeredLine(artifacts: A2APeerArtifact[]): string {
   const besides = artifacts.map(artifact =>
     artifact.mediaType === NOTEBOOK_MEDIA_TYPE
       ? `a notebook, ${artifact.name}`
-      : artifact.name,
+      : artifact.mediaType === A2UI_MEDIA_TYPE
+        ? `what it shows, ${artifact.name}`
+        : artifact.name,
   );
   return besides.length ? `the report and ${besides.join(', ')}` : 'the report';
 }
@@ -288,6 +342,11 @@ export type A2ATeam = {
   artifacts: A2APeerArtifact[];
   /** The latest notebook a peer gave, kept until another one comes. */
   notebook: A2APeerArtifact | null;
+  /**
+   * Every surface of components the members showed in this conversation,
+   * in the order they came, with who showed it (STUDIO H-02).
+   */
+  surfaces: A2ATeamSurface[];
   /** Which way the first peer's link carries a message now. */
   flow: A2ATeamFlow;
   /** The tool calls the peers' connections are answering now. */
@@ -466,6 +525,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   const [artifacts, setArtifacts] = useState<A2APeerArtifact[]>([]);
   const [givens, setGivens] = useState<Record<string, A2APeerArtifact[]>>({});
   const [notebook, setNotebook] = useState<A2APeerArtifact | null>(null);
+  const [surfaces, setSurfaces] = useState<A2ATeamSurface[]>([]);
   const [flows, setFlows] = useState<Record<string, A2ATeamFlow>>({});
   const [calls, setCalls] = useState<A2ATeamCall[]>([]);
   const callsNow = useRef<A2ATeamCall[]>([]);
@@ -554,6 +614,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         setReports(prev => ({ ...prev, [id]: event.answer }));
         setArtifacts(event.artifacts);
         setGivens(prev => ({ ...prev, [id]: event.artifacts }));
+        setSurfaces(prev => surfacesAfter(prev, id, event.artifacts));
         const given = notebookAmong(event.artifacts);
         if (given) {
           setNotebook(given);
@@ -933,6 +994,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     report,
     artifacts,
     notebook,
+    surfaces,
     flow: first?.flow ?? 'still',
     calls,
     busy,

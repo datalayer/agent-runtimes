@@ -23,3 +23,4 @@ export * from './sceneTranscript';
 export * from './SceneTranscript';
 export * from './SceneView';
 export * from './sceneStage';
+export * from './AnswerSurfaces';

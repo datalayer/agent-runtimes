@@ -166,9 +166,28 @@ export const TEXT_MEDIA_TYPES: readonly string[] = [
 /** A Jupyter notebook, as A2A carries it. */
 export const NOTEBOOK_MEDIA_TYPE = 'application/x-ipynb+json';
 
+/**
+ * Components of the catalog, as A2A carries them: one A2UI surface per
+ * artifact (`{surfaceId, catalogId, title, messages}`), A2UI's media type.
+ */
+export const A2UI_MEDIA_TYPE = 'application/json+a2ui';
+
 /** What a format is, in words, for a model reading a tool's description. */
 const FORMAT_NAMES: Record<string, string> = {
   [NOTEBOOK_MEDIA_TYPE]: 'a Jupyter notebook',
+  [A2UI_MEDIA_TYPE]:
+    'components drawn for the person: the sources as cards, a table, a chart, a choice of buttons',
+};
+
+/**
+ * A button pressed on an answer's surface, sent back with the reader's turn:
+ * its name and what choosing it does (`payload.does`). The runtime reads it
+ * from the message's metadata (`loop.action`): one that does more than read
+ * is refused to a visitor in a sentence, before any model runs.
+ */
+export type A2APeerAction = {
+  name: string;
+  payload: Record<string, unknown>;
 };
 
 /**
@@ -248,8 +267,8 @@ export function artifactsOf(
   return found;
 }
 
-/** A user's message of one text part, as the SDK's 1.x types write it. */
-export function textMessage(text: string): Message {
+/** A user's message of one text part, as the SDK's 1.x types write it; a pressed button's action in its metadata. */
+export function textMessage(text: string, action?: A2APeerAction): Message {
   return {
     messageId: globalThis.crypto.randomUUID(),
     contextId: '',
@@ -263,7 +282,7 @@ export function textMessage(text: string): Message {
         mediaType: '',
       },
     ],
-    metadata: undefined,
+    metadata: action ? { loop: { action } } : undefined,
     extensions: [],
     referenceTaskIds: [],
   };
@@ -341,6 +360,8 @@ export type AskA2APeerOptions = {
    * the peer answers in words alone.
    */
   accept?: readonly string[];
+  /** The button pressed on one of its answers' surfaces, when this request is one. */
+  action?: A2APeerAction;
 };
 
 /**
@@ -356,14 +377,14 @@ export async function askA2APeer(
   request: string,
   options: AskA2APeerOptions = {},
 ): Promise<A2APeerAnswer> {
-  const { signal, onEvent, accept } = options;
+  const { signal, onEvent, accept, action } = options;
   onEvent?.({
     phase: 'asked',
     request,
     ...(accept?.length ? { accept: [...accept] } : {}),
   });
   try {
-    return await streamTask(peer, request, signal, onEvent, accept);
+    return await streamTask(peer, request, signal, onEvent, accept, action);
   } catch (reason) {
     const error = reason instanceof Error ? reason.message : String(reason);
     onEvent?.({ phase: 'failed', error });
@@ -377,6 +398,7 @@ async function streamTask(
   signal: AbortSignal | undefined,
   onEvent: ((event: A2APeerEvent) => void) | undefined,
   accept: readonly string[] | undefined,
+  action?: A2APeerAction,
 ): Promise<A2APeerAnswer> {
   const texts = new Map<string, string>();
   // What it gave besides words, by artifact: the last chunk says it whole.
@@ -387,7 +409,7 @@ async function streamTask(
   const stream = peer.client.sendMessageStream(
     {
       tenant: '',
-      message: textMessage(request),
+      message: textMessage(request, action),
       configuration: accept?.length
         ? {
             acceptedOutputModes: [...accept],

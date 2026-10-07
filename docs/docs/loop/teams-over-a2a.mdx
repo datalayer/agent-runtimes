@@ -390,6 +390,87 @@ const notebookArea = useRef<HTMLDivElement>(null);
 <div ref={notebookArea} />
 ```
 
+### Components in answers
+
+The other format is components of the catalog (STUDIO H-02):
+`application/json+a2ui`, A2UI's media type. The scenes' members on a runtime
+name it after Markdown and the notebook (agentspecs 0.0.64):
+
+```yaml
+interface:
+  outputs:
+    - text/markdown
+    - application/x-ipynb+json
+    - application/json+a2ui
+```
+
+**Composed.** In a run that accepts it the agent has `show_components(title,
+sources?, table?, chart?, choice?)`, and its prompt says what fits each:
+
+| Given | Drawn with | What the reader gets |
+| --- | --- | --- |
+| `sources: [{title, url?, passage?}]` | `Evidence` | the records or pages the answer rests on, as cards; a card with a public link opens it |
+| `table: {columns, rows}` | `Table` | rows that compare, under their columns |
+| `chart: {kind, x, y, series?, points}` | `Chart` | a series of numbers, a point per row |
+| `choice: {question, options: [{label, does}]}` | `Text`, a `Row` of `Button` | two to four buttons that answer the application |
+
+The runtime builds the nodes, not the model: each is checked against the
+catalog's JSON Schema (`component_node`), the values sit in the surface's
+data model and the nodes read them by path (`/sources`, `/rows`,
+`/points`), and a surface the catalog would not draw — nothing to show, an
+empty list, a point without its `x` or `y`, a link that is not a web
+address, a choice of one option — is refused with a sentence the model acts
+on (`ModelRetry`), twice at most. At most three surfaces per answer. Like
+`write_notebook`, `show_components` touches nothing outside the run: the
+rules decide it as reading, and a visitor's run shows them too.
+
+**Carried.** Each surface is an artifact beside the text: one data part,
+`mediaType: application/json+a2ui`, holding `{surfaceId, catalogId, title,
+messages}` — the A2UI v0.9 messages that draw it (`createSurface`,
+`updateComponents`, `updateDataModel`), the surface's id `answer-…`. While
+it is composed the status says *Showing it…*, then *Shown*.
+
+**Drawn.** `useA2ATeam({ …, accept: COMPONENTS_NOTEBOOK_AND_WORDS })` keeps
+every surface the members show in the conversation, in the order they came,
+each once, with the member that gave it (`team.surfaces`,
+`{ id, giver, artifact }`). `AnswerSurfaces` draws them with the A2UI
+surface plugin's `InlineSurface` on Datalayer's catalog, in the page's theme,
+each titled with who showed it; A2UI's renderer is loaded only once a
+surface is drawn.
+
+**A choice answers the application.** A button pressed is the reader's
+answer to the member that showed it: `onPress(surface, pressed)` gets the
+option's words and its action (`pressedOf`), and the page asks that member
+with them — `askA2APeer(peer, pressed.message, { action: pressed.action })`
+puts the action in the message's metadata, `loop.action: {name, payload:
+{does}}`. One choice per surface; what came back is said under it.
+
+**An approval is honest.** An option whose `does` is more than `read`
+(`write`, `send`, `delete`…) is an approval. The agent is told to show an
+action it would take but does not take itself that way — the action and
+*Not now*. Pressed in a visitor's run, the worker refuses it before any
+model runs, in the sentence a visitor's tool call is refused with
+(`refused_action`, `visitor_refusal`): *Without an account it only reads:
+`Send the reminders` would do more than read, so it asked nobody and did
+nothing.* Anywhere else the press is the person's turn, and the
+application's rules decide: an action it has no tool for is not done, one
+that asks first is asked of a person (Tool Approvals).
+
+```tsx
+import { AnswerSurfaces, COMPONENTS_NOTEBOOK_AND_WORDS, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+import { askA2APeer } from '@datalayer/agent-runtimes/lib/runtimes/browser/a2aPeer';
+
+const team = useA2ATeam({ entry, peers, inference, accept: COMPONENTS_NOTEBOOK_AND_WORDS });
+// …
+<AnswerSurfaces
+  surfaces={team.surfaces}
+  names={{ accounting: 'Accounting' }}
+  onPress={async (surface, pressed) =>
+    (await askA2APeer(peerOf(surface.giver), pressed.message, { action: pressed.action })).answer
+  }
+/>
+```
+
 ## The application asking: `@a2a-js/sdk` in the browser
 
 `runtimes/browser/a2aPeer` uses the A2A SDK's own client (`@a2a-js/sdk` 1.x),

@@ -209,11 +209,11 @@ class TestTheCard:
         assert skill["id"] == "accounting"
         assert skill["examples"] == [s.message for s in accounting.interface.starters]
         assert skill["inputModes"] == card["defaultInputModes"] == ["text/plain"]
-        # Its answers in Markdown, and a notebook to a caller that accepts one.
+        # Its answers in Markdown, and a notebook or components to a caller that accepts them.
         assert (
             skill["outputModes"]
             == card["defaultOutputModes"]
-            == ["text/markdown", "application/x-ipynb+json"]
+            == ["text/markdown", "application/x-ipynb+json", "application/json+a2ui"]
         )
         assert card["capabilities"]["streaming"] is True
         assert card["securitySchemes"]["datalayer"]["httpAuthSecurityScheme"][
@@ -873,3 +873,132 @@ class TestTheNotebook:
             for part in r["artifactUpdate"]["artifact"]["parts"]
         ]
         assert any(part.get("mediaType") == NOTEBOOK for part in parts)
+
+
+A2UI = "application/json+a2ui"
+
+
+class TestTheComponents:
+    """STUDIO H-02, H-03: Accounting shows components of the catalog to a caller that draws them."""
+
+    @pytest.fixture
+    def showing(self, monkeypatch: Any) -> list[dict[str, Any]]:
+        """Accounting, scripted to show a table and a choice with its tool, as its model would."""
+        seen: list[dict[str, Any]] = []
+
+        async def stream(self: Any, prompt: str, context: Any) -> Any:
+            from agent_runtimes.output import formats
+
+            self.contexts.append(context)
+            call = {"id": "c-7", "name": "show_components", "arguments": {}}
+            yield StreamEvent(type="tool_call", data=call)
+            said = formats.show_components(
+                "Payment reminders",
+                table=formats.ShownTable(
+                    columns=["customer", "days late"],
+                    rows=[{"customer": "Ada", "days late": 75}],
+                ),
+                choice=formats.ShownChoice(
+                    question="Send a reminder to Ada?",
+                    options=[
+                        formats.ShownOption(label="Send the reminders", does="send"),
+                        formats.ShownOption(label="Not now"),
+                    ],
+                ),
+            )
+            seen.append({"prompt": prompt, "said": said})
+            yield StreamEvent(
+                type="tool_result", data={**call, "result": said, "error": None}
+            )
+            yield StreamEvent(type="text", data=REPORT)
+
+        monkeypatch.setattr(Accounting, "stream", stream)
+        return seen
+
+    @staticmethod
+    def _parts(body: str) -> list[dict[str, Any]]:
+        return [
+            part
+            for event in _events(body)
+            if "artifactUpdate" in event["result"]
+            for part in event["result"]["artifactUpdate"]["artifact"]["parts"]
+        ]
+
+    @pytest.mark.asyncio
+    async def test_a_caller_that_draws_them_gets_the_surface_as_an_artifact(
+        self, state: Any, showing: list[dict[str, Any]]
+    ) -> None:
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post(
+                "/", json=_accepting("Payment reminders?", [A2UI, "text/markdown"])
+            )
+        [part] = [p for p in self._parts(response.text) if p.get("mediaType") == A2UI]
+        surface = part["data"]
+        assert surface["surfaceId"].startswith("answer-")
+        assert surface["title"] == "Payment reminders"
+        components = {
+            node["id"]: node
+            for message in surface["messages"]
+            for node in message.get("updateComponents", {}).get("components", [])
+        }
+        assert components["table"]["component"] == "Table"
+        assert components["option-0"]["action"] == {
+            "event": {"name": "Send the reminders", "context": {"does": "send"}}
+        }
+        [run] = showing
+        assert "show_components" in run["prompt"] and run["said"].startswith("Shown")
+
+    @pytest.mark.asyncio
+    async def test_a_caller_that_does_not_draw_them_gets_words_only(
+        self, state: Any, showing: list[dict[str, Any]]
+    ) -> None:
+        async with served(state) as (app, _), _client(app) as client:
+            response = await client.post(
+                "/", json=_accepting("Payment reminders?", ["text/markdown"])
+            )
+        assert all(p.get("mediaType") != A2UI for p in self._parts(response.text))
+        [run] = showing
+        assert "does not draw components" in run["said"]
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_who_approves_is_refused_and_no_model_runs(
+        self, state: Any, inference: list[str]
+    ) -> None:
+        request = _accepting("Send the reminders", [A2UI, "text/markdown"])
+        request["params"]["message"]["metadata"] = {
+            "loop": {
+                "action": {"name": "Send the reminders", "payload": {"does": "send"}}
+            }
+        }
+        async with (
+            served(state, visitors=True) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            response = await client.post(
+                "/",
+                json=request,
+                headers={"Authorization": f"Bearer {_visitor_token()}"},
+            )
+        assert response.status_code == 200
+        texts = "".join(p.get("text", "") for p in self._parts(response.text))
+        assert "Without an account it only reads: `Send the reminders`" in texts
+        assert agent.contexts == []
+
+    @pytest.mark.asyncio
+    async def test_a_visitor_who_chooses_to_read_is_answered(
+        self, state: Any, inference: list[str]
+    ) -> None:
+        request = _accepting("Not now", [A2UI])
+        request["params"]["message"]["metadata"] = {
+            "loop": {"action": {"name": "Not now", "payload": {"does": "read"}}}
+        }
+        async with (
+            served(state, visitors=True) as (app, agent),
+            _client(app, REMOTE) as client,
+        ):
+            await client.post(
+                "/",
+                json=request,
+                headers={"Authorization": f"Bearer {_visitor_token()}"},
+            )
+        assert len(agent.contexts) == 1

@@ -3328,7 +3328,18 @@ class SceneMoveSpec(BaseModel):
         default=None, description="The kind of tool: read, write, …"
     )
     answers: Optional[
-        Literal["words", "table", "chart", "notebook", "map", "file", "image"]
+        Literal[
+            "words",
+            "table",
+            "chart",
+            "notebook",
+            "map",
+            "file",
+            "image",
+            "sources",
+            "choice",
+            "approval",
+        ]
     ] = Field(default=None, description="What kind of answer comes back")
 
 

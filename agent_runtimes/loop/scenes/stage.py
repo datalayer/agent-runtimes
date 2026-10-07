@@ -43,10 +43,26 @@ from agent_runtimes.loop.scenes.transcript import (
 )
 
 #: The kinds of answer a rehearsal line may name (agentspecs' ``AnswerKind``).
-ANSWER_KINDS = ("words", "table", "chart", "notebook", "map", "file", "image")
+ANSWER_KINDS = (
+    "words",
+    "table",
+    "chart",
+    "notebook",
+    "map",
+    "file",
+    "image",
+    "sources",
+    "choice",
+    "approval",
+)
 
 #: What a rehearsal line's words mean on a line said: ``a table`` → ``table``.
-_KIND_WORDS = re.compile(r"^an?\s+(words|table|chart|notebook|map|file|image)$")
+_KIND_WORDS = re.compile(
+    r"^(?:an?\s+)?(words|table|chart|notebook|map|file|image|sources|choice|approval)$"
+)
+
+#: The catalog's components that show a kind not named in theirs (STUDIO H-02).
+_COMPONENT_KINDS = {"evidence": "sources", "button": "choice"}
 
 _MARKDOWN_TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{2,}", re.MULTILINE)
 
@@ -79,10 +95,24 @@ def shown_kinds(
         shows.append("image")
     for component in components:
         name = str(component.get("component") or component.get("type") or "").lower()
-        for kind in ANSWER_KINDS[1:]:
-            if kind in name and kind not in shows:
+        kinds = [kind for kind in ANSWER_KINDS[1:] if kind in name]
+        if name in _COMPONENT_KINDS:
+            kinds.append(_COMPONENT_KINDS[name])
+        if name == "button" and _does_more_than_read(component):
+            kinds.append("approval")
+        for kind in kinds:
+            if kind not in shows:
                 shows.append(kind)
     return tuple(shows)
+
+
+def _does_more_than_read(button: Mapping[str, Any]) -> bool:
+    """Whether a button's action says it does more than read (``context.does``)."""
+    action = button.get("action")
+    event = action.get("event") if isinstance(action, Mapping) else None
+    context = event.get("context") if isinstance(event, Mapping) else None
+    does = context.get("does") if isinstance(context, Mapping) else None
+    return isinstance(does, str) and does not in ("", "read")
 
 
 def kind_of_words(detail: str) -> Optional[str]:

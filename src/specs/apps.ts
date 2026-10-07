@@ -97,7 +97,11 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
-    outputs: ['text/markdown', 'application/x-ipynb+json'],
+    outputs: [
+      'text/markdown',
+      'application/x-ipynb+json',
+      'application/json+a2ui',
+    ],
   },
   tests: {
     readyAt: 0.8,
@@ -252,7 +256,11 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
-    outputs: ['text/markdown', 'application/x-ipynb+json'],
+    outputs: [
+      'text/markdown',
+      'application/x-ipynb+json',
+      'application/json+a2ui',
+    ],
   },
   tests: {
     readyAt: 0.8,
@@ -394,6 +402,10 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
         message:
           'Which datasets and granules cover the Po valley for June 2026?',
       },
+      {
+        label: 'Save the granules',
+        message: 'Save the June 2026 granules of the Po valley to my Space.',
+      },
     ],
     commands: [],
     modes: [],
@@ -410,7 +422,11 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
-    outputs: ['text/markdown', 'application/x-ipynb+json'],
+    outputs: [
+      'text/markdown',
+      'application/x-ipynb+json',
+      'application/json+a2ui',
+    ],
   },
   tests: {
     readyAt: 0.8,
@@ -1014,7 +1030,11 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
-    outputs: ['text/markdown', 'application/x-ipynb+json'],
+    outputs: [
+      'text/markdown',
+      'application/x-ipynb+json',
+      'application/json+a2ui',
+    ],
   },
   tests: {
     readyAt: 0.8,
@@ -1100,7 +1120,7 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   agent: 'worker-event-response:0.0.1',
   team: '',
   instructions:
-    'You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. You change nothing anywhere: you ask, and you report.',
+    'You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. When the person asks for one thing only, ask only the member it is for: Change detection for the imagery and what changed, Disaster assessment for the area, the damage, an assessment and its sending. Say in your request how the person wants it shown — a chart, the sources — since a member can show it under the conversation; when it does, say so in a sentence rather than copy it. Never say a thing was sent or done unless the member says it was. You change nothing anywhere: you ask, and you report.',
   model: '',
   skills: [],
   backendTools: [],
@@ -1131,12 +1151,17 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
       {
         label: 'Wildfire',
         message:
-          'Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?',
+          'Fires burned around Los Angeles from 7 January 2025. Which imagery shows what changed?',
       },
       {
         label: 'Storm',
         message:
-          'The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?',
+          'The Ahr valley was hit by a storm on 14 July 2021. Chart the imagery found each day from 10 to 20 July.',
+      },
+      {
+        label: 'Alert',
+        message:
+          'Send the Valencia flood assessment to the emergency services.',
       },
     ],
     commands: [],
@@ -1707,12 +1732,16 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
       {
         label: 'Accruals',
         message:
-          'Which accruals should be booked for last month, and for how much?',
+          'Which accruals should be booked for last month? Show me the entries each rests on.',
       },
       {
-        label: 'Reconciliation gaps',
+        label: 'Expenses by month',
         message:
-          'Which bank lines and open items are still unreconciled for last month?',
+          "Chart last month's expenses by account against the month before.",
+      },
+      {
+        label: 'Post the accruals',
+        message: 'Post the accruals you suggested for last month.',
       },
     ],
     commands: [],
@@ -1730,7 +1759,11 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
       language: '',
       where: 'auto',
     },
-    outputs: ['text/markdown', 'application/x-ipynb+json'],
+    outputs: [
+      'text/markdown',
+      'application/x-ipynb+json',
+      'application/json+a2ui',
+    ],
   },
   tests: {
     readyAt: 0.8,
@@ -2631,7 +2664,7 @@ export const SALES_APP_0_0_1: AppSpec = {
   agent: 'worker-sales-pipeline-board-report:0.0.1',
   team: '',
   instructions:
-    'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. You change nothing anywhere: you ask, and you report.',
+    'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. Say in your request how the person wants it shown — a chart, the invoices one by one — since Accounting can show it under the conversation; when it does, say so in a sentence rather than copy it. A request to do something rather than to read — send, remind, post — goes to Accounting the same way, and you repeat what it answered: never say a thing was done unless Accounting says it was. You change nothing anywhere: you ask, and you report.',
   model: '',
   skills: [],
   backendTools: [],
@@ -2661,11 +2694,17 @@ export const SALES_APP_0_0_1: AppSpec = {
       },
       {
         label: 'Aged receivables',
-        message: 'Give me the aged receivables as of today, by customer.',
+        message: 'Chart the aged receivables as of today, by customer.',
       },
       {
-        label: 'Trial balance',
-        message: 'What does the trial balance say for last month?',
+        label: 'Largest balance',
+        message:
+          'Which invoices make up the largest balance due? Show me each one.',
+      },
+      {
+        label: 'Payment reminders',
+        message:
+          'Send a payment reminder to every customer more than 60 days late.',
       },
     ],
     commands: [],
@@ -3664,7 +3703,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       assistant: 'wizard',
-      outputs: ['text/markdown', 'application/x-ipynb+json'],
+      outputs: [
+        'text/markdown',
+        'application/x-ipynb+json',
+        'application/json+a2ui',
+      ],
     },
     tests: {
       cases: [
@@ -3758,7 +3801,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       assistant: 'cat',
-      outputs: ['text/markdown', 'application/x-ipynb+json'],
+      outputs: [
+        'text/markdown',
+        'application/x-ipynb+json',
+        'application/json+a2ui',
+      ],
     },
     tests: {
       cases: [
@@ -3855,9 +3902,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           message:
             'Which datasets and granules cover the Po valley for June 2026?',
         },
+        {
+          label: 'Save the granules',
+          message: 'Save the June 2026 granules of the Po valley to my Space.',
+        },
       ],
       assistant: 'eyes',
-      outputs: ['text/markdown', 'application/x-ipynb+json'],
+      outputs: [
+        'text/markdown',
+        'application/x-ipynb+json',
+        'application/json+a2ui',
+      ],
     },
     tests: {
       cases: [
@@ -4210,7 +4265,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       assistant: 'wizard',
-      outputs: ['text/markdown', 'application/x-ipynb+json'],
+      outputs: [
+        'text/markdown',
+        'application/x-ipynb+json',
+        'application/json+a2ui',
+      ],
     },
     tests: {
       cases: [
@@ -4269,7 +4328,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'worker-event-response:0.0.1',
     instructions:
-      'You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. You change nothing anywhere: you ask, and you report.',
+      'You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. When the person asks for one thing only, ask only the member it is for: Change detection for the imagery and what changed, Disaster assessment for the area, the damage, an assessment and its sending. Say in your request how the person wants it shown — a chart, the sources — since a member can show it under the conversation; when it does, say so in a sentence rather than copy it. Never say a thing was sent or done unless the member says it was. You change nothing anywhere: you ask, and you report.',
     interface: {
       accent: 'rose',
       welcome:
@@ -4283,12 +4342,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           label: 'Wildfire',
           message:
-            'Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?',
+            'Fires burned around Los Angeles from 7 January 2025. Which imagery shows what changed?',
         },
         {
           label: 'Storm',
           message:
-            'The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?',
+            'The Ahr valley was hit by a storm on 14 July 2021. Chart the imagery found each day from 10 to 20 July.',
+        },
+        {
+          label: 'Alert',
+          message:
+            'Send the Valencia flood assessment to the emergency services.',
         },
       ],
       assistant: 'paperclip',
@@ -4667,16 +4731,24 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           label: 'Accruals',
           message:
-            'Which accruals should be booked for last month, and for how much?',
+            'Which accruals should be booked for last month? Show me the entries each rests on.',
         },
         {
-          label: 'Reconciliation gaps',
+          label: 'Expenses by month',
           message:
-            'Which bank lines and open items are still unreconciled for last month?',
+            "Chart last month's expenses by account against the month before.",
+        },
+        {
+          label: 'Post the accruals',
+          message: 'Post the accruals you suggested for last month.',
         },
       ],
       assistant: 'cat',
-      outputs: ['text/markdown', 'application/x-ipynb+json'],
+      outputs: [
+        'text/markdown',
+        'application/x-ipynb+json',
+        'application/json+a2ui',
+      ],
     },
     tests: {
       cases: [
@@ -5374,7 +5446,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'worker-sales-pipeline-board-report:0.0.1',
     instructions:
-      'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. You change nothing anywhere: you ask, and you report.',
+      'You are the sales desk. You do not hold the books: the Accounting application does. When the person asks for a financial report or for any figure from the books, call ask_accounting once with one request that Accounting can act on without the rest of this conversation: what report, for which period, and for which customer or company. Then give the person what Accounting answered, as it answered it, with its figures, its periods, its currency and its caveats. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When Accounting cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the period or whom it is about, ask the person before you ask Accounting. Say in your request how the person wants it shown — a chart, the invoices one by one — since Accounting can show it under the conversation; when it does, say so in a sentence rather than copy it. A request to do something rather than to read — send, remind, post — goes to Accounting the same way, and you repeat what it answered: never say a thing was done unless Accounting says it was. You change nothing anywhere: you ask, and you report.',
     interface: {
       accent: 'sky',
       welcome:
@@ -5387,11 +5459,17 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
         {
           label: 'Aged receivables',
-          message: 'Give me the aged receivables as of today, by customer.',
+          message: 'Chart the aged receivables as of today, by customer.',
         },
         {
-          label: 'Trial balance',
-          message: 'What does the trial balance say for last month?',
+          label: 'Largest balance',
+          message:
+            'Which invoices make up the largest balance due? Show me each one.',
+        },
+        {
+          label: 'Payment reminders',
+          message:
+            'Send a payment reminder to every customer more than 60 days late.',
         },
       ],
       assistant: 'paperclip',

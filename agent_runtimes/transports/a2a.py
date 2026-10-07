@@ -508,7 +508,7 @@ class A2AWorker(_FastA2AWorker):
         turn: "TurnSpend",
         outputs: "RunOutputs",
     ) -> None:
-        from ..output.formats import artifacts_of, outputs_instructions
+        from ..output.formats import artifacts_of, outputs_instructions, refused_action
 
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
@@ -598,9 +598,14 @@ class A2AWorker(_FastA2AWorker):
         text = ""
         final_output: str | None = None
         canceled = False
+        # A button of an answer's surface that would do more than read, pressed
+        # by a visitor, is refused in a sentence: no model runs (STUDIO H-03).
+        refused = refused_action(incoming)
         open_steering(task_id)
         try:
-            async for event in self.agent.stream(prompt, context):
+            async for event in (
+                _said(refused) if refused else self.agent.stream(prompt, context)
+            ):
                 if cancel is not None and cancel.is_set():
                     # Leaving the loop closes the adapter's stream, which stops
                     # the run underneath it.
@@ -765,6 +770,13 @@ class A2AWorker(_FastA2AWorker):
                 parts=[Part(text=str(result))],
             )
         ]
+
+
+async def _said(text: str) -> AsyncIterator[Any]:
+    """An answer given in words without a model: one text event."""
+    from types import SimpleNamespace
+
+    yield SimpleNamespace(type="text", data=text)
 
 
 def _agent_message(context_id: str, part: "Part") -> "Message":

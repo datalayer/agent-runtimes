@@ -246,12 +246,12 @@ def test_a_member_that_cannot_play_makes_the_beat_not_run_with_why(scene: Any) -
         "accounting"
     ].reason = "Accounting is not set up: The MCP server odoo-accounting needs DATALAYER_ODOO_URL."
     verdict = asyncio.run(rehearse(scene, stage, where="here"))
-    assert [beat.state for beat in verdict.beats] == [NOT_RUN] * 3
+    assert [beat.state for beat in verdict.beats] == [NOT_RUN] * 4
     assert verdict.beats[0].says == stage.members["accounting"].reason
     assert verdict.exit_code == 3
     assert (
         verdict.says
-        == "Rehearsal: 0 of 3 beats passed. 3 not run. The scene is not Live."
+        == "Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live."
     )
 
 
@@ -306,7 +306,7 @@ def test_a_scene_with_a_recording_and_no_live_run_says_its_recording_stands(
     for member in stage.members.values():
         member.reason = "Not signed in to Datalayer."
     verdict = asyncio.run(rehearse(recorded, stage, where="here"))
-    assert verdict.not_run == 3
+    assert verdict.not_run == 4
     assert verdict.notes == [
         "Not played live: its recording stands (sales-and-accounting/recording.json, taken 2026-10-07): "
         "recorded on a developer's machine."
@@ -437,7 +437,7 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup() -> None:
     )
     assert "Sales in the browser → accounting" in result.output
     assert "Accounting on a runtime; Odoo via MCP" in result.output
-    assert "Beats: open-invoices, aged-receivables, trial-balance" in result.output
+    assert "Beats: open-invoices, aged-receivables, largest-balance, payment-reminders" in result.output
     assert (
         "· To set up: The MCP server 'odoo-accounting:0.0.1' is not enabled."
         in result.output
@@ -495,7 +495,7 @@ def test_rehearse_says_not_run_and_exits_3_when_a_member_cannot_play() -> None:
     assert "· open-invoices: not run — " in result.output
     assert "which this process does not bring" in result.output
     assert (
-        "Rehearsal: 0 of 3 beats passed. 3 not run. The scene is not Live."
+        "Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live."
         in result.output
     )
 

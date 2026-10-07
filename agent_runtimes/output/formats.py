@@ -16,7 +16,17 @@ only in a run that accepts its format (:data:`OUTPUT_TOOLS`), and checked here
 before it is kept. The worker carries what was composed as an A2A artifact,
 one part of its media type (:func:`artifacts_of`), beside the text.
 
-The one such format today is a Jupyter notebook (``application/x-ipynb+json``),
+Components of the catalog (``application/json+a2ui``, A2UI's media type) are
+the other: shown with ``show_components`` — the sources as cards that open, a
+comparison as a table, a series as a chart, a choice as buttons that answer
+the application — each call one A2UI surface, the runtime building its nodes
+from what the agent gave and checking each against the catalog's JSON Schema
+(`agent_runtimes.loop.apps.components`). A button pressed comes back as the
+reader's next turn, its action in the message's metadata
+(``loop.action``): one whose option does more than read is refused to a
+visitor in a sentence before any model runs (:func:`refused_action`).
+
+A Jupyter notebook (``application/x-ipynb+json``) is
 written with ``write_notebook``: a valid nbformat 4 document that runs in the
 reader's browser, offline (Pyodide) — the figures the agent read embedded as
 data, the analysis as code cells, the explanation as markdown. No network, no
@@ -32,7 +42,7 @@ import json
 import re
 import uuid
 from contextvars import ContextVar, Token
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable, Literal, Optional, Sequence
 
 from pydantic import BaseModel, Field
@@ -40,7 +50,15 @@ from pydantic import BaseModel, Field
 from agent_runtimes.orchestration.documents import NOTEBOOK_MEDIA_TYPE
 
 __all__ = [
+    "A2UI_MEDIA_TYPE",
     "NOTEBOOK_MEDIA_TYPE",
+    "SHOW_COMPONENTS",
+    "ShownChart",
+    "ShownChoice",
+    "ShownOption",
+    "ShownSource",
+    "ShownTable",
+    "SurfaceRefused",
     "OUTPUT_TOOLS",
     "OUTPUT_TOOL_NOTES",
     "TEXT_MEDIA_TYPES",
@@ -57,6 +75,8 @@ __all__ = [
     "notebook_of_cells",
     "outputs_instructions",
     "outputs_toolset",
+    "refused_action",
+    "surface_of_components",
     "tool_given",
 ]
 
@@ -66,13 +86,27 @@ TEXT_MEDIA_TYPES: frozenset[str] = frozenset({"text/plain", "text/markdown"})
 #: The tool an agent composes a notebook with.
 WRITE_NOTEBOOK = "write_notebook"
 
+#: Components of the catalog, as an A2UI surface: A2UI's media type over A2A.
+A2UI_MEDIA_TYPE = "application/json+a2ui"
+
+#: The tool an agent shows components of the catalog with.
+SHOW_COMPONENTS = "show_components"
+
 #: The tools that compose an output, by the media type each writes.
-OUTPUT_TOOLS: dict[str, str] = {WRITE_NOTEBOOK: NOTEBOOK_MEDIA_TYPE}
+OUTPUT_TOOLS: dict[str, str] = {
+    WRITE_NOTEBOOK: NOTEBOOK_MEDIA_TYPE,
+    SHOW_COMPONENTS: A2UI_MEDIA_TYPE,
+}
 
 #: What a caller is told while an output tool runs, and once it has: (call, end).
 OUTPUT_TOOL_NOTES: dict[str, tuple[str, str]] = {
     WRITE_NOTEBOOK: ("Writing a notebook…", "Notebook written"),
+    SHOW_COMPONENTS: ("Showing it…", "Shown"),
 }
+
+#: The most surfaces a run shows, and rows (or points, or sources) one holds.
+MAX_SURFACES = 3
+MAX_ITEMS = 200
 
 #: The modules a notebook may import: what Pyodide ships, and Python's own.
 NOTEBOOK_MODULES: frozenset[str] = frozenset(
@@ -139,6 +173,8 @@ class RunOutputs:
     notebook: Optional[dict[str, Any]] = None
     #: Its title, which names the artifact and the file.
     notebook_title: str = ""
+    #: The surfaces shown (`surface_of_components`), in order.
+    surfaces: list[dict[str, Any]] = field(default_factory=list)
 
     def accepts(self, media_type: str) -> bool:
         return media_type in self.accepted
@@ -206,6 +242,32 @@ def tool_given(tool_name: str) -> bool:
 
 def outputs_instructions(outputs: RunOutputs) -> str:
     """What the agent is told of the formats this run may give besides words; empty for none."""
+    return _notebook_instructions(outputs) + _components_instructions(outputs)
+
+
+def _components_instructions(outputs: RunOutputs) -> str:
+    if not outputs.accepts(A2UI_MEDIA_TYPE):
+        return ""
+    return (
+        "\n\n---\n"
+        "Who asked can draw components beside your answer. Show what you read with the "
+        f"`{SHOW_COMPONENTS}` tool, once per answer, after you have read it, with what "
+        "fits: `sources` — the records, datasets or pages your answer rests on, each a "
+        "card with its title, its link when it has a public one, and the passage or "
+        "figure it gave; `table` — rows that compare, under their columns; `chart` — "
+        "a series of numbers, a point per row, `x` the field across and `y` the one "
+        "measured; `choice` — a question and two to four options, buttons the reader "
+        "presses to answer you, each saying what choosing it does (`read`, `write`, "
+        "`send`, `delete`…). When you are asked to do something that would change, "
+        "send or delete — which you do not do yourself — say what you would do and "
+        "show it as a choice: that action, its `does` what it would do, and *Not now* "
+        "(`read`); a person decides, and your rules apply when it is pressed. Every "
+        "value comes from what you read: invent no row, point, source or link. Still "
+        "answer in words, and say in one sentence what is shown."
+    )
+
+
+def _notebook_instructions(outputs: RunOutputs) -> str:
     if not outputs.accepts(NOTEBOOK_MEDIA_TYPE):
         return ""
     modules = ", ".join(sorted({"pandas", "numpy", "matplotlib"}))
@@ -379,14 +441,328 @@ def write_notebook(title: str, cells: list[NotebookCell]) -> str:
     )
 
 
+# --- components of the catalog ------------------------------------------------------
+
+#: What an option of a choice does when it is chosen: the classes of the rules.
+OptionDoes = Literal["read", "write", "send", "buy", "delete", "publish"]
+
+
+class SurfaceRefused(ValueError):
+    """Components the catalog does not draw as given, in a sentence."""
+
+
+class ShownSource(BaseModel):
+    """One source an answer rests on: a card that opens its link."""
+
+    title: str = Field(description="What it is: an invoice's number, a dataset's name")
+    url: str = Field(
+        default="", description="Its public link, when it has one; empty otherwise"
+    )
+    passage: str = Field(
+        default="", description="What it gave: the passage, the figure, the date"
+    )
+
+
+class ShownTable(BaseModel):
+    """Rows that compare, under their columns."""
+
+    title: str = Field(default="", description="What the table is, above it")
+    columns: list[str] = Field(description="The columns, in order: the rows' keys")
+    rows: list[dict[str, Any]] = Field(description="The rows, each by its columns")
+
+
+class ShownChart(BaseModel):
+    """A series of numbers, drawn: a point per row."""
+
+    title: str = Field(default="", description="What the chart shows, above it")
+    kind: Literal["bar", "line", "scatter", "area"] = Field(
+        default="bar", description="How the numbers are drawn"
+    )
+    x: str = Field(description="The field along the bottom")
+    y: str = Field(description="The field measured: a number")
+    series: str = Field(default="", description="A field whose values are drawn apart")
+    points: list[dict[str, Any]] = Field(
+        description="The points, each with `x` and `y`"
+    )
+
+
+class ShownOption(BaseModel):
+    """One button of a choice."""
+
+    label: str = Field(description="Its words: what the reader chooses")
+    does: OptionDoes = Field(
+        default="read", description="What choosing it does: `read`, or what it changes"
+    )
+
+
+class ShownChoice(BaseModel):
+    """A question, and the buttons that answer it."""
+
+    question: str = Field(description="What is asked of the reader, in a sentence")
+    options: list[ShownOption] = Field(description="Two to four options, in order")
+
+
+def _items(kind: str, items: Sequence[Any]) -> None:
+    if not items:
+        raise SurfaceRefused(
+            f"The {kind} has nothing in it: show it only with what you read."
+        )
+    if len(items) > MAX_ITEMS:
+        raise SurfaceRefused(
+            f"The {kind} holds at most {MAX_ITEMS}; this one has {len(items)}."
+        )
+
+
+def surface_of_components(
+    title: str,
+    sources: Optional[Sequence[ShownSource | dict[str, Any]]] = None,
+    table: Optional[ShownTable | dict[str, Any]] = None,
+    chart: Optional[ShownChart | dict[str, Any]] = None,
+    choice: Optional[ShownChoice | dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """
+    An answer's components as the A2UI surface that draws them, each checked.
+
+    The nodes are the catalog's — ``Evidence`` for the sources, ``Table``,
+    ``Chart``, and a ``Row`` of ``Button`` for a choice, each option's
+    action named by its words with what it does (``{"does": ...}``) — and
+    each is checked against the catalog's JSON Schema; the values sit in the
+    surface's data model, which the nodes read by path.
+
+    Returns
+    -------
+    dict
+        ``{surfaceId, catalogId, title, messages}``, its id ``answer-…``.
+
+    Raises
+    ------
+    SurfaceRefused
+        For nothing to show, an empty or oversized list, a table's row or a
+        chart's point without its fields, a choice of fewer than two options
+        or more than four, or a node the catalog refuses.
+    """
+    from agent_runtimes.loop.apps.components import answer_surface, component_node
+
+    nodes: list[dict[str, Any]] = []
+    data: dict[str, Any] = {}
+    try:
+        if sources:
+            read = [
+                item
+                if isinstance(item, ShownSource)
+                else ShownSource.model_validate(item)
+                for item in sources
+            ]
+            _items("list of sources", read)
+            for index, source in enumerate(read):
+                if not source.title.strip() and not source.url.strip():
+                    raise SurfaceRefused(
+                        f"Source {index + 1} has neither a title nor a link."
+                    )
+                if source.url and not re.match(r"^https?://", source.url):
+                    raise SurfaceRefused(
+                        f"Source {index + 1}'s link is not a web address: leave it empty."
+                    )
+            data["sources"] = [item.model_dump() for item in read]
+            nodes.append(
+                component_node(
+                    "sources", "Evidence", title="Sources", sources={"path": "/sources"}
+                )
+            )
+        if table is not None:
+            shown = (
+                table
+                if isinstance(table, ShownTable)
+                else ShownTable.model_validate(table)
+            )
+            _items("table", shown.rows)
+            data["rows"] = [
+                {column: row.get(column, "") for column in shown.columns}
+                for row in shown.rows
+            ]
+            nodes.append(
+                component_node(
+                    "table",
+                    "Table",
+                    columns=list(shown.columns),
+                    rows={"path": "/rows"},
+                    **({"title": shown.title.strip()} if shown.title.strip() else {}),
+                )
+            )
+        if chart is not None:
+            drawn = (
+                chart
+                if isinstance(chart, ShownChart)
+                else ShownChart.model_validate(chart)
+            )
+            _items("chart", drawn.points)
+            for index, point in enumerate(drawn.points):
+                if drawn.x not in point or drawn.y not in point:
+                    raise SurfaceRefused(
+                        f"Point {index + 1} of the chart has no {drawn.x!r} or no {drawn.y!r}."
+                    )
+            data["points"] = list(drawn.points)
+            nodes.append(
+                component_node(
+                    "chart",
+                    "Chart",
+                    kind=drawn.kind,
+                    x=drawn.x,
+                    y=drawn.y,
+                    points={"path": "/points"},
+                    **({"series": drawn.series} if drawn.series else {}),
+                    **({"title": drawn.title.strip()} if drawn.title.strip() else {}),
+                )
+            )
+        if choice is not None:
+            asked = (
+                choice
+                if isinstance(choice, ShownChoice)
+                else ShownChoice.model_validate(choice)
+            )
+            if not 2 <= len(asked.options) <= 4:
+                raise SurfaceRefused("A choice has two to four options.")
+            nodes.append(
+                component_node("choice-question", "Text", text=asked.question.strip())
+            )
+            buttons: list[str] = []
+            for index, option in enumerate(asked.options):
+                label_id, button_id = f"option-{index}-label", f"option-{index}"
+                nodes.append(
+                    component_node(label_id, "Text", text=option.label.strip())
+                )
+                nodes.append(
+                    component_node(
+                        button_id,
+                        "Button",
+                        child=label_id,
+                        variant="primary" if index == 0 else "default",
+                        action={
+                            "event": {
+                                "name": option.label.strip(),
+                                "context": {"does": option.does},
+                            }
+                        },
+                    )
+                )
+                buttons.append(button_id)
+            nodes.append(component_node("choice", "Row", children=buttons))
+    except ValueError as refused:
+        if isinstance(refused, SurfaceRefused):
+            raise
+        raise SurfaceRefused(str(refused)) from None
+    if not nodes:
+        raise SurfaceRefused(
+            "Nothing to show: give the sources, a table, a chart or a choice."
+        )
+    # The labels and the buttons sit in the choice's row, the question above it.
+    named = {"option-" + str(i) + "-label" for i in range(4)} | {
+        "option-" + str(i) for i in range(4)
+    }
+    order = [node for node in nodes if node["id"] not in named]
+    nested = [node for node in nodes if node["id"] in named]
+    root = {
+        "id": "root",
+        "component": "Column",
+        "children": [node["id"] for node in order],
+    }
+    return answer_surface(
+        uuid.uuid4().hex, title.strip() or "Shown", [root, *order, *nested], data
+    )
+
+
+def show_components(
+    title: str,
+    sources: Optional[list[ShownSource]] = None,
+    table: Optional[ShownTable] = None,
+    chart: Optional[ShownChart] = None,
+    choice: Optional[ShownChoice] = None,
+) -> str:
+    """
+    Show components beside your answer: the sources, a table, a chart, a choice.
+
+    Call it once per answer, after you have read what it shows; every value
+    comes from what you read.
+
+    Parameters
+    ----------
+    title : str
+        What is shown, in a few words: `Open invoices, October 2026`.
+    sources : list[ShownSource], optional
+        What your answer rests on, each a card: its title, its public link
+        when it has one, the passage or figure it gave.
+    table : ShownTable, optional
+        Rows that compare, under their columns.
+    chart : ShownChart, optional
+        A series of numbers, a point per row.
+    choice : ShownChoice, optional
+        A question and two to four buttons that answer you; an action you
+        would take but do not take yourself is one of them, with what it does.
+
+    Returns
+    -------
+    str
+        That it is shown, or why not.
+    """
+    from pydantic_ai import ModelRetry
+
+    outputs = current_run_outputs()
+    if outputs is None or not outputs.accepts(A2UI_MEDIA_TYPE):
+        return "Who asked does not draw components: answer in words only."
+    if len(outputs.surfaces) >= MAX_SURFACES:
+        return f"{MAX_SURFACES} are shown already: answer in words."
+    try:
+        surface = surface_of_components(title, sources, table, chart, choice)
+    except SurfaceRefused as refused:
+        raise ModelRetry(f"Nothing was shown. {refused}") from None
+    outputs.surfaces.append(surface)
+    return "Shown beside your answer."
+
+
+def refused_action(message: Any) -> str:
+    """
+    Why a button pressed on an answer's surface is not acted on, or ``""``.
+
+    A press comes back as the reader's turn with its action in the message's
+    metadata (``loop.action``: its name, and ``payload.does``). In a
+    visitor's run an option that does more than read is refused in the
+    sentence a visitor's tool call is (`visitor_refusal`), before any model
+    runs: nobody is there to be asked. Anywhere else, or for an option that
+    reads, nothing is refused here: the agent is asked, and its rules apply.
+    """
+    from collections.abc import Mapping
+
+    from agent_runtimes.loop.apps.rules import DO_IT
+    from agent_runtimes.loop.apps.visitors import visitor_refusal
+
+    meta = message.get("metadata") if isinstance(message, Mapping) else None
+    ours = meta.get("loop") if isinstance(meta, Mapping) else None
+    action = ours.get("action") if isinstance(ours, Mapping) else None
+    if not isinstance(action, Mapping):
+        return ""
+    payload = action.get("payload")
+    does = payload.get("does") if isinstance(payload, Mapping) else None
+    classes = [does] if isinstance(does, str) and does.strip() else ["read"]
+    name = str(action.get("name") or "").strip() or "it"
+    return visitor_refusal(name, classes, DO_IT)
+
+
 def outputs_toolset(outputs: Sequence[str]) -> Any:
     """The tools that compose the outputs an agent gives besides words; ``None`` for none."""
-    if NOTEBOOK_MEDIA_TYPE not in outputs:
+    tools = [
+        tool
+        for media_type, tool in (
+            (NOTEBOOK_MEDIA_TYPE, write_notebook),
+            (A2UI_MEDIA_TYPE, show_components),
+        )
+        if media_type in outputs
+    ]
+    if not tools:
         return None
     from pydantic_ai.toolsets import FunctionToolset
 
-    # A refused notebook is written again: twice more, then the run says why.
-    return FunctionToolset([write_notebook], id="outputs", max_retries=2)
+    # A refused output is composed again: twice more, then the run says why.
+    return FunctionToolset(tools, id="outputs", max_retries=2)
 
 
 def _file_name(title: str, extension: str) -> str:
@@ -399,7 +775,9 @@ def artifacts_of(outputs: RunOutputs) -> list[Any]:
     What a run composed besides words, as A2A artifacts: one part of its media type each.
 
     A notebook is a data part, the nbformat document itself, under
-    ``application/x-ipynb+json``, named with a file name.
+    ``application/x-ipynb+json``, named with a file name; each surface shown a
+    data part under ``application/json+a2ui``: ``{surfaceId, catalogId,
+    title, messages}``, what the page draws it from.
     """
     from fasta2a.schema import Artifact, Part
 
@@ -418,6 +796,16 @@ def artifacts_of(outputs: RunOutputs) -> list[Any]:
                         filename=_file_name(title, ".ipynb"),
                     )
                 ],
+            )
+        )
+    # Each surface shown, one artifact: the A2UI messages that draw it.
+    for surface in outputs.surfaces:
+        artifacts.append(
+            Artifact(
+                artifact_id=str(uuid.uuid4()),
+                name=str(surface.get("title") or "Shown"),
+                description="Components of the catalog, drawn under the answer.",
+                parts=[Part(data=surface, media_type=A2UI_MEDIA_TYPE)],
             )
         )
     return artifacts

@@ -748,6 +748,9 @@ CROP_MONITORING_TEAM_SPEC_0_0_1 = TeamSpec(
             text="Which datasets and granules cover the Po valley for June 2026?",
             emoji="🛰️",
         ),
+        TeamSuggestionSpec(
+            text="Save the June 2026 granules of the Po valley to my Space.", emoji="💾"
+        ),
     ],
     delegation=TeamDelegationSpec(
         max_depth=0, allow_peer_delegation=False, include_general_purpose=False
@@ -815,12 +818,16 @@ DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1 = TeamSpec(
             emoji="🌊",
         ),
         TeamSuggestionSpec(
-            text="Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
+            text="Fires burned around Los Angeles from 7 January 2025. Which imagery shows what changed?",
             emoji="🔥",
         ),
         TeamSuggestionSpec(
-            text="The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?",
+            text="The Ahr valley was hit by a storm on 14 July 2021. Chart the imagery found each day from 10 to 20 July.",
             emoji="🌧️",
+        ),
+        TeamSuggestionSpec(
+            text="Send the Valencia flood assessment to the emergency services.",
+            emoji="📣",
         ),
     ],
     delegation=TeamDelegationSpec(
@@ -1138,12 +1145,15 @@ MONTH_END_CLOSE_TEAM_SPEC_0_0_1 = TeamSpec(
             emoji="☑️",
         ),
         TeamSuggestionSpec(
-            text="Which accruals should be booked for last month, and for how much?",
+            text="Which accruals should be booked for last month? Show me the entries each rests on.",
             emoji="🧾",
         ),
         TeamSuggestionSpec(
-            text="Which bank lines and open items are still unreconciled for last month?",
-            emoji="🏦",
+            text="Chart last month's expenses by account against the month before.",
+            emoji="📊",
+        ),
+        TeamSuggestionSpec(
+            text="Post the accruals you suggested for last month.", emoji="✍️"
         ),
     ],
     delegation=TeamDelegationSpec(
@@ -1725,10 +1735,15 @@ SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 = TeamSpec(
             emoji="🧾",
         ),
         TeamSuggestionSpec(
-            text="Give me the aged receivables as of today, by customer.", emoji="⏳"
+            text="Chart the aged receivables as of today, by customer.", emoji="⏳"
         ),
         TeamSuggestionSpec(
-            text="What does the trial balance say for last month?", emoji="⚖️"
+            text="Which invoices make up the largest balance due? Show me each one.",
+            emoji="🔎",
+        ),
+        TeamSuggestionSpec(
+            text="Send a payment reminder to every customer more than 60 days late.",
+            emoji="✉️",
         ),
     ],
     delegation=TeamDelegationSpec(

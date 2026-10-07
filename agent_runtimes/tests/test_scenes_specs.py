@@ -73,7 +73,7 @@ def test_the_cast_arrives_resolved_from_the_team() -> None:
 
 def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
     for scene in SCENE_CATALOGUE.values():
-        assert len(scene.script) == 3, scene.id
+        assert len(scene.script) == 4, scene.id
         for beat in scene.script:
             assert beat.cue.say and beat.moves and beat.expect and beat.shows, (
                 scene.id,

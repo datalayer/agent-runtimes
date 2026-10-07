@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  A2UI_MEDIA_TYPE,
   NOTEBOOK_MEDIA_TYPE,
   a2aPeerTool,
   askA2APeer,
@@ -207,6 +208,7 @@ describe('Sales asks Accounting over A2A', () => {
     expect(peer.skill.outputModes).toEqual([
       'text/markdown',
       NOTEBOOK_MEDIA_TYPE,
+      A2UI_MEDIA_TYPE,
     ]);
     expect(offeredFormats(peer, ACCEPT)).toEqual([NOTEBOOK_MEDIA_TYPE]);
     expect(offeredFormats(peer, ['text/markdown'])).toEqual([]);
@@ -215,6 +217,18 @@ describe('Sales asks Accounting over A2A', () => {
       'It can also give a Jupyter notebook',
     );
     expect(peerToolDescription(peer)).not.toContain('Jupyter notebook');
+  });
+
+  it('sends a button pressed on an answer with its action, in the message', async () => {
+    const { fetch, seen } = accounting();
+    const peer = await connectA2APeer({ url: URL, key: KEY, fetch });
+    await askA2APeer(peer, 'Send them', {
+      action: { name: 'Send them', payload: { does: 'send' } },
+    });
+    const [request] = seen.filter(entry => entry.method === 'POST');
+    expect(request.body.params.message.metadata).toEqual({
+      loop: { action: { name: 'Send them', payload: { does: 'send' } } },
+    });
   });
 
   it('accepts a notebook, and is answered with one beside the words', async () => {

@@ -84,7 +84,19 @@ export interface SceneCueSpec {
 
 /** What kind of answer comes back, and what the page shows. */
 export type SceneAnswerKind =
-  'words' | 'table' | 'chart' | 'notebook' | 'map' | 'file' | 'image';
+  | 'words'
+  | 'table'
+  | 'chart'
+  | 'notebook'
+  | 'map'
+  | 'file'
+  | 'image'
+  /** The sources it read, as cards that open (STUDIO H-02). */
+  | 'sources'
+  /** A choice as buttons that answer the application. */
+  | 'choice'
+  /** A choice whose option does more than read: asked, and refused to a visitor. */
+  | 'approval';
 
 /** How fast a beat plays for the audience. */
 export type ScenePace = 'quick' | 'steady' | 'slow';
