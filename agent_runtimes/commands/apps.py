@@ -750,7 +750,11 @@ def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
         where=str(held.get("where") or validation.HERE),
         at=str(held.get("at") or ""),
     )
-    base_url = store.base.split("/api/spacer/v1")[0]
+    from agent_runtimes.loop.launch import make_client
+
+    # ai-agents' own origin: Spacer and ai-agents need not share one (r1's
+    # ai-agents keeps it, Spacer answers on prod1).
+    base_url = str(make_client()[0].urls.ai_agents_url).rstrip("/")
     try:
         validation.attach(
             store.http, base_url, app_uid=app_uid, version=item.version, report=ran

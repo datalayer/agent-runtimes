@@ -442,7 +442,10 @@ def test_validate_judges_a_worded_test_here_with_a_judge_and_attaches_the_report
         version = 4
         model = {"spec": __import__("yaml").safe_load(spec.read_text())}
 
+    urls: list = []
+
     def keep(request: httpx.Request) -> httpx.Response:
+        urls.append(str(request.url))
         kept.append(json.loads(request.content))
         return httpx.Response(200, json={"success": True, "validation": {"version": 4}})
 
@@ -454,6 +457,21 @@ def test_validate_judges_a_worded_test_here_with_a_judge_and_attaches_the_report
             return Item()
 
     monkeypatch.setattr(apps_command, "_store", lambda: Store())
+    # ai-agents answers at its own origin, not Spacer's (r1 and prod1).
+    from types import SimpleNamespace
+
+    import agent_runtimes.loop.launch as launch_module
+
+    monkeypatch.setattr(
+        launch_module,
+        "make_client",
+        lambda: (
+            SimpleNamespace(
+                urls=SimpleNamespace(ai_agents_url="https://r1.datalayer.run")
+            ),
+            "token",
+        ),
+    )
     attached = runner.invoke(
         apps_cli,
         [
@@ -471,6 +489,9 @@ def test_validate_judges_a_worded_test_here_with_a_judge_and_attaches_the_report
     report = json.loads(attached.output)[0]
     assert report["tests_says"].endswith("Attached to version 4 of Greeter.")
     assert kept[0]["version"] == 4 and kept[0]["report"]["app"] == "greeter"
+    assert urls == [
+        "https://r1.datalayer.run/api/ai-agents/v1/evals/apps/app-1/validation"
+    ]
     assert kept[0]["report"]["cases"][1]["state"] == "passed"
     refused = runner.invoke(apps_cli, ["validate", str(spec), "--tests", "--attach"])
     assert refused.exit_code != 0
