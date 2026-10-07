@@ -25,8 +25,9 @@ Two things are withheld, each as :data:`WITHHELD`:
 makes; :func:`redact` is what everything else said or kept goes through.
 
 What it cannot do: code the model writes runs in a sandbox that has the
-account's secrets in its environment (a skill's script needs them), and code
-can print a secret changed — reversed, encoded — which no value matches.
+skills' declared secrets in its environment (a skill's script needs them;
+only what the specs declare is given, :mod:`.declared_secrets`), and code can
+print a secret changed — reversed, encoded — which no value matches.
 """
 
 from __future__ import annotations

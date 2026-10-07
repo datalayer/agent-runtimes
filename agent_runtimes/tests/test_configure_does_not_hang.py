@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -194,15 +195,25 @@ def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
 
 
 def test_the_cloud_sequence_answers_with_an_error_and_logs_no_secret(
-    client: Any, caplog: pytest.LogCaptureFixture
+    client: Any, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     caplog.set_level(logging.DEBUG)
-    # 1. The companion: the account's secrets, and the default agent.
+    # What cog-crawler's skills and the application's connection declare (R-19),
+    # given here and not read from the machine running the test.
+    for name in ("TAVILY_API_KEY", "GITHUB_TOKEN"):
+        monkeypatch.setenv(name, "declared-for-this-test")
+        monkeypatch.delenv(name)
+    # 1. The companion: the declared secrets and one nothing declares, and the
+    # default agent.
     response = client.post(
         "/api/v1/agents/configure-from-spec",
         json={
             "agent_spec_id": "cog-crawler",
-            "env_vars": [{"name": "DEMO_SECRET_FOR_THIS_TEST", "value": SECRET}],
+            "env_vars": [
+                {"name": "DEMO_SECRET_FOR_THIS_TEST", "value": SECRET},
+                {"name": "TAVILY_API_KEY", "value": "tavily-for-this-test"},
+                {"name": "GITHUB_TOKEN", "value": "github-for-this-test"},
+            ],
         },
     )
     assert response.status_code == 200, response.text
@@ -218,6 +229,8 @@ def test_the_cloud_sequence_answers_with_an_error_and_logs_no_secret(
     # Deleting the agent it replaces never stops the runtime.
     assert client.deletes
     assert all(d == {"stop_runtime": False, "runtime_id": None} for d in client.deletes)
+    # Not declared by the spec, never set (R-19).
+    assert "DEMO_SECRET_FOR_THIS_TEST" not in os.environ
     # The secret's name is said; no part of its value, anywhere.
     logged = "\n".join(record.getMessage() for record in caplog.records)
     assert "DEMO_SECRET_FOR_THIS_TEST" in logged

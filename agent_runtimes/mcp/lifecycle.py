@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_runtimes.guardrails.credentials import hold_env, hold_expansion, redact
+from agent_runtimes.guardrails.declared_secrets import env_for_server
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.types import MCPServer, MCPServerTool
 
@@ -399,7 +400,8 @@ class MCPLifecycleManager:
                 #  2. Layer extra_env (from API request body, e.g. decoded secrets)
                 #  3. Layer config.env (from catalog/mcp.json, may contain ${VAR} refs)
                 # This ordering lets config.env reference extra_env values via ${VAR}.
-                env = {**os.environ}
+                # Without the secrets a configure gave for other servers (R-19).
+                env = env_for_server(os.environ, config)
 
                 if extra_env:
                     env.update(extra_env)

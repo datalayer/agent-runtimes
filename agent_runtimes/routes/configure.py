@@ -949,7 +949,7 @@ async def get_agent_spec_endpoint(
     Raises:
         HTTPException: If agent spec not found.
     """
-    from .agents import get_stored_agent_spec
+    from .agents import get_stored_agent_spec, set_up_refused
 
     spec = get_stored_agent_spec(agent_id)
     if spec is None:
@@ -961,9 +961,13 @@ async def get_agent_spec_endpoint(
     # Enrich with current sandbox status
     sandbox_status = _get_sandbox_status()
 
+    refused = set_up_refused(agent_id)
     return {
         **spec,
         "sandbox": sandbox_status.model_dump() if sandbox_status else None,
+        # Why its configure was refused — a secret its specs declare and it was
+        # not given (R-19) — so a launch waiting for it says so, and stops.
+        **({"set_up_refused": refused} if refused else {}),
     }
 
 

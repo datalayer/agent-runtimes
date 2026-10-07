@@ -601,9 +601,45 @@ the routes answer it and as it is logged), and the config the MCP routes
 answer: an MCP server's arguments and environment keep their `${VAR}` until
 the server starts.
 
+**Only the secrets its specs declare are given** (decided 2026-10-07). A
+runtime is never given the account's whole set of secrets: it is given those
+its specs declare, read off them by
+`agent_runtimes.guardrails.declared_secrets` — each MCP server it reaches (the
+agent's `mcp_servers`, an application's `connections`): its `envvars` and
+every `${VAR}` its command line, environment or address names; each skill its
+agent runs: its `envvars`; a subagent it is by `ref`, the same; and a
+deployment that takes a signed user, its `DATALAYER_APP_USER_SECRET_<UID>`.
+The runtime itself needs none of the account's secrets
+(`PLATFORM_RUNTIME_SECRETS` is empty): it calls its models with its
+ai-inference token and acts with the person's token, each given apart.
+`DATALAYER_API_KEY` is given only when a server or a skill declares it — the
+Earthdata connection's bearer does.
+
+| Who | Gets |
+| --- | --- |
+| the runtime's process | every declared secret |
+| an MCP server | its own, and no other server's |
+| the code sandbox (the kernel the model's code runs in) | the skills' alone: a server's credential stays with the server |
+| anything else | nothing: a secret no spec declares is given to nothing |
+
+Before it gives anything, the pod companion asks
+`POST /api/v1/agents/declared-secrets` (the spec's names, answered with names
+only) and passes on those of the account's secrets, no other; when the runtime
+does not answer, it passes on none. `configure-from-spec` (and so
+`/apps/configure`) keeps to them again on receipt: an undeclared name it is
+sent is dropped and logged by name, one a spec declared before and no longer
+declares is unset, and `mcp-servers/start` keeps to what its running agents
+declare. **Fail fast:** a spec whose server or skill needs a secret that is
+not there is refused with `422`, a sentence per secret — *Crop monitoring is
+not set up: the MCP server earthdata needs DATALAYER_API_KEY, which this
+runtime was not given…* — and `loop apps run --cloud` says that sentence and
+stops the runtime instead of waiting; nothing falls back to all the secrets.
+A runtime with no agentspec is a person's notebook: its kernel keeps the
+account's secrets as before.
+
 **What it cannot do.** Code the model writes runs in a sandbox that has the
-account's secrets in its environment, because a skill's script needs them. A
-secret printed as it is, is withheld; one printed changed — reversed,
+skills' declared secrets in its environment, because a skill's script needs
+them. A secret printed as it is, is withheld; one printed changed — reversed,
 encoded — is not, since no value matches it. An application's answer is
 checked for credentials by its built-in check too (R-06).
 

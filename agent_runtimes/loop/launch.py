@@ -695,7 +695,11 @@ def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
                 f"{relay_url}/api/v1/configure/agents/{CLOUD_AGENT_NAME}/spec",
                 timeout=10.0,
             )
-            if response.status_code == 200 and set_up_by_datalayer(response.json()):
+            answered = response.json() if response.status_code == 200 else None
+            if isinstance(answered, dict) and answered.get("set_up_refused"):
+                # A secret its specs declare was not given (R-19): said now.
+                raise CloudRefused(str(answered["set_up_refused"]))
+            if set_up_by_datalayer(answered):
                 return True
         except (httpx.HTTPError, ValueError):
             pass
@@ -1026,7 +1030,12 @@ def launch_cloud(
             f"The cloud runtime {launch.runtime_name} did not answer in time; it was stopped."
         )
     status(f"Waiting for Datalayer to set up {launch.runtime_name} for the account…")
-    if not wait_until_set_up(relay.url):
+    try:
+        set_up = wait_until_set_up(relay.url)
+    except CloudRefused as refused:
+        launch.stop()
+        raise CloudRefused(f"{refused} The runtime was stopped.") from None
+    if not set_up:
         launch.stop()
         raise RuntimeError(
             f"Datalayer did not set up {launch.runtime_name} in time (the account's "

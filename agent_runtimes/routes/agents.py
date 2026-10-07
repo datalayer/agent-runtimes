@@ -37,6 +37,16 @@ from ..capabilities import (
     build_usage_limits_from_agent_spec,
 )
 from ..events import create_event
+from ..guardrails.credentials import release
+from ..guardrails.declared_secrets import (
+    DeclaredSecrets,
+    declared_secrets,
+    forget_given,
+    given_names,
+    keep_declared,
+    note_given,
+    server_env_names,
+)
 from ..mcp import get_mcp_manager, initialize_config_mcp_servers
 from ..mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
@@ -84,6 +94,10 @@ _api_prefix = "/api/v1"
 # This preserves the separated system_prompt and system_prompt_codemode_addons
 # which are merged at agent creation time and lost in the running agent.
 _agentspecs: dict[str, dict[str, Any]] = {}
+
+#: Why an agent's configure was refused, by agent name, until one succeeds:
+#: answered with its creation spec, so a launch waiting for it says why (R-19).
+_SET_UP_REFUSED: dict[str, str] = {}
 
 _PARAM_TOKEN_PATTERNS = [
     re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}"),
@@ -4201,7 +4215,9 @@ async def _start_mcp_servers_for_agent(
             )
             # Pass env vars explicitly so MCP subprocess gets them even if
             # os.environ was not populated (robust, order-independent).
-            extra_env = {ev.name: ev.value for ev in env_vars} if env_vars else None
+            # Its own secrets alone: another server's are not its (R-19).
+            own = server_env_names(config)
+            extra_env = {ev.name: ev.value for ev in env_vars if ev.name in own} or None
             instance = await lifecycle_manager.start_server(
                 server_id, config, extra_env=extra_env
             )
@@ -4296,10 +4312,47 @@ async def _start_mcp_servers_for_agent(
     return started, already_running, failed, codemode_rebuilt
 
 
+def _declared_for_agents(agent_ids: list[str]) -> DeclaredSecrets:
+    """What the specs of these running agents declare, read off their creation records."""
+    consumers: dict[str, frozenset[str]] = {}
+    servers: dict[str, frozenset[str]] = {}
+    kernel: set[str] = set()
+    held: set[str] = set()
+    for name in agent_ids:
+        record = _agentspecs.get(name)
+        if not isinstance(record, dict):
+            continue
+        library = (
+            get_library_agent_spec(str(record["agent_spec_id"]))
+            if record.get("agent_spec_id")
+            else None
+        )
+        found = declared_secrets(
+            library,
+            forwarded_spec=record.get("agent_spec") or record,
+            app_spec=record.get("app_spec"),
+            app_instance=record.get("app_instance"),
+            resolve_agent=get_library_agent_spec,
+        )
+        for key, value in found.consumers.items():
+            consumers[key] = consumers.get(key, frozenset()) | value
+        for key, value in found.servers.items():
+            servers[key] = servers.get(key, frozenset()) | value
+        kernel |= found.kernel
+        held |= found.held
+    return DeclaredSecrets(
+        consumers=consumers,
+        servers=servers,
+        kernel=frozenset(kernel),
+        held=frozenset(held),
+    )
+
+
 async def _setup_env_and_sandbox(
     body: StartAgentMcpServersRequest,
     request: Request,
     agent_id: str | None = None,
+    declared: DeclaredSecrets | None = None,
 ) -> tuple[bool, str | None, str | None]:
     """
     Shared helper: set process env vars and configure sandbox from request body.
@@ -4314,6 +4367,23 @@ async def _setup_env_and_sandbox(
         (sandbox_configured, sandbox_variant, mcp_proxy_url)
     """
     label = f"mcp-servers/start/{agent_id}" if agent_id else "mcp-servers/start"
+    if declared is None:
+        # Started without a spec: what the running agents' specs declare (R-19).
+        declared = _declared_for_agents([agent_id] if agent_id else list(_agents))
+        kept, dropped = keep_declared(
+            {ev.name: ev.value for ev in body.env_vars if ev.name}, declared.runtime
+        )
+        if dropped:
+            # Names only: never any part of a value.
+            logger.info("[%s] not declared, not set: %s", label, dropped)
+        note_given(kept)
+        body = body.model_copy(
+            update={
+                "env_vars": [
+                    EnvVar(name=name, value=value) for name, value in kept.items()
+                ]
+            }
+        )
     env_var_names = [ev.name for ev in body.env_vars]
     for env_var in body.env_vars:
         # Names only: never any part of a value.
@@ -4334,9 +4404,10 @@ async def _setup_env_and_sandbox(
             from ..services.code_sandbox_manager import get_code_sandbox_manager
 
             sandbox_manager = get_code_sandbox_manager()
-            env_dict = (
-                {ev.name: ev.value for ev in body.env_vars} if body.env_vars else None
-            )
+            # The skills' secrets alone: a server's stays with the server (R-19).
+            env_dict = {
+                ev.name: ev.value for ev in body.env_vars if ev.name in declared.kernel
+            } or None
             sandbox_manager.configure_from_url(
                 body.jupyter_sandbox,
                 mcp_proxy_url=body.mcp_proxy_url,
@@ -4916,6 +4987,49 @@ class ConfigureFromSpecRequest(BaseModel):
     """The agent to (re)create: ``default``, or the one ``loop`` talks to."""
 
 
+class DeclaredSecretsRequest(BaseModel):
+    """What the companion asks before it gives a runtime any secret (R-19)."""
+
+    agent_spec_id: str | None = None
+    """The agentspec it will configure; none: the agents running now."""
+    agent_spec: dict[str, Any] | None = None
+    app_spec: dict[str, Any] | None = None
+    app_instance: dict[str, Any] | None = None
+
+
+@router.post("/declared-secrets")
+async def declared_secrets_endpoint(body: DeclaredSecretsRequest) -> dict[str, Any]:
+    """The names of the secrets a spec declares — the only ones a runtime is given.
+
+    Names only, never a value: ``runtime`` (what the process may hold),
+    ``kernel`` (what the code sandbox gets: the skills'), ``consumers`` (who
+    needs which). The companion gives the runtime those of the account's
+    secrets and no other (LOOP R-19, decided 2026-10-07).
+    """
+    if body.agent_spec_id:
+        spec = get_library_agent_spec(body.agent_spec_id)
+        if spec is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
+            )
+        declared = declared_secrets(
+            spec,
+            forwarded_spec=body.agent_spec,
+            app_spec=body.app_spec,
+            app_instance=body.app_instance,
+            resolve_agent=get_library_agent_spec,
+        )
+    else:
+        declared = _declared_for_agents(list(_agents))
+    return declared.as_names()
+
+
+def set_up_refused(agent_id: str) -> str | None:
+    """Why the agent's last configure was refused, or None."""
+    return _SET_UP_REFUSED.get(agent_id)
+
+
 @router.post("/configure-from-spec")
 async def configure_from_spec_endpoint(
     http_request: Request,
@@ -4963,14 +5077,63 @@ async def configure_from_spec_endpoint(
     """
     logger.info("Configuring agent from spec: %s", body.agent_spec_id)
 
-    # ── 1. Set process env vars from companion (secrets, API keys) ───
-    for env_var in body.env_vars:
-        name = env_var.get("name", "")
-        value = env_var.get("value", "")
-        if name:
-            # Names only: never any part of a value.
-            logger.info("[configure-from-spec] setting env var: %s", name)
-            os.environ[name] = value
+    # ── 1. The library spec, and the secrets its specs declare (R-19) ──
+    spec = get_library_agent_spec(body.agent_spec_id)
+    if spec is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
+        )
+    target_agent_name = body.agent_id
+    declared = declared_secrets(
+        spec,
+        forwarded_spec=body.agent_spec,
+        app_spec=body.app_spec,
+        app_instance=body.app_instance,
+        resolve_agent=get_library_agent_spec,
+    )
+
+    # ── 2. Only the declared secrets are set; none other is kept ─────
+    given = {
+        str(ev.get("name") or ""): str(ev.get("value") or "")
+        for ev in body.env_vars
+        if ev.get("name")
+    }
+    kept, dropped = keep_declared(given, declared.runtime)
+    if dropped:
+        # Names only: never any part of a value.
+        logger.info(
+            "[configure-from-spec] not declared by '%s', not set: %s",
+            body.agent_spec_id,
+            dropped,
+        )
+    taken_back = sorted(given_names() - declared.runtime)
+    for name in taken_back:
+        # Given for a spec configured before, declared by none now.
+        release(os.environ.pop(name, None))
+    forget_given(taken_back)
+    if taken_back:
+        logger.info("[configure-from-spec] no longer declared, unset: %s", taken_back)
+    problems = declared.missing(
+        lambda name: bool(
+            (kept.get(name) or "").strip() or (os.environ.get(name) or "").strip()
+        ),
+        who=str((body.app_spec or {}).get("name") or body.agent_spec_id),
+    )
+    if problems:
+        _SET_UP_REFUSED[target_agent_name] = " ".join(problems)
+        raise HTTPException(status_code=422, detail={"problems": problems})
+    _SET_UP_REFUSED.pop(target_agent_name, None)
+    for name, value in kept.items():
+        logger.info("[configure-from-spec] setting env var: %s", name)
+        os.environ[name] = value
+    note_given(kept)
+    kernel_env = [
+        EnvVar(name=name, value=value)
+        for name, value in kept.items()
+        if name in declared.kernel
+    ]
+    server_env = [EnvVar(name=name, value=value) for name, value in kept.items()]
 
     # Store the user JWT so that ToolApprovalConfig.from_env() can later
     # populate user_jwt_token — used by ToolsGuardrailCapability to:
@@ -4987,28 +5150,14 @@ async def configure_from_spec_endpoint(
             "true" if body.emit_live_events else "false"
         )
 
-    # ── 2. Validate that the referenced library spec exists ──────────
-    spec = get_library_agent_spec(body.agent_spec_id)
-    if spec is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Agentspec '{body.agent_spec_id}' not found in library.",
-        )
-
-    target_agent_name = body.agent_id
-
     # ── 3. Configure sandbox if jupyter_sandbox is provided ──────────
     #    The sandbox is managed independently of the agent — it survives
-    #    agent deletion/recreation.
+    #    agent deletion/recreation. It gets the skills' secrets alone.
     sandbox_variant: str | None = None
     mcp_proxy_url: str | None = body.mcp_proxy_url
     if body.jupyter_sandbox:
         sandbox_body = StartAgentMcpServersRequest(
-            env_vars=[
-                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
-                for ev in body.env_vars
-                if ev.get("name")
-            ],
+            env_vars=kernel_env,
             jupyter_sandbox=body.jupyter_sandbox,
             mcp_proxy_url=body.mcp_proxy_url,
         )
@@ -5016,6 +5165,7 @@ async def configure_from_spec_endpoint(
             sandbox_body,
             http_request,
             agent_id=target_agent_name,
+            declared=declared,
         )
 
     # ── 4. Build the CreateAgentRequest that represents this spec ────
@@ -5145,27 +5295,22 @@ async def configure_from_spec_endpoint(
         agent_name=target_agent_name,
         sandbox_variant=sandbox_variant,
         mcp_proxy_url=mcp_proxy_url,
-        env_count=len(body.env_vars),
+        env_count=len(kept),
         assignment_source="companion-configure-from-spec",
     )
 
     # ── 7. Start MCP servers + inject sandbox env vars (async) ───────
-    sandbox_env_vars: dict[str, str] = {}
-    for env_var in body.env_vars:
-        name = env_var.get("name", "")
-        value = env_var.get("value", "")
-        if name and value:
-            sandbox_env_vars[name] = value
+    #    Each server is started with its own secrets; the sandbox gets the
+    #    skills' alone (R-19).
+    sandbox_env_vars: dict[str, str] = {
+        ev.name: ev.value for ev in kernel_env if ev.value
+    }
 
     async def _background_mcp_and_sandbox() -> None:
         """Fire-and-forget: start MCP servers + inject sandbox env vars."""
         # ── MCP servers ──────────────────────────────────────
         if target_agent_name in _agents:
-            env_var_objects = [
-                EnvVar(name=ev.get("name", ""), value=ev.get("value", ""))
-                for ev in body.env_vars
-                if ev.get("name")
-            ]
+            env_var_objects = server_env
             try:
                 (
                     started,

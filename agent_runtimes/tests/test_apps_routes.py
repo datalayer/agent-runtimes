@@ -77,6 +77,15 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(agents, "delete_agent", delete_agent)
     monkeypatch.setattr(agents, "_emit_agent_assigned_event", lambda **kwargs: None)
     monkeypatch.setitem(agents._agentspecs, "default", None)
+    # What cog-crawler and its connection declare, set where it runs (R-19):
+    # a spec whose secret is not there is refused before its agent is made.
+    for name in (
+        "TAVILY_API_KEY",
+        "GITHUB_TOKEN",
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+    ):
+        monkeypatch.setenv(name, "declared-for-this-test")
     routes._RUNNING.clear()
     monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
     with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
