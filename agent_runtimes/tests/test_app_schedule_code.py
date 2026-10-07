@@ -463,6 +463,36 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
             sessions.serve_agent_code(name, None)
 
 
+def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
+    creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
+) -> None:
+    """The keeper of a deployment kept always on (R-33) makes its agent from
+    `kept_payload` with the version's `app.py`: the create route takes it as
+    for a tick, and every session of that agent — a visitor's at the
+    address, not only a woken one — runs with the code; without it, none."""
+    from agent_runtimes.loop.apps.deployments import kept_payload
+    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+
+    spec = tick_spec()
+    principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
+    try:
+        for name, code in (("r14-kept", TICK_CODE), ("r14-kept-spec", None)):
+            payload = kept_payload(
+                spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=code
+            )
+            request = CreateAgentRequest(**{**payload, "name": name})
+            asyncio.run(create_agent(request, _DummyRequest()))
+        served = sessions.code_of(load_app(spec), "r14-kept")
+        assert served is not None and served.spec.id == "r14-tick"
+        assert served.schedule_at(1) == "tick"
+        assert sessions.code_of(load_app(spec), "r14-kept-spec") is None
+    finally:
+        principal.forget_principal_token("dep-14")
+        for name in ("r14-kept", "r14-kept-spec"):
+            sessions.serve_agent_code(name, None)
+
+
 def test_a_woken_session_runs_the_code_the_deployment_carried_not_the_prompt(
     runtime: Runtime,  # noqa: F811 - the fixture
     remote: TestClient,  # noqa: F811 - the fixture

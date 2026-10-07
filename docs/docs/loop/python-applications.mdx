@@ -439,6 +439,16 @@ bounded amount of credits for its runtime — the deployment's spend limit
 when its owner set one, else the platform's own small reservation — never
 a share of what the owner has left.
 
+A deployment kept **always on** runs your code too. Its version's `app.py`
+is kept with the deployment as it is deployed or moved to another version,
+beside its spec, and the runtime it is kept on is handed it each time it
+starts — `app_code` on the payload that makes its agent there
+(`kept_payload`), also when the platform starts it again with nobody
+present, which reads no Spacer item. Every session of that agent — a
+visitor's at the address, a tick's — runs with it. A deployment kept
+before its code was kept with it is not guessed to have none: it stops
+being kept on, saying it is to be deployed again.
+
 **A `@app.schedule` handler runs on the tick** when the runtime runs the
 application's code — an `app.py` of the catalogue, at the version the
 runtime has: the scheduler knows a schedule by its position among the
