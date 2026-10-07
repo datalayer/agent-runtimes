@@ -26,7 +26,7 @@ import {
 /** The tools the entry asks with, as the hook makes them, by the peer's name. */
 const told = vi.hoisted(() => ({
   tools: new Map<string, (event: A2APeerEvent) => void>(),
-  asked: [] as { peer: string; request: string }[],
+  asked: [] as { peer: string; request: string; action?: unknown }[],
   answer: 'The imagery shows a flooded plain.',
 }));
 vi.mock('../../../runtimes/browser/a2aPeer', async importOriginal => {
@@ -47,9 +47,13 @@ vi.mock('../../../runtimes/browser/a2aPeer', async importOriginal => {
     askA2APeer: async (
       peer: A2APeer,
       request: string,
-      options: { onEvent?: (event: A2APeerEvent) => void },
+      options: { onEvent?: (event: A2APeerEvent) => void; action?: unknown },
     ) => {
-      told.asked.push({ peer: peer.card.name, request });
+      told.asked.push({
+        peer: peer.card.name,
+        request,
+        ...(options.action ? { action: options.action } : {}),
+      });
       options.onEvent?.({ phase: 'asked', request });
       options.onEvent?.({
         phase: 'working',
@@ -353,5 +357,150 @@ describe('an entry on a runtime', () => {
     // Its own calls are not a peer's: nothing on a link.
     expect(result.current.flows).toEqual({});
     expect(result.current.calls).toEqual([]);
+  });
+});
+
+describe('a button pressed on what a peer showed', () => {
+  const PRESSED = {
+    message: 'Send the reminders',
+    action: { name: 'Send the reminders', payload: { does: 'send' } },
+  };
+
+  it('is a turn of the conversation: the person’s line to it, its answer from it', async () => {
+    const { useA2ATeam } = await import('../useA2ATeam');
+    const { result } = renderHook(() =>
+      useA2ATeam({
+        entry: SALES_APP_0_0_1,
+        peerApp: ACCOUNTING_APP_0_0_1,
+        peer: peerNamed('Accounting'),
+        inference: {} as never,
+      }),
+    );
+    let reply = '';
+    await act(async () => {
+      reply = await result.current.pressAction(
+        ACCOUNTING_APP_0_0_1.id,
+        PRESSED,
+      );
+    });
+    expect(reply).toBe(told.answer);
+    // Asked directly, the button's action beside its words.
+    expect(told.asked).toEqual([
+      {
+        peer: 'Accounting',
+        request: 'Send the reminders',
+        action: PRESSED.action,
+      },
+    ]);
+    const member = { id: ACCOUNTING_APP_0_0_1.id, name: 'Accounting' };
+    expect(result.current.turns).toEqual([
+      { role: 'user', text: 'Send the reminders', member },
+      { role: 'assistant', text: told.answer, member },
+    ]);
+    // In the entry's history: the person to Accounting, then Accounting.
+    expect(result.current.entryHistory).toMatchObject([
+      {
+        role: 'user',
+        content: 'Send the reminders',
+        speaker: { name: 'You' },
+        directedTo: member,
+      },
+      { role: 'assistant', content: told.answer, speaker: member },
+    ]);
+    // As an ask_accounting answer lands: its history, its report, its balloon.
+    const [accounting] = result.current.peers;
+    expect(
+      accounting.history.filter(item => 'role' in item).map(item => item),
+    ).toMatchObject([
+      { role: 'user', content: 'Send the reminders' },
+      { role: 'assistant', content: told.answer },
+    ]);
+    expect(accounting.report).toBe(told.answer);
+    expect(result.current.report).toBe(told.answer);
+    expect(accounting.persona).toMatchObject({
+      state: 'idle',
+      saying: told.answer,
+    });
+    expect(result.current.busy).toBe(false);
+  });
+
+  it('is refused when its member is not reached', async () => {
+    const { useA2ATeam } = await import('../useA2ATeam');
+    const { result } = renderHook(() =>
+      useA2ATeam({
+        entry: SALES_APP_0_0_1,
+        peerApp: ACCOUNTING_APP_0_0_1,
+        peer: null,
+        inference: {} as never,
+      }),
+    );
+    await expect(
+      result.current.pressAction(ACCOUNTING_APP_0_0_1.id, PRESSED),
+    ).rejects.toThrow('Accounting is not reached');
+    expect(told.asked).toEqual([]);
+    expect(result.current.turns).toEqual([]);
+  });
+
+  it('is the person’s in the transcript, not the entry’s', async () => {
+    const { createOtelLiveTracer } =
+      await import('@datalayer/core/lib/otel/live');
+    const { traceA2AFetch } = await import('../../inspector/a2aSpans');
+    const { PERSON, transcriptOfSpans, lineText } =
+      await import('../sceneTranscript');
+    let now = 1000;
+    const tracer = createOtelLiveTracer({
+      serviceName: 'Sales',
+      now: () => (now += 10),
+    });
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    const traced = traceA2AFetch(
+      async (_input, init) =>
+        new Response(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            result: {
+              message: {
+                parts: [
+                  {
+                    text: String(init?.body).includes('loop')
+                      ? 'It only reads: nothing sent.'
+                      : 'Two are open.',
+                  },
+                ],
+              },
+            },
+          }),
+          { headers: { 'content-type': 'application/json' } },
+        ),
+      { tracer, asker: 'Sales', peer: 'Accounting', pressedBy: PERSON },
+    );
+    const send = (text: string, metadata?: unknown) =>
+      traced('http://peer/', {
+        method: 'POST',
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'SendMessage',
+          params: { message: { parts: [{ text }], metadata } },
+        }),
+      });
+    // The entry's ask, then the person's press.
+    await send('Which invoices are open?');
+    await flush();
+    await send('Send the reminders', {
+      loop: { action: PRESSED.action },
+    });
+    await flush();
+    const lines = transcriptOfSpans(tracer.spans(), [
+      { id: 'sales', name: 'Sales' },
+      { id: 'accounting', name: 'Accounting' },
+    ]).map(lineText);
+    expect(lines).toEqual([
+      'Sales → Accounting: Which invoices are open?',
+      'Accounting: Two are open.',
+      'You → Accounting: Send the reminders',
+      'Accounting: It only reads: nothing sent.',
+    ]);
   });
 });

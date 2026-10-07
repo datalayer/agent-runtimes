@@ -68,7 +68,9 @@ export type AnswerSurfacesProps = {
   names?: Record<string, string>;
   /**
    * A button pressed on one of them: ask the member that showed it, and
-   * answer what it said, in words, to be shown under the surface.
+   * answer what it said, in words, to be shown under the surface. A team's
+   * `pressAction(surface.giver, pressed)` makes the press a turn of its
+   * conversation too. A press that throws is said, and another is taken.
    */
   onPress?: (
     surface: A2ATeamSurface,

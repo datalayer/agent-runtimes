@@ -26,7 +26,9 @@
  * the latest notebook kept until another one comes ({@link A2ATeam.notebook}),
  * and each surface of components of the catalog a peer shows
  * (`application/json+a2ui`) kept with the peer that gave it, in the order
- * they came ({@link A2ATeam.surfaces}, STUDIO H-02).
+ * they came ({@link A2ATeam.surfaces}, STUDIO H-02). A button pressed on
+ * one is a turn of the conversation ({@link A2ATeam.pressAction}): the
+ * person's line to that member, its answer from it, in the entry's history.
  * The tools a peer calls on its connections (its MCP servers), told over
  * A2A as it calls them, are kept as the calls running now ({@link callsAfter}).
  *
@@ -56,6 +58,7 @@ import {
   A2UI_MEDIA_TYPE,
   NOTEBOOK_MEDIA_TYPE,
   type A2APeer,
+  type A2APeerAction,
   type A2APeerArtifact,
   type A2APeerEvent,
 } from '../../runtimes/browser/a2aPeer';
@@ -79,6 +82,7 @@ import {
   type A2ATeamConnection,
   type A2ATeamFlow,
 } from './a2aTeamFlow';
+import { PERSON } from './sceneTranscript';
 import {
   toolLineOfStep,
   type BalloonToolLine,
@@ -112,8 +116,29 @@ export const AT_REST: A2ATeamPersona = {
   away: false,
 };
 
-/** One turn of the conversation with the entry. */
-export type A2ATeamTurn = { role: 'user' | 'assistant'; text: string };
+/**
+ * One turn of the conversation with the entry. A button pressed on what
+ * another member showed is a turn of it too: the person's line addressed to
+ * that member, and its answer from it (`member`, STUDIO H-02).
+ */
+export type A2ATeamTurn = {
+  role: 'user' | 'assistant';
+  text: string;
+  /**
+   * The member other than the entry this turn is with: the one whose
+   * button the person pressed, and who answered it.
+   */
+  member?: { id: string; name: string };
+};
+
+/**
+ * A button pressed on a surface a member showed (`AnswerSurfaces`'
+ * `AnswerPressed`): its words, the person's turn, and its action.
+ */
+export type A2ATeamPress = {
+  message: string;
+  action: A2APeerAction;
+};
 
 /** What a page that shows notebooks accepts: a notebook, and words in Markdown. */
 export const NOTEBOOK_AND_WORDS: readonly string[] = [
@@ -356,6 +381,17 @@ export type A2ATeam = {
   /** Whether the entry can be asked: every peer is connected, or the entry is. */
   ready: boolean;
   send: (text: string) => Promise<void>;
+  /**
+   * A button pressed on what a member showed (its id: the entry's, or a
+   * peer's), as a turn of the conversation (STUDIO H-02): the person's line
+   * in the entry's history, the member asked directly over A2A with the
+   * button's action beside its words (`askA2APeer({ action })`), and its
+   * reply landing as an `ask_<peer>` answer does — in its history, its
+   * balloon, its flow, the team's report, surfaces and notebook — and in
+   * the entry's history as that member's answer. Answers its words; throws
+   * when the member is not reached, a turn is under way, or it failed.
+   */
+  pressAction: (memberId: string, pressed: A2ATeamPress) => Promise<string>;
   stop: () => void;
 };
 
@@ -921,6 +957,74 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     ],
   );
 
+  const pressAction = useCallback(
+    async (memberId: string, pressed: A2ATeamPress): Promise<string> => {
+      const words = pressed.message.trim();
+      const isEntry = memberId === entry.id;
+      const one = isEntry ? undefined : peerOf(memberId);
+      const name = isEntry ? entry.name : (one?.app.name ?? memberId);
+      const to = isEntry ? entryPeer : (one?.peer ?? null);
+      if (!to) {
+        throw new Error(`${name} is not reached: it cannot be asked.`);
+      }
+      if (busy) {
+        throw new Error('Wait for the answer under way, then choose.');
+      }
+      if (!words) {
+        throw new Error('This button says nothing to send.');
+      }
+      // The entry's own button is a turn with it; another member's is
+      // addressed to that member, and answered by it.
+      const member = isEntry ? undefined : { id: memberId, name };
+      const withMember = member ? { member } : {};
+      setBusy(true);
+      setTurns(prev => [...prev, { role: 'user', text: words, ...withMember }]);
+      abort.current = new AbortController();
+      try {
+        const { answer } = await askA2APeer(to, words, {
+          signal: abort.current.signal,
+          action: pressed.action,
+          accept,
+          onEvent: event => onMemberEvent(memberId, event),
+        });
+        setTurns(prev => [
+          ...prev,
+          { role: 'assistant', text: answer, ...withMember },
+        ]);
+        if (!entryPeer) {
+          // The entry's model reads it at its next turn: what was chosen,
+          // and what the member answered.
+          history.current = [
+            ...history.current,
+            { role: 'user', content: words },
+            {
+              role: 'assistant',
+              content: `${name} answered the person directly: ${answer}`,
+            },
+          ];
+        }
+        // Answered: back at rest, its words still in its balloon.
+        setPersona(memberId, prev => ({ ...prev, state: 'idle' }));
+        return answer;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setTurns(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: `Could not answer: ${message}`,
+            ...withMember,
+          },
+        ]);
+        throw error;
+      } finally {
+        abort.current = null;
+        setBusy(false);
+      }
+    },
+    [entry, entryPeer, peerOf, busy, accept, onMemberEvent, setPersona],
+  );
+
   const stop = useCallback(() => abort.current?.abort(), []);
 
   useEffect(
@@ -957,6 +1061,18 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         role: turn.role,
         content: turn.text,
         createdAt: new Date(0),
+        // A button pressed on another member's surface: the person's line
+        // to it, and its answer, said by it.
+        ...(turn.member
+          ? turn.role === 'user'
+            ? {
+                speaker: { id: 'person', name: PERSON },
+                directedTo: { id: turn.member.id, name: turn.member.name },
+              }
+            : {
+                speaker: { id: turn.member.id, name: turn.member.name },
+              }
+          : {}),
       })),
     [turns],
   );
@@ -1000,6 +1116,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     busy,
     ready: entryPeer ? true : agent !== null,
     send,
+    pressAction,
     stop,
   };
 }

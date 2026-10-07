@@ -238,4 +238,44 @@ describe('AnswerSurfaces', () => {
       expect(onPress).toHaveBeenCalledTimes(1);
     },
   );
+
+  it(
+    'says a press that failed, and takes another',
+    { timeout: 30000 },
+    async () => {
+      const { AnswerSurfaces } = await import('../AnswerSurfaces');
+      const onPress = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error('Wait for the answer under way, then choose.'),
+        )
+        .mockResolvedValueOnce('Nothing sent.');
+      render(
+        <AnswerSurfaces
+          surfaces={[
+            { id: SURFACE_ID, giver: 'accounting', artifact: SURFACE },
+          ]}
+          names={{ accounting: 'Accounting' }}
+          onPress={onPress}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole(
+          'button',
+          { name: 'Send them' },
+          { timeout: 20000 },
+        ),
+      );
+      expect(
+        await screen.findByText(/Wait for the answer under way/),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+      expect(await screen.findByText('Accounting: Nothing sent.')).toBeTruthy();
+      expect(screen.getByText('You chose: Not now')).toBeTruthy();
+      expect(onPress).toHaveBeenCalledTimes(2);
+      // Answered: one choice per surface.
+      fireEvent.click(screen.getByRole('button', { name: 'Send them' }));
+      expect(onPress).toHaveBeenCalledTimes(2);
+    },
+  );
 });

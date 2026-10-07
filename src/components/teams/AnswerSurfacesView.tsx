@@ -8,7 +8,8 @@
  * Datalayer's catalog, its title and who showed it above it, and under it
  * what was chosen and what the member answered. One choice per surface:
  * once a button is pressed the surface says what was chosen and asks no
- * more.
+ * more — unless the press failed (the member not reached, a turn under
+ * way): what failed is said, and another press is taken.
  *
  * @module components/teams/AnswerSurfacesView
  */
@@ -26,7 +27,13 @@ import { readA2uiToolResult } from '../../loop/plugins/a2ui-surface/toolResult';
 import { pressedOf, type AnswerSurfacesProps } from './AnswerSurfaces';
 import type { A2ATeamSurface } from './useA2ATeam';
 
-type Answered = { chose: string; reply?: string; waiting: boolean };
+type Answered = {
+  chose: string;
+  reply?: string;
+  waiting: boolean;
+  /** It failed: said, and another button can be pressed. */
+  failed?: boolean;
+};
 
 function OneSurface({
   surface,
@@ -45,7 +52,7 @@ function OneSurface({
   const onAction = useCallback(
     (action: A2uiClientAction) => {
       const pressed = pressedOf(action);
-      if (!pressed || answered || !onPress) {
+      if (!pressed || (answered && !answered.failed) || !onPress) {
         return;
       }
       setAnswered({ chose: pressed.message, waiting: true });
@@ -56,6 +63,7 @@ function OneSurface({
             chose: pressed.message,
             reply: error instanceof Error ? error.message : String(error),
             waiting: false,
+            failed: true,
           }),
       );
     },

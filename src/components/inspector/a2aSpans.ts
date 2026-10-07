@@ -58,6 +58,13 @@ export type A2ASpansOptions = {
    * Without it, a tool the peer's runtime runs.
    */
   classifyTool?: (name: string, args?: Record<string, unknown>) => ToolClass;
+  /**
+   * Who presses the buttons of what the peer shows: a request carrying a
+   * pressed button's action (`loop.action` in its message's metadata) is
+   * theirs, not the asker's — the person (`You`) on a page that draws the
+   * surfaces (STUDIO H-02). Unsaid, every request is the asker's.
+   */
+  pressedBy?: string;
 };
 
 type Json = Record<string, unknown>;
@@ -125,6 +132,15 @@ function stepOf(message: unknown):
     }
   }
   return undefined;
+}
+
+/** Whether a message carries a pressed button's action: `metadata.loop.action`. */
+export function pressedAction(message: unknown): boolean {
+  if (!isObject(message) || !isObject(message.metadata)) {
+    return false;
+  }
+  const loop = message.metadata.loop;
+  return isObject(loop) && isObject(loop.action);
 }
 
 const FAILED_STATES = /FAILED|REJECTED|CANCELED/;
@@ -405,7 +421,10 @@ export function traceA2AFetch(
     const span = tracer.startSpan(
       rpc ? `a2a ${method}` : `${httpMethod} ${path}`,
       {
-        serviceName: asker,
+        serviceName:
+          options.pressedBy && pressedAction(message)
+            ? options.pressedBy
+            : asker,
         kind: 'CLIENT',
         attributes: {
           'peer.service': peer,

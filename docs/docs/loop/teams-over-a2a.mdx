@@ -443,7 +443,20 @@ answer to the member that showed it: `onPress(surface, pressed)` gets the
 option's words and its action (`pressedOf`), and the page asks that member
 with them — `askA2APeer(peer, pressed.message, { action: pressed.action })`
 puts the action in the message's metadata, `loop.action: {name, payload:
-{does}}`. One choice per surface; what came back is said under it.
+{does}}`. One choice per surface; what came back is said under it (a
+press that failed is said, and another button can be pressed).
+
+**A press is a turn of the conversation.** In a team, give `onPress` the
+team's `pressAction(surface.giver, pressed)`: the person's line goes into
+the entry's history, addressed to that member (`turns`' `member`, the
+history's `speaker` *You* and `directedTo`), the member is asked directly
+with the action, and its reply lands as an `ask_<peer>` answer does — its
+history, its balloon, its link's flow, the team's report, surfaces and
+notebook — and in the entry's history as that member's answer. The entry's
+model reads both at its next turn. In the transcript the press is the
+person's: give the peer's `traceA2AFetch` `pressedBy: PERSON`, and a request
+carrying `loop.action` is recorded with *You* as its service — *You →
+Accounting: Send the reminders* — while the entry's own requests stay its.
 
 **An approval is honest.** An option whose `does` is more than `read`
 (`write`, `send`, `delete`…) is an approval. The agent is told to show an
@@ -458,16 +471,13 @@ that asks first is asked of a person (Tool Approvals).
 
 ```tsx
 import { AnswerSurfaces, COMPONENTS_NOTEBOOK_AND_WORDS, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
-import { askA2APeer } from '@datalayer/agent-runtimes/lib/runtimes/browser/a2aPeer';
 
 const team = useA2ATeam({ entry, peers, inference, accept: COMPONENTS_NOTEBOOK_AND_WORDS });
 // …
 <AnswerSurfaces
   surfaces={team.surfaces}
   names={{ accounting: 'Accounting' }}
-  onPress={async (surface, pressed) =>
-    (await askA2APeer(peerOf(surface.giver), pressed.message, { action: pressed.action })).answer
-  }
+  onPress={(surface, pressed) => team.pressAction(surface.giver, pressed)}
 />
 ```
 
