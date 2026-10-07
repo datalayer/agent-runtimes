@@ -26,7 +26,13 @@ The routes live in `agent_runtimes/routes/apps.py`, beside `configure`,
 
 A session is opened on the agent the platform made for the application, as it
 makes one today: `POST /api/v1/agents` with the Appspec (`app_spec`) and the
-instance it runs (`app_instance`: `app_uid`, `deployment_uid`, `version`).
+instance it runs (`app_instance`: `app_uid`, `deployment_uid`, `version`) —
+and, for a deployment of an application written in Python, its `app.py`
+(`app_code`: `{file, text}`, what `loop apps push` kept with the version),
+which the runtime runs that agent's sessions with; code is accepted for a
+deployment's agent only, once its principal's token is held, and refused
+(422) otherwise. The agent's capabilities are the same as in a terminal —
+its rules, checks and record, its documents, saving and learning tools.
 The session API does not make agents; it refuses, in a sentence, an agent that
 is not there or runs no application.
 

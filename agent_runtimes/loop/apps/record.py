@@ -124,7 +124,28 @@ _RECORDERS: Dict[str, "AppRecorder"] = {}
 _AGENT_RECORDERS: Dict[str, "AppRecorder"] = {}
 
 #: The sends begun as a run starts, held until done: a task nothing refers to may be collected.
-_SENDING: Set[Any] = set()
+#: The sends in flight, by session (LOOP R-14): a stream of the session ends
+#: only once they are done (`AppRecorder.settled`), so a scheduler that stops
+#: the runtime as the stream ends finds the turn on the record.
+_SENDING: Dict[str, Set[Any]] = {}
+
+
+def send_later(session: str, sending: Any) -> Any:
+    """Send ``session``'s record in a task of its own, held until done — a
+    task nothing refers to may be collected — and counted among what
+    `AppRecorder.settled` waits for."""
+    task = asyncio.get_running_loop().create_task(sending)
+    held = _SENDING.setdefault(session, set())
+    held.add(task)
+
+    def done(finished: Any) -> None:
+        held.discard(finished)
+        if not held and _SENDING.get(session) is held:
+            _SENDING.pop(session, None)
+
+    task.add_done_callback(done)
+    return task
+
 
 #: The longest comment kept with a thumb.
 COMMENT_LIMIT = 2000
@@ -402,6 +423,16 @@ class AppRecorder:
             "entries": entries,
         }
 
+    async def settled(self, session: str) -> None:
+        """Wait until every send of ``session``'s record in flight is done,
+        then send what is still pending: what a stream's end waits for
+        (LOOP R-14), so nothing of the turn is lost to a runtime stopped as
+        the stream ends. Never fails: a record is never worth a run.
+        """
+        while _SENDING.get(session):
+            await asyncio.gather(*list(_SENDING[session]), return_exceptions=True)
+        await self.flush(session)
+
     async def flush(self, session: str) -> None:
         entries = self._pending.pop(session, [])
         if not entries:
@@ -552,9 +583,7 @@ class AppRecorder:
         """
         _SESSION.set(session)
         self.add("run", f"{self.app.name} is working", {})
-        task = asyncio.get_running_loop().create_task(self.flush(session))
-        _SENDING.add(task)
-        task.add_done_callback(_SENDING.discard)
+        send_later(session, self.flush(session))
 
     def approvals_unread(self, why: str) -> None:
         """What the person approved in advance could not be read: they are asked."""
@@ -702,14 +731,15 @@ class AppRecordCapability(AbstractCapability[Any]):
                 # stops reading at `RUN_FINISHED` (and stops the runtime with
                 # it, as the terminal does) takes away.
                 answer = self._answers.get(key, "")
-                task = asyncio.get_running_loop().create_task(
+                task = send_later(
+                    self._sessions[key],
                     self._close(
                         ctx,
                         _short(answer, 300),
                         {"length": len(answer)},
                         # A client gone before the answer leaves no turn.
                         answered=answer if final else None,
-                    )
+                    ),
                 )
                 # Held until done: a task nothing refers to may be collected.
                 self._sending.add(task)

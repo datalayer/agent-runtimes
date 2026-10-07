@@ -52,6 +52,7 @@ def digest() -> tuple[Application, List[str]]:
             "kind": "worker",
             "agent": "cog-crawler:0.0.1",
             "goal": "Keep the week's digest.",
+            "record": {"keep_for": "30_days", "include": ["conversations", "outputs"]},
             "triggers": [
                 {"type": "once", "at": "launch"},
                 {
@@ -107,7 +108,7 @@ def deployed(
     monkeypatch.setattr(
         sessions,
         "code_of",
-        lambda app: application if app.id == "digest" else None,
+        lambda app, agent_id="": application if app.id == "digest" else None,
     )
     runtime.make("digest", application.document, DEPLOYMENT)
     yield runtime, ran
@@ -285,3 +286,269 @@ def test_the_runtime_s_agent_of_a_woken_deployment_knows_nobody_is_present(
     finally:
         _SESSION.reset(token)
         principal.forget_principal_token("dep-1")
+
+
+# --- the deployment's own code travels with the tick (drilled 2026-10-07) ----------
+
+TICK_SOURCE = """
+from agent_runtimes.loop.apps import Application, Session
+
+app = Application.from_spec(
+    {
+        "schema": "loop.app/v1",
+        "id": "r14-tick",
+        "version": "0.0.1",
+        "name": "R-14 tick",
+        "kind": "worker",
+        "agent": "cog-crawler:0.0.1",
+        "goal": "Say the time on every tick, and nothing more.",
+        "record": {"keep_for": "30_days", "include": ["conversations", "outputs"]},
+        "triggers": [{"type": "once", "at": "launch"}],
+    }
+)
+
+
+@app.schedule("*/2 * * * *", description="Every two minutes", prompt="Say that the tick ran.")
+async def tick(session: Session) -> None:
+    await session.send("TICK-HANDLER-RAN")
+"""
+
+TICK_CODE = {"file": "app.py", "text": TICK_SOURCE}
+TICK_DEPLOYMENT = {"app_uid": "app-14", "deployment_uid": "dep-14", "version": 2}
+
+
+def tick_spec() -> Dict[str, Any]:
+    """The Appspec `loop apps push` builds from the code: its schedule at position 1."""
+    from agent_runtimes.loop.apps.application import load_application_source
+
+    return load_application_source(TICK_SOURCE, "app.py").document
+
+
+def test_a_versions_code_is_in_the_payload_the_scheduler_hands_the_runtime() -> None:
+    """ai-agents' `/wake` reads the item's `app.py` beside its spec and
+    `session_payload` carries it as `app_code`; a spec version carries none;
+    what is not an `app.py` is refused."""
+    from agent_runtimes.loop.apps.deployments import (
+        DeployRefused,
+        kept_payload,
+        session_payload,
+    )
+
+    spec = tick_spec()
+    woken_by = {"kind": "schedule", "position": 1}
+    carried = session_payload(
+        spec,
+        app_uid="app-14",
+        deployment_uid="dep-14",
+        version=2,
+        woken_by=woken_by,
+        code=TICK_CODE,
+    )
+    assert carried["app_code"] == TICK_CODE
+    assert carried["app_instance"]["woken_by"] == woken_by
+    assert "app_code" not in session_payload(
+        spec, app_uid="app-14", deployment_uid="dep-14", version=2, woken_by=woken_by
+    )
+    assert (
+        kept_payload(
+            spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=TICK_CODE
+        )["app_code"]
+        == TICK_CODE
+    )
+    for wrong in (
+        {"file": "app.txt", "text": TICK_SOURCE},
+        {"file": "../app.py", "text": TICK_SOURCE},
+        {"file": "app.py", "text": " "},
+        {"text": TICK_SOURCE},
+    ):
+        with pytest.raises(DeployRefused):
+            session_payload(
+                spec,
+                app_uid="app-14",
+                deployment_uid="dep-14",
+                version=2,
+                woken_by=woken_by,
+                code=wrong,
+            )
+
+
+def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
+    creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
+) -> None:
+    """`app_code` is accepted for a deployment's agent once its principal's
+    token is held, and served for that agent's sessions; with no deployment
+    behind the request, or code of another application, nothing runs."""
+    from fastapi import HTTPException
+
+    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.routes.agents import (
+        CreateAgentRequest,
+        create_agent,
+        delete_agent,
+    )
+
+    spec = tick_spec()
+
+    def create(name: str, instance: Dict[str, Any], code: Dict[str, Any]) -> None:
+        request = CreateAgentRequest(
+            name=name,
+            transport="ag-ui",
+            app_spec=spec,
+            app_instance=instance,
+            app_code=code,
+        )
+        asyncio.run(create_agent(request, _DummyRequest()))
+
+    principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
+    try:
+        create(
+            "r14-tick-agent",
+            {**TICK_DEPLOYMENT, "woken_by": woken(1, "*/2 * * * *")},
+            TICK_CODE,
+        )
+        served = sessions.code_of(load_app(spec), "r14-tick-agent")
+        assert served is not None and served.schedule_at(1) == "tick"
+        # Another agent of the same application was given no code: the
+        # catalogue has none for it either.
+        assert sessions.code_of(load_app(spec), "another-agent") is None
+        # A Preview — no deployment — runs no code from a request.
+        with pytest.raises(HTTPException) as refused:
+            create("r14-preview", {"app_uid": "app-14", "version": 2}, TICK_CODE)
+        assert (
+            refused.value.status_code == 422
+            and "deployment only" in refused.value.detail
+        )
+        assert sessions.code_of(load_app(spec), "r14-preview") is None
+        # Code of another application, or that does not load, is refused.
+        other = {
+            "file": "app.py",
+            "text": TICK_SOURCE.replace('"id": "r14-tick"', '"id": "r14-other"'),
+        }
+        with pytest.raises(HTTPException) as refused:
+            create("r14-other", TICK_DEPLOYMENT, other)
+        assert (
+            refused.value.status_code == 422
+            and "different versions" in refused.value.detail
+        )
+        with pytest.raises(HTTPException) as refused:
+            create(
+                "r14-broken", TICK_DEPLOYMENT, {"file": "app.py", "text": "def (:\n"}
+            )
+        assert (
+            refused.value.status_code == 422 and "does not load" in refused.value.detail
+        )
+        with pytest.raises(HTTPException) as refused:
+            create("r14-none", TICK_DEPLOYMENT, {"file": "app.py", "text": "x = 1\n"})
+        assert (
+            refused.value.status_code == 422
+            and "defines 0 applications" in refused.value.detail
+        )
+        # Deleted, the agent's code goes with it (the registry stubbed by
+        # `creation_spy` holds no agent: one is put there for the route).
+        from agent_runtimes.routes.acp import _agents
+
+        _agents["r14-tick-agent"] = (None, None)
+        asyncio.run(delete_agent("r14-tick-agent"))
+        _agents.pop("r14-tick-agent", None)
+        assert sessions.code_of(load_app(spec), "r14-tick-agent") is None
+    finally:
+        principal.forget_principal_token("dep-14")
+        for name in (
+            "r14-tick-agent",
+            "r14-preview",
+            "r14-other",
+            "r14-broken",
+            "r14-none",
+        ):
+            sessions.serve_agent_code(name, None)
+
+
+def test_a_woken_session_runs_the_code_the_deployment_carried_not_the_prompt(
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """End to end on the runtime's routes, nothing patched in `sessions`: the
+    agent's code is the deployment's `app.py`, the handler runs on the tick,
+    the agent is never asked the prompt, and the record holds the turn."""
+    from agent_runtimes.loop.apps.application import load_application_source
+
+    async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {
+            "access_token": "p-token",
+            "expires_in": 3600,
+            "principal_uid": "principal-14",
+        }
+
+    principal.use_asker(ask)
+    principal.forget_principal_token("dep-14")
+    spec = tick_spec()
+    runtime.make("r14-tick", spec, TICK_DEPLOYMENT)
+    sessions.serve_agent_code(
+        "r14-tick", load_application_source(TICK_SOURCE, "app.py")
+    )
+    try:
+        events = events_of(
+            remote.post(
+                "/api/v1/apps/sessions",
+                headers=as_("owner"),
+                json={
+                    "agent": "r14-tick",
+                    **TICK_DEPLOYMENT,
+                    "opener": "Say that the tick ran.",
+                    "woken_by": woken(1, "*/2 * * * *"),
+                    "session": "session-tick-14",
+                },
+            )
+        )
+        assert answer_of(events) == "TICK-HANDLER-RAN"
+        assert runtime.models["r14-tick"].prompts == []
+        # The record says the schedule woke it, before the stream ended.
+        [began] = [
+            e
+            for e in runtime.entries("session")
+            if e["session_uid"] == "session-tick-14"
+        ]
+        assert began["payload"]["woken_by"]["position"] == 1
+    finally:
+        sessions.serve_agent_code("r14-tick", None)
+        principal.forget_principal_token("dep-14")
+
+
+def test_the_stream_of_a_turn_ends_only_once_its_record_is_sent(
+    deployed: tuple[Runtime, List[str]],
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """The agent's turn is sent to ai-agents in a task after `RUN_FINISHED`;
+    a scheduler stops the runtime as the stream ends, so the stream waits for
+    it (drilled 2026-10-07: turns never reached the record)."""
+    import asyncio as aio
+
+    made, _ = deployed
+    slow = made.send
+
+    async def send(body: Dict[str, Any]) -> None:
+        await aio.sleep(0.3)
+        await slow(body)
+
+    made.send = send  # type: ignore[method-assign]
+    from agent_runtimes.loop.apps.record import agent_recorder
+
+    recorder = agent_recorder("digest")
+    assert recorder is not None
+    recorder.send = send  # type: ignore[assignment]
+    events = events_of(
+        start(
+            remote,
+            woken(1, "0 18 * * 5"),
+            opener="Sum up the week.",
+            session="session-tick-06",
+        )
+    )
+    assert answer_of(events) == "Heard 1: Sum up the week."
+    kinds = [
+        e["kind"]
+        for body in made.records
+        if body["session_uid"] == "session-tick-06"
+        for e in body["entries"]
+    ]
+    assert "turn" in kinds and "output" in kinds

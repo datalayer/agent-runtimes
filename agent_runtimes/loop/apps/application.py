@@ -33,9 +33,9 @@ an `AppHost`.
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import inspect
 import sys
+import types
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 
@@ -1922,17 +1922,44 @@ def load_application(path: Union[str, Path]) -> Application:
         When the file defines none, or more than one.
     """
     file = Path(path).resolve()
-    module_name = f"loop_app_{abs(hash(str(file)))}"
-    spec = importlib.util.spec_from_file_location(module_name, file)
-    if spec is None or spec.loader is None:
+    if not file.is_file():
         raise ValueError(f"{file} is not a Python file.")
-    module = importlib.util.module_from_spec(spec)
+    # Compiled from its source each time, never from a cached .pyc: a file
+    # edited within the same second, to the same size, is read as it is now
+    # (`loop apps run --watch`), and nothing is written beside it.
+    return load_application_source(file.read_bytes(), str(file))
+
+
+def load_application_source(source: Union[str, bytes], file: str) -> Application:
+    """The application a Python source defines: an ``app.py`` as a
+    deployment carries it to its runtime (LOOP R-14, P-10), not a file here.
+
+    Parameters
+    ----------
+    source : str or bytes
+        The file's text.
+    file : str
+        Its name, for the tracebacks.
+
+    Returns
+    -------
+    Application
+        The one `Application` at the top of the source.
+
+    Raises
+    ------
+    ValueError
+        When the source defines none, or more than one; what the source
+        raises as it runs, a `SyntaxError` among them, is raised as it is.
+    """
+    name = str(file or "app.py")
+    text = source if isinstance(source, bytes) else source.encode("utf-8")
+    module_name = f"loop_app_{abs(hash((name, text)))}"
+    module = types.ModuleType(module_name)
+    module.__file__ = name
     sys.modules[module_name] = module
     try:
-        # Compiled from its source each time, never from a cached .pyc: a file
-        # edited within the same second, to the same size, is read as it is now
-        # (`loop apps run --watch`), and nothing is written beside it.
-        exec(compile(file.read_bytes(), str(file), "exec"), module.__dict__)  # noqa: S102  # nosec B102
+        exec(compile(text, name, "exec"), module.__dict__)  # noqa: S102  # nosec B102
     finally:
         sys.modules.pop(module_name, None)
     found: List[Application] = []
@@ -1941,9 +1968,16 @@ def load_application(path: Union[str, Path]) -> Application:
             found.append(value)
     if len(found) != 1:
         raise ValueError(
-            f"{file.name} defines {len(found)} applications; it has to define one."
+            f"{Path(name).name} defines {len(found)} applications; it has to define one."
         )
     return found[0]
 
 
-__all__ = ["EVENTS", "AppHost", "Application", "Handler", "load_application"]
+__all__ = [
+    "EVENTS",
+    "AppHost",
+    "Application",
+    "Handler",
+    "load_application",
+    "load_application_source",
+]

@@ -3,10 +3,12 @@
 
 """An application's agent: the agent it names, with its rules, checks and record.
 
-Whoever runs an application — a runtime configured with its spec, or an
-``app.py`` driven in-process — attaches the same three capabilities to its
-agent (`app_capabilities`): its rules decide every tool call, its checks look
-at what the rules let through, and its record keeps what happened.
+Whoever runs an application — a runtime's create route configured with its
+spec, or an ``app.py`` driven in-process — builds its agent's capabilities
+here and nowhere else (`app_capabilities`): its rules decide every tool call,
+its checks look at what the rules let through, its record keeps what
+happened, and its tools — documents, saving, learning — are the same on a
+cloud runtime as in a terminal (LOOP R-25).
 
 `AppAgent` is what a session's code calls (``session.agent``): one agent, one
 conversation, its history kept from turn to turn.
@@ -68,8 +70,14 @@ def app_capabilities(
     ask_rule: Optional[RuleAsk] = None,
     ask_check: Optional[CheckAsk] = None,
     registry: Optional[ContributionRegistry] = None,
+    given: Optional[List[Any]] = None,
 ) -> List[Any]:
     """The capabilities an application's agent runs with, in their order.
+
+    The one builder for every agent of an application: the one made in
+    process (the terminal, a framework's), and the one a runtime's create
+    route makes for a Preview or a deployment — so a cloud runtime's agent
+    has exactly what the terminal's has, saving included (LOOP R-24, R-25).
 
     Parameters
     ----------
@@ -85,32 +93,66 @@ def app_capabilities(
         How the person is asked when a Gate says so; the tool-approval path when unsaid.
     registry : ContributionRegistry, optional
         The Reactor registry the rules are found in; the runtime's when unsaid.
+    given : list, optional
+        What the runtime already made the agent with, from its agent's spec
+        (its guardrails, its context usage): placed after the record, before
+        the application's own tools.
 
     Returns
     -------
     list
         Its rules first, then its checks — a call the rules refuse is not
         checked, and a Guard reads what the rules decided — then its record,
-        the tool that searches its documents when it names some, the
-        tool that saves a result when a Space is granted to write, and what
-        it learns when it is saved on Datalayer (R-26).
+        what was ``given``, the tool that searches its documents when it
+        names some, the tool that saves a result when a Space is granted to
+        write, and what it learns when it is saved on Datalayer (R-26).
     """
+    from agent_runtimes.loop.apps.notifications import AppNotifier
+
     rules = rules_for(app, agent_id=agent_id, registry=registry)
     rules.record = recorder.decided
     # What the person answered when asked is an entry of its own (LOOP R-07).
     rules.answered = recorder.answered
+    rules.app_uid = recorder.app_uid
     unattended_when_woken(rules, recorder)
     if ask_rule is not None:
         rules.ask = ask_rule
+    # Who is asked before it acts is told through the channels it names,
+    # as its principal on a deployment (LOOP R-37).
+    notifier = AppNotifier(
+        app=app,
+        recorder=recorder,
+        app_uid=recorder.app_uid,
+        deployment_uid=recorder.deployment_uid,
+    )
+    rules.notify = notifier.approval_asked
+    # *Do it if I asked* decided from what the person approved in advance,
+    # read from IAM as it acts (LOOP U-25); an application the platform does
+    # not know has none.
+    if recorder.app_uid:
+        from agent_runtimes.loop.apps.grants import StandingApprovals
+
+        rules.granted = StandingApprovals(
+            app_uid=recorder.app_uid,
+            deployment_uid=recorder.deployment_uid,
+            unread=recorder.approvals_unread,
+        ).granted
     checks = AppChecksCapability(
         checks=AppChecks.of(app),
         agent_id=agent_id,
+        app_uid=recorder.app_uid,
         ask=ask_check,
         decide=rules.decide,
         record=recorder.checked,
+        notify=notifier.approval_asked,
         answered=recorder.answered,
     )
-    capabilities: List[Any] = [rules, checks, AppRecordCapability(recorder=recorder)]
+    capabilities: List[Any] = [
+        rules,
+        checks,
+        AppRecordCapability(recorder=recorder),
+        *(given or []),
+    ]
     # Answers that may be heard are written for the ear too (VOICE.md VO-44).
     from agent_runtimes.voice import voice_capability
 

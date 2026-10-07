@@ -558,6 +558,43 @@ def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
     return _agentspecs.get(agent_id)
 
 
+def _application_code_of(code: dict[str, Any], app: Any) -> Any:
+    """The `Application` a deployment's ``app.py`` defines (LOOP R-14), loaded
+    from the text the request carries: refused (422) when it is not an
+    ``app.py``, does not load, or defines another application or version
+    than the Appspec the agent runs — code and spec of different versions.
+    """
+    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.loop.apps.deployments import DeployRefused, code_carried
+
+    try:
+        carried = code_carried(code)
+    except DeployRefused as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    assert carried is not None
+    try:
+        application = load_application_source(carried["text"], carried["file"])
+    except ValueError as wrong:
+        raise HTTPException(
+            status_code=422, detail=f"The application's code does not load: {wrong}"
+        ) from None
+    except Exception as wrong:  # noqa: BLE001 - said to the caller, never run
+        raise HTTPException(
+            status_code=422,
+            detail=f"The application's code does not load: {type(wrong).__name__}: {wrong}",
+        ) from None
+    if (application.spec.id, application.spec.version) != (app.id, app.version):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"The code defines {application.spec.id} {application.spec.version}, "
+                f"not {app.id} {app.version} the agent runs: its code and its "
+                "Appspec are of different versions."
+            ),
+        )
+    return application
+
+
 def set_api_prefix(prefix: str) -> None:
     """Set the API prefix for dynamic mount paths."""
     global _api_prefix
@@ -1187,6 +1224,19 @@ class CreateAgentRequest(BaseModel):
             "before every tool call in place of the default approvals (LOOP R-03, R-05)."
         ),
     )
+    app_code: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "The `app.py` of the version a deployment's agent runs, `{file, text}`, "
+            "as `loop apps push` kept it in the application's item and the "
+            "deployment carries it (LOOP R-14): the runtime runs the agent's "
+            "sessions with it — its `start`, `message`, `schedule` handlers, "
+            "its tools and checks — under the application's rules, as "
+            "`loop apps run` does. Accepted for a deployment's agent only, once "
+            "its principal's token is held (I-03): code carried by a request "
+            "with no deployment behind it is refused (422)."
+        ),
+    )
     app_instance: dict[str, Any] | None = Field(
         default=None,
         description=(
@@ -1715,6 +1765,21 @@ async def create_agent(
                     )
                 except PrincipalTokenMissing as missing:
                     raise HTTPException(status_code=422, detail=str(missing)) from None
+            # The version's own code, carried by the deployment (LOOP R-14):
+            # run for this agent's sessions, in its principal's name only —
+            # a request with no deployment behind it runs no code here.
+            served_code = None
+            if request.app_code is not None:
+                if not serving_deployment or visitors_runtime():
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            "An application's code runs on a runtime for a "
+                            "deployment only, in its principal's name: this agent "
+                            "serves none."
+                        ),
+                    )
+                served_code = _application_code_of(request.app_code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
             # its own (LOOP U-31, U-32), read from IAM with the caller's
@@ -2360,15 +2425,8 @@ async def create_agent(
             # An application's rules decide every tool call, in place of the
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
-                from agent_runtimes.loop.apps.agent import unattended_when_woken
-                from agent_runtimes.loop.apps.guards import (
-                    AppChecks,
-                    AppChecksCapability,
-                )
-                from agent_runtimes.loop.apps.notifications import AppNotifier
-                from agent_runtimes.loop.apps.plugins import rules_for
+                from agent_runtimes.loop.apps.agent import app_capabilities
                 from agent_runtimes.loop.apps.record import (
-                    AppRecordCapability,
                     AppRecorder,
                     keep_agent_recorder,
                 )
@@ -2396,81 +2454,21 @@ async def create_agent(
                 )
                 # The session API writes a session's start to it (R-04).
                 keep_agent_recorder(agent_id, recorder)
-                # Who is asked before it acts is told through the channels
-                # it names, as its principal on a deployment (LOOP R-37).
-                notifier = AppNotifier(
-                    app=running_app,
+                # And runs its sessions with the deployment's code (R-14).
+                from agent_runtimes.loop.apps.sessions import serve_agent_code
+
+                serve_agent_code(agent_id, served_code)
+                # Exactly what the terminal's agent of the application runs
+                # with — its rules, checks and record first, what its agent's
+                # spec gave it, then its documents, saving and learning tools
+                # (LOOP R-25): one builder, so a cloud runtime's agent lacks
+                # nothing an in-process one has.
+                capabilities = app_capabilities(
+                    running_app,
                     recorder=recorder,
-                    app_uid=recorder.app_uid,
-                    deployment_uid=recorder.deployment_uid,
+                    agent_id=agent_id,
+                    given=capabilities,
                 )
-                rules = rules_for(running_app, agent_id=agent_id)
-                rules.record = recorder.decided
-                rules.notify = notifier.approval_asked
-                # What the person answered is an entry of its own (LOOP R-07).
-                rules.answered = recorder.answered
-                rules.app_uid = recorder.app_uid
-                # A session nobody opened — woken by a schedule — has nobody
-                # present: it only reads, unless a rule says otherwise
-                # (LOOP R-16), on a runtime as in process.
-                unattended_when_woken(rules, recorder)
-                # *Do it if I asked* decided from what the person approved
-                # in advance, read from IAM as it acts (LOOP U-25); an
-                # application the platform does not know has none.
-                if recorder.app_uid:
-                    from agent_runtimes.loop.apps.grants import StandingApprovals
-
-                    rules.granted = StandingApprovals(
-                        app_uid=recorder.app_uid,
-                        deployment_uid=recorder.deployment_uid,
-                        unread=recorder.approvals_unread,
-                    ).granted
-                capabilities.insert(0, rules)
-                # And its checks, after its rules: a call the rules refuse
-                # is not checked, and a Guard reads what the rules decided
-                # (LOOP R-06).
-                capabilities.insert(
-                    1,
-                    AppChecksCapability(
-                        checks=AppChecks.of(running_app),
-                        agent_id=agent_id,
-                        app_uid=recorder.app_uid,
-                        decide=rules.decide,
-                        record=recorder.checked,
-                        notify=notifier.approval_asked,
-                        answered=recorder.answered,
-                    ),
-                )
-                capabilities.insert(2, AppRecordCapability(recorder=recorder))
-                # What it knows: the documents it was given, searched on
-                # Contents as its principal, or as the person in a Preview
-                # (LOOP U-24, R-29).
-                from agent_runtimes.loop.apps.documents import (
-                    AppDocumentsCapability,
-                    knows_documents,
-                )
-
-                if knows_documents(running_app):
-                    capabilities.append(
-                        AppDocumentsCapability(
-                            app=running_app,
-                            app_uid=recorder.app_uid,
-                            deployment_uid=recorder.deployment_uid,
-                        )
-                    )
-                # What it learns (LOOP R-26): skills its conversations propose
-                # for its owner to review, and those approved, used — an
-                # application saved on Datalayer only.
-                if recorder.app_uid:
-                    from agent_runtimes.loop.apps.learning import AppLearningCapability
-
-                    capabilities.append(
-                        AppLearningCapability(
-                            app=running_app,
-                            app_uid=recorder.app_uid,
-                            deployment_uid=recorder.deployment_uid,
-                        )
-                    )
                 logger.info(
                     "Application %s on agent %s: its rules, checks and record attached.",
                     running_app.id,
@@ -3290,10 +3288,12 @@ async def delete_agent(
 
     # Remove the stored creation spec
     _agentspecs.pop(agent_id, None)
-    # And what the session API knew of it (LOOP R-04).
+    # And what the session API knew of it (LOOP R-04), and the code it ran (R-14).
     from agent_runtimes.loop.apps.record import keep_agent_recorder
+    from agent_runtimes.loop.apps.sessions import serve_agent_code
 
     keep_agent_recorder(agent_id, None)
+    serve_agent_code(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.

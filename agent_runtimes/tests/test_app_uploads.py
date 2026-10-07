@@ -249,7 +249,7 @@ def test_a_file_sent_without_being_asked_goes_to_app_file(
 ) -> None:
     received: List[Any] = []
     application = desk(received)
-    monkeypatch.setattr(sessions, "code_of", lambda app: application)
+    monkeypatch.setattr(sessions, "code_of", lambda app, agent_id="": application)
     model = runtime.make("photo-desk", application.document, {"app_uid": "app-9"})
     events = events_of(
         local.post(
@@ -294,7 +294,7 @@ def test_without_app_file_the_words_go_to_message_and_the_file_answers_what_it_a
         await session.send(f"{text}: {picture.name}")
 
     assert application.handler("file") is None
-    monkeypatch.setattr(sessions, "code_of", lambda app: application)
+    monkeypatch.setattr(sessions, "code_of", lambda app, agent_id="": application)
     runtime.make("asker", application.document, {"app_uid": "app-8"})
     events = events_of(
         local.post(

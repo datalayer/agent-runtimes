@@ -380,6 +380,11 @@ _CODE: Dict[Tuple[str, str], Any] = {}
 #: catalogue's (LOOP P-25), by id and version.
 _SERVED: Dict[Tuple[str, str], Any] = {}
 
+#: The code a deployment's agent on this runtime was given to run, by the
+#: agent's id (LOOP R-14): the ``app.py`` of the version it runs, carried by
+#: the deployment and accepted by the create route in its principal's name.
+_AGENT_CODE: Dict[str, Any] = {}
+
 
 def serve_code(application: Any) -> None:
     """Run an application's code on this runtime: its sessions, at its id and
@@ -389,15 +394,30 @@ def serve_code(application: Any) -> None:
     _SERVED[(spec.id, spec.version)] = application
 
 
-def code_of(app: AppSpec) -> Any:
+def serve_agent_code(agent_id: str, application: Any) -> None:
+    """Run an application's code for the sessions of one agent of this
+    runtime (LOOP R-14): the deployment's ``app.py``, as the create route
+    accepted it; ``None`` forgets it (the agent deleted).
+    """
+    if application is None:
+        _AGENT_CODE.pop(agent_id, None)
+    else:
+        _AGENT_CODE[agent_id] = application
+
+
+def code_of(app: AppSpec, agent_id: str = "") -> Any:
     """The `Application` an application's code defines, when it is written in Python.
 
-    One this process was given to run (`serve_code`), else an example of the
-    catalogue built from its ``app.py`` (`APP_BUILT`), at the version the
-    runtime runs; ``None`` for a spec, which its agent answers.
+    The code its agent was given (`serve_agent_code`), else one this process
+    was given to run (`serve_code`), else an example of the catalogue built
+    from its ``app.py`` (`APP_BUILT`), at the version the runtime runs;
+    ``None`` for a spec, which its agent answers.
     """
     from agent_runtimes.specs.apps import APP_BUILT
 
+    given = _AGENT_CODE.get(agent_id) if agent_id else None
+    if given is not None:
+        return given
     served = _SERVED.get((app.id, app.version))
     if served is not None:
         return served
@@ -721,6 +741,7 @@ class LiveSession:
             # only reads, and asks nobody, as a visitor's (LOOP R-20).
             if self.opened_by.kind == "embed":
                 enter_visitor_run(f"embed:{self.opened_by.visit}")
+            cancelled = False
             try:
                 if wraps_run:
                     self.emit(RunStartedEvent(thread_id=self.uid, run_id=self._run_id))
@@ -728,6 +749,7 @@ class LiveSession:
                 if wraps_run:
                     self.emit(RunFinishedEvent(thread_id=self.uid, run_id=self._run_id))
             except asyncio.CancelledError:
+                cancelled = True
                 raise
             except (SessionRefused, InvalidAnswer) as refused:
                 self.emit(RunErrorEvent(message=str(refused)))
@@ -739,6 +761,11 @@ class LiveSession:
                 self._answer = None
                 if self.state != "stopped":
                     self.state = "open"
+                if not cancelled:
+                    # The stream ends once the turn is on the record: a
+                    # scheduler stopping the runtime as it ends loses
+                    # nothing (LOOP R-14).
+                    await self.recorder.settled(self.uid)
                 self._end_stream()
 
         self._task = asyncio.get_running_loop().create_task(runner())
@@ -1756,6 +1783,7 @@ def forget_sessions() -> None:
     """Forget every session, and the code it was given to run (a test)."""
     _SESSIONS.clear()
     _SERVED.clear()
+    _AGENT_CODE.clear()
 
 
 def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:
@@ -1867,7 +1895,7 @@ def new_session(
         profile=profile,
         user=user,
     )
-    application = code_of(app)
+    application = code_of(app, agent_id)
     if application is not None:
         from agent_runtimes.loop.apps.application import AppHost
 
@@ -1987,6 +2015,7 @@ __all__ = [
     "SessionRefused",
     "agent_app",
     "code_of",
+    "serve_agent_code",
     "conversation_from_record",
     "forget_sessions",
     "given_files",

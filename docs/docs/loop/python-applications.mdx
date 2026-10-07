@@ -422,6 +422,21 @@ resuming starts them again, taking it down removes them; deploying another
 version registers that version's schedules. Every tick is a run of the
 schedule, which says whether it answered.
 
+Your code travels with the deployment. The `app.py` that `loop apps push`
+kept beside the version's spec is what the platform hands the runtime on
+each tick (`app_code` on the payload that creates the agent), and the
+runtime runs the session with it — its `start`, `message` and `schedule`
+handlers, its tools and checks — under the application's rules, as
+`loop apps run` does. The runtime accepts code for a deployment's agent
+only, once it holds the deployment's principal token: a request carrying
+code with no deployment behind it is refused. A version written as a spec
+carries no code, and its agent is asked the prompt. The stream of a woken
+session ends only once its turn is on the record, so a scheduler that stops
+the runtime as the stream ends loses nothing of it. Each tick reserves a
+bounded amount of credits for its runtime — the deployment's spend limit
+when its owner set one, else the platform's own small reservation — never
+a share of what the owner has left.
+
 **A `@app.schedule` handler runs on the tick** when the runtime runs the
 application's code — an `app.py` of the catalogue, at the version the
 runtime has: the scheduler knows a schedule by its position among the
