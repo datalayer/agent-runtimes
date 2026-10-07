@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getThemeConfig,
-  loopAccentStyles,
+  themeAccentVars,
   loopControlsCss,
   loopFontFamily,
   loopThemeStyles,
@@ -202,21 +202,27 @@ describe('the theme inside the element', () => {
       dark: Record<string, string>;
       css?: string;
     };
-    expect(styles.light).toMatchObject(loopAccentStyles('violet', 'light'));
-    expect(styles.dark).toMatchObject(loopAccentStyles('violet', 'dark'));
+    expect(styles.light).toMatchObject(themeAccentVars('violet', 'light'));
+    expect(styles.dark).toMatchObject(themeAccentVars('violet', 'dark'));
     expect(styles.css).toBe(loopThemeStyles.css);
   });
 
-  it('is the theme the application names, without loop’s accent over it (T-30)', () => {
+  it('is the theme the application names, with its accent over it (T-30; every theme since 2026-10-07)', () => {
     const styles = embedThemeStyles({ accent: 'violet', variant: 'earth' }) as {
       light: Record<string, string>;
       css?: string;
     };
     const earth = getThemeConfig('earth').themeStyles;
-    expect(styles.light).toEqual(earth.light);
+    expect(styles.light).toEqual({
+      ...(earth.light as Record<string, string>),
+      ...themeAccentVars('violet', 'light'),
+    });
     expect(styles.css).toBe(earth.css);
     expect(embedThemeOverrides({ accent: 'violet', variant: 'earth' })).toEqual(
-      { light: {}, dark: {} },
+      {
+        light: themeAccentVars('violet', 'light'),
+        dark: themeAccentVars('violet', 'dark'),
+      },
     );
   });
 

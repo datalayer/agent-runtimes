@@ -23,8 +23,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import {
-  loopAccentNames,
-  loopAccents,
+  themeAccentNames,
+  themeAccents,
   loopColors,
 } from '@datalayer/primer-addons/lib/theme';
 import {
@@ -60,11 +60,11 @@ const MODES: AssistantColorMode[] = ['light', 'dark'];
 const PAGES: Record<AssistantColorMode, string[]> = {
   light: [
     loopColors.white,
-    ...loopAccentNames.map(name => loopAccents[name].stage.light),
+    ...themeAccentNames.map(name => themeAccents[name].stage.light),
   ],
   dark: [
     loopColors.black,
-    ...loopAccentNames.map(name => loopAccents[name].stage.dark),
+    ...themeAccentNames.map(name => themeAccents[name].stage.dark),
   ],
 };
 

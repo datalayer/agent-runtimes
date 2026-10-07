@@ -20,7 +20,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { loopAccentStyles } from '@datalayer/primer-addons';
+import { themeAccentVars } from '@datalayer/primer-addons';
 import { emptyAppspec, dumpAppspec } from '../apps/appspec';
 import { LoopAssistantCharacter } from '../core';
 import { ASSISTANT_CHARACTERS } from '../../chat/assistant/characters';
@@ -99,7 +99,7 @@ beforeEach(() => {
 afterEach(() => {
   iamStore.setState({ token: undefined } as never);
   // Nothing of an embed's theme is ever written on the host's page.
-  expect(document.body.style.getPropertyValue('--loop-accent')).toBe('');
+  expect(document.body.style.getPropertyValue('--theme-accent')).toBe('');
   expect(document.body.getAttribute('data-color-mode')).toBeNull();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
@@ -195,8 +195,8 @@ describe('AppEmbed, the React component', () => {
     });
     const one = await render(<AppEmbed app={app} mode="bubble" />);
     const floating = held().themeOverrides;
-    expect(floating.light).toEqual(loopAccentStyles('rose', 'light'));
-    expect(floating.dark).toEqual(loopAccentStyles('rose', 'dark'));
+    expect(floating.light).toEqual(themeAccentVars('rose', 'light'));
+    expect(floating.dark).toEqual(themeAccentVars('rose', 'dark'));
     await act(async () => one.root.unmount());
     const two = await render(
       <AppEmbed
@@ -207,7 +207,7 @@ describe('AppEmbed, the React component', () => {
       />,
     );
     const inline = seen.renderer.at(-1)!.themeOverrides;
-    expect(inline.light).toMatchObject(loopAccentStyles('violet', 'light'));
+    expect(inline.light).toMatchObject(themeAccentVars('violet', 'light'));
     expect(inline.light['--fontStack-sansSerif']).toBe('Georgia, serif');
     await act(async () => two.root.unmount());
   });
@@ -383,8 +383,8 @@ describe('AppEmbed, the React component', () => {
     const themed = container.querySelector(
       '[data-datalayer-theme-scope]',
     ) as HTMLElement;
-    expect(themed.style.getPropertyValue('--loop-accent')).toBeTruthy();
-    const rose = themed.style.getPropertyValue('--loop-accent');
+    expect(themed.style.getPropertyValue('--theme-accent')).toBeTruthy();
+    const rose = themed.style.getPropertyValue('--theme-accent');
     expect(themed.style.getPropertyValue('--fontStack-sansSerif')).toBe(
       'Georgia, serif',
     );
@@ -401,7 +401,7 @@ describe('AppEmbed, the React component', () => {
       other.container.querySelector(
         '[data-datalayer-theme-scope]',
       ) as HTMLElement
-    ).style.getPropertyValue('--loop-accent');
+    ).style.getPropertyValue('--theme-accent');
     expect(violet).not.toBe(rose);
     await act(async () => other.root.unmount());
   });
@@ -552,18 +552,18 @@ deployment:
     // The spec's accent inside the conversation, where the chat sets its
     // theme again.
     expect(held().themeOverrides.light).toEqual(
-      loopAccentStyles('sun', 'light'),
+      themeAccentVars('sun', 'light'),
     );
     // Nothing of it in the page's own tree, and nothing of its theme on the
     // page: no tokens on the host's <body>, no portal root of its own there.
     expect(document.body.querySelector('[data-testid="floating"]')).toBeNull();
-    expect(document.body.style.getPropertyValue('--loop-accent')).toBe('');
+    expect(document.body.style.getPropertyValue('--theme-accent')).toBe('');
     expect(document.body.getAttribute('data-color-mode')).toBeNull();
     expect(document.getElementById('__primerPortalRoot__')).toBeNull();
     expect(
       (
         shadow.querySelector('[data-datalayer-theme-scope]') as HTMLElement
-      ).style.getPropertyValue('--loop-accent'),
+      ).style.getPropertyValue('--theme-accent'),
     ).toBeTruthy();
     // The host's attribute wins over the spec's mode.
     await act(async () => element.setAttribute('mode', 'bubble'));

@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import { LoopAgentBlueprint, LoopChatSuggestion } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
-import { loopAccentStyles } from '@datalayer/primer-addons';
+import { themeAccentVars } from '@datalayer/primer-addons';
 import {
   agentIdOf,
   appDatalayerCreatePayload,
@@ -97,11 +97,11 @@ describe('the application’s accent in its conversation (LOOP T-05, T-18)', () 
     expect(research.interface.accent).toBe('sky');
     // The chat sets its theme again inside it: without this, its bubbles and
     // its links would wear the theme's mint whatever the page around it set.
-    expect(appThemeOverrides(research, 'loop')).toEqual({
-      light: loopAccentStyles('sky', 'light'),
-      dark: loopAccentStyles('sky', 'dark'),
+    expect(appThemeOverrides(research)).toEqual({
+      light: themeAccentVars('sky', 'light'),
+      dark: themeAccentVars('sky', 'dark'),
     });
-    expect(appThemeOverrides(research, 'loop')?.light?.['--loop-accent']).toBe(
+    expect(appThemeOverrides(research)?.light?.['--theme-accent']).toBe(
       '#8CCBF9',
     );
   });
@@ -112,12 +112,15 @@ describe('the application’s accent in its conversation (LOOP T-05, T-18)', () 
       ...research,
       interface: { ...research.interface, accent: undefined },
     } as unknown as typeof research;
-    expect(appThemeOverrides(plain, 'loop')).toBeUndefined();
+    expect(appThemeOverrides(plain)).toBeUndefined();
   });
 
-  it('lays nothing over another theme: the accents are loop’s colours (T-30)', () => {
+  it('is the same over every theme: the accents are the theme system’s (T-30, 2026-10-07)', () => {
+    // The overrides do not depend on the theme the chat wears.
     expect(
-      appThemeOverrides(APP_CATALOGUE['web-research'], 'earth'),
-    ).toBeUndefined();
+      appThemeOverrides(APP_CATALOGUE['web-research'])?.light?.[
+        '--button-primary-bgColor-rest'
+      ],
+    ).toBe('#8CCBF9');
   });
 });

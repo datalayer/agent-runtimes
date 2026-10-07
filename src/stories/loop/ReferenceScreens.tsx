@@ -26,8 +26,8 @@ import { Button, Heading, Text } from '@primer/react';
 import {
   Box,
   DatalayerThemeProvider,
-  loopAccentStyles,
   setupPrimerPortals,
+  themeAccentVars,
   themeConfigs,
   type ThemeVariant,
 } from '@datalayer/primer-addons';
@@ -136,7 +136,7 @@ export function ReferenceTheme({
       themeStyles={config.themeStyles}
       baseStyles={
         theme === 'loop'
-          ? (loopAccentStyles('green', mode) as React.CSSProperties)
+          ? (themeAccentVars('green', mode) as React.CSSProperties)
           : undefined
       }
     >
@@ -145,7 +145,7 @@ export function ReferenceTheme({
         position="fixed"
         inset={0}
         p={4}
-        bg="var(--loop-stage, var(--bgColor-muted))"
+        bg={theme === 'loop' ? 'var(--theme-stage)' : 'var(--bgColor-muted)'}
         color="fg.default"
         display="flex"
       >

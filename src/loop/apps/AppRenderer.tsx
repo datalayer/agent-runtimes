@@ -58,11 +58,7 @@ import {
   type ReactorExtension,
   type ReactorPlugin,
 } from '@datalayer/reactor';
-import {
-  loopAccentStyles,
-  useSystemColorMode,
-  useThemeStore,
-} from '@datalayer/primer-addons';
+import { themeAccentVars, useSystemColorMode } from '@datalayer/primer-addons';
 import type { AppSpec } from '../../types/agentspecs';
 import type { ThemeOverrides } from '../../types/chat';
 import { defineAgentCapacityPlugin } from '../plugins/agent-capacity';
@@ -494,18 +490,15 @@ const NO_PLUGINS: PluginRef[] = [];
  * The application's accent over the theme its conversation wears, in both
  * modes (LOOP T-05): its bubbles and its one button in its own colour, and
  * not in the theme's default — the chat sets its theme again inside it, so
- * what the page around it set does not reach in. The accents are `loop`'s
- * colours: over another theme (T-30) nothing is laid, the theme's own rule.
+ * what the page around it set does not reach in. The accents are the theme
+ * system's: laid over whatever theme it wears (T-30; decided 2026-10-07).
  */
-export function appThemeOverrides(
-  app: AppSpec,
-  variant: string,
-): ThemeOverrides | undefined {
+export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
   const accent = app.interface?.accent;
-  return accent && variant === 'loop'
+  return accent
     ? {
-        light: loopAccentStyles(accent, 'light'),
-        dark: loopAccentStyles(accent, 'dark'),
+        light: themeAccentVars(accent, 'light'),
+        dark: themeAccentVars(accent, 'dark'),
       }
     : undefined;
 }
@@ -611,12 +604,10 @@ export function AppRenderer({
   /*
    * The theme it runs in (T-30): the one its host says, else the one its
    * Appspec names, else the page's — the person's own. Its mode likewise;
-   * `auto` is the device's.
+   * `auto` is the device's. Its accent is laid over whichever it is.
    */
-  const pageTheme = useThemeStore(state => state.theme);
   const system = useSystemColorMode();
   const named = app.interface?.theme;
-  const worn = embed.themeVariant ?? named?.variant ?? pageTheme;
   const namedMode: 'light' | 'dark' | undefined =
     named?.mode === 'auto'
       ? system
@@ -625,9 +616,9 @@ export function AppRenderer({
         : undefined;
   const accent = app.interface?.accent;
   const themeOverrides = useMemo(
-    () => appThemeOverrides(app, worn),
+    () => appThemeOverrides(app),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accent, worn],
+    [accent],
   );
   if ('problem' in preset) {
     return (

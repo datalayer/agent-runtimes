@@ -20,7 +20,7 @@ import { Text } from '@primer/react';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
 import { PRESENCE_LINES, type PresenceState } from './presenceStatus';
 
-const ACCENT = 'var(--loop-accent, var(--fgColor-accent))';
+const ACCENT = 'var(--theme-accent)';
 
 /**
  * A face at `size`: an emoji drawn in Fluent Emoji, the same on every

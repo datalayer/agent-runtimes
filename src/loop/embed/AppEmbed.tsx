@@ -29,7 +29,8 @@
  * it does inline; the chrome told by the workspace what it is doing and
  * what it last said, for the balloon and the blink.
  *
- * In the `loop` theme with the application's accent (T-12, T-05), which the
+ * In its theme (`loop` unless it names one) with the application's accent
+ * over it, whichever theme (T-12, T-05), which the
  * host may override with the face and the mode (D-11) — around the
  * conversation and inside it, where the chat sets its theme again.
  *

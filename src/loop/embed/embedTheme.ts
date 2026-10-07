@@ -25,10 +25,10 @@
 import type { CSSProperties } from 'react';
 import {
   getThemeConfig,
-  loopAccentStyles,
   loopFontFamily,
   scopeThemeCss,
   THEME_SCOPE_ATTRIBUTE,
+  themeAccentVars,
   type ThemeStyles,
 } from '@datalayer/primer-addons';
 import type { AppAccent, AppThemeVariant } from '../../types/agentspecs';
@@ -62,17 +62,15 @@ function faceOf(
   return typeof styles.fontFamily === 'string' ? styles.fontFamily : '';
 }
 
-/** The accent over a theme: `loop`'s colours, over `loop` only (T-30). */
+/** The accent over a theme, whichever theme (T-05, T-30; every theme since 2026-10-07). */
 const accentOver = (
-  variant: AppThemeVariant,
   accent: AppAccent,
   which: 'light' | 'dark',
-): Record<string, string> =>
-  variant === 'loop' ? loopAccentStyles(accent, which) : {};
+): Record<string, string> => themeAccentVars(accent, which);
 
 /**
  * The theme as the embed wears it — `loop`, or the one the application
- * names (T-30) — with the application's accent over `loop` in both modes
+ * names (T-30) — with the application's accent over it in both modes
  * (T-05), and the host's face when it named one.
  */
 export function embedThemeStyles({
@@ -88,7 +86,7 @@ export function embedThemeStyles({
   const mode = (which: 'light' | 'dark') => {
     const theme = base[which] as Record<string, unknown>;
     return withFace(
-      { ...theme, ...accentOver(variant, accent, which) },
+      { ...theme, ...accentOver(accent, which) },
       font,
       faceOf(variant, theme),
     ) as CSSProperties;
@@ -104,7 +102,7 @@ export function embedThemeStyles({
  * The same accent and face laid over the conversation's own theme (T-05,
  * D-11): the chat sets its theme again inside it, which would put the
  * theme's colours and face back over what the embed set around it. The
- * accent's properties in each mode (over `loop` only), and, when the host
+ * accent's properties in each mode (over any theme), and, when the host
  * named a face, every property of the theme that names its own.
  */
 export function embedThemeOverrides({
@@ -124,7 +122,7 @@ export function embedThemeOverrides({
         ([name, value]) => typeof value === 'string' && value !== theme[name],
       ),
     ) as Record<string, string>;
-    return { ...faced, ...accentOver(variant, accent, which) };
+    return { ...faced, ...accentOver(accent, which) };
   };
   return { light: mode('light'), dark: mode('dark') };
 }
