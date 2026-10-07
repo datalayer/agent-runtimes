@@ -371,3 +371,73 @@ def test_configure_with_no_organization_takes_none_off_and_says_so(client: Any) 
     body = client.post("/api/v1/apps/configure", json={"app": with_table}).json()
     assert TABLE_OFF not in body["setup"]
     assert body["plugins_off_says"].startswith("No organization was named")
+
+
+APP_PY = """from agent_runtimes.loop.apps import Application, Session
+
+app = Application(id="hello", kind="chat", agent="example-simple:0.0.1", name="Hello")
+
+
+@app.start
+async def opening(session: Session) -> None:
+    await session.say("Hello.")
+"""
+
+
+def test_build_runs_the_file_apart_and_answers_its_spec(client: Any) -> None:
+    """LOOP P-10: the Studio's Run — the file built by a process of its own."""
+    built = client.post("/api/v1/apps/build", json={"file": "app.py", "text": APP_PY})
+    assert built.status_code == 200, built.text
+    spec = built.json()["spec"]
+    assert spec.startswith("# Built from app.py by `loop apps build`")
+    assert "# loop:code start: opening (app.py:6)" in spec
+    assert "\nid: hello\n" in spec
+    broken = client.post(
+        "/api/v1/apps/build", json={"file": "app.py", "text": "import nowhere_at_all\n"}
+    )
+    assert broken.status_code == 422
+    [problem] = broken.json()["detail"]["problems"]
+    assert problem.startswith("app.py does not load: ModuleNotFoundError")
+    folder = client.post(
+        "/api/v1/apps/build", json={"file": "../app.py", "text": APP_PY}
+    )
+    assert folder.status_code == 422
+    assert "is not the name of a Python file" in folder.json()["detail"]["problems"][0]
+
+
+def test_a_file_that_never_ends_is_stopped_not_the_server() -> None:
+    from agent_runtimes.loop.apps.build import build_apart
+
+    with pytest.raises(AppNotRunnable) as refused:
+        build_apart("app.py", "while True:\n    pass\n", timeout=2)
+    assert refused.value.problems == [
+        "app.py did not build within 2 seconds: it was stopped."
+    ]
+
+
+def test_eject_answers_an_app_py_that_builds_the_same_spec(client: Any) -> None:
+    """LOOP P-13: the Studio's Eject — nothing kept on the runtime."""
+    import yaml
+
+    spec = yaml.safe_dump(WEB_RESEARCH, sort_keys=False, allow_unicode=True)
+    ejected = client.post("/api/v1/apps/eject", json={"spec": spec})
+    assert ejected.status_code == 200, ejected.text
+    body = ejected.json()
+    assert body["code"]["file"] == "app.py"
+    assert "Written by `loop apps eject`" in body["code"]["text"]
+    assert body["spec"].startswith("# Built from app.py by `loop apps build`")
+    assert yaml.safe_load(body["spec"]) == WEB_RESEARCH
+    refused = client.post("/api/v1/apps/eject", json={"spec": "- a list\n"})
+    assert refused.status_code == 422
+    assert "is not an application's spec" in refused.json()["detail"]["problems"][0]
+
+
+def test_build_and_eject_are_a_persons() -> None:
+    from agent_runtimes.app import create_app
+
+    with TestClient(create_app(), client=("203.0.113.9", 50000)) as stranger:
+        for path, body in (
+            ("/api/v1/apps/build", {"text": APP_PY}),
+            ("/api/v1/apps/eject", {"spec": "id: x\n"}),
+        ):
+            assert stranger.post(path, json=body).status_code == 401

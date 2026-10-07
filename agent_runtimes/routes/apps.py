@@ -15,7 +15,10 @@ other at launch.
 interface shows before it is made. `GET /api/v1/apps` lists the applications
 the runtime knows. `POST /api/v1/apps/feedback` keeps what a person says of a
 conversation — a thumb up or down, and a comment — in the application's
-record (LOOP V-18). `GET /api/v1/apps/memories/{app}` is what an
+record (LOOP V-18). `POST /api/v1/apps/build` builds an ``app.py`` in a
+process of its own and `POST /api/v1/apps/eject` writes a spec as one — the
+Studio's Python tab (LOOP P-10, P-13); a person's, nothing kept here.
+`GET /api/v1/apps/memories/{app}` is what an
 application remembers of the caller — its owner, or a visitor apart (LOOP
 R-36) — and `DELETE` forgets one thing of it, or everything once the caller
 confirmed how many (LOOP R-18).
@@ -433,6 +436,63 @@ async def configure_app(
         "plugins_off_says": plugins_off.says,
         **({"a2a": a2a} if a2a else {}),
     }
+
+
+class BuildRequest(BaseModel):
+    """An application's file, to build (LOOP P-10)."""
+
+    file: str = Field("app.py", description="Its name: app.py, with no folder")
+    text: str = Field(..., description="Its text, as the Studio's Python tab holds it")
+
+
+class EjectRequest(BaseModel):
+    """An application's Appspec, to eject into Python (LOOP P-13)."""
+
+    spec: str = Field(..., description="Its Appspec, as YAML")
+
+
+@router.post("/build")
+async def build_file(
+    body: BuildRequest, authorized: Authorized = Depends(a_person)
+) -> Dict[str, Any]:
+    """Build an ``app.py`` in a process of its own: the Studio's *Run* (LOOP P-10).
+
+    What ``loop apps build`` does, on this runtime: the file is run apart from
+    the server, for at most a minute, and its Appspec is answered — what its
+    code decides marked at the top — or, 422, why it does not build. Nothing
+    is kept here: the Studio keeps the file and its spec as the next draft.
+    """
+    from agent_runtimes.loop.apps.build import build_apart
+
+    try:
+        text = await asyncio.to_thread(build_apart, body.file, body.text)
+    except AppNotRunnable as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": refused.problems}
+        ) from None
+    return {"file": body.file, "spec": text}
+
+
+@router.post("/eject")
+async def eject_spec(
+    body: EjectRequest, authorized: Authorized = Depends(a_person)
+) -> Dict[str, Any]:
+    """Write an application built by spec as an ``app.py`` (LOOP P-13).
+
+    `loop apps eject` on a spec's text: the ``app.py`` that holds it, ready
+    for code, and the spec that file builds — checked to be the same, else
+    refused (422) with why. Nothing is kept here: the Studio saves both as the
+    application's next version.
+    """
+    from agent_runtimes.loop.apps.scaffold import InitRefused, eject_text
+
+    try:
+        ejected = await asyncio.to_thread(eject_text, body.spec)
+    except InitRefused as refused:
+        raise HTTPException(
+            status_code=422, detail={"problems": [str(refused)]}
+        ) from None
+    return {"code": {"file": "app.py", "text": ejected.code}, "spec": ejected.spec}
 
 
 @router.get("")

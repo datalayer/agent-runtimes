@@ -1327,13 +1327,28 @@ is the same, and the version left behind keeps its own file. `loop apps pull
 without it (*… is written in Python: push its app.py, which builds this
 spec.*). The Studio shows the file in the application's **Python** tab, every
 line numbered, and the Canvas links each thing the code decides
-(`app.py line 23`) to its line there. The file is changed where it is kept,
-not in the Studio; an application of several files keeps its `app.py` only.
+(`app.py line 23`) to its line there. An application of several files keeps
+its `app.py` only.
+
+**Changed in the Studio.** The Python tab is an editor too. *Run in a
+sandbox* sends the file to a runtime of the person's on Datalayer —
+`POST /api/v1/apps/build` with `{"file": "app.py", "text": …}` — which builds
+it in a Python process of its own, for at most a minute, and answers the
+Appspec it builds, what its code decides marked at the top (`{"spec": …}`),
+or, 422, why it does not build (`{"detail": {"problems": [...]}}`): a file
+that never ends is stopped, not the runtime's server. The Studio takes the
+file and that spec as its draft, saved as any change is — a changed file is
+the next version once the one it was at has run or shipped. Nothing is kept
+on the runtime. The route answers a person, never a visitor or an embed.
 
 **From a spec.** An application built by spec or on the Canvas becomes one
 written in Python with `loop apps eject app.yaml`: an `app.py` holding its
 spec, ready for code, which builds it the same. One way, said before it is
-done; see the [CLI](../cli#eject-an-application-into-python).
+done; see the [CLI](../cli#eject-an-application-into-python). The Studio's
+Python tab has the same *Eject*: `POST /api/v1/apps/eject` with `{"spec": …}`
+answers the `app.py` and the spec it builds — checked to be the same, else
+refused with why — and the Studio saves both as the application's next
+version, the ones before it kept.
 
 `loop apps run app.py` runs it as it runs a spec — a runtime here
 (`--local`) or on Datalayer (`--cloud`), configured with the built Appspec,

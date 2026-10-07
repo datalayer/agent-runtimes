@@ -276,11 +276,111 @@ def build(path: Union[str, Path]) -> Built:
     )
 
 
+#: How long a file is given to build apart, in seconds (LOOP P-10).
+APART_SECONDS = 60.0
+
+#: The largest file built apart: an application's source, not a dataset.
+APART_LIMIT = 200_000
+
+#: The line the process apart answers on, before its JSON.
+_APART_ANSWER = "loop-apps-built:"
+
+_APART_CHILD = "import sys; from agent_runtimes.loop.apps.build import _apart_child; _apart_child()"
+
+
+def _apart_child() -> None:
+    """In the process apart: build the file it is given, say the spec or why not."""
+    import json
+    import sys
+    import tempfile
+
+    asked = json.loads(sys.stdin.read())
+    with tempfile.TemporaryDirectory() as scratch:
+        file = Path(scratch) / asked["file"]
+        file.write_text(asked["text"])
+        try:
+            answer: Dict[str, Any] = {"text": build(file).text}
+        except AppNotRunnable as refused:
+            answer = {"problems": list(refused.problems)}
+    sys.stdout.write("\n" + _APART_ANSWER + json.dumps(answer) + "\n")
+    sys.stdout.flush()
+
+
+def build_apart(file: str, text: str, timeout: float = APART_SECONDS) -> str:
+    """Build an application's file in a process of its own (LOOP P-10).
+
+    What the Studio's Python tab runs: the file written in a scratch folder
+    and built by another Python process, which has ``timeout`` seconds — a
+    file that loops, or whose import never ends, stops that process and not
+    the runtime's server.
+
+    Parameters
+    ----------
+    file : str
+        The file's name: ``app.py``, or another ``.py`` name with no folder.
+    text : str
+        Its text.
+    timeout : float
+        The seconds it is given.
+
+    Returns
+    -------
+    str
+        The Appspec it builds, as YAML, its code marked (`Built.text`).
+
+    Raises
+    ------
+    AppNotRunnable
+        When the file is not one to build, does not build, or takes too long —
+        with the reasons, in sentences.
+    """
+    import json
+    import subprocess
+    import sys
+
+    if not re.fullmatch(r"[A-Za-z_][\w-]*\.py", file or ""):
+        raise AppNotRunnable([f"“{file}” is not the name of a Python file."])
+    if not text.strip():
+        raise AppNotRunnable([f"{file} is empty."])
+    if len(text) > APART_LIMIT:
+        raise AppNotRunnable(
+            [
+                f"{file} is longer than {APART_LIMIT:,} characters: build it with `loop apps build`."
+            ]
+        )
+    try:
+        done = subprocess.run(  # noqa: S603 - this interpreter, a fixed line
+            [sys.executable, "-I", "-c", _APART_CHILD],
+            input=json.dumps({"file": file, "text": text}),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise AppNotRunnable(
+            [f"{file} did not build within {timeout:g} seconds: it was stopped."]
+        ) from None
+    for line in reversed(done.stdout.splitlines()):
+        if line.startswith(_APART_ANSWER):
+            answer = json.loads(line[len(_APART_ANSWER) :])
+            if "problems" in answer:
+                raise AppNotRunnable([str(problem) for problem in answer["problems"]])
+            return str(answer["text"])
+    said = [line for line in done.stderr.splitlines() if line.strip()]
+    raise AppNotRunnable(
+        [
+            f"{file} stopped before it was built: {said[-1] if said else 'it said nothing'}."
+        ]
+    )
+
+
 __all__ = [
+    "APART_SECONDS",
     "CODE_MARK",
     "Built",
     "CodeMark",
     "build",
+    "build_apart",
     "code_marks",
     "is_python",
     "read_code_marks",

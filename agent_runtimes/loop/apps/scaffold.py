@@ -337,6 +337,46 @@ def eject(spec_path: Path, out: Optional[Path] = None, *, force: bool = False) -
     return target
 
 
+@dataclass(frozen=True)
+class Ejected:
+    """An application ejected where no file is kept (LOOP P-13): its text."""
+
+    code: str
+    """The ``app.py`` that holds its spec, ready for code."""
+
+    spec: str
+    """The Appspec that file builds, as `loop apps build` writes it."""
+
+
+def eject_text(spec: str) -> Ejected:
+    """`eject`, on an Appspec's text rather than a file: what the Studio asks.
+
+    The spec is written in a scratch folder and ejected there, checked as
+    `eject` checks it; nothing is kept on this machine.
+
+    Parameters
+    ----------
+    spec : str
+        The application's Appspec, as YAML.
+
+    Returns
+    -------
+    Ejected
+        Its ``app.py``, and the spec that file builds.
+
+    Raises
+    ------
+    InitRefused
+        As `eject` refuses.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        spec_path = Path(scratch) / SPEC_FILE
+        spec_path.write_text(spec)
+        code = eject(spec_path)
+        built = build(code)
+        return Ejected(code=code.read_text(), spec=built.text)
+
+
 def init(
     app_id: str,
     where: Path,
