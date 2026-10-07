@@ -476,7 +476,7 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --typescript-output src/specs/frontendTools.ts
 	$(call step,Generating environment variable specifications)
 	python scripts/codegen/generate_envvars.py \
-	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/envvars \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/env-vars \
 	  --python-output agent_runtimes/specs/envvars.py \
 	  --typescript-output src/specs/envvars.ts
 	$(call step,Generating AI model specifications)

@@ -7,7 +7,7 @@ Generate Python and TypeScript code from YAML environment variable specification
 
 Usage:
     python generate_envvars.py \\
-      --specs-dir specs/envvars \\
+      --specs-dir specs/env-vars \\
       --python-output agent_runtimes/config/envvars.py \\
       --typescript-output src/config/envvars.ts
 """
