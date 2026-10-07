@@ -602,7 +602,7 @@ async def converse_in_process(
     from agent_runtimes.loop.apps.record import AppRecorder
 
     factory = agent or local_agent
-    if application.handler("message") is None:
+    if application.handler("message") is None and application.code_agent is None:
         factory(application.spec)  # refused here, before any case is asked
     conversed: List[Conversed] = []
     for case in cases:

@@ -850,6 +850,138 @@ is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.
 
+## An agent of your own: other frameworks
+
+`app.agent(...)` gives the application an agent written in your code, in
+place of its agent's (LOOP P-23): a plain function, a LangGraph graph or a
+LangChain runnable, a LlamaIndex agent or workflow. `session.agent` is then
+that agent, with the same `run` and `stream`, so an application with no
+`@app.message` is answered by it, and code that calls `session.agent` does
+not change. Wherever the application runs — `loop apps run`, a runtime, a
+mount — its sessions get it: it is the application plugin's contribution to
+`loop.app.agent`.
+
+What it does becomes the session's **steps** (see [Steps](#steps)): a step
+for the run, named after the agent, and nested in it a step per model call
+and per tool call, with its input and its output — the chain of thought the
+chat shows, kept in the record with the tool calls, the decisions, the
+person's approvals and the turn.
+
+The spec still names an agent of the catalogue (`agent=`): what answers where
+the file does not run. `loop apps build` marks the agent of the code —
+`# loop:code agent langgraph: research (app.py:12)` — and the Studio's Canvas
+shows it, locked, as the rest of what the code decides.
+
+Each framework is an extra, so that nothing is installed for an application
+that does not use it:
+
+```bash
+pip install 'agent-runtimes[langgraph]'    # LangGraph, and LangChain's core
+pip install 'agent-runtimes[langchain]'    # LangChain's core alone
+pip install 'agent-runtimes[llamaindex]'   # LlamaIndex's core
+```
+
+An `app.py` importing a framework that is missing is refused in one sentence
+naming its extra: *app.py does not load. It needs LangGraph, which is not
+installed here: pip install 'agent-runtimes[langgraph]'.*
+
+### A plain function
+
+```python
+@app.agent
+async def answer(text: str, history: list) -> AsyncIterator[str]:
+    yield "You said "
+    yield text
+```
+
+Sync or async; returning the answer's text, or yielding its pieces, which are
+streamed as they come. Blocking code runs in a thread. Besides the prompt it
+is given, by name, what it asks for: `session`, `history` (the turns so far,
+as `{"role", "content"}`), `instructions` (the modes' and profile's), and what
+the code tells the agent for a turn — `session.agent.run(text, goal="…")`
+gives `goal=` to a function that takes it, and is refused in a sentence by
+one that does not.
+
+### LangChain and LangGraph
+
+```python
+from langgraph.prebuilt import create_react_agent
+
+graph = create_react_agent(model, [search, send_email])
+app.agent(graph, name="research", tools={"search": "read", "send_email": "send"})
+```
+
+The graph runs with `astream_events`: its model's tokens are the answer, as
+they come; each model call, tool call and retrieval is a step. A turn is
+given as `{"messages": [...history, ("user", prompt)]}` — the history kept by
+the session, or by the graph when it has a checkpointer (the session's id is
+its `thread_id`) — what the code tells the agent for a turn said as a system
+message before it. A LangChain runnable is given the prompt alone. Another
+shape is said with `input=`: `app.agent(chain, input=lambda prompt, **context:
+{"question": prompt})`.
+
+**Its rules decide every tool it calls through LangChain's tools.** A
+callback handler given to each run decides each call in `on_tool_start`,
+before the tool runs: the rules, then the built-in checks and the Gates
+(R-06), then the checks of its code (`@app.check("tool_call")`). A call the
+rules ask about asks the person of the session; refused, the tool does not
+run and the turn stops with `AppRuleBlockedError`, its sentence the rule's.
+
+`tools=` says what each tool does — `read`, `write`, `send`, `buy`, `delete`,
+`publish` — as `@app.tool(does=...)` does, and declares it in the spec, with
+the description and parameters the framework gives it, so that the Canvas
+lists it and a rule can name it. Every tool the graph is found to have (its
+tool nodes; a runnable's `tools`) must be said, and a tool said that it does
+not have is refused. A tool it finds as it runs and nobody said is left to
+the person, and so refused.
+
+### LlamaIndex
+
+```python
+from llama_index.core.agent.workflow import ReActAgent
+
+agent = ReActAgent(tools=[search, send_email], llm=llm)
+app.agent(agent, name="research", tools={"search": "read", "send_email": "send"})
+```
+
+A LlamaIndex agent (`FunctionAgent`, `ReActAgent`, an `AgentWorkflow`) runs
+with `stream_events`; its memory is kept from turn to turn of the session. A
+step per model call — what it wrote, its reasoning for a ReAct agent, as the
+step's output — and per tool call. **Its answer comes whole when the run
+ends**: what a LlamaIndex agent streams is its reasoning as well as its
+answer.
+
+**Its rules decide every tool the agent calls.** Given to the application,
+the agent's tool calls are taken over: each is decided in its session, as a
+LangChain tool's is, and a call made outside a session is refused. A
+workflow of your own is run with `run(user_msg=prompt)` (or what `input=`
+returns); each event it writes to its stream is a step, and its result the
+answer.
+
+### What the rules see, and what they do not
+
+| The agent | Its tool calls |
+|---|---|
+| A LangGraph graph, a LangChain runnable | Decided, each one, before it runs |
+| A LlamaIndex agent | Decided, each one, before it runs |
+| A plain function, a LlamaIndex workflow | **Not seen**: no rule decides them |
+
+LOOP does not see what a plain function or a workflow calls: `loop apps
+validate` says so — *needs attention*: *Its agent is a plain function,
+answer: LOOP sees none of the tools it may call, so its rules decide none of
+them* — so that the verdict never passes for what the rules never saw.
+
+What every agent of the code gets: a credential is withheld from its answer
+as it streams; an answer that a Gate or a check of its code reads is given
+whole once they let it through, and not at all when they refuse it — a
+framework's model cannot be asked again, as a catalogue agent's is. What it
+does not get: connections, skills, backend tools, documents to answer from,
+a Space to save to and a team are tools LOOP gives an agent of the
+catalogue; an application declaring them with an agent of its code is
+refused, and so is `@app.tool` beside `app.agent`: give the tool to the agent
+itself. The modes' and profile's instructions are told to it; their model is
+not run — its model is its own.
+
 ## Mounted into your own FastAPI
 
 An application runs inside a FastAPI of your own, under a path of its own
@@ -1066,6 +1198,19 @@ asks. `agent_runtimes/tests/test_app_mount.py` covers `app.mount` in a
 FastAPI of one's own, with FastAPI's `TestClient`: the page, the
 developer's own routes, the Session API and the code under the path, the
 agent made through the runtime's own route, and window messages both ways.
+`agent_runtimes/tests/test_app_frameworks.py` covers `app.agent`: a plain
+function sync, async or yielding, given the session and the turn's context,
+a credential withheld, an answer its check refuses not given; a LangGraph
+agent and a LlamaIndex ReAct agent as steps, their tool calls decided —
+done, asked and allowed, asked and refused with the tool not run — and
+recorded, their tools' declarations refused when unsaid or unknown; a
+LlamaIndex agent's tool refused outside a session, and an `AgentWorkflow`
+deciding its agents' tools once; a workflow's events as
+steps; the build mark, the note of `validate`, and a missing framework named
+by its extra. Each framework runs through a fake that says its events as it
+does, and — where it is installed — through its own classes, a prebuilt
+agent on a scripted model, so that the fake is held to the framework
+(LangGraph 1.2, langchain-core 1.6, llama-index-core 0.14; CI runs the fakes).
 
 **Not verified.** A mounted application's page in a browser — the embed's
 script loaded from Datalayer and talking to the mount — and a model reading an
@@ -1073,6 +1218,7 @@ image sent: the model is scripted in the tests. A Python application reached
 from a browser on a cloud runtime: the [Session API](./session-api) runs one in process in its tests
 (`test_app_sessions.py`, *Report from a File* taking its file from the page),
 not yet live. The agent is scripted in the tests; no test calls a real model
-through this API.
+through this API. No agent of another framework has run with a real model,
+nor on a runtime.
 
 **Not built yet.** See [What runs today, and what waits](#what-runs-today-and-what-waits).

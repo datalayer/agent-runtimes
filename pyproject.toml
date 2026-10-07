@@ -235,6 +235,20 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
+# An application's agent written with another framework (LOOP P-23,
+# `app.agent`): its runs become the session's steps, its tool calls decided by
+# the application's rules. Opt-in and out of `all`: each brings a framework of
+# its own, and `app.agent` refuses one that is missing with the extra to install.
+langchain = [
+    "langchain-core>=1.0.0,<2",
+]
+langgraph = [
+    "langchain-core>=1.0.0,<2",
+    "langgraph>=1.0.0,<2",
+]
+llamaindex = [
+    "llama-index-core>=0.14.0,<0.15",
+]
 all = [
     "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]

@@ -313,8 +313,14 @@ class AppTux(CliTux):
         return None
 
     async def send_message(self, message: str) -> None:
-        """The code's ``message`` answers, if it has one; else the runtime's agent."""
-        if self.application.handler("message") is None or self.app_session is None:
+        """The code's ``message`` answers, if it has one, or the agent of its
+        code (LOOP P-23); else the runtime's agent.
+        """
+        answers = (
+            self.application.handler("message") is not None
+            or self.application.code_agent is not None
+        )
+        if not answers or self.app_session is None:
             await super().send_message(message)
             return
         session = self.app_session

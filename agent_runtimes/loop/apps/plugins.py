@@ -72,6 +72,8 @@ REACTIONS: Tuple[str, ...] = (
     "tool",
     "check",
     "test",
+    # The agent its code gives it (LOOP P-23): what makes a session's agent.
+    "agent",
 )
 
 #: The reactions known by a name besides the application's id; a tool's, a
@@ -195,7 +197,7 @@ def register_application(
     contributions = PluginContributions(registry, manifest.name)
     _contribute(contributions, app)
     for reaction in REACTIONS:
-        if reaction in NAMED_REACTIONS:
+        if reaction in NAMED_REACTIONS or reaction == "agent":
             continue
         handler = application.handler(reaction)
         if handler is not None:
@@ -214,6 +216,15 @@ def register_application(
             contributions.contribute(
                 REACTION_POINTS[reaction], handler, contribution_id=f"{app.id}/{name}"
             )
+    code_agent = getattr(application, "code_agent", None)
+    if code_agent is not None:
+        from agent_runtimes.loop.apps.frameworks import framework_agent_maker
+
+        contributions.contribute(
+            REACTION_POINTS["agent"],
+            framework_agent_maker(code_agent),
+            contribution_id=app.id,
+        )
     return manifest
 
 

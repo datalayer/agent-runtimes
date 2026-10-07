@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import inspect
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
@@ -44,7 +45,12 @@ from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
 from agent_runtimes.loop.apps.components import component_node
 from agent_runtimes.loop.apps.composer import COMMAND_INPUT, command_called
 from agent_runtimes.loop.apps.forms import form_values_refused
-from agent_runtimes.loop.apps.loading import load_app
+from agent_runtimes.loop.apps.frameworks import (
+    CodeAgent,
+    code_agent_of,
+    code_agent_problems,
+)
+from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
 from agent_runtimes.loop.apps.own import CHECK_STAGES, own_checks, own_toolset
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
@@ -152,6 +158,7 @@ class Application:
         self._tools: Dict[str, Handler] = {}
         self._checks: Dict[str, Handler] = {}
         self._tests: Dict[str, Handler] = {}
+        self._code_agent: Optional[CodeAgent] = None
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -187,6 +194,7 @@ class Application:
         application._tools = {}
         application._checks = {}
         application._tests = {}
+        application._code_agent = None
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -207,7 +215,12 @@ class Application:
             When the spec would not be run, with the reasons.
         """
         if self._spec is None:
-            self._spec = load_app(self._document)
+            spec = load_app(self._document)
+            if self._code_agent is not None:
+                problems = code_agent_problems(spec, self._code_agent)
+                if problems:
+                    raise AppNotRunnable(problems)
+            self._spec = spec
         return self._spec
 
     @property
@@ -783,6 +796,88 @@ class Application:
 
         return decorate
 
+    # --- an agent of its own code (LOOP P-23) -----------------------------------
+
+    def agent(
+        self,
+        target: Any = None,
+        *,
+        name: Optional[str] = None,
+        tools: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+        input: Optional[Callable[..., Any]] = None,
+    ) -> Any:
+        """Give the application an agent of its code, in place of its agent's.
+
+        A plain function, sync or async, given the prompt and returning the
+        answer's text or yielding its pieces::
+
+            @app.agent
+            async def answer(text: str) -> str:
+                return f"You said: {text}"
+
+        Or a LangGraph graph, a LangChain runnable, a LlamaIndex agent or
+        workflow, each tool it has said by what it does, for its rules::
+
+            app.agent(graph, tools={"search": "read", "send_email": "send"})
+
+        ``session.agent`` is then this agent: its run is shown as steps, and
+        its rules decide every tool call LOOP sees — a LangChain or LangGraph
+        tool through LangChain's callbacks, a LlamaIndex agent's through its
+        tool calls; a function's and a workflow's LOOP does not see (`frameworks`).
+        The spec still names an agent of the catalogue (``agent=``): what
+        answers where its code does not run.
+
+        Parameters
+        ----------
+        target : Any
+            The function, graph, runnable, agent or workflow.
+        name : str, optional
+            What it is called; the function's name, else its class's.
+        tools : mapping, optional
+            What each of its tools does, by name: ``read``, ``write``,
+            ``send``, ``buy``, ``delete``, ``publish``; declared in the spec.
+        input : callable, optional
+            ``input(prompt, **context)``: what a turn is given to it as; for a
+            LangGraph graph ``{"messages": [...]}``, for a runnable the prompt,
+            for a LlamaIndex agent or workflow ``{"user_msg": prompt}``.
+
+        Returns
+        -------
+        Any
+            ``target``, or a decorator when it is not given.
+        """
+        if target is None:
+            return lambda given: self.agent(given, name=name, tools=tools, input=input)
+        if self._code_agent is not None:
+            raise ValueError(
+                f"{self.id} already has an agent of its code: {self._code_agent.name}."
+            )
+        if self._tools:
+            raise ValueError(_GIVES_ITS_OWN)
+        code = getattr(target, "__code__", None)
+        if code is not None:
+            line = code.co_firstlineno
+        else:
+            caller = inspect.currentframe()
+            caller = caller.f_back if caller is not None else None
+            # Called through the decorator form: the line that called it.
+            while caller is not None and caller.f_code.co_filename == __file__:
+                caller = caller.f_back
+            line = caller.f_lineno if caller is not None else 0
+        agent, declared = code_agent_of(
+            target, name=name, tools=tools, input=input, line=line
+        )
+        for tool in declared:
+            self._declare("tools", tool)
+        self._code_agent = agent
+        self._spec = None
+        return target
+
+    @property
+    def code_agent(self) -> Optional[CodeAgent]:
+        """The agent its code gives it (``app.agent``), if any."""
+        return self._code_agent
+
     # --- code where plain words are not enough (LOOP P-06) ---------------------
 
     def tool(
@@ -836,6 +931,8 @@ class Application:
             from pydantic_ai import Tool
 
             name = function.__name__
+            if self._code_agent is not None:
+                raise ValueError(_GIVES_ITS_OWN)
             if name in self._tools:
                 raise ValueError(f"{self.id} already has a tool {name!r}.")
             definition = Tool(function, takes_ctx=False).tool_def
@@ -1077,6 +1174,13 @@ class Application:
         )
 
 
+#: Why an agent of its code and tools of its code do not go together.
+_GIVES_ITS_OWN = (
+    "An agent of its code (app.agent) brings its own tools, and @app.tool gives "
+    "a tool to an agent of the catalogue: give the tool to the agent itself."
+)
+
+
 def _first_line(function: Handler) -> str:
     """The first line of a function's docstring, or nothing."""
     doc = (getattr(function, "__doc__", None) or "").strip()
@@ -1149,12 +1253,14 @@ class AppHost:
         }
         toolset = own_toolset(self.spec, tools)
         capability = own_checks(self.spec, checks, record=self.recorder.checked)
+        # An agent of its code (LOOP P-23) is every session's, wherever it runs.
+        maker = self._reaction("agent") or self._agent_maker
         return Session(
             self.spec,
             self.channel,
             agent_factory=self._agent,
             recorder=self.recorder,
-            agent_maker=self._agent_maker,
+            agent_maker=maker,
             toolsets=[toolset] if toolset is not None else [],
             capabilities=[capability] if capability is not None else [],
             **kwargs,

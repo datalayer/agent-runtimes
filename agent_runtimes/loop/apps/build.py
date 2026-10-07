@@ -46,7 +46,9 @@ class CodeMark:
     moment: str
     """``start``, ``message``…, ``action <name>``, ``schedule <name>``,
     ``command <name>``, or what its code adds (LOOP P-06): ``tool <name>``,
-    ``check <name>``, ``test <name>``."""
+    ``check <name>``, ``test <name>``; and ``agent <framework>``, the agent
+    its code gives it (P-23): ``function``, ``langgraph``, ``langchain``,
+    ``llamaindex-agent`` or ``llamaindex-workflow``."""
 
     handler: str
     """The handler's name."""
@@ -111,6 +113,16 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         handler = application.handler(event)
         if handler is not None:
             marks.append(CodeMark(event, handler.__name__, _where(handler, source)))
+    # The agent its code gives it (LOOP P-23), by what it is.
+    agent = application.code_agent
+    if agent is not None:
+        marks.append(
+            CodeMark(
+                f"agent {agent.framework}",
+                agent.name,
+                f"{source}:{agent.line}" if agent.line else source,
+            )
+        )
     for name, handler in application.actions.items():
         marks.append(
             CodeMark(f"action {name}", handler.__name__, _where(handler, source))
@@ -238,6 +250,18 @@ def build(path: Union[str, Path]) -> Built:
             raise AppNotRunnable([str(error)]) from None
         raise AppNotRunnable(
             [f"{file.name} does not load: {type(error).__name__}: {error}"]
+        ) from None
+    except ImportError as error:
+        # A framework it is written with, not installed here (LOOP P-23).
+        from agent_runtimes.loop.apps.frameworks import missing_framework
+
+        missing = missing_framework(error)
+        raise AppNotRunnable(
+            [
+                f"{file.name} does not load. {missing}"
+                if missing
+                else f"{file.name} does not load: {type(error).__name__}: {error}"
+            ]
         ) from None
     except Exception as error:  # noqa: BLE001 - whatever the file raises, said
         raise AppNotRunnable(

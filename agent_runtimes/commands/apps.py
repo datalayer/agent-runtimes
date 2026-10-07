@@ -284,6 +284,8 @@ def validate_file(
 
     if not is_python(path):
         attention += code_notes(application)
+    else:
+        attention += code_agent_notes(path)
     return Report(
         str(path),
         NEEDS_ATTENTION if attention else PASSES,
@@ -291,6 +293,20 @@ def validate_file(
         setup=setup,
         plugins_off_says=says,
     )
+
+
+def code_agent_notes(path: Path) -> List[str]:
+    """What validation says of the agent an ``app.py`` gives itself (LOOP P-23).
+
+    An agent whose tool calls LOOP does not see — a plain function, a
+    LlamaIndex workflow — has none of them decided by its rules: said, so that
+    the verdict is not *passes* for what its rules never see.
+    """
+    from agent_runtimes.loop.apps.build import build
+
+    agent = build(path).application.code_agent
+    note = agent.note() if agent is not None else None
+    return [note] if note else []
 
 
 @app.callback()
@@ -1243,7 +1259,11 @@ def apps_run(
             else "on this machine"
         )
         startup = f"{application.emoji}  {application.name} is running {where_said}"
-        if ask and has_code and built.handler("message") is not None:
+        if (
+            ask
+            and has_code
+            and (built.handler("message") is not None or built.code_agent is not None)
+        ):
             from agent_runtimes.loop.apps.terminal import ask_once
 
             asyncio.run(ask_once(built, ask, console))
