@@ -30,7 +30,10 @@ import {
 import { listComponents } from '../../specs/uiPlugins';
 import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import { checkAppspec } from '../apps/checks';
-import { appComponents, customComponentProblems } from '../apps/customComponents';
+import {
+  appComponents,
+  customComponentProblems,
+} from '../apps/customComponents';
 import { appPreset } from '../apps/AppRenderer';
 import { LoopA2uiComponent } from '../core/a2uiComponents';
 import { LoopCanvasBlock } from '../core/canvasBlocks';
@@ -86,22 +89,36 @@ describe('a component its developer wrote, reviewed', () => {
     const gauge = app.interface.customComponents![0];
     expect(gauge).toMatchObject({ name: 'Gauge', height: 240, integrity: '' });
     expect(dumpAppspec(app).interface).toEqual({ custom_components: [GAUGE] });
-    expect(checkAppspec({ ...BASE, interface: { custom_components: [GAUGE] } })
-      .problems).toEqual([]);
+    expect(
+      checkAppspec({ ...BASE, interface: { custom_components: [GAUGE] } })
+        .problems,
+    ).toEqual([]);
   });
 
   it('is refused in the sentences agentspecs says', () => {
     const cases: Array<[Record<string, unknown>, string]> = [
       [{ name: 'Table' }, 'The component Table is a component of the catalog'],
       [{ name: 'gauge' }, 'a word starting with a capital letter'],
-      [{ source: './gauge.js' }, 'is a file of the application\'s folder'],
-      [{ source: 'http://elements.example.com/g.js' }, 'is loaded over `https://`'],
+      [{ source: './gauge.js' }, "is a file of the application's folder"],
+      [
+        { source: 'http://elements.example.com/g.js' },
+        'is loaded over `https://`',
+      ],
       [{ source: 'javascript:alert(1)' }, 'is loaded over `https://`'],
       [{ integrity: 'md5-x' }, 'is no Subresource Integrity hash'],
       [{ props: { type: 'array' } }, 'props are the JSON Schema of an object'],
-      [{ props: { type: 'object', properties: { when: { type: 'date' } } } }, "'when' is typed 'date'"],
-      [{ props: { type: 'object', properties: { id: { type: 'string' } } } }, "cannot have a property named 'id'"],
-      [{ shows: ['label'] }, "both has the property 'label' and binds through it"],
+      [
+        { props: { type: 'object', properties: { when: { type: 'date' } } } },
+        "'when' is typed 'date'",
+      ],
+      [
+        { props: { type: 'object', properties: { id: { type: 'string' } } } },
+        "cannot have a property named 'id'",
+      ],
+      [
+        { shows: ['label'] },
+        "both has the property 'label' and binds through it",
+      ],
       [{ sends: ['action'] }, "cannot bind through 'action'"],
       [{ example: { value: 1 } }, "example is refused: it needs 'label'"],
       [{ height: 10 }, 'between 40 and 2000 pixels'],
@@ -155,9 +172,9 @@ describe('a component its developer wrote, reviewed', () => {
       standard: false,
       bindings: { shows: ['value'], sends: ['chosen'] },
     });
-    expect(appComponents(parseAppspec(BASE).app, listComponents())).toHaveLength(
-      listComponents().length,
-    );
+    expect(
+      appComponents(parseAppspec(BASE).app, listComponents()),
+    ).toHaveLength(listComponents().length);
   });
 
   it("draws a widget's page output with it", () => {
@@ -217,7 +234,8 @@ describe('its frame', () => {
   });
 
   it('fetches its module without credentials and draws only the one reviewed', async () => {
-    const code = 'export default function draw(root) { root.textContent = "1"; }';
+    const code =
+      'export default function draw(root) { root.textContent = "1"; }';
     const bytes = new TextEncoder().encode(code);
     const digest = await crypto.subtle.digest('SHA-384', bytes);
     const integrity = `sha384-${btoa(String.fromCharCode(...new Uint8Array(digest)))}`;
@@ -238,7 +256,9 @@ describe('its frame', () => {
     const missing = vi.fn(async () => new Response('', { status: 404 }));
     await expect(
       customModule('https://m.example.com/c.js', '', missing),
-    ).rejects.toThrow('could not be fetched from https://m.example.com/c.js (404)');
+    ).rejects.toThrow(
+      'could not be fetched from https://m.example.com/c.js (404)',
+    );
   });
 });
 
@@ -272,7 +292,10 @@ describe('on a surface', () => {
             value: { path: '/load' },
             chosen: { path: '/chosen' },
             action: {
-              event: { name: 'choose', context: { chosen: { path: '/chosen' } } },
+              event: {
+                name: 'choose',
+                context: { chosen: { path: '/chosen' } },
+              },
             },
           },
         ],
@@ -331,7 +354,11 @@ describe('on a surface', () => {
       kind: 'props',
       props: { label: 'Load', value: 42 },
     });
-    expect(told).toContainEqual({ tag: 'loop.component', kind: 'module', code });
+    expect(told).toContainEqual({
+      tag: 'loop.component',
+      kind: 'module',
+      code,
+    });
     await say({ kind: 'send', name: 'chosen', value: 7 });
     expect(actions).toHaveLength(1);
     expect(actions[0].name).toBe('choose');
@@ -347,14 +374,17 @@ describe('on a surface', () => {
   it("is of its application's catalog only", () => {
     const gauge = declared();
     const own = [customImplementation(gauge)];
-    expect(catalogOfBlocks(['Text', 'Gauge'], own).components.has('Gauge')).toBe(
-      true,
-    );
+    expect(
+      catalogOfBlocks(['Text', 'Gauge'], own).components.has('Gauge'),
+    ).toBe(true);
     expect(() => catalogOfBlocks(['Text', 'Gauge'])).toThrow(
       'No renderer draws Gauge',
     );
     expect(() =>
-      catalogOfBlocks(['Text'], [customImplementation({ ...gauge, name: 'Text' })]),
+      catalogOfBlocks(
+        ['Text'],
+        [customImplementation({ ...gauge, name: 'Text' })],
+      ),
     ).toThrow('Text is a component of the catalog');
   });
 });

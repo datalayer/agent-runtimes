@@ -237,9 +237,10 @@ export function pageProblems(app: AppSpec): string[] {
       );
     }
     // A component its developer wrote (P-17): its value what it shows first.
-    const custom = output.component in PAGE_OUTPUT_SHOWS
-      ? undefined
-      : customComponentOf(app, output.component);
+    const custom =
+      output.component in PAGE_OUTPUT_SHOWS
+        ? undefined
+        : customComponentOf(app, output.component);
     if (custom) {
       if (custom.shows.length === 0) {
         problems.push(

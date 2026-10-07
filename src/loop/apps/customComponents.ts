@@ -72,7 +72,11 @@ const isBound = (value: unknown): boolean => isRecord(value) && 'path' in value;
 const quoted = (name: string): string => `'${name}'`;
 
 /** Why a value is not one a property takes, or null. */
-function valueRefused(name: string, field: Field, value: unknown): string | null {
+function valueRefused(
+  name: string,
+  field: Field,
+  value: unknown,
+): string | null {
   if (Array.isArray(field.enum)) {
     return field.enum.includes(value)
       ? null
@@ -143,7 +147,9 @@ export function customComponentProblems(
       `Cannot use “${component.name}” as a component's name: a word starting with a capital letter, as Gauge.`,
     );
   } else if (getComponent(component.name)) {
-    problems.push(`${said} is a component of the catalog: name yours otherwise.`);
+    problems.push(
+      `${said} is a component of the catalog: name yours otherwise.`,
+    );
   }
   if (!component.description.trim()) {
     problems.push(`${said} says what it is for, under \`description\`.`);

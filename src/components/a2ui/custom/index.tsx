@@ -184,7 +184,11 @@ export function customImplementation(
   const entry = customComponentEntry(component, version);
   const api = { name: component.name, schema: componentSchemaOf(entry) };
   const Render = ({ props }: ReactA2uiComponentProps<CustomProps>) => (
-    <CustomComponentView component={component} props={props} fetcher={fetcher} />
+    <CustomComponentView
+      component={component}
+      props={props}
+      fetcher={fetcher}
+    />
   );
   return createComponentImplementation(
     api as unknown as ComponentApi,
