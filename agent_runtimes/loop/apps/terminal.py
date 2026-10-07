@@ -31,6 +31,7 @@ from agent_runtimes.loop.apps.application import AppHost, Application
 from agent_runtimes.loop.apps.composer import command_called, command_prompt
 from agent_runtimes.loop.apps.forms import form_fields
 from agent_runtimes.loop.apps.loading import AppNotRunnable
+from agent_runtimes.loop.apps.pages import page_values
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
     Closed,
@@ -39,6 +40,7 @@ from agent_runtimes.loop.apps.session import (
     FileQuestion,
     FormQuestion,
     Message,
+    PageShown,
     Question,
     Removed,
     Session,
@@ -139,6 +141,18 @@ class TerminalChannel:
                 markup=False,
                 highlight=False,
             )
+        elif isinstance(event, PageShown):
+            # A page the terminal does not draw: its outputs, said (LOOP P-05).
+            for name, value in event.outputs.items():
+                said = (
+                    value
+                    if isinstance(value, str)
+                    else f"{len(value)} rows"
+                    if isinstance(value, list)
+                    else json.dumps(value, ensure_ascii=False)
+                )
+                self.console.print(f"[dim]▤ {name}:[/dim] ", end="")
+                self.console.print(said, markup=False, highlight=False)
         elif isinstance(event, Removed):
             if event.message_id in self._shown:
                 self.console.print("[dim]✗ a message was removed.[/dim]")
@@ -278,7 +292,8 @@ class AppTux(CliTux):
         return await super().show_prompt()
 
     async def handle_command(self, user_input: str) -> Optional[str]:
-        """``/action <name> [json]`` presses one of the application's buttons;
+        """``/action <name> [json]`` presses one of the application's buttons,
+        ``/page [json]`` runs its page on the inputs given (LOOP P-05);
         ``/<command> words`` runs one of its commands (LOOP P-19): the code
         answers it when it has the command, else its prompt is sent.
         """
@@ -291,6 +306,22 @@ class AppTux(CliTux):
                 return None
             return command_prompt(command, words)
         name, _, rest = user_input.partition(" ")
+        if name == "/page" and self.application.handler("page") is not None:
+            # Its page, run on the inputs given; the rest at their defaults (P-05).
+            try:
+                inputs = json.loads(rest) if rest.strip() else {}
+            except json.JSONDecodeError as error:
+                self.console.print(f"[red]✗[/red] The inputs are not JSON: {error}")
+                return None
+            try:
+                page_values(self.application.spec, inputs)
+            except ValueError as refused:
+                self.console.print(f"[red]✗[/red] {refused}", highlight=False)
+                return None
+            running = self.app_session
+            assert running is not None
+            await self._turn(lambda: self.host.page(running, inputs))
+            return None
         if name != "/action":
             return await super().handle_command(user_input)
         action, _, payload = rest.strip().partition(" ")

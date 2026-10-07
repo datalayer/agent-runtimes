@@ -620,6 +620,37 @@ export interface AppSurfaceSpec {
   composedAt: string;
 }
 
+/** What a page's output is drawn with (LOOP P-05). */
+export type AppPageOutputComponent = 'Text' | 'Image' | 'Table' | 'Chart';
+
+/** One thing a widget's page shows for its inputs (LOOP P-05), at `/outputs/<name>`. */
+export interface AppPageOutputSpec {
+  name: string;
+  /** What a person reads above it; none when empty. */
+  title: string;
+  /** `Text` (words) unless said, `Image` (an address), `Table` (rows), `Chart` (points). */
+  component: AppPageOutputComponent;
+  /** The component's other properties: a Table's `columns`, a Chart's `kind`, `x`, `y`. */
+  props: Record<string, unknown>;
+}
+
+/**
+ * A widget's page written in its code (LOOP P-05, `@app.page`): its inputs a
+ * form, drawn at `/inputs/<name>`; its outputs values, shown at
+ * `/outputs/<name>`. As an input changes, the function its code names runs
+ * again on all of them, and the outputs change in place.
+ */
+export interface AppPageSpec {
+  /** The function of its code that runs it. */
+  function: string;
+  inputs: AppFormSchema;
+  /** How the inputs are drawn, as `settingsUi` draws the settings. */
+  inputsUi?: Record<string, unknown>;
+  outputs: AppPageOutputSpec[];
+  /** Whether it runs again as an input changes; else when Run is pressed. */
+  live: boolean;
+}
+
 /**
  * An application's voice (VOICE.md VO-41), off unless said: whether a person
  * may talk to it, whether its answers are heard, with which voice of the
@@ -699,6 +730,8 @@ export interface AppInterfaceSpec {
   /** The components of the catalog the surface may use. */
   components: string[];
   surface?: AppSurfaceSpec;
+  /** A widget's page written in its code (P-05); none when unsaid. */
+  page?: AppPageSpec;
   /**
    * The character its floating assistant shows; the paper clip when unsaid.
    * Said, it wins over the one the person chose in their settings.

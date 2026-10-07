@@ -274,9 +274,73 @@ session always first:
 | `@app.logout` | `(session)` | The person signed out. The session then ends: `end` runs after it. |
 | `@app.command(name, description)` | `(session, words)` | The person sends `/<name> words`: the code answers in place of `message`. Declared in the Appspec with the prompt `/<name> {input}`, and marked as code by `loop apps build` (`command <name>`); in the terminal, `/<name>` runs it too. |
 | `@app.schedule(cron, *, description="", prompt="")` | `(session)` | On a schedule, in a session of its own. Also adds the schedule to the Appspec's triggers. |
+| `@app.page` / `@app.page(live=False)` | `([session], **inputs)` | A widget's page (LOOP P-05): its inputs changed on the page, or Run pressed with `live=False`. Returns its outputs. See [A widget's page](#a-widgets-page). |
 
 A second handler for the same moment, action or schedule raises
 `ValueError`.
+
+### A widget's page
+
+A widget can be a function of its inputs, like a notebook cell with sliders
+(LOOP P-05): its page draws the inputs as a form and the outputs below them,
+and as an input changes, the function runs again on all of them and the
+outputs change in place — no message, no conversation, on the same page and
+renderer as a chat application.
+
+```python
+from typing import Literal
+
+from agent_runtimes.loop.apps import Application
+
+app = Application(id="quote", kind="widget", agent="jupyter-data-analyst:0.0.1")
+app.output("total", title="Total")
+app.output("lines", "Table", columns=["item", "amount"])
+app.input("seats", {"type": "integer", "title": "Seats", "minimum": 1, "maximum": 1000, "default": 10})
+
+
+@app.page
+def quote(seats: int = 10, plan: Literal["Team", "Business"] = "Team") -> dict:
+    price = 12 if plan == "Team" else 30
+    return {
+        "total": f"{seats * price} €",
+        "lines": [{"item": plan, "amount": seats * price}],
+    }
+```
+
+**Inputs** are the function's parameters, by name: each typed by its
+annotation — `int`, `float`, `bool`, `str`, a `Literal` or an `Enum` of them,
+a `list` of them — its default its default, one without a default required.
+`app.input(name, field, required=False)` says one more precisely (a title, a
+minimum, a maximum), as `app.setting` does; the field it says wins. Together
+they are a form (LOOP C-16), drawn on the page at `/inputs/<name>`. The
+function takes the session first when it wants it (`session.agent`,
+`session.state`), and `**inputs` to take inputs it does not name.
+
+**Outputs** are declared with `app.output(name, component="Text", *,
+title="", **props)`: `Text` shows words (a number is shown as words),
+`Image` an address (a URL or a data URL), `Table` rows and `Chart` points —
+each a list of records, a pandas DataFrame too — the component's other
+properties checked against the catalog as `app.ui` checks them (a Table's
+`columns`, a Chart's `kind`, `x` and `y`). The function returns the value of
+its one output, or its outputs by name, all of them. Declaring none, the page
+has one: `result`, in words.
+
+Both are its Appspec's `interface.page` — `function`, `inputs`, `outputs`,
+`live` — so that the Canvas shows them and validation runs them; `loop apps
+build` marks the function as code (`# loop:code page: quote (app.py:9)`).
+
+| What | Refused |
+| --- | --- |
+| Declaring | `app.output` with another component (`ValueError`), properties its schema refuses, or a name used twice; `app.input` of what is not a JSON Schema, or of an input the function does not take (`TypeError`); a parameter of a type a form does not ask, or taken by position (`TypeError`); `app.action("page")`, the action that runs the page; a page on an application that is not a widget, or inputs declared and no `@app.page` (`AppNotRunnable` from `app.spec`). |
+| Running | Inputs its form refuses — out of range, not one of its options, an input it does not have — in a sentence (`ValueError`; 422 from the [Session API](./session-api)); what it returns when an output is missing or unknown, or a value its component does not draw. |
+
+`AppHost.page(session, inputs)` runs it in process and returns its outputs;
+the page sends its inputs as the `page` action of its session (`{"inputs":
+{...}}`), and the outputs come back as a `loop.page` event. The terminal says
+them. `loop apps validate app.py --tests --local` runs the page on its inputs'
+defaults — *It shows each of its outputs for its inputs' defaults.* — and
+fails when the function raises, returns what its page does not show, or an
+input it requires has no default (a page shows its outputs from the start).
 
 ### Code where plain words are not enough
 
@@ -1144,7 +1208,8 @@ terminal is also the application's `AppHost`:
 
 - **In this process**, through a channel to the terminal: `start` when the
   session opens, `message` when the application has one, an action with
-  `/action <name> [json]`, `end` when the person leaves; `session.ask` asks
+  `/action <name> [json]`, its page with `/page [json]` (its outputs said),
+  `end` when the person leaves; `session.ask` asks
   at the prompt. With a `message`, `--ask "…"` runs `start`, then it, once.
 - **On the runtime**: a message the code does not take, answered by the
   runtime's agent with the application's rules, as for a spec.
@@ -1191,6 +1256,15 @@ recorded; tests run and decided by their code, from `validate --tests
 --local`. `agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
 `loop.element` events of the Session API, drawn again on a resume.
+`agent_runtimes/tests/test_app_page.py` covers `@app.page`: inputs from
+parameters and `app.input`, outputs from `app.output`, the page in the spec
+and marked by `build`, refused in sentences when declared and when run; run
+through an `AppHost`, the terminal's `/page`, and the Session API's `page`
+action — a `loop.page` event, 422 for inputs its form refuses — and from
+`validate --tests --local` on its defaults. The page side — run as an input
+changes in a session of its own, its outputs shown in place — is tested with
+vitest (`app-page-code`), against a stubbed runtime; no widget page has been
+run against a live runtime.
 `agent_runtimes/tests/test_app_uploads.py` covers what a person sends: the
 kinds, sizes and counts of `uploads` refused with 422 in sentences, an image
 given to the model whole, `@app.file`, and a file waiting for what the code

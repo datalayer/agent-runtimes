@@ -530,6 +530,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           default: null,
           description: 'The component tree, when there is one',
         },
+        page: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppPage',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            "A widget's page written in its code (`@app.page`, LOOP P-05): its inputs as a form, its outputs as values; run again as an input changes, its outputs shown in place. None when unsaid",
+        },
         assistant: {
           anyOf: [
             {
@@ -718,6 +731,98 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
       },
       title: 'AppOptionTranslation',
+      type: 'object',
+    },
+    AppPage: {
+      additionalProperties: false,
+      description:
+        "A widget's page written in its code (LOOP P-05): `@app.page`.\n\nIts inputs are a form, drawn on the page; as one changes, the function\nof its code runs again on them and the page shows what it returned, in\nplace. Without its file nothing runs it, and validation says so.",
+      properties: {
+        function: {
+          description: 'The function of its code that runs the page',
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+          title: 'Function',
+          type: 'string',
+        },
+        inputs: {
+          additionalProperties: true,
+          description:
+            'Its inputs: the JSON Schema of a form, an object of named fields, each with its `title` and its `default`; on the page at `/inputs/<name>`, checked by the runtime against the same schema',
+          title: 'Inputs',
+          type: 'object',
+        },
+        inputs_ui: {
+          anyOf: [
+            {
+              additionalProperties: true,
+              type: 'object',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'How its inputs are drawn, as `interface.settings_ui` draws the settings: a uiSchema by field name',
+          title: 'Inputs Ui',
+        },
+        outputs: {
+          description:
+            'What it shows for its inputs, in order, each at `/outputs/<name>`',
+          items: {
+            $ref: '#/$defs/AppPageOutput',
+          },
+          minItems: 1,
+          title: 'Outputs',
+          type: 'array',
+        },
+        live: {
+          default: true,
+          description:
+            'Whether it runs again as an input changes; `false`: when the person presses Run',
+          title: 'Live',
+          type: 'boolean',
+        },
+      },
+      required: ['function', 'inputs', 'outputs'],
+      title: 'AppPage',
+      type: 'object',
+    },
+    AppPageOutput: {
+      additionalProperties: false,
+      description:
+        'One thing a page shows for its inputs (LOOP P-05): a value, drawn with a component.',
+      properties: {
+        name: {
+          description:
+            'Its name: what its code returns it under, and where the page shows it (`/outputs/<name>`)',
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+          title: 'Name',
+          type: 'string',
+        },
+        title: {
+          default: '',
+          description: 'What a person reads above it; none when unsaid',
+          title: 'Title',
+          type: 'string',
+        },
+        component: {
+          default: 'Text',
+          description:
+            'What draws it: `Text` (words, unless said), `Image` (an address), `Table` (rows) or `Chart` (points)',
+          title: 'Component',
+          type: 'string',
+        },
+        props: {
+          additionalProperties: true,
+          description:
+            "The component's other properties: a Table's `columns`, a Chart's `kind`, `x` and `y`",
+          title: 'Props',
+          type: 'object',
+        },
+      },
+      required: ['name'],
+      title: 'AppPageOutput',
       type: 'object',
     },
     AppPermissions: {

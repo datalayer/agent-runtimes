@@ -15,11 +15,17 @@
  * Canvas can place and what the page can draw are one list: a page that
  * uses a block no enabled plugin contributes says so, in place of the page.
  *
+ * A widget's page written in its code (LOOP P-05) runs in a session of its
+ * own, beside the conversation: as an input changes, the page sends them all
+ * to the session's `page` action and shows what its code answered at
+ * `/outputs/<name>`, in place — no message is sent (`./pageRun`).
+ *
  * @module loop/plugins/app-page/AppPage
  */
 
 import type { JSX } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { Box } from '@datalayer/primer-addons';
 import { signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
@@ -38,7 +44,22 @@ import {
   SURFACE_CATALOG_ID,
   type InlineSurfaceModel,
 } from '../a2ui-surface/InlineSurface';
-import { appPageAction, appPageData, appPageMessages } from './appPageModel';
+import {
+  appPageAction,
+  appPageData,
+  appPageMessages,
+  pageInputsOf,
+  pageOf,
+} from './appPageModel';
+import {
+  openPageSession,
+  outputsData,
+  runPageIn,
+  type PageRunContext,
+} from './pageRun';
+
+/** How long the page waits after an input changed before it runs (P-05). */
+export const PAGE_RUN_DELAY_MS = 300;
 
 /** No chat in the workspace: the page reads a turn that never starts. */
 const NO_TURN = signal<ChatTurnSnapshot>({ id: 0, status: 'idle' });
@@ -110,11 +131,106 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, drawnWith]);
-  const data = useMemo(
-    () => appPageData(app, turn, conversation),
-    [app, turn, conversation],
-  );
   const [refusal, setRefusal] = useState<string | null>(null);
+  // A widget's page written in its code (P-05): its outputs, as last answered.
+  const page = pageOf(app);
+  const [outputs, setOutputs] = useState<Record<string, unknown>>({});
+  const data = useMemo(
+    () => ({
+      ...appPageData(app, turn, conversation),
+      ...outputsData(outputs),
+    }),
+    [app, turn, conversation, outputs],
+  );
+  const token = useIAMStore(state => state.token) ?? '';
+  const pageContext = useRef<PageRunContext>({ serverUrl: '', agentId: '' });
+  pageContext.current = {
+    serverUrl: workspace.sandbox?.agentBaseUrl || workspace.serverUrl || '',
+    agentId: workspace.agentId || app.id,
+    token: token || undefined,
+  };
+  const pageSession = useRef<Promise<string> | null>(null);
+  const pageRunning = useRef(false);
+  const pageNext = useRef<Record<string, unknown> | null>(null);
+  const pageSent = useRef('');
+  const alive = useRef(true);
+  // The latest inputs win: one run at a time, the last ones written next.
+  const runPage = useCallback((inputs: Record<string, unknown>) => {
+    pageNext.current = inputs;
+    if (pageRunning.current) {
+      return;
+    }
+    pageRunning.current = true;
+    void (async () => {
+      while (pageNext.current && alive.current) {
+        const next = pageNext.current;
+        pageNext.current = null;
+        const context = pageContext.current;
+        try {
+          pageSession.current ??= openPageSession(context);
+          const turn = await runPageIn(
+            context,
+            await pageSession.current,
+            next,
+          );
+          if (!alive.current) break;
+          if ('refused' in turn) {
+            setRefusal(turn.refused);
+          } else {
+            setRefusal(null);
+            setOutputs(turn.outputs);
+          }
+        } catch (error) {
+          // No session: the next change opens one again.
+          pageSession.current = null;
+          if (alive.current) {
+            setRefusal(error instanceof Error ? error.message : String(error));
+          }
+        }
+      }
+      pageRunning.current = false;
+    })();
+  }, []);
+  // A live page runs as its inputs change, from the start (their defaults).
+  const unwatch = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      unwatch.current?.();
+    };
+  }, []);
+  const onSurface = useCallback(
+    (surface: InlineSurfaceModel) => {
+      if (!page?.live) {
+        return;
+      }
+      unwatch.current?.();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const changed = (value: Record<string, unknown> | undefined) => {
+        const inputs = pageInputsOf(app, value);
+        const said = JSON.stringify(inputs);
+        if (said === pageSent.current) {
+          return;
+        }
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          pageSent.current = said;
+          runPage(inputs);
+        }, PAGE_RUN_DELAY_MS);
+      };
+      const watching = surface.dataModel.subscribe<Record<string, unknown>>(
+        '/inputs',
+        changed,
+      );
+      changed(watching.value);
+      unwatch.current = () => {
+        clearTimeout(timer);
+        watching.unsubscribe();
+      };
+    },
+    [app, page?.live, runPage],
+  );
   // The workspace changes as the chat reports itself; the handler reads the latest.
   const workspaceRef = useRef(workspace);
   workspaceRef.current = workspace;
@@ -135,7 +251,9 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
         return;
       }
       setRefusal(null);
-      if ('stop' in outcome) {
+      if ('runPage' in outcome) {
+        runPage(outcome.runPage);
+      } else if ('stop' in outcome) {
         controls.stop?.();
       } else if ('newChat' in outcome) {
         controls.newChat?.();
@@ -164,7 +282,7 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
         }
       }
     },
-    [app],
+    [app, runPage],
   );
 
   return (
@@ -185,6 +303,7 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
           onAction={onAction}
           validationError={refusal}
           catalog={drawing.catalog}
+          {...(page ? { onSurface } : {})}
         />
       )}
     </Box>

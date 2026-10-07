@@ -52,10 +52,27 @@ from agent_runtimes.loop.apps.frameworks import (
 )
 from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
 from agent_runtimes.loop.apps.own import CHECK_STAGES, own_checks, own_toolset
+from agent_runtimes.loop.apps.pages import (
+    OUTPUT_SHOWS,
+    PAGE_ACTION,
+    RESULT_OUTPUT,
+    PageSignature,
+    page_outputs,
+    page_signature,
+    page_values,
+    run_page,
+)
 from agent_runtimes.loop.apps.plugins import reaction_of, register_application
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
-from agent_runtimes.loop.apps.session import Channel, Session, Shown, UploadedFile, call
+from agent_runtimes.loop.apps.session import (
+    Channel,
+    PageShown,
+    Session,
+    Shown,
+    UploadedFile,
+    call,
+)
 from agent_runtimes.specs.ui_plugins import SurfaceComponents
 from agent_runtimes.types import (
     AppCodeCheckSpec,
@@ -86,6 +103,8 @@ EVENTS = (
     "resume",
     "end",
     "logout",
+    # A widget's page, run on its inputs (LOOP P-05).
+    "page",
 )
 
 
@@ -159,6 +178,7 @@ class Application:
         self._checks: Dict[str, Handler] = {}
         self._tests: Dict[str, Handler] = {}
         self._code_agent: Optional[CodeAgent] = None
+        self._page_signature: Optional[PageSignature] = None
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -195,6 +215,7 @@ class Application:
         application._checks = {}
         application._tests = {}
         application._code_agent = None
+        application._page_signature = None
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -215,7 +236,7 @@ class Application:
             When the spec would not be run, with the reasons.
         """
         if self._spec is None:
-            spec = load_app(self._document)
+            spec = load_app(self._completed())
             if self._code_agent is not None:
                 problems = code_agent_problems(spec, self._code_agent)
                 if problems:
@@ -226,7 +247,33 @@ class Application:
     @property
     def document(self) -> Dict[str, Any]:
         """The spec as a document, as its YAML would say it; a copy."""
-        return dict(self._document)
+        return self._completed()
+
+    def _completed(self) -> Dict[str, Any]:
+        """The document, its page's output said when its code declares none (P-05).
+
+        Raises
+        ------
+        AppNotRunnable
+            For a page whose inputs or outputs are declared and no function runs.
+        """
+        document = dict(self._document)
+        page = (document.get("interface") or {}).get("page")
+        if page is None:
+            return document
+        if "function" not in page:
+            raise AppNotRunnable(
+                [
+                    f"{self.id} declares its page's inputs or outputs, and no function "
+                    "runs it: decorate one with @app.page."
+                ]
+            )
+        if not page.get("outputs"):
+            document["interface"] = {
+                **document["interface"],
+                "page": {**page, "outputs": [dict(RESULT_OUTPUT)]},
+            }
+        return document
 
     def _declare(self, section: str, item: Any, *, under: Optional[str] = None) -> None:
         target = self._document
@@ -668,6 +715,170 @@ class Application:
         """
         return SurfaceComponents(self.component)
 
+    # --- a widget's page (LOOP P-05) --------------------------------------------
+
+    def _page(self) -> Dict[str, Any]:
+        """Its page, as the document holds it; made empty the first time."""
+        interface = self._document.setdefault("interface", {})
+        page = interface.setdefault("page", {})
+        page.setdefault("inputs", {"type": "object", "properties": {}})
+        page.setdefault("outputs", [])
+        self._spec = None
+        return page
+
+    def input(
+        self, name: str, field: Mapping[str, Any], *, required: bool = False
+    ) -> Dict[str, Any]:
+        """An input of its page (LOOP P-05): a field of the form its page draws.
+
+        Its page's function takes it by name; without this, each parameter of
+        the function is an input, typed by its annotation, its default its
+        default. Said here, the field wins over what the parameter says.
+
+        Parameters
+        ----------
+        name : str
+            The input's name: the parameter it is given as.
+        field : mapping
+            Its JSON Schema: a ``type``, a ``title``, a ``default``, and what
+            it takes (``enum``, ``minimum``, ``maximum``…).
+        required : bool
+            Whether the page runs only once it is given.
+
+        Returns
+        -------
+        dict
+            The inputs' form, as the spec holds it.
+
+        Raises
+        ------
+        TypeError
+            When the field is not a JSON Schema, or the page's function does
+            not take the input.
+        """
+        if not isinstance(field, Mapping):
+            raise TypeError(
+                f"The input {name!r} is a field of its page's form: its JSON Schema, "
+                "such as {'type': 'integer', 'title': 'Seats', 'default': 10}."
+            )
+        signature = self._page_signature
+        if (
+            signature is not None
+            and not signature.open
+            and name not in signature.fields
+        ):
+            raise TypeError(
+                f"{self.handler('page').__name__} does not take the input {name!r}: "  # type: ignore[union-attr]
+                "add it as a parameter, or take **inputs."
+            )
+        form = self._page()["inputs"]
+        form["properties"][name] = dict(field)
+        if required and name not in form.get("required", []):
+            form.setdefault("required", []).append(name)
+        return form
+
+    def output(
+        self, name: str, component: str = "Text", *, title: str = "", **props: Any
+    ) -> Dict[str, Any]:
+        """An output of its page (LOOP P-05): a value it shows, with a component.
+
+        ``app.output("total", title="Total")`` shows words;
+        ``app.output("lines", "Table", columns=["item", "amount"])`` rows;
+        ``app.output("trend", "Chart", kind="line", x="month", y="amount")``
+        points; ``app.output("plot", "Image")`` an address. Its page's
+        function returns it under its name; the component's other properties
+        are checked against the catalog, as ``app.ui`` checks them.
+
+        Returns
+        -------
+        dict
+            The output, as the spec holds it.
+
+        Raises
+        ------
+        ValueError
+            For a component an output is not drawn with, properties its schema
+            refuses, or a name already given.
+        """
+        shows = OUTPUT_SHOWS.get(component)
+        if shows is None:
+            raise ValueError(
+                f"The output {name!r} is drawn with {component!r}: an output is one of "
+                f"{', '.join(OUTPUT_SHOWS)}."
+            )
+        # Its value fills what the component shows: bound, as the page binds it.
+        component_node(
+            name, component, **{shows: {"path": f"/outputs/{name}"}}, **props
+        )
+        outputs = self._page()["outputs"]
+        if any(output["name"] == name for output in outputs):
+            raise ValueError(f"{self.id}'s page already has an output {name!r}.")
+        output: Dict[str, Any] = {"name": name}
+        if title:
+            output["title"] = title
+        if component != "Text":
+            output["component"] = component
+        if props:
+            output["props"] = dict(props)
+        outputs.append(output)
+        return dict(output)
+
+    def page(self, handler: Optional[Handler] = None, *, live: bool = True) -> Any:
+        """Its page (LOOP P-05): ``handler([session], **inputs)`` returns its outputs.
+
+        ``@app.page`` or ``@app.page(live=False)``. Each parameter of the
+        function is an input of the page — typed by its annotation (``int``,
+        ``float``, ``bool``, ``str``, a ``Literal`` or an ``Enum`` of them, a
+        ``list`` of them), its default its default, required without one — and
+        ``app.input`` says one more precisely. It returns the value of its one
+        output, or its outputs by name (`output`). As an input changes on the
+        page, it runs again on all of them, and the page shows its outputs in
+        place; with ``live=False``, when the person presses Run.
+
+        Parameters
+        ----------
+        handler : callable
+            The function, sync or async; the session first when it takes one.
+        live : bool
+            Whether it runs again as an input changes.
+
+        Returns
+        -------
+        callable
+            The function, or the decorator.
+        """
+
+        def decorate(function: Handler) -> Handler:
+            signature = page_signature(function)
+            page = self._page()
+            form = page["inputs"]
+            stray = [
+                name for name in form["properties"] if name not in signature.fields
+            ]
+            if stray and not signature.open:
+                raise TypeError(
+                    f"{function.__name__} does not take {', '.join(stray)}, declared "
+                    "with app.input: add it as a parameter, or take **inputs."
+                )
+            declared = set(form["properties"])
+            for name, field in signature.fields.items():
+                form["properties"].setdefault(name, field)
+            required = [
+                name
+                for name in signature.required
+                if name not in declared and name not in form.get("required", [])
+            ]
+            if required:
+                form.setdefault("required", []).extend(required)
+            page["function"] = function.__name__
+            if not live:
+                page["live"] = False
+            self._on("page", function)
+            self._page_signature = signature
+            return function
+
+        return decorate(handler) if handler is not None else decorate
+
     # --- reactions -------------------------------------------------------------
 
     def _on(self, event: str, handler: Handler) -> Handler:
@@ -747,6 +958,12 @@ class Application:
         callable
             The decorator.
         """
+
+        if name == PAGE_ACTION:
+            raise ValueError(
+                f"{PAGE_ACTION!r} is the action that runs its page (@app.page): "
+                "name the button's action otherwise."
+            )
 
         def decorate(handler: Handler) -> Handler:
             if name in self._actions:
@@ -1072,7 +1289,7 @@ class Application:
         ----------
         event : str
             ``start``, ``message``, ``settings``, ``stop``, ``resume``,
-            ``end`` or ``logout``.
+            ``end``, ``logout`` or ``page``.
 
         Returns
         -------
@@ -1385,6 +1602,42 @@ class AppHost:
                 await self.message(session, text)
             return
         await self._react(session, handler, list(files), text)
+
+    async def page(
+        self, session: Session, inputs: Optional[Mapping[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """An input of its page changed (LOOP P-05): run ``page`` on its inputs.
+
+        The inputs are checked against the page's form, each with its default
+        for the rest; what the function returns is shown as its outputs
+        (`PageShown`), in place of the last ones.
+
+        Returns
+        -------
+        dict
+            Its outputs, by name, as the page draws them.
+
+        Raises
+        ------
+        KeyError
+            When its code has no ``@app.page``.
+        ValueError
+            In a sentence: inputs its form refuses, or outputs it cannot show.
+        """
+        self._open(session)
+        function = self._reaction("page")
+        if function is None:
+            raise KeyError(f"{self.app.id} has no page: its code has no @app.page.")
+        values = page_values(self.spec, inputs or {})
+        shown: Dict[str, Any] = {}
+
+        async def show(session: Session) -> None:
+            result = await run_page(function, session, values)
+            shown.update(page_outputs(self.spec, result))
+            await session.channel.deliver(PageShown(session.id, values, dict(shown)))
+
+        await self._react(session, show)
+        return shown
 
     async def window(self, session: Session, data: Any) -> None:
         """The page posted a message (LOOP P-25): run ``window``.

@@ -2384,6 +2384,38 @@ class AppUploadsSpec(BaseModel):
     )
 
 
+class AppPageOutputSpec(BaseModel):
+    """One thing a widget's page shows for its inputs (LOOP P-05)."""
+
+    name: str = Field(..., description="Where the page shows it: `/outputs/<name>`")
+    title: str = Field(default="", description="What a person reads above it")
+    component: str = Field(
+        default="Text", description="`Text`, `Image`, `Table` or `Chart`"
+    )
+    props: Dict[str, Any] = Field(
+        default_factory=dict, description="The component's other properties"
+    )
+
+
+class AppPageSpec(BaseModel):
+    """A widget's page written in its code (LOOP P-05): `@app.page`."""
+
+    function: str = Field(..., description="The function of its code that runs it")
+    inputs: Dict[str, Any] = Field(
+        ..., description="The JSON Schema of a form: its inputs, by name"
+    )
+    inputs_ui: Optional[Dict[str, Any]] = Field(
+        default=None, description="How its inputs are drawn: a uiSchema by field name"
+    )
+    outputs: List[AppPageOutputSpec] = Field(
+        default_factory=list, description="What it shows, each at `/outputs/<name>`"
+    )
+    live: bool = Field(
+        default=True,
+        description="Whether it runs again as an input changes; else on Run",
+    )
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -2432,6 +2464,13 @@ class AppInterfaceSpec(BaseModel):
         description="The components of the catalog the surface may use",
     )
     surface: Optional[AppSurfaceSpec] = None
+    page: Optional[AppPageSpec] = Field(
+        default=None,
+        description=(
+            "A widget's page written in its code (LOOP P-05): its inputs a form, "
+            "its outputs values, run again as an input changes"
+        ),
+    )
     assistant: Optional[str] = Field(
         default=None,
         description=(

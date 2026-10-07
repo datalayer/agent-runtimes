@@ -50,6 +50,7 @@ import {
   APP_THEME_MODES,
   APP_THEME_VARIANTS,
   isAssistantCharacterId,
+  PAGE_OUTPUT_SHOWS,
   parseAppspec,
 } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
@@ -178,6 +179,85 @@ export function ownCodeProblems(app: AppSpec): string[] {
   );
   if (new Set(decided).size !== decided.length) {
     problems.push('Two tests are decided by the same function of its code.');
+  }
+  problems.push(...pageProblems(app));
+  return problems;
+}
+
+/**
+ * What agentspecs refuses of a widget's page written in its code (LOOP
+ * P-05): a page that is not a widget's, inputs that are not a form, outputs
+ * of one name twice, drawn with another component, saying in their `props`
+ * what their value fills or lacking what their component needs, and an input
+ * named as a setting — both are on the page at `/inputs/<name>`.
+ */
+export function pageProblems(app: AppSpec): string[] {
+  const page = app.interface.page;
+  if (!page) {
+    return [];
+  }
+  const problems: string[] = [];
+  if (app.kind !== 'widget') {
+    problems.push(
+      `A page of inputs and outputs is a widget's: a ${app.kind} application has none. Remove \`interface.page\`, or make it a widget.`,
+    );
+  }
+  if (!CODE_NAME.test(page.function)) {
+    problems.push(
+      `Cannot use “${page.function}” as the function of its page: letters, digits and \`_\`, as in Python.`,
+    );
+  }
+  problems.push(
+    ...formProblems({
+      id: 'page inputs',
+      schema: page.inputs,
+      ui: page.inputsUi,
+    }),
+  );
+  if (page.outputs.length === 0) {
+    problems.push('Its page shows one output at least.');
+  }
+  const names = page.outputs.map(output => output.name);
+  if (new Set(names).size !== names.length) {
+    problems.push('Two outputs of its page have the same name.');
+  }
+  for (const output of page.outputs) {
+    if (!CODE_NAME.test(output.name)) {
+      problems.push(
+        `Cannot use “${output.name}” as an output's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+    const shows = PAGE_OUTPUT_SHOWS[output.component];
+    if (!shows) {
+      problems.push(
+        `The output “${output.name}” is drawn with ${output.component}: an output is one of ${Object.keys(PAGE_OUTPUT_SHOWS).join(', ')}.`,
+      );
+      continue;
+    }
+    const said = [shows, 'id', 'component'].filter(key => key in output.props);
+    if (said.length > 0) {
+      problems.push(
+        `The output “${output.name}” says ${said.join(', ')} in its \`props\`: its id is its name, and what it shows is its value.`,
+      );
+    }
+    const schema = getComponent(output.component)?.properties as
+      { required?: string[] } | undefined;
+    const missing = (schema?.required ?? []).filter(
+      key => key !== shows && !(key in output.props),
+    );
+    if (missing.length > 0) {
+      problems.push(
+        `The output “${output.name}” is a ${output.component} without ${missing.join(', ')}: say it in its \`props\`.`,
+      );
+    }
+  }
+  const settings = Object.keys(app.interface.settings?.properties ?? {});
+  const inputs = Object.keys(page.inputs?.properties ?? {});
+  const shared = settings.filter(name => inputs.includes(name));
+  if (shared.length > 0) {
+    problems.push(
+      `${shared.map(name => `“${name}”`).join(', ')} is both a setting and an input of its page: name one otherwise.`,
+    );
   }
   return problems;
 }
@@ -1123,6 +1203,29 @@ export function documentShapeProblems(document: unknown): string[] {
           required(item, 'component', where);
         },
       );
+    }); // A widget's page written in its code (LOOP P-05), as agentspecs reads it.
+    mapping(ui.page, 'interface.page', page => {
+      unknownKeys(
+        page,
+        ['function', 'inputs', 'inputs_ui', 'outputs', 'live'],
+        'interface.page',
+        'a page',
+      );
+      required(page, 'function', 'interface.page');
+      required(page, 'inputs', 'interface.page');
+      required(page, 'outputs', 'interface.page');
+      if (page.live !== undefined && typeof page.live !== 'boolean') {
+        at('interface.page.live', 'is true or false');
+      }
+      records(page.outputs, 'interface.page.outputs', (output, where) => {
+        required(output, 'name', where);
+        unknownKeys(
+          output,
+          ['name', 'title', 'component', 'props'],
+          where,
+          'an output',
+        );
+      });
     });
   });
   mapping(d.tests, 'tests', tests => {

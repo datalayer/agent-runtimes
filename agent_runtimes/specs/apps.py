@@ -85,6 +85,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": "wizard",
             "balloon": None,
             "voice": {
@@ -230,6 +231,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": "cat",
             "balloon": None,
             "voice": {
@@ -353,6 +355,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
             ],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -510,6 +513,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": "wizard",
             "balloon": None,
             "voice": {
@@ -669,6 +673,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -820,6 +825,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
             ],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -1120,6 +1126,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
                 "composed_by": "template",
                 "composed_at": "",
             },
+            "page": None,
             "assistant": "eyes",
             "balloon": None,
             "voice": {
@@ -1384,6 +1391,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                 "composed_by": "template",
                 "composed_at": "",
             },
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -1585,6 +1593,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                 "composed_by": "developer",
                 "composed_at": "",
             },
+            "page": None,
             "assistant": "wizard",
             "balloon": None,
             "voice": {
@@ -1709,6 +1718,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": "paperclip",
             "balloon": None,
             "voice": {
@@ -1831,6 +1841,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
             ],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -2013,6 +2024,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
             ],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {
@@ -2316,6 +2328,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "composed_by": "canvas",
                 "composed_at": "",
             },
+            "page": None,
             "assistant": "paperclip",
             "balloon": None,
             "voice": {
@@ -2451,6 +2464,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             "uploads": None,
             "components": [],
             "surface": None,
+            "page": None,
             "assistant": None,
             "balloon": None,
             "voice": {

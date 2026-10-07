@@ -65,6 +65,7 @@ export function InlineSurface({
   validationError,
   data,
   catalog = datalayerCatalog,
+  onSurface,
 }: {
   messages: A2uiMessage[];
   /** What it draws with, read once: Datalayer's catalog unless given. */
@@ -78,6 +79,12 @@ export function InlineSurface({
    * changed is written: what a person typed elsewhere in the model stays.
    */
   data?: InlineSurfaceData;
+  /**
+   * Told of each surface once it is created, for a host that reads what a
+   * person writes as they write it — a widget's page run again as an input
+   * changes (LOOP P-05) — rather than when a button is pressed.
+   */
+  onSurface?: (surface: Surface) => void;
 }): JSX.Element | null {
   // Reached through a ref: the processor is built once, and the handler it
   // was built with must not go stale when the host's does not.
@@ -101,10 +108,13 @@ export function InlineSurface({
   processorRef.current = processor;
   const [surfaces, setSurfaces] = useState<Surface[]>([]);
 
+  const onSurfaceRef = useRef(onSurface);
+  onSurfaceRef.current = onSurface;
   useEffect(() => {
-    const created = processor.onSurfaceCreated(surface =>
-      setSurfaces(previous => [...previous, surface]),
-    );
+    const created = processor.onSurfaceCreated(surface => {
+      setSurfaces(previous => [...previous, surface]);
+      onSurfaceRef.current?.(surface);
+    });
     const deleted = processor.onSurfaceDeleted(id =>
       setSurfaces(previous => previous.filter(surface => surface.id !== id)),
     );

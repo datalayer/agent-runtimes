@@ -71,6 +71,7 @@ from agent_runtimes.loop.apps.components import answer_surface
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
 from agent_runtimes.loop.apps.host_user import HostUser, reads_user, signed_host_context
+from agent_runtimes.loop.apps.pages import LOOP_PAGE, PAGE_ACTION
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -81,6 +82,7 @@ from agent_runtimes.loop.apps.session import (
     FormQuestion,
     InvalidAnswer,
     Message,
+    PageShown,
     Question,
     Removed,
     Session,
@@ -852,6 +854,14 @@ class LiveSession:
         elif isinstance(event, WindowMessage):
             # For the page the application sits in, not the conversation (P-25).
             self.emit(CustomEvent(name=LOOP_WINDOW, value={"data": event.data}))
+        elif isinstance(event, PageShown):
+            # A widget's page, shown in place for its inputs (LOOP P-05).
+            self.emit(
+                CustomEvent(
+                    name=LOOP_PAGE,
+                    value={"inputs": event.inputs, "outputs": event.outputs},
+                )
+            )
         elif isinstance(event, Closed):
             self._elements.pop(event.element_id, None)
             self.emit(
@@ -1051,6 +1061,13 @@ class LiveSession:
         """
         self._keep(given)
         self._unasked.extend(given)
+        if name == PAGE_ACTION:
+            # Its page, run on its inputs (LOOP P-05).
+            if self.session is None:
+                await self._open_code()
+            assert self.session is not None
+            await self.host.page(self.session, payload.get("inputs") or {})
+            return
         handler = self.host.app.actions.get(name)
         if handler is None:
             await self._message_code(text.strip() or name)
@@ -1135,6 +1152,13 @@ class LiveSession:
         refused = form_values_refused(self.app, name, payload or {})
         if refused:
             raise SessionRefused(422, refused)
+        if name == PAGE_ACTION and (
+            self.host is None or self.host.app.handler("page") is None
+        ):
+            raise SessionRefused(
+                422,
+                f"{self.app.name} has no page of its code (@app.page) here: nothing runs it.",
+            )
         if self.host is not None:
             return self._start_turn(
                 lambda: self._action_code(name, payload or {}, text, given),

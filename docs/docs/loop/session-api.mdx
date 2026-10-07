@@ -194,7 +194,7 @@ as `GET` says it — then the turn's events.
 | --- | --- |
 | `POST /sessions` | **Start**: `{agent, deployment_uid?, app_uid?, version?, opener?, settings?, profile?, session?, woken_by?}`; `profile` the one it is with (LOOP P-20), the first when unsaid, 422 for one the application does not have. The record begins (`woken_by` when nobody opened it), a Python application's `start` runs, then the opener is answered — or, woken by a schedule (`woken_by: {kind: "schedule", position, ...}`), the handler its code declared at that trigger runs in the opener's place (409 when the trigger there is not that schedule, 422 when `position` is missing). |
 | `POST /sessions/{uid}/messages` | **Message**: `{text}`. The next turn — or the answer to what the application asked. |
-| `POST /sessions/{uid}/actions` | **Action**: `{name, payload?, text?, files?}`. A page block's action — File upload's `upload`, a Form's `submit`, a Table's `select` — with the files given. |
+| `POST /sessions/{uid}/actions` | **Action**: `{name, payload?, text?, files?}`. A page block's action — File upload's `upload`, a Form's `submit`, a Table's `select` — with the files given. The action `page`, `{name: "page", payload: {inputs}}`, runs a widget's page on its inputs (LOOP P-05): checked against its form, each with its default for the rest — refused with 422 and the sentence (*“Its page's inputs” was sent what its fields refuse: seats: 0 is less than the minimum of 1.*; *The page of Quote has no input colour: its inputs are seats, plan.*), and with 422 for an application with no page of its code — then its `@app.page` runs and its outputs come back as a `CUSTOM` event named `loop.page`, `{inputs, outputs}`. Not a turn of the conversation: nothing is said in it. |
 | `POST /sessions/{uid}/window` | **A window message** from the page the application sits in (LOOP P-25): `{data}`, anything JSON writes. A Python application's `@app.window` runs on it, as a turn; what it tells the page back (`session.send_window_message`) is a `CUSTOM` event named `loop.window`, `{data}`. Refused with 422 for an application whose code reads none (*Help Desk reads no window message: its code has no @app.window.*), 409 while it answers or waits. Not a turn of the conversation. |
 | `PUT /sessions/{uid}/settings` | **Settings change**: `{values}`, checked against the application's settings — the JSON Schema of a form (LOOP C-16), with the check a Form's values get (*“Its settings” was sent what its fields refuse: tone: 'Loud' is not one of ['Plain', 'Warm'].*; *There is no field nope.*) — and kept. The settings a start or a run carries (`settings`, `forwardedProps.loop.settings`) are checked the same way, refused with 422. |
 | `POST /sessions/{uid}/stop` | **Stop**: what runs is cancelled, a Python application's `stop` runs, the session waits to be resumed. Answers the session, as JSON. |
@@ -458,8 +458,12 @@ taking none; a block's action held to its page's File upload; `@app.file`
 given the files and the words, and without it the file answering what the
 code asks. Window messages (`agent_runtimes/tests/test_app_mount.py`): a
 `loop.window` event in a turn, the page's message answered by `@app.window`,
-refused for an application whose code reads none. The page side is tested with vitest
-(`app-page`, `app-page-blocks`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`, `app-uploads`, `loopWindow`, `embed-session`).
+refused for an application whose code reads none. A widget's page
+(`agent_runtimes/tests/test_app_page.py`): the `page` action answering a
+`loop.page` event, nothing said in the conversation, its inputs refused with
+422 in a sentence, and refused for an application with no page of its code.
+The page side is tested with vitest
+(`app-page`, `app-page-blocks`, `app-page-code`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`, `app-uploads`, `loopWindow`, `embed-session`).
 
 A Preview held to its grants (`agent_runtimes/tests/test_app_preview_grants.py`):
 its token asked with the person's, for the Spaces of the Appspec it runs; each

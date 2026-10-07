@@ -255,10 +255,24 @@ class WindowMessage:
     """What it says: anything JSON writes."""
 
 
+@dataclass(frozen=True)
+class PageShown:
+    """What a widget's page shows for its inputs (LOOP P-05): the outputs its
+    code returned, by name, for the inputs it ran on — shown in place of the
+    last ones, not in the conversation.
+    """
+
+    session_id: str
+    inputs: Dict[str, Any]
+    """The inputs it ran on, by name, with their defaults."""
+    outputs: Dict[str, Any]
+    """Each output's value, by name, as its component draws it."""
+
+
 #: What a session delivers to its channel. A step is delivered twice: when it
 #: starts, and when it ends (with `ended_at`); a message again when it changed,
-#: an element of a panel or a page likewise.
-Event = Union[Message, Delta, Step, Removed, Shown, Closed, WindowMessage]
+#: an element of a panel or a page likewise; a page's outputs each time it ran.
+Event = Union[Message, Delta, Step, Removed, Shown, Closed, WindowMessage, PageShown]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
 
@@ -1199,6 +1213,7 @@ __all__ = [
     "InvalidAnswer",
     "MemoryChannel",
     "Message",
+    "PageShown",
     "Question",
     "Removed",
     "Session",

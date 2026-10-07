@@ -816,7 +816,7 @@ def test_end_and_logout_are_one_handler_each_and_marked_as_code():
         app.end(closed)
     assert app.handler("end") is closed
     assert app.handler("logout") is None
-    assert EVENTS[-2:] == ("end", "logout")
+    assert EVENTS[-3:] == ("end", "logout", "page")
 
 
 # --- P-15: messages that change ---------------------------------------------------

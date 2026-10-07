@@ -48,6 +48,8 @@ import type {
   AppLayout,
   AppModeOptionSpec,
   AppModeSpec,
+  AppPageOutputComponent,
+  AppPageSpec,
   AppProfileSpec,
   AppRuleSpec,
   AppStarterSpec,
@@ -511,6 +513,61 @@ function parseUploads(data: Data): AppUploadsSpec {
   };
 }
 
+/** What a page's output may be drawn with (LOOP P-05), and the property of each that shows its value. */
+export const PAGE_OUTPUT_SHOWS: Record<AppPageOutputComponent, string> = {
+  Text: 'text',
+  Image: 'url',
+  Table: 'rows',
+  Chart: 'points',
+};
+
+/**
+ * A widget's page written in its code (P-05), as written: its inputs a form
+ * kept whole, an output drawn with another component kept as written so that
+ * the checks say it.
+ */
+function parsePage(data: Data): AppPageSpec {
+  const page: AppPageSpec = {
+    function: text(data.function),
+    inputs: (isData(data.inputs)
+      ? JSON.parse(JSON.stringify(data.inputs))
+      : {}) as AppFormSchema,
+    outputs: records(data.outputs).map(output => ({
+      name: text(output.name),
+      title: text(output.title),
+      component: text(output.component, 'Text') as AppPageOutputComponent,
+      props: isData(output.props)
+        ? (JSON.parse(JSON.stringify(output.props)) as Data)
+        : {},
+    })),
+    live: data.live !== false,
+  };
+  if (isData(data.inputs_ui)) {
+    page.inputsUi = JSON.parse(JSON.stringify(data.inputs_ui)) as Data;
+  }
+  return page;
+}
+
+function dumpPage(page: AppPageSpec): Data {
+  const written = new Writer().text('function', page.function, '\u0000');
+  written.data.inputs = JSON.parse(JSON.stringify(page.inputs));
+  if (page.inputsUi) {
+    written.data.inputs_ui = { ...page.inputsUi };
+  }
+  written.list(
+    'outputs',
+    page.outputs.map(
+      output =>
+        new Writer()
+          .text('name', output.name, '\u0000')
+          .text('title', output.title)
+          .text('component', output.component, 'Text')
+          .part('props', { ...output.props }).data,
+    ),
+  );
+  return written.value('live', page.live, true).data;
+}
+
 function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   const parsed: AppInterfaceSpec = {
     layout: oneOf(
@@ -548,6 +605,9 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
   }
   if (isData(data.surface)) {
     parsed.surface = parseSurface(data.surface);
+  }
+  if (isData(data.page)) {
+    parsed.page = parsePage(data.page);
   }
   if (isAssistantCharacterId(data.assistant)) {
     parsed.assistant = data.assistant;
@@ -1038,6 +1098,9 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
   writer.list('components', spec.components);
   if (spec.surface) {
     writer.data.surface = dumpSurface(spec.surface);
+  }
+  if (spec.page) {
+    writer.data.page = dumpPage(spec.page);
   }
   if (spec.assistant) {
     writer.data.assistant = spec.assistant;

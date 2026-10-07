@@ -124,6 +124,15 @@ def form_values_refused(
     str or None
         The refusal in a sentence: the form, then each field and why.
     """
+    from agent_runtimes.loop.apps.pages import PAGE_ACTION, page_values
+
+    if action == PAGE_ACTION and app.interface.page is not None:
+        # A widget's page run on its inputs (LOOP P-05): its form, checked.
+        try:
+            page_values(app, payload.get("inputs", {}))
+        except ValueError as refused:
+            return str(refused)
+        return None
     surface = app.interface.surface
     if surface is None:
         return None

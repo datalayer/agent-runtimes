@@ -135,4 +135,5 @@ export function defineAppHostPagePlugin(
 
 export { AppPage, type AppPageProps } from './AppPage';
 export * from './appPageModel';
+export * from './pageRun';
 export default defineAppPagePlugin;

@@ -32,8 +32,10 @@
 import type {
   AppFormField,
   AppFormSchema,
+  AppPageSpec,
   AppSpec,
 } from '../../../types/agentspecs';
+import { PAGE_OUTPUT_SHOWS } from '../../apps/appspec';
 import type {
   ChatTurnSnapshot,
   ChatTurnStatus,
@@ -293,12 +295,57 @@ export function appKindPaths(
     meaning: `The setting “${settingTitle(id, field)}”.`,
     words: settingTitle(id, field),
   }));
+  // A widget's page written in its code (P-05): its inputs taken, its
+  // outputs published, and the action that runs it.
+  const page = pageOf(app);
+  if (!page) {
+    return {
+      ...kind,
+      publishes: [...kind.publishes, ...inputs],
+      accepts: [...kind.accepts, ...inputs],
+    };
+  }
+  const pageInputs = settingFields(page.inputs).map(([id, field]) => ({
+    path: inputPath(id),
+    meaning: `The input “${settingTitle(id, field)}” of its page.`,
+    words: settingTitle(id, field),
+  }));
+  const outputs = page.outputs.map(output => ({
+    path: outputPath(output.name),
+    meaning: `What its page shows as “${output.title || output.name}”, drawn with a ${output.component}, for its inputs.`,
+    words: output.title || output.name,
+    ...(output.component === 'Table' || output.component === 'Chart'
+      ? { list: true }
+      : {}),
+  }));
   return {
     ...kind,
-    publishes: [...kind.publishes, ...inputs],
-    accepts: [...kind.accepts, ...inputs],
+    publishes: [...kind.publishes, ...inputs, ...pageInputs, ...outputs],
+    accepts: [...kind.accepts, ...inputs, ...pageInputs],
+    actions: [...kind.actions, PAGE],
   };
 }
+
+/** The page its code writes (P-05): a widget's, or none. */
+export const pageOf = (
+  app: Pick<AppSpec, 'kind' | 'interface'>,
+): AppPageSpec | undefined =>
+  app.kind === 'widget' ? app.interface.page : undefined;
+
+/** The path an output of its page is shown at (P-05). */
+export const outputPath = (name: string): string => `/outputs/${name}`;
+
+/** The action that runs a widget's page written in its code (P-05). */
+export const PAGE_ACTION = 'page';
+
+const PAGE: AppPageAction = {
+  name: PAGE_ACTION,
+  meaning:
+    'Run its page on its inputs: every value written under /inputs, its outputs shown in place at /outputs.',
+  words: 'Run its page',
+  context: [],
+  asks: {},
+};
 
 /** The components its surface has, or none. */
 const surfaceComponents = (app: Pick<AppSpec, 'interface'>) =>
@@ -393,7 +440,10 @@ export function appPageInitialData(
     // Each setting at its default, as the settings' form holds it; a
     // ChoicePicker a builder placed at a setting holds a list of the values
     // chosen.
-    const inputs = settingDefaults(app.interface.settings);
+    const inputs = {
+      ...settingDefaults(app.interface.settings),
+      ...settingDefaults(pageOf(app)?.inputs),
+    };
     for (const node of app.interface.surface?.components ?? []) {
       const bound = (node.value as { path?: unknown } | undefined)?.path;
       const id =
@@ -405,6 +455,9 @@ export function appPageInitialData(
       }
     }
     tree.inputs = inputs;
+  }
+  if (pageOf(app)) {
+    tree.outputs = {};
   }
   if (paths.accepts.some(entry => entry.path === DRAFT.path)) {
     tree.draft = '';
@@ -521,12 +574,32 @@ export function settingsOf(
   app: Pick<AppSpec, 'interface'>,
   inputs: unknown,
 ): Record<string, unknown> {
+  return formValuesOf(app.interface.settings, inputs);
+}
+
+/**
+ * The inputs of a widget's page written in its code (P-05), as the page
+ * holds them, typed as its form says, for the session's `page` action: the
+ * runtime checks them against the same form.
+ */
+export function pageInputsOf(
+  app: Pick<AppSpec, 'kind' | 'interface'>,
+  inputs: unknown,
+): Record<string, unknown> {
+  return formValuesOf(pageOf(app)?.inputs, inputs);
+}
+
+/** A form's values as the page holds them, each typed as its field says. */
+function formValuesOf(
+  form: AppFormSchema | undefined,
+  inputs: unknown,
+): Record<string, unknown> {
   const values =
     inputs && typeof inputs === 'object'
       ? (inputs as Record<string, unknown>)
       : {};
   const settings: Record<string, unknown> = {};
-  for (const [id, field] of settingFields(app.interface.settings)) {
+  for (const [id, field] of settingFields(form)) {
     const held = values[id];
     if (held === undefined || held === null) {
       continue;
@@ -590,6 +663,8 @@ export type AppPageOutcome =
     }
   | { stop: true }
   | { newChat: true }
+  /** A widget's page, to run on these inputs (P-05): no message is sent. */
+  | { runPage: Record<string, unknown> }
   | { refused: string };
 
 /**
@@ -629,6 +704,8 @@ export function appPageAction(
     ...(settings ? { settings } : {}),
   });
   switch (event.name) {
+    case PAGE_ACTION:
+      return { runPage: pageInputsOf(app, read('/inputs')) };
     case 'stop':
       return { stop: true };
     case 'new':
@@ -704,7 +781,11 @@ const button = (
  * `@datalayer/primer-rjsf`, the values written at `/inputs` as they are
  * filled — no action, no button: they go with the next run.
  */
-function settingsForm(app: Pick<AppSpec, 'interface'>): Component[] {
+function settingsForm(app: Pick<AppSpec, 'kind' | 'interface'>): Component[] {
+  const page = pageOf(app);
+  if (page) {
+    return pageForm(app, page);
+  }
   return app.interface.settings && settingFields(app.interface.settings).length
     ? [
         {
@@ -717,6 +798,58 @@ function settingsForm(app: Pick<AppSpec, 'interface'>): Component[] {
         },
       ]
     : [];
+}
+
+/**
+ * A widget's page written in its code (P-05): one Form of its settings and
+ * its inputs, written at `/inputs` as they are filled — the page runs its
+ * code on them as they change — then each output, under its title, drawn
+ * with its component from `/outputs/<name>`; a Run button when it is not
+ * live.
+ */
+function pageForm(
+  app: Pick<AppSpec, 'interface'>,
+  page: AppPageSpec,
+): Component[] {
+  const settings = app.interface.settings;
+  const schema: AppFormSchema = {
+    ...page.inputs,
+    type: 'object',
+    properties: { ...settings?.properties, ...page.inputs.properties },
+    required: [...(settings?.required ?? []), ...(page.inputs.required ?? [])],
+  };
+  const ui = { ...app.interface.settingsUi, ...page.inputsUi };
+  const outputs = page.outputs.flatMap(output => [
+    ...(output.title
+      ? [
+          {
+            id: `output-${output.name}-title`,
+            component: 'Text',
+            text: output.title,
+            variant: 'h4',
+          },
+        ]
+      : []),
+    {
+      ...output.props,
+      id: `output-${output.name}`,
+      component: output.component,
+      [PAGE_OUTPUT_SHOWS[output.component] ?? 'text']: {
+        path: outputPath(output.name),
+      },
+    },
+  ]);
+  return [
+    {
+      id: 'inputs',
+      component: 'Form',
+      schema,
+      ...(Object.keys(ui).length > 0 ? { ui } : {}),
+      values: { path: '/inputs' },
+    },
+    ...(page.live ? [] : button('run-page', 'Run', PAGE_ACTION, true)),
+    ...outputs,
+  ];
 }
 
 /**
@@ -739,6 +872,11 @@ export function defaultAppSurface(
       );
       break;
     case 'widget':
+      if (pageOf(app)) {
+        // Its page is its code's (P-05): the inputs, and what it shows for them.
+        body.push(...inputs);
+        break;
+      }
       body.push(
         ...inputs,
         { id: 'actions', component: 'Row', children: ['run', 'stop'] },

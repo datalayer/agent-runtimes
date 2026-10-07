@@ -193,6 +193,12 @@ def code_notes(application: Any) -> List[str]:
                 f"Its test “{case.expect}” is decided by its code ({case.code}): "
                 "run from this spec alone, it is judged by its words."
             )
+    page = application.interface.page
+    if page is not None:
+        notes.append(
+            f"Its page is run by its code ({page.function}): run from this spec "
+            "alone, nothing shows its outputs."
+        )
     return notes
 
 
@@ -471,6 +477,88 @@ def apps_validate(
 
 
 def _code_tests_of(path: Path, report: Report, *, local: bool) -> bool:
+    """List, or run here, the tests an app.py's code decides (LOOP P-06), and
+    its page on its inputs' defaults (P-05).
+
+    Returns whether they were asked but not all run (exit 3).
+    """
+    unrun = _case_tests_of(path, report, local=local)
+    return _page_test_of(path, report, local=local) or unrun
+
+
+#: What the page of a widget written in its code is checked for (LOOP P-05).
+PAGE_TEST = "It shows each of its outputs for its inputs' defaults."
+
+
+def _page_test_of(path: Path, report: Report, *, local: bool) -> bool:
+    """List, or run here, a widget's page on its inputs' defaults (LOOP P-05):
+    each of its outputs given, and drawn. Returns whether it was asked but not run.
+    """
+    import asyncio
+
+    from agent_runtimes.loop.apps.application import AppHost
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.loop.apps.session import MemoryChannel
+
+    try:
+        application = _application_of(path)
+    except AppNotRunnable:
+        return False
+    page = application.spec.interface.page
+    if page is None:
+        return False
+    row = {
+        "name": page.function,
+        "expect": PAGE_TEST,
+        "ask": "",
+        "state": "",
+        "says": "",
+    }
+    if report.tests_says == "Its code decides no test.":
+        report.tests_says = ""
+    if not application.handler("page"):
+        row["says"] = "Its page is run by an app.py: validate the app.py to run it."
+        report.tests.append(row)
+        return False
+    if not local:
+        row["says"] = "Not run. --local runs it here."
+        report.tests.append(row)
+        return False
+    missing = [
+        name
+        for name in page.inputs.get("required") or []
+        if "default" not in (page.inputs["properties"].get(name) or {})
+    ]
+    if missing:
+        row["state"] = "failed"
+        row["says"] = (
+            f"Not run: {', '.join(missing)} has no default, and a page shows its outputs "
+            "from the start. Give it one."
+        )
+        report.tests.append(row)
+        return False
+
+    async def run() -> None:
+        host = AppHost(application, MemoryChannel())
+        session = await host.open()
+        await host.page(session, {})
+
+    try:
+        with _quiet():
+            asyncio.run(run())
+    except (ValueError, KeyError) as refused:
+        row["state"] = "failed"
+        row["says"] = str(refused).strip("'\"")
+    except Exception as failed:  # noqa: BLE001 - its code failed: said
+        row["state"] = "failed"
+        row["says"] = f"{page.function} failed: {type(failed).__name__}: {failed}"
+    else:
+        row["state"] = "passed"
+    report.tests.append(row)
+    return False
+
+
+def _case_tests_of(path: Path, report: Report, *, local: bool) -> bool:
     """List, or run here, the tests an app.py's code decides (LOOP P-06).
 
     Returns whether they were asked but not all run (exit 3).
