@@ -3238,3 +3238,241 @@ class TeamSpec(BaseModel):
     )
 
     model_config = {"populate_by_name": True}
+
+
+# ============================================================================
+# Scenes (agentspecs `scenes`, `schema: loop.scene/v1`, LOOP A-11)
+# ============================================================================
+
+
+class ScenePersonaSpec(BaseModel):
+    """How a member appears to the audience, in a scene."""
+
+    name: str = Field(default="", description="The name the audience sees")
+    face: str = Field(default="", description="One emoji, its face on stage")
+    line: str = Field(default="", description="One line of *who I am here*")
+
+
+class SceneCastMemberSpec(BaseModel):
+    """A member of the cast: a member of the team, with its persona and its brief."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    member: str = Field(..., description="Its id in the team")
+    app: str = Field(default="", description="The application it is, `id:version`")
+    ref: str = Field(
+        default="", description="The agent it is, when it is not an application"
+    )
+    server: str = Field(
+        default="", description="The MCP server it is, a system of the scene"
+    )
+    role: Optional[str] = Field(
+        default=None, description="What it is for, structurally"
+    )
+    runs_in: Optional[Literal["browser", "runtime"]] = Field(
+        default=None, description="Where its loop turns", alias="runsIn"
+    )
+    talks_to: List[TeamLinkSpec] = Field(
+        default_factory=list, description="Whom it asks, and over what", alias="talksTo"
+    )
+    persona: ScenePersonaSpec = Field(default_factory=ScenePersonaSpec)
+    brief: str = Field(default="", description="What it is for in this scene")
+
+
+class SceneSystemSpec(BaseModel):
+    """A system on stage: an MCP server the cast reaches."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    server: str = Field(..., description="The server, `id` or `id:version`")
+    shown_as: str = Field(
+        default="", alias="as", description="The name the audience reads"
+    )
+    holds: str = Field(default="", description="What it holds in this scene")
+
+
+class SceneSettingSpec(BaseModel):
+    """The stage: what is on it, and what the audience is told."""
+
+    systems: List[SceneSystemSpec] = Field(default_factory=list)
+    frames: List[str] = Field(
+        default_factory=list, description="The Frames it plays under"
+    )
+    contents: List[str] = Field(default_factory=list, description="The data in play")
+    period: str = Field(default="", description="When the scene plays, in words")
+    language: str = Field(default="", description="The language it plays in")
+    assumes: str = Field(
+        default="", description="What the audience is told before it starts"
+    )
+
+
+class SceneCueSpec(BaseModel):
+    """What starts a beat: one of the three is said."""
+
+    say: str = Field(default="", description="An opener the audience may say")
+    schedule: str = Field(default="")
+    event: str = Field(default="")
+
+
+class SceneMoveSpec(BaseModel):
+    """One member asking another over a protocol, or answering the audience."""
+
+    who: str = Field(..., description="The member moving")
+    asks: str = Field(
+        default="", description="Whom; empty when it answers the audience"
+    )
+    over: Optional[Literal["a2a", "mcp"]] = Field(default=None)
+    what: str = Field(default="", description="What it asks for, or answers, in words")
+    tool: str = Field(default="", description="Over mcp: the tool, by name or pattern")
+    does: Optional[str] = Field(
+        default=None, description="The kind of tool: read, write, …"
+    )
+    answers: Optional[
+        Literal["words", "table", "chart", "notebook", "map", "file", "image"]
+    ] = Field(default=None, description="What kind of answer comes back")
+
+
+class SceneBranchSpec(BaseModel):
+    """What a beat does instead when a decision holds."""
+
+    decision: str = Field(...)
+    expect: str = Field(default="")
+    moves: List[SceneMoveSpec] = Field(default_factory=list)
+    then: str = Field(default="", description="The beat that follows, by id")
+
+
+class SceneBeatSpec(BaseModel):
+    """One beat of the script."""
+
+    id: str = Field(...)
+    cue: SceneCueSpec = Field(...)
+    narration: str = Field(default="", description="One line for the audience")
+    moves: List[SceneMoveSpec] = Field(default_factory=list)
+    expect: str = Field(..., description="What should happen, in words")
+    shows: List[str] = Field(default_factory=list, description="What the page shows")
+    pace: Optional[Literal["quick", "steady", "slow"]] = Field(default=None)
+    branch: List[SceneBranchSpec] = Field(default_factory=list)
+
+
+class ScenePositionSpec(BaseModel):
+    """Where a member stands: fractions of the box."""
+
+    x: float = Field(...)
+    y: float = Field(...)
+
+
+class SceneTranscriptSpec(BaseModel):
+    """What the transcript shows."""
+
+    tools: bool = Field(default=True)
+    narration: bool = Field(default=True)
+    withhold: List[str] = Field(default_factory=list, description="Words withheld")
+
+
+class SceneStageSpec(BaseModel):
+    """Directions for the page."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    positions: Dict[str, ScenePositionSpec] = Field(default_factory=dict)
+    opens_first: str = Field(
+        default="", alias="opensFirst", description="Whose balloon opens first"
+    )
+    transcript: SceneTranscriptSpec = Field(default_factory=SceneTranscriptSpec)
+    inspectors: List[str] = Field(default_factory=list)
+    rests_after: str = Field(
+        default="",
+        alias="restsAfter",
+        description="How long the scene plays before it rests",
+    )
+    pace: Literal["quick", "steady", "slow"] = Field(default="steady")
+
+
+class SceneAudienceSpec(BaseModel):
+    """Who may watch and ask, and what an ask may cost."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    who: Literal["visitors", "signed-in", "nobody"] = Field(default="signed-in")
+    ceiling_per_ask: float = Field(
+        default=0, alias="ceilingPerAsk", description="In USD"
+    )
+    asks_a_day: int = Field(default=0, alias="asksADay")
+
+
+class SceneRehearsalBeatSpec(BaseModel):
+    """What a beat's transcript must look like."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    beat: str = Field(...)
+    lines: List[str] = Field(default_factory=list, description="The shape, in order")
+    must_say: List[str] = Field(default_factory=list, alias="mustSay")
+    must_not_say: List[str] = Field(default_factory=list, alias="mustNotSay")
+    within: str = Field(default="")
+
+
+class SceneRecordingSpec(BaseModel):
+    """A transcript recorded once, played when the scene cannot play live (LOOP H-08)."""
+
+    path: str = Field(...)
+    taken: str = Field(default="")
+    note: str = Field(default="")
+
+
+class SceneRehearsalSpec(BaseModel):
+    """The scene's tests: a passing rehearsal is the gallery's *Live*."""
+
+    beats: List[SceneRehearsalBeatSpec] = Field(default_factory=list)
+    within: str = Field(default="")
+    recording: Optional[SceneRecordingSpec] = Field(default=None)
+    verified: AppVerifiedSpec = Field(default_factory=AppVerifiedSpec)
+
+
+class SceneDeploymentSpec(BaseModel):
+    """Where the scene plays."""
+
+    account: str = Field(default="")
+    page: str = Field(default="", description="The page it plays on")
+    addresses: Dict[str, str] = Field(
+        default_factory=dict,
+        description="For each member on a runtime, the variable its address is read from",
+    )
+
+
+class SceneSpec(BaseModel):
+    """A scene (`agentspecs/scenes`): a team, staged.
+
+    The team says who is on stage; the scene says what happens there. In the
+    generated catalogue the cast is resolved — every member of the team, its
+    persona filled from its application — the `entry` said, and what the
+    scene names that is not enabled carried as `setup`.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: str = Field(
+        default="loop.scene/v1", alias="schema", description="The version of the spec"
+    )
+    id: str = Field(..., description="Unique scene identifier")
+    version: str = Field(default="0.0.1")
+    name: str = Field(..., description="The tab's name")
+    description: str = Field(default="")
+    tags: List[str] = Field(default_factory=list)
+    icon: str = Field(default="people")
+    emoji: str = Field(
+        default="👀", description="Its face: one emoji, drawn before its name"
+    )
+    team: str = Field(default="", description="The team it stages, `id:version`")
+    entry: str = Field(default="", description="The member the audience talks to")
+    cast: List[SceneCastMemberSpec] = Field(default_factory=list)
+    setting: SceneSettingSpec = Field(default_factory=SceneSettingSpec)
+    script: List[SceneBeatSpec] = Field(default_factory=list)
+    stage: SceneStageSpec = Field(default_factory=SceneStageSpec)
+    audience: SceneAudienceSpec = Field(default_factory=SceneAudienceSpec)
+    rehearsal: SceneRehearsalSpec = Field(default_factory=SceneRehearsalSpec)
+    deployment: SceneDeploymentSpec = Field(default_factory=SceneDeploymentSpec)
+    setup: List[str] = Field(
+        default_factory=list,
+        description="What it names that is not enabled, in sentences",
+    )

@@ -1647,6 +1647,7 @@ export * from './gates';
 export * from './tracks';
 export * from './ops';
 export * from './apps';
+export * from './scenes';
 export * from './actions';
 export * from './appspecSchema';
 """

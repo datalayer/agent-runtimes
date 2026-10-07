@@ -36,6 +36,7 @@ export * from './outputs';
 export * from './personas';
 export * from './protocol';
 export * from './sandbox';
+export * from './scenes';
 export * from './skills';
 export * from './stream';
 export * from './teams';

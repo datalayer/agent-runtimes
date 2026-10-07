@@ -1,0 +1,1161 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+"""
+Scene Catalog.
+
+A team, staged: the setting, the script, the stage directions, the
+audience, the rehearsal and where it plays. The cast is resolved.
+
+This file is AUTO-GENERATED from YAML specifications.
+DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
+"""
+
+from typing import Dict
+
+from agent_runtimes.types import SceneSpec
+
+# ============================================================================
+# Scene Definitions
+# ============================================================================
+
+CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "crop-monitoring",
+        "version": "0.0.1",
+        "name": "Crop monitoring",
+        "description": "One agent follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.",
+        "tags": ["example", "scene", "earthdata", "agriculture", "a2a"],
+        "icon": "globe",
+        "emoji": "🛰️",
+        "team": "crop-monitoring:0.0.1",
+        "entry": "crop-monitoring",
+        "cast": [
+            {
+                "member": "crop-monitoring",
+                "app": "crop-monitoring:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "initiator",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Crop monitoring",
+                    "face": "🌾",
+                    "line": "I search the imagery and tell you how the fields are doing.",
+                },
+                "brief": "Take the field and the period, search the datasets and the granules that cover them, and report the vigour, the growth and the fields to watch; leave any download to the person.",
+            }
+        ],
+        "setting": {
+            "systems": [
+                {
+                    "server": "earthdata:0.0.1",
+                    "as": "Earthdata",
+                    "holds": "NASA's catalogue of satellite imagery, searched, not downloaded.",
+                }
+            ],
+            "period": "the last three months",
+            "language": "en",
+            "assumes": "One agent, its data: Crop monitoring on Datalayer, searching the satellite imagery NASA Earthdata holds.",
+        },
+        "script": [
+            {
+                "id": "vigour-this-season",
+                "cue": {
+                    "say": "How has crop vigour evolved over the last three months around 45.5N, 10.2E?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The datasets that cover the place, then the granules of the season.",
+                "moves": [
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the vegetation datasets covering the place",
+                        "tool": "search_earth_datasets",
+                        "does": "read",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules of the last three months",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "",
+                        "what": "the vigour month by month",
+                        "tool": "",
+                        "answers": "chart",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "",
+                        "what": "how the season went, in a paragraph",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "A chart of the vigour month by month from the granules found, and a paragraph saying how the season went; nothing downloaded.",
+                "shows": ["chart", "words"],
+                "branch": [
+                    {
+                        "decision": "no granule covers the period",
+                        "expect": "It says so, and names the nearest dates that are covered.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+            {
+                "id": "fields-to-watch",
+                "cue": {
+                    "say": "Which fields around 41.9N, 12.5E show a drop in vegetation this month compared with last?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "This month against the last, field by field.",
+                "moves": [
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules of this month and the last",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "",
+                        "what": "the fields whose vegetation dropped, with the drop",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                ],
+                "expect": "A table of the fields whose vegetation dropped from last month to this, each with the size of the drop, from the imagery found.",
+                "shows": ["table"],
+                "pace": "slow",
+            },
+            {
+                "id": "imagery-available",
+                "cue": {
+                    "say": "Which datasets and granules cover the Po valley for June 2026?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "What there is to look at, before anything is looked at.",
+                "moves": [
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the datasets covering the Po valley",
+                        "tool": "search_earth_datasets",
+                        "does": "read",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules of June 2026",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "crop-monitoring",
+                        "asks": "",
+                        "what": "the datasets and the granules, with their dates",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                ],
+                "expect": "A table of the datasets and the granules that cover the Po valley in June 2026, with their dates; a download is left to the person.",
+                "shows": ["table"],
+                "branch": [
+                    {
+                        "decision": "the audience asks to download the granules",
+                        "expect": "It leaves the download to a person, and says how.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+        ],
+        "stage": {
+            "positions": {"crop-monitoring": {"x": 0.5, "y": 0.5}},
+            "opens_first": "crop-monitoring",
+            "transcript": {"tools": True, "narration": True},
+            "inspectors": ["agent", "tools"],
+            "rests_after": "10m",
+            "pace": "steady",
+        },
+        "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
+        "rehearsal": {
+            "beats": [
+                {
+                    "beat": "vigour-this-season",
+                    "lines": [
+                        "You → Crop monitoring",
+                        "Crop monitoring → Earthdata: search_earth_datasets",
+                        "Crop monitoring → Earthdata: search_earth_datagranules",
+                        "Crop monitoring: a chart",
+                    ],
+                    "must_say": ["vigour"],
+                    "must_not_say": ["downloaded"],
+                    "within": "90s",
+                },
+                {
+                    "beat": "fields-to-watch",
+                    "lines": [
+                        "You → Crop monitoring",
+                        "Crop monitoring → Earthdata: search_earth_datagranules",
+                        "Crop monitoring: a table",
+                    ],
+                    "must_say": ["drop"],
+                    "within": "90s",
+                },
+                {
+                    "beat": "imagery-available",
+                    "lines": [
+                        "You → Crop monitoring",
+                        "Crop monitoring → Earthdata: search_earth_*",
+                        "Crop monitoring: a table",
+                    ],
+                    "must_say": ["granule"],
+                    "must_not_say": ["downloaded"],
+                    "within": "60s",
+                },
+            ],
+            "within": "240s",
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                ],
+            },
+        },
+        "deployment": {
+            "account": "demo",
+            "page": "/",
+            "addresses": {
+                "crop-monitoring": "DATALAYER_DEMO_SCENE_CROP_MONITORING_CROP_MONITORING_A2A_URL"
+            },
+        },
+        "setup": ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
+    }
+)
+
+DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "disaster-assessment",
+        "version": "0.0.1",
+        "name": "Disaster assessment",
+        "description": "An event desk asks two specialists what a disaster affected and what changed on the ground, each reading NASA Earthdata, and reports.",
+        "tags": ["example", "scene", "earthdata", "disaster", "insurance", "a2a"],
+        "icon": "alert",
+        "emoji": "🚨",
+        "team": "disaster-assessment:0.0.1",
+        "entry": "event-response",
+        "cast": [
+            {
+                "member": "event-response",
+                "app": "event-response:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "initiator",
+                "runs_in": "browser",
+                "talks_to": [
+                    {"member": "disaster-assessment", "over": "a2a"},
+                    {"member": "change-detection", "over": "a2a"},
+                ],
+                "persona": {
+                    "name": "Event response",
+                    "face": "🛡️",
+                    "line": "Tell me what happened; I ask the specialists and report.",
+                },
+                "brief": "Take the event, ask Disaster assessment for the area and the damage and Change detection for the change on the ground, one request each, and report what they answer without adding to it.",
+            },
+            {
+                "member": "disaster-assessment",
+                "app": "disaster-assessment:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "contributor",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Disaster assessment",
+                    "face": "🌊",
+                    "line": "I estimate the area affected and the damage from the imagery.",
+                },
+                "brief": "From the imagery before and after the event, estimate the area affected and the extent of the damage; say what the imagery does not show.",
+            },
+            {
+                "member": "change-detection",
+                "app": "change-detection:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "contributor",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Change detection",
+                    "face": "🔍",
+                    "line": "I find what changed on the ground between two dates.",
+                },
+                "brief": "From the imagery at two dates, find what changed on the ground; give the granules the change was read from.",
+            },
+        ],
+        "setting": {
+            "systems": [
+                {
+                    "server": "earthdata:0.0.1",
+                    "as": "Earthdata",
+                    "holds": "NASA's catalogue of satellite imagery, searched, not downloaded.",
+                }
+            ],
+            "period": "the days before and after the event",
+            "language": "en",
+            "assumes": "Three agents over A2A — Event response in your browser, Disaster assessment and Change detection on Datalayer — each searching the satellite imagery NASA Earthdata holds.",
+        },
+        "script": [
+            {
+                "id": "flood",
+                "cue": {
+                    "say": "Valencia, Spain, was flooded on 29 October 2024. What was affected, and what changed?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "Event response asks both specialists; each searches the imagery around the date.",
+                "moves": [
+                    {
+                        "who": "event-response",
+                        "asks": "disaster-assessment",
+                        "over": "a2a",
+                        "what": "the area the flood affected and the damage",
+                        "tool": "",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules before and after 29 October 2024",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "",
+                        "what": "the area affected and the extent of the damage",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "change-detection",
+                        "over": "a2a",
+                        "what": "what changed on the ground around Valencia",
+                        "tool": "",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules at the two dates",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "",
+                        "what": "the changes found, each with the granules it was read from",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "",
+                        "what": "what the two answered, as they answered it",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "The area affected and the damage from Disaster assessment, the changes on the ground from Change detection with their granules, reported by Event response without a figure of its own.",
+                "shows": ["words", "table"],
+                "pace": "slow",
+                "branch": [
+                    {
+                        "decision": "no imagery covers the days around the event",
+                        "expect": "The specialists say so, and Event response reports that nothing could be assessed.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+            {
+                "id": "wildfire",
+                "cue": {
+                    "say": "Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The same two questions, for a fire.",
+                "moves": [
+                    {
+                        "who": "event-response",
+                        "asks": "disaster-assessment",
+                        "over": "a2a",
+                        "what": "the area burned and the damage",
+                        "tool": "",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules before and after 7 January 2025",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "",
+                        "what": "the area burned and the extent of the damage",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "change-detection",
+                        "over": "a2a",
+                        "what": "what changed on the ground around Los Angeles",
+                        "tool": "",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules at the two dates",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "",
+                        "what": "the changes found, with their granules",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "",
+                        "what": "what the two answered",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "The area burned and the damage, and the changes on the ground with their granules, reported by Event response as the two answered them.",
+                "shows": ["words", "table"],
+                "pace": "slow",
+            },
+            {
+                "id": "storm",
+                "cue": {
+                    "say": "The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "A storm, three years back: what the archive still shows.",
+                "moves": [
+                    {
+                        "who": "event-response",
+                        "asks": "disaster-assessment",
+                        "over": "a2a",
+                        "what": "the area the storm affected and the damage",
+                        "tool": "",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules before and after 14 July 2021",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "disaster-assessment",
+                        "asks": "",
+                        "what": "the area affected and the extent of the damage",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "change-detection",
+                        "over": "a2a",
+                        "what": "what changed on the ground in the Ahr valley",
+                        "tool": "",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "earthdata",
+                        "over": "mcp",
+                        "what": "the granules at the two dates",
+                        "tool": "search_earth_datagranules",
+                        "does": "read",
+                    },
+                    {
+                        "who": "change-detection",
+                        "asks": "",
+                        "what": "the changes found, with their granules",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "event-response",
+                        "asks": "",
+                        "what": "what the two answered",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "The area affected and the damage, and the changes on the ground with their granules, reported by Event response as the two answered them.",
+                "shows": ["words", "table"],
+                "pace": "slow",
+            },
+        ],
+        "stage": {
+            "positions": {
+                "event-response": {"x": 0.5, "y": 0.2},
+                "disaster-assessment": {"x": 0.25, "y": 0.75},
+                "change-detection": {"x": 0.75, "y": 0.75},
+            },
+            "opens_first": "event-response",
+            "transcript": {"tools": True, "narration": True},
+            "inspectors": ["agent", "a2a", "tools"],
+            "rests_after": "10m",
+            "pace": "slow",
+        },
+        "audience": {"who": "visitors", "ceiling_per_ask": 0.1, "asks_a_day": 3},
+        "rehearsal": {
+            "beats": [
+                {
+                    "beat": "flood",
+                    "lines": [
+                        "You → Event response",
+                        "Event response → Disaster assessment",
+                        "Disaster assessment → Earthdata: search_earth_datagranules",
+                        "Disaster assessment: words",
+                        "Event response → Change detection",
+                        "Change detection → Earthdata: search_earth_datagranules",
+                        "Change detection: a table",
+                        "Event response: words",
+                    ],
+                    "must_say": ["Valencia"],
+                    "must_not_say": ["downloaded"],
+                    "within": "120s",
+                },
+                {
+                    "beat": "wildfire",
+                    "lines": [
+                        "You → Event response",
+                        "Event response → Disaster assessment",
+                        "Disaster assessment → Earthdata: search_earth_datagranules",
+                        "Event response → Change detection",
+                        "Change detection → Earthdata: search_earth_datagranules",
+                        "Event response: words",
+                    ],
+                    "must_say": ["Los Angeles"],
+                    "within": "120s",
+                },
+                {
+                    "beat": "storm",
+                    "lines": [
+                        "You → Event response",
+                        "Event response → Disaster assessment",
+                        "Disaster assessment → Earthdata: search_earth_datagranules",
+                        "Event response → Change detection",
+                        "Change detection → Earthdata: search_earth_datagranules",
+                        "Event response: words",
+                    ],
+                    "must_say": ["Ahr"],
+                    "within": "120s",
+                },
+            ],
+            "within": "300s",
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "The two runtimes are not deployed under the demo account yet, the page runs a team of two today, and the rehearsal has not been played (A-14)."
+                ],
+            },
+        },
+        "deployment": {
+            "account": "demo",
+            "page": "/",
+            "addresses": {
+                "disaster-assessment": "DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_DISASTER_ASSESSMENT_A2A_URL",
+                "change-detection": "DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_CHANGE_DETECTION_A2A_URL",
+            },
+        },
+        "setup": [
+            "The agent 'worker-event-response:0.0.1' is not enabled.",
+            "The agent 'worker-disaster-assessment:0.0.1' is not enabled.",
+            "The agent 'worker-change-detection:0.0.1' is not enabled.",
+        ],
+    }
+)
+
+MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "month-end-close",
+        "version": "0.0.1",
+        "name": "Month-end close",
+        "description": "One agent drives the close from the Odoo books it only reads: where the close stands, what is to book, what is still open.",
+        "tags": ["example", "scene", "odoo", "finance", "a2a"],
+        "icon": "calendar",
+        "emoji": "📒",
+        "team": "month-end-close:0.0.1",
+        "entry": "month-end-close",
+        "cast": [
+            {
+                "member": "month-end-close",
+                "app": "month-end-close:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "initiator",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Month-end close",
+                    "face": "🗓️",
+                    "line": "I read the books and tell you where the close stands.",
+                },
+                "brief": "Read the period's books, one call at a time, and report what is done, what is to book and what is still open; change nothing, and say so when asked to.",
+            }
+        ],
+        "setting": {
+            "systems": [
+                {
+                    "server": "odoo-accounting:0.0.1",
+                    "as": "Odoo",
+                    "holds": "Datalayer's own books, read only.",
+                }
+            ],
+            "period": "last month",
+            "language": "en",
+            "assumes": "One agent, its data: Month-end close on Datalayer, on Datalayer's own books in Odoo, read only.",
+        },
+        "script": [
+            {
+                "id": "close-checklist",
+                "cue": {
+                    "say": "Where does the month-end close stand for last month? Give me the checklist.",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The lock dates and the bank first, then the checklist.",
+                "moves": [
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "whether last month is locked",
+                        "tool": "odoo_accounting_get_lock_dates",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "where the bank reconciliation stands",
+                        "tool": "odoo_accounting_bank_status",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "",
+                        "what": "the checklist, each step done, to do or blocked",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                ],
+                "expect": "A checklist of the close with each step marked done, to do or blocked, read from the books, nothing assumed.",
+                "shows": ["table"],
+                "branch": [
+                    {
+                        "decision": "last month is locked in the books",
+                        "expect": "It says the close is done, and gives the lock date.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+            {
+                "id": "accruals",
+                "cue": {
+                    "say": "Which accruals should be booked for last month, and for how much?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The entries of the period, and what they leave to accrue.",
+                "moves": [
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "last month's journal entries",
+                        "tool": "odoo_accounting_list_journal_entries",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "the accounts the accruals go to",
+                        "tool": "odoo_accounting_general_ledger",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "",
+                        "what": "each accrual to book, its account and its amount",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                ],
+                "expect": "A table of the accruals to book, each with its account and its amount, and nothing booked: a request to post them is answered with what a person would have to do.",
+                "shows": ["table"],
+                "pace": "slow",
+                "branch": [
+                    {
+                        "decision": "the audience asks to post the accruals",
+                        "expect": "It leaves the posting to a person, and says what they would do.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+            {
+                "id": "reconciliation-gaps",
+                "cue": {
+                    "say": "Which bank lines and open items are still unreconciled for last month?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The bank lines against the open items.",
+                "moves": [
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "last month's bank lines not yet reconciled",
+                        "tool": "odoo_accounting_list_bank_lines",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "the open items of the period",
+                        "tool": "odoo_accounting_list_open_balances",
+                        "does": "read",
+                    },
+                    {
+                        "who": "month-end-close",
+                        "asks": "",
+                        "what": "the unreconciled lines and the open items, side by side",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                ],
+                "expect": "A table of the bank lines and the open items still unreconciled, with their amounts; it reconciles nothing itself.",
+                "shows": ["table"],
+            },
+        ],
+        "stage": {
+            "positions": {"month-end-close": {"x": 0.5, "y": 0.5}},
+            "opens_first": "month-end-close",
+            "transcript": {"tools": True, "narration": True, "withhold": ["ids"]},
+            "inspectors": ["agent", "tools"],
+            "rests_after": "10m",
+            "pace": "steady",
+        },
+        "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
+        "rehearsal": {
+            "beats": [
+                {
+                    "beat": "close-checklist",
+                    "lines": [
+                        "You → Month-end close",
+                        "Month-end close → Odoo: odoo_accounting_get_lock_dates",
+                        "Month-end close → Odoo: odoo_accounting_bank_status",
+                        "Month-end close: a table",
+                    ],
+                    "must_say": ["close"],
+                    "must_not_say": ["I posted"],
+                    "within": "60s",
+                },
+                {
+                    "beat": "accruals",
+                    "lines": [
+                        "You → Month-end close",
+                        "Month-end close → Odoo: odoo_accounting_*",
+                        "Month-end close: a table",
+                    ],
+                    "must_say": ["accrual"],
+                    "must_not_say": ["I posted"],
+                    "within": "60s",
+                },
+                {
+                    "beat": "reconciliation-gaps",
+                    "lines": [
+                        "You → Month-end close",
+                        "Month-end close → Odoo: odoo_accounting_list_bank_lines",
+                        "Month-end close → Odoo: odoo_accounting_list_open_balances",
+                        "Month-end close: a table",
+                    ],
+                    "must_say": ["unreconciled"],
+                    "within": "60s",
+                },
+            ],
+            "within": "180s",
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its runtime is not deployed under the demo account yet, and the rehearsal has not been played (A-14)."
+                ],
+            },
+        },
+        "deployment": {
+            "account": "demo",
+            "page": "/",
+            "addresses": {
+                "month-end-close": "DATALAYER_DEMO_SCENE_MONTH_END_CLOSE_MONTH_END_CLOSE_A2A_URL"
+            },
+        },
+        "setup": [
+            "The agent 'worker-month-end-close:0.0.1' is not enabled.",
+            "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
+        ],
+    }
+)
+
+SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "sales-and-accounting",
+        "version": "0.0.1",
+        "name": "Sales & Accounting",
+        "description": "A sales desk asks Accounting for the figures and hands them over; Accounting reads the Odoo books and answers, and changes nothing.",
+        "tags": ["example", "scene", "odoo", "finance", "a2a"],
+        "icon": "people",
+        "emoji": "🤝",
+        "team": "sales-and-accounting:0.0.1",
+        "entry": "sales",
+        "cast": [
+            {
+                "member": "sales",
+                "app": "sales:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "initiator",
+                "runs_in": "browser",
+                "talks_to": [{"member": "accounting", "over": "a2a"}],
+                "persona": {
+                    "name": "Sales",
+                    "face": "💼",
+                    "line": "I take your request and bring the figures back.",
+                },
+                "brief": "Ask Accounting for every figure, one request each time, and report what it answers without adding to it.",
+            },
+            {
+                "member": "accounting",
+                "app": "accounting:0.0.1",
+                "ref": "",
+                "server": "",
+                "role": "contributor",
+                "runs_in": "runtime",
+                "persona": {
+                    "name": "Accounting",
+                    "face": "🧾",
+                    "line": "I read the books and answer; I change nothing.",
+                },
+                "brief": "Answer from the Odoo books, read only, in a table where a table fits; say so when the books do not hold the answer.",
+            },
+        ],
+        "setting": {
+            "systems": [
+                {
+                    "server": "odoo-accounting:0.0.1",
+                    "as": "Odoo",
+                    "holds": "Datalayer's own books, read only.",
+                }
+            ],
+            "period": "this month and the last",
+            "language": "en",
+            "assumes": "Two agents over A2A — Sales in your browser, Accounting on Datalayer — on Datalayer's own books in Odoo, read only.",
+        },
+        "script": [
+            {
+                "id": "open-invoices",
+                "cue": {
+                    "say": "Which customer invoices are still open, and how much is due in total?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "Sales takes the request and asks Accounting, which reads the books.",
+                "moves": [
+                    {
+                        "who": "sales",
+                        "asks": "accounting",
+                        "over": "a2a",
+                        "what": "the open customer invoices and the total due",
+                        "tool": "",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "the customer invoices still open",
+                        "tool": "odoo_accounting_list_invoices",
+                        "does": "read",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "",
+                        "what": "the open invoices by customer, with the total due",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "sales",
+                        "asks": "",
+                        "what": "what Accounting answered, as it answered it",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "A table of the open customer invoices, by customer, with one total that matches the books; Sales adds nothing to it.",
+                "shows": ["table"],
+                "pace": "steady",
+                "branch": [
+                    {
+                        "decision": "the books hold no open invoice",
+                        "expect": "Sales says so in a sentence, and invents no figure.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+            {
+                "id": "aged-receivables",
+                "cue": {
+                    "say": "Give me the aged receivables as of today, by customer.",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "Accounting ages what is due, bucket by bucket.",
+                "moves": [
+                    {
+                        "who": "sales",
+                        "asks": "accounting",
+                        "over": "a2a",
+                        "what": "the aged receivables as of today, by customer",
+                        "tool": "",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "the receivables, aged",
+                        "tool": "odoo_accounting_aged_balance",
+                        "does": "read",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "",
+                        "what": "each customer's balance by age, with the totals",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "sales",
+                        "asks": "",
+                        "what": "the table, and which customers are furthest behind",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "A table of the receivables by customer and by age, its totals the books' own; Sales points at the customers furthest behind.",
+                "shows": ["table"],
+            },
+            {
+                "id": "trial-balance",
+                "cue": {
+                    "say": "What does the trial balance say for last month?",
+                    "schedule": "",
+                    "event": "",
+                },
+                "narration": "The whole of last month, account by account.",
+                "moves": [
+                    {
+                        "who": "sales",
+                        "asks": "accounting",
+                        "over": "a2a",
+                        "what": "the trial balance for last month",
+                        "tool": "",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "odoo",
+                        "over": "mcp",
+                        "what": "last month's trial balance",
+                        "tool": "odoo_accounting_trial_balance",
+                        "does": "read",
+                    },
+                    {
+                        "who": "accounting",
+                        "asks": "",
+                        "what": "the accounts with their debit and credit, balanced",
+                        "tool": "",
+                        "answers": "table",
+                    },
+                    {
+                        "who": "sales",
+                        "asks": "",
+                        "what": "the table, and whether it balances",
+                        "tool": "",
+                        "answers": "words",
+                    },
+                ],
+                "expect": "A trial balance for last month whose debits equal its credits; Sales says that it balances, or that it does not.",
+                "shows": ["table"],
+                "pace": "slow",
+                "branch": [
+                    {
+                        "decision": "last month is not closed in the books",
+                        "expect": "Accounting says the balance is provisional, and gives it as it stands.",
+                        "moves": [],
+                        "then": "",
+                    }
+                ],
+            },
+        ],
+        "stage": {
+            "positions": {
+                "sales": {"x": 0.25, "y": 0.5},
+                "accounting": {"x": 0.75, "y": 0.5},
+            },
+            "opens_first": "sales",
+            "transcript": {"tools": True, "narration": True, "withhold": ["ids"]},
+            "inspectors": ["agent", "a2a", "tools"],
+            "rests_after": "10m",
+            "pace": "steady",
+        },
+        "audience": {"who": "visitors", "ceiling_per_ask": 0.05, "asks_a_day": 5},
+        "rehearsal": {
+            "beats": [
+                {
+                    "beat": "open-invoices",
+                    "lines": [
+                        "You → Sales",
+                        "Sales → Accounting",
+                        "Accounting → Odoo: odoo_accounting_list_invoices",
+                        "Accounting: a table",
+                        "Sales: words",
+                    ],
+                    "must_say": ["invoice"],
+                    "must_not_say": ["I cannot", "error"],
+                    "within": "60s",
+                },
+                {
+                    "beat": "aged-receivables",
+                    "lines": [
+                        "You → Sales",
+                        "Sales → Accounting",
+                        "Accounting → Odoo: odoo_accounting_aged_balance",
+                        "Accounting: a table",
+                        "Sales: words",
+                    ],
+                    "must_say": ["days"],
+                    "within": "60s",
+                },
+                {
+                    "beat": "trial-balance",
+                    "lines": [
+                        "You → Sales",
+                        "Sales → Accounting",
+                        "Accounting → Odoo: odoo_accounting_trial_balance",
+                        "Accounting: a table",
+                        "Sales: words",
+                    ],
+                    "must_say": ["debit", "credit"],
+                    "within": "60s",
+                },
+            ],
+            "within": "180s",
+            "verified": {
+                "live": [
+                    "Sales asked Accounting live over A2A on a developer's machine (2026-10-06) for the open customer invoices: Accounting read the aged receivables and said the list of invoices had failed; one column total was wrong."
+                ],
+                "recorded": [],
+                "unverified": [
+                    "The rehearsal has not been played as a set (A-14): the scene is not Live yet."
+                ],
+            },
+        },
+        "deployment": {
+            "account": "demo",
+            "page": "/",
+            "addresses": {"accounting": "DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL"},
+        },
+        "setup": [
+            "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
+            "The agent 'worker-accountant:0.0.1' is not enabled.",
+            "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
+        ],
+    }
+)
+
+
+# ============================================================================
+# Scene Catalog
+# ============================================================================
+
+SCENE_CATALOGUE: Dict[str, SceneSpec] = {
+    "crop-monitoring": CROP_MONITORING_SCENE_0_0_1,
+    "disaster-assessment": DISASTER_ASSESSMENT_SCENE_0_0_1,
+    "month-end-close": MONTH_END_CLOSE_SCENE_0_0_1,
+    "sales-and-accounting": SALES_AND_ACCOUNTING_SCENE_0_0_1,
+}
+
+
+def get_scene_spec(scene_id: str) -> SceneSpec | None:
+    """A scene, by `id` or `id:version`, or None."""
+    found = SCENE_CATALOGUE.get(scene_id)
+    if found is not None:
+        return found
+    base, _, version = scene_id.rpartition(":")
+    return SCENE_CATALOGUE.get(base) if base and "." in version else None
+
+
+def list_scene_specs(tag: str | None = None) -> list[SceneSpec]:
+    """Every scene of the catalogue, or those carrying a tag."""
+    return [
+        scene for scene in SCENE_CATALOGUE.values() if tag is None or tag in scene.tags
+    ]
+
+
+def scenes_staging(team_id: str) -> list[SceneSpec]:
+    """Every scene that stages a team, by its id with or without a version."""
+    wanted = team_id.split(":")[0]
+    return [
+        scene
+        for scene in SCENE_CATALOGUE.values()
+        if scene.team and scene.team.split(":")[0] == wanted
+    ]

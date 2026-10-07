@@ -425,7 +425,7 @@ loop-demo-nocodemode: # loop-demo-nocodemode
 list-specs: # list specs
 	agent-runtimes list-specs
 
-specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
+specs: specs-clone specs-sandbox-variants specs-generate specs-format ## generate Python and TypeScript code from YAML specifications (agents, teams, scenes, frames, cogs, ops, guards, gates, tracks, applications, MCP servers, skills, envvars)
 
 specs-sandbox-variants: ## scaffold sandbox example agent specs for all supported sandbox variants
 	$(call step,Generating sandbox variant example agents)
@@ -558,6 +558,15 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	    --actions-typescript-output src/specs/actions.ts; \
 	else \
 	  echo "Skipping application specifications: $(AGENTSPECS_DIR)/agentspecs/apps not found (agentspecs < 0.0.15)"; \
+	fi
+	$(call step,Generating scene specifications)
+	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/scenes" ]; then \
+	  python scripts/codegen/generate_scenes.py \
+	    --specs-dir $(AGENTSPECS_DIR)/agentspecs/scenes \
+	    --python-output agent_runtimes/specs/scenes.py \
+	    --typescript-output src/specs/scenes.ts; \
+	else \
+	  echo "Skipping scene specifications: $(AGENTSPECS_DIR)/agentspecs/scenes not found (agentspecs < 0.0.61)"; \
 	fi
 	$(call step,Generating memory specifications)
 	python scripts/codegen/generate_memory.py \
