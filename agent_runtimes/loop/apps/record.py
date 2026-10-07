@@ -35,6 +35,11 @@ session, by the recorder that recorded it (`recorder_of`); only when the
 application's ``record.include`` names ``feedback``. Unlike the rest, it is
 sent at once and a failure to send it is said: the person is waiting for it.
 
+What its code names a conversation — its title, tags and metadata
+(``session.title``, ``session.tags``, ``session.metadata``, LOOP P-24) — is
+a ``thread`` entry of that session, always kept, sent as it changes: the
+person's history lists their threads under it, their own word over its.
+
 What was said — each turn of a conversation, what the person asked and what
 it answered — is kept as a ``turn`` entry, under ``conversations``, the
 item of ``record.include`` that names it. Each turn says whether the
@@ -100,7 +105,7 @@ INCLUDED_BY = {
 #: Kept whatever `record.include` says: a session's start, a run's start
 #: (what Activity reads as in progress, LOOP R-15), and what its channels were
 #: sent (LOOP R-37).
-ALWAYS_KEPT = frozenset({"session", "run", "notification"})
+ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread"})
 
 #: What a person's answer is said as, in an approval entry (LOOP R-07).
 ANSWERS = {
@@ -436,6 +441,9 @@ class AppRecorder:
         """
         while _SENDING.get(session):
             await asyncio.gather(*list(_SENDING[session]), return_exceptions=True)
+            # Sends that are done leave the set in their callbacks, which a
+            # gather of done tasks does not wait for: let them run.
+            await asyncio.sleep(0)
         await self.flush(session)
 
     async def flush(self, session: str) -> None:
@@ -448,8 +456,44 @@ class AppRecorder:
         except Exception as error:  # noqa: BLE001 - a record is never worth a run
             logger.warning("The record of %s was not sent: %s", body["app_uid"], error)
 
+    def named(
+        self,
+        session: str,
+        *,
+        title: str,
+        tags: List[str],
+        metadata: Dict[str, Any],
+    ) -> None:
+        """What its code names a conversation now — its title, tags and
+        metadata (LOOP P-24) — as a ``thread`` entry of ``session``, sent in
+        a task of its own when a loop runs, else with the session's next
+        send. The latest one stands.
+        """
+        if not self.kept("thread"):
+            return
+        self._pending.setdefault(session, []).append(
+            {
+                "kind": "thread",
+                "summary": redact(title)[:2000],
+                "payload": redacted(
+                    {"title": title, "tags": list(tags), "metadata": dict(metadata)}
+                ),
+            }
+        )
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        send_later(session, self.flush(session))
+
     async def feedback(
-        self, session: str, *, liked: bool, comment: str = "", by: str = ""
+        self,
+        session: str,
+        *,
+        liked: bool,
+        comment: str = "",
+        by: str = "",
+        message: str = "",
     ) -> Dict[str, Any]:
         """Write a person's word on a session to the record, and send it now.
 
@@ -463,6 +507,9 @@ class AppRecorder:
             What they said besides, if anything.
         by : str
             Who said it, as the runtime knows the caller.
+        message : str
+            The answer it is about, as the chat names it; ``""`` for the
+            conversation as a whole.
 
         Returns
         -------
@@ -490,7 +537,12 @@ class AppRecorder:
                 ("Liked it" if liked else "Did not like it")
                 + (f": {said}" if said else "")
             )[:COMMENT_LIMIT],
-            "payload": {"liked": liked, "comment": said, "by": by},
+            "payload": {
+                "liked": liked,
+                "comment": said,
+                "by": by,
+                **({"message": message[:200]} if message else {}),
+            },
         }
         await self.send(self._body(session, [entry]))
         return entry

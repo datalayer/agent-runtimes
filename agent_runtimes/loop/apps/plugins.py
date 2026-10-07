@@ -64,6 +64,7 @@ REACTIONS: Tuple[str, ...] = (
     "window",
     "stop",
     "resume",
+    "feedback",
     "end",
     "logout",
     # A widget's page, run on its inputs (LOOP P-05).

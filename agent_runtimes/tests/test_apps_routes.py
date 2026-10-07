@@ -205,15 +205,26 @@ def test_feedback_on_a_conversation_is_kept_in_the_record(
     recorder.start("thread-7")
     answer = client.post(
         "/api/v1/apps/feedback",
-        json={"session": "thread-7", "liked": True, "comment": "Clear."},
+        json={
+            "session": "thread-7",
+            "liked": True,
+            "comment": "Clear.",
+            "message": "answer-2",
+        },
     )
     assert answer.status_code == 200, answer.text
-    assert answer.json() == {"kept": True, "summary": "Liked it: Clear."}
+    # No code of its own heard it: a spec's application.
+    assert answer.json() == {
+        "kept": True,
+        "summary": "Liked it: Clear.",
+        "heard": False,
+    }
     assert sent[0]["app_uid"] == "app-7"
     assert sent[0]["entries"][0]["payload"] == {
         "liked": True,
         "comment": "Clear.",
         "by": "local",
+        "message": "answer-2",
     }
     # A conversation it did not record, here, is not one to answer for.
     unknown = client.post(
@@ -221,6 +232,86 @@ def test_feedback_on_a_conversation_is_kept_in_the_record(
     )
     assert unknown.status_code == 404
     assert "No conversation nowhere" in unknown.json()["detail"]
+
+
+def test_feedback_is_heard_by_its_code(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP P-24: once kept, a Python application's `@app.feedback` hears it."""
+    from agent_runtimes.loop.apps import (
+        AppHost,
+        Application,
+        Feedback,
+        Session,
+        sessions,
+    )
+    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
+    assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
+    application = Application(id="web-research", agent="example-simple")
+    heard: list = []
+
+    @application.feedback
+    async def said(session: Session, feedback: Feedback) -> None:
+        heard.append((session.id, feedback))
+        if not feedback.liked:
+            session.tags = [*session.tags, "to-review"]
+
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    app = load_app(keeps)
+    recorder = AppRecorder(app=app, app_uid="app-7", send=send)
+    live = sessions.LiveSession(
+        uid="thread-9",
+        agent_id="default",
+        app=app,
+        instance={},
+        opened_by=Caller(kind="local", uid=""),
+        acts_as={"kind": "person", "uid": ""},
+        recorder=recorder,
+    )
+    sessions._SESSIONS[live.uid] = live
+    live.host = AppHost(application, live, recorder=recorder)
+    try:
+        recorder.start("thread-9")
+        import asyncio
+
+        live.session = asyncio.run(live.host.open(id=live.uid))
+        answer = client.post(
+            "/api/v1/apps/feedback",
+            json={
+                "session": "thread-9",
+                "liked": False,
+                "comment": "Too long.",
+                "message": "answer-1",
+            },
+        )
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["heard"] is True
+        assert heard == [
+            (
+                "thread-9",
+                Feedback(
+                    liked=False, comment="Too long.", message="answer-1", by="local"
+                ),
+            )
+        ]
+        # What its code did with it is kept with the conversation.
+        assert live.session.tags == ("to-review",)
+        threads = [
+            entry
+            for body in sent
+            for entry in body["entries"]
+            if entry["kind"] == "thread"
+        ]
+        assert threads[-1]["payload"]["tags"] == ["to-review"]
+    finally:
+        sessions.forget_sessions()
 
 
 def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> None:

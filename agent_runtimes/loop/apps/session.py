@@ -358,6 +358,118 @@ class UploadedFile:
     content: bytes
 
 
+@dataclass(frozen=True)
+class Feedback:
+    """What a person said of an answer (LOOP V-18, P-24): a thumb, and a comment.
+
+    Given to the application's ``@app.feedback`` once it is kept in its record.
+    """
+
+    liked: bool
+    """The thumb: up or down."""
+    comment: str = ""
+    """What they said besides, if anything."""
+    message: str = ""
+    """The answer it is about, as the chat names it; ``""`` for the conversation."""
+    by: str = ""
+    """Who said it, as the runtime knows them."""
+
+
+#: How long a conversation's title and a tag may be, how many tags it
+#: carries, and how large its metadata is once written: as ai-agents keeps
+#: a person's threads (LOOP P-24).
+THREAD_TITLE_LIMIT = 200
+THREAD_TAG_LIMIT = 40
+THREAD_MAX_TAGS = 20
+THREAD_METADATA_LIMIT = 10_000
+
+
+def thread_tags(tags: Iterable[Any]) -> List[str]:
+    """Tags as a conversation keeps them: said, each once, in order.
+
+    Raises
+    ------
+    ValueError
+        In a sentence: a tag too long, or too many.
+    """
+    if isinstance(tags, str):
+        tags = [tags]
+    kept: List[str] = []
+    for tag in tags:
+        said = " ".join(str(tag or "").split())
+        if not said:
+            continue
+        if len(said) > THREAD_TAG_LIMIT:
+            raise ValueError(
+                f"A tag is at most {THREAD_TAG_LIMIT} characters: "
+                f"{said[:THREAD_TAG_LIMIT]}… is longer."
+            )
+        if said not in kept:
+            kept.append(said)
+    if len(kept) > THREAD_MAX_TAGS:
+        raise ValueError(
+            f"A conversation carries at most {THREAD_MAX_TAGS} tags, not {len(kept)}."
+        )
+    return kept
+
+
+class ThreadMetadata(Dict[str, Any]):
+    """A conversation's metadata (LOOP P-24): a dict whose every change is
+    kept with the conversation, in its record — ``session.metadata["plan"] =
+    "pro"``. Its values are written as JSON; at most 10,000 characters."""
+
+    def __init__(self, changed: Callable[[], None]) -> None:
+        super().__init__()
+        self._changed = changed
+
+    def _kept(self) -> None:
+        written = json.dumps(dict(self), default=str)
+        if len(written) > THREAD_METADATA_LIMIT:
+            raise ValueError(
+                f"A conversation's metadata is at most {THREAD_METADATA_LIMIT} "
+                "characters, written."
+            )
+        self._changed()
+
+    def _try(self, change: Callable[[], Any]) -> Any:
+        before = dict(self)
+        result = change()
+        try:
+            self._kept()
+        except ValueError:
+            super().clear()
+            super().update(before)
+            raise
+        return result
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._try(lambda: super(ThreadMetadata, self).__setitem__(key, value))
+
+    def __delitem__(self, key: str) -> None:
+        self._try(lambda: super(ThreadMetadata, self).__delitem__(key))
+
+    def update(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override]
+        self._try(lambda: super(ThreadMetadata, self).update(*args, **kwargs))
+
+    def pop(self, key: str, *default: Any) -> Any:  # type: ignore[override]
+        return self._try(lambda: super(ThreadMetadata, self).pop(key, *default))
+
+    def setdefault(self, key: str, default: Any = None) -> Any:  # type: ignore[override]
+        return self._try(lambda: super(ThreadMetadata, self).setdefault(key, default))
+
+    def clear(self) -> None:
+        self._try(lambda: super(ThreadMetadata, self).clear())
+
+    def replace(self, value: Mapping[str, Any]) -> None:
+        """All of it at once, kept once."""
+
+        def change() -> None:
+            super(ThreadMetadata, self).clear()
+            super(ThreadMetadata, self).update(dict(value))
+
+        self._try(change)
+
+
 class AskTimeout(asyncio.TimeoutError):
     """The user did not answer in time."""
 
@@ -617,6 +729,59 @@ class Session:
         self._own_toolsets = list(toolsets)
         self._own_capabilities = list(capabilities)
         self._elements: Dict[str, Element] = {}
+        self._title = ""
+        self._tags: List[str] = []
+        self._metadata = ThreadMetadata(self._named)
+
+    # --- what the conversation is called (LOOP P-24) ----------------------------
+
+    @property
+    def title(self) -> str:
+        """The conversation's title, as its code names it: what the person's
+        history lists it under, unless they rename it. ``""`` until said;
+        their first question stands for it then.
+        """
+        return self._title
+
+    @title.setter
+    def title(self, value: str) -> None:
+        said = " ".join(str(value or "").split())
+        if len(said) > THREAD_TITLE_LIMIT:
+            raise ValueError(f"A title is at most {THREAD_TITLE_LIMIT} characters.")
+        self._title = said
+        self._named()
+
+    @property
+    def tags(self) -> Tuple[str, ...]:
+        """The conversation's tags, as its code gives them: what the person's
+        history finds it by, beside theirs. Set them whole —
+        ``session.tags = [*session.tags, "billing"]``.
+        """
+        return tuple(self._tags)
+
+    @tags.setter
+    def tags(self, value: Iterable[Any]) -> None:
+        self._tags = thread_tags(value)
+        self._named()
+
+    @property
+    def metadata(self) -> ThreadMetadata:
+        """What its code keeps with the conversation, by name, as JSON: kept
+        in its record as it changes, listed with the person's thread."""
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value: Mapping[str, Any]) -> None:
+        self._metadata.replace(value)
+
+    def _named(self) -> None:
+        """Keep what the conversation is called now, in the record."""
+        self._recorder.named(
+            self.id,
+            title=self._title,
+            tags=list(self._tags),
+            metadata=dict(self._metadata),
+        )
 
     # --- what the user set -----------------------------------------------------
 

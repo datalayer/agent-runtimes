@@ -67,6 +67,7 @@ from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import (
     Channel,
+    Feedback,
     PageShown,
     Session,
     Shown,
@@ -102,6 +103,8 @@ EVENTS = (
     "window",
     "stop",
     "resume",
+    # What a person said of an answer, once kept (LOOP P-24).
+    "feedback",
     "end",
     "logout",
     # A widget's page, run on its inputs (LOOP P-05).
@@ -1047,6 +1050,16 @@ class Application:
         """React to an earlier session reopened, its state back: ``handler(session)``."""
         return self._on("resume", handler)
 
+    def feedback(self, handler: Handler) -> Handler:
+        """React to a person's word on an answer (LOOP P-24): ``handler(session,
+        feedback)``, a `Feedback` — the thumb, the comment, the answer it is
+        about and who said it — once it is kept in the record.
+
+        Feedback is offered only when the application's ``record.include``
+        names ``feedback``; what the handler sends, the person reads.
+        """
+        return self._on("feedback", handler)
+
     def end(self, handler: Handler) -> Handler:
         """React to the conversation closing for good: ``handler(session)``.
 
@@ -1402,7 +1415,7 @@ class Application:
         ----------
         event : str
             ``start``, ``message``, ``settings``, ``stop``, ``resume``,
-            ``end``, ``logout`` or ``page``.
+            ``feedback``, ``end``, ``logout`` or ``page``.
 
         Returns
         -------
@@ -1783,6 +1796,17 @@ class AppHost:
         handler = self._reaction("stop")
         if handler is not None:
             await self._react(session, handler)
+
+    async def feedback(self, session: Session, feedback: Feedback) -> bool:
+        """A person's word on an answer, kept in the record (LOOP P-24): run
+        ``feedback``. Whether the code has one.
+        """
+        self._open(session)
+        handler = self._reaction("feedback")
+        if handler is None:
+            return False
+        await self._react(session, handler, feedback)
+        return True
 
     async def end(self, session: Session) -> None:
         """The conversation closed: what runs is cancelled, ``end`` runs, and

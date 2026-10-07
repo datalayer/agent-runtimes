@@ -141,6 +141,11 @@ class FeedbackRequest(BaseModel):
     )
     liked: bool = Field(..., description="The thumb: up or down")
     comment: str = Field("", max_length=COMMENT_LIMIT)
+    message: str = Field(
+        "",
+        max_length=200,
+        description="The answer it is about, as the chat names it (LOOP P-24); none for the conversation",
+    )
 
 
 def running_app(agent: str = "default") -> Optional[AppSpec]:
@@ -532,10 +537,29 @@ async def feedback(
             liked=body.liked,
             comment=body.comment,
             by=caller.uid or caller.kind,
+            message=body.message,
         )
     except RecordNotSent as error:
         raise HTTPException(status_code=502, detail=str(error)) from None
-    return {"kept": True, "summary": entry["summary"]}
+    # Its code hears it, once kept (LOOP P-24): `@app.feedback`.
+    from agent_runtimes.loop.apps.sessions import session_of
+
+    live = session_of(body.session)
+    heard = False
+    if live is not None and live.host is not None and live.session is not None:
+        from agent_runtimes.loop.apps.session import Feedback
+
+        payload = entry["payload"]
+        heard = await live.host.feedback(
+            live.session,
+            Feedback(
+                liked=body.liked,
+                comment=str(payload.get("comment") or ""),
+                message=body.message,
+                by=str(payload.get("by") or ""),
+            ),
+        )
+    return {"kept": True, "summary": entry["summary"], "heard": heard}
 
 
 # --- the session API (LOOP R-04) ------------------------------------------------

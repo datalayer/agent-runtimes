@@ -57,6 +57,7 @@ from agent_runtimes.loop.apps.session import (
     Delta,
     Element,
     FileQuestion,
+    Feedback,
     FormQuestion,
     InvalidAnswer,
     MemoryChannel,
@@ -75,6 +76,7 @@ from agent_runtimes.loop.apps.utilities import cache, run_sync
 
 __all__ = [
     "AgentFactory",
+    "Feedback",
     "Answer",
     "AppAgent",
     "AppHost",
