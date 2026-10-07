@@ -106,26 +106,28 @@ function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
       borderRadius="50%"
       bg={SANDBOX_INDICATOR_COLORS[aggregate]}
       sx={
-        aggregate === 'executing' && {
-          animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
-          '@keyframes sandbox-busy-fade': {
-            '0%': {
-              opacity: 1,
-              transform: 'scale(1)',
-              filter: 'saturate(1)',
-            },
-            '50%': {
-              opacity: 0.45,
-              transform: 'scale(0.92)',
-              filter: 'saturate(0.75)',
-            },
-            '100%': {
-              opacity: 1,
-              transform: 'scale(1)',
-              filter: 'saturate(1)',
-            },
-          },
-        }
+        aggregate !== 'executing'
+          ? undefined
+          : {
+              animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
+              '@keyframes sandbox-busy-fade': {
+                '0%': {
+                  opacity: 1,
+                  transform: 'scale(1)',
+                  filter: 'saturate(1)',
+                },
+                '50%': {
+                  opacity: 0.45,
+                  transform: 'scale(0.92)',
+                  filter: 'saturate(0.75)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'scale(1)',
+                  filter: 'saturate(1)',
+                },
+              },
+            }
       }
     />
   );
