@@ -84,7 +84,6 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": "wizard",
@@ -231,7 +230,6 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": "cat",
@@ -356,7 +354,6 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
                 "TextField",
                 "Button",
             ],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,
@@ -515,7 +512,6 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": "wizard",
@@ -676,7 +672,6 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,
@@ -829,7 +824,6 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
                 "TextField",
                 "Button",
             ],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,
@@ -1062,7 +1056,6 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
                 "Divider",
             ],
-            "custom_components": [],
             "surface": {
                 "protocol": "a2ui/v0.9",
                 "components": [
@@ -1320,7 +1313,6 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
                 "Divider",
             ],
-            "custom_components": [],
             "surface": {
                 "protocol": "a2ui/v0.9",
                 "components": [
@@ -1531,7 +1523,6 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
                 "FileUpload",
                 "Button",
             ],
-            "custom_components": [],
             "surface": {
                 "protocol": "a2ui/v0.9",
                 "components": [
@@ -1726,7 +1717,6 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": "paperclip",
@@ -1850,7 +1840,6 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
                 "TextField",
                 "Button",
             ],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,
@@ -2034,7 +2023,6 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
                 "TextField",
                 "Button",
             ],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,
@@ -2259,7 +2247,6 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "Button",
                 "Divider",
             ],
-            "custom_components": [],
             "surface": {
                 "protocol": "a2ui/v0.9",
                 "components": [
@@ -2476,7 +2463,6 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             "translations": {},
             "uploads": None,
             "components": [],
-            "custom_components": [],
             "surface": None,
             "page": None,
             "assistant": None,

@@ -88,7 +88,6 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     assistant: 'wizard',
     voice: {
       enabled: false,
@@ -243,7 +242,6 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     assistant: 'cat',
     voice: {
       enabled: false,
@@ -373,7 +371,6 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -546,7 +543,6 @@ export const DECIDE_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     assistant: 'wizard',
     voice: {
       enabled: false,
@@ -714,7 +710,6 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -873,7 +868,6 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -1112,7 +1106,6 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
       'Button',
       'Divider',
     ],
-    customComponents: [],
     surface: {
       protocol: 'a2ui/v0.9',
       components: [
@@ -1411,7 +1404,6 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
       'Button',
       'Divider',
     ],
-    customComponents: [],
     surface: {
       protocol: 'a2ui/v0.9',
       components: [
@@ -1672,7 +1664,6 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
       'FileUpload',
       'Button',
     ],
-    customComponents: [],
     surface: {
       protocol: 'a2ui/v0.9',
       components: [
@@ -1915,7 +1906,6 @@ export const SALES_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     assistant: 'paperclip',
     voice: {
       enabled: false,
@@ -2044,7 +2034,6 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -2231,7 +2220,6 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
       'TextField',
       'Button',
     ],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',
@@ -2476,7 +2464,6 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
       'Button',
       'Divider',
     ],
-    customComponents: [],
     surface: {
       protocol: 'a2ui/v0.9',
       components: [
@@ -2745,7 +2732,6 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     language: 'en',
     translations: {},
     components: [],
-    customComponents: [],
     voice: {
       enabled: false,
       input: 'push_to_talk',

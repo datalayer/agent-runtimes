@@ -127,6 +127,9 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         for case in spec["tests"]["cases"]:
             if not case.get("code"):
                 case.pop("code", None)
+        # Components of its own: said only when it has some.
+        if not spec["interface"].get("custom_components"):
+            spec["interface"].pop("custom_components", None)
         for key in ("description", "instructions", "goal"):
             spec[key] = _flat(spec.get(key))
         spec["interface"]["welcome"] = _flat(spec["interface"].get("welcome"))
