@@ -140,7 +140,8 @@ def authorship(
 def byline(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
     """The last line of a page it saves: its face and name, and *on its own*
     when nobody was there — or the user it wrote for, when the host's server
-    signed them (D-21)."""
+    signed them (D-21).
+    """
     face = f"{app.emoji} " if app.emoji else ""
     who = f"{face}{app.name or app.id}"
     if on_its_own:

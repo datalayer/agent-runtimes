@@ -78,7 +78,7 @@ class HostUser:
     name: str
 
     def as_value(self) -> Dict[str, Any]:
-        """As `host_context` answers it, and the session says it."""
+        """The value `host_context` answers with, and the session says."""
         return {"sub": self.sub, "name": self.name, "signed": True}
 
 
@@ -94,7 +94,8 @@ class UserNotSigned(Exception):
 
 def secret_variable(deployment_uid: str) -> str:
     """Where a deployment's secret arrives on a runtime, and the name ai-agents
-    keeps it under among its owner's secrets: ``DATALAYER_APP_USER_SECRET_<UID>``."""
+    keeps it under among its owner's secrets: ``DATALAYER_APP_USER_SECRET_<UID>``.
+    """
     uid = re.sub(r"[^A-Za-z0-9]", "_", str(deployment_uid or "").strip()).upper()
     if not uid:
         raise ValueError(
@@ -289,9 +290,9 @@ def signed_host_context(
             answered = {}
         if not isinstance(answered, dict):
             answered = {}
-        values = (
-            answered.get("values") if isinstance(answered.get("values"), dict) else {}
-        )
+        values = answered.get("values")
+        if not isinstance(values, dict):
+            values = {}
         unsaid = [name for name in answered.get("unsaid") or [] if name != "user"]
         answer = {**answered, "values": {**values, "user": user.as_value()}}
         if unsaid:

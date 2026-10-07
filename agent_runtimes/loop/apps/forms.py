@@ -130,8 +130,8 @@ def form_values_refused(
         # A widget's page run on its inputs (LOOP P-05): its form, checked.
         try:
             page_values(app, payload.get("inputs", {}))
-        except ValueError as refused:
-            return str(refused)
+        except ValueError as error:
+            return str(error)
         return None
     surface = app.interface.surface
     if surface is None:

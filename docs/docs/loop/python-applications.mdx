@@ -335,12 +335,13 @@ build` marks the function as code (`# loop:code page: quote (app.py:9)`).
 | Running | Inputs its form refuses — out of range, not one of its options, an input it does not have — in a sentence (`ValueError`; 422 from the [Session API](./session-api)); what it returns when an output is missing or unknown, or a value its component does not draw. |
 
 `AppHost.page(session, inputs)` runs it in process and returns its outputs;
-the page sends its inputs as the `page` action of its session (`{"inputs":
-{...}}`), and the outputs come back as a `loop.page` event. The terminal says
-them. `loop apps validate app.py --tests --local` runs the page on its inputs'
-defaults — *It shows each of its outputs for its inputs' defaults.* — and
-fails when the function raises, returns what its page does not show, or an
-input it requires has no default (a page shows its outputs from the start).
+the page sends its inputs as the `page` action of its session
+(`{"inputs": {...}}`), and the outputs come back as a `loop.page` event. The
+terminal says them. `loop apps validate app.py --tests --local` runs the page
+on its inputs' defaults — *It shows each of its outputs for its inputs'
+defaults.* — and fails when the function raises, returns what its page does
+not show, or an input it requires has no default (a page shows its outputs
+from the start).
 
 ### Code where plain words are not enough
 
@@ -732,6 +733,67 @@ workspace mounts; a resume draws again what was open, and its code can still
 close it. A terminal cannot open one: it names it (*▸ Runs, shown in the
 side panel*) and its components.
 
+### Components of your own
+
+When the catalog has no component for what you want to show — a gauge, a
+map, a diagram — write one (LOOP P-17). It is a component of this
+application only: its Canvas places it, its page draws it, its code shows it
+inline, in a panel or on a page, and a widget's page draws an output with it.
+No other application sees it.
+
+```python
+app.custom_component(
+    "Gauge",
+    description="A dial, from nothing to its most.",
+    source="https://elements.example.com/gauge.js",   # a built ES module
+    integrity="sha384-…",                               # the module reviewed
+    props={
+        "type": "object",
+        "properties": {"label": {"type": "string"}, "most": {"type": "number"}},
+        "required": ["label"],
+    },
+    shows=["value"],      # bound to what the application publishes
+    sends=["chosen"],     # written, then its action dispatched
+)
+
+app.component("load", "Gauge", label="Load", value={"path": "/load"})   # on its surface
+app.output("load", "Gauge", title="Load", label="Load")                 # a page's output
+
+await session.show(session.component("now", "Gauge", label="Now", value=42), where="panel")
+```
+
+- It is declared in the spec, under `interface.custom_components`, and
+  reviewed as a component of the catalog is: agentspecs refuses a name of the
+  catalog's, a property of a type the renderer cannot tell apart, a binding
+  that is also a property, an example its schema refuses, and a module that
+  is not a built ES module over `https://` (or `http://localhost` while you
+  write it). Where it is used, its properties are checked against its schema
+  — by `app.component`, `session.component`, `session.show` and the page.
+- `session.component(id, component, **props)` makes a node of the catalog or
+  of the application's own; `session.ui` keeps the catalog's typed calls.
+- On a widget's page, its value is what it shows first (`shows[0]`): any
+  value JSON writes, a DataFrame its rows.
+- The module's default export draws it into the element it is given:
+
+  ```js
+  export default function draw(root, { props, send }) {
+    const dial = document.createElement('meter');
+    root.append(dial);
+    const update = next => { dial.max = next.most ?? 100; dial.value = next.value ?? 0; };
+    update(props);
+    dial.onclick = () => send('chosen', dial.value);
+    return { update };
+  }
+  ```
+
+  A React component is bundled into such a module with its React; a module
+  of the application's folder, built and served with it, is LOOP P-29.
+- It runs in a sandboxed frame of no origin (`sandbox="allow-scripts"`): no
+  cookie, no storage, no access to the page around it, and no request leaves
+  it — the page fetches the module without credentials, checks it against
+  `integrity`, and hands it over. It is given its properties and what it
+  shows, and what it sends is taken under a name of `sends` only.
+
 ### Messages that change
 
 A message sent is not final:
@@ -981,8 +1043,8 @@ given as `{"messages": [...history, ("user", prompt)]}` — the history kept by
 the session, or by the graph when it has a checkpointer (the session's id is
 its `thread_id`) — what the code tells the agent for a turn said as a system
 message before it. A LangChain runnable is given the prompt alone. Another
-shape is said with `input=`: `app.agent(chain, input=lambda prompt, **context:
-{"question": prompt})`.
+shape is said with `input=`:
+`app.agent(chain, input=lambda prompt, **context: {"question": prompt})`.
 
 **Its rules decide every tool it calls through LangChain's tools.** A
 callback handler given to each run decides each call in `on_tool_start`,
@@ -1265,6 +1327,13 @@ action — a `loop.page` event, 422 for inputs its form refuses — and from
 changes in a session of its own, its outputs shown in place — is tested with
 vitest (`app-page-code`), against a stubbed runtime; no widget page has been
 run against a live runtime.
+`agent_runtimes/tests/test_app_custom_components.py` covers components of
+your own: declared and refused in agentspecs' sentences, placed on the
+surface and checked, of one application only, shown inline, in a panel and
+with an answer, and drawing a widget's page's output; the page side — its
+review, its palette entry, its frame, its module fetched and checked, what it
+sends — is tested with vitest (`app-custom-components`). No custom component
+has been drawn in a browser.
 `agent_runtimes/tests/test_app_uploads.py` covers what a person sends: the
 kinds, sizes and counts of `uploads` refused with 422 in sentences, an image
 given to the model whole, `@app.file`, and a file waiting for what the code

@@ -305,7 +305,7 @@ def test_over_ag_ui_the_token_goes_with_the_run_and_host_context_says_its_user(
         forwarded.append(body)
 
     monkeypatch.setattr(sessions.LiveSession, "forward", forward)
-    run = {
+    run: Dict[str, Any] = {
         "threadId": "thread-ana-0001",
         "runId": "run-1",
         "state": None,

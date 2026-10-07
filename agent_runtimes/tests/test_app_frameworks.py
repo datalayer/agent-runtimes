@@ -25,6 +25,7 @@ from typing import Any, Callable, Dict, List, Tuple
 
 import pytest
 
+from agent_runtimes.chat.tux import SessionStats
 from agent_runtimes.commands.apps import NEEDS_ATTENTION, validate_file
 from agent_runtimes.loop.apps import AppHost, Application, MemoryChannel, Session
 from agent_runtimes.loop.apps.build import build
@@ -38,7 +39,7 @@ from agent_runtimes.loop.apps.frameworks import (
 )
 from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.record import AppRecorder
-from agent_runtimes.loop.apps.session import ALLOW, REFUSE, Message, Step
+from agent_runtimes.loop.apps.session import ALLOW, REFUSE, Delta, Message, Step
 
 pytest.importorskip("agentspecs.apps")
 
@@ -217,9 +218,7 @@ def test_a_credential_is_withheld_as_a_function_answers() -> None:
         host, channel, _ = hosted(app)
         session = await host.open()
         await host.message(session, "the key?")
-        pieces = [
-            event.text for event in channel.events if type(event).__name__ == "Delta"
-        ]
+        pieces = [event.text for event in channel.events if isinstance(event, Delta)]
         return channel.messages[-1].text, pieces
 
     whole, pieces = asyncio.run(scenario())
@@ -342,6 +341,7 @@ def test_what_loop_gives_an_agent_of_the_catalogue_is_not_given_to_one_of_its_co
     app.agent(lambda text: text, name="echo")
     spec = Application(id="connected", kind="chat", agent=AGENT)
     spec.connection("tavily")
+    assert app.code_agent is not None
     problems = code_agent_problems(spec.spec, app.code_agent)
     assert problems == [
         "connected has connections, which LOOP gives an agent of the catalogue, "
@@ -631,7 +631,7 @@ def test_a_langgraph_run_is_steps_and_its_tokens_the_answer(
     channel, sent = asyncio.run(scenario())
     assert ran == ["search x"]
     assert channel.messages[-1].text.strip() == ANSWER
-    deltas = [event.text for event in channel.events if type(event).__name__ == "Delta"]
+    deltas = [event.text for event in channel.events if isinstance(event, Delta)]
     assert len(deltas) > 1
     ended = steps(channel)
     root = ended[-1]
@@ -1118,8 +1118,8 @@ def test_the_terminal_gives_a_message_to_the_agent_of_its_code() -> None:
 
     tux = Tux.__new__(Tux)
     tux.application = app
-    tux.app_session = object()
-    tux.stats = SimpleNamespace(messages=0)
+    tux.app_session = Session.__new__(Session)
+    tux.stats = SessionStats()
     tux.console = console
     asyncio.run(tux.send_message("hello"))
     assert sent == ["code"]
