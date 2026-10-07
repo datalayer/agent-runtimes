@@ -192,6 +192,8 @@ A runtime serves an application over A2A when it is configured with `a2a`:
 # On Datalayer: a new cloud runtime, or a running one with -r <uid>.
 loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
 loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
+# Open to visitors without an account too (next sections).
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --visitors --keep
 # On a runtime that is already running, such as the examples' server on :8765.
 python examples/sales-accounting-a2a/serve_accounting.py --url http://127.0.0.1:8765
 # Every member on a runtime of every scene, each on a local runtime of its own.
@@ -266,6 +268,14 @@ POST /api/v1/apps/configure
 
 The answer's `a2a` then says `visitors`: the runs a visitor has a day, all
 of them together, and what the runs act with.
+
+From the terminal, `loop apps run <app>.yaml --cloud --a2a --visitors` sends
+`visitors`, and `--visitors-key <token>` sends `visitors_key`. On a runtime
+that is already serving it, `-r <runtime uid>` configures it again on the
+same runtime, at the same address. `--visitors` without `--a2a`, or
+`--visitors-key` without `--visitors`, is refused before anything is
+launched. Without `--visitors`, a visitor's token is answered 403 *…is not
+open to visitors: its owner answers a key granted to its route only.*
 
 **Who a visitor is.** A visitor's token from ai-inference
 (`POST /anonymous/token {"app": "<application id>", "visitor": "<id>"}`),

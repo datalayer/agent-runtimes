@@ -464,6 +464,59 @@ class TestLoopServesIt:
         }
         configure_on("http://127.0.0.1:9999", document)
         assert sent["body"] == {"app": document}
+        configure_on(
+            "http://127.0.0.1:9999",
+            document,
+            a2a_url="https://ingress/x",
+            visitors=True,
+        )
+        assert sent["body"] == {
+            "app": document,
+            "a2a": True,
+            "public_url": "https://ingress/x",
+            "visitors": True,
+        }
+        configure_on(
+            "http://127.0.0.1:9999",
+            document,
+            a2a_url="https://ingress/x",
+            visitors=True,
+            visitors_key="k",
+        )
+        assert sent["body"]["visitors_key"] == "k"
+
+    def test_visitors_without_a2a_is_refused_before_anything_starts(
+        self, monkeypatch: Any, tmp_path: Any
+    ) -> None:
+        """`--visitors` is a way of serving over A2A; `--visitors-key` needs `--visitors`."""
+        import httpx as real_httpx
+        import typer
+        from typer.testing import CliRunner
+
+        from agent_runtimes.commands import apps as apps_commands
+        from agent_runtimes.loop import launch
+
+        def refuse(*args: Any, **kwargs: Any) -> Any:
+            raise AssertionError("nothing is launched or configured")
+
+        monkeypatch.setattr(launch, "launch_cloud", refuse)
+        monkeypatch.setattr(real_httpx, "post", refuse)
+        spec = tmp_path / "accounting.yaml"
+        spec.write_text("id: accounting\nname: Accounting\n")
+        runner = CliRunner()
+        said = runner.invoke(
+            apps_commands.app, ["run", str(spec), "--cloud", "--visitors"]
+        )
+        assert said.exit_code == 1
+        assert "--visitors is a way of serving it over A2A: add --a2a." in said.output
+        said = runner.invoke(
+            apps_commands.app,
+            ["run", str(spec), "--cloud", "--a2a", "--visitors-key", "k"],
+        )
+        assert said.exit_code == 1
+        assert "--visitors-key is for an application open to visitors" in said.output
+        with pytest.raises(typer.BadParameter, match="add --a2a"):
+            apps_commands.configure_on("http://x", {"id": "a"}, visitors=True)
 
 
 #: The owner's key for visitors: granted to the route, reaching Odoo read only.

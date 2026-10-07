@@ -1260,20 +1260,36 @@ def configure_on(
     document: Dict[str, Any],
     organization: Optional[str] = None,
     a2a_url: Optional[str] = None,
+    visitors: bool = False,
+    visitors_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Configure a runtime with an application; its refusal said in sentences.
 
     With ``organization``, the runtime reads the plugins it turned off and the
     contexts its agent keeps to (LOOP C-12, U-31) with the caller's token.
     With ``a2a_url``, the runtime's address as its callers reach it, it also
-    serves the application over A2A, to the members of its team.
+    serves the application over A2A, to the members of its team. With
+    ``visitors``, that A2A route also answers visitors without an account
+    (LOOP R-30), their runs acting with ``visitors_key`` when given.
     """
     import httpx
 
+    if (visitors or visitors_key) and a2a_url is None:
+        raise typer.BadParameter(
+            "--visitors is a way of serving it over A2A: add --a2a."
+        )
+    if visitors_key and not visitors:
+        raise typer.BadParameter(
+            "--visitors-key is for an application open to visitors: add --visitors."
+        )
     body: Dict[str, Any] = {"app": document}
     if a2a_url is not None:
         body["a2a"] = True
         body["public_url"] = a2a_url
+    if visitors:
+        body["visitors"] = True
+    if visitors_key:
+        body["visitors_key"] = visitors_key
     if organization:
         from agent_runtimes.loop.launch import NotSignedIn, make_client
 
@@ -1350,6 +1366,22 @@ def apps_run(
             "agent card are printed, and the session is the runtime's, not the terminal's."
         ),
     ),
+    visitors: bool = typer.Option(
+        False,
+        "--visitors",
+        help=(
+            "With --a2a: also answer visitors without an account (a visitor's token from "
+            "ai-inference naming this application); their runs only read, a few a day each."
+        ),
+    ),
+    visitors_key: str = typer.Option(
+        None,
+        "--visitors-key",
+        help=(
+            "With --visitors: the owner's key visitors' runs act with, a token from a task "
+            "grant on this application's A2A route; unsaid, the runtime's own credential."
+        ),
+    ),
 ) -> None:
     """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
 
@@ -1377,6 +1409,17 @@ def apps_run(
         launch_cloud,
         speak_ag_ui,
     )
+
+    if (visitors or visitors_key) and not a2a:
+        console.print(
+            "[red]✗[/red] --visitors is a way of serving it over A2A: add --a2a."
+        )
+        raise typer.Exit(1)
+    if visitors_key and not visitors:
+        console.print(
+            "[red]✗[/red] --visitors-key is for an application open to visitors: add --visitors."
+        )
+        raise typer.Exit(1)
 
     try:
         built = _application_of(path)
@@ -1454,7 +1497,14 @@ def apps_run(
             )
         try:
             configured = (
-                configure_on(base_url, document, organization, a2a_url=public_url)
+                configure_on(
+                    base_url,
+                    document,
+                    organization,
+                    a2a_url=public_url,
+                    visitors=visitors,
+                    visitors_key=visitors_key,
+                )
                 if a2a
                 else configure_on(base_url, document, organization)
             )
@@ -1564,6 +1614,14 @@ def _serve_over_a2a(
     )
     console.print(f"  A2A:  {served.get('url', '')}", highlight=False)
     console.print(f"  Card: {served.get('card', '')}", highlight=False)
+    opened = served.get("visitors")
+    if opened:
+        console.print(
+            f"  Open to visitors: {opened.get('turns_a_visitor')} runs a visitor, "
+            f"{opened.get('turns_a_day')} in all a day, acting with "
+            f"{opened.get('acts_with')}.",
+            highlight=False,
+        )
     if cloud_launch:
         console.print(
             f"  A key granted to it names the task {served.get('task', '')}…: "

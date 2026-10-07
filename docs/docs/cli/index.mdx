@@ -264,6 +264,30 @@ Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests
 Next: cd desk && loop apps run app.yaml
 ```
 
+### An application served over A2A
+
+`loop apps run <app>.yaml --a2a` serves the application over A2A, at
+`/api/v1/a2a/agents/<its id>/`, to the members of its team that ask it, and
+prints its address and its agent card. With `--cloud`, it is a Datalayer
+runtime, a new one or the one `-r <runtime uid>` names, and `--keep` leaves
+it serving once `loop` stops.
+
+```bash
+loop apps run accounting.yaml --cloud --a2a --keep                    # a key granted to its route is answered
+loop apps run accounting.yaml --cloud --a2a --visitors --keep         # visitors without an account too
+loop apps run accounting.yaml --cloud -r <uid> --a2a --visitors --keep # the same runtime, opened to visitors
+```
+
+| Option | What it does |
+| --- | --- |
+| `--a2a` | Serve it over A2A, and wait until Ctrl-C. |
+| `--visitors` | With `--a2a`: also answer visitors without an account, with a visitor's token from ai-inference that names this application. Their runs only read, and are counted (a few a day each). |
+| `--visitors-key <token>` | With `--visitors`: the owner's key visitors' runs act with, a token from a task grant on this application's A2A route. Unsaid, they act with the runtime's own credential. |
+
+`--visitors` without `--a2a`, or `--visitors-key` without `--visitors`, is
+refused before anything is launched. See
+[A team of applications over A2A](/loop/teams-over-a2a#open-to-visitors).
+
 ### Eject: an application into Python
 
 `loop apps eject app.yaml` writes an application built by spec or on the
