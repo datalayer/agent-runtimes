@@ -150,6 +150,19 @@ class Step:
     """Why it failed, when it did."""
 
 
+def shown_step(step: Step) -> Step:
+    """A step as it is shown: what it read, wrote and failed with, a
+    credential withheld (LOOP R-19)."""
+    from agent_runtimes.guardrails.credentials import redact, redacted
+
+    return replace(
+        step,
+        input=redacted(step.input),
+        output=redacted(step.output),
+        error=redact(step.error) if step.error else step.error,
+    )
+
+
 #: Where an element shows (LOOP P-18): in the conversation, in a side panel
 #: beside it, or on a page of its own over it.
 WHERE: Tuple[str, ...] = ("inline", "panel", "page")
@@ -1028,7 +1041,7 @@ class Session:
             output=None,
             started_at=_now(),
         )
-        await self.channel.deliver(started)
+        await self.channel.deliver(shown_step(started))
         holder = StepOutput()
         token = _STEP.set(started.id)
         try:
@@ -1053,7 +1066,7 @@ class Session:
         The record is sent when the outermost step ends, with the steps
         nested in it.
         """
-        await self.channel.deliver(step)
+        await self.channel.deliver(shown_step(step))
         self._recorder.start(self.id)
         self._recorder.stepped(step)
         if step.parent_id is None:

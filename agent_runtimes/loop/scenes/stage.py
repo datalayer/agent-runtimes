@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from agent_runtimes.guardrails.credentials import hold, redact
 from agent_runtimes.loop.scenes.transcript import (
     PERSON,
     SceneConnection,
@@ -302,6 +303,8 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
     }
     headers = {"Accept": "text/event-stream"}
     if member.key:
+        # Sent by the stage, never shown to a model or a span (LOOP R-19).
+        hold(member.key)
         headers["Authorization"] = f"Bearer {member.key}"
     texts: Dict[str, str] = {}
     steps: List[A2AStep] = []
@@ -810,11 +813,13 @@ class _SpanRecorder(_recorder_base()):  # type: ignore[misc]
                 "gen_ai.agent.name": self.member.name,
                 "gen_ai.tool.name": tool,
                 "datalayer.tool.kind": _tool_kind(tool, self.member),
-                "gen_ai.tool.call.arguments": str(payload.get("arguments") or ""),
+                "gen_ai.tool.call.arguments": redact(
+                    str(payload.get("arguments") or "")
+                ),
             },
             parent=_PARENT.get("") or self.parent,
         )
-        self.recording.end(span, error=str(payload.get("error") or ""))
+        self.recording.end(span, error=redact(str(payload.get("error") or "")))
 
     async def flush(self, session: str) -> None:
         self._pending.pop(session, None)

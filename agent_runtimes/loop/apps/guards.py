@@ -22,7 +22,6 @@ reports as it reports a rule's refusal.
 from __future__ import annotations
 
 import fnmatch
-import json
 import logging
 import re
 from dataclasses import dataclass, field, replace
@@ -51,6 +50,11 @@ from pydantic_ai.messages import (
 from pydantic_ai.tools import ToolDefinition
 
 from agent_runtimes.guardrails.common import GuardrailBlockedError
+
+# What a credential is, and what it becomes in what is shown, are the
+# runtime's (LOOP R-19): the secrets it holds by their value, then what looks
+# like one. Named here too, as the checks have always named them.
+from agent_runtimes.guardrails.credentials import credentials_in, redact
 from agent_runtimes.types import AppSpec
 
 logger = logging.getLogger(__name__)
@@ -59,55 +63,7 @@ PREFLIGHT = "preflight"
 IN_FLIGHT = "in_flight"
 POST_RUN = "post_run"
 
-#: What a credential looks like, by kind. Precise patterns only: a check that
-#: cries wolf is turned off, and then it checks nothing.
-CREDENTIALS: Dict[str, re.Pattern[str]] = {
-    "a private key": re.compile(r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----"),
-    "an AWS access key": re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
-    "a GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36,}\b"),
-    "a Slack token": re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b"),
-    "an API key": re.compile(r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\b"),
-    "a Google API key": re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
-    "a signed token": re.compile(
-        r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"
-    ),
-}
-
-
-#: What a credential becomes in what is shown.
-WITHHELD = "[a credential, withheld]"
-
-_PRIVATE_KEY_BLOCK = re.compile(
-    r"-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----.*?(?:-----END (?:[A-Z]+ )?PRIVATE KEY-----|\Z)",
-    re.DOTALL,
-)
-
-
 _PRIVATE_KEY_END = re.compile(r"-----END [A-Z ]+-----")
-
-
-def redact(text: str) -> str:
-    """A text with every credential in it withheld; a key block to its end."""
-    text = _PRIVATE_KEY_BLOCK.sub(WITHHELD, text)
-    for kind, pattern in CREDENTIALS.items():
-        if kind != "a private key":
-            text = pattern.sub(WITHHELD, text)
-    return text
-
-
-def _text_of(value: Any) -> str:
-    if isinstance(value, str):
-        return value
-    try:
-        return json.dumps(value, default=str)
-    except (TypeError, ValueError):
-        return str(value)
-
-
-def credentials_in(value: Any) -> List[str]:
-    """The kinds of credential a value holds, in order, each once."""
-    text = _text_of(value)
-    return [kind for kind, pattern in CREDENTIALS.items() if pattern.search(text)]
 
 
 def _keys_of(value: Any) -> List[str]:

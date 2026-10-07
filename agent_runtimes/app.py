@@ -552,6 +552,13 @@ async def _create_and_register_cli_agent(
             agent_id,
         )
 
+    # Credentials are never shown to the model (LOOP R-19): last, so it
+    # wraps every tool call innermost and reads every request last.
+    from .guardrails.credentials import credentials_withheld
+
+    agent_kwargs["capabilities"] = credentials_withheld(
+        list(agent_kwargs.get("capabilities") or [])
+    )
     try:
         resolved_model = resolve_model_for_inference_provider(
             model,

@@ -559,6 +559,54 @@ every application's session as a value (`forwardedProps.loop.settings`). A butto
 written, is refused in a sentence on the page; a tree the A2UI catalog refuses
 is said where it would have been drawn.
 
+### Credentials
+
+A credential is never shown to the model. A connection uses a stored secret
+through its tool: the runtime holds the secret and the tool sends it where it
+goes — the header an MCP server is started with, the account's API key a
+toolset signs with, the token of the gateway a connection reaches in the
+person's name. The model only ever reads what the tool did.
+
+**What the runtime holds as a secret.** Every environment variable whose name
+says it is one — a part of its name is `KEY`, `TOKEN`, `SECRET`, `PASSWORD`,
+`PAT`, `CREDENTIALS`, `COOKIE` or `AUTHORIZATION` (`EARTHDATA_TOKEN`,
+`DATALAYER_APP_USER_SECRET_<UID>`), unless its last word says where or who it
+is (`…_URL`, `…_ID`, `…_USERNAME`, `…_PATH`). And every value given to it as
+one: what a `${VAR}` expands to in an MCP server's header or argument that
+sends a credential (`Authorization: Bearer ${…}`), whatever the variable is
+called; the secrets a configure gives an MCP server or the sandbox's kernel;
+the sandbox's token; a deployment's user secret; the token of an agent node.
+A value shorter than eight characters, or a path, is never withheld by its
+value.
+
+**What the model cannot see.** Each agent the runtime makes — the create
+route's, an application's, a subagent's — carries
+`CredentialsWithheldCapability`, last of its capabilities
+(`agent_runtimes.guardrails.credentials`). A held secret, and anything shaped
+like a credential (a private key, an AWS, GitHub, Slack or Google key, an API
+key, a signed token), is replaced by `[a credential, withheld]` in:
+
+- a tool's result and its error — before any other capability, the record,
+  the stream to the browser or the span of the call reads it; a tool that
+  fails with one fails with a `ToolErrorWithheld` that says it withheld, the
+  original neither chained nor logged;
+- a tool's description and its parameters;
+- every request to the model — its instructions, the prompt, what the page
+  answered `host_context`, a retry — the conversation kept as it was sent.
+
+**What is never kept or said with one.** The record (every entry, whoever
+wrote it), a session's steps, the spans of a scene and of a tool call, the
+sentence a failed turn or A2A task is said in, an MCP server's failure (as
+the routes answer it and as it is logged), and the config the MCP routes
+answer: an MCP server's arguments and environment keep their `${VAR}` until
+the server starts.
+
+**What it cannot do.** Code the model writes runs in a sandbox that has the
+account's secrets in its environment, because a skill's script needs them. A
+secret printed as it is, is withheld; one printed changed — reversed,
+encoded — is not, since no value matches it. An application's answer is
+checked for credentials by its built-in check too (R-06).
+
 ## Extending Loop
 
 A host plugin is ordinary reactor code. One that adds an editor, its tools,

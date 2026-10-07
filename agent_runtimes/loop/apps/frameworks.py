@@ -526,7 +526,9 @@ class _Run:
             self.root = step
         else:
             self.steps[key] = _Open(step)
-        await self.session.channel.deliver(step)
+        from agent_runtimes.loop.apps.session import shown_step
+
+        await self.session.channel.deliver(shown_step(step))
 
     async def end(self, key: str, output: Any = None, error: str = "") -> None:
         """End a step: shown, and kept in the record."""

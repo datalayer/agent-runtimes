@@ -47,6 +47,7 @@ import binascii
 import json
 import logging
 import re
+import traceback
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -65,6 +66,7 @@ from typing import (
 )
 
 from agent_runtimes.context.identities import get_request_user_jwt
+from agent_runtimes.guardrails.credentials import redact
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import answer_surface
@@ -754,10 +756,17 @@ class LiveSession:
                 cancelled = True
                 raise
             except (SessionRefused, InvalidAnswer) as refused:
-                self.emit(RunErrorEvent(message=str(refused)))
+                self.emit(RunErrorEvent(message=redact(str(refused))))
             except Exception as error:  # noqa: BLE001 - said on the stream
-                logger.exception("A turn of session %s failed.", self.uid)
-                self.emit(RunErrorEvent(message=f"The turn failed: {error}"))
+                # Said, and logged, with any credential in it withheld (R-19).
+                logger.error(
+                    "A turn of session %s failed: %s",
+                    self.uid,
+                    redact("".join(traceback.format_exception(error))),
+                )
+                self.emit(
+                    RunErrorEvent(message=f"The turn failed: {redact(str(error))}")
+                )
             finally:
                 self._question = None
                 self._answer = None

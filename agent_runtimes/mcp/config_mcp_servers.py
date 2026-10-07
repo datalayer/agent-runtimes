@@ -18,6 +18,7 @@ from typing import Any
 
 from mcp.client.stdio import stdio_client
 
+from agent_runtimes.guardrails.credentials import hold_env, hold_expansion, redact
 from agent_runtimes.mcp.toolsets import (
     MCP_SERVER_STARTUP_TIMEOUT,
     get_config_mcp_toolsets,
@@ -56,7 +57,10 @@ def expand_env_vars(value: str) -> str:
 
     def replace(match: re.Match[str]) -> str:
         var_name = match.group(1)
-        return os.environ.get(var_name, "")
+        expanded = os.environ.get(var_name, "")
+        # Used by the server, never shown to the model (LOOP R-19).
+        hold_expansion(value, var_name, expanded)
+        return expanded
 
     return re.sub(pattern, replace, value)
 
@@ -124,16 +128,15 @@ def get_mcp_servers_from_config() -> list[dict[str, Any]]:
 
     mcp_servers = config.get("mcpServers", {})
     for server_id, server_config in mcp_servers.items():
-        # Expand env vars in the config
-        expanded_config = expand_config_env_vars(server_config)
-
+        # Its args and env keep their `${VAR}`: expanded where the server is
+        # started, never in what is listed (LOOP R-19).
         servers.append(
             {
                 "id": server_id,
                 "name": server_id.replace("-", " ").replace("_", " ").title(),
-                "command": expanded_config.get("command"),
-                "args": expanded_config.get("args", []),
-                "env": expanded_config.get("env", {}),
+                "command": expand_env_vars(server_config.get("command") or "") or None,
+                "args": server_config.get("args", []),
+                "env": server_config.get("env", {}),
                 "transport": "stdio",  # Default to stdio
             }
         )
@@ -159,8 +162,15 @@ async def discover_mcp_server_tools(
     server_id = server_config.get("id", "unknown")
 
     command = server_config.get("command")
-    args = server_config.get("args", [])
-    env = server_config.get("env", {})
+    raw_args = server_config.get("args", [])
+    # Expanded here, where the server is started, and held: used by the
+    # server, never shown to the model (LOOP R-19).
+    expanded = expand_config_env_vars(
+        {"args": raw_args, "env": server_config.get("env", {})}
+    )
+    args = expanded["args"]
+    env = expanded["env"]
+    hold_env(env)
 
     if not command:
         logger.warning(f"No command specified for {server_id}")
@@ -178,7 +188,7 @@ async def discover_mcp_server_tools(
         )
 
         logger.info(f"Starting MCP server {server_id} for tool discovery...")
-        logger.debug(f"Command: {command} {' '.join(args)}")
+        logger.debug(redact(f"Command: {command} {' '.join(raw_args)}"))
 
         async with asyncio.timeout(timeout):
             async with stdio_client(server_params) as (read, write):

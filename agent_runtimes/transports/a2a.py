@@ -10,12 +10,14 @@ Supports identity context for OAuth token propagation across agent boundaries.
 
 import asyncio
 import logging
+import traceback
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 from ..context.identities import IdentityContextManager
+from ..guardrails.credentials import redact
 from .base import BaseTransport
 
 if TYPE_CHECKING:
@@ -151,11 +153,11 @@ class A2ATransport(BaseTransport):
                 }
 
             except Exception as e:
-                logger.error(f"A2A request error: {e}")
+                logger.error(redact(f"A2A request error: {e}"))
                 return {
                     "result": None,
                     "status": "error",
-                    "error": str(e),
+                    "error": redact(str(e)),
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
                     "conversation_id": conversation_id,
@@ -235,10 +237,10 @@ class A2ATransport(BaseTransport):
                     yield a2a_event
 
             except Exception as e:
-                logger.error(f"A2A stream error: {e}")
+                logger.error(redact(f"A2A stream error: {e}"))
                 yield {
                     "type": "error",
-                    "data": str(e),
+                    "data": redact(str(e)),
                     "conversation_id": conversation_id,
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
@@ -431,14 +433,18 @@ class A2AWorker(_FastA2AWorker):
             # nothing about why. Log it, and put the reason on the failed
             # status; closing here keeps the base's own failed status from
             # following it.
-            logger.exception(
-                "A2A task %s for agent %s failed", task_id, self.agent.name
+            # Said, and logged, with any credential withheld (LOOP R-19).
+            logger.error(
+                "A2A task %s for agent %s failed: %s",
+                task_id,
+                self.agent.name,
+                redact("".join(traceback.format_exception(exc))),
             )
             from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
 
             await self.storage.update_task(task_id, state="failed")
             message = _agent_message(
-                context_id, Part(text=f"{type(exc).__name__}: {exc}")
+                context_id, Part(text=redact(f"{type(exc).__name__}: {exc}"))
             )
             # Which limit of the budget the delegation set stopped the run,
             # where the delegation put the budget (O1-07), and what it spent.

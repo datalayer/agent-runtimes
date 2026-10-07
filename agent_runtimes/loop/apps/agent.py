@@ -198,7 +198,10 @@ def app_capabilities(
                 deployment_uid=recorder.deployment_uid,
             )
         )
-    return capabilities
+    # Credentials are never shown to the model (LOOP R-19), last of all.
+    from agent_runtimes.guardrails.credentials import credentials_withheld
+
+    return credentials_withheld(capabilities)
 
 
 def _agent_spec(reference: str) -> Optional[Agentspec]:

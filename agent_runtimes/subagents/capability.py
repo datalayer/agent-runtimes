@@ -174,7 +174,10 @@ def _build_subagent_capabilities(
                 )
             )
 
-    return capabilities
+    # Credentials are never shown to its model either (LOOP R-19).
+    from ..guardrails.credentials import credentials_withheld
+
+    return credentials_withheld(capabilities)
 
 
 @dataclass(frozen=True)

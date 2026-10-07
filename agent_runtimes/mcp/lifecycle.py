@@ -18,6 +18,7 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any
 
+from agent_runtimes.guardrails.credentials import hold_env, hold_expansion, redact
 from agent_runtimes.mcp.catalog_mcp_servers import MCP_SERVER_CATALOG
 from agent_runtimes.types import MCPServer, MCPServerTool
 
@@ -37,6 +38,18 @@ MCP_SERVER_MAX_ATTEMPTS = 3
 #: and ``mcp-remote`` falls back to an interactive OAuth sign-in, in a browser
 #: a runtime does not have — it waits for it forever.
 _BEARER_ARG = re.compile(r"^\s*Authorization:\s*Bearer\s*$", re.IGNORECASE)
+
+
+class _Failures(dict[str, str]):
+    """Why each server failed, a credential never kept in it (LOOP R-19).
+
+    What a start failed with is answered by the routes and said to whoever
+    configured the agent: an error that echoes a command line with its
+    expanded header is kept with the header withheld.
+    """
+
+    def __setitem__(self, server_id: str, error: str) -> None:
+        super().__setitem__(server_id, redact(str(error)))
 
 
 def empty_bearer_problem(server_id: str, raw_args: list[Any], args: list[Any]) -> str:
@@ -105,7 +118,7 @@ class MCPLifecycleManager:
         # Separate storage for config (mcp.json) vs catalog servers
         self._config_servers: dict[str, MCPServerInstance] = {}  # From mcp.json
         self._catalog_servers: dict[str, MCPServerInstance] = {}  # From catalog
-        self._failed_servers: dict[str, str] = {}  # server_id -> error message
+        self._failed_servers: dict[str, str] = _Failures()  # server_id -> error
         self._starting_servers: set[str] = set()  # server_ids currently starting
         self._expected_servers: set[str] = set()  # server_ids declared in mcp.json
         self._initialization_event: asyncio.Event | None = None
@@ -149,25 +162,11 @@ class MCPLifecycleManager:
                 logger.warning(
                     f"Environment variable '{var_name}' not found or empty during expansion"
                 )
+            # Used by the tool, never shown to the model (LOOP R-19).
+            hold_expansion(value, var_name, env_value)
             return env_value
 
         return re.sub(pattern, replace, value)
-
-    def _expand_config_env_vars(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Recursively expand environment variables in a config dictionary."""
-        result: dict[str, Any] = {}
-        for key, value in config.items():
-            if isinstance(value, str):
-                result[key] = self._expand_env_vars(value)
-            elif isinstance(value, list):
-                result[key] = [
-                    self._expand_env_vars(v) if isinstance(v, str) else v for v in value
-                ]
-            elif isinstance(value, dict):
-                result[key] = self._expand_config_env_vars(value)
-            else:
-                result[key] = value
-        return result
 
     def _load_mcp_config(self) -> dict[str, Any]:
         """Load MCP configuration from mcp.json file."""
@@ -231,9 +230,13 @@ class MCPLifecycleManager:
         Returns:
             MCPServer config or None if not found
         """
-        # If user provides a command, use their config entirely
+        # If user provides a command, use their config entirely. Its args and
+        # env keep their `${VAR}`: they are expanded as the server starts, so
+        # a secret never sits in the config the routes answer (LOOP R-19).
         if user_config:
-            expanded = self._expand_config_env_vars(user_config)
+            expanded = dict(user_config)
+            if isinstance(expanded.get("command"), str):
+                expanded["command"] = self._expand_env_vars(expanded["command"])
             if "command" in expanded:
                 logger.info(f"Using user-provided command for MCP server '{server_id}'")
 
@@ -273,10 +276,9 @@ class MCPLifecycleManager:
 
             # Apply user env overrides if provided
             if user_config:
-                expanded = self._expand_config_env_vars(user_config)
-                if "env" in expanded:
-                    # Merge env vars
-                    config.env = {**(config.env or {}), **expanded["env"]}
+                # Merged with their `${VAR}`, expanded as the server starts.
+                if "env" in user_config:
+                    config.env = {**(config.env or {}), **user_config["env"]}
 
             logger.info(f"Using catalog config for MCP server '{server_id}'")
             return config
@@ -374,7 +376,10 @@ class MCPLifecycleManager:
                     return instance
 
             logger.info(
-                f"🔧 Creating MCP server '{server_id}' ({storage_name}) with command: {config.command} {config.args}"
+                redact(
+                    f"🔧 Creating MCP server '{server_id}' ({storage_name}) "
+                    f"with command: {config.command} {config.args}"
+                )
             )
 
             # Import pydantic_ai MCP support
@@ -398,6 +403,8 @@ class MCPLifecycleManager:
 
                 if extra_env:
                     env.update(extra_env)
+                    # Used by the server, never shown to the model (R-19).
+                    hold_env(extra_env)
                     # Names only: never any part of a value.
                     logger.info(
                         f"  [mcp/lifecycle] extra env vars for '{server_id}': "
@@ -419,6 +426,8 @@ class MCPLifecycleManager:
                         for key, value in config.env.items()
                     }
                     logger.debug(f"  Expanded config.env: {list(expanded_env.keys())}")
+                    # Used by the server, never shown to the model (R-19).
+                    hold_env(expanded_env)
                     env.update(expanded_env)
 
                 # Expand environment variables in args (e.g., ${KAGGLE_API_TOKEN}).
@@ -460,7 +469,9 @@ class MCPLifecycleManager:
 
             except Exception as e:
                 error = f"Failed to create MCP server: {e}"
-                logger.error(f"✗ MCP server '{server_id}' creation failed: {error}")
+                logger.error(
+                    redact(f"✗ MCP server '{server_id}' creation failed: {error}")
+                )
                 self._failed_servers[server_id] = error
                 return None
 
@@ -553,7 +564,9 @@ class MCPLifecycleManager:
                 except (_ExceptionGroup, BaseExceptionGroup) as eg:
                     error_lines = self._format_exception_group(eg)
                     for line in error_lines:
-                        logger.error(f"✗ MCP server '{server_id}' exception: {line}")
+                        logger.error(
+                            redact(f"✗ MCP server '{server_id}' exception: {line}")
+                        )
                     error_detail = (
                         error_lines[0] if error_lines else "Unknown error in TaskGroup"
                     )
@@ -588,7 +601,9 @@ class MCPLifecycleManager:
 
                     await exit_stack.__aexit__(None, None, None)
                     logger.error(
-                        f"✗ MCP server '{server_id}' startup failed: {error_detail}"
+                        redact(
+                            f"✗ MCP server '{server_id}' startup failed: {error_detail}"
+                        )
                     )
                     self._failed_servers[server_id] = error_detail
                     return None
@@ -952,7 +967,10 @@ class MCPLifecycleManager:
                     logger.warning(f"No config available for MCP server '{server_id}'")
             except Exception as e:
                 logger.error(
-                    f"Exception starting MCP server '{server_id}': {e}", exc_info=True
+                    redact(
+                        f"Exception starting MCP server '{server_id}': "
+                        + self._format_exception(e)
+                    )
                 )
                 self._failed_servers[server_id] = str(e)
 

@@ -79,7 +79,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.loop.apps.guards import redact
+from agent_runtimes.guardrails.credentials import redact, redacted
 from agent_runtimes.types import AppSpec
 
 logger = logging.getLogger(__name__)
@@ -347,8 +347,13 @@ class AppRecorder:
         session = _SESSION.get()
         if not session or not self.kept(kind):
             return
+        # Nothing kept holds a credential, whoever wrote the entry (LOOP R-19).
         self._pending.setdefault(session, []).append(
-            {"kind": kind, "summary": summary[:2000], "payload": payload or {}}
+            {
+                "kind": kind,
+                "summary": redact(summary)[:2000],
+                "payload": redacted(payload or {}),
+            }
         )
 
     def opened(self, session: str, person_uid: str) -> None:

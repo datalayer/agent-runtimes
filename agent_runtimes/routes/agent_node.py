@@ -22,6 +22,8 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from agent_runtimes.guardrails.credentials import hold
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent-node", tags=["agent-node"])
@@ -135,6 +137,8 @@ def set_runtime_credentials(
 ) -> dict[str, str | None]:
     """Persist UI-supplied credentials so the sync loop can pick them up."""
     cleaned_token = (token or "").strip() or None
+    # Used by the runtime, never shown to the model (LOOP R-19).
+    hold(cleaned_token)
     cleaned_url = (runtimes_url or "").strip().rstrip("/") or None
     changed = False
     with _LOCK:

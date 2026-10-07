@@ -570,6 +570,13 @@ class CodeSandboxManager:
                 self._config.jupyter_token = final_token
             elif jupyter_token is not None:
                 self._config.jupyter_token = jupyter_token
+            # The sandbox's token is used by its tools, never shown to the
+            # model (LOOP R-19); nor are the secrets given to its kernel.
+            from agent_runtimes.guardrails.credentials import hold, hold_env
+
+            hold(self._config.jupyter_token)
+            if env_vars:
+                hold_env(env_vars)
 
             if variant is not None:
                 self._config.variant = variant

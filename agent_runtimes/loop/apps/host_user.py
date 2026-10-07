@@ -41,6 +41,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import jwt
 
+from agent_runtimes.guardrails.credentials import hold, release
 from agent_runtimes.types import AppSpec
 
 __all__ = [
@@ -112,8 +113,10 @@ def use_user_secret(deployment_uid: str, secret: Optional[str]) -> None:
     """Give this runtime a deployment's secret in the process; ``None`` takes it back."""
     if secret:
         _GIVEN[deployment_uid] = secret
+        # Verifies the host's tokens, never shown to the model (LOOP R-19).
+        hold(secret)
     else:
-        _GIVEN.pop(deployment_uid, None)
+        release(_GIVEN.pop(deployment_uid, None))
 
 
 def _secret_of(deployment_uid: str) -> str:
