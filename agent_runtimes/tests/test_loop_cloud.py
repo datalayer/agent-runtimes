@@ -124,6 +124,7 @@ def datalayer(monkeypatch: pytest.MonkeyPatch) -> FakeDatalayer:
     client = FakeDatalayer()
     monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
     monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+    monkeypatch.setattr(launch, "wait_until_set_up", lambda url, timeout=180.0: True)
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url, timeout=120.0: True)
     return client
 

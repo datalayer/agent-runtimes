@@ -663,6 +663,46 @@ def wait_until_ready(relay_url: str, timeout: float = 180.0) -> bool:
     return False
 
 
+def set_up_by_datalayer(spec: Any) -> bool:
+    """Whether a runtime's agent record is the one Datalayer set it up with.
+
+    A pooled runtime starts its agent from the image's agentspec before it is
+    anybody's (``_create_and_register_cli_agent``, a record with an ``id``).
+    Once assigned, Datalayer's start hooks give it the account's secrets and
+    configure that agent again through ``configure-from-spec``, which records
+    the request it was created from (``CreateAgentRequest``: no ``id``, its
+    ``selected_mcp_servers``).
+    """
+    return (
+        isinstance(spec, dict) and "selected_mcp_servers" in spec and "id" not in spec
+    )
+
+
+def wait_until_set_up(relay_url: str, timeout: float = 180.0) -> bool:
+    """Whether Datalayer has set the runtime up before the timeout.
+
+    Its agent answers from the moment the pod starts, before the runtime is
+    set up for the account: an application configured on it then finds none
+    of the account's secrets (an owner's connection does not start), and is
+    replaced by the platform's own configuration when it comes (STUDIO A-08).
+    """
+    import httpx
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            response = httpx.get(
+                f"{relay_url}/api/v1/configure/agents/{CLOUD_AGENT_NAME}/spec",
+                timeout=10.0,
+            )
+            if response.status_code == 200 and set_up_by_datalayer(response.json()):
+                return True
+        except (httpx.HTTPError, ValueError):
+            pass
+        time.sleep(2.0)
+    return False
+
+
 def minutes_left(expired_at: Any, now: Optional[float] = None) -> Optional[int]:
     """What remains of a reservation, in whole minutes, or None when unknown."""
     from datetime import datetime
@@ -984,6 +1024,13 @@ def launch_cloud(
         launch.stop()
         raise RuntimeError(
             f"The cloud runtime {launch.runtime_name} did not answer in time; it was stopped."
+        )
+    status(f"Waiting for Datalayer to set up {launch.runtime_name} for the account…")
+    if not wait_until_set_up(relay.url):
+        launch.stop()
+        raise RuntimeError(
+            f"Datalayer did not set up {launch.runtime_name} in time (the account's "
+            "secrets and model token are given then); it was stopped."
         )
     if not speak_ag_ui(relay.url):
         missing = library_has(relay.url, agent_id) is False

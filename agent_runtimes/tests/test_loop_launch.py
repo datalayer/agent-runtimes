@@ -212,6 +212,7 @@ def test_launch_reserves_what_was_chosen_and_reaches_it_through_a_relay(
     client = FakeClient()
     monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
     monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+    monkeypatch.setattr(launch, "wait_until_set_up", lambda url, timeout=180.0: True)
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url, timeout=120.0: True)
     started = launch.launch_cloud("crawler", minutes=15, can_ask=False)
     try:
@@ -379,6 +380,7 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
         launch, "_select", lambda question, choices, default: "runtime-9"
     )
     monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+    monkeypatch.setattr(launch, "wait_until_set_up", lambda url, timeout=180.0: True)
     monkeypatch.setattr(launch, "speak_ag_ui", lambda url, timeout=120.0: True)
     monkeypatch.setattr(launch, "ensure_agentspec", lambda *args, **kwargs: False)
     back = launch.launch_cloud("crawler", can_ask=True)
@@ -389,3 +391,70 @@ def test_a_running_agent_runtime_is_offered_before_a_new_one(
         assert back.relay.target == "https://r1.example/agent-runtimes/p/runtime-9"
     finally:
         back.relay.stop()
+
+
+# --- a runtime set up for the account before anything is configured on it (STUDIO A-08)
+
+
+def test_the_record_datalayer_sets_a_runtime_up_with_is_told_from_the_pools() -> None:
+    import inspect
+
+    from agent_runtimes.app import _create_and_register_cli_agent
+    from agent_runtimes.routes.agents import CreateAgentRequest
+
+    # What configure-from-spec records: the request the agent was created from.
+    configured = CreateAgentRequest(
+        name="default", agent_spec_id="example-simple"
+    ).model_dump()
+    configured.pop("jupyter_sandbox", None)
+    assert launch.set_up_by_datalayer(configured)
+    assert launch.set_up_by_datalayer({**configured, "sandbox": None})
+
+    # What a pooled pod records at boot, from the image's agentspec.
+    booted_source = inspect.getsource(_create_and_register_cli_agent)
+    assert '"id": getattr(agent_spec, "id", agent_id)' in booted_source
+    assert '"selected_mcp_servers"' not in booted_source
+    booted = {
+        "id": "example-simple",
+        "agent_spec_id": "example-simple",
+        "mcp_servers": [],
+    }
+    assert not launch.set_up_by_datalayer(booted)
+    assert not launch.set_up_by_datalayer(None)
+
+
+def test_nothing_is_configured_before_datalayer_set_the_runtime_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = FakeClient()
+    calls: List[str] = []
+    monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
+    monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+
+    def set_up(url: str, timeout: float = 180.0) -> bool:
+        calls.append("set up")
+        return True
+
+    def speaks(url: str, timeout: float = 120.0) -> bool:
+        calls.append("ag-ui")
+        return True
+
+    monkeypatch.setattr(launch, "wait_until_set_up", set_up)
+    monkeypatch.setattr(launch, "speak_ag_ui", speaks)
+    started = launch.launch_cloud("crawler", can_ask=False)
+    try:
+        assert calls == ["set up", "ag-ui"]
+    finally:
+        started.relay.stop()
+
+
+def test_a_runtime_datalayer_never_sets_up_is_stopped_in_a_sentence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = FakeClient()
+    monkeypatch.setattr(launch, "make_client", lambda: (client, "the-token"))
+    monkeypatch.setattr(launch, "wait_until_ready", lambda url, timeout=180.0: True)
+    monkeypatch.setattr(launch, "wait_until_set_up", lambda url, timeout=180.0: False)
+    with pytest.raises(RuntimeError, match="did not set up runtime-1 in time.*stopped"):
+        launch.launch_cloud("crawler", can_ask=False)
+    assert client.stopped == ["runtime-1"]
