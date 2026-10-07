@@ -41,6 +41,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
+from agent_runtimes.loop.apps.record import AppRecorder as AppRecorderBase
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -575,6 +576,34 @@ class Conversed:
     """What it asked the person, when it stopped to: its answer ends there."""
     error: str = ""
     """Why the turn failed, when it did."""
+    checks: Tuple[Tuple[str, Any], ...] = ()
+    """What its checks said on the way (LOOP R-06, P-06): each as the record
+    keeps it, the stage and the `Verdict` — a step stopped, an answer asked
+    again, a person asked."""
+    tools: Tuple[str, ...] = ()
+    """The tools it called, in order, as its rules decided them (LOOP R-05)."""
+
+
+class _WatchedRecorder(AppRecorderBase):
+    """A recorder that sends nothing and keeps what the checks and the rules
+    said, for the run that asked (LOOP V-08)."""
+
+    def __init__(self, app: AppSpec) -> None:
+        super().__init__(app=app, send=_keep_nothing)
+        self.verdicts: List[Tuple[str, Any]] = []
+        self.tools: List[str] = []
+
+    def checked(self, stage: str, verdict: Any) -> None:
+        self.verdicts.append((stage, verdict))
+        super().checked(stage, verdict)
+
+    def decided(self, enforced: Any) -> None:
+        tool = getattr(enforced, "tool_name", "") or getattr(
+            getattr(enforced, "decision", None), "tool", ""
+        )
+        if tool:
+            self.tools.append(str(tool))
+        super().decided(enforced)
 
 
 async def converse_in_process(
@@ -599,7 +628,6 @@ async def converse_in_process(
     """
     from agent_runtimes.loop.apps.agent import local_agent
     from agent_runtimes.loop.apps.application import AppHost
-    from agent_runtimes.loop.apps.record import AppRecorder
 
     factory = agent or local_agent
     if application.handler("message") is None and application.code_agent is None:
@@ -607,12 +635,8 @@ async def converse_in_process(
     conversed: List[Conversed] = []
     for case in cases:
         channel = _SafetyChannel()
-        host = AppHost(
-            application,
-            channel,
-            agent=factory,
-            recorder=AppRecorder(app=application.spec, send=_keep_nothing),
-        )
+        recorder = _WatchedRecorder(application.spec)
+        host = AppHost(application, channel, agent=factory, recorder=recorder)
         opened = 0
         asked = ""
         try:
@@ -622,9 +646,22 @@ async def converse_in_process(
         except _AskedThePerson as question:
             asked = str(question)
         except Exception as error:  # noqa: BLE001 - a turn that fails is the outcome
-            conversed.append(Conversed(error=_why(error)))
+            conversed.append(
+                Conversed(
+                    error=_why(error),
+                    checks=tuple(recorder.verdicts),
+                    tools=tuple(recorder.tools),
+                )
+            )
             continue
-        conversed.append(Conversed(tuple(channel.memory.events[opened:]), asked))
+        conversed.append(
+            Conversed(
+                tuple(channel.memory.events[opened:]),
+                asked,
+                checks=tuple(recorder.verdicts),
+                tools=tuple(recorder.tools),
+            )
+        )
     return conversed
 
 

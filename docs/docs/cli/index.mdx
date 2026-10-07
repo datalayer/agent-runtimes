@@ -298,15 +298,65 @@ loop apps validate app.yaml --safety --local --judge anthropic:claude-haiku-4-5
 loop apps validate app.yaml --safety --cloud --app <id>  # on Datalayer, through the Evals engine
 ```
 
-An `app.py` whose code decides some of its tests (`@app.test`, see
-[Python applications](/loop/python-applications#code-where-plain-words-are-not-enough))
-runs them with `--tests`: listed alone, or run on this machine with
-`--local`, each case asked of the application in this process and decided by
-its function — no judge. A test that fails exits 1; one that could not run, 3.
+### An application's tests, with the checks on
+
+`--tests` takes its **test conversations** (`tests.cases`: *when it is asked
+this, it should do that*, the same tests the Studio's *Run its tests* asks):
+listed alone, or run on this machine with `--local`. Each case is asked of
+the application in this process, a session of its own — its rules, its
+checks and its code's own tools and checks attached — and what came of it is
+read in this order, the first that fails naming the check:
+
+- **a check stopped it on the way**: a tool call a catalogue Gate or a check
+  of its code stopped, an answer a check asked again until the model gave up,
+  a rule that held it back — said with the check's own sentence;
+- **nothing sensitive leaves**: a credential in the answer; and every
+  catalogue Guard it names under `checks.guards` that the runtime executes
+  (the Sensitive Data Guard, the Tool Use Policy Guard), run on the answer —
+  its fields when it is JSON. A Guard judged by a Cog or a person is not run,
+  and the report says so;
+- **the output has its shape**: in one of the formats its interface says
+  (`interface.outputs`; words when it says none), and, for a decision, naming
+  one of its alternatives;
+- **it answers from its sources**: an application that names documents
+  (`contents`) searched them before it answered — read from what it did, not
+  from the words of its answer;
+- **it does what it should**: decided by the function its code names
+  (`@app.test`, see [Python applications](/loop/python-applications#code-where-plain-words-are-not-enough))
+  or, for a test in words, by a judge — the model named with `--judge`, or
+  the AI Inference service when `DATALAYER_AI_INFERENCE_URL` is set. With no
+  judge, a test in words is not run, and says so.
+
+Each test is `passed`, `failed` or `not_run`; a failed one names the check
+(`check`: `sensitive`, `shape`, `sources`, `expected`, a Guard's or a Gate's
+id, a check of its code, `rules`) and says why. `--json` prints the run as
+plain data under `validation`. A test that fails exits 1; one that could not
+run, 3.
 
 ```bash
-loop apps validate app.py --tests --local
+loop apps validate app.py --tests --local                       # decided by its code; a test in words needs a judge
+loop apps validate app.yaml --tests --local --judge anthropic:claude-haiku-4-5
+loop apps validate app.yaml --tests --local --judge … --app <id> --attach   # kept against the saved version
 ```
+
+```text
+app.yaml  Passes the instant checks
+  Its tests decide whether it is ready.
+  ✓ It greets back.
+  ✗ It refuses. — The answer holds an AWS access key: nothing sensitive leaves.
+  ✗ It finds her record. — Sensitive Data Stop: the field `IBAN`.
+  Its tests: 1 of 3 passed; 2 stopped by a check.
+```
+
+With `--attach --app <id>`, the report is handed to ai-agents, which keeps it
+against the saved version of the application the file is — so the file must
+be that version (`loop apps push` first) — as the Studio keeps a run of the
+Evals engine: the *Validate* tab shows each test and the check that stopped
+it, and Readiness and the *Ship* tab read its share. A run on this machine
+asks no safety set, so Readiness says *Not known yet* of it until the safety
+set is asked (`--safety --local` in the same run attaches it too). An
+application that needs what only a runtime brings — connections, skills, a
+team — is not run here: push it and run its tests from the Studio.
 
 ```text
 app.yaml  Passes the instant checks
@@ -319,7 +369,7 @@ app.yaml  Passes the instant checks
 - **On this machine** (`--local`): each test is asked in a session of its own. An application that needs nothing a runtime brings runs in this process, with its rules, checks and code. One with connections, tools or skills runs on a local runtime configured with it, as `loop apps run --local` does. The judge is the model named by `--judge`, using your key for it on this machine, or the AI Inference service when `DATALAYER_AI_INFERENCE_URL` is set. With no judge, nothing is asked: the tests are listed, with the way each would be judged.
 - **On Datalayer** (`--cloud --app <id>`): the Evals engine runs the saved application itself, with its connections and rules (the `app` subject), at its current version. The file must be that version, so if it is not, push it first (`loop apps push`). The launch is checked before anything starts, and the engine's refusal is shown in its own words. It is billed, so `loop` asks first and shows the most it can cost. Without a terminal it launches only with `--yes`. The tests are kept in an evalset of their own, `<name> — safety set`, which is reused for as long as the tests stay the same.
 
-Exit codes: `1` when the application is not ready or a safety test did not hold (an answer that never came counts as not holding), `2` with `--strict` when something needs attention, and `3` when the safety set was asked for but not judged (no judge, a launch you declined, or a run that could not start).
+Exit codes: `1` when the application is not ready, a safety test did not hold (an answer that never came counts as not holding), a test failed or the report could not be attached, `2` with `--strict` when something needs attention, and `3` when the safety set or a test was asked for but not judged (no judge, a launch you declined, or a run that could not start).
 
 ### A scene's rehearsal
 

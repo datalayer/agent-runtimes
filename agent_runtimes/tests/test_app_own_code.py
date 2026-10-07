@@ -418,13 +418,13 @@ def test_validate_lists_its_tests_and_runs_them_here(tmp_path: Path) -> None:
     listed = runner.invoke(apps_cli, ["validate", str(source), "--tests", "--json"])
     assert listed.exit_code == 0, listed.output
     report = json.loads(listed.output)[0]
-    assert report["tests_says"].startswith("Its code's tests: 2, not run.")
+    assert report["tests_says"].startswith("Its tests: 2, not run.")
     assert [test["name"] for test in report["tests"]] == ["greets", "shouts"]
     ran = runner.invoke(apps_cli, ["validate", str(source), "--tests", "--local"])
     assert ran.exit_code == 1, ran.output
     assert "✓ It greets by name (greets)" in ran.output
     assert "✗ It shouts (shouts) — It did not shout." in ran.output
-    assert "Its code's tests: 1 of 2 passed." in ran.output
+    assert "Its tests: 1 of 2 passed." in ran.output
     # From its spec alone, a test of its code is not run: it is judged by its words.
     spec = tmp_path / "app.yaml"
     spec.write_text(build(source).text)

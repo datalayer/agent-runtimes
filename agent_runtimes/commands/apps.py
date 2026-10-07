@@ -26,10 +26,16 @@ the instant checks pass, which is not yet *Ready*: that takes its tests.
 With ``--safety`` it also asks the safety set every application runs (LOOP
 V-09, `agent_runtimes.loop.apps.safety`) — listed alone, asked on this
 machine (``--local``) or on Datalayer through the Evals engine (``--cloud``).
-With ``--tests`` it also runs the tests an ``app.py``'s code decides (LOOP
-P-06, ``@app.test``) — listed alone, or run on this machine (``--local``),
-each case asked of the application and its conversation handed to its
-function: no judge, no model call but the application's own.
+With ``--tests`` it also runs its test conversations (LOOP V-08,
+`agent_runtimes.loop.apps.validation`) — listed alone, or run on this machine
+(``--local``): each case asked of the application in this process with its
+checks on — nothing sensitive leaves, the output has its shape, it answers
+from its sources, the catalogue Guards it names — then decided by the
+function its code names (P-06, ``@app.test``) or by a judge (``--judge``, or
+``DATALAYER_AI_INFERENCE_URL``). A failed case names the check that stopped
+it. With ``--attach --app <uid>`` the report is kept by ai-agents against the
+saved version the file is, as the Studio keeps a run of the Evals engine, so
+Readiness and the Ship tab read it.
 
 An application written in Python, an ``app.py``, is built to its Appspec
 first (`loop apps build`, LOOP P-07): `validate`, `run` and `push` take one
@@ -43,7 +49,7 @@ import json
 import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Tuple
 
 import typer
 from rich.console import Console
@@ -90,10 +96,13 @@ class Report:
     safety_says: str = ""
     #: Where the plugins taken as off came from, in a sentence (LOOP C-12).
     plugins_off_says: str = ""
-    #: The tests its code decides (LOOP P-06): each test's name, case and outcome.
+    #: Its test conversations (LOOP V-08): each case, its outcome and the check
+    #: that stopped it; `name` the function of its code that decides it (P-06).
     tests: List[Dict[str, str]] = field(default_factory=list)
-    #: *Its code's tests: 2 of 2 passed.*, once run.
+    #: *Its tests: 2 of 3 passed; 1 stopped by a check.*, once run.
     tests_says: str = ""
+    #: The run as plain data (`ValidationReport.as_dict`), once run here.
+    validation: Optional[Dict[str, Any]] = None
 
 
 def _require_agentspecs() -> Any:
@@ -341,7 +350,7 @@ def apps_validate(
     tests: bool = typer.Option(
         False,
         "--tests",
-        help="Also the tests its code decides (@app.test): listed, or run here with --local.",
+        help="Also its test conversations, with the checks on: listed, or run here with --local.",
     ),
     local: bool = typer.Option(
         False,
@@ -361,10 +370,15 @@ def apps_validate(
     app_uid: str = typer.Option(
         None,
         "--app",
-        help="With --cloud: the application it is saved as; the file must be its saved version.",
+        help="With --cloud or --attach: the application it is saved as; the file must be its saved version.",
     ),
     yes: bool = typer.Option(
         False, "--yes", "-y", help="With --cloud: launch without asking."
+    ),
+    attach: bool = typer.Option(
+        False,
+        "--attach",
+        help="With --tests --local --app: keep the report against the saved version, for Readiness and the Ship tab.",
     ),
     organization: str = typer.Option(
         None,
@@ -372,26 +386,36 @@ def apps_validate(
         help="The organization's uid: its turned-off plugins and its contexts, read from IAM.",
     ),
 ) -> None:
-    """Run the instant checks of one or more applications, and its safety set.
+    """Run the instant checks of one or more applications, its safety set, and its tests.
 
-    Exit 1 when one is not ready, a safety test did not hold or a test of
-    its code failed; with --strict, exit 2 when one needs attention; exit 3
-    when the safety set was asked but not judged, or its code's tests could
-    not be run.
+    Exit 1 when one is not ready, a safety test did not hold, a test failed
+    or the report could not be attached; with --strict, exit 2 when one
+    needs attention; exit 3 when the safety set was asked but not judged, or
+    a test could not be run.
     """
     if local and not (safety or tests):
         raise typer.BadParameter("--local goes with --safety or --tests.")
-    if (cloud or judge or app_uid or yes) and not safety:
-        raise typer.BadParameter("--cloud, --judge, --app and --yes go with --safety.")
+    if (cloud or yes) and not safety:
+        raise typer.BadParameter("--cloud and --yes go with --safety.")
+    if judge and not (safety or tests):
+        raise typer.BadParameter("--judge goes with --safety or --tests.")
+    if attach and not (tests and local):
+        raise typer.BadParameter("--attach goes with --tests --local.")
+    if app_uid and not (cloud or attach):
+        raise typer.BadParameter("--app goes with --cloud or --attach.")
+    if attach and not app_uid:
+        raise typer.BadParameter(
+            "The report is attached to a saved application: name it with --app."
+        )
     if tests and cloud:
         raise typer.BadParameter(
-            "The tests its code decides run where its code is: here, with --local."
+            "Its tests run here, with --local; the Studio runs them on Datalayer."
         )
     if local and cloud:
         raise typer.BadParameter("--local or --cloud: one place to ask it.")
     if (local or cloud) and len(paths) != 1:
         raise typer.BadParameter(
-            "The safety set is asked of one application at a time."
+            "The safety set and the tests are asked of one application at a time."
         )
     if cloud and not app_uid:
         raise typer.BadParameter(
@@ -418,11 +442,16 @@ def apps_validate(
                 )
                 or unjudged
             )
+    unattached = False
     if tests:
         for path, report in zip(paths, reports):
             if report.verdict == NOT_READY:
                 continue
-            unjudged = _code_tests_of(path, report, local=local) or unjudged
+            unjudged = (
+                _code_tests_of(path, report, local=local, judge=judge) or unjudged
+            )
+            if attach and report.validation is not None:
+                unattached = not _attach_report(path, report, app_uid)
     if as_json:
         typer.echo(json.dumps([asdict(report) for report in reports], indent=2))
     else:
@@ -458,9 +487,10 @@ def apps_validate(
                 mark = {"passed": "[green]✓[/green]", "failed": "[red]✗[/red]"}.get(
                     test.get("state", ""), "·"
                 )
+                named = f" ({test['name']})" if test.get("name") else ""
                 said = f" — {test['says']}" if test.get("says") else ""
                 console.print(
-                    f"  {mark} {test['expect']} ({test['name']}){said}", highlight=False
+                    f"  {mark} {test['expect']}{named}{said}", highlight=False
                 )
             if report.tests_says:
                 console.print(f"  {report.tests_says}", highlight=False)
@@ -470,19 +500,24 @@ def apps_validate(
         raise typer.Exit(1)
     if any(test.get("state") == "failed" for r in reports for test in r.tests):
         raise typer.Exit(1)
+    if unattached:
+        raise typer.Exit(1)
     if strict and any(report.verdict == NEEDS_ATTENTION for report in reports):
         raise typer.Exit(2)
     if unjudged:
         raise typer.Exit(3)
 
 
-def _code_tests_of(path: Path, report: Report, *, local: bool) -> bool:
-    """List, or run here, the tests an app.py's code decides (LOOP P-06), and
-    its page on its inputs' defaults (P-05).
+def _code_tests_of(
+    path: Path, report: Report, *, local: bool, judge: Optional[str] = None
+) -> bool:
+    """List, or run here, its test conversations with the checks on (LOOP
+    V-08) — each decided by its code (P-06) or by a judge — and its page on
+    its inputs' defaults (P-05).
 
     Returns whether they were asked but not all run (exit 3).
     """
-    unrun = _case_tests_of(path, report, local=local)
+    unrun = _case_tests_of(path, report, local=local, judge=judge)
     return _page_test_of(path, report, local=local) or unrun
 
 
@@ -514,7 +549,7 @@ def _page_test_of(path: Path, report: Report, *, local: bool) -> bool:
         "state": "",
         "says": "",
     }
-    if report.tests_says == "Its code decides no test.":
+    if report.tests_says == NO_TEST:
         report.tests_says = ""
     if not application.handler("page"):
         row["says"] = "Its page is run by an app.py: validate the app.py to run it."
@@ -558,14 +593,37 @@ def _page_test_of(path: Path, report: Report, *, local: bool) -> bool:
     return False
 
 
-def _case_tests_of(path: Path, report: Report, *, local: bool) -> bool:
-    """List, or run here, the tests an app.py's code decides (LOOP P-06).
+#: What a run says of an application with no test conversation.
+NO_TEST = "It has no test."
+
+
+def _judge_here(model: Optional[str]) -> Tuple[Any, str]:
+    """The judge of the worded tests on this machine: the model named, or the
+    one configured (`default_judge`); None when there is none."""
+    from agent_runtimes.evals.remote.evaluators import default_judge
+    from agent_runtimes.loop.apps import safety as _safety
+
+    if model:
+        return _safety.model_judge(model), model
+    return default_judge(), ""
+
+
+def _agent_here() -> Any:
+    """How the application's agent is built in this process: from its spec
+    (`local_agent`) when None; stood in for in tests."""
+    return None
+
+
+def _case_tests_of(
+    path: Path, report: Report, *, local: bool, judge: Optional[str] = None
+) -> bool:
+    """List, or run here, its test conversations with the checks on (LOOP V-08).
 
     Returns whether they were asked but not all run (exit 3).
     """
     import asyncio
 
-    from agent_runtimes.loop.apps import own
+    from agent_runtimes.loop.apps import own, validation
     from agent_runtimes.loop.apps.loading import AppNotRunnable
 
     try:
@@ -573,65 +631,132 @@ def _case_tests_of(path: Path, report: Report, *, local: bool) -> bool:
     except AppNotRunnable as refused:
         report.tests_says = " ".join(refused.problems)
         return True
-    cases = own.code_tests(application.spec)
+    cases = list(application.spec.tests.cases)
     listed = [
         {
             "name": case.code,
             "expect": case.expect,
             "ask": case.ask,
             "state": "",
+            "check": "",
             "says": "",
         }
         for case in cases
     ]
     if not cases:
-        report.tests_says = "Its code decides no test."
+        report.tests_says = NO_TEST
         return False
-    if not application.tests:
+    coded = own.code_tests(application.spec)
+    if coded and len(coded) == len(cases) and not application.tests:
+        # Every test is decided by an app.py this spec stands apart from.
         report.tests = listed
         report.tests_says = (
-            f"Its code's tests: {len(cases)}, decided by an app.py: validate the app.py "
-            "to run them; from this spec alone they are judged by their words."
+            f"Its tests: {len(cases)}, decided by an app.py: validate the app.py "
+            "to run them."
         )
         return False
     if not local:
         report.tests = listed
         report.tests_says = (
-            f"Its code's tests: {len(cases)}, not run. --local runs them here, "
-            "each decided by its code."
+            f"Its tests: {len(cases)}, not run. --local runs them here: each asked "
+            "of the application with its checks on, decided by its code (@app.test) "
+            "or by a judge (--judge <model>, or DATALAYER_AI_INFERENCE_URL)."
         )
         return False
+    judge_call, judge_model = (
+        _judge_here(judge) if len(coded) < len(cases) else (None, "")
+    )
     try:
         with _quiet():
-            results = asyncio.run(own.run_code_tests(application))
+            ran = asyncio.run(
+                validation.run_tests(
+                    application,
+                    judge=judge_call,
+                    model=judge_model,
+                    agent=_agent_here(),
+                )
+            )
     except AppNotRunnable as refused:
         report.tests = listed
-        report.tests_says = "Its code's tests: not run. " + " ".join(refused.problems)
+        report.tests_says = "Its tests: not run. " + " ".join(refused.problems)
         return True
     except Exception as refused:  # noqa: BLE001 - its agent cannot be built here
         said = str(refused).strip().splitlines()
         report.tests = listed
-        report.tests_says = (
-            "Its code's tests: not run. Its agent cannot be built here: "
-            + (said[0] if said else type(refused).__name__)
+        report.tests_says = "Its tests: not run. Its agent cannot be built here: " + (
+            said[0] if said else type(refused).__name__
         )
         return True
     report.tests = [
         {
-            "name": result.name,
+            "name": result.code,
             "expect": result.expect,
             "ask": result.ask,
             "state": result.state,
+            "check": result.check,
             "says": result.says,
         }
-        for result in results
+        for result in ran.cases
     ]
-    passed = sum(result.state == own.PASSED for result in results)
-    unrun = sum(result.state == own.NOT_RUN for result in results)
-    report.tests_says = f"Its code's tests: {passed} of {len(results)} passed." + (
-        f" {unrun} not run." if unrun else ""
+    report.tests_says = ran.says
+    report.validation = ran.as_dict()
+    return ran.not_run > 0
+
+
+def _attach_report(path: Path, report: Report, app_uid: str) -> bool:
+    """Hand the run's report to ai-agents, which keeps it against the saved
+    version the file is (LOOP V-08). Returns whether it was kept; what
+    refused it is said in `tests_says`."""
+    import httpx
+
+    from agent_runtimes.loop.apps import validation
+    from agent_runtimes.loop.apps.deployments import DeployRefused
+    from agent_runtimes.loop.apps.store import _canonical
+
+    store = _store()
+    try:
+        item = store.item(app_uid)
+    except (DeployRefused, httpx.HTTPError) as refused:
+        report.tests_says += f" Not attached: {refused}"
+        return False
+    if _canonical(read_document(path)) != _canonical(item.model.get("spec")):
+        report.tests_says += (
+            f" Not attached: {path} is not version {item.version} of {item.name}, "
+            f"the saved one: `loop apps push {path} --app {app_uid}` first."
+        )
+        return False
+    held = report.validation or {}
+    ran = validation.ValidationReport(
+        app=str(held.get("app") or ""),
+        name=str(held.get("name") or ""),
+        version=str(held.get("version") or ""),
+        cases=[
+            validation.CaseResult(
+                ask=str(case.get("ask") or ""),
+                expect=str(case.get("expect") or ""),
+                state=str(case.get("state") or ""),
+                check=str(case.get("check") or ""),
+                says=str(case.get("says") or ""),
+                answer=str(case.get("answer") or ""),
+                code=str(case.get("code") or ""),
+            )
+            for case in held.get("cases") or []
+        ],
+        checks=list(held.get("checks") or []),
+        unexecuted=list(held.get("unexecuted") or []),
+        where=str(held.get("where") or validation.HERE),
+        at=str(held.get("at") or ""),
     )
-    return unrun > 0
+    base_url = store.base.split("/api/spacer/v1")[0]
+    try:
+        validation.attach(
+            store.http, base_url, app_uid=app_uid, version=item.version, report=ran
+        )
+    except validation.AttachRefused as refused:
+        report.tests_says += f" Not attached: {refused}"
+        return False
+    report.tests_says += f" Attached to version {item.version} of {item.name}."
+    return True
 
 
 def _unsafe(report: Report) -> bool:
