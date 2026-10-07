@@ -638,6 +638,27 @@ connections declare before the application's agent is made, every later
 configure declares them too, and a missing one is refused in the sentence
 above, its agent with it.
 
+The browser launches the same way. The Studio's Preview and an
+application's hosted page, signed in, allocate its runtime through
+`useAgentRuntimes` with `appLaunch` — its Appspec, and the saved application
+and deployment when there are — which `DatalayerAgentBridge` reads from the
+payload its agent is created with (`appLaunchOf`). `createRuntime` sends
+them as `app_spec`, `app_uid` and `deployment_uid`, and refuses an
+application without its Appspec, or a deployment without its application,
+before asking anything. A preview of an application not saved yet sends its
+Appspec alone. An application's runtime is always its own: the hook never
+looks for a running one to reuse for it.
+
+**A runtime you attach to** (`loop apps run … --cloud -r <runtime>`) was not
+launched for the application, and secrets reach a runtime only when it is
+launched, from its companion. The application is still configured there: if
+the runtime holds every secret its connections need, it runs. If not, the
+configure refuses in the sentence above, and `loop` adds *runtime-9 was not
+launched for Web research: a runtime is given an application's secrets when
+it is launched for it. Run it without --runtime to launch one for it.* Without
+`-r`, `loop apps run --cloud` does not offer you a running runtime first, as
+`loop --cloud` does for an agent: it launches one for the application.
+
 Before it gives anything, the pod companion asks
 `POST /api/v1/agents/declared-secrets` (the spec's names, answered with names
 only) and passes on those of the account's secrets, no other; when the runtime

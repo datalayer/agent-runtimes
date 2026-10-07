@@ -932,6 +932,21 @@ def _attach(
     return back
 
 
+def attached_refusal(runtime_name: str, app_name: str) -> str:
+    """Why an application refused on a runtime it was attached to cannot be
+    set up there, and what to do (LOOP R-19).
+
+    Secrets reach a runtime once, from its companion, when it is launched:
+    a runtime launched for something else was given that one's, and nothing
+    can give it the application's afterwards.
+    """
+    return (
+        f"{runtime_name} was not launched for {app_name}: a runtime is given "
+        "an application's secrets when it is launched for it. Run it without "
+        "--runtime to launch one for it."
+    )
+
+
 def launch_cloud(
     agent_id: Optional[str],
     *,
@@ -958,7 +973,11 @@ def launch_cloud(
     ``app_spec`` is the Appspec of the application the runtime is launched
     for (`loop apps run --cloud`): sent with the launch, so the runtime is
     given the secrets its connections declare and a missing one is said
-    before the application is configured (LOOP R-19).
+    before the application is configured (LOOP R-19). A running runtime is
+    not offered for it: one not launched for the application was not given
+    its secrets. ``runtime`` still attaches to the one the person names; its
+    configure then declares the application's secrets and refuses, in a
+    sentence, one the runtime was not given (`attached_refusal`).
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
 
@@ -973,7 +992,7 @@ def launch_cloud(
         if back is None:
             raise CloudRefused(f"{named.runtime_name} is running but does not answer.")
         return back
-    if reconnect:
+    if reconnect and not app_spec:
         again = choose_running(offer.running, can_ask=asking)
         if again is not None:
             back = _attach(

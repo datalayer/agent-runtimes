@@ -1445,11 +1445,28 @@ def apps_run(
                 if cloud_launch
                 else base_url
             )
-        configured = (
-            configure_on(base_url, document, organization, a2a_url=public_url)
-            if a2a
-            else configure_on(base_url, document, organization)
-        )
+        try:
+            configured = (
+                configure_on(base_url, document, organization, a2a_url=public_url)
+                if a2a
+                else configure_on(base_url, document, organization)
+            )
+        except typer.BadParameter as refused:
+            if (
+                cloud_launch is None
+                or not cloud_launch.attached
+                or "this runtime was not given" not in refused.message
+            ):
+                raise
+            # A runtime attached to was not launched for the application: its
+            # secrets are given at launch only (R-19), so the remedy is a
+            # launch, not the account's secrets.
+            from agent_runtimes.loop.launch import attached_refusal
+
+            raise typer.BadParameter(
+                f"{refused.message} "
+                + attached_refusal(cloud_launch.runtime_name, application.name)
+            ) from None
         if a2a:
             _serve_over_a2a(application, configured, cloud_launch)
             return

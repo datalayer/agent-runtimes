@@ -297,6 +297,58 @@ def test_run_builds_an_app_py_and_runs_its_code_in_the_renderer(
     assert tux[2]["reload"] is None
 
 
+class _Attached:
+    """A runtime attached to with -r, as `launch_cloud` hands it back."""
+
+    attached = True
+    runtime_name = "runtime-9"
+    server_url = "http://127.0.0.1:5555"
+    ingress = "https://r1.example/runtime-9"
+
+
+@pytest.mark.parametrize(
+    ("refusal", "told"),
+    [
+        (
+            "Interview is not set up: the MCP server earthdata needs "
+            "EARTHDATA_TOKEN, which this runtime was not given: add it to the "
+            "account's secrets (or set it before a local run), then configure it again.",
+            True,
+        ),
+        ("Interview names a model this runtime cannot run.", False),
+    ],
+)
+def test_an_application_refused_on_a_runtime_attached_to_is_told_to_launch_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, refusal: str, told: bool
+) -> None:
+    """Its secrets are given at launch only (STUDIO R-19)."""
+    import typer
+
+    launched: List[Any] = []
+    monkeypatch.setattr(
+        "agent_runtimes.loop.launch.launch_cloud",
+        lambda *args, **kwargs: _kept(launched, kwargs, _Attached()),
+    )
+    monkeypatch.setattr(
+        "agent_runtimes.loop.launch.finish_cloud", lambda *args, **kwargs: None
+    )
+
+    def refuse(url: str, document: Any, organization: Any = None) -> Any:
+        raise typer.BadParameter(refusal)
+
+    monkeypatch.setattr(commands, "configure_on", refuse)
+    result = runner.invoke(
+        app, ["run", str(write(tmp_path)), "--cloud", "-r", "runtime-9"]
+    )
+    assert result.exit_code != 0
+    assert launched[0]["runtime"] == "runtime-9"
+    # Typer boxes its error: the words, without the box.
+    said = " ".join(result.output.replace("│", " ").split())
+    assert ("runtime-9 was not launched for" in said) is told
+    if told:
+        assert "Run it without --runtime to launch one for it." in said
+
+
 def test_a_spec_runs_as_before_and_watches_when_asked(
     tmp_path: Path, local_server: List[Any]
 ) -> None:

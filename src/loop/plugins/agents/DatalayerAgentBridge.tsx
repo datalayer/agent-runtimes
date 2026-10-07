@@ -32,6 +32,7 @@ import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 import { useAgentRuntimes } from '../../../hooks/useAgentRuntimes';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
+import { appLaunchOf } from './appLaunch';
 import { AGENTS_PLUGIN_NAME, type AgentsConfig } from './plugin';
 import { useOptionalSandboxService } from './useSandboxService';
 
@@ -105,9 +106,20 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     [agentSpecId, agentName, protocol, createPayload],
   );
 
+  /*
+   * The application the runtime is launched for (STUDIO R-19): its Appspec
+   * and where it runs, read from the payload its agent is created with — the
+   * Studio's Preview, the hosted page signed in. Sent with the launch, so the
+   * runtime is given the secrets its connections declare before its agent is
+   * made; without it, a connection needing a secret is refused on the
+   * runtime. A bare spec launches none.
+   */
+  const appLaunch = useMemo(() => appLaunchOf(createPayload), [createPayload]);
+
   const { runtime, status, error } = useAgentRuntimes({
     agentSpecId,
     agentConfig,
+    ...(appLaunch ? { appLaunch } : {}),
     variant: 'cloud-pydanticai',
     autoStart: onDatalayer && !already,
     autoCreateAgent: onDatalayer && !already,

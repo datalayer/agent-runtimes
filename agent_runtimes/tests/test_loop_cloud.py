@@ -319,6 +319,43 @@ def test_an_application_s_launch_carries_its_appspec(datalayer: FakeDatalayer) -
         started.relay.stop()
 
 
+def test_an_application_is_never_offered_a_running_runtime(
+    datalayer: FakeDatalayer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One not launched for the application was not given its secrets (R-19)."""
+    datalayer.running = [Running("runtime-9", "ai-agents-env")]
+    offered: List[Any] = []
+    monkeypatch.setattr(
+        launch,
+        "choose_running",
+        lambda running, can_ask: _kept(offered, running, None),
+    )
+    app = {"schema": "loop.app/v1", "id": "web-research"}
+    started = launch.launch_cloud(
+        "example-simple", can_ask=False, minutes=5, app_spec=app
+    )
+    try:
+        assert offered == [] and not started.attached
+        assert datalayer.created["app_spec"] == app
+    finally:
+        started.relay.stop()
+    # An agent alone is still offered the running one first (L-06).
+    started = launch.launch_cloud("crawler", can_ask=False, minutes=5)
+    try:
+        assert len(offered) == 1
+    finally:
+        started.relay.stop()
+
+
+def test_an_application_on_a_runtime_attached_to_is_told_to_launch_one() -> None:
+    said = launch.attached_refusal("runtime-9", "Web research")
+    assert said == (
+        "runtime-9 was not launched for Web research: a runtime is given an "
+        "application's secrets when it is launched for it. Run it without "
+        "--runtime to launch one for it."
+    )
+
+
 def test_refusals_launch_nothing(datalayer: FakeDatalayer) -> None:
     datalayer.credits = 0.0
     with pytest.raises(CloudRefused, match="No credits left"):

@@ -758,6 +758,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               givenName: runtimeOptions.givenName,
               capabilities: runtimeOptions.capabilities,
               snapshot: runtimeOptions.snapshot,
+              // The application it is launched for, with its Appspec (R-19).
+              appSpec: runtimeOptions.appSpec,
+              appUid: runtimeOptions.appUid,
+              deploymentUid: runtimeOptions.deploymentUid,
             });
             set({ status: 'connecting' });
             const jupyterBaseUrl = runtimeRecord.ingress;
