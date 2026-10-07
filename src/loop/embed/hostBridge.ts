@@ -260,3 +260,60 @@ export function hostUserRunProps(
     },
   };
 }
+
+/** A user token ai-agents signed, and when it ends (seconds since the epoch). */
+export type SignedUserToken = { token: string; exp: number };
+
+/**
+ * Asks ai-agents to sign the person signed in to Datalayer as a deployment's
+ * user (LOOP D-21; STUDIO A-18 to A-20), with their own token: what a
+ * surface that has no host server holding the deployment's secret — the
+ * VS Code extension, Jupyter AI Agents, Datalayer Desktop — sends as
+ * `forwardedProps.loop.user_token` with the runs of an application that
+ * says `user: signed`. HS256 with the deployment's secret, `sub` the
+ * person's uid, `name` theirs, fifteen minutes; refused (`403`) for an
+ * application's principal or a narrowed token, and for a person the
+ * deployment does not let in. Those surfaces share no code, so they copy
+ * it.
+ *
+ * @param aiAgentsUrl - The ai-agents service's base URL.
+ * @param deploymentUid - The deployment talked to.
+ * @param token - The person's Datalayer token.
+ * @param fetcher - What asks; `fetch` unless given.
+ *
+ * @returns The user token and when it ends.
+ *
+ * @throws With ai-agents' sentence when it refuses.
+ */
+export async function fetchUserToken(
+  aiAgentsUrl: string,
+  deploymentUid: string,
+  token: string,
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+): Promise<SignedUserToken> {
+  const url = `${aiAgentsUrl.replace(/\/+$/, '')}/api/ai-agents/v1/apps/deployments/${encodeURIComponent(deploymentUid)}/user-token`;
+  const response = await fetcher(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  let body: Record<string, unknown> = {};
+  try {
+    const read = await response.json();
+    body =
+      read && typeof read === 'object' ? (read as Record<string, unknown>) : {};
+  } catch {
+    // The status says it.
+  }
+  if (!response.ok) {
+    const detail = typeof body.detail === 'string' ? body.detail : '';
+    throw new Error(
+      detail || `ai-agents refused to sign you (${response.status}).`,
+    );
+  }
+  const signed = typeof body.user_token === 'string' ? body.user_token : '';
+  const exp = Number(body.exp);
+  if (!signed || !Number.isFinite(exp)) {
+    throw new Error('ai-agents answered no user token.');
+  }
+  return { token: signed, exp };
+}

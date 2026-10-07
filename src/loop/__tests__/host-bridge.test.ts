@@ -23,6 +23,7 @@ import {
   hostUserRunProps,
   signedUser,
   type AppEmbedHost,
+  fetchUserToken,
 } from '../embed/hostBridge';
 
 const HOST = {
@@ -324,5 +325,35 @@ describe('who its user is (D-21)', () => {
     ).toContain(
       '“verified” is not how the host’s user is taken: claimed or signed.',
     );
+  });
+});
+
+describe('fetchUserToken (D-21; STUDIO A-18 to A-20)', () => {
+  it('asks ai-agents to sign the person, with their own token, and says its refusal', async () => {
+    const fetcher = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response(JSON.stringify({ user_token: 'u.t.k', exp: 2000 }), {
+          status: 200,
+        }),
+    );
+    await expect(
+      fetchUserToken('https://r1.datalayer.run/', 'd 1', 'tok', fetcher),
+    ).resolves.toEqual({ token: 'u.t.k', exp: 2000 });
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/d%201/user-token',
+      { method: 'POST', headers: { Authorization: 'Bearer tok' } },
+    );
+    const refusing = async () =>
+      new Response(
+        JSON.stringify({ detail: 'Only a person is signed as themselves.' }),
+        { status: 403 },
+      );
+    await expect(
+      fetchUserToken('https://r1', 'd', 'tok', refusing),
+    ).rejects.toThrow('Only a person is signed as themselves.');
+    const empty = async () => new Response('{}', { status: 200 });
+    await expect(
+      fetchUserToken('https://r1', 'd', 'tok', empty),
+    ).rejects.toThrow('ai-agents answered no user token.');
   });
 });
