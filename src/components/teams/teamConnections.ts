@@ -16,7 +16,7 @@ import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { SERVER_ACTIONS } from '../../specs/actions';
 import type { AppSpec } from '../../types/agentspecs';
 import { connectionOfTool, type A2ATeamConnection } from './a2aTeamFlow';
-import type { ToolClass } from '../inspector/agentInspector';
+import type { ToolClass } from '../inspector/agentSpans';
 
 /** A server reference without its version: `odoo-accounting:0.0.1` is `odoo-accounting`. */
 const idOf = (ref: string): string => {
@@ -60,7 +60,7 @@ export function teamConnectionsOf(
 }
 
 /**
- * Where a member's tool call comes from, for the Agent Inspector: a call to
+ * Where a member's tool call comes from, for its span: a call to
  * one of its connections is an MCP call, with the server's mark; any other
  * is `fallback`'s (`classifyToolCall`, by the catalogues) or a tool its
  * runtime runs (`write_notebook`).
@@ -73,11 +73,11 @@ export function teamToolClassifier(
     const connection = connectionOfTool(name, connections);
     if (connection) {
       return {
-        source: 'mcp',
+        kind: 'mcp',
         ...(connection.icon ? { icon: connection.icon } : {}),
         ...(connection.emoji ? { emoji: connection.emoji } : {}),
       };
     }
-    return fallback?.(name, args) ?? { source: 'backend-tool' };
+    return fallback?.(name, args) ?? { kind: 'runtime' };
   };
 }

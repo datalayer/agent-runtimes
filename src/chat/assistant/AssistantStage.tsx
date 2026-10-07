@@ -73,7 +73,7 @@ import {
   opensContextMenu,
   type AssistantMenuItem,
 } from './AssistantContextMenu';
-import type { AgentInspectorSink } from '../../components/inspector/agentInspector';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import type { AssistantSandbox } from './assistantDetails';
 import {
   BalloonExpandContext,
@@ -606,9 +606,9 @@ export interface AssistantStageProps {
    */
   suggestions?: readonly BalloonSuggestion[];
   onSuggestion?: (suggestion: BalloonSuggestion) => void;
-  /** The Agent Inspector's sink: its menu offers *Inspect the agent…*. */
-  inspector?: AgentInspectorSink | null;
-  /** The agent whose own record the inspector shows, of a shared sink (a team's member). */
+  /** The Agent Inspector's tracer: its menu offers *Inspect the agent…*. */
+  inspector?: OtelLiveTracer | null;
+  /** The agent whose own spans the inspector shows, of a shared tracer (a team's member). */
   inspectAgent?: string;
   /**
    * What its menu calls the conversation's entry, which does `onToggle`;
@@ -1188,7 +1188,7 @@ export function AssistantStage({
       {inspecting && (
         <Suspense fallback={null}>
           <AgentInspectorDialog
-            sink={inspector ?? null}
+            tracer={inspector ?? null}
             agent={inspectAgent}
             title={`${about?.name ?? name} \u00b7 Agent Inspector`}
             onClose={() => {

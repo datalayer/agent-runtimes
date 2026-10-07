@@ -90,7 +90,8 @@ export type ConnectA2APeerOptions = {
   key?: string;
   /**
    * The fetch to use, for tests and hosts that wrap the network — such as
-   * the Agent Inspector's `inspectA2AFetch`, which records the traffic.
+   * the Agent Inspector's `traceA2AFetch`, which records the traffic as
+   * OpenTelemetry spans.
    */
   fetch?: typeof globalThis.fetch;
 };

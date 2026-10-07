@@ -14,7 +14,7 @@ import type { ComponentType, ReactNode } from 'react';
 import type { ICollaborationProvider } from '@datalayer/jupyter-react';
 import type { ChatMessage, MessageHandler } from './messages';
 import type { Protocol, ProtocolConfig } from './protocol';
-import type { AgentInspectorSink } from '../components/inspector/agentInspector';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import type { McpServerSelection } from './inference';
 import type { MCPServerTool } from './mcp';
 import type { AgentRuntimeConfig } from './config';
@@ -1601,11 +1601,12 @@ export interface ChatBaseProps {
   onToolCallComplete?: (context: ToolCallCompleteContext) => void;
 
   /**
-   * The Agent Inspector's sink: the agent's turns (its model, its tokens)
-   * and its tool calls, from start to end, are recorded there. Without it,
-   * the sink of the nearest `AgentInspectorProvider`, if any.
+   * The Agent Inspector's tracer: the agent's turns (`invoke_agent` spans:
+   * its model, its tokens) and its tool calls (`execute_tool` spans), from
+   * start to end, are recorded there. Without it, the tracer of the nearest
+   * `AgentInspectorProvider`, if any.
    */
-  inspector?: AgentInspectorSink | null;
+  inspector?: OtelLiveTracer | null;
 
   // ============ Tool Approval Banner ============
 

@@ -64,7 +64,7 @@ import type { AssistantMenuItem } from '../../chat/assistant/AssistantContextMen
 import type { AssistantSandbox } from '../../chat/assistant/assistantDetails';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { teamNotebookKernel } from './teamNotebookKernel';
-import type { AgentInspectorSink } from '../inspector/agentInspector';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import { SpecMark } from '../../chat/marks/SpecMark';
 import {
   toolWords,
@@ -122,10 +122,10 @@ export type A2ATeamGraphMember = {
   suggestions?: readonly BalloonSuggestion[];
   onSuggestion?: (suggestion: BalloonSuggestion) => void;
   /**
-   * The team's Agent Inspector: its menu offers *Inspect the agent…*, its
-   * own record (what it did, and the A2A messages it sent or received).
+   * The team's Agent Inspector's tracer: its menu offers *Inspect the
+   * agent…*, its own spans (what it did, and the A2A requests sent to it).
    */
-  inspector?: AgentInspectorSink | null;
+  inspector?: OtelLiveTracer | null;
   /** Stops its turn, from its menu, while it works. */
   onStop?: () => void;
   /** What its menu's *About* and *Agent Details…* say. */

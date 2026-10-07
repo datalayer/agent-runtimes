@@ -16,7 +16,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useAgentInspector } from '../components/inspector/agentInspector';
+import { useAgentInspector } from '../components/inspector/agentSpans';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { Button, Heading, Text, ToggleSwitch } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
@@ -133,7 +133,7 @@ const AssistantExample: React.FC = () => {
   // How the balloon shows the conversation (T-23): history, or current.
   const [balloon, setBalloon] = useState<BalloonDisplay>('history');
   // What the agent does, for the menu's *Inspect the agent…*.
-  const { sink: inspector } = useAgentInspector();
+  const { tracer: inspector } = useAgentInspector();
   // Pixel, the test sprite, read once through the clippy.js reader.
   const [pixel, setPixel] = useState<AssistantCharacterData>();
   useEffect(() => {

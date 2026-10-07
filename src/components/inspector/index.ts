@@ -4,17 +4,17 @@
  */
 
 /**
- * The Agent Inspector: what agents do — A2A traffic, MCP calls, skills,
- * frontend and backend tools, model turns, approvals — recorded into a sink
- * and drawn as rows that unfold to their payloads.
+ * The Agent Inspector: what agents do — model turns, tool calls (MCP,
+ * frontend, skills, codemode, runtime), A2A requests and what came back —
+ * recorded as OpenTelemetry spans in the page's tracer (core's
+ * `createOtelLiveTracer`) and drawn by core's OTEL view (`OtelLiveSpans`).
  *
  * @module components/inspector
  */
 
-export * from './agentInspector';
+export * from './agentSpans';
 export * from './classify';
-export * from './chatInspect';
-export * from './a2aInspect';
-export * from './JsonTree';
+export * from './chatSpans';
+export * from './a2aSpans';
 export * from './AgentInspector';
 export * from './AgentInspectorDialog';

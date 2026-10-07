@@ -104,7 +104,7 @@ import {
   useChatKeyboardShortcuts,
   getShortcutDisplay,
 } from '@datalayer/core/lib/hooks';
-import type { AgentInspectorSink } from '../components/inspector/agentInspector';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import type { AssistantMenuItem } from './assistant/AssistantContextMenu';
 import type { AssistantAbout } from './assistant/AssistantStage';
 import {
@@ -301,10 +301,11 @@ export interface ChatFloatingProps extends ChatCommonProps {
   conversation?: FloatingConversation;
 
   /**
-   * The Agent Inspector's sink: the chat records its agent's turns and tool
-   * calls there, and the assistant's menu offers *Inspect the agent…*.
+   * The Agent Inspector's tracer: the chat records its agent's turns and
+   * tool calls there as spans, and the assistant's menu offers *Inspect the
+   * agent…*.
    */
-  inspector?: AgentInspectorSink | null;
+  inspector?: OtelLiveTracer | null;
   /** The balloon's display, changed from the assistant's menu. */
   onBalloonDisplayChange?: (display: BalloonDisplay) => void;
   /** Opens the host's character picker, from the assistant's menu. */

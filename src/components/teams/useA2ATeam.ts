@@ -21,10 +21,11 @@
  * peer calls on its connections (its MCP servers), told over A2A as it calls
  * them, are kept as the calls running now ({@link callsAfter}).
  *
- * Given an Agent Inspector's sink (`inspector`), the entry's turns (its
- * model, its tokens), its call to the peer, and what the peer's events were
- * made of are recorded there; the A2A traffic itself is recorded by the
- * peer's fetch (`connectA2APeer`'s `inspect`).
+ * Given the Agent Inspector's tracer (`inspector`), the entry's turns (an
+ * `invoke_agent` span: its model, its tokens) and its call to the peer (an
+ * `execute_tool` span under it) are recorded there as OpenTelemetry spans;
+ * the A2A traffic itself, under that call, is recorded by the peer's fetch
+ * (`traceA2AFetch`).
  *
  * What `A2ATeamGraph` draws, and what a page's composer sends.
  *
@@ -48,7 +49,16 @@ import {
   type A2APeerEvent,
 } from '../../runtimes/browser/a2aPeer';
 import type { AppSpec } from '../../types/agentspecs';
-import type { AgentInspectorSink } from '../inspector/agentInspector';
+import type {
+  OtelLiveSpan,
+  OtelLiveTracer,
+} from '@datalayer/core/lib/otel/live';
+import {
+  endAgentTurn,
+  endToolCall,
+  startAgentTurn,
+  startToolCall,
+} from '../inspector/agentSpans';
 import {
   callsAfter,
   flowAfter,
@@ -147,10 +157,10 @@ export type UseA2ATeamOptions = {
    */
   accept?: readonly string[];
   /**
-   * The Agent Inspector's sink: the entry's turns and its call to the peer
-   * are recorded there, and what the peer's events were made of.
+   * The Agent Inspector's tracer: the entry's turns and its call to the
+   * peer are recorded there as spans.
    */
-  inspector?: AgentInspectorSink | null;
+  inspector?: OtelLiveTracer | null;
 };
 
 export type A2ATeam = {
@@ -260,7 +270,6 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   );
   const [busy, setBusy] = useState(false);
   const history = useRef<ModelMessage[]>([]);
-  const turnCount = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const flowTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -269,8 +278,6 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   // What the peer does, as it does it: its own state and balloon, and the link.
   const onPeerEvent = useCallback(
     (event: A2APeerEvent) => {
-      // Linked to the A2A entry it came from (the capture's linker).
-      inspector?.note(event);
       const next = flowAfter(event);
       clearTimeout(flowTimer.current);
       setFlow(next.flow);
@@ -356,7 +363,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       }
     },
-    [peerApp.id, peerConnections, inspector, tell, toolCalled],
+    [peerApp.id, peerConnections, tell, toolCalled],
   );
 
   const agent = useMemo(() => {
@@ -397,19 +404,16 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       history.current = [...history.current, { role: 'user', content: asked }];
       abort.current = new AbortController();
       let said = '';
-      // The turn, in the inspector: the entry's model, from the question to
-      // the answer, and its tokens.
-      turnCount.current += 1;
-      const turnKey = `turn:${entry.id}:${turnCount.current}`;
-      inspector?.start({
-        key: turnKey,
-        actor: entry.name,
-        source: 'model',
-        kind: 'turn',
-        name: entry.model || undefined,
-        summary: balloonLine(asked, 160),
-        payload: { prompt: asked, model: entry.model || undefined },
-      });
+      // The turn, as a span: the entry's model, from the question to the
+      // answer, and its tokens; its calls to the peer under it.
+      const turnSpan = inspector
+        ? startAgentTurn(inspector, {
+            agent: entry.name,
+            prompt: asked,
+            model: entry.model || undefined,
+          })
+        : undefined;
+      const toolSpans = new Map<string, OtelLiveSpan>();
       try {
         const result = await agent.stream({
           messages: history.current,
@@ -421,15 +425,19 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               (part.input as { request?: string } | undefined)?.request ?? '',
             );
             // Its tool runs here, in the page, and asks the peer over A2A.
-            inspector?.start({
-              key: `tool:${part.toolCallId}`,
-              actor: entry.name,
-              source: 'frontend-tool',
-              kind: 'tool-call',
-              name: askTool,
-              summary: balloonLine(request, 160),
-              payload: part.input,
-            });
+            if (inspector && turnSpan) {
+              toolSpans.set(
+                part.toolCallId,
+                startToolCall(inspector, {
+                  agent: entry.name,
+                  name: askTool,
+                  id: part.toolCallId,
+                  args: part.input,
+                  tool: { kind: 'frontend' },
+                  parent: turnSpan.context,
+                }),
+              );
+            }
             setEntryPersona(prev => ({
               ...prev,
               state: 'waiting',
@@ -447,10 +455,14 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
             }));
           } else if (part.type === 'tool-result' && part.toolName === askTool) {
             const output = part.output as { error?: string } | undefined;
-            inspector?.end(`tool:${part.toolCallId}`, {
-              result: part.output,
-              ...(output?.error ? { error: String(output.error) } : {}),
-            });
+            const toolSpan = toolSpans.get(part.toolCallId);
+            if (toolSpan) {
+              toolSpans.delete(part.toolCallId);
+              endToolCall(toolSpan, {
+                result: part.output,
+                ...(output?.error ? { error: String(output.error) } : {}),
+              });
+            }
             setEntryPersona(prev => ({
               ...prev,
               state: 'thinking',
@@ -472,13 +484,16 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               tool: undefined,
             }));
           } else if (part.type === 'tool-error' && part.toolName === askTool) {
-            inspector?.end(`tool:${part.toolCallId}`, {
-              status: 'failed',
-              error:
-                part.error instanceof Error
-                  ? part.error.message
-                  : String(part.error),
-            });
+            const toolSpan = toolSpans.get(part.toolCallId);
+            if (toolSpan) {
+              toolSpans.delete(part.toolCallId);
+              endToolCall(toolSpan, {
+                error:
+                  part.error instanceof Error
+                    ? part.error.message
+                    : String(part.error),
+              });
+            }
             setEntryPersona(prev => ({
               ...prev,
               state: 'thinking',
@@ -494,16 +509,11 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           ...history.current,
           { role: 'assistant', content: said },
         ];
-        if (inspector) {
+        if (turnSpan) {
           const usage = await Promise.resolve(result.totalUsage).catch(
             () => undefined,
           );
-          inspector.end(turnKey, {
-            result: { text: said, ...(usage ? { usage } : {}) },
-            summary: `${balloonLine(asked, 60)} → ${balloonLine(said, 80)}${
-              usage?.totalTokens ? ` · ${usage.totalTokens} tokens` : ''
-            }`,
-          });
+          endAgentTurn(turnSpan, { text: said, usage });
         }
         setTurns(prev => [...prev, { role: 'assistant', text: said }]);
         setEntryPersona(prev => ({
@@ -514,7 +524,12 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        inspector?.end(turnKey, { status: 'failed', error: message });
+        toolSpans.forEach(toolSpan =>
+          endToolCall(toolSpan, { error: message }),
+        );
+        if (turnSpan) {
+          endAgentTurn(turnSpan, { error: message });
+        }
         setTurns(prev => [
           ...prev,
           { role: 'assistant', text: `Something went wrong: ${message}` },

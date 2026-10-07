@@ -133,11 +133,11 @@ const EphemeralDocument = React.lazy(() =>
 );
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
-import { useAgentInspectorSink } from '../../components/inspector/agentInspector';
+import { useAgentInspectorTracer } from '../../components/inspector/agentSpans';
 import {
-  chatInspectorRecorder,
-  type ChatInspectorRecorder,
-} from '../../components/inspector/chatInspect';
+  chatSpanRecorder,
+  type ChatSpanRecorder,
+} from '../../components/inspector/chatSpans';
 import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 import { loopStepOf, withLoopStep } from './loopStep';
 import { applyLoopElement, loopElementChange } from './loopElement';
@@ -2274,21 +2274,21 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
-  // The Agent Inspector: the turns and tool calls, recorded as they happen.
-  const inspectorFromContext = useAgentInspectorSink();
-  const inspectorSink = inspectorGiven ?? inspectorFromContext;
+  // The Agent Inspector: the turns and tool calls, as spans, as they happen.
+  const inspectorFromContext = useAgentInspectorTracer();
+  const inspectorTracer = inspectorGiven ?? inspectorFromContext;
   const inspectorActorRef = useRef('Agent');
   inspectorActorRef.current =
     (typeof title === 'string' && title) || activeAgentId || 'Agent';
   const recorderRef = useRef<{
-    sink: unknown;
-    recorder: ChatInspectorRecorder;
+    tracer: unknown;
+    recorder: ChatSpanRecorder;
   } | null>(null);
-  if (inspectorSink && recorderRef.current?.sink !== inspectorSink) {
+  if (inspectorTracer && recorderRef.current?.tracer !== inspectorTracer) {
     recorderRef.current = {
-      sink: inspectorSink,
-      recorder: chatInspectorRecorder(
-        inspectorSink,
+      tracer: inspectorTracer,
+      recorder: chatSpanRecorder(
+        inspectorTracer,
         () => inspectorActorRef.current,
         {
           frontendTools: () =>
@@ -2296,7 +2296,7 @@ function ChatBaseInner({
         },
       ),
     };
-  } else if (!inspectorSink) {
+  } else if (!inspectorTracer) {
     recorderRef.current = null;
   }
   const inspectAnswerRef = useRef('');

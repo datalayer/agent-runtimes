@@ -24,15 +24,16 @@
  * list_invoices…" while Accounting calls Odoo. Then the report appears. The
  * page's own state is `useA2ATeam`'s, which the landing's home page runs too.
  *
- * Under the graph, each member has its own Agent Inspector: Sales' — its
- * model turns, its `ask_accounting` call, the A2A messages it sends and
- * receives — and Accounting's — what it received over A2A, its Odoo MCP
- * calls, `write_notebook`, its status updates and artifacts, as the A2A
- * stream tells them. Both read one record (`useAgentInspector`), fed by the
- * team (`useA2ATeam`'s `inspector`) and by the fetch the A2A client sends
- * with (`inspectA2AFetch`); an A2A message shows in both, sent in one and
- * received in the other. Right-click a member for its menu: *Inspect the
- * agent…* opens its inspector over the page.
+ * Under the graph, each member has its own Agent Inspector, core's OTEL
+ * view of the page's OpenTelemetry spans: Sales' — its model turns
+ * (`invoke_agent`), its `ask_accounting` call (`execute_tool`), the A2A
+ * requests it sends and what came back, event by event — and Accounting's —
+ * the A2A requests sent to it (`peer.service`), its Odoo MCP calls,
+ * `write_notebook`, as the A2A stream tells them. Both read one tracer
+ * (`useAgentInspector`), fed by the team (`useA2ATeam`'s `inspector`) and by
+ * the fetch the A2A client sends with (`traceA2AFetch`); an A2A request
+ * shows in both. Right-click a member for its menu: *Inspect the agent…*
+ * opens its inspector over the page.
  *
  * Sales' suggestions — its Appspec's starters — are chips in its balloon
  * while it waits for a question: one clicked is asked, as if typed.
@@ -81,7 +82,7 @@ import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_1 } from '../specs/apps';
 import {
   AgentInspector,
   classifyToolCall,
-  inspectA2AFetch,
+  traceA2AFetch,
   useAgentInspector,
 } from '../components/inspector';
 import { SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 } from '../specs/teams/teams';
@@ -127,8 +128,8 @@ function AgentA2ATeam(): JSX.Element {
       accountingKeyClock.expiresAt <= Date.now(),
   );
 
-  // One record of what both members do, each inspector showing its own.
-  const { sink: inspector } = useAgentInspector();
+  // One tracer of what both members do, each inspector showing its own.
+  const { tracer: inspector } = useAgentInspector();
   const [peer, setPeer] = useState<A2APeer | null>(null);
   const [peerError, setPeerError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -143,9 +144,9 @@ function AgentA2ATeam(): JSX.Element {
     connectA2APeer({
       url: accountingUrl,
       key: accountingKey,
-      // The A2A traffic, recorded: Sales sends, Accounting answers.
-      fetch: inspectA2AFetch(globalThis.fetch.bind(globalThis), {
-        sink: inspector,
+      // The A2A traffic, as spans: Sales sends, Accounting answers.
+      fetch: traceA2AFetch(globalThis.fetch.bind(globalThis), {
+        tracer: inspector,
         asker: SALES.name,
         peer: ACCOUNTING.name,
         classifyTool: teamToolClassifier(
@@ -367,14 +368,15 @@ function AgentA2ATeam(): JSX.Element {
               {member.emoji} {member.name}&rsquo;s Agent Inspector
             </Heading>
             <AgentInspector
-              sink={inspector}
+              tracer={inspector}
               agent={member.name}
+              compact
               maxHeight={360}
               exportName={`agent-inspector-${member.id}`}
               emptyText={
                 member === SALES
-                  ? 'Its model turns, its call to Accounting and the A2A messages it sends and receives show here.'
-                  : 'What it receives over A2A, its Odoo MCP calls and what it sends back show here.'
+                  ? 'Its model turns, its call to Accounting and the A2A requests it sends, with what came back, show here.'
+                  : 'The A2A requests sent to it, its Odoo MCP calls and what it sends back show here.'
               }
             />
           </Box>

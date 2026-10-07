@@ -19,7 +19,8 @@ import {
   assistantMenuItems,
   type AssistantStageProps,
 } from '../assistant/AssistantStage';
-import { createAgentInspector } from '../../components/inspector/agentInspector';
+import { createOtelLiveTracer } from '@datalayer/core/lib/otel/live';
+import { startAgentTurn } from '../../components/inspector/agentSpans';
 
 vi.stubGlobal(
   'ResizeObserver',
@@ -257,13 +258,8 @@ describe('its entries', () => {
 
 describe('Inspect the agent…', () => {
   it('opens the Agent Inspector over the page; Esc closes it', async () => {
-    const inspector = createAgentInspector();
-    inspector.push({
-      actor: 'Clip',
-      source: 'model',
-      kind: 'turn',
-      summary: 'a turn',
-    });
+    const inspector = createOtelLiveTracer();
+    startAgentTurn(inspector, { agent: 'Clip', prompt: 'a turn' }).end();
     await render({ inspector });
     await act(async () => {
       character().dispatchEvent(
@@ -277,7 +273,9 @@ describe('Inspect the agent…', () => {
     });
     await vi.waitFor(() =>
       expect(
-        document.querySelector('[role="dialog"] [data-inspector-entry]'),
+        document.querySelector(
+          '[role="dialog"] [data-otel-span-name="invoke_agent Clip"]',
+        ),
       ).not.toBeNull(),
     );
     await wait();

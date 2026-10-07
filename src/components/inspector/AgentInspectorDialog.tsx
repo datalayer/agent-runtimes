@@ -5,8 +5,8 @@
 
 /**
  * The Agent Inspector over the page: a large dialog, the inspector loaded
- * only when it opens, fed by the sink the agent's chat or team feeds. Esc
- * closes it.
+ * only when it opens, drawing the spans the agent's chat or team records
+ * into its tracer. Esc closes it.
  *
  * @module components/inspector/AgentInspectorDialog
  */
@@ -15,21 +15,21 @@ import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { Dialog } from '@primer/react';
 import { Text } from '@primer/react';
-import type { AgentInspectorSink } from './agentInspector';
+import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 
 const AgentInspector = lazy(() => import('./AgentInspector'));
 
 export type AgentInspectorDialogProps = {
-  sink: AgentInspectorSink | null;
+  tracer: OtelLiveTracer | null;
   /** The dialog's title. */
   title?: string;
-  /** One agent's own record (`AgentInspector`'s `agent`); all of it without. */
+  /** One agent's own spans (`AgentInspector`'s `agent`); all of them without. */
   agent?: string;
   onClose: () => void;
 };
 
 export function AgentInspectorDialog({
-  sink,
+  tracer,
   title = 'Agent Inspector',
   agent,
   onClose,
@@ -48,7 +48,7 @@ export function AgentInspectorDialog({
         }
       >
         <AgentInspector
-          sink={sink}
+          tracer={tracer}
           agent={agent}
           maxHeight="calc(80vh - 140px)"
           emptyText="Nothing recorded yet: what the agent does shows here as it does it."
