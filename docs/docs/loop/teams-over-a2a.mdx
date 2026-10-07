@@ -139,6 +139,51 @@ The example shows it: the box above the inspectors is a `SceneView`, its
 graph as before, its transcript read from the same tracer. Tests: a
 scripted scene gives the expected lines (`sceneTranscript.test.tsx`).
 
+## Rehearsal
+
+A scene spec's `rehearsal` (agentspecs `scenes/`, LOOP A-14) says, per
+beat, the shape the transcript must take — in the grammar above, `You →
+Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
+`Accounting: a table`, `Sales: words` — the words the answer must and must
+not hold, and the time the beat may take. `loop scenes rehearse <scene>`
+plays each beat's cue through the scene and judges it:
+
+- **The stage** (`agent_runtimes.loop.scenes.stage`): the entry's application
+  runs in this process as `loop apps run` runs one (`AppHost`, its agent from
+  `local_agent` or one a test gives), with a tool per member it talks to,
+  `ask_<member>`, declared as a tool of its own that reads. The ask is an A2A
+  request: to the member in this process (a session of its own) or, with
+  `--cloud`, to the member served over A2A on a cloud runtime of its own, as
+  `serve_accounting.py` serves Accounting, asked with a key granted to its
+  route (`--key <member>=<key>`), its tool calls read off the working
+  statuses of the stream as `askA2APeer` reads them.
+- **One grammar**: what happens is recorded as the spans the Agent Inspector
+  reads (`invoke_agent`, `execute_tool`, `a2a`, each with the attributes
+  above) and read back by `agent_runtimes.loop.scenes.transcript`, the Python
+  twin of `sceneTranscript.ts` — `transcript_of_spans`, `transcript_of_record`,
+  `line_text`, `transcript_text`. Both are held to one fixture,
+  `agent_runtimes/tests/fixtures/scene_transcript.json` (the scripted scene,
+  what is still happening and what failed, a tool of no connection, the
+  same answer said once), read by `sceneTranscriptFixture.test.ts` and
+  `test_scenes_transcript.py`.
+- **The verdict** (`agent_runtimes.loop.scenes.rehearsal`): the expected lines
+  found in the transcript in order (a member by its id or its shown name, a
+  system by its id, server or `as`; a detail as a pattern or words; *a
+  table* read off the answer), `must_say` / `must_not_say` on the entry's
+  answer, `within` on the time; each beat **passed**, **failed** with what
+  differed, or **not run** with why — a member whose setup is incomplete
+  leaves the beats that need it not run with its sentence. A scene with a
+  recording and no live run says its recording stands. Exit codes are `loop
+  apps validate`'s (1 failed, 3 not run); a scene whose every beat passed is
+  *Live*.
+
+`loop scenes ls` lists the catalogue: each scene's face, members (where each
+runs, whom it asks, what it reaches), beats, setup, and whether it was
+verified live. The whole is on the [CLI page](/cli#a-scenes-rehearsal); the
+tests are `test_scenes_rehearse.py` (a scripted scene: fake members answering
+fixed lines, to a pass, a fail and a not run; the command's words and exit
+codes).
+
 ## The application asked: fasta2a on the runtime
 
 A runtime serves an application over A2A when it is configured with `a2a`:

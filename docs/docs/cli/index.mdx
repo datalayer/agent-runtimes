@@ -321,6 +321,66 @@ app.yaml  Passes the instant checks
 
 Exit codes: `1` when the application is not ready or a safety test did not hold (an answer that never came counts as not holding), `2` with `--strict` when something needs attention, and `3` when the safety set was asked for but not judged (no judge, a launch you declined, or a run that could not start).
 
+### A scene's rehearsal
+
+A scene (`agentspecs.scenes`, `loop.scene/v1`) stages a team and says what
+happens on stage: its cast with their personas, its setting, its script of
+beats — each a cue the audience may say — and its **rehearsal**: for each
+beat, the shape its transcript must take, in the transcript's own grammar
+(`You → Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
+`Accounting: a table`, `Sales: words`), the words the answer must and must
+not hold (`must_say`, `must_not_say`), and the time it may take (`within`).
+
+```bash
+loop scenes ls                                   # the catalogue: faces, members, setup, Live or not
+loop scenes rehearse sales-and-accounting        # every beat, here, in this process
+loop scenes rehearse sales-and-accounting --beat open-invoices
+loop scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # every runtime member on a cloud runtime, over A2A
+loop scenes rehearse scenes/my-scene.yaml --json
+```
+
+`rehearse` plays each beat's cue through the scene the way `loop apps run`
+runs one application: the entry's application in this process, with a tool
+per member it talks to (`ask_accounting`, declared as a tool of its own that
+reads, so its rules let it through) that asks that member — in this process
+too, a session of its own, or over A2A where it is served. With `--cloud`,
+every member that runs on a runtime gets a cloud runtime of its own,
+configured with its application and served over A2A as `serve_accounting.py`
+does; its route answers a key granted to it, given as `--key <member>=<key>`
+or `DATALAYER_SCENE_KEY_<MEMBER>` (`examples/sales-accounting-a2a/make_temp_key.py`).
+What happens is recorded as the spans the Agent Inspector reads and read
+back as the transcript by the one grammar (`agent_runtimes.loop.scenes.transcript`,
+the Python twin of the page's `sceneTranscript.ts`, both held to one fixture),
+then compared to the beat's expected lines in order — other lines may come
+between them; a member is named by its id or the name it is shown under, a
+system by its id, its server or what it is shown as; a detail is a pattern or
+words; *a table* is read off the answer — then `must_say` and `must_not_say`
+on the entry's answer, and `within` on the time the beat took.
+
+Each beat gets a verdict in the words of the Validate tab: **passed**,
+**failed** with what differed, or **not run** with why. A member whose setup
+is incomplete — its agent cannot be built here, its runtime refused it or
+says what it needs, no key for its route — makes the beats that need it *not
+run* with that sentence; nothing crashes. A scene with a recording and no
+live run says its recording stands.
+
+```text
+🤝  Sales & Accounting (sales-and-accounting), rehearsed on this machine
+  ✓ open-invoices: passed (14 s)
+      You → Sales: Which customer invoices are still open, and how much is due in total?
+      Sales → Accounting: Which customer invoices are still open, and how much is due in total?
+      Accounting → Odoo: odoo_accounting_list_invoices
+      Accounting: | Customer | Invoice | Due | …
+      Sales: Accounting answered: …
+  ✗ aged-receivables: failed (9 s) — Expected “Accounting → Odoo: odoo_accounting_aged_balance” after “Sales → Accounting”; the transcript went on: “Accounting: The books hold no aged balance.”. It did not say “days”.
+  · trial-balance: not run — Accounting is not set up: The MCP server odoo-accounting needs DATALAYER_ODOO_URL.
+  Rehearsal: 1 of 3 beats passed. 1 failed. 1 not run. The scene is not Live.
+```
+
+Exit codes are `loop apps validate`'s: `1` when a beat failed, `3` when one
+was not run, `0` when every beat passed — a scene whose rehearsal passed is
+*Live*. With `--json` the verdict is printed whole.
+
 ### Connect to a Remote Server
 
 Use the `connect` subcommand to attach to an existing server:

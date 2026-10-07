@@ -84,6 +84,7 @@ from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
 from agent_runtimes.commands.sandboxes import app as sandboxes_app
+from agent_runtimes.commands.scenes import app as scenes_app
 from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.serve import (
     LogLevel,
@@ -522,6 +523,7 @@ app.add_typer(snapshots_app)
 app.add_typer(ray_app)
 app.add_typer(schedules_app)
 app.add_typer(apps_app)
+app.add_typer(scenes_app)
 app.command("events-list")(events_list)
 app.command("event-ls")(events_ls)
 app.command("events-ls")(events_ls)
