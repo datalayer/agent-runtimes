@@ -85,12 +85,18 @@ export const EARTHDATA_MCP_SERVER_0_0_1: MCPServer = {
   emoji: '🌍',
   url: '',
   command: 'npx',
-  args: ['-y', 'earthdata-mcp-server'],
+  args: [
+    '-y',
+    'mcp-remote',
+    'https://mcp.datalayer.run/mcp?only=earthdata',
+    '--header',
+    'Authorization: Bearer ${DATALAYER_API_KEY}',
+  ],
   transport: 'stdio',
   enabled: true,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: ['EARTHDATA_USERNAME:0.0.1', 'EARTHDATA_PASSWORD:0.0.1'],
+  requiredEnvVars: ['DATALAYER_API_KEY:0.0.1'],
 };
 
 export const EURUS_MCP_SERVER_0_0_1: MCPServer = {

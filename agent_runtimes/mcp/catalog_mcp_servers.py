@@ -90,16 +90,15 @@ EARTHDATA_MCP_SERVER_0_0_1 = MCPServer(
     command="npx",
     args=[
         "-y",
-        "earthdata-mcp-server",
+        "mcp-remote",
+        "https://mcp.datalayer.run/mcp?only=earthdata",
+        "--header",
+        "Authorization: Bearer ${DATALAYER_API_KEY}",
     ],
     transport="stdio",
     enabled=True,
     tools=[],
-    env={
-        "EARTHDATA_USERNAME": "${EARTHDATA_USERNAME}",
-        "EARTHDATA_PASSWORD": "${EARTHDATA_PASSWORD}",
-    },
-    required_env_vars=["EARTHDATA_USERNAME:0.0.1", "EARTHDATA_PASSWORD:0.0.1"],
+    required_env_vars=["DATALAYER_API_KEY:0.0.1"],
 )
 
 EURUS_MCP_SERVER_0_0_1 = MCPServer(
