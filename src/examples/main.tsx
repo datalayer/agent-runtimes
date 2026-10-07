@@ -121,6 +121,9 @@ const ANONYMOUS_EXAMPLES = new Set([
   // The Sales and Accounting team: Sales in the page on a visitor's trial
   // key, Accounting on the local server, which answers the machine itself.
   'AgentA2ATeamExample',
+  // The scenes of the catalogue: each entry in the page on a visitor's trial
+  // key, the members on a runtime on local servers that answer the machine.
+  'ScenesExample',
   // Decide, on the local agent-runtimes server as above: Jev is asked
   // through the server's ai-inference, with the server's own key.
   'AgentDecideExample',
@@ -1454,6 +1457,7 @@ const ExampleAppThemed: React.FC<{
             'LoopStrategyExample',
             'LoopAppComputerExample',
             'AgentspecsExample',
+            'ScenesExample',
           ];
           const loopOrder = (id: string) => {
             const index = LOOP_ORDER.indexOf(id);

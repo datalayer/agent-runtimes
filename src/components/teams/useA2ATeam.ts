@@ -4,28 +4,34 @@
  */
 
 /**
- * A team of two applications over A2A, as a page runs it: the entry's loop
- * turns in the page and asks its peer over A2A with one tool.
+ * A team of applications over A2A, as a page runs it: the entry's loop
+ * turns in the page and asks each of its peers over A2A with a tool of its
+ * own.
  *
  * The entry (Sales) talks to the person: its instructions and its model run
  * here (the Vercel AI SDK's loop), its model reached through ai-inference
  * with whatever `inference` holds — a signed-in person's token, or a
- * visitor's trial key. Its one tool asks the peer (Accounting) with
- * {@link a2aPeerTool}. What each of them does is kept as a persona — the
- * state its character acts and what its balloon says — the peer's last
- * answer as the report, and the way
- * the link carries a message as the flow ({@link flowAfter}). What the peer
- * gives besides words — the formats the page accepts (`accept`), such as a
- * Jupyter notebook — is kept as its artifacts, and its latest notebook kept
- * until another one comes ({@link A2ATeam.notebook}). The tools the
- * peer calls on its connections (its MCP servers), told over A2A as it calls
- * them, are kept as the calls running now ({@link callsAfter}).
+ * visitor's trial key. Its tools ask its peers (Accounting; Disaster
+ * assessment and Change detection), one `ask_<peer>` tool per peer, with
+ * {@link a2aPeerTool}. A team of two names its peer as `peerApp`; a team of
+ * N names them as `peers` (LOOP A-08). An entry that runs on a runtime
+ * itself (a scene of one member: Month-end close, Crop monitoring) is asked
+ * over A2A from the page, with no agent in the browser: `entryPeer`.
+ *
+ * What each of them does is kept as a persona — the state its character
+ * acts and what its balloon says — each peer's last answer as the report,
+ * and the way each link carries a message as its flow ({@link flowAfter}).
+ * What a peer gives besides words — the formats the page accepts
+ * (`accept`), such as a Jupyter notebook — is kept as its artifacts, and
+ * the latest notebook kept until another one comes ({@link A2ATeam.notebook}).
+ * The tools a peer calls on its connections (its MCP servers), told over
+ * A2A as it calls them, are kept as the calls running now ({@link callsAfter}).
  *
  * Given the Agent Inspector's tracer (`inspector`), the entry's turns (an
- * `invoke_agent` span: its model, its tokens) and its call to the peer (an
- * `execute_tool` span under it) are recorded there as OpenTelemetry spans;
- * the A2A traffic itself, under that call, is recorded by the peer's fetch
- * (`traceA2AFetch`).
+ * `invoke_agent` span: its model, its tokens) and its calls to its peers
+ * (`execute_tool` spans under it) are recorded there as OpenTelemetry
+ * spans; the A2A traffic itself, under those calls, is recorded by each
+ * peer's fetch (`traceA2AFetch`).
  *
  * What `A2ATeamGraph` draws, and what a page's composer sends.
  *
@@ -33,7 +39,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { stepCountIs, ToolLoopAgent, type ModelMessage } from 'ai';
+import { stepCountIs, ToolLoopAgent, type ModelMessage, type Tool } from 'ai';
 import type { AssistantState } from '../../chat/assistant/state';
 import type { ChatMessage } from '../../types/messages';
 import type { DisplayItem, ToolCallMessage } from '../../types/chat';
@@ -43,6 +49,7 @@ import {
 } from '../../runtimes/browser/model';
 import {
   a2aPeerTool,
+  askA2APeer,
   NOTEBOOK_MEDIA_TYPE,
   type A2APeer,
   type A2APeerArtifact,
@@ -74,6 +81,7 @@ import {
 } from '../../chat/assistant/toolLine';
 
 const NO_CONNECTIONS: A2ATeamConnection[] = [];
+const NO_PEERS: readonly A2ATeamPeerOptions[] = [];
 
 /** What one member's character does: its state, its balloon, and whether it was sent away. */
 export type A2ATeamPersona = {
@@ -136,37 +144,128 @@ export function balloonLine(text: string, length = 120): string {
   return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
 }
 
+/** The name of the entry's tool for a peer, as its instructions call it: `ask_<peer id>`. */
+export function askToolOf(peerId: string): string {
+  return `ask_${peerId.replace(/-/g, '_')}`;
+}
+
+/**
+ * What a member says when it is asked, before it works: the books when it
+ * reaches Odoo, the system it reaches otherwise, or just that it is on it.
+ */
+export function askedLine(connections: readonly A2ATeamConnection[]): string {
+  if (connections.some(connection => connection.id.startsWith('odoo'))) {
+    return 'On it. Let me read the books.';
+  }
+  const systems = [...new Set(connections.map(connection => connection.label))];
+  return systems.length
+    ? `On it. Let me look in ${systems.join(' and ')}.`
+    : 'On it.';
+}
+
+/**
+ * The entry's instructions for a team of more than one peer: its own, and
+ * which tool asks whom, so that it names each. A team of two keeps the
+ * entry's instructions as they are.
+ */
+export function teamInstructions(
+  entry: Pick<AppSpec, 'instructions'>,
+  peers: readonly { app: Pick<AppSpec, 'name'>; askTool: string }[],
+): string {
+  if (peers.length < 2) {
+    return entry.instructions;
+  }
+  const who = peers
+    .map(peer => `${peer.app.name} with \`${peer.askTool}\``)
+    .join(', ');
+  return `${entry.instructions}\n\nYour team, over A2A: ask ${who}. Each answers one request on its own.`;
+}
+
+/** A member the entry asks over A2A. */
+export type A2ATeamPeerOptions = {
+  /** The member asked. */
+  app: AppSpec;
+  /** The peer, once its card is read; `null` until then. */
+  peer: A2APeer | null;
+  /** The name of the entry's tool for it; `ask_<its id>` unsaid. */
+  askTool?: string;
+  /** Its connections (`teamConnectionsOf(app)`): the calls to them are kept. */
+  connections?: A2ATeamConnection[];
+  /**
+   * What its balloon says before it is asked (a scene's `opens_first`, its
+   * persona's line); unsaid, it waits quietly.
+   */
+  greeting?: string;
+};
+
 export type UseA2ATeamOptions = {
   /** The member that talks to the person and asks: it runs in this page. */
   entry: AppSpec;
-  /** The member it asks over A2A. */
-  peerApp: AppSpec;
-  /** The peer, once its card is read; `null` until then. */
-  peer: A2APeer | null;
-  /** Where the entry's model is asked, and with whose token. */
-  inference: Omit<BrowserModelOptions, 'model'>;
-  /** The name of the entry's tool, as its instructions call it: `ask_<peer id>`. */
+  /** A team of two: the member it asks over A2A. */
+  peerApp?: AppSpec;
+  /** A team of two: the peer, once its card is read; `null` until then. */
+  peer?: A2APeer | null;
+  /** A team of two: the name of the entry's tool, as its instructions call it: `ask_<peer id>`. */
   askTool?: string;
-  /** The most steps of one turn. */
-  maxSteps?: number;
-  /** The peer's connections (`teamConnectionsOf(peerApp)`): the calls to them are kept. */
+  /** A team of two: the peer's connections (`teamConnectionsOf(peerApp)`). */
   peerConnections?: A2ATeamConnection[];
   /**
-   * The media types the page accepts from the peer (`acceptedOutputModes`):
+   * A team of N: the members the entry asks, in the order its tools are
+   * offered. Give the same array while nothing changed (memoised): a new
+   * one makes the entry's agent again.
+   */
+  peers?: readonly A2ATeamPeerOptions[];
+  /**
+   * The entry itself, when it runs on a runtime and is asked over A2A from
+   * the page: no agent turns in the browser, `send` asks it directly, and
+   * its persona follows what it tells (asked, working, its tools, answered).
+   * `null` until its card is read.
+   */
+  entryPeer?: A2APeer | null;
+  /** Where the entry's model is asked, and with whose token. */
+  inference: Omit<BrowserModelOptions, 'model'>;
+  /** The most steps of one turn. */
+  maxSteps?: number;
+  /**
+   * The media types the page accepts from the peers (`acceptedOutputModes`):
    * words, and the formats it can show, such as a notebook. Unsaid, words alone.
    */
   accept?: readonly string[];
   /**
-   * The Agent Inspector's tracer: the entry's turns and its call to the
-   * peer are recorded there as spans.
+   * The Agent Inspector's tracer: the entry's turns and its calls to the
+   * peers are recorded there as spans.
    */
   inspector?: OtelLiveTracer | null;
 };
 
+/** One peer of the team, as the team keeps it. */
+export type A2ATeamPeer = {
+  /** Its id: its application's. */
+  id: string;
+  app: AppSpec;
+  /** The name of the entry's tool for it. */
+  askTool: string;
+  connections: A2ATeamConnection[];
+  /** Whether it is reached: its card was read. */
+  connected: boolean;
+  persona: A2ATeamPersona;
+  /** What it was asked, the tools it called and what it answered. */
+  history: DisplayItem[];
+  /** Its last answer, as it gave it. */
+  report: string | null;
+  /** What it gave besides words with its last answer. */
+  artifacts: A2APeerArtifact[];
+  /** Which way its link carries a message now. */
+  flow: A2ATeamFlow;
+  setAway: (away: boolean) => void;
+};
+
 export type A2ATeam = {
   entryPersona: A2ATeamPersona;
+  /** The first peer's persona: the peer of a team of two. */
   peerPersona: A2ATeamPersona;
   setEntryAway: (away: boolean) => void;
+  /** Sends the first peer away, or calls it back. */
   setPeerAway: (away: boolean) => void;
   turns: A2ATeamTurn[];
   /**
@@ -175,37 +274,65 @@ export type A2ATeam = {
    */
   entryHistory: DisplayItem[];
   /**
-   * What the peer was asked, the tools it called and what it answered, in
-   * the chat's model (messages and tool calls).
+   * What the first peer was asked, the tools it called and what it
+   * answered, in the chat's model (messages and tool calls).
    */
   peerHistory: DisplayItem[];
-  /** The peer's last answer, as it gave it. */
+  /** The peers, in their order, each as the team keeps it. */
+  peers: A2ATeamPeer[];
+  /** Which way each peer's link carries a message now, by the peer's id. */
+  flows: Record<string, A2ATeamFlow>;
+  /** The last answer a peer gave, as it gave it. */
   report: string | null;
-  /** What the peer gave besides words with its last answer, by media type. */
+  /** What a peer gave besides words with the last answer, by media type. */
   artifacts: A2APeerArtifact[];
-  /** The latest notebook the peer gave, kept until another one comes. */
+  /** The latest notebook a peer gave, kept until another one comes. */
   notebook: A2APeerArtifact | null;
-  /** Which way the link carries a message now. */
+  /** Which way the first peer's link carries a message now. */
   flow: A2ATeamFlow;
-  /** The tool calls the peer's connections are answering now. */
+  /** The tool calls the peers' connections are answering now. */
   calls: A2ATeamCall[];
   /** Whether a turn is under way. */
   busy: boolean;
-  /** Whether the entry can be asked: its peer is connected. */
+  /** Whether the entry can be asked: every peer is connected, or the entry is. */
   ready: boolean;
   send: (text: string) => Promise<void>;
   stop: () => void;
 };
 
-/** Run a team of two over A2A in the page. */
+type ResolvedPeer = {
+  id: string;
+  app: AppSpec;
+  peer: A2APeer | null;
+  askTool: string;
+  connections: A2ATeamConnection[];
+  greeting?: string;
+};
+
+/** A persona at rest, or greeting with a line when it has one. */
+function restingPersona(greeting: string | undefined): A2ATeamPersona {
+  return greeting
+    ? {
+        ...AT_REST,
+        state: 'greeting',
+        saying: balloonLine(greeting),
+        full: greeting,
+        insist: true,
+      }
+    : AT_REST;
+}
+
+/** Run a team over A2A in the page. */
 export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   const {
     entry,
     peerApp,
-    peer,
+    peer = null,
+    peerConnections = NO_CONNECTIONS,
+    peers: given = NO_PEERS,
+    entryPeer = null,
     inference,
     maxSteps = 6,
-    peerConnections = NO_CONNECTIONS,
     inspector = null,
   } = options;
   // By what it names, so that a page passing a new array of the same media
@@ -215,7 +342,41 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     () => (acceptKey ? acceptKey.split('\n') : undefined),
     [acceptKey],
   );
-  const askTool = options.askTool ?? `ask_${peerApp.id.replace(/-/g, '_')}`;
+  const askTool = options.askTool ?? (peerApp ? askToolOf(peerApp.id) : '');
+  // The peers, resolved: the one of a team of two, then those of a team of N.
+  const peerList = useMemo<ResolvedPeer[]>(
+    () => [
+      ...(peerApp
+        ? [
+            {
+              id: peerApp.id,
+              app: peerApp,
+              peer,
+              askTool,
+              connections: peerConnections,
+            },
+          ]
+        : []),
+      ...given.map(one => ({
+        id: one.app.id,
+        app: one.app,
+        peer: one.peer,
+        askTool: one.askTool ?? askToolOf(one.app.id),
+        connections: one.connections ?? NO_CONNECTIONS,
+        ...(one.greeting ? { greeting: one.greeting } : {}),
+      })),
+    ],
+    [peerApp, peer, askTool, peerConnections, given],
+  );
+  // Read by the event handlers, so that they need not be made again when
+  // a peer connects.
+  const peersNow = useRef(peerList);
+  peersNow.current = peerList;
+  const peerOf = useCallback(
+    (id: string) => peersNow.current.find(one => one.id === id),
+    [],
+  );
+
   const [entryPersona, setEntryPersona] = useState<A2ATeamPersona>(() => ({
     ...AT_REST,
     state: 'greeting',
@@ -223,46 +384,89 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     full: entry.interface.welcome ?? '',
     insist: Boolean(entry.interface.welcome),
   }));
-  const [peerPersona, setPeerPersona] = useState<A2ATeamPersona>(AT_REST);
+  const [personas, setPersonas] = useState<Record<string, A2ATeamPersona>>(() =>
+    Object.fromEntries(
+      peerList.map(one => [one.id, restingPersona(one.greeting)]),
+    ),
+  );
+  const personaOf = useCallback(
+    (id: string): A2ATeamPersona =>
+      personas[id] ?? restingPersona(peerOf(id)?.greeting),
+    [personas, peerOf],
+  );
+  /** Change a member's persona: the entry's, or a peer's by id. */
+  const setPersona = useCallback(
+    (id: string, next: (prev: A2ATeamPersona) => A2ATeamPersona) => {
+      if (id === entry.id) {
+        setEntryPersona(next);
+      } else {
+        setPersonas(prev => ({
+          ...prev,
+          [id]: next(prev[id] ?? restingPersona(peerOf(id)?.greeting)),
+        }));
+      }
+    },
+    [entry.id, peerOf],
+  );
   const [turns, setTurns] = useState<A2ATeamTurn[]>([]);
-  const [peerHistory, setPeerHistory] = useState<DisplayItem[]>([]);
+  const [histories, setHistories] = useState<Record<string, DisplayItem[]>>({});
   const told = useRef(0);
-  const tell = useCallback((role: 'user' | 'assistant', text: string) => {
-    told.current += 1;
-    const message: ChatMessage = {
-      id: `peer-${told.current}`,
-      role,
-      content: text,
-      createdAt: new Date(),
-    };
-    setPeerHistory(prev => [...prev, message]);
-  }, []);
-  // A tool the peer calls, as the chat holds one: added when it starts,
+  const tell = useCallback(
+    (id: string, role: 'user' | 'assistant', text: string) => {
+      if (id === entry.id) {
+        // The entry's history is its turns.
+        return;
+      }
+      told.current += 1;
+      const message: ChatMessage = {
+        id: `peer-${told.current}`,
+        role,
+        content: text,
+        createdAt: new Date(),
+      };
+      setHistories(prev => ({ ...prev, [id]: [...(prev[id] ?? []), message] }));
+    },
+    [entry.id],
+  );
+  // A tool a peer calls, as the chat holds one: added when it starts,
   // updated when it ends.
   const toolCalled = useCallback(
-    (step: { id?: string; name: string; ended: boolean; error?: string }) => {
-      const id = step.id ?? step.name;
+    (
+      id: string,
+      step: { id?: string; name: string; ended: boolean; error?: string },
+    ) => {
+      if (id === entry.id) {
+        return;
+      }
+      const connections = peerOf(id)?.connections ?? NO_CONNECTIONS;
+      const callId = step.id ?? step.name;
       const call: ToolCallMessage = {
-        id: `peer-tool:${id}`,
+        id: `peer-tool:${callId}`,
         type: 'tool-call',
-        toolCallId: id,
-        toolName: toolOwnName(step.name, peerConnections),
+        toolCallId: callId,
+        toolName: toolOwnName(step.name, connections),
         args: {},
         status: step.error ? 'error' : step.ended ? 'complete' : 'executing',
         ...(step.error ? { error: step.error } : {}),
       };
-      setPeerHistory(prev =>
-        prev.some(item => item.id === call.id)
-          ? prev.map(item => (item.id === call.id ? call : item))
-          : [...prev, call],
-      );
+      setHistories(prev => {
+        const history = prev[id] ?? [];
+        return {
+          ...prev,
+          [id]: history.some(item => item.id === call.id)
+            ? history.map(item => (item.id === call.id ? call : item))
+            : [...history, call],
+        };
+      });
     },
-    [peerConnections],
+    [entry.id, peerOf],
   );
   const [report, setReport] = useState<string | null>(null);
+  const [reports, setReports] = useState<Record<string, string | null>>({});
   const [artifacts, setArtifacts] = useState<A2APeerArtifact[]>([]);
+  const [givens, setGivens] = useState<Record<string, A2APeerArtifact[]>>({});
   const [notebook, setNotebook] = useState<A2APeerArtifact | null>(null);
-  const [flow, setFlow] = useState<A2ATeamFlow>('still');
+  const [flows, setFlows] = useState<Record<string, A2ATeamFlow>>({});
   const [calls, setCalls] = useState<A2ATeamCall[]>([]);
   const callsNow = useRef<A2ATeamCall[]>([]);
   const callTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -271,52 +475,65 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   const [busy, setBusy] = useState(false);
   const history = useRef<ModelMessage[]>([]);
   const abort = useRef<AbortController | null>(null);
-  const flowTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
+  const flowTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
-  // What the peer does, as it does it: its own state and balloon, and the link.
-  const onPeerEvent = useCallback(
-    (event: A2APeerEvent) => {
-      const next = flowAfter(event);
-      clearTimeout(flowTimer.current);
-      setFlow(next.flow);
-      if (next.holdMs) {
-        flowTimer.current = setTimeout(() => setFlow('still'), next.holdMs);
-      }
-      // The calls to the peer's connections: a call's end, when it came
-      // quickly, is shown a moment longer.
-      const after = callsAfter(
-        callsNow.current,
-        event,
-        peerApp.id,
-        peerConnections,
-        Date.now(),
-      );
-      callsNow.current = after.calls;
-      setCalls(after.calls);
-      if (after.holdMs) {
-        clearTimeout(callTimer.current);
-        callTimer.current = setTimeout(() => {
-          callsNow.current = pruneCalls(callsNow.current, Date.now());
-          setCalls(callsNow.current);
-        }, after.holdMs);
+  // What a member does, as it does it: its own state and balloon, and its
+  // link. A peer's when the entry asks it; the entry's own when the entry
+  // is asked over A2A.
+  const onMemberEvent = useCallback(
+    (id: string, event: A2APeerEvent) => {
+      const connections =
+        id === entry.id
+          ? NO_CONNECTIONS
+          : (peerOf(id)?.connections ?? NO_CONNECTIONS);
+      if (id !== entry.id) {
+        const next = flowAfter(event);
+        clearTimeout(flowTimers.current.get(id));
+        setFlows(prev => ({ ...prev, [id]: next.flow }));
+        if (next.holdMs) {
+          flowTimers.current.set(
+            id,
+            setTimeout(
+              () => setFlows(prev => ({ ...prev, [id]: 'still' })),
+              next.holdMs,
+            ),
+          );
+        }
+        // The calls to its connections: a call's end, when it came
+        // quickly, is shown a moment longer. Another peer's calls are its own.
+        const others = callsNow.current.filter(call => call.member !== id);
+        const after = callsAfter(
+          callsNow.current.filter(call => call.member === id),
+          event,
+          id,
+          connections,
+          Date.now(),
+        );
+        callsNow.current = [...others, ...after.calls];
+        setCalls(callsNow.current);
+        if (after.holdMs) {
+          clearTimeout(callTimer.current);
+          callTimer.current = setTimeout(() => {
+            callsNow.current = pruneCalls(callsNow.current, Date.now());
+            setCalls(callsNow.current);
+          }, after.holdMs);
+        }
       }
       if (event.phase === 'asked') {
-        tell('user', event.request);
-        setPeerPersona(prev => ({
+        tell(id, 'user', event.request);
+        setPersona(id, prev => ({
           ...prev,
           state: 'greeting',
-          saying: 'On it. Let me read the books.',
+          saying: askedLine(connections),
           full: undefined,
           insist: true,
           tool: undefined,
         }));
       } else if (event.phase === 'working') {
         if (event.tool) {
-          toolCalled(event.tool);
+          toolCalled(id, event.tool);
         }
-        setPeerPersona(prev => ({
+        setPersona(id, prev => ({
           ...prev,
           state: 'working',
           saying: event.note ? balloonLine(event.note) : prev.saying,
@@ -327,19 +544,21 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           tool: event.tool
             ? toolLineOfStep(
                 event.tool,
-                toolOwnName(event.tool.name, peerConnections),
+                toolOwnName(event.tool.name, connections),
               )
             : undefined,
         }));
       } else if (event.phase === 'answered') {
-        tell('assistant', event.answer);
+        tell(id, 'assistant', event.answer);
         setReport(event.answer);
+        setReports(prev => ({ ...prev, [id]: event.answer }));
         setArtifacts(event.artifacts);
+        setGivens(prev => ({ ...prev, [id]: event.artifacts }));
         const given = notebookAmong(event.artifacts);
         if (given) {
           setNotebook(given);
         }
-        setPeerPersona(prev => ({
+        setPersona(id, prev => ({
           ...prev,
           state: 'speaking',
           saying: balloonLine(event.answer),
@@ -348,12 +567,12 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           tool: undefined,
         }));
         // The entry was given a notebook: in its balloon, read-only.
-        if (given) {
+        if (given && id !== entry.id) {
           setEntryPersona(prev => ({ ...prev, notebook: given }));
         }
       } else {
-        tell('assistant', `Could not answer: ${event.error}`);
-        setPeerPersona(prev => ({
+        tell(id, 'assistant', `Could not answer: ${event.error}`);
+        setPersona(id, prev => ({
           ...prev,
           state: 'idle',
           saying: balloonLine(event.error),
@@ -363,12 +582,22 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         }));
       }
     },
-    [peerApp.id, peerConnections, tell, toolCalled],
+    [entry.id, peerOf, setPersona, tell, toolCalled],
   );
 
+  // The peers' ids and whether each is reached: the agent is made again
+  // when one connects, not when a peer's state changes.
   const agent = useMemo(() => {
-    if (!peer) {
+    if (entryPeer || !peerList.length || peerList.some(one => !one.peer)) {
       return null;
+    }
+    const tools: Record<string, Tool> = {};
+    for (const one of peerList) {
+      tools[one.askTool] = a2aPeerTool({
+        peer: one.peer as A2APeer,
+        onEvent: event => onMemberEvent(one.id, event),
+        accept,
+      });
     }
     return new ToolLoopAgent({
       id: entry.id,
@@ -376,18 +605,67 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         ...inference,
         model: entry.model || undefined,
       }),
-      instructions: entry.instructions,
-      tools: {
-        [askTool]: a2aPeerTool({ peer, onEvent: onPeerEvent, accept }),
-      },
+      instructions: teamInstructions(entry, peerList),
+      tools,
       stopWhen: stepCountIs(maxSteps),
     });
-  }, [peer, inference, onPeerEvent, entry, askTool, maxSteps, accept]);
+  }, [entryPeer, peerList, inference, onMemberEvent, entry, maxSteps, accept]);
+
+  /** Every peer at rest again, its greeting gone. */
+  const peersAtRest = useCallback(() => {
+    setPersonas(
+      Object.fromEntries(peersNow.current.map(one => [one.id, AT_REST])),
+    );
+  }, []);
+
+  // The entry on a runtime: asked over A2A from the page, as the person.
+  const sendOverA2A = useCallback(
+    async (asked: string, to: A2APeer) => {
+      setBusy(true);
+      setReport(null);
+      setArtifacts([]);
+      setTurns(prev => [...prev, { role: 'user', text: asked }]);
+      abort.current = new AbortController();
+      try {
+        const { answer } = await askA2APeer(to, asked, {
+          signal: abort.current.signal,
+          onEvent: event => onMemberEvent(entry.id, event),
+          accept,
+        });
+        setTurns(prev => [...prev, { role: 'assistant', text: answer }]);
+        setEntryPersona(prev => ({ ...prev, state: 'idle' }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setTurns(prev => [
+          ...prev,
+          { role: 'assistant', text: `Could not answer: ${message}` },
+        ]);
+        setEntryPersona(prev => ({
+          ...prev,
+          state: 'idle',
+          saying: balloonLine(message),
+          full: message,
+          insist: true,
+          tool: undefined,
+        }));
+      } finally {
+        abort.current = null;
+        setBusy(false);
+      }
+    },
+    [entry.id, onMemberEvent, accept],
+  );
 
   const send = useCallback(
     async (text: string) => {
       const asked = text.trim();
-      if (!asked || !agent || busy) {
+      if (!asked || busy) {
+        return;
+      }
+      if (entryPeer) {
+        return sendOverA2A(asked, entryPeer);
+      }
+      if (!agent) {
         return;
       }
       setBusy(true);
@@ -400,12 +678,12 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
         saying: 'Let me see…',
         insist: true,
       });
-      setPeerPersona(AT_REST);
+      peersAtRest();
       history.current = [...history.current, { role: 'user', content: asked }];
       abort.current = new AbortController();
       let said = '';
       // The turn, as a span: the entry's model, from the question to the
-      // answer, and its tokens; its calls to the peer under it.
+      // answer, and its tokens; its calls to the peers under it.
       const turnSpan = inspector
         ? startAgentTurn(inspector, {
             agent: entry.name,
@@ -414,13 +692,22 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           })
         : undefined;
       const toolSpans = new Map<string, OtelLiveSpan>();
+      // The peer a tool asks, by the tool's name.
+      const askedPeer = (toolName: string) =>
+        peersNow.current.find(one => one.askTool === toolName);
       try {
         const result = await agent.stream({
           messages: history.current,
           abortSignal: abort.current.signal,
         });
         for await (const part of result.fullStream) {
-          if (part.type === 'tool-call' && part.toolName === askTool) {
+          const to =
+            part.type === 'tool-call' ||
+            part.type === 'tool-result' ||
+            part.type === 'tool-error'
+              ? askedPeer(part.toolName)
+              : undefined;
+          if (part.type === 'tool-call' && to) {
             const request = String(
               (part.input as { request?: string } | undefined)?.request ?? '',
             );
@@ -430,7 +717,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
                 part.toolCallId,
                 startToolCall(inspector, {
                   agent: entry.name,
-                  name: askTool,
+                  name: to.askTool,
                   id: part.toolCallId,
                   args: part.input,
                   tool: { kind: 'frontend' },
@@ -441,19 +728,19 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
             setEntryPersona(prev => ({
               ...prev,
               state: 'waiting',
-              saying: balloonLine(`${peerApp.name}, could you: ${request}`),
-              full: `${peerApp.name}, could you: ${request}`,
+              saying: balloonLine(`${to.app.name}, could you: ${request}`),
+              full: `${to.app.name}, could you: ${request}`,
               insist: true,
-              // Its one tool, in its own words: it asks its peer.
+              // Its tool, in its own words: it asks its peer.
               tool: {
                 id: part.toolCallId,
-                tool: askTool,
-                name: askTool,
+                tool: to.askTool,
+                name: to.askTool,
                 phase: 'running',
-                words: `Asking ${peerApp.name}…`,
+                words: `Asking ${to.app.name}…`,
               },
             }));
-          } else if (part.type === 'tool-result' && part.toolName === askTool) {
+          } else if (part.type === 'tool-result' && to) {
             const output = part.output as { error?: string } | undefined;
             const toolSpan = toolSpans.get(part.toolCallId);
             if (toolSpan) {
@@ -470,9 +757,9 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               full: undefined,
               tool: undefined,
             }));
-            // Accounting has handed its answer over: back at rest, its last
+            // The peer has handed its answer over: back at rest, its last
             // words still in its balloon.
-            setPeerPersona(prev => ({ ...prev, state: 'idle' }));
+            setPersona(to.id, prev => ({ ...prev, state: 'idle' }));
           } else if (part.type === 'text-delta') {
             said += part.text;
             setEntryPersona(prev => ({
@@ -483,7 +770,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
               insist: true,
               tool: undefined,
             }));
-          } else if (part.type === 'tool-error' && part.toolName === askTool) {
+          } else if (part.type === 'tool-error' && to) {
             const toolSpan = toolSpans.get(part.toolCallId);
             if (toolSpan) {
               toolSpans.delete(part.toolCallId);
@@ -542,21 +829,35 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
           insist: true,
           tool: undefined,
         }));
-        setFlow('still');
+        setFlows({});
         callsNow.current = [];
         setCalls([]);
       } finally {
         abort.current = null;
         setBusy(false);
-        // However the turn ended, neither member is still at work.
-        setPeerPersona(prev =>
-          prev.state === 'idle' && !prev.tool
-            ? prev
-            : { ...prev, state: 'idle', tool: undefined },
+        // However the turn ended, no member is still at work.
+        setPersonas(prev =>
+          Object.fromEntries(
+            Object.entries(prev).map(([id, one]) => [
+              id,
+              one.state === 'idle' && !one.tool
+                ? one
+                : { ...one, state: 'idle', tool: undefined },
+            ]),
+          ),
         );
       }
     },
-    [agent, busy, askTool, peerApp.name, entry, inspector],
+    [
+      agent,
+      busy,
+      entry,
+      inspector,
+      entryPeer,
+      sendOverA2A,
+      setPersona,
+      peersAtRest,
+    ],
   );
 
   const stop = useCallback(() => abort.current?.abort(), []);
@@ -564,7 +865,7 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
   useEffect(
     () => () => {
       abort.current?.abort();
-      clearTimeout(flowTimer.current);
+      flowTimers.current.forEach(timer => clearTimeout(timer));
       clearTimeout(callTimer.current);
     },
     [],
@@ -574,9 +875,18 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     (away: boolean) => setEntryPersona(prev => ({ ...prev, away })),
     [],
   );
+  const setAwayOf = useCallback(
+    (id: string, away: boolean) => setPersona(id, prev => ({ ...prev, away })),
+    [setPersona],
+  );
   const setPeerAway = useCallback(
-    (away: boolean) => setPeerPersona(prev => ({ ...prev, away })),
-    [],
+    (away: boolean) => {
+      const first = peersNow.current[0];
+      if (first) {
+        setAwayOf(first.id, away);
+      }
+    },
+    [setAwayOf],
   );
 
   const entryHistory = useMemo<DisplayItem[]>(
@@ -590,21 +900,43 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
     [turns],
   );
 
+  const NONE: DisplayItem[] = useMemo(() => [], []);
+  const teamPeers = useMemo<A2ATeamPeer[]>(
+    () =>
+      peerList.map(one => ({
+        id: one.id,
+        app: one.app,
+        askTool: one.askTool,
+        connections: one.connections,
+        connected: one.peer !== null,
+        persona: personaOf(one.id),
+        history: histories[one.id] ?? NONE,
+        report: reports[one.id] ?? null,
+        artifacts: givens[one.id] ?? [],
+        flow: flows[one.id] ?? 'still',
+        setAway: (away: boolean) => setAwayOf(one.id, away),
+      })),
+    [peerList, personaOf, histories, reports, givens, flows, setAwayOf, NONE],
+  );
+  const first = teamPeers[0];
+
   return {
     entryHistory,
-    peerHistory,
+    peerHistory: first?.history ?? NONE,
     entryPersona,
-    peerPersona,
+    peerPersona: first?.persona ?? AT_REST,
     setEntryAway,
     setPeerAway,
     turns,
+    peers: teamPeers,
+    flows,
     report,
     artifacts,
     notebook,
-    flow,
+    flow: first?.flow ?? 'still',
     calls,
     busy,
-    ready: agent !== null,
+    ready: entryPeer ? true : agent !== null,
     send,
     stop,
   };

@@ -26,8 +26,11 @@ export const EXAMPLE_GROUP_ORDER = [
 ] as const;
 
 export const getExampleGroup = (id: string): string => {
+  // The library of specs, the Loop shells, and the scenes of the catalogue
+  // (LOOP A-15): the applications and what is staged with them.
   if (
     id === 'AgentspecsExample' ||
+    id === 'ScenesExample' ||
     id.startsWith('Loop') ||
     id === 'DecksAgent'
   ) {

@@ -4,15 +4,25 @@
  */
 
 /**
- * A team of two over A2A, as a graph (React Flow): each member is its
- * character (`AssistantStage`), with its name and where it runs under it, and
- * one edge links the entry to the peer.
+ * A team over A2A, as a graph (React Flow): each member is its character
+ * (`AssistantStage`), with its name and where it runs under it, and an edge
+ * links the entry to each peer it asks — one peer (`peer`, a team of two)
+ * or several (`peers`, a team of N; LOOP A-08). The edges are the team's
+ * `talks_to` (`links`): a peer that talks to another peer has its edge
+ * drawn too, still, since the page runs the entry's asks only.
  *
- * The edge is still until a message travels on it. While the entry asks, it
+ * An edge is still until a message travels on it. While the entry asks, it
  * flows from the entry to the peer; while the peer answers, from the peer to
- * the entry ({@link A2ATeamFlow}, from the `A2APeerEvent` phases). A reader
- * who asks for no motion sees the same thing without the movement: the arrow
- * at the end the message goes to, and the word for it on the edge.
+ * the entry ({@link A2ATeamFlow}, from the `A2APeerEvent` phases; one flow
+ * per peer, `flows`). A reader who asks for no motion sees the same thing
+ * without the movement: the arrow at the end the message goes to, and the
+ * word for it on the edge.
+ *
+ * The members stand where the layout puts them: the entry on the left and
+ * the peers to its right, one under another — or where a scene's stage
+ * directions say (`positions`, fractions of the box; LOOP A-13): the
+ * distinct `x` values are the columns, left to right, the distinct `y`
+ * values the rows, top to bottom.
  *
  * A member's connections — the MCP servers it reaches, Odoo for Accounting —
  * hang under it, each a node half a member's size with the server's mark
@@ -153,17 +163,39 @@ export type A2ATeamGraphMember = {
   onBalloonDisplayChange?: (display: BalloonDisplay) => void;
 };
 
+/** Who talks to whom over A2A: an edge of the graph. */
+export type A2ATeamGraphLink = { from: string; to: string };
+
+/** Where a member stands: fractions of the box, as a scene's stage says. */
+export type A2ATeamGraphPosition = { x: number; y: number };
+
 export type A2ATeamGraphProps = {
   /** The member that asks: drawn on the left. */
   entry: A2ATeamGraphMember;
-  /** The member asked over A2A: drawn on the right. */
-  peer: A2ATeamGraphMember;
-  /** Which way the link carries a message now. */
-  flow: A2ATeamFlow;
-  /** Whether the peer is reached: the edge is drawn faint until it is. */
-  connected: boolean;
-  /** What the edge says at rest: `A2A · <the peer's skill>`. */
+  /** The member asked over A2A: drawn on the right. A team of two. */
+  peer?: A2ATeamGraphMember;
+  /** The members asked over A2A, a team of N: after `peer` when both are given. */
+  peers?: readonly A2ATeamGraphMember[];
+  /** Which way the link to `peer` carries a message now. */
+  flow?: A2ATeamFlow;
+  /** Which way each peer's link carries a message now, by the peer's id. */
+  flows?: Record<string, A2ATeamFlow>;
+  /**
+   * Whether the peers are reached: an edge is drawn faint until its peer
+   * is. One answer for all, or one per peer id.
+   */
+  connected: boolean | Record<string, boolean>;
+  /** What an edge says at rest: `A2A · <the peer's skill>`. */
   label?: string;
+  /** What each peer's edge says at rest, by the peer's id; `label` unsaid. */
+  labels?: Record<string, string>;
+  /**
+   * The edges: the team's `talks_to` over A2A. Unsaid, the entry to each
+   * peer. An edge between two peers is drawn still.
+   */
+  links?: readonly A2ATeamGraphLink[];
+  /** Where each member stands, by its id (a scene's `stage.positions`). */
+  positions?: Record<string, A2ATeamGraphPosition>;
   /** The character's size, in pixels at full scale. */
   size?: number;
   /** The tool calls running now, to the members' connections (`useA2ATeam`). */
@@ -185,6 +217,8 @@ const NOTEBOOK_BALLOON_ROOM = 480;
 const NOTEBOOK_PREVIEW_HEIGHT = 180;
 const GAP = 220;
 const WIDTH = NODE_WIDTH * 2 + GAP;
+/** Between two rows of members. */
+const ROW_GAP = 48;
 /** A connection's node: half a member's. */
 const CONNECTION_WIDTH = NODE_WIDTH / 2;
 /** Between a member and its connections. */
@@ -208,6 +242,55 @@ type MemberData = {
   side: 'left' | 'right';
   size: number;
 };
+
+/**
+ * The handles an edge leaves and reaches a member by, named: the middle of
+ * its character on each side, chosen by where the other member stands.
+ */
+export const MEMBER_HANDLES = {
+  inLeft: 'in-left',
+  outRight: 'out-right',
+  inTop: 'in-top',
+  outBottom: 'out-bottom',
+  inRight: 'in-right',
+  outLeft: 'out-left',
+  inBottom: 'in-bottom',
+  outTop: 'out-top',
+  connections: 'connections',
+} as const;
+
+/**
+ * The handles for an edge from one place to another: rightward across,
+ * leftward across, or down or up when the other member is mostly below or
+ * above.
+ */
+export function handlesBetween(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): { sourceHandle: string; targetHandle: string } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0
+      ? {
+          sourceHandle: MEMBER_HANDLES.outRight,
+          targetHandle: MEMBER_HANDLES.inLeft,
+        }
+      : {
+          sourceHandle: MEMBER_HANDLES.outLeft,
+          targetHandle: MEMBER_HANDLES.inRight,
+        };
+  }
+  return dy >= 0
+    ? {
+        sourceHandle: MEMBER_HANDLES.outBottom,
+        targetHandle: MEMBER_HANDLES.inTop,
+      }
+    : {
+        sourceHandle: MEMBER_HANDLES.outTop,
+        targetHandle: MEMBER_HANDLES.inBottom,
+      };
+}
 
 /**
  * The members as they are now, by id. Not in the nodes' data: a node whose
@@ -382,9 +465,31 @@ const MemberNode = memo(function MemberNode({
       data-member-state={persona.state}
     >
       <Handle
+        id={MEMBER_HANDLES.inLeft}
         type="target"
         position={Position.Left}
         style={HANDLE(size)}
+        isConnectable={false}
+      />
+      <Handle
+        id={MEMBER_HANDLES.inRight}
+        type="target"
+        position={Position.Right}
+        style={HANDLE(size)}
+        isConnectable={false}
+      />
+      <Handle
+        id={MEMBER_HANDLES.inTop}
+        type="target"
+        position={Position.Top}
+        style={{ ...HANDLE(size), top: 0 }}
+        isConnectable={false}
+      />
+      <Handle
+        id={MEMBER_HANDLES.inBottom}
+        type="target"
+        position={Position.Bottom}
+        style={{ ...HANDLE(size), top: size }}
         isConnectable={false}
       />
       <Box sx={{ width: size, height: size, position: 'relative' }}>
@@ -530,14 +635,36 @@ const MemberNode = memo(function MemberNode({
         {member.where}
       </Text>
       <Handle
+        id={MEMBER_HANDLES.outRight}
         type="source"
         position={Position.Right}
         style={HANDLE(size)}
         isConnectable={false}
       />
+      <Handle
+        id={MEMBER_HANDLES.outLeft}
+        type="source"
+        position={Position.Left}
+        style={HANDLE(size)}
+        isConnectable={false}
+      />
+      <Handle
+        id={MEMBER_HANDLES.outBottom}
+        type="source"
+        position={Position.Bottom}
+        style={{ ...HANDLE(size), top: size }}
+        isConnectable={false}
+      />
+      <Handle
+        id={MEMBER_HANDLES.outTop}
+        type="source"
+        position={Position.Top}
+        style={{ ...HANDLE(size), top: 0 }}
+        isConnectable={false}
+      />
       {member.connections?.length ? (
         <Handle
-          id="connections"
+          id={MEMBER_HANDLES.connections}
           type="source"
           position={Position.Bottom}
           style={{ ...HANDLE(size), top: 'auto', bottom: 0 }}
@@ -711,6 +838,28 @@ export function flowWords(flow: A2ATeamFlow, entry: string, peer: string) {
 
 const ARROW = 9;
 
+/**
+ * An arrowhead at the end a message goes to — the target's when `forward`,
+ * the source's otherwise — pointing along the edge.
+ */
+export function arrowPath(
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+  forward: boolean,
+): string {
+  const tip = forward ? target : source;
+  const from = forward ? source : target;
+  const length = Math.hypot(tip.x - from.x, tip.y - from.y) || 1;
+  // Along the edge, toward the tip; and across it.
+  const ax = (tip.x - from.x) / length;
+  const ay = (tip.y - from.y) / length;
+  const bx = tip.x - ax * ARROW;
+  const by = tip.y - ay * ARROW;
+  const px = -ay * (ARROW / 1.6);
+  const py = ax * (ARROW / 1.6);
+  return `M ${tip.x},${tip.y} L ${bx + px},${by + py} L ${bx - px},${by - py} Z`;
+}
+
 const LinkEdge = memo(function LinkEdge({
   id,
   sourceX,
@@ -721,11 +870,13 @@ const LinkEdge = memo(function LinkEdge({
 }: EdgeProps<Edge<LinkData>>): JSX.Element {
   const flow = data?.flow ?? 'still';
   const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-  // The arrow at the end the message goes to.
+  // The arrow at the end the message goes to, along the edge.
   const towardPeer = flow === 'asking';
-  const tipX = towardPeer ? targetX : sourceX;
-  const back = towardPeer ? -ARROW : ARROW;
-  const arrow = `M ${tipX},${targetY} L ${tipX + back},${targetY - ARROW / 1.6} L ${tipX + back},${targetY + ARROW / 1.6} Z`;
+  const arrow = arrowPath(
+    { x: sourceX, y: sourceY },
+    { x: targetX, y: targetY },
+    towardPeer,
+  );
   return (
     <>
       <BaseEdge
@@ -857,23 +1008,93 @@ export function callWords(
   return `${member} calls ${connection.label} · ${toolWords(tool, connection)}`;
 }
 
-/** The viewport that shows the graph's width whole in a box `width` wide, never larger than drawn. */
-export function teamViewport(width: number): Viewport {
-  const zoom = Math.min(1, width / WIDTH);
-  return { zoom, x: (width - WIDTH * zoom) / 2, y: 0 };
+/** The viewport that shows a graph `drawn` wide whole in a box `width` wide, never larger than drawn. */
+export function teamViewport(width: number, drawn = WIDTH): Viewport {
+  const zoom = Math.min(1, width / drawn);
+  return { zoom, x: (width - drawn * zoom) / 2, y: 0 };
 }
 
-/** Draw a team of two over A2A, the link moving with what travels on it. */
+/** Where a member is laid out: its column and row, from the positions or the default. */
+export type MemberPlace = { column: number; row: number };
+
+/**
+ * Where each member stands, as columns and rows: from the positions given
+ * (the distinct `x` values are the columns left to right, the distinct `y`
+ * values the rows top to bottom), or the entry in the first column and the
+ * peers one under another in the second.
+ */
+export function placeMembers(
+  entryId: string,
+  peerIds: readonly string[],
+  positions?: Record<string, A2ATeamGraphPosition>,
+): { places: Record<string, MemberPlace>; columns: number; rows: number } {
+  const ids = [entryId, ...peerIds];
+  const placed = positions ?? {};
+  if (ids.every(id => placed[id])) {
+    const xs = [...new Set(ids.map(id => placed[id].x))].sort((a, b) => a - b);
+    const ys = [...new Set(ids.map(id => placed[id].y))].sort((a, b) => a - b);
+    return {
+      places: Object.fromEntries(
+        ids.map(id => [
+          id,
+          { column: xs.indexOf(placed[id].x), row: ys.indexOf(placed[id].y) },
+        ]),
+      ),
+      columns: xs.length,
+      rows: ys.length,
+    };
+  }
+  return {
+    places: {
+      [entryId]: { column: 0, row: 0 },
+      ...Object.fromEntries(
+        peerIds.map((id, at) => [id, { column: 1, row: at }]),
+      ),
+    },
+    columns: peerIds.length ? 2 : 1,
+    rows: Math.max(1, peerIds.length),
+  };
+}
+
+/** The one flow the graph reports for all its edges: asking before answering before still. */
+export function flowOfAll(flows: readonly A2ATeamFlow[]): A2ATeamFlow {
+  return flows.includes('asking')
+    ? 'asking'
+    : flows.includes('answering')
+      ? 'answering'
+      : 'still';
+}
+
+const NO_PEERS: readonly A2ATeamGraphMember[] = [];
+
+/** Draw a team over A2A, each link moving with what travels on it. */
 export function A2ATeamGraph({
   entry,
   peer,
+  peers: more = NO_PEERS,
   flow,
+  flows,
   connected,
   label = 'A2A',
+  labels,
+  links,
+  positions,
   size = 96,
   calls = [],
   balloonRoom = BALLOON_ROOM,
 }: A2ATeamGraphProps): JSX.Element {
+  const peers = useMemo(() => [...(peer ? [peer] : []), ...more], [peer, more]);
+  const members = useMemo(() => [entry, ...peers], [entry, peers]);
+  const memberOf = (id: string) => members.find(member => member.id === id);
+  const flowOf = (peerId: string): A2ATeamFlow =>
+    flows?.[peerId] ??
+    (peer && peerId === peer.id ? (flow ?? 'still') : 'still');
+  const connectedOf = (peerId: string): boolean =>
+    typeof connected === 'boolean' ? connected : Boolean(connected[peerId]);
+  const labelOf = (peerId: string): string => labels?.[peerId] ?? label;
+  const edgesWanted: readonly A2ATeamGraphLink[] =
+    links ?? peers.map(one => ({ from: entry.id, to: one.id }));
+
   const box = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -890,7 +1111,17 @@ export function A2ATeamGraph({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const viewport = useMemo(() => teamViewport(width || WIDTH), [width]);
+  // Where the members stand, as columns and rows, and the width that takes.
+  const peerIds = peers.map(one => one.id);
+  const placing = placeMembers(entry.id, peerIds, positions);
+  const drawn = Math.max(
+    WIDTH,
+    placing.columns * NODE_WIDTH + (placing.columns - 1) * GAP,
+  );
+  const viewport = useMemo(
+    () => teamViewport(width || drawn, drawn),
+    [width, drawn],
+  );
   // The members' height: the character, its name and where it runs.
   const memberHeight = size + 56;
   const connectionSize = Math.round(size / 2);
@@ -898,48 +1129,53 @@ export function A2ATeamGraph({
   // and room under it before the graph's edge.
   const connectionHeight = connectionSize + 58;
   // The connections' ids, member by member: the nodes change only when they do.
-  const placed = [entry, peer].map(member => ({
+  const placed = members.map(member => ({
     member: member.id,
     connections: (member.connections ?? []).map(connection => connection.id),
   }));
   const placedKey = JSON.stringify(placed);
   const hasConnections = placed.some(({ connections }) => connections.length);
   // A notebook in a balloon: more room above the members.
-  const room = [entry, peer].some(member => member.persona.notebook)
+  const room = members.some(member => member.persona.notebook)
     ? Math.max(NOTEBOOK_BALLOON_ROOM, balloonRoom)
     : balloonRoom;
-  const height = Math.ceil(
-    (room +
-      memberHeight +
-      (hasConnections ? CONNECTION_GAP + connectionHeight : 0)) *
-      viewport.zoom,
-  );
+  // Under a member: its connections, when any member has some.
+  const below = hasConnections ? CONNECTION_GAP + connectionHeight : 0;
+  const rowHeight = memberHeight + below;
+  const total = room + placing.rows * rowHeight + (placing.rows - 1) * ROW_GAP;
+  const height = Math.ceil(total * viewport.zoom);
+  // Where each member is laid out, before it is moved.
+  const layoutOf = (id: string): { x: number; y: number } => {
+    const place = placing.places[id] ?? { column: 0, row: 0 };
+    return {
+      x: place.column * (NODE_WIDTH + GAP),
+      y: room + place.row * (rowHeight + ROW_GAP),
+    };
+  };
 
   // Where the members were moved, kept inside the graph's box.
-  const total =
-    room +
-    memberHeight +
-    (hasConnections ? CONNECTION_GAP + connectionHeight : 0);
   const boundsOf = (id: string): MemberBounds => {
-    const layoutX = id === entry.id ? 0 : NODE_WIDTH + GAP;
-    const below = placed.find(({ member }) => member === id)?.connections.length
+    const layout = layoutOf(id);
+    const under = placed.find(({ member }) => member === id)?.connections.length
       ? CONNECTION_GAP + connectionHeight
       : 0;
     return {
-      minDx: -layoutX,
-      maxDx: WIDTH - NODE_WIDTH - layoutX,
-      minDy: -room,
-      maxDy: total - room - memberHeight - below,
+      minDx: -layout.x,
+      maxDx: drawn - NODE_WIDTH - layout.x,
+      minDy: -layout.y,
+      maxDy: total - layout.y - memberHeight - under,
     };
   };
-  const [moved, setMoved] = useState<Record<string, MemberOffset>>(() => ({
-    [entry.id]: MOVED.get(movedKey(entry.id)) ?? AT_PLACE,
-    [peer.id]: MOVED.get(movedKey(peer.id)) ?? AT_PLACE,
-  }));
+  const [moved, setMoved] = useState<Record<string, MemberOffset>>(() =>
+    Object.fromEntries(
+      members.map(member => [
+        member.id,
+        MOVED.get(movedKey(member.id)) ?? AT_PLACE,
+      ]),
+    ),
+  );
   const offsetOf = (id: string): MemberOffset =>
     clampOffset(moved[id] ?? AT_PLACE, boundsOf(id));
-  const entryOffset = offsetOf(entry.id);
-  const peerOffset = offsetOf(peer.id);
   const movingValue = {
     zoom: viewport.zoom,
     offsetOf,
@@ -954,73 +1190,61 @@ export function A2ATeamGraph({
     },
   };
 
+  // Each member's place and move, and its connections: the nodes are made
+  // again only when one of them changes.
+  const layout = members.map(member => {
+    const at = layoutOf(member.id);
+    const offset = offsetOf(member.id);
+    return {
+      id: member.id,
+      x: at.x + offset.dx,
+      y: at.y + offset.dy,
+      // Its balloon opens toward the middle of the graph.
+      side:
+        at.x + NODE_WIDTH / 2 <= drawn / 2
+          ? ('left' as const)
+          : ('right' as const),
+      connections: (member.connections ?? []).map(connection => connection.id),
+    };
+  });
+  const layoutKey = JSON.stringify(layout);
   const nodes = useMemo<Node<MemberData | ConnectionData>[]>(
-    () => [
-      {
-        id: entry.id,
-        type: 'member',
-        position: { x: entryOffset.dx, y: room + entryOffset.dy },
-        width: NODE_WIDTH,
-        height: memberHeight,
-        draggable: false,
-        selectable: false,
-        // Above the edge and its label: a balloon overflows its node.
-        zIndex: 10,
-        data: { id: entry.id, side: 'left', size },
-      },
-      {
-        id: peer.id,
-        type: 'member',
-        position: {
-          x: NODE_WIDTH + GAP + peerOffset.dx,
-          y: room + peerOffset.dy,
-        },
-        width: NODE_WIDTH,
-        height: memberHeight,
-        draggable: false,
-        selectable: false,
-        zIndex: 10,
-        data: { id: peer.id, side: 'right', size },
-      },
-      ...(JSON.parse(placedKey) as typeof placed).flatMap(
-        ({ member, connections }, side) => {
-          // A member's connections move with it.
-          const moveBy = side === 0 ? entryOffset : peerOffset;
-          const xs = connectionsX(
-            (side === 0 ? 0 : NODE_WIDTH + GAP) + moveBy.dx,
-            connections.length,
-          );
-          return connections.map((connection, at) => ({
-            id: connectionNodeId(member, connection),
-            type: 'connection',
-            position: {
-              x: xs[at],
-              y: room + memberHeight + CONNECTION_GAP + moveBy.dy,
-            },
-            width: CONNECTION_WIDTH,
-            height: connectionHeight,
+    () =>
+      (JSON.parse(layoutKey) as typeof layout).flatMap(
+        ({ id, x, y, side, connections }) => [
+          {
+            id,
+            type: 'member',
+            position: { x, y },
+            width: NODE_WIDTH,
+            height: memberHeight,
             draggable: false,
             selectable: false,
-            zIndex: 5,
-            data: { member, connection, size: connectionSize },
-          }));
-        },
+            // Above the edge and its label: a balloon overflows its node.
+            zIndex: 10,
+            data: { id, side, size },
+          } as Node<MemberData>,
+          // A member's connections move with it.
+          ...connections.map((connection, at) => {
+            const xs = connectionsX(x, connections.length);
+            return {
+              id: connectionNodeId(id, connection),
+              type: 'connection',
+              position: {
+                x: xs[at],
+                y: y + memberHeight + CONNECTION_GAP,
+              },
+              width: CONNECTION_WIDTH,
+              height: connectionHeight,
+              draggable: false,
+              selectable: false,
+              zIndex: 5,
+              data: { member: id, connection, size: connectionSize },
+            } as Node<ConnectionData>;
+          }),
+        ],
       ),
-    ],
-    [
-      entry.id,
-      peer.id,
-      size,
-      room,
-      memberHeight,
-      placedKey,
-      connectionSize,
-      connectionHeight,
-      entryOffset.dx,
-      entryOffset.dy,
-      peerOffset.dx,
-      peerOffset.dy,
-    ],
+    [layoutKey, size, memberHeight, connectionSize, connectionHeight],
   );
   // The notebook open under the graph runs on a Pyodide kernel in the page:
   // the entry's sandbox, while it is open.
@@ -1043,21 +1267,33 @@ export function A2ATeamGraph({
           },
     [entry, notebookKernel],
   );
-  const members = useMemo(
-    () => ({ [entry.id]: entryMember, [peer.id]: peer }),
-    [entry.id, entryMember, peer],
+  const membersById = useMemo(
+    () => ({
+      [entry.id]: entryMember,
+      ...Object.fromEntries(peers.map(one => [one.id, one])),
+    }),
+    [entry.id, entryMember, peers],
   );
-  const words = flowWords(flow, entry.name, peer.name);
+  // The words for each flow, for the edges and for a screen reader.
+  const wordsOf = (link: A2ATeamGraphLink): string =>
+    link.from === entry.id
+      ? flowWords(
+          flowOf(link.to),
+          entry.name,
+          memberOf(link.to)?.name ?? link.to,
+        )
+      : '';
+  const words = edgesWanted.map(wordsOf).filter(Boolean);
   // The tool each connection is answering now, in words, by its node's id.
   const busy = useMemo(() => {
     const byNode: Record<string, string> = {};
     const said: string[] = [];
     for (const call of calls) {
-      const member = call.member === entry.id ? entry : peer;
-      const connection = member.connections?.find(
+      const member = members.find(one => one.id === call.member);
+      const connection = member?.connections?.find(
         known => known.id === call.connection,
       );
-      if (!connection || member.id !== call.member) {
+      if (!member || !connection) {
         continue;
       }
       const node = connectionNodeId(member.id, connection.id);
@@ -1065,22 +1301,44 @@ export function A2ATeamGraph({
       said.push(callWords(member.name, connection, call.tool));
     }
     return { byNode, said: [...new Set(said)] };
-  }, [calls, entry, peer]);
+  }, [calls, members]);
+  const linkKey = JSON.stringify(
+    edgesWanted.map(link => ({
+      ...link,
+      flow: link.from === entry.id ? flowOf(link.to) : 'still',
+      connected: connectedOf(link.to),
+      label: wordsOf(link)
+        ? `${labelOf(link.to)} · ${wordsOf(link)}`
+        : labelOf(link.to),
+      ...handlesBetween(layoutOf(link.from), layoutOf(link.to)),
+    })),
+  );
   const edges = useMemo<Edge<LinkData | CallData>[]>(
     () => [
-      {
-        id: `${entry.id}->${peer.id}`,
-        source: entry.id,
-        target: peer.id,
-        type: 'a2a',
-        selectable: false,
-        focusable: false,
-        data: {
-          flow,
-          connected,
-          label: words ? `${label} · ${words}` : label,
-        },
-      },
+      ...(
+        JSON.parse(linkKey) as (A2ATeamGraphLink &
+          LinkData & { sourceHandle: string; targetHandle: string })[]
+      ).map(
+        ({
+          from,
+          to,
+          flow: linkFlow,
+          connected: reached,
+          label: said,
+          sourceHandle,
+          targetHandle,
+        }) => ({
+          id: `${from}->${to}`,
+          source: from,
+          sourceHandle,
+          target: to,
+          targetHandle,
+          type: 'a2a',
+          selectable: false,
+          focusable: false,
+          data: { flow: linkFlow, connected: reached, label: said },
+        }),
+      ),
       ...(JSON.parse(placedKey) as typeof placed).flatMap(
         ({ member, connections }) =>
           connections.map(connection => {
@@ -1089,7 +1347,7 @@ export function A2ATeamGraph({
             return {
               id: `${member}->${node}`,
               source: member,
-              sourceHandle: 'connections',
+              sourceHandle: MEMBER_HANDLES.connections,
               target: node,
               type: 'mcp',
               selectable: false,
@@ -1099,16 +1357,18 @@ export function A2ATeamGraph({
           }),
       ),
     ],
-    [entry.id, peer.id, flow, connected, label, words, placedKey, busy],
+    [linkKey, placedKey, busy],
   );
-  const heard = [words, ...busy.said].filter(Boolean).join('. ');
+  const heard = [...words, ...busy.said].filter(Boolean).join('. ');
+  const flowNow = flowOfAll(peers.map(one => flowOf(one.id)));
 
   return (
     <Box
       ref={box}
       data-a2a-team-graph=""
-      data-a2a-flow={flow}
+      data-a2a-flow={flowNow}
       data-a2a-calls={calls.length}
+      data-a2a-members={members.length}
       sx={{
         width: '100%',
         height,
@@ -1172,7 +1432,7 @@ export function A2ATeamGraph({
         {heard}
       </Box>
       <Moving.Provider value={movingValue}>
-        <Members.Provider value={members}>
+        <Members.Provider value={membersById}>
           <Busy.Provider value={busy.byNode}>
             <ReactFlow
               nodes={nodes}
@@ -1197,7 +1457,7 @@ export function A2ATeamGraph({
               style={{ overflow: 'visible', background: 'transparent' }}
               // The library is MIT: its credit is not required on the page.
               proOptions={{ hideAttribution: true }}
-              aria-label={`${entry.name} and ${peer.name}, over A2A`}
+              aria-label={`${entry.name} and ${peers.map(one => one.name).join(', ')}, over A2A`}
             />
           </Busy.Provider>
         </Members.Provider>

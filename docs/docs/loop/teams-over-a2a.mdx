@@ -149,7 +149,13 @@ loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
 loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
 # On a runtime that is already running, such as the examples' server on :8765.
 python examples/sales-accounting-a2a/serve_accounting.py --url http://127.0.0.1:8765
+# Every member on a runtime of every scene, each on a local runtime of its own.
+python examples/sales-accounting-a2a/serve_scenes.py --url http://127.0.0.1:8767
 ```
+
+A runtime serves one application over A2A at a time: configuring another
+replaces it. A scene with several members on a runtime needs a runtime per
+member, which is what `serve_scenes.py` does locally (below).
 
 `POST /api/v1/apps/configure` with `"a2a": true` (and `public_url`, the
 address callers reach) makes the runtime's agent the application's agent,
@@ -362,8 +368,9 @@ the peer calls), then `answered` (with what it gave besides words) or
 
 ## The team as a graph
 
-`components/teams` draws a team of two and runs it in a page. It is not in
-the components barrel, because it brings React Flow:
+`components/teams` draws a team and runs it in a page — a team of two, or a
+team of N (LOOP A-08). It is not in the components barrel, because it brings
+React Flow:
 
 ```tsx
 import { A2ATeamGraph, teamConnectionsOf, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
@@ -420,6 +427,69 @@ team.send('Which invoices are still open?');
 - **`flowAfter`** turns an `A2APeerEvent` into the flow. `asked` and
   `working` give `asking`. `answered` gives `answering` for
   `ANSWER_SHOWN_MS` (1.8 s). `failed` gives `still`.
+
+### A team of N
+
+Disaster assessment is three members: Event response in the browser asks
+Disaster assessment and Change detection, each on a runtime, each on
+Earthdata. The same hook and the same graph run it:
+
+```tsx
+const team = useA2ATeam({
+  entry: EVENT_RESPONSE,
+  peers: [
+    { app: DISASTER_ASSESSMENT, peer: assessor, connections: teamConnectionsOf(DISASTER_ASSESSMENT) },
+    { app: CHANGE_DETECTION, peer: detector, connections: teamConnectionsOf(CHANGE_DETECTION) },
+  ],
+  inference,
+});
+
+<A2ATeamGraph
+  entry={{ id: 'event-response', name: 'Event response', character: 'paperclip', where: 'in your browser', persona: team.entryPersona }}
+  peers={team.peers.map(peer => ({ id: peer.id, name: peer.app.name, character: 'wizard', where: 'on a runtime', persona: peer.persona, connections: peer.connections }))}
+  flows={team.flows}
+  calls={team.calls}
+  connected={{ 'disaster-assessment': assessor !== null, 'change-detection': detector !== null }}
+  links={teamLinksOf(DISASTER_ASSESSMENT_TEAM)}
+  positions={DISASTER_ASSESSMENT_SCENE.stage.positions}
+/>;
+```
+
+- **`useA2ATeam`'s `peers`** names the members the entry asks, in order.
+  The entry gets one tool per peer, `ask_<peer id>` (`askToolOf`), and its
+  instructions are followed by a line naming each — *ask Disaster assessment
+  with `ask_disaster_assessment`, Change detection with
+  `ask_change_detection`* (`teamInstructions`; a team of two keeps the
+  entry's instructions as they are). The team is `ready` once every peer is
+  reached. Each peer is kept on `team.peers` — its persona, its history, its
+  report and artifacts, its flow, `setAway` — and `team.flows` says which
+  way each link carries a message, by the peer's id. The calls to each
+  peer's connections are its own: one peer's request does not end
+  another's call. `peerApp`, `peer`, `askTool` and `peerConnections` still
+  name a team of two, and `peerPersona`, `peerHistory`, `flow` are the
+  first peer's. A peer may greet before it is asked (`greeting`: a scene's
+  `opens_first`). What a member says when asked follows what it reaches:
+  *Let me read the books* on Odoo, *Let me look in Earthdata* otherwise
+  (`askedLine`).
+- **An entry on a runtime** (`entryPeer`: Month-end close, Crop monitoring,
+  the scenes of one member) is asked over A2A from the page as the person,
+  with no agent in the browser; its persona follows what it tells, as a
+  peer's does.
+- **`A2ATeamGraph`'s `peers`** draws the entry and N peers, each with its
+  MCP connections under it, its balloon, its menu and its inspector;
+  `flows`, `connected` and `labels` are per peer id. The edges are the
+  team's `talks_to` over A2A (`links`, `teamLinksOf(team)`): a peer that
+  talks to another peer has its edge drawn too, still — the page runs the
+  entry's asks only. Without `positions`, the entry stands on the left and
+  the peers to its right one under another; with a scene's
+  `stage.positions` (fractions of the box), the distinct `x` values are the
+  columns and the distinct `y` values the rows, so Disaster assessment is a
+  triangle: Event response above, the two specialists below it
+  (`placeMembers`). An edge leaves and reaches a member by the side that
+  faces the other (`handlesBetween`), and its arrow points along it. The
+  graph reports one flow for all its edges (`data-a2a-flow`: asking before
+  answering before still) and how many members it draws
+  (`data-a2a-members`).
 
 ### How a tool call reaches the graph
 
@@ -569,6 +639,42 @@ model and where it runs; Accounting's A2A card), *Code Sandbox Details…*
 kernel and its variables), *Ask Sales* (Sales only: the composer), the
 suggestions, *Balloon: History / Current* (its history lists what it was
 asked, said and did), *Stop the turn*, *About*, and *Send away*.
+
+## The Scenes example
+
+`ScenesExample` (the Apps group) puts the catalogue's scenes in tabs
+(`listSceneSpecs`), each its face and its name. The tab chosen is drawn from
+its scene spec (`sceneStageOf`, LOOP A-15): its `assumes` line under the
+tabs; its graph and its transcript behind *Graph · Transcript*
+(`SceneView`); its members standing where its stage directions put them
+(`positions`), the balloon of `opens_first` open; the script's cues as the
+entry's suggestions, each labelled by the starter of the entry's Appspec
+that says the same words (`sceneCuesOf`); the report, and the notebook a
+member gives, under the graph. Right-click a member for its menu: *Inspect
+the agent…* opens its Agent Inspector, every member on one tracer. A tab
+switch unmounts the scene that ran, which stops its requests.
+
+It plays against the local servers, so a scene is tried before it is
+deployed anywhere. The entry in the browser asks its model through the
+examples' inference, on the signed-in person's token or a visitor's trial
+key. Each member on a runtime is reached at `VITE_A2A_<MEMBER>_URL`
+(`sceneAddressVariable`), or by default on a local runtime
+(`sceneRuntimePorts`): Accounting on :8767, as `npm run examples` has
+served it, and the others on a runtime each from :8768 on, in the
+catalogue's order — Crop monitoring :8768, Disaster assessment :8769,
+Change detection :8770, Month-end close :8771.
+`examples/sales-accounting-a2a/serve_scenes.py` serves them by the same rule
+(`npm run examples` runs it as `server:scenes`): Accounting on the runtime
+already running at `--url`, and each other member on a runtime the script
+starts (`python -m agent_runtimes serve --port N`) and keeps up; `--only`
+names the members to serve, `--no-start` serves on runtimes already at
+their ports. A member whose setup is incomplete — the Odoo or Earthdata
+keys missing on this machine — is not served, and the script prints what it
+needs; the page draws the member all the same and says, in a flash, where
+it was not reached, what its application's `setup` says and how to serve it.
+A scene of one member (Month-end close, Crop monitoring) is asked over A2A
+from the page as the person (`entryPeer`); Disaster assessment runs as a
+team of three.
 
 The landing's home page runs the same team without an inspector on the
 page. The members' menus still offer *Inspect the agent…*. The inspector's

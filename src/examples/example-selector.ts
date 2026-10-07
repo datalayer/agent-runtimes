@@ -276,6 +276,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
   ),
   makeEntry(
+    'ScenesExample',
+    () => import('./ScenesExample'),
+    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end close, Crop monitoring, Disaster assessment — each its graph and transcript, its cues as suggestions, played against the local servers (LOOP A-15).',
+    ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
+  ),
+  makeEntry(
     'LoopShellExample',
     () => import('./LoopShellExample'),
     'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
