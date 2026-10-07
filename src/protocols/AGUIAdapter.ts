@@ -147,7 +147,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       const baseUrl = new URL(this.aguiConfig.baseUrl);
       const terminateUrl = `${baseUrl.origin}/api/v1/ag-ui/terminate`;
 
-      const response = await fetch(terminateUrl, {
+      const response = await this.fetchOf()(terminateUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -310,7 +310,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
 
     try {
-      const response = await fetch(this.aguiConfig.baseUrl, {
+      const response = await this.fetchOf()(this.aguiConfig.baseUrl, {
         method: 'POST',
         headers: this.buildHeaders({
           Accept: 'text/event-stream',

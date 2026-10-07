@@ -98,6 +98,9 @@ export interface ProtocolAdapterConfig {
   /** Request timeout in milliseconds */
   timeout?: number;
 
+  /** The fetch to use; a phone passes one whose response body streams (e.g. `expo/fetch`). Default: the global `fetch`. */
+  fetch?: typeof fetch;
+
   /** Additional protocol-specific options */
   options?: Record<string, unknown>;
 }

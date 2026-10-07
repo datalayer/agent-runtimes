@@ -25,7 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import type { ToolApprovalFilters } from '../types/tool-approvals';
 import { useAIAgentsWebSocket } from './useAIAgentsWebSocket';
-import { normalizeApproval, type ApprovalRecord } from '../portable/approvals';
+import { normalizeApproval, type ApprovalRecord } from '../utils/approvals';
 
 // ─── Types ───────────────────────────────────────────────────────────
 

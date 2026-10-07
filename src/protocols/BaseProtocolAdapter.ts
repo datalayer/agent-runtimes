@@ -186,6 +186,11 @@ export abstract class BaseProtocolAdapter implements ProtocolAdapter {
     return { ...headers, ...additionalHeaders };
   }
 
+  /** The fetch the caller gave, else the global one; read per call so a test can stub the global. */
+  protected fetchOf(): typeof fetch {
+    return this.config.fetch ?? ((input, init) => fetch(input, init));
+  }
+
   /**
    * Create abort signal with timeout
    */
