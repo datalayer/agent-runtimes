@@ -168,7 +168,13 @@ class TerminalChannel:
             # A terminal draws no surface: it names what the page shows.
             if node.get("component") in ("Row", "Column", "Card", "List", "Tabs"):
                 continue
-            said = node.get("title") or node.get("text") or node.get("label") or ""
+            said = (
+                node.get("title")
+                or node.get("text")
+                or node.get("label")
+                or node.get("name")
+                or ""
+            )
             line = f"  ▣ {node.get('component')} {node.get('id')}"
             if isinstance(said, str) and said:
                 line += f": {said}"

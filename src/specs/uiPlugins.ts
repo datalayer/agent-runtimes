@@ -1032,6 +1032,64 @@ export const A2UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
         },
       },
     },
+    {
+      id: 'Download',
+      name: 'File to download',
+      category: 'data',
+      emoji: '📄',
+      description:
+        'A file the application gives, to save: a report, a sheet, an export — by its link, or the file itself as a data: URL.',
+      version: '1.0.0',
+      standard: false,
+      properties: {
+        type: 'object',
+        required: ['name', 'url'],
+        properties: {
+          name: {
+            type: 'string',
+            title: 'File name',
+            description: 'What the file is saved as, with its extension.',
+            minLength: 1,
+          },
+          url: {
+            type: 'string',
+            title: 'Link',
+            description:
+              'Where the file is: an http(s) link, or the file itself as a data: URL.',
+            pattern: '^(https?://|data:)',
+          },
+          media_type: {
+            type: 'string',
+            title: 'Kind',
+            description:
+              'Its media type (text/csv, application/pdf…), said beside its name.',
+          },
+          size: {
+            type: 'integer',
+            title: 'Size (bytes)',
+            description: 'How large it is, said beside its name.',
+            minimum: 0,
+          },
+          description: {
+            type: 'string',
+            title: 'Description',
+            description: 'A line under its name.',
+          },
+        },
+      },
+      bindings: {
+        shows: [],
+        sends: [],
+      },
+      events: ['download'],
+      example: {
+        name: 'totals.csv',
+        url: 'data:text/csv;base64,bW9udGgsdG90YWwKSmFuLDEyMDAK',
+        media_type: 'text/csv',
+        size: 21,
+        description: "The month's totals.",
+      },
+    },
   ],
 };
 

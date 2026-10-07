@@ -5,7 +5,7 @@
 
 /**
  * Datalayer's own components, drawn (LOOP C-18): each of Table, Chart, File
- * upload, Chat, Evidence and Form renders from its catalog example on a
+ * upload, Chat, Evidence, Form and File to download renders from its catalog example on a
  * surface drawn by `datalayerCatalog`, reads what the application publishes
  * through its binding, and sends what a person does through the A2UI action
  * path — written where its binding points, then its action dispatched with
@@ -26,7 +26,9 @@ import {
   VISIBLE_WHEN,
   chartOption,
   datalayerCatalog,
+  downloadOf,
   fileRefusal,
+  sizeInWords,
 } from '..';
 
 // ECharts draws on a canvas or an SVG it sizes from the page, which jsdom
@@ -162,6 +164,7 @@ describe('Datalayer’s own components', () => {
       'Chat',
       'Evidence',
       'Form',
+      'Download',
     ]);
     for (const id of OWN_COMPONENT_IDS) {
       const renderer = datalayerCatalog.components.get(id);
@@ -388,6 +391,51 @@ describe('Datalayer’s own components', () => {
     ).toBe('a.pdf is larger than 1 MB.');
     expect(fileRefusal({ name: 'A.PDF', size: 10 }, ['.pdf'], 1)).toBeNull();
     expect(fileRefusal({ name: 'any', size: 10 }, undefined, 1)).toBeNull();
+  });
+
+  it('Download: a file offered by its name, its kind and size said, a press sent', async () => {
+    const { container, actions } = await draw([
+      {
+        id: 'totals',
+        component: 'Download',
+        ...example('Download'),
+        action: {
+          event: { name: 'download', context: { file: 'totals.csv' } },
+        },
+      },
+    ]);
+    const link = container.querySelector('a') as HTMLAnchorElement;
+    expect(link.textContent).toBe('totals.csv');
+    expect(link.getAttribute('download')).toBe('totals.csv');
+    expect(link.getAttribute('href')).toBe(
+      'data:text/csv;base64,bW9udGgsdG90YWwKSmFuLDEyMDAK',
+    );
+    expect(container.textContent).toContain('text/csv · 21 bytes');
+    expect(container.textContent).toContain("The month's totals.");
+    // jsdom does not navigate: the press is what is checked.
+    link.addEventListener('click', event => event.preventDefault());
+    await click(link);
+    expect(sent(actions)).toEqual([
+      { name: 'download', context: { file: 'totals.csv' } },
+    ]);
+  });
+
+  it('Download: a link of another scheme is not followed', async () => {
+    expect(downloadOf({ name: 'x.csv', url: 'javascript:alert(1)' })).toEqual({
+      problem:
+        'x.csv is not offered: its link is neither an http(s) link nor a data: URL.',
+    });
+    expect(downloadOf({ name: '', url: 'https://a.b/x' })).toEqual({
+      problem: 'This file has no name.',
+    });
+    expect(downloadOf({ name: 'r.pdf', url: 'https://a.b/r.pdf' })).toEqual({
+      name: 'r.pdf',
+      url: 'https://a.b/r.pdf',
+    });
+    expect(sizeInWords(1)).toBe('1 byte');
+    expect(sizeInWords(1536)).toBe('1.5 KB');
+    expect(sizeInWords(30 * 1024 * 1024)).toBe('30 MB');
+    expect(sizeInWords(undefined)).toBe('');
   });
 
   it('Chat: its welcome and starters, the messages published, a message sent', async () => {

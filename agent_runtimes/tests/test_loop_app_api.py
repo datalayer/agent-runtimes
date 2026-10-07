@@ -466,6 +466,9 @@ async def test_an_answer_shows_components_of_the_catalog():
             session.ui.button(
                 "again", child="again-label", action={"event": {"name": "again"}}
             ),
+            session.ui.download(
+                "export", name="runs.csv", url="https://example.com/runs.csv"
+            ),
         ],
         data={"runs": [{"model": "a", "cost": 1}]},
     )
@@ -476,6 +479,7 @@ async def test_an_answer_shows_components_of_the_catalog():
         "Chart",
         "Text",
         "Button",
+        "Download",
     ]
     assert sent.data == {"runs": [{"model": "a", "cost": 1}]}
     assert channel.events[-1] == sent
@@ -501,6 +505,12 @@ async def test_an_answer_shows_components_of_the_catalog():
         await session.send(
             "x",
             show=[session.ui.text("note", text="a"), session.ui.text("note", text="b")],
+        )
+    # A file is offered by an http(s) link or as a data: URL, nothing else.
+    with pytest.raises(ValueError, match="url"):
+        await session.send(
+            "x",
+            show=[session.ui.download("f", name="a.csv", url="javascript:alert(1)")],
         )
     with pytest.raises(ValueError, match="item 1 is not one"):
         await session.send("x", show=["a table"])

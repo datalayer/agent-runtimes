@@ -41,8 +41,6 @@ What does **not** exist yet:
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
   [The agent](#the-agent)).
-- **A file to download in an answer.** The catalog has no such component
-  yet; see [What an answer shows](#what-an-answer-shows).
 
 ## Where its code runs
 
@@ -695,8 +693,8 @@ await session.send(
 
 - `show` — components, drawn under the text in the order given; a component
   another names as its child (a Button's label) is drawn where that one puts
-  it. Text, Image, Table, Chart, Button, Card, Row, Column and the rest of
-  the catalog; a file to download is not in the catalog.
+  it. Text, Image, Table, Chart, Button, Card, Row, Column, a file to
+  download and the rest of the catalog.
 - `data` — what a property bound to a path reads (a Table's `rows`, a
   Chart's `points`): the answer's own data.
 - A Button's action (`action={"event": {"name": "again"}}`) is sent to the
@@ -709,9 +707,43 @@ await session.send(
   components of one id or a child no component is raise `ValueError`, in a
   sentence, before anything is sent.
 
+**A file to download** is `session.ui.download`: the name it is saved as and
+where it is — an `https://` link, or the file itself as a `data:` URL — with
+its kind and size said beside its name and a line under it. Pressing it
+saves the file; an `action` on it is sent to the application as a button's
+is. Any other link (`javascript:`, a path of the runtime) is refused by the
+schema before anything is sent.
+
+```python
+import base64
+
+csv = "month,total\nJan,1200\n".encode()
+await session.send(
+    "Your export.",
+    show=[
+        session.ui.download(
+            "totals",
+            name="totals.csv",
+            url="data:text/csv;base64," + base64.b64encode(csv).decode(),
+            media_type="text/csv",
+            size=len(csv),
+            description="The month's totals.",
+        )
+    ],
+)
+```
+
+A `data:` URL travels with the message: keep it to files of a few megabytes,
+and give a link for anything larger.
+
 On the channel, they are the `Message`'s `components` and `data`. Over the
 [Session API](./session-api) they are a surface under the message, drawn by
-the chat's A2UI renderer; a terminal names each (*▣ Table runs*).
+the chat's A2UI renderer — the one a team's answers are drawn with on the
+home page; a terminal names each (*▣ Table runs*, *▣ Download totals: totals.csv*).
+**On the record**, what an answer showed is kept with it, under `outputs`
+(`record.include`): each component by its kind, its id and the words it
+shows — a title, a label, a file's name — and the names of its data, never
+the data itself.
 
 ### Where an element shows
 

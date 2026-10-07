@@ -6,7 +6,7 @@
 /**
  * Datalayer's own components, drawn (LOOP C-18): a renderer for each the
  * catalog has beside A2UI's basic ones — Table, Chart, File upload, Chat,
- * Evidence and Form — made as A2UI makes its own, so that the decision
+ * Evidence, Form and File to download — made as A2UI makes its own, so that the decision
  * surface, an application's page, the Surface view and the components page
  * draw them as they draw a Button.
  *
@@ -22,6 +22,7 @@ import { FileUpload } from './FileUpload';
 import { Chat } from './Chat';
 import { Evidence } from './Evidence';
 import { Form } from './Form';
+import { Download } from './Download';
 
 const RENDERERS: Record<DrawnOwnComponent, ReactComponentImplementation> = {
   Table,
@@ -30,6 +31,7 @@ const RENDERERS: Record<DrawnOwnComponent, ReactComponentImplementation> = {
   Chat,
   Evidence,
   Form,
+  Download,
 };
 
 /**
@@ -63,5 +65,6 @@ export { DRAWN_OWN_COMPONENTS, type DrawnOwnComponent } from './drawn';
 export { chartOption, chartPoints, chartSeries } from './Chart';
 export { chatItems } from './Chat';
 export { evidenceSources } from './Evidence';
+export { downloadOf, sizeInWords } from './Download';
 export { refusal as fileRefusal, type GivenFile } from './FileUpload';
 export { tableRows } from './Table';

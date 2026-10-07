@@ -64,6 +64,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -592,6 +593,56 @@ class AppRecorder:
                 "error": _short(step.error, 300) if step.error else "",
                 "started_at": started.isoformat(),
                 "ended_at": ended.isoformat() if ended else "",
+            },
+        )
+
+    def shown(
+        self,
+        message_id: str,
+        author: str,
+        nodes: Any,
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        """Keep what an answer showed under its message (LOOP P-04).
+
+        Kept under ``outputs``, as the answer is: the message it came with,
+        who said it, each component of the catalog by its kind and id and
+        the words it shows (a title, a label, a file's name), and the names
+        of what its data held — never the data itself, which the page drew
+        and the conversation keeps.
+        """
+        shown: List[Dict[str, str]] = []
+        for node in nodes:
+            if node.get("component") in ("Row", "Column", "Card", "List", "Tabs"):
+                continue
+            said = next(
+                (
+                    node[key]
+                    for key in ("title", "text", "label", "name")
+                    if isinstance(node.get(key), str) and node[key]
+                ),
+                "",
+            )
+            shown.append(
+                {
+                    "id": str(node.get("id", "")),
+                    "component": str(node.get("component", "")),
+                    "said": _short(said, 200) if said else "",
+                }
+            )
+        if not shown:
+            return
+        self.add(
+            "output",
+            f"{author} showed "
+            + ", ".join(
+                f"{one['component']} {one['said'] or one['id']}" for one in shown
+            ),
+            {
+                "message": message_id,
+                "author": author,
+                "shows": shown,
+                "data": sorted(str(key) for key in (data or {})),
             },
         )
 

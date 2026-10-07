@@ -19,6 +19,7 @@ export const DRAWN_OWN_COMPONENTS = [
   'Chat',
   'Evidence',
   'Form',
+  'Download',
 ] as const;
 
 export type DrawnOwnComponent = (typeof DRAWN_OWN_COMPONENTS)[number];

@@ -853,6 +853,11 @@ class LiveSession:
                     )
                 )
                 kept["shows"] = shown
+                # And on the run's record, as the answer is (LOOP P-04).
+                self.recorder.start(self.uid)
+                self.recorder.shown(
+                    event.id, event.author, event.components, event.data
+                )
             if event.author != self.app.name:
                 kept["name"] = event.author
                 self.emit(

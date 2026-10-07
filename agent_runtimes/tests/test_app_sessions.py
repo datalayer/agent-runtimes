@@ -839,6 +839,15 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
 
     application = Application(id="notes-assistant", agent="example-simple")
     app = application.spec
+    # What it shows is on the record with the answer, under `outputs`.
+    recorded = app.model_copy(
+        update={"record": app.record.model_copy(update={"include": ["outputs"]})}
+    )
+    bodies: List[Dict[str, Any]] = []
+
+    async def keep(body: Dict[str, Any]) -> None:
+        bodies.append(body)
+
     live = sessions.LiveSession(
         uid="session-0016",
         agent_id="notes-assistant",
@@ -846,7 +855,7 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
         instance={},
         opened_by=Caller(kind="person", uid="ada"),
         acts_as={"kind": "person", "uid": "ada"},
-        recorder=AppRecorder(app=app, send=lambda body: _nothing()),
+        recorder=AppRecorder(app=recorded, send=keep),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
     live.session = await live.host.open(id=live.uid)
@@ -898,6 +907,28 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
     assert [m["role"] for m in snapshot] == ["assistant", "tool", "assistant"]
     assert snapshot[0]["toolCalls"][0]["function"]["name"] == sessions.SHOW_TOOL
     assert json.loads(snapshot[1]["content"]) == surface
+
+    # The record keeps what was shown, by kind, id and words; not the data.
+    shown = await session.send(
+        "Your export.",
+        show=[
+            session.ui.download(
+                "totals",
+                name="totals.csv",
+                url="data:text/csv;base64,bW9udGgsdG90YWwKSmFuLDEyMDAK",
+                media_type="text/csv",
+            )
+        ],
+    )
+    await live.recorder.flush(live.uid)
+    outputs = [e for body in bodies for e in body["entries"] if e["kind"] == "output"]
+    assert [e["payload"]["message"] for e in outputs] == [sent.id, shown.id]
+    assert outputs[0]["payload"]["shows"] == [
+        {"id": "runs", "component": "Table", "said": ""}
+    ]
+    assert outputs[0]["payload"]["data"] == ["runs"]
+    assert outputs[1]["summary"] == "Notes assistant showed Download totals.csv"
+    assert "base64" not in json.dumps(outputs)
 
 
 async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:

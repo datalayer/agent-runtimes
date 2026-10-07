@@ -992,6 +992,58 @@ A2UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
                 },
             },
         ),
+        ComponentSpec(
+            id="Download",
+            name="File to download",
+            description="A file the application gives, to save: a report, a sheet, an export — by its link, or the file itself as a data: URL.",
+            category="data",
+            emoji="📄",
+            version="1.0.0",
+            standard=False,
+            properties={
+                "type": "object",
+                "required": ["name", "url"],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "File name",
+                        "description": "What the file is saved as, with its extension.",
+                        "minLength": 1,
+                    },
+                    "url": {
+                        "type": "string",
+                        "title": "Link",
+                        "description": "Where the file is: an http(s) link, or the file itself as a data: URL.",
+                        "pattern": "^(https?://|data:)",
+                    },
+                    "media_type": {
+                        "type": "string",
+                        "title": "Kind",
+                        "description": "Its media type (text/csv, application/pdf…), said beside its name.",
+                    },
+                    "size": {
+                        "type": "integer",
+                        "title": "Size (bytes)",
+                        "description": "How large it is, said beside its name.",
+                        "minimum": 0,
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Description",
+                        "description": "A line under its name.",
+                    },
+                },
+            },
+            bindings=ComponentBindingsSpec(shows=[], sends=[]),
+            events=["download"],
+            example={
+                "name": "totals.csv",
+                "url": "data:text/csv;base64,bW9udGgsdG90YWwKSmFuLDEyMDAK",
+                "media_type": "text/csv",
+                "size": 21,
+                "description": "The month's totals.",
+            },
+        ),
     ],
 )
 
@@ -2102,5 +2154,51 @@ class SurfaceComponents:
         return self._place(
             id,
             "Form",
+            **{name: value for name, value in given.items() if value is not None},
+        )
+
+    def download(
+        self,
+        id: str,
+        *,
+        name: Union[str, Bound],
+        url: Union[str, Bound],
+        media_type: Optional[Union[str, Bound]] = None,
+        size: Optional[Union[int, Bound]] = None,
+        description: Optional[Union[str, Bound]] = None,
+        action: Optional[Dict[str, Any]] = None,
+        visible_when: Optional[Bound] = None,
+        weight: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """File to download, version 1.0.0: A file the application gives, to save: a report, a sheet, an export — by its link, or the file itself as a data: URL.
+
+        Parameters
+        ----------
+        id : str
+            Its id on the surface, unique; ``root`` is where the surface starts.
+        name : str or Bound
+            File name: What the file is saved as, with its extension.
+        url : str or Bound
+            Link: Where the file is: an http(s) link, or the file itself as a data: URL.
+        media_type : str or Bound
+            Kind: Its media type (text/csv, application/pdf…), said beside its name.
+        size : int or Bound
+            Size (bytes): How large it is, said beside its name.
+        description : str or Bound
+            Description: A line under its name.
+        """
+        given = {
+            "name": name,
+            "url": url,
+            "media_type": media_type,
+            "size": size,
+            "description": description,
+            "action": action,
+            "visible_when": visible_when,
+            "weight": weight,
+        }
+        return self._place(
+            id,
+            "Download",
             **{name: value for name, value in given.items() if value is not None},
         )
