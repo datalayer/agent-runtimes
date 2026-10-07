@@ -151,6 +151,8 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
     # emitted only when said, as a team of agents says none of them.
     if agent.get("app"):
         lines.append(f'            app="{agent["app"]}",')
+    if agent.get("server"):
+        lines.append(f'            server="{agent["server"]}",')
     if agent.get("runs_in"):
         lines.append(f'            runs_in="{agent["runs_in"]}",')
     links = agent.get("talks_to") or []
@@ -220,6 +222,7 @@ def _generate_team_agent_ts(agent: Dict[str, Any]) -> str:
     links = agent.get("talks_to") or []
     application = (
         (f"\n      app: '{agent['app']}'," if agent.get("app") else "")
+        + (f"\n      server: '{agent['server']}'," if agent.get("server") else "")
         + (f"\n      runsIn: '{agent['runs_in']}'," if agent.get("runs_in") else "")
         + (
             "\n      talksTo: ["
@@ -484,10 +487,14 @@ from agent_runtimes.types import (
             # `shared` by default: routing only makes sense if the member
             # receiving the work can see what was already said.
             context = spec.get("context") or {}
+            # The Frames of its shared context (LOOP A-04): written only when
+            # it names some, as the parser reads it.
+            frames = context.get("frames") or []
             code += (
                 "    context=TeamContextSpec("
                 f'sharing="{context.get("sharing", "shared")}"'
-                "),\n"
+                + (f", frames={_fmt_list(frames)}" if frames else "")
+                + "),\n"
             )
             code += f"    validation={validation_code},\n"
             code += f"    agents={agents_code},\n"
@@ -778,7 +785,13 @@ import type {{ TeamSpec }} from '{types_import_path}';
                 " },\n"
             )
             context = spec.get("context") or {}
-            code += f"  context: {{ sharing: '{context.get('sharing', 'shared')}' }},\n"
+            frames = context.get("frames") or []
+            frames_ts = (
+                ", frames: [" + ", ".join(f"'{frame}'" for frame in frames) + "]"
+                if frames
+                else ""
+            )
+            code += f"  context: {{ sharing: '{context.get('sharing', 'shared')}'{frames_ts} }},\n"
             code += f"  validation: {validation_ts},\n"
             code += f"  agents: {agents_ts},\n"
             if rr_ts is not None:

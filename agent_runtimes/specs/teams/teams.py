@@ -710,6 +710,182 @@ COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1 = TeamSpec(
     ),
 )
 
+CROP_MONITORING_TEAM_SPEC_0_0_1 = TeamSpec(
+    id="crop-monitoring",
+    version="0.0.1",
+    name="Crop monitoring",
+    description="One agent, its data: Crop monitoring follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.",
+    tags=["example", "scene", "earth-observation", "agriculture", "earthdata", "a2a"],
+    enabled=True,
+    icon="telescope",
+    emoji="🛰️",
+    color="#1a7f37",
+    agent_spec_id="",
+    orchestration_protocol="a2a",
+    execution_mode="supervisor",
+    supervisor=TeamSupervisorSpec(
+        name="Crop monitoring",
+        ref="",
+        app="crop-monitoring:0.0.1",
+        model="",
+        goal="",
+        instructions="",
+        approval="auto",
+        can_terminate=True,
+    ),
+    routing_instructions="Crop monitoring answers every request from the imagery itself, one search at a time, and reports what the granules show without adding to it.",
+    entry="crop-monitoring",
+    suggestions=[
+        TeamSuggestionSpec(
+            text="How has crop vigour evolved over the last three months around 45.5N, 10.2E?",
+            emoji="🌱",
+        ),
+        TeamSuggestionSpec(
+            text="Which fields around 41.9N, 12.5E show a drop in vegetation this month compared with last?",
+            emoji="🌾",
+        ),
+        TeamSuggestionSpec(
+            text="Which datasets and granules cover the Po valley for June 2026?",
+            emoji="🛰️",
+        ),
+    ],
+    delegation=TeamDelegationSpec(
+        max_depth=0, allow_peer_delegation=False, include_general_purpose=False
+    ),
+    context=TeamContextSpec(sharing="shared"),
+    validation=TeamValidationSpec(
+        timeout="300s", retry_on_failure=False, max_retries=0
+    ),
+    agents=[
+        TeamAgentspec(
+            id="crop-monitoring",
+            name="",
+            ref="",
+            app="crop-monitoring:0.0.1",
+            runs_in="runtime",
+            role="initiator",
+            goal="Take the person's field and period, search the imagery that covers them, and report the vigour, the growth and the fields to watch.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+    ],
+)
+
+DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1 = TeamSpec(
+    id="disaster-assessment",
+    version="0.0.1",
+    name="Disaster assessment",
+    description="An event desk in the browser that gets the area a disaster affected and the damage from Disaster assessment, and what changed on the ground from Change detection, each on a runtime over A2A, each reading NASA Earthdata. Event response takes the event and reports; the two others read the imagery and answer.",
+    tags=[
+        "example",
+        "scene",
+        "earth-observation",
+        "disaster",
+        "insurance",
+        "earthdata",
+        "a2a",
+    ],
+    enabled=True,
+    icon="pulse",
+    emoji="🛰️",
+    color="#cf222e",
+    agent_spec_id="",
+    orchestration_protocol="a2a",
+    execution_mode="supervisor",
+    supervisor=TeamSupervisorSpec(
+        name="Event response",
+        ref="",
+        app="event-response:0.0.1",
+        model="",
+        goal="",
+        instructions="",
+        approval="auto",
+        can_terminate=True,
+    ),
+    routing_instructions="Event response asks Disaster assessment for the area and the damage, and Change detection for the change on the ground, one request each, and reports what they answer without adding to it.",
+    entry="event-response",
+    suggestions=[
+        TeamSuggestionSpec(
+            text="Valencia, Spain, was flooded on 29 October 2024. What was affected, and what changed?",
+            emoji="🌊",
+        ),
+        TeamSuggestionSpec(
+            text="Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
+            emoji="🔥",
+        ),
+        TeamSuggestionSpec(
+            text="The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?",
+            emoji="🌧️",
+        ),
+    ],
+    delegation=TeamDelegationSpec(
+        max_depth=1, allow_peer_delegation=True, include_general_purpose=False
+    ),
+    context=TeamContextSpec(sharing="shared"),
+    validation=TeamValidationSpec(
+        timeout="600s", retry_on_failure=False, max_retries=0
+    ),
+    agents=[
+        TeamAgentspec(
+            id="event-response",
+            name="",
+            ref="",
+            app="event-response:0.0.1",
+            runs_in="browser",
+            talks_to=[
+                TeamLinkSpec(member="disaster-assessment", over="a2a"),
+                TeamLinkSpec(member="change-detection", over="a2a"),
+            ],
+            role="initiator",
+            goal="Take the person's event, ask Disaster assessment and Change detection for it, and report what they answered.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+        TeamAgentspec(
+            id="disaster-assessment",
+            name="",
+            ref="",
+            app="disaster-assessment:0.0.1",
+            runs_in="runtime",
+            role="contributor",
+            goal="Estimate the area the event affected and the extent of the damage from the imagery before and after it, over A2A.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+        TeamAgentspec(
+            id="change-detection",
+            name="",
+            ref="",
+            app="change-detection:0.0.1",
+            runs_in="runtime",
+            role="contributor",
+            goal="Find what changed on the ground between the two dates from the imagery, over A2A.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+    ],
+)
+
 JUPYTER_TEAM_SPEC_0_0_1 = TeamSpec(
     id="jupyter",
     version="0.0.1",
@@ -929,6 +1105,72 @@ JUPYTER_TEAM_SPEC_0_0_1 = TeamSpec(
     output=TeamOutputSpec(
         formats=["ipynb", "markdown"], template="Notebook Session Summary", storage=""
     ),
+)
+
+MONTH_END_CLOSE_TEAM_SPEC_0_0_1 = TeamSpec(
+    id="month-end-close",
+    version="0.0.1",
+    name="Month-end close",
+    description="One agent, its data: Month-end close drives the close from the Odoo books, which it only reads — the checklist, the accruals to book, the reconciliation gaps that remain.",
+    tags=["example", "scene", "accounting", "finance", "odoo", "a2a"],
+    enabled=True,
+    icon="sync",
+    emoji="🧾",
+    color="#bf8700",
+    agent_spec_id="",
+    orchestration_protocol="a2a",
+    execution_mode="supervisor",
+    supervisor=TeamSupervisorSpec(
+        name="Month-end close",
+        ref="",
+        app="month-end-close:0.0.1",
+        model="",
+        goal="",
+        instructions="",
+        approval="auto",
+        can_terminate=True,
+    ),
+    routing_instructions="Month-end close answers every request from the books itself, one read at a time, and reports what the books hold without adding to it.",
+    entry="month-end-close",
+    suggestions=[
+        TeamSuggestionSpec(
+            text="Where does the month-end close stand for last month? Give me the checklist.",
+            emoji="☑️",
+        ),
+        TeamSuggestionSpec(
+            text="Which accruals should be booked for last month, and for how much?",
+            emoji="🧾",
+        ),
+        TeamSuggestionSpec(
+            text="Which bank lines and open items are still unreconciled for last month?",
+            emoji="🏦",
+        ),
+    ],
+    delegation=TeamDelegationSpec(
+        max_depth=0, allow_peer_delegation=False, include_general_purpose=False
+    ),
+    context=TeamContextSpec(sharing="shared"),
+    validation=TeamValidationSpec(
+        timeout="300s", retry_on_failure=False, max_retries=0
+    ),
+    agents=[
+        TeamAgentspec(
+            id="month-end-close",
+            name="",
+            ref="",
+            app="month-end-close:0.0.1",
+            runs_in="runtime",
+            role="initiator",
+            goal="Take the person's request, read the period's books, and report where the close stands: what is done, what is to book, what is still open.",
+            depends_on=[],
+            subagents=[],
+            model="",
+            mcp_server="",
+            tools=[],
+            trigger="",
+            approval="auto",
+        ),
+    ],
 )
 
 NOTEBOOK_BENCHMARK_TEAM_SPEC_0_0_1 = TeamSpec(
@@ -1669,7 +1911,10 @@ TEAM_SPECS: Dict[str, TeamSpec] = {
     "audit-inventory-levels": AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
     "automate-regulatory-reporting": AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
     "comprehensive-sales-analytics": COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
+    "crop-monitoring": CROP_MONITORING_TEAM_SPEC_0_0_1,
+    "disaster-assessment": DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1,
     "jupyter": JUPYTER_TEAM_SPEC_0_0_1,
+    "month-end-close": MONTH_END_CLOSE_TEAM_SPEC_0_0_1,
     "notebook-benchmark": NOTEBOOK_BENCHMARK_TEAM_SPEC_0_0_1,
     "optimize-grid-operations": OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
     "process-citizen-requests": PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,

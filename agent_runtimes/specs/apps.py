@@ -159,6 +159,292 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "change-detection",
+        "version": "0.0.1",
+        "name": "Change detection",
+        "kind": "chat",
+        "description": "Finds what changed on the ground between two dates — land use, vegetation, water, built-up area — from the satellite imagery NASA Earthdata holds, which it searches and reads, with the granules behind each change it reports.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-change-detection:0.0.1",
+        "team": "",
+        "instructions": "You detect change from satellite imagery. Requests usually come from the Event response application over A2A, and you answer them from NASA Earthdata, which you reach through the earthdata tools: search the datasets that observe the surface at the place asked, then the granules at the first date and at the second, and compare what they show. You download nothing: when data must be fetched, describe it and write the script a person would run. Answer with the change itself: the place and the two dates, each change you read — where, what kind, how large — and how confident you are, the dataset and granule behind each one. When a request does not say the place or the dates, say what you need. When Earthdata holds nothing for it, say so plainly and do not fill the gap.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [
+            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+        ],
+        "rules": [
+            {
+                "action": "Search and read the imagery",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Download files to the runtime",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "violet",
+            "theme": None,
+            "welcome": "Give me a place and two dates, and I'll tell you what changed on the ground between them from the satellite imagery NASA Earthdata holds. I search and read; I download nothing.",
+            "starters": [
+                {
+                    "label": "Change between two dates",
+                    "message": "What changed around 39.5N, 0.4W between 1 October and 15 November 2024?",
+                },
+                {
+                    "label": "Water extent",
+                    "message": "How did the water extent change around the Ahr valley between 10 and 20 July 2021?",
+                },
+                {
+                    "label": "Imagery at two dates",
+                    "message": "Which granules cover Los Angeles on 1 January and 15 January 2025?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": "cat",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": ["text/markdown", "application/x-ipynb+json"],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "What changed around 39.5N, 0.4W between 1 October and 15 November 2024?",
+                    "expect": "It searches the datasets and the granules at both dates with the earthdata tools and answers with each change it read, its kind and its size, and the granules behind it.",
+                },
+                {
+                    "ask": "Which granules cover Los Angeles on 1 January and 15 January 2025?",
+                    "expect": "It lists the granules at both dates, with their datasets, and downloads nothing.",
+                },
+                {
+                    "ask": "Download the granules at both dates.",
+                    "expect": "It does not download them. It writes the script a person would run, and says what it would fetch.",
+                },
+                {
+                    "ask": "What changed?",
+                    "expect": "It asks where and between which dates, before it searches.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not been asked live over A2A yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled.",
+                    "Its tests have not been run as a set: no validation run is attached to it.",
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": [
+            "example",
+            "earth-observation",
+            "change-detection",
+            "earthdata",
+            "a2a",
+            "scene",
+        ],
+        "icon": "telescope",
+        "emoji": "🔍",
+        "avatar": "",
+        "banner": "",
+        "setup": ["The agent 'worker-change-detection:0.0.1' is not enabled."],
+    }
+)
+
+CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "crop-monitoring",
+        "version": "0.0.1",
+        "name": "Crop monitoring",
+        "kind": "chat",
+        "description": "Tracks crop vigour and growth over time from the satellite imagery NASA Earthdata holds, which it searches and reads, and flags the fields that need attention, with the datasets and granules behind each finding.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-crop-monitoring:0.0.1",
+        "team": "",
+        "instructions": "You monitor crops from satellite imagery. You work from NASA Earthdata, which you reach through the earthdata tools: search the datasets that observe vegetation, land surface and moisture, then the granules that cover the field and the period asked, and say what each one shows — its dataset, its dates, its resolution, its cloud cover when it is given. You download nothing: when a person wants the data, describe what to fetch and write the script that fetches it for them to run. Answer with the monitoring itself: the field and the period, the vigour and growth you read across the dates, the fields or the parcels that need attention and why, and the dataset and granule behind each finding. When a request does not say the field or the period, ask before you search. When Earthdata holds nothing for it, say so plainly and do not fill the gap.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [
+            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+        ],
+        "rules": [
+            {
+                "action": "Search and read the imagery",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Download files to the runtime",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "lime",
+            "theme": None,
+            "welcome": "Give me a field and a period, and I'll follow its crops across the satellite imagery NASA Earthdata holds: vigour, growth and what needs attention. I search and read; I download nothing.",
+            "starters": [
+                {
+                    "label": "Vigour this season",
+                    "message": "How has crop vigour evolved over the last three months around 45.5N, 10.2E?",
+                },
+                {
+                    "label": "Fields to watch",
+                    "message": "Which fields around 41.9N, 12.5E show a drop in vegetation this month compared with last?",
+                },
+                {
+                    "label": "Imagery available",
+                    "message": "Which datasets and granules cover the Po valley for June 2026?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": "eyes",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": ["text/markdown", "application/x-ipynb+json"],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "How has crop vigour evolved over the last three months around 45.5N, 10.2E?",
+                    "expect": "It searches the vegetation datasets and their granules over the period with the earthdata tools and answers with what the imagery shows across the dates, naming each dataset and granule.",
+                },
+                {
+                    "ask": "Which datasets and granules cover the Po valley for June 2026?",
+                    "expect": "It lists the datasets and granules it found, with their dates, and downloads nothing.",
+                },
+                {
+                    "ask": "Download the granules for me.",
+                    "expect": "It does not download them. It writes the script a person would run, and says what it would fetch.",
+                },
+                {
+                    "ask": "Which fields are at risk on Mars?",
+                    "expect": "It says Earthdata holds no such imagery, and invents nothing.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not run live yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled.",
+                    "Its tests have not been run as a set: no validation run is attached to it.",
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": [
+            "example",
+            "earth-observation",
+            "agriculture",
+            "earthdata",
+            "a2a",
+            "scene",
+        ],
+        "icon": "telescope",
+        "emoji": "🌾",
+        "avatar": "",
+        "banner": "",
+        "setup": ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
+    }
+)
+
 CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -578,6 +864,279 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "disaster-assessment",
+        "version": "0.0.1",
+        "name": "Disaster assessment",
+        "kind": "chat",
+        "description": "Estimates the area a natural disaster affected and the extent of the damage from the satellite imagery NASA Earthdata holds before and after the event, which it searches and reads, with the granules behind each figure.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-disaster-assessment:0.0.1",
+        "team": "",
+        "instructions": "You assess disasters from satellite imagery. Requests usually come from the Event response application over A2A, and you answer them from NASA Earthdata, which you reach through the earthdata tools: search the datasets that observe the surface at the place asked, then the granules before the event and after it, and compare what they show. You download nothing: when data must be fetched, describe it and write the script a person would run. Answer with the assessment itself: the event, the place and the dates, the area affected and how you bounded it, the extent of the damage you read and how confident you are, the dataset and granule behind each figure. When a request does not say the event, the place or its date, say what you need. When Earthdata holds nothing for it, say so plainly and do not fill the gap.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [
+            {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
+        ],
+        "rules": [
+            {
+                "action": "Search and read the imagery",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Download files to the runtime",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "rose",
+            "theme": None,
+            "welcome": "Name an event, a place and a date, and I'll compare the satellite imagery NASA Earthdata holds before and after it: the area affected and the extent of the damage. I search and read; I download nothing.",
+            "starters": [
+                {
+                    "label": "Flood extent",
+                    "message": "Assess the flooding around Valencia, Spain, after 29 October 2024.",
+                },
+                {
+                    "label": "Wildfire damage",
+                    "message": "How much area burned around Los Angeles in the fires of January 2025?",
+                },
+                {
+                    "label": "Imagery before and after",
+                    "message": "Which granules show the Ahr valley before and after 14 July 2021?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": "wizard",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": ["text/markdown", "application/x-ipynb+json"],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Assess the flooding around Valencia, Spain, after 29 October 2024.",
+                    "expect": "It searches the datasets and the granules before and after the date with the earthdata tools and answers with the area affected, the extent it read and the granules behind each figure.",
+                },
+                {
+                    "ask": "Which granules show the Ahr valley before and after 14 July 2021?",
+                    "expect": "It lists the granules on either side of the date, with their datasets, and downloads nothing.",
+                },
+                {
+                    "ask": "Download everything you found.",
+                    "expect": "It does not download it. It writes the script a person would run, and says what it would fetch.",
+                },
+                {
+                    "ask": "Assess the earthquake.",
+                    "expect": "It asks which event, where and when, before it searches.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not been asked live over A2A yet: its agent is set up, not enabled, on this machine; the earthdata server is enabled.",
+                    "Its tests have not been run as a set: no validation run is attached to it.",
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": [
+            "example",
+            "earth-observation",
+            "disaster",
+            "earthdata",
+            "a2a",
+            "scene",
+        ],
+        "icon": "pulse",
+        "emoji": "🌊",
+        "avatar": "",
+        "banner": "",
+        "setup": ["The agent 'worker-disaster-assessment:0.0.1' is not enabled."],
+    }
+)
+
+EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "event-response",
+        "version": "0.0.1",
+        "name": "Event response",
+        "kind": "chat",
+        "description": "Takes word of a live event — a flood, a fire, a storm — asks Disaster assessment for the area affected and the damage and Change detection for what changed on the ground, each over A2A, and reports what they answered, adding no figure of its own.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-event-response:0.0.1",
+        "team": "",
+        "instructions": "You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. You change nothing anywhere: you ask, and you report.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "rules": [],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "rose",
+            "theme": None,
+            "welcome": "Tell me of an event — a flood, a fire, a storm — where and when, and I'll get the area affected and the damage from Disaster assessment and what changed on the ground from Change detection.",
+            "starters": [
+                {
+                    "label": "Flood",
+                    "message": "Valencia, Spain, was flooded on 29 October 2024. What was affected, and what changed?",
+                },
+                {
+                    "label": "Wildfire",
+                    "message": "Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
+                },
+                {
+                    "label": "Storm",
+                    "message": "The Ahr valley was hit by a storm on 14 July 2021. What was affected, and what changed?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": "paperclip",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Valencia, Spain, was flooded on 29 October 2024. What was affected, and what changed?",
+                    "expect": "It calls ask_disaster_assessment once with the event, the place and the date, and ask_change_detection once with the place and the dates before and after, and reports what each answered, adding no figure.",
+                },
+                {
+                    "ask": "There was a flood. What was affected?",
+                    "expect": "It asks where and when before asking anyone.",
+                },
+                {
+                    "ask": "Just estimate the damage yourself, no need to ask anyone.",
+                    "expect": "It does not estimate. It asks Disaster assessment, or says that it only reports what the members answered.",
+                },
+                {
+                    "ask": "Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
+                    "expect": "When a member cannot answer, it says which one could not and why, and invents nothing.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not asked Disaster assessment or Change detection live yet: its agent is set up, not enabled, on this machine.",
+                    "Its tests have not been run as a set: no validation run is attached to it.",
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": [
+            "example",
+            "earth-observation",
+            "insurance",
+            "disaster",
+            "a2a",
+            "scene",
+        ],
+        "icon": "pulse",
+        "emoji": "🛡️",
+        "avatar": "",
+        "banner": "",
+        "setup": ["The agent 'worker-event-response:0.0.1' is not enabled."],
+    }
+)
+
 INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -981,6 +1540,146 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         "avatar": "",
         "banner": "",
         "setup": [],
+    }
+)
+
+MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "month-end-close",
+        "version": "0.0.1",
+        "name": "Month-end close",
+        "kind": "chat",
+        "description": "Drives the month-end close from the Odoo books, which it only reads: the close checklist, the accruals to book, the open items and the reconciliation gaps that remain, each with the figures behind it.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "worker-month-end-close:0.0.1",
+        "team": "",
+        "instructions": "You drive the month-end close. You work from the Odoo books, which you reach through the odoo-accounting tools and only read. Use the tools for every figure: the journal entries of the period, the open balances, the trial balance, the general ledger, the partner ledgers and the aged balances. Answer with the close itself: the period, the company, the currency, the checklist with what is done and what is not, the accruals you suggest and why, the unreconciled items and the gaps that remain, and the tool each figure came from. When a request does not say its period or its company, take the month that just ended and the default company and say that you did. When the books do not hold the answer, or a tool is refused, say so plainly and do not fill the gap. Never write to Odoo: never create, post, reconcile, book, match, lock or delete anything, and do not offer to. A request to change the books is answered with what a person would have to do, not done.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [
+            {
+                "server": "odoo-accounting:0.0.1",
+                "access": "read",
+                "as": "owner",
+                "only": [],
+            }
+        ],
+        "rules": [
+            {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
+            {
+                "action": "Change the books",
+                "applies_to": ["write", "delete"],
+                "behaviour": "ask_first",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "theme": None,
+            "welcome": "Ask me where the month-end close stands: the checklist, the accruals to book, the open items and the reconciliation gaps. I read Odoo; I change nothing.",
+            "starters": [
+                {
+                    "label": "Close checklist",
+                    "message": "Where does the month-end close stand for last month? Give me the checklist.",
+                },
+                {
+                    "label": "Accruals",
+                    "message": "Which accruals should be booked for last month, and for how much?",
+                },
+                {
+                    "label": "Reconciliation gaps",
+                    "message": "Which bank lines and open items are still unreconciled for last month?",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": "cat",
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": ["text/markdown", "application/x-ipynb+json"],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Where does the month-end close stand for last month? Give me the checklist.",
+                    "expect": "It reads the period's entries and balances with the odoo-accounting tools and answers with a checklist that says what is done and what is not, the company and the period.",
+                },
+                {
+                    "ask": "Which accruals should be booked for last month, and for how much?",
+                    "expect": "It suggests accruals from what the books hold, each with its amount and the entries it read, and books none of them.",
+                },
+                {
+                    "ask": "Post the accruals you suggested.",
+                    "expect": "It does not post them. It says that it only reads the books and what a person would have to do.",
+                },
+                {
+                    "ask": "Is the close done for a company that is not in Odoo?",
+                    "expect": "It says the books do not hold it, and invents nothing.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "It has not run live yet: its agent and the odoo-accounting server are set up, not enabled, on this machine.",
+                    "Its tests have not been run as a set: no validation run is attached to it.",
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "30_days",
+            "include": ["conversations"],
+            "suggest_tests": False,
+            "retention_days": 30,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "enabled": True,
+        "unavailable_because": "",
+        "tags": ["example", "accounting", "finance", "odoo", "a2a", "scene"],
+        "icon": "sync",
+        "emoji": "🗓️",
+        "avatar": "",
+        "banner": "",
+        "setup": [
+            "The agent 'worker-month-end-close:0.0.1' is not enabled.",
+            "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
+        ],
     }
 )
 
@@ -2539,11 +3238,16 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
 
 APP_CATALOGUE: Dict[str, AppSpec] = {
     "accounting": ACCOUNTING_APP_0_0_1,
+    "change-detection": CHANGE_DETECTION_APP_0_0_1,
+    "crop-monitoring": CROP_MONITORING_APP_0_0_1,
     "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_1,
     "data-quality": DATA_QUALITY_APP_0_0_1,
     "decide": DECIDE_APP_0_0_1,
+    "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_1,
+    "event-response": EVENT_RESPONSE_APP_0_0_1,
     "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
     "model-choice": MODEL_CHOICE_APP_0_0_1,
+    "month-end-close": MONTH_END_CLOSE_APP_0_0_1,
     "pipeline-report": PIPELINE_REPORT_APP_0_0_1,
     "quote-calculator": QUOTE_CALCULATOR_APP_0_0_1,
     "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_1,
@@ -2558,11 +3262,16 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
 #: page composed on the Canvas) or `written` (its spec written out).
 APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "accounting": "written",
+    "change-detection": "written",
+    "crop-monitoring": "written",
     "customer-interview": "python",
     "data-quality": "written",
     "decide": "written",
+    "disaster-assessment": "written",
+    "event-response": "written",
     "inbox-triage": "written",
     "model-choice": "written",
+    "month-end-close": "written",
     "pipeline-report": "written",
     "quote-calculator": "written",
     "report-from-a-file": "python",

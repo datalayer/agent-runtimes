@@ -34,6 +34,111 @@ agents:
   that would change the books. A connection that only reads reaches no tool
   that writes.
 
+## Scenes
+
+A *scene* — agents arranged with their roles, their shared context and
+their interactions, as Datalayer's Studio shows them — is a team and
+nothing else (LOOP A-04, agentspecs 0.0.60). What the team model says of a
+scene:
+
+- **One member is allowed; none is not.** An agent working alone with its
+  data is a scene (`month-end-close`, `crop-monitoring`: *one agent, its
+  data*). A team with no member is refused when the catalogue loads.
+- **Each member names its `role`**, and the team its shared `context`:
+  `sharing` (how much of the conversation each member is told: `shared`,
+  `isolated`, `own-turns`) and `frames`, the Frames every member works
+  under, in order (`TeamContextSpec.frames`).
+- **Each interaction names its protocol.** `talks_to … over: a2a` to an
+  agent or an application; `over: mcp` to a member that is an MCP server of
+  the catalogue (`server`, in place of `ref` and `app`: a system of the
+  scene the others reach tool by tool, which asks nobody). A member that
+  talks to one not in the scene, a server asked over A2A, an application
+  asked over MCP and a scene that enters at a server are each refused in a
+  sentence (`TeamLinkSpec.over`, `TeamAgentspec.server`).
+
+The home page's four scenes are in the teams catalogue
+(`src/specs/teams/teams.ts`): `sales-and-accounting` (Sales in the browser
+asks Accounting on a runtime; Odoo under Accounting), `month-end-close`
+(Month-end close alone on a runtime; Odoo), `crop-monitoring` (Crop
+monitoring alone on a runtime; NASA Earthdata) and `disaster-assessment`
+(Event response in the browser asks Disaster assessment and Change
+detection, each on a runtime; Earthdata under each). The MCP servers under
+a member are its application's connections (`teamConnectionsOf`), not
+restated in the team. What each scene needs is said as setup, not as a
+mistake: the five workers behind them are catalogued and not enabled,
+`earthdata` is enabled (its three tools classed: the searches read, the
+download writes), `odoo-accounting` is not.
+
+## The transcript
+
+What happens in a scene, as lines, in the order it happened (LOOP A-06):
+
+```
+12:00:00  You → Sales: Give me the aged receivables as of today, by customer.
+12:00:01  Sales → Accounting: Aged receivables as of today, by customer.
+12:00:02  Accounting → Odoo: odoo_accounting_aged_balance
+12:00:04  Accounting: Three customers owe 12,400 EUR; the oldest is 91 days.
+12:00:05  Sales: Accounting says three customers owe 12,400 EUR; the oldest is 91 days.
+```
+
+One source, read two ways (`components/teams/sceneTranscript`, pure: spans
+or entries in, lines out):
+
+- **Live**, from the OpenTelemetry spans the Agent Inspector reads — the
+  page's one tracer, core's `createOtelLiveTracer`, that `useA2ATeam`,
+  `traceA2AFetch` and the chats record into. `transcriptOfSpans(spans,
+  members)`: an `invoke_agent` span is what the person asked (*You → Sales*,
+  for a turn with no parent) and what the agent answered (*Sales: …*, at its
+  end); an `a2a` request is who asked whom in what words (*Sales →
+  Accounting*, from `a2a.message.text` and `peer.service`) and what came
+  back (*Accounting: …*, from `a2a.answer.text` or the last `a2a.message` /
+  `a2a.artifact_update` event; *could not answer* when it failed); an
+  `execute_tool` span is a call (*Accounting → Odoo: odoo_accounting_aged_balance*,
+  the server being the connection the tool is of, `connectionOfTool` over
+  the member's `connections`; a tool of no connection is called on *the
+  page*, *a skill*, *codemode* or *its runtime* by `datalayer.tool.kind`).
+  A tool call under which an A2A request sits (Sales' `ask_accounting`) is
+  the asking itself and is not a line of its own; the same words said twice
+  (an answer as the request's events, and as the peer's own turn when a
+  runtime's spans are read) are one line. An open span is a line still
+  happening (`open`, drawn with an ellipsis); a failed one says so.
+- **After**, from a finished run's record (`RecordEntry`, as Activity reads
+  it): `transcriptOfRecord(entries, member)` — a `turn` is what the person
+  asked and what the member answered, a `tool_call` what it called in
+  between (the calls are recorded before the turn closes, so the question is
+  placed where the turn began), an `output` stands in for the answer when the
+  record keeps no conversations.
+
+`lineText(line)` is a line in words, `transcriptText(lines)` the whole with
+a time on each — what *Copy as text* copies. The members are named by their
+spans' service (`SceneTranscriptMember`: `id`, `name`, `connections`).
+
+**Drawn.** `SceneTranscript` lists the lines (each its time, who and to
+whom, the words or the tool) with *Copy as text*. `SceneView` holds a
+scene's graph and its transcript behind a *Graph · Transcript* toggle
+(Primer's `SegmentedControl`): the graph stays mounted while the transcript
+shows. It reads the transcript from the tracer the members record into
+(`tracer` and `members`, through `useSceneTranscript`), or takes a finished
+run's lines (`lines`):
+
+```tsx
+import { A2ATeamGraph, SceneView, teamConnectionsOf } from '@datalayer/agent-runtimes/lib/components/teams';
+
+<SceneView
+  tracer={inspector}
+  members={[
+    { id: 'sales', name: 'Sales' },
+    { id: 'accounting', name: 'Accounting', connections: teamConnectionsOf(ACCOUNTING) },
+  ]}
+>
+  <A2ATeamGraph … />
+</SceneView>;
+```
+
+The example shows it: the box above the inspectors is a `SceneView`, its
+graph as before, its transcript read from the same tracer. Tests: a
+scripted scene gives the expected lines (`sceneTranscript.test.tsx`).
+
 ## The application asked: fasta2a on the runtime
 
 A runtime serves an application over A2A when it is configured with `a2a`:

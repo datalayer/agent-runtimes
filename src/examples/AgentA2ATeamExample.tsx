@@ -72,6 +72,7 @@ import {
 import { connectA2APeer, type A2APeer } from '../runtimes/browser/a2aPeer';
 import {
   A2ATeamGraph,
+  SceneView,
   NOTEBOOK_AND_WORDS,
   teamConnectionsOf,
   teamToolClassifier,
@@ -130,6 +131,19 @@ function AgentA2ATeam(): JSX.Element {
 
   // One tracer of what both members do, each inspector showing its own.
   const { tracer: inspector } = useAgentInspector();
+  // The members as the transcript names them: the spans' services, and the
+  // connections a tool call is of (Accounting → Odoo).
+  const sceneMembers = useMemo(
+    () => [
+      { id: SALES.id, name: SALES.name },
+      {
+        id: ACCOUNTING.id,
+        name: ACCOUNTING.name,
+        connections: ACCOUNTING_CONNECTIONS,
+      },
+    ],
+    [],
+  );
   const [peer, setPeer] = useState<A2APeer | null>(null);
   const [peerError, setPeerError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -275,68 +289,76 @@ function AgentA2ATeam(): JSX.Element {
           mb: 3,
         }}
       >
-        <A2ATeamGraph
-          entry={{
-            id: SALES.id,
-            name: SALES.name,
-            emoji: SALES.emoji,
-            character: SALES.interface.assistant ?? 'paperclip',
-            where:
-              salesMember.runsIn === 'browser'
-                ? 'in your browser'
-                : 'on a runtime',
-            persona: team.entryPersona,
-            onToggle: () => composer.current?.focus(),
-            conversationLabel: `Ask ${SALES.name}`,
-            onAway: team.setEntryAway,
-            history: team.entryHistory,
-            expandTarget: notebookArea,
-            notebookTitle: `${ACCOUNTING.name}\u2019s notebook`,
-            suggestions: team.ready && !team.busy ? suggestions : undefined,
-            onSuggestion: suggestion => send(suggestion.prompt),
-            inspector,
-            onStop: team.busy ? team.stop : undefined,
-            about: {
+        {/* The scene: its graph, and its transcript read from the same
+            tracer the inspectors read, behind Graph · Transcript (A-06). */}
+        <SceneView
+          members={sceneMembers}
+          tracer={inspector}
+          emptyText="Ask Sales: what it says to Accounting, what Accounting reads in Odoo and answers, line by line, shows here."
+        >
+          <A2ATeamGraph
+            entry={{
+              id: SALES.id,
               name: SALES.name,
-              spec: `${SALES.id}:${SALES.version}`,
-              model: SALES.model || undefined,
-              where: 'in your browser',
-              description: SALES.description || undefined,
-            },
-          }}
-          peer={{
-            id: ACCOUNTING.id,
-            name: ACCOUNTING.name,
-            // Its face as its card says it, once it is reached.
-            emoji: peer?.face?.emoji ?? ACCOUNTING.emoji,
-            character: ACCOUNTING.interface.assistant ?? 'wizard',
-            where: accountingWhere,
-            persona: team.peerPersona,
-            onAway: team.setPeerAway,
-            history: team.peerHistory,
-            connections: ACCOUNTING_CONNECTIONS,
-            inspector,
-            sandbox: accountingSandbox,
-            about: {
+              emoji: SALES.emoji,
+              character: SALES.interface.assistant ?? 'paperclip',
+              where:
+                salesMember.runsIn === 'browser'
+                  ? 'in your browser'
+                  : 'on a runtime',
+              persona: team.entryPersona,
+              onToggle: () => composer.current?.focus(),
+              conversationLabel: `Ask ${SALES.name}`,
+              onAway: team.setEntryAway,
+              history: team.entryHistory,
+              expandTarget: notebookArea,
+              notebookTitle: `${ACCOUNTING.name}\u2019s notebook`,
+              suggestions: team.ready && !team.busy ? suggestions : undefined,
+              onSuggestion: suggestion => send(suggestion.prompt),
+              inspector,
+              onStop: team.busy ? team.stop : undefined,
+              about: {
+                name: SALES.name,
+                spec: `${SALES.id}:${SALES.version}`,
+                model: SALES.model || undefined,
+                where: 'in your browser',
+                description: SALES.description || undefined,
+              },
+            }}
+            peer={{
+              id: ACCOUNTING.id,
               name: ACCOUNTING.name,
-              spec: `${ACCOUNTING.id}:${ACCOUNTING.version}`,
-              model: ACCOUNTING.model || undefined,
+              // Its face as its card says it, once it is reached.
+              emoji: peer?.face?.emoji ?? ACCOUNTING.emoji,
+              character: ACCOUNTING.interface.assistant ?? 'wizard',
               where: accountingWhere,
-              // What its A2A card says, once it is reached.
-              description:
-                peer?.card.description || ACCOUNTING.description || undefined,
-              skills: peer?.card.skills.map(skill => skill.name),
-              protocol: peer ? 'a2a' : undefined,
-              url: peer ? accountingUrl : undefined,
-            },
-          }}
-          flow={team.flow}
-          calls={team.calls}
-          // Room for the balloons: suggestions, *more* and a notebook.
-          balloonRoom={320}
-          connected={peer !== null}
-          label={peer ? `A2A · ${peer.skill.name}` : 'A2A · not connected'}
-        />
+              persona: team.peerPersona,
+              onAway: team.setPeerAway,
+              history: team.peerHistory,
+              connections: ACCOUNTING_CONNECTIONS,
+              inspector,
+              sandbox: accountingSandbox,
+              about: {
+                name: ACCOUNTING.name,
+                spec: `${ACCOUNTING.id}:${ACCOUNTING.version}`,
+                model: ACCOUNTING.model || undefined,
+                where: accountingWhere,
+                // What its A2A card says, once it is reached.
+                description:
+                  peer?.card.description || ACCOUNTING.description || undefined,
+                skills: peer?.card.skills.map(skill => skill.name),
+                protocol: peer ? 'a2a' : undefined,
+                url: peer ? accountingUrl : undefined,
+              },
+            }}
+            flow={team.flow}
+            calls={team.calls}
+            // Room for the balloons: suggestions, *more* and a notebook.
+            balloonRoom={320}
+            connected={peer !== null}
+            label={peer ? `A2A · ${peer.skill.name}` : 'A2A · not connected'}
+          />
+        </SceneView>
       </Box>
 
       {/* The notebook Accounting gave, right under the team, to run and

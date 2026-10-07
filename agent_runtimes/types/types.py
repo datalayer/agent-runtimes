@@ -2848,7 +2848,10 @@ class TeamLinkSpec(BaseModel):
     """One member asking another directly, over a protocol (agentspecs `TeamLink`)."""
 
     member: str = Field(..., description="The member asked, by its id in the team")
-    over: Literal["a2a"] = Field(default="a2a", description="The protocol")
+    over: Literal["a2a", "mcp"] = Field(
+        default="a2a",
+        description="The protocol: `a2a` to an agent or an application, `mcp` to a server member",
+    )
 
 
 class TeamAgentspec(BaseModel):
@@ -2869,6 +2872,14 @@ class TeamAgentspec(BaseModel):
         description=(
             "Application catalogue reference, in place of `ref`: the member is "
             "that application, with its agent, connections, rules and interface"
+        ),
+    )
+    server: str = Field(
+        default="",
+        description=(
+            "MCP server catalogue reference, in place of `ref` and `app`: the "
+            "member is that server, a system of the scene the others reach over "
+            "MCP (LOOP A-04)"
         ),
     )
     runs_in: Optional[Literal["browser", "runtime"]] = Field(
@@ -2970,6 +2981,13 @@ class TeamContextSpec(BaseModel):
             "How much of the conversation each member is given: 'shared' "
             "(all of it), 'isolated' (its own thread), or 'own-turns' (one "
             "thread, but only its own turns are sent)"
+        ),
+    )
+    frames: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The Frames every member works under, in order, `id` or `id:version` "
+            "(LOOP A-04): the team's shared context"
         ),
     )
 
