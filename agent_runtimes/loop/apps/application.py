@@ -42,7 +42,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
-from agent_runtimes.loop.apps.components import placer
+from agent_runtimes.loop.apps.components import component_node
 from agent_runtimes.loop.apps.composer import COMMAND_INPUT, command_called
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.frameworks import (
@@ -78,7 +78,6 @@ from agent_runtimes.types import (
     AppCodeCheckSpec,
     AppCommandSpec,
     AppConnectionSpec,
-    AppCustomComponentSpec,
     AppModeOptionSpec,
     AppModeSpec,
     AppProfileSpec,
@@ -694,7 +693,7 @@ class Application:
         dict
             The node, as the surface holds it.
         """
-        node = placer(self._custom_components())(id, component, **properties)
+        node = component_node(id, component, **properties)
         interface = self._document.setdefault("interface", {})
         surface = interface.get("surface") or {"protocol": "a2ui/v0.9"}
         nodes = surface.setdefault("components", [])
@@ -704,110 +703,6 @@ class Application:
         interface["surface"] = surface
         self._spec = None
         return dict(node)
-
-    # --- components its developer wrote (LOOP P-17) -----------------------------
-
-    def _custom_components(self) -> List[AppCustomComponentSpec]:
-        """The components it declares of its own, as the spec holds them."""
-        return [
-            AppCustomComponentSpec.model_validate(item)
-            for item in (self._document.get("interface") or {}).get("custom_components")
-            or []
-        ]
-
-    def custom_component(
-        self,
-        name: str,
-        *,
-        description: str,
-        source: str,
-        props: Optional[Mapping[str, Any]] = None,
-        shows: Sequence[str] = (),
-        sends: Sequence[str] = (),
-        integrity: str = "",
-        height: int = 240,
-        example: Optional[Mapping[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """Declare a component its developer wrote (LOOP P-17): of this application only.
-
-        ``app.custom_component("Gauge", description="A dial.", source=
-        "https://elements.example.com/gauge.js", props={"type": "object",
-        "properties": {"label": {"type": "string"}}}, shows=["value"])``; then
-        ``app.component("load", "Gauge", label="Load", value={"path": "/load"})``
-        places it, ``session.component(...)`` shows it, and
-        ``app.output("load", "Gauge", label="Load")`` draws a page's output
-        with it. Its module is a built ES module, its default export drawing
-        it (``export default function (root, {props, send})``), loaded in a
-        sandboxed frame of no origin; a file of the application's folder
-        waits for its packaging (P-29).
-
-        Parameters
-        ----------
-        name : str
-            Its name on a surface, a word starting with a capital letter.
-        description : str
-            What it is for, in a sentence.
-        source : str
-            The address of its module: ``https://``, or ``http://localhost``.
-        props : mapping, optional
-            Its properties, the JSON Schema of an object; none when unsaid.
-        shows : sequence of str
-            What it shows from the page's data: bindings.
-        sends : sequence of str
-            What it sends back: bindings it writes, then its action.
-        integrity : str
-            Its module's Subresource Integrity hash: a module that differs is
-            not drawn.
-        height : int
-            Its height on the page, in pixels.
-        example : mapping, optional
-            A configuration its schema accepts, for the palette's preview.
-
-        Returns
-        -------
-        dict
-            The component, as the spec holds it.
-
-        Raises
-        ------
-        ValueError
-            For a declaration agentspecs refuses, in its sentences, or a name
-            already declared.
-        """
-        from agentspecs.apps import AppCustomComponent
-        from pydantic import ValidationError
-
-        given: Dict[str, Any] = {
-            "name": name,
-            "description": description,
-            "source": source,
-            "shows": list(shows),
-            "sends": list(sends),
-            "integrity": integrity,
-            "height": height,
-        }
-        if props is not None:
-            given["props"] = dict(props)
-        if example is not None:
-            given["example"] = dict(example)
-        try:
-            declared = AppCustomComponent.model_validate(given)
-        except ValidationError as error:
-            raise ValueError(
-                "; ".join(
-                    str(each["msg"]).removeprefix("Value error, ")
-                    for each in error.errors()
-                )
-            ) from None
-        if any(component.name == name for component in self._custom_components()):
-            raise ValueError(f"{self.id} already has a component {name!r} of its own.")
-        item = declared.model_dump(mode="json", exclude_defaults=True)
-        item.setdefault("props", declared.props)
-        self._document.setdefault("interface", {}).setdefault(
-            "custom_components", []
-        ).append(item)
-        self._spec = None
-        return dict(item)
 
     @property
     def ui(self) -> SurfaceComponents:
@@ -905,24 +800,16 @@ class Application:
             For a component an output is not drawn with, properties its schema
             refuses, or a name already given.
         """
-        own = self._custom_components()
-        custom = next((each for each in own if each.name == component), None)
         shows = OUTPUT_SHOWS.get(component)
-        if shows is None and custom is not None:
-            # A component its developer wrote (P-17): its value is what it shows first.
-            if not custom.shows:
-                raise ValueError(
-                    f"The output {name!r} is drawn with {component!r}, which shows nothing: "
-                    "its value is what it shows first, under `shows`."
-                )
-            shows = custom.shows[0]
         if shows is None:
             raise ValueError(
                 f"The output {name!r} is drawn with {component!r}: an output is one of "
-                f"{', '.join(OUTPUT_SHOWS)} or a component of its own (app.custom_component)."
+                f"{', '.join(OUTPUT_SHOWS)}."
             )
         # Its value fills what the component shows: bound, as the page binds it.
-        placer(own)(name, component, **{shows: {"path": f"/outputs/{name}"}}, **props)
+        component_node(
+            name, component, **{shows: {"path": f"/outputs/{name}"}}, **props
+        )
         outputs = self._page()["outputs"]
         if any(output["name"] == name for output in outputs):
             raise ValueError(f"{self.id}'s page already has an output {name!r}.")
