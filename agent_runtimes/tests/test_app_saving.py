@@ -21,7 +21,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from agent_runtimes.loop.apps.agent import app_capabilities
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError, sentence_of
 from agent_runtimes.loop.apps.plugins import rules_for
-from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.loop.apps.record import _SESSION, AppRecorder
 from agent_runtimes.loop.apps.rules import UNCLASSED
 from agent_runtimes.loop.apps.saving import (
     APPROVE_AND_SAVE,
@@ -465,10 +465,26 @@ async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
 
     rules = rules_for(app)
     rules.ask = ask
+    # What the record says of it (found in the R-25 drill of 2026-10-07: it
+    # said `do_it`): refused, not granted — never the behaviour that let the
+    # tool run only to refuse it.
+    recorder = AppRecorder(
+        app=app.model_copy(
+            update={"record": app.record.model_copy(update={"include": ["decisions"]})}
+        ),
+        app_uid="app-1",
+    )
+    rules.record = recorder.decided
+    _SESSION.set("s-r25")
     capability = AppSavingCapability(app=app, app_uid="app-1", write=written)
     await Agent(FunctionModel(model), capabilities=[rules, capability]).run(
         "Save it in the wiki."
     )
+    [entry] = [e for e in recorder._pending.get("s-r25", []) if e["kind"] == "decision"]
+    assert entry["summary"] == f"{SAVE_TOOL}: refused (not granted to write that Space)"
+    assert {
+        key: entry["payload"][key] for key in ("behaviour", "because", "refused")
+    } == {"behaviour": "refused", "because": SPACE_NOT_GRANTED, "refused": SPACE_NOT_GRANTED}
     assert asked == []
     assert written.calls == []
     assert returned == [

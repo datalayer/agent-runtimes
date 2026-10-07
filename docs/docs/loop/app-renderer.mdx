@@ -545,8 +545,10 @@ markdown (LOOP R-24). Nothing is written before a person saw it:
 - **Decline** keeps nothing: the tool never runs.
 - **A Space it is not granted is not asked.** A call naming a Space the
   Appspec does not grant to write is refused by the tool before anybody is
-  asked to approve it — *You may save only in …* — and the record says it was
-  decided without asking (`space_not_granted`), then the tool's refusal.
+  asked to approve it — *You may save only in …* — and the record says so: a
+  `decision` entry *refused (not granted to write that Space)* —
+  `behaviour: refused`, `because` and `refused` both `space_not_granted`,
+  never `do_it` — then the tool's refusal, writing nothing.
 - **A retry is the same page.** The write names an idempotency key — the
   application, the session, the Space and what is saved — and Spacer answers a
   create retried under that key with the page the first one made

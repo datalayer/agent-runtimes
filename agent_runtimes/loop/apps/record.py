@@ -115,6 +115,12 @@ ANSWERS = {
     "unanswered": "not answered in time",
 }
 
+#: What a decision is said as when its call is refused with nobody asked (LOOP R-25).
+REFUSED = "refused"
+
+#: Why such a call was refused, in the entry's summary.
+REFUSALS = {"space_not_granted": "not granted to write that Space"}
+
 #: The session the current run belongs to.
 _SESSION: contextvars.ContextVar[str] = contextvars.ContextVar(
     "loop_app_session", default=""
@@ -651,13 +657,20 @@ class AppRecorder:
 
     def decided(self, enforced: Any) -> None:
         decision = getattr(enforced, "decision", enforced)
+        # A call refused with nobody asked — a Space it is not granted (LOOP
+        # R-25) — is said refused: the behaviour that lets its tool run only
+        # to refuse it is not what was decided.
+        refused = str(getattr(enforced, "refused", "") or "")
+        behaviour = REFUSED if refused else getattr(decision, "behaviour", "")
         detail = {
             "tool": getattr(decision, "tool", ""),
-            "behaviour": getattr(decision, "behaviour", ""),
+            "behaviour": behaviour,
             "because": getattr(decision, "because", ""),
             # What the call does: a send is counted against its approval (LOOP W-08).
             "classes": list(getattr(decision, "classes", ()) or ()),
         }
+        if refused:
+            detail["refused"] = refused
         # Done without asking because the person approved it in advance (U-25).
         approved = getattr(enforced, "approved", None)
         if approved is not None:
@@ -665,7 +678,8 @@ class AppRecorder:
             detail["approved_words"] = approved.words
         self.add(
             "decision",
-            f"{getattr(decision, 'tool', '?')}: {getattr(decision, 'behaviour', '?')}"
+            f"{getattr(decision, 'tool', '?')}: {behaviour or '?'}"
+            + (f" ({REFUSALS.get(refused, refused)})" if refused else "")
             + (f" (approved in advance: {approved.words})" if approved else ""),
             detail,
         )

@@ -188,6 +188,11 @@ class Enforced:
     approved: Optional[Approval] = None
     """For *Do it if I asked*: the approval given in advance that covers it (U-25)."""
 
+    refused: str = ""
+    """Why the call is refused though nobody is asked — the tool runs only to
+    say so in its own sentence, writing nothing (a Space not granted, R-25);
+    the record says *refused*, never the behaviour that let the tool run."""
+
 
 def _id_of(ref: str) -> str:
     base, _, version = str(ref).rpartition(":")
@@ -372,6 +377,7 @@ class AppRulesCapability(AbstractCapability[Any]):
                 return Enforced(
                     tool_name,
                     replace(decided, behaviour=DO_IT, because=SPACE_NOT_GRANTED),
+                    refused=SPACE_NOT_GRANTED,
                 )
             if decided.behaviour != LEAVE_TO_ME:
                 decided = replace(
