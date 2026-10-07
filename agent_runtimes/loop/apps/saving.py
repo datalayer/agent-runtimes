@@ -56,6 +56,11 @@ SAVING_CLASSES: Mapping[str, List[str]] = {SAVE_TOOL: ["write"]}
 #: Why a save is asked whatever the rules say: it is shown first.
 APPROVE_AND_SAVE = "approve_and_save"
 
+#: Why a save is not asked: the Space it names is not granted to write, and
+#: the tool refuses it by itself — nobody is asked to approve what cannot be
+#: written (LOOP R-25).
+SPACE_NOT_GRANTED = "space_not_granted"
+
 #: The longest text saved, in characters: all of it is shown before it is.
 DRAFT_LIMIT = 20_000
 
@@ -85,6 +90,24 @@ def writable_spaces(app: AppSpec) -> List[str]:
         if grant.access == "write" and space and space not in found:
             found.append(space)
     return found
+
+
+def not_granted(app: AppSpec, space: Any = "") -> str:
+    """Why a save in `space` is refused, in a sentence; ``""`` when it may be asked.
+
+    Read the same way before the person is asked (`enforcement`) and by the
+    tool itself, so that a Space not granted is refused without asking anyone.
+    """
+    spaces = writable_spaces(app)
+    if not spaces:
+        return "No Space is granted to you to save in: say that you cannot save it."
+    target = str(space or "").strip() or spaces[0]
+    if target not in spaces:
+        return (
+            f"You may save only in {', '.join(spaces)}, not in {target}: "
+            "save it in one of those, or say that you cannot."
+        )
+    return ""
 
 
 def saves(app: AppSpec) -> bool:
@@ -277,15 +300,10 @@ class AppSavingCapability(AbstractCapability[Any]):
             content: The whole text to keep, in markdown.
             space: The Space to save in, when it may save in several; its first otherwise.
         """
-        spaces = writable_spaces(self.app)
-        if not spaces:
-            return "No Space is granted to you to save in: say that you cannot save it."
-        target = str(space or "").strip() or spaces[0]
-        if target not in spaces:
-            return (
-                f"You may save only in {', '.join(spaces)}, not in {target}: "
-                "save it in one of those, or say that you cannot."
-            )
+        refused = not_granted(self.app, space)
+        if refused:
+            return refused
+        target = str(space or "").strip() or writable_spaces(self.app)[0]
         title = " ".join(str(title or "").split())
         content = str(content or "").strip()
         if not title or not content:
@@ -363,12 +381,14 @@ __all__ = [
     "DRAFT_LIMIT",
     "SAVE_TOOL",
     "SAVING_CLASSES",
+    "SPACE_NOT_GRANTED",
     "AppSavingCapability",
     "NotSaved",
     "authorship",
     "byline",
     "idempotency_key",
     "link_of",
+    "not_granted",
     "saves",
     "writable_spaces",
     "write_on_spacer",

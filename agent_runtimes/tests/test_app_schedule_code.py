@@ -552,3 +552,66 @@ def test_the_stream_of_a_turn_ends_only_once_its_record_is_sent(
         for e in body["entries"]
     ]
     assert "turn" in kinds and "output" in kinds
+
+
+def test_a_woken_session_running_code_keeps_its_run_turn_and_output(
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    """No agent's run frames a handler, so nothing recorded it: the record
+    held the session's start only (drilled 2026-10-07, evening). It is kept
+    as an agent's run is: the run, the turn — what woke it, what its code
+    said — and its output, before the stream ends."""
+    from agent_runtimes.loop.apps.application import load_application_source
+
+    async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {
+            "access_token": "p-token",
+            "expires_in": 3600,
+            "principal_uid": "principal-14",
+        }
+
+    principal.use_asker(ask)
+    principal.forget_principal_token("dep-14")
+    runtime.make("r14-tick", tick_spec(), TICK_DEPLOYMENT)
+    sessions.serve_agent_code(
+        "r14-tick", load_application_source(TICK_SOURCE, "app.py")
+    )
+    try:
+        events = events_of(
+            remote.post(
+                "/api/v1/apps/sessions",
+                headers=as_("owner"),
+                json={
+                    "agent": "r14-tick",
+                    **TICK_DEPLOYMENT,
+                    "opener": "Say that the tick ran.",
+                    "woken_by": woken(1, "*/2 * * * *"),
+                    "session": "session-tick-15",
+                },
+            )
+        )
+        assert answer_of(events) == "TICK-HANDLER-RAN"
+        entries = [
+            e
+            for body in runtime.records
+            if body["session_uid"] == "session-tick-15"
+            for e in body["entries"]
+        ]
+        assert [e["kind"] for e in entries] == ["session", "run", "turn", "output"]
+        turn = entries[2]["payload"]
+        assert (turn["asked"], turn["answered"]) == (
+            "Say that the tick ran.",
+            "TICK-HANDLER-RAN",
+        )
+        assert entries[3]["summary"] == "TICK-HANDLER-RAN"
+        assert entries[3]["payload"] == {"length": 16, "schedule": "tick"}
+        # Every body says what woke it, as an agent's turn would.
+        assert all(
+            body["woken_by"]["position"] == 1
+            for body in runtime.records
+            if body["session_uid"] == "session-tick-15"
+        )
+    finally:
+        sessions.serve_agent_code("r14-tick", None)
+        principal.forget_principal_token("dep-14")

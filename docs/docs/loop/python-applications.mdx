@@ -432,7 +432,10 @@ only, once it holds the deployment's principal token: a request carrying
 code with no deployment behind it is refused. A version written as a spec
 carries no code, and its agent is asked the prompt. The stream of a woken
 session ends only once its turn is on the record, so a scheduler that stops
-the runtime as the stream ends loses nothing of it. Each tick reserves a
+the runtime as the stream ends loses nothing of it. A tick run by your code
+is recorded as an agent's run is: the run, its turn — the trigger's prompt
+and what your handler sent — and its output, beside the steps it took,
+as far as the Appspec's `record.include` keeps them. Each tick reserves a
 bounded amount of credits for its runtime — the deployment's spend limit
 when its owner set one, else the platform's own small reservation — never
 a share of what the owner has left.

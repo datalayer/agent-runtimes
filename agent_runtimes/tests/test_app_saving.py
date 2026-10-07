@@ -27,12 +27,14 @@ from agent_runtimes.loop.apps.saving import (
     APPROVE_AND_SAVE,
     DRAFT_LIMIT,
     SAVE_TOOL,
+    SPACE_NOT_GRANTED,
     AppSavingCapability,
     NotSaved,
     authorship,
     byline,
     idempotency_key,
     link_of,
+    not_granted,
     saves,
     writable_spaces,
     write_on_spacer,
@@ -407,3 +409,70 @@ def test_its_capability_knows_who_opened_each_session() -> None:
     recorder.opened("s-1", "u-eric")
     assert saving.person is not None and saving.person("s-1") == "u-eric"
     assert saving.woken is not None and not saving.woken("s-1")
+
+
+async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
+    """LOOP R-25: the grant is read before the person is asked, not after."""
+    app = digest()
+    decided = rules_for(app).decide(
+        SAVE_TOOL, {"title": "t", "content": "c", "space": "sp-wiki"}
+    )
+    assert (decided.decision.behaviour, decided.decision.because) == (
+        "do_it",
+        SPACE_NOT_GRANTED,
+    )
+    assert "not granted to write" in sentence_of(decided.decision)
+    # A Space granted, or none named, is still asked.
+    for space in ("sp-reports", ""):
+        assert (
+            rules_for(app)
+            .decide(SAVE_TOOL, {"title": "t", "content": "c", "space": space})
+            .decision.because
+            == APPROVE_AND_SAVE
+        )
+    # *Leave it to me* still refuses it outright.
+    never = rules_for(
+        digest(
+            rules=[
+                {"action": "Write", "applies_to": ["write"], "behaviour": "leave_to_me"}
+            ]
+        )
+    ).decide(SAVE_TOOL, {"space": "sp-wiki"})
+    assert never.decision.behaviour == "leave_to_me"
+
+    asked: List[tuple] = []
+
+    async def ask(tool: str, args: Dict[str, Any], decision: Any) -> None:
+        asked.append((tool, dict(args)))
+
+    written = Written()
+    returned: List[str] = []
+    calls = iter(
+        [
+            ToolCallPart(
+                SAVE_TOOL,
+                {"title": "Weekly digest", "content": DIGEST, "space": "sp-wiki"},
+            )
+        ]
+    )
+
+    def model(messages: list, info: AgentInfo) -> ModelResponse:
+        last = messages[-1].parts[-1]
+        if getattr(last, "part_kind", "") == "tool-return":
+            returned.append(str(last.content))
+        call = next(calls, None)
+        return ModelResponse(parts=[call] if call else [TextPart("Done.")])
+
+    rules = rules_for(app)
+    rules.ask = ask
+    capability = AppSavingCapability(app=app, app_uid="app-1", write=written)
+    await Agent(FunctionModel(model), capabilities=[rules, capability]).run(
+        "Save it in the wiki."
+    )
+    assert asked == []
+    assert written.calls == []
+    assert returned == [
+        "You may save only in sp-notes, sp-reports, not in sp-wiki: "
+        "save it in one of those, or say that you cannot."
+    ]
+    assert not_granted(app, "sp-notes") == "" and not_granted(app) == ""

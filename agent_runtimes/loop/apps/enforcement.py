@@ -91,7 +91,13 @@ from agent_runtimes.loop.apps.rules import (
     gives,
     matches,
 )
-from agent_runtimes.loop.apps.saving import APPROVE_AND_SAVE, DRAFT_LIMIT, SAVE_TOOL
+from agent_runtimes.loop.apps.saving import (
+    APPROVE_AND_SAVE,
+    DRAFT_LIMIT,
+    SAVE_TOOL,
+    SPACE_NOT_GRANTED,
+    not_granted,
+)
 from agent_runtimes.loop.apps.visitors import visitor_refusal
 from agent_runtimes.output.formats import OUTPUT_TOOLS, outputs_toolset, tool_given
 from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
@@ -152,6 +158,11 @@ def sentence_of(decision: Decision) -> str:
         return (
             f"`{decision.tool}` runs code on the application's computer, "
             "and its shell is off: it is left to you."
+        )
+    if decision.because == SPACE_NOT_GRANTED:
+        return (
+            "It named a Space it is not granted to write: nothing is asked, "
+            "and the tool refuses it."
         )
     if decision.because == APPROVE_AND_SAVE:
         return (
@@ -352,6 +363,16 @@ class AppRulesCapability(AbstractCapability[Any]):
         # only *Leave it to me* stands, and refuses it.
         if tool_name == SAVE_TOOL and tool_name in self.extra_classes:
             decided = decision_for(self.app, tool_name, classes=["write"])
+            if decided.behaviour != LEAVE_TO_ME and not_granted(
+                self.app, args.get("space")
+            ):
+                # A Space it is not granted to write (LOOP R-25): nobody is
+                # asked to approve what cannot be written; the tool runs and
+                # refuses it in its own sentence, writing nothing.
+                return Enforced(
+                    tool_name,
+                    replace(decided, behaviour=DO_IT, because=SPACE_NOT_GRANTED),
+                )
             if decided.behaviour != LEAVE_TO_ME:
                 decided = replace(
                     decided, behaviour=ASK_FIRST, because=APPROVE_AND_SAVE

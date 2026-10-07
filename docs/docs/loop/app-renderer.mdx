@@ -465,6 +465,10 @@ markdown (LOOP R-24). Nothing is written before a person saw it:
   paragraphs (`markdown_document`) — and the agent is answered its link,
   `/<owner>/<space>/documents/<uid>`, to give the person.
 - **Decline** keeps nothing: the tool never runs.
+- **A Space it is not granted is not asked.** A call naming a Space the
+  Appspec does not grant to write is refused by the tool before anybody is
+  asked to approve it — *You may save only in …* — and the record says it was
+  decided without asking (`space_not_granted`), then the tool's refusal.
 - **A retry is the same page.** The write names an idempotency key — the
   application, the session, the Space and what is saved — and Spacer answers a
   create retried under that key with the page the first one made

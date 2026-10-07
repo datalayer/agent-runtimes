@@ -558,6 +558,8 @@ class LiveSession:
     )
     _elements: Dict[str, Shown] = field(default_factory=dict, init=False, repr=False)
     """The elements open in a side panel or on a page (LOOP P-18): drawn again on a resume."""
+    _said: Optional[Dict[str, str]] = field(default=None, init=False, repr=False)
+    """What its code said in a turn recorded as a run of its own (LOOP R-14), by message id."""
 
     # --- what the session is -----------------------------------------------------
 
@@ -850,6 +852,8 @@ class LiveSession:
                         value={"id": event.id, "author": event.author},
                     )
                 )
+            if self._said is not None:
+                self._said[event.id] = event.text
             for index, said in enumerate(self.messages):
                 if said.get("id") == event.id:
                     self.messages[index] = kept
@@ -984,8 +988,7 @@ class LiveSession:
             """The turn."""
             await self._open_code(woken_by)
             if schedule is not None:
-                assert self.host is not None and self.session is not None
-                await self.host.scheduled(self.session, schedule)
+                await self._scheduled_code(schedule, opener)
                 return
             if not opener:
                 return
@@ -999,6 +1002,42 @@ class LiveSession:
         return self._start_turn(
             work, wraps_run=self.host is not None, head=head, counts=bool(opener)
         )
+
+    async def _scheduled_code(self, name: str, opener: str) -> None:
+        """Run the handler its code declared for a schedule, recorded as a run.
+
+        No agent's run frames it, so nothing else records it (LOOP R-14): it
+        is kept as the agent's runs are, and as a framework's turn is — the
+        run begun, the turn (what woke it, what its code said), its output,
+        or how it stopped — and its steps, as its code's steps always are.
+        """
+        assert self.host is not None and self.session is not None
+        recorder = self.recorder
+        recorder.start(self.uid)
+        recorder.ran(self.uid)
+        asked = opener.strip() or f"Woken by its schedule {name}."
+        self._said = {}
+        try:
+            await self.host.scheduled(self.session, name)
+        except BaseException as error:
+            said = str(error) or type(error).__name__
+            recorder.start(self.uid)
+            recorder.add(
+                "output",
+                f"Stopped: {said[:300]}",
+                {"error": type(error).__name__, "schedule": name},
+            )
+            await recorder.flush(self.uid)
+            raise
+        finally:
+            said_by_code = self._said or {}
+            self._said = None
+        answer = "\n\n".join(text for text in said_by_code.values() if text)
+        recorder.start(self.uid)
+        if recorder.kept("turn"):
+            recorder.turned(asked, answer)
+        recorder.add("output", answer[:300], {"length": len(answer), "schedule": name})
+        await recorder.flush(self.uid)
 
     def _woken_schedule(self, woken_by: Optional[Mapping[str, Any]]) -> Optional[str]:
         """The schedule of its code a tick woke it for, by the trigger's position
