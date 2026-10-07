@@ -375,6 +375,8 @@ export function SpeechBalloon({
       boxShadow="shadow.medium"
       fontSize={1}
       textAlign="left"
+      // Pixels, as strings: a number here is read as the theme's space
+      // scale (`-7` would be `-space[7]`, 48px).
       bottom={side === 'above' ? `${above}px` : undefined}
       top={side === 'above' ? undefined : `${above}px`}
       sx={{
