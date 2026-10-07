@@ -12,7 +12,7 @@
  * @module loop/apps/hostTools
  */
 
-import type { AppHostBridgeSpec } from '../../types/agentspecs';
+import type { AppHostBridgeSpec, AppHostUser } from '../../types/agentspecs';
 
 /** The tool its agent reads what the page passes it with. */
 export const HOST_CONTEXT_TOOL = 'host_context';
@@ -22,6 +22,17 @@ export const hostTool = (name: string): string => `host_${name}`;
 
 /** How a value or a function of the host is named. */
 export const HOST_NAME = /^[a-z][a-z0-9_]{0,62}$/;
+
+/** What the page's word on its visitor may be worth (LOOP D-21). */
+export const HOST_USERS: readonly AppHostUser[] = ['claimed', 'signed'];
+
+/**
+ * Whether a session is opened only for a user the host's server signed
+ * (LOOP D-21): `deployment.embedded.host.user: signed`.
+ */
+export function signedUser(bridge: AppHostBridgeSpec | undefined): boolean {
+  return bridge?.user === 'signed';
+}
 
 /** The tools its agent is given for the host. */
 export function hostToolsOf(bridge: AppHostBridgeSpec | undefined): string[] {

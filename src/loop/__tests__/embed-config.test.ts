@@ -151,6 +151,7 @@ describe('what the host overrides', () => {
         'api',
         'height',
         'language',
+        'user-token',
       ]),
     );
   });

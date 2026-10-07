@@ -36,7 +36,10 @@
  * agent calls as `host_open_ticket`, each as the rule naming it decides; the
  * element raises `message` when the application has answered and `action`
  * when it called a function of the page, beside `decision` and
- * `token-expired`.
+ * `token-expired`. Who its user is, when it matters (LOOP D-21): the page
+ * sets `user-token` (or `element.userToken`) to the token its server signed
+ * naming the user, sent with every run of an application that says
+ * `user: signed`.
  *
  * Window messages (LOOP P-25), on the host's own server: the element raises
  * `window-message` (`detail.data`) when the application's code tells the page
@@ -282,6 +285,8 @@ export function defineDatalayerAppElement(
     /** What the page gives the application, read at each call (D-10). */
     private readonly host: AppEmbedHost = {
       context: () => this.passed,
+      // Read as each run is sent (D-21): a renewed one goes with the next.
+      userToken: () => this.getAttribute('user-token') || undefined,
       functions: this.offered,
       onWindowPort: post => {
         this.windowPort = post;
@@ -349,6 +354,23 @@ export function defineDatalayerAppElement(
       }
     }
 
+    /**
+     * The token the host's server signed naming its user (LOOP D-21), the
+     * `user-token` attribute's: what an application that says `user: signed`
+     * opens its session with. Set it to hand a new one over.
+     */
+    get userToken(): string {
+      return this.getAttribute('user-token') ?? '';
+    }
+
+    set userToken(value: string) {
+      if (value) {
+        this.setAttribute('user-token', String(value));
+      } else {
+        this.removeAttribute('user-token');
+      }
+    }
+
     connectedCallback(): void {
       window.addEventListener('message', this.onMessage);
       void this.load();
@@ -365,6 +387,11 @@ export function defineDatalayerAppElement(
       after: string | null,
     ): void {
       if (!this.isConnected || before === after) {
+        return;
+      }
+      // The user's signed token is read as each run is sent (D-21): nothing
+      // is drawn again for a new one.
+      if (name === 'user-token') {
         return;
       }
       // A new token is handed to the framed page that is already there,

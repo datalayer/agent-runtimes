@@ -306,6 +306,7 @@ class AppRecorder:
     _started: Set[str] = field(default_factory=set, init=False)
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
     _opened: Dict[str, str] = field(default_factory=dict, init=False)
+    _signed: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
         # Nothing is kept of a conversation without an account (LOOP R-30).
@@ -339,6 +340,17 @@ class AppRecorder:
     def opener(self, session: str) -> str:
         """The person who opened ``session``, or ``""``."""
         return self._opened.get(session, "")
+
+    def signed(self, session: str, user: Optional[Dict[str, Any]]) -> None:
+        """Say which user the host's server signed for ``session`` (LOOP D-21); ``None`` for none."""
+        if user:
+            self._signed[session] = dict(user)
+        else:
+            self._signed.pop(session, None)
+
+    def signed_user(self, session: str) -> Dict[str, Any]:
+        """The user the host's server signed for ``session`` — ``{sub, name}`` — or ``{}``."""
+        return dict(self._signed.get(session) or {})
 
     def woken(self, session: str) -> Dict[str, Any]:
         """What woke a session: its own, or every session's; empty when a person opened it."""

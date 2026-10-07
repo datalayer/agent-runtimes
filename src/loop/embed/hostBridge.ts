@@ -21,6 +21,16 @@
  * the host's own server (`server`), and what it answers comes back as
  * `window-message` events.
  *
+ * Who its user is (LOOP D-21): what the page says as `user` is a claim.
+ * An application whose Appspec says `deployment.embedded.host.user: signed`
+ * takes only a token the host's **server** signed with the deployment's
+ * secret (HS256: `sub`, `name`, `exp` at most an hour away), which the page
+ * hands over as `userToken` (the element's `user-token`). It goes with every
+ * run as `forwardedProps.loop.user_token` (`hostUserRunProps`); the runtime
+ * verifies it where the session opens, refuses the session without it, and
+ * answers `host_context`'s `user` with the user it names. The secret never
+ * reaches the page.
+ *
  * Offered: the functions of the page its Appspec names
  * (`deployment.embedded.host.functions`), each called by its agent as the
  * tool `host_<name>`. Every one of these tools is decided in the page by
@@ -36,15 +46,17 @@
 
 import type { AppBehaviour, AppSpec } from '../../types/agentspecs';
 import type { FrontendToolDefinition } from '../../types/tools';
+import type { RunPropsContribution } from '../core';
 import { behaviourFor } from '../apps/rules';
 import {
   HOST_CONTEXT_TOOL,
   HOST_NAME,
   hostTool,
   hostToolsOf,
+  signedUser,
 } from '../apps/hostTools';
 
-export { HOST_CONTEXT_TOOL, HOST_NAME, hostTool, hostToolsOf };
+export { HOST_CONTEXT_TOOL, HOST_NAME, hostTool, hostToolsOf, signedUser };
 
 /** What the application tells the page it sits in. */
 export type HostEvent =
@@ -81,6 +93,12 @@ export type HostFunction = (
 export type AppEmbedHost = {
   /** What the page passes now: its visitor (`user`), itself (`page`), values of its own. */
   context?: () => Record<string, unknown>;
+  /**
+   * The token the host's server signed naming its user (LOOP D-21), read as
+   * each run is sent: what an application that says `user: signed` opens its
+   * session with. Never the deployment's secret.
+   */
+  userToken?: () => string | undefined;
   /** The page's functions, by the names the Appspec gives them. */
   functions?: Record<string, HostFunction>;
   /** Told what the application does: `message`, `action`. */
@@ -217,4 +235,28 @@ export function hostFrontendTools(
     });
   }
   return tools;
+}
+
+/**
+ * What goes with every run for the host's user (LOOP D-21): the token the
+ * host's server signed, as `forwardedProps.loop.user_token`, for an
+ * application that says `user: signed` — read at each run, so that the
+ * newest is sent; nothing when the page gives none, and the runtime refuses
+ * the session in a sentence. `undefined` for an application that takes what
+ * the page says.
+ */
+export function hostUserRunProps(
+  app: Pick<AppSpec, 'deployment'>,
+  host: () => AppEmbedHost,
+): RunPropsContribution | undefined {
+  if (!signedUser(app.deployment.embedded?.host)) {
+    return undefined;
+  }
+  return {
+    id: 'host-user',
+    props: () => {
+      const token = host().userToken?.()?.trim();
+      return token ? { loop: { user_token: token } } : {};
+    },
+  };
 }

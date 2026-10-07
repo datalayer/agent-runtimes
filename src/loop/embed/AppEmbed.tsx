@@ -49,7 +49,7 @@ import {
   useState,
 } from 'react';
 import type { CSSProperties, JSX, ReactNode } from 'react';
-import type { PluginRef } from '@datalayer/reactor';
+import { contribution, definePlugin, type PluginRef } from '@datalayer/reactor';
 import { Text, registerPortalRoot } from '@primer/react';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
@@ -83,7 +83,12 @@ import {
 } from '../plugins/assistant-characters';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
 import { createChatExtrasPlugin } from '../plugins/chat-extras';
-import { hostFrontendTools, type AppEmbedHost } from './hostBridge';
+import {
+  hostFrontendTools,
+  hostUserRunProps,
+  type AppEmbedHost,
+} from './hostBridge';
+import { LoopRunProps } from '../core';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 import {
   WINDOW_NOT_YET,
@@ -364,9 +369,32 @@ export function useHostBridge(
     // The tools change with what the Appspec names, and the rules that decide them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle, key]);
+  // Who its user is (D-21): the token the host's server signed goes with
+  // every run, for an application that takes only a signed user.
+  const signed = bridge?.user === 'signed';
+  const userPlugin = useMemo(() => {
+    const runProps = hostUserRunProps(app, () => hostRef.current ?? {});
+    return runProps
+      ? (definePlugin({
+          name: `loop-host-user-${app.id}`,
+          displayName: `${app.name}: who its user is`,
+          description: `The token naming its user that the host's server signed, sent with every run of ${app.name}.`,
+          octicon: 'person',
+          emoji: '\u{1F464}',
+          contributes: [
+            contribution(LoopRunProps, runProps, { id: 'host-user' }),
+          ],
+        }) as PluginRef)
+      : undefined;
+    // Made again only when whether it is signed changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.id, signed]);
   const plugins = useMemo(
-    () => (bridge ? [handle.plugin as PluginRef] : NO_HOST_PLUGINS),
-    [bridge, handle],
+    () =>
+      bridge
+        ? [handle.plugin as PluginRef, ...(userPlugin ? [userPlugin] : [])]
+        : NO_HOST_PLUGINS,
+    [bridge, handle, userPlugin],
   );
   // What its code tells the page during a turn (LOOP P-25), raised on it.
   useEffect(

@@ -569,7 +569,7 @@ made by that code.
 | | |
 | --- | --- |
 | `session.id` | The session's id: its conversation and its record. |
-| `session.user` | Who the person is, when the host knows. |
+| `session.user` | Who the person is, when the host knows: embedded with `user: signed`, the `sub` the host's server signed (LOOP D-21). |
 | `session.state` | A dict the application keeps across the turns of this session; each session has its own. |
 | `session.settings` | The person's settings, by id, their defaults filled in; a copy. |
 | `session.profile` | The id of the profile the conversation is with (LOOP P-20): the first unless another was picked; `None` for an application without profiles. |

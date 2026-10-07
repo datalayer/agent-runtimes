@@ -54,7 +54,7 @@ import {
 } from './appspec';
 import { classesOf, splitRef, toolBehaviours } from './rules';
 import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
-import { HOST_NAME, hostToolsOf } from './hostTools';
+import { HOST_NAME, HOST_USERS, hostToolsOf } from './hostTools';
 import { MAX_UPLOAD_MB, UPLOAD_KIND } from './uploads';
 import { formUiProblems } from './settingsInputs';
 import { translationProblems } from './language';
@@ -307,6 +307,12 @@ function shapeProblems(app: AppSpec): string[] {
     const names = host.functions.map(fn => fn.name);
     if (new Set(names).size !== names.length) {
       problems.push('The host’s functions are named once each.');
+    }
+    // Who its user is (D-21): what the page says, or what its server signed.
+    if (host.user !== undefined && !HOST_USERS.includes(host.user)) {
+      problems.push(
+        `“${host.user}” is not how the host’s user is taken: claimed or signed.`,
+      );
     }
     const named = new Set(app.rules.flatMap(rule => rule.appliesTo));
     for (const tool of hostToolsOf(host)) {

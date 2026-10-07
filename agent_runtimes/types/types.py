@@ -2552,6 +2552,39 @@ class AppHostedSpec(BaseModel):
     slug: str = Field(default="")
 
 
+class AppHostFunctionSpec(BaseModel):
+    """A function of the host page the application's agent may call (LOOP D-10)."""
+
+    name: str = Field(..., description="Called as the tool `host_<name>`")
+    description: str = Field(..., description="What it does, for the agent")
+    parameters: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="Its arguments, as a JSON Schema object",
+    )
+
+
+class AppHostBridgeSpec(BaseModel):
+    """What the host page and an embedded application say to each other (LOOP D-10, D-21)."""
+
+    context: List[str] = Field(
+        default_factory=list,
+        description="The host's values it reads with `host_context`: `user`, `page`, its own",
+    )
+    functions: List[AppHostFunctionSpec] = Field(default_factory=list)
+    user: str = Field(
+        default="claimed",
+        description=(
+            "Who its user is: `claimed`, what the page says; `signed`, only a token the "
+            "host's server signed with the deployment's secret (LOOP D-21)"
+        ),
+    )
+
+    @property
+    def signed_user(self) -> bool:
+        """Whether a session is opened only for a user the host's server signed (D-21)."""
+        return self.user == "signed"
+
+
 class AppEmbeddedSpec(BaseModel):
     """An application inside another product's page."""
 
@@ -2559,6 +2592,10 @@ class AppEmbeddedSpec(BaseModel):
         default="inline", description="`inline`, `bubble`, `panel` or `assistant`"
     )
     origins: List[str] = Field(default_factory=list)
+    host: Optional[AppHostBridgeSpec] = Field(
+        default=None,
+        description="What the host page passes it, the functions it offers, and who its user is",
+    )
 
 
 class AppDeploymentSpec(BaseModel):

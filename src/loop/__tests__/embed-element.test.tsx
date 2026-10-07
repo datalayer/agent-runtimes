@@ -470,6 +470,52 @@ deployment:
     element.remove();
   });
 
+  it('sends the token the host signed naming its user with every run, when the application takes only that (D-21)', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    const element = document.createElement('datalayer-app') as HTMLElement & {
+      userToken: string;
+    };
+    element.innerHTML = `<script type="application/yaml">
+schema: loop.app/v1
+id: shop-orders
+name: Shop orders
+kind: chat
+agent: support-agent
+rules:
+  - action: Read what the page says
+    applies_to: host_context
+    behaviour: do_it
+deployment:
+  embedded:
+    host:
+      context: [user]
+      user: signed
+</script>`;
+    element.setAttribute('user-token', 'signed.by.host');
+    await act(async () => {
+      document.body.appendChild(element);
+    });
+    await settle();
+    const drawn = seen.renderer.length;
+    const renderer = seen.renderer.at(-1)!;
+    // The host's tools, and who its user is.
+    expect(renderer.plugins).toHaveLength(2);
+    const plugin = renderer.plugins[1] as unknown as {
+      contributes: Array<{ value: { props: () => unknown } }>;
+    };
+    const props = () => plugin.contributes[0].value.props();
+    expect(props()).toEqual({ loop: { user_token: 'signed.by.host' } });
+    // A new one goes with the next run, and nothing is drawn again for it.
+    element.userToken = 'renewed.by.host';
+    await settle();
+    expect(seen.renderer.length).toBe(drawn);
+    expect(props()).toEqual({ loop: { user_token: 'renewed.by.host' } });
+    expect(element.getAttribute('user-token')).toBe('renewed.by.host');
+    element.userToken = '';
+    expect(props()).toEqual({});
+    element.remove();
+  });
+
   it('draws an Appspec written in it, in its shadow root, in the mode its spec says', async () => {
     iamStore.setState({ token: 'jwt' } as never);
     const element = document.createElement('datalayer-app');

@@ -70,6 +70,7 @@ from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import answer_surface
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
+from agent_runtimes.loop.apps.host_user import HostUser, reads_user, signed_host_context
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -505,6 +506,8 @@ class LiveSession:
     """The option of each of its modes the person is in (LOOP P-19), as the last run said."""
     profile: str = ""
     """The profile the conversation is with (LOOP P-20); ``""`` until one is said, then kept."""
+    user: Optional[HostUser] = None
+    """Embedded, the user the host's server signed (LOOP D-21): who `host_context` says, and its code's user."""
     state: str = "open"
     messages: List[Dict[str, Any]] = field(default_factory=list)
     """The conversation so far, as AG-UI messages: what a run is given."""
@@ -542,6 +545,13 @@ class LiveSession:
         return str(self.instance.get("deployment_uid") or "")
 
     @property
+    def user_id(self) -> Optional[str]:
+        """Who its code's ``session.user`` is: the user the host signed, else who opened it."""
+        if self.user is not None:
+            return self.user.sub
+        return self.opened_by.uid or None
+
+    @property
     def written_in_python(self) -> bool:
         """Whether its application's code reacts to it."""
         return self.host is not None
@@ -565,6 +575,7 @@ class LiveSession:
             "preview": not self.deployment_uid,
             "acts_as": dict(self.acts_as),
             "opened_by": {"kind": self.opened_by.kind, "uid": self.opened_by.uid},
+            "user": self.user.as_value() if self.user is not None else None,
             "state": self.state,
             "settings": dict(self.settings),
             "profile": self.profile or None,
@@ -902,7 +913,7 @@ class LiveSession:
         await self.recorder.flush(self.uid)
         if self.host is not None and self.session is None:
             self.session = await self.host.open(
-                user=self.opened_by.uid or None,
+                user=self.user_id,
                 settings=self.settings,
                 id=self.uid,
                 modes=self.modes,
@@ -1368,7 +1379,7 @@ class LiveSession:
                 self.session = await self.host.resume(
                     self.uid,
                     state,
-                    user=self.opened_by.uid or None,
+                    user=self.user_id,
                     settings=self.settings,
                     elements=list(self._elements.values()),
                 )
@@ -1630,6 +1641,10 @@ class LiveSession:
                 # What its model is given whole: an image, a recording, a PDF (P-21).
                 content = [{"type": "text", "text": content}, *parts]
             said = [*messages[:-1], {**last, "content": content}] if words else messages
+            # What the page answered `host_context`, its `user` the one the
+            # host's server signed (LOOP D-21): never what the page says.
+            if reads_user(self.app):
+                said = signed_host_context(said, self.user)
             self.messages = [dict(m) for m in said]
             # The profile the conversation is with, and the modes the person
             # is in, for this run only (LOOP P-19, P-20).
@@ -1775,8 +1790,12 @@ def new_session(
     messages: Optional[List[Dict[str, Any]]] = None,
     resumed: bool = False,
     profile: str = "",
+    user: Optional[HostUser] = None,
 ) -> LiveSession:
     """A session of an application's agent on this runtime, kept by uid.
+
+    ``user`` is the user the host's server signed, embedded (LOOP D-21,
+    `host_user_of`): verified before it is made.
 
     Raises
     ------
@@ -1808,6 +1827,8 @@ def new_session(
     # Who opened it, on its record (LOOP R-31): a person the runtime
     # verified; an embed's visitor or one not signed in is nobody known.
     recorder.opened(uid, opened_by.uid if opened_by.kind == "person" else "")
+    # Who it acts for, embedded, as the host's server signed them (D-21).
+    recorder.signed(uid, {"sub": user.sub, "name": user.name} if user else None)
     live = LiveSession(
         uid=uid,
         agent_id=agent_id,
@@ -1820,6 +1841,7 @@ def new_session(
         messages=list(messages or []),
         resumed=resumed,
         profile=profile,
+        user=user,
     )
     application = code_of(app)
     if application is not None:

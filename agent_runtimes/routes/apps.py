@@ -572,6 +572,13 @@ class StartSessionRequest(BaseModel):
     woken_by: Dict[str, Any] = Field(
         default_factory=dict, description="What woke it, when nobody opened it (R-14)"
     )
+    user_token: str = Field(
+        "",
+        description=(
+            "Embedded, the token the host's server signed naming its user (LOOP D-21): "
+            "what an application that says `user: signed` opens its session with"
+        ),
+    )
 
 
 class SessionMessageRequest(BaseModel):
@@ -612,6 +619,13 @@ class ResumeSessionRequest(BaseModel):
     agent: str = Field(
         "",
         description="The application's agent here, for a session this runtime no longer holds",
+    )
+    user_token: str = Field(
+        "",
+        description=(
+            "For one it no longer holds, the token the host's server signed naming its "
+            "user, when its application takes only that (LOOP D-21)"
+        ),
     )
 
 
@@ -722,6 +736,22 @@ async def _acts_as(
     }
 
 
+def _signed_user(
+    app: AppSpec, instance: Dict[str, Any], token: Any, *, woken: bool = False
+) -> Any:
+    """The user the host's server signed for a session opening, or a refusal (LOOP D-21)."""
+    from agent_runtimes.loop.apps.host_user import UserNotSigned, host_user_of
+
+    if token is not None and not isinstance(token, str):
+        raise HTTPException(
+            status_code=422, detail="The token naming the user is text."
+        )
+    try:
+        return host_user_of(app, instance, token, woken=woken)
+    except UserNotSigned as refused:
+        raise HTTPException(status_code=refused.status, detail=refused.reason) from None
+
+
 def _prune() -> None:
     """Forget the oldest idle sessions beyond what a runtime holds."""
     from agent_runtimes.loop.apps import sessions
@@ -810,6 +840,8 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+    # Who its user is, embedded, when it takes only one its host signed (D-21).
+    user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
     _prune()
     try:
         live = new_session(
@@ -821,6 +853,7 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
             settings=body.settings,
             uid=body.session,
             profile=body.profile,
+            user=user,
         )
         return _stream(
             live.open(
@@ -1008,6 +1041,8 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
         bearer = bearer_of(request.headers.get("authorization"))
         set_request_user_jwt(bearer or None)
         acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+        # Opened again: its user signed again, when its application takes only that (D-21).
+        user = _signed_user(app, instance, body.user_token)
         messages = await conversation_from_record(uid, app, instance, bearer)
         _prune()
         live = new_session(
@@ -1019,6 +1054,7 @@ async def resume_session(uid: str, body: ResumeSessionRequest, request: Request)
             uid=uid,
             messages=messages,
             resumed=True,
+            user=user,
         )
         return _stream(live.resume(head=live.session_event()))
     except SessionRefused as refused:
@@ -1070,6 +1106,13 @@ async def session_agui(agent: str, request: Request) -> Any:
         live = session_of(thread)
         if live is None:
             acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+            # Who its user is, embedded, when it takes only one its host
+            # signed (D-21): verified as the session opens.
+            user = _signed_user(
+                app,
+                instance,
+                loop.get("user_token") if isinstance(loop, dict) else None,
+            )
             _prune()
             live = new_session(
                 agent_id=agent,
@@ -1078,6 +1121,7 @@ async def session_agui(agent: str, request: Request) -> Any:
                 opened_by=authorized.caller,
                 acts_as=acts_as,
                 uid=thread,
+                user=user,
             )
         elif live.agent_id != agent or not live.answers_to(authorized.caller):
             raise SessionRefused(404, f"No session {thread} of {agent} is held here.")

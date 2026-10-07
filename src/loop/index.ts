@@ -362,6 +362,8 @@ export {
   hostRefused,
   hostTool,
   hostToolsOf,
+  hostUserRunProps,
+  signedUser,
   type AppEmbedHost,
   type HostEvent,
   type HostFunction,

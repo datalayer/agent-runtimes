@@ -57,6 +57,8 @@ export const EMBED_ATTRIBUTES = {
     'true or false: whether a visit’s conversation is picked up again after the page reloads, kept in the page’s storage; true by default.',
   language:
     'The language the visitor reads the application in, as BCP 47 tags it (fr, pt-BR): its translation into it, and the chat’s own words; the visitor’s browser’s by default.',
+  'user-token':
+    'A token your server signed with the deployment’s secret, naming your user (HS256: sub, name, exp at most an hour away): what an application that says user: signed opens its session with.',
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;

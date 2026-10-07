@@ -106,6 +106,19 @@ that application **as it is deployed**, and nothing beyond:
   feedback is about its own session only. It configures nothing and reads no
   memories (`403`).
 
+- **Who its user is, when it matters** (LOOP D-21). An application whose
+  Appspec says `deployment.embedded.host.user: signed` opens a session of its
+  deployment only with a token the host's server signed naming its user —
+  HS256 with the deployment's secret, `sub`, `name`, `exp` at most an hour
+  away — sent as `user_token` (`POST /sessions`, `POST /sessions/{uid}/resume`)
+  or `forwardedProps.loop.user_token` (AG-UI). Verified as the session opens,
+  with the secret this runtime was given (`DATALAYER_APP_USER_SECRET_<deployment
+  uid>`): `401` without it, `403` for one that is not one, `503` when the
+  runtime was not given the secret. The user it names is the session's
+  (`user`: `{ sub, name, signed }`): what `host_context` answers as `user`,
+  its code's `session.user`, and whom a page it saves was written for. A
+  Preview, and a session a schedule woke, have nobody to sign.
+
 On Datalayer, a runtime is launched with a person's credentials, which an
 embed token never stands for: an embed's visitor reaches a session where an
 agent-runtimes server already runs the deployment — the host's own
@@ -204,6 +217,7 @@ What `GET` says of a session:
   "preview": true,
   "acts_as": {"kind": "person", "uid": "ada"},
   "opened_by": {"kind": "person", "uid": "ada"},
+  "user": null,
   "state": "open",
   "settings": {"tone": "Plain"},
   "asking": null,

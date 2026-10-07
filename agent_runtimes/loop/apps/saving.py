@@ -110,13 +110,16 @@ def authorship(
     person_uid: str,
     on_its_own: bool,
     session: str,
+    user: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Who wrote a page it saves: the application, and the person it acted for (I-10).
 
     ``person_uid`` is who opened the session, ``""`` when it is not known;
     ``on_its_own`` when nobody did — a session woken by a schedule (R-16).
+    ``user``, embedded, the user the host's server signed (D-21): its
+    ``sub`` and ``name``, kept as ``for_user``.
     """
-    return {
+    about: Dict[str, Any] = {
         "saved_by": "loop.app",
         "app": {
             "id": app.id,
@@ -129,13 +132,22 @@ def authorship(
         "on_its_own": on_its_own,
         "session": session,
     }
+    if user:
+        about["for_user"] = {"sub": str(user["sub"]), "name": str(user["name"])}
+    return about
 
 
-def byline(app: AppSpec, *, on_its_own: bool) -> str:
-    """The last line of a page it saves: its face and name, and *on its own* when nobody was there."""
+def byline(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
+    """The last line of a page it saves: its face and name, and *on its own*
+    when nobody was there — or the user it wrote for, when the host's server
+    signed them (D-21)."""
     face = f"{app.emoji} " if app.emoji else ""
     who = f"{face}{app.name or app.id}"
-    return f"*Written by {who}, on its own.*" if on_its_own else f"*Written by {who}.*"
+    if on_its_own:
+        return f"*Written by {who}, on its own.*"
+    return (
+        f"*Written by {who}, for {for_name}.*" if for_name else f"*Written by {who}.*"
+    )
 
 
 def link_of(space: Mapping[str, Any], document_uid: str) -> str:
@@ -245,6 +257,9 @@ class AppSavingCapability(AbstractCapability[Any]):
     woken: Optional[Callable[[str], Any]] = None
     """What woke a session, empty when a person opened it: then it writes on its own (I-10, R-16)."""
 
+    user: Optional[Callable[[str], Dict[str, Any]]] = None
+    """The user the host's server signed for a session, embedded — ``{sub, name}`` — or ``{}`` (D-21)."""
+
     write: Optional[Write] = None
     """How Spacer is written to; over HTTP, with the token of the run, when unsaid."""
 
@@ -292,6 +307,7 @@ class AppSavingCapability(AbstractCapability[Any]):
         # and the document's metadata names it and the person it acted for.
         person_uid = self.person(session) if self.person is not None else ""
         on_its_own = bool(self.woken(session)) if self.woken is not None else False
+        user = self.user(session) if self.user is not None else {}
         about = authorship(
             self.app,
             app_uid=self.app_uid,
@@ -299,9 +315,12 @@ class AppSavingCapability(AbstractCapability[Any]):
             person_uid=person_uid,
             on_its_own=on_its_own,
             session=session,
+            user=user,
         )
+        signed_name = "" if on_its_own else str(user.get("name") or "")
         state = markdown_document(
-            title, f"{content}\n\n{byline(self.app, on_its_own=on_its_own)}"
+            title,
+            f"{content}\n\n{byline(self.app, on_its_own=on_its_own, for_name=signed_name)}",
         )
         try:
             written = await (self.write or self._write_with_token)(

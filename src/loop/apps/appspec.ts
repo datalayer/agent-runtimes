@@ -36,6 +36,7 @@ import type {
   AppThemeVariant,
   AppAssistantCharacter,
   AppEmbedMode,
+  AppHostUser,
   AppCommandSpec,
   AppConnectionSpec,
   AppCriterionSpec,
@@ -626,6 +627,11 @@ function parseDeployment(data: Data): AppDeploymentSpec {
         ? {
             host: {
               context: texts(data.embedded.host.context),
+              // Kept as written when said: a value that is none is refused
+              // by the checks, never read as `claimed` (D-21).
+              ...(data.embedded.host.user !== undefined
+                ? { user: text(data.embedded.host.user) as AppHostUser }
+                : {}),
               functions: records(data.embedded.host.functions).map(fn => ({
                 name: text(fn.name),
                 description: text(fn.description),
@@ -1260,6 +1266,11 @@ export function dumpAppspec(app: AppSpec): Data {
                           ? {}
                           : { parameters: fn.parameters }),
                       })),
+                    )
+                    .value<string>(
+                      'user',
+                      app.deployment.embedded.host.user ?? 'claimed',
+                      'claimed',
                     ).data,
               ).data,
         ).data,

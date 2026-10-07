@@ -1464,7 +1464,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     HostBridge: {
       additionalProperties: false,
       description:
-        "What the host page and the application say to each other (LOOP D-10).\n\nThe values of the host it reads (`context`: `user`, `page`, or a name of\nthe host's own), through the tool `host_context`; the functions of the\nhost it may call, each through `host_<name>`. Every one of these tools is\ndecided by a rule that names it, as any tool is: one no rule names is\nleft to the person.",
+        "What the host page and the application say to each other (LOOP D-10).\n\nThe values of the host it reads (`context`: `user`, `page`, or a name of\nthe host's own), through the tool `host_context`; the functions of the\nhost it may call, each through `host_<name>`. Every one of these tools is\ndecided by a rule that names it, as any tool is: one no rule names is\nleft to the person.\n\nWho its user is (`user`, LOOP D-21): what the page says (`claimed`), or\nonly what the host's server signed (`signed`) — a short token, HS256\nwith the deployment's secret, naming `sub`, `name` and `exp` at most an\nhour away. An application that acts in each user's name, or shows data\nthat is theirs, says `signed`.",
       properties: {
         context: {
           description:
@@ -1482,6 +1482,12 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           },
           title: 'Functions',
           type: 'array',
+        },
+        user: {
+          $ref: '#/$defs/HostUser',
+          default: 'claimed',
+          description:
+            "Who its user is: `claimed`, what the page says; `signed`, only a token the host's server signed with the deployment's secret, the unsigned one refused",
         },
       },
       title: 'HostBridge',
@@ -1513,6 +1519,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       required: ['name', 'description'],
       title: 'HostFunction',
       type: 'object',
+    },
+    HostUser: {
+      description:
+        "What the host page's word on its visitor is worth (LOOP D-21).",
+      enum: ['claimed', 'signed'],
+      title: 'HostUser',
+      type: 'string',
     },
     HostedDeployment: {
       additionalProperties: false,

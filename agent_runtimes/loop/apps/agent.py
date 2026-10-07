@@ -140,6 +140,8 @@ def app_capabilities(
                 # Who it acts for: who opened the session, or nobody (I-10).
                 person=recorder.opener,
                 woken=recorder.woken,
+                # The user the host's server signed, embedded (D-21).
+                user=recorder.signed_user,
             )
         )
     # What it learns (LOOP R-26): skills proposed for its owner to review,

@@ -821,7 +821,16 @@ export interface AppHostFunctionSpec {
 export interface AppHostBridgeSpec {
   context: string[];
   functions: AppHostFunctionSpec[];
+  /**
+   * Who its user is (LOOP D-21): `claimed`, what the page says (unless
+   * said); `signed`, only a token the host's server signed with the
+   * deployment's secret — the unsigned one refused.
+   */
+  user?: AppHostUser;
 }
+
+/** What the host page's word on its visitor is worth (LOOP D-21). */
+export type AppHostUser = 'claimed' | 'signed';
 
 export interface AppDeploymentSpec {
   hosted?: {

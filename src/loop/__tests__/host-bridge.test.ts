@@ -20,6 +20,8 @@ import {
   hostFrontendTools,
   hostRefused,
   hostToolsOf,
+  hostUserRunProps,
+  signedUser,
   type AppEmbedHost,
 } from '../embed/hostBridge';
 
@@ -265,6 +267,62 @@ describe('the Appspec of the host', () => {
         'The host function “Open Ticket” says what it does.',
         'The host function “Open Ticket” takes its arguments as a JSON Schema of `type: object`.',
       ]),
+    );
+  });
+});
+
+describe('who its user is (D-21)', () => {
+  const signed = (): AppSpec => {
+    const app = hosted(RULED.rules);
+    app.deployment.embedded!.host = { ...HOST, user: 'signed' };
+    return app;
+  };
+
+  it('is what the page says unless the Appspec says signed', () => {
+    expect(signedUser(HOST)).toBe(false);
+    expect(signedUser({ ...HOST, user: 'signed' })).toBe(true);
+    expect(signedUser(undefined)).toBe(false);
+    expect(hostUserRunProps(RULED, () => ({}))).toBeUndefined();
+  });
+
+  it('sends the token the host signed with every run, the newest', () => {
+    let token: string | undefined = 'one.two.three';
+    const runProps = hostUserRunProps(signed(), () => ({
+      userToken: () => token,
+    }))!;
+    expect(runProps.id).toBe('host-user');
+    expect(runProps.props()).toEqual({
+      loop: { user_token: 'one.two.three' },
+    });
+    token = 'four.five.six';
+    expect(runProps.props()).toEqual({ loop: { user_token: 'four.five.six' } });
+    // None given: nothing sent, and the runtime refuses the session.
+    token = '  ';
+    expect(runProps.props()).toEqual({});
+    expect(hostUserRunProps(signed(), () => ({}))!.props()).toEqual({});
+  });
+
+  it('is written, read back and checked', () => {
+    const written = dumpAppspec(signed());
+    expect(
+      (written.deployment as { embedded: { host: { user: string } } }).embedded
+        .host.user,
+    ).toBe('signed');
+    expect(parseAppspec(written).app.deployment.embedded?.host?.user).toBe(
+      'signed',
+    );
+    // Claimed is what it is unless said: not written.
+    expect(
+      'user' in
+        (dumpAppspec(RULED).deployment as { embedded: { host: object } })
+          .embedded.host,
+    ).toBe(false);
+    const wrong = signed();
+    wrong.deployment.embedded!.host!.user = 'verified' as 'signed';
+    expect(
+      checkApp(wrong).problems.filter(problem => /host/.test(problem)),
+    ).toContain(
+      '“verified” is not how the host’s user is taken: claimed or signed.',
     );
   });
 });
