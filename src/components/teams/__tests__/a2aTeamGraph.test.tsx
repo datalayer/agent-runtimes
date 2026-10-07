@@ -381,8 +381,13 @@ describe('A2ATeamGraph with a connection', () => {
     expect(container.textContent).toContain(
       'Accounting calls Odoo · trial balance',
     );
+    // The style elements' text, and the rules primer-addons' Box inserts
+    // into its stylesheet (`insertRule`, no text).
     const css = Array.from(document.querySelectorAll('style'))
-      .map(style => style.textContent ?? '')
+      .flatMap(style => [
+        style.textContent ?? '',
+        ...Array.from(style.sheet?.cssRules ?? []).map(rule => rule.cssText),
+      ])
       .join('\n');
     const reduced = css.slice(css.indexOf('prefers-reduced-motion'));
     expect(reduced).toMatch(

@@ -67,9 +67,14 @@ function expectEveryButtonNamed(): void {
 }
 
 /** The CSS styled-components wrote, where the media queries end up. */
+/** Every style of the page: the text of its style elements, and the rules
+ * primer-addons' Box inserts into its stylesheet (`insertRule`, no text). */
 function styles(): string {
   return [...document.querySelectorAll('style')]
-    .map(style => style.textContent ?? '')
+    .flatMap(style => [
+      style.textContent ?? '',
+      ...[...(style.sheet?.cssRules ?? [])].map(rule => rule.cssText),
+    ])
     .join('\n');
 }
 
@@ -189,10 +194,10 @@ describe('the composer’s toolbar, read by name', () => {
     const css = styles();
     expect(css).toMatch(/mcp-pulse/);
     expect(css).toMatch(/skills-pulse/);
-    // styled-components 5 (what npm installs beside @datalayer/primer-addons)
-    // writes the prefixed property first; 6 writes it alone.
+    // styled-components 5 writes the prefixed property first, 6 writes it
+    // alone; a Box's rule reads back from the stylesheet with spaces.
     const reduced = css.match(
-      /@media \(prefers-reduced-motion: ?reduce\)\{[^}]*\{(-webkit-animation:none;)?animation:none;?\}/g,
+      /@media \(prefers-reduced-motion: ?reduce\) ?\{[^}]*\{ ?(-webkit-animation: ?none; ?)?animation: ?none;? ?\}/g,
     );
     expect(reduced?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
