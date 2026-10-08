@@ -29,6 +29,7 @@ import { registerDeckComponents, registerDecks } from '@datalayer/decks';
 import { exampleDeckComponents, exampleDecks } from '@datalayer/decks/examples';
 import { LoopEmbed } from '../apps';
 import { DeckViewPlugin, LoopDecksPlugin } from '../apps/plugins/decks';
+import { GraphViewPlugin } from '../apps/plugins/graph';
 
 // The package's example decks, so the catalog has something to open and the
 // agent's suggestions point at decks that exist. Once, at module load.
@@ -38,7 +39,7 @@ registerDeckComponents(exampleDeckComponents);
 
 // Module-level, so the embed builds its reactor once rather than on every
 // render of this component.
-const DECK_PLUGINS = [LoopDecksPlugin, DeckViewPlugin];
+const DECK_PLUGINS = [LoopDecksPlugin, DeckViewPlugin, GraphViewPlugin];
 
 const DecksAgent: React.FC = () => (
   <ThemedProvider>
@@ -54,9 +55,8 @@ const DecksAgent: React.FC = () => (
         editorSelector
         commandPalette
         /* The plugins panel in the sidebar, and the plugin graph behind its
-           button. */
+           button (GraphViewPlugin, among the plugins below). */
         pluginsPanel
-        graph
         agentSummary={false}
         plugins={DECK_PLUGINS}
       />
