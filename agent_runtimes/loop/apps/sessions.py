@@ -1103,7 +1103,35 @@ class LiveSession:
             await self._open_code()
         assert self.session is not None
         self.messages.append({"id": _new_id(), "role": "user", "content": text})
-        await self.host.message(self.session, text)
+        session = self.session
+        await self._code_turn(text, lambda: self.host.message(session, text))
+
+    async def _code_turn(self, asked: str, work: Callable[[], Awaitable[Any]]) -> None:
+        """Run what its code does with a person's message, kept as a turn
+        (LOOP P-24): what they asked and what its code said.
+
+        The agent its code runs keeps its own turn as its run ends (the
+        record's capability), and then none is added here; a code that
+        answers by itself — ``session.send`` with no model — is kept here,
+        so that its threads count their turns and are found by the words
+        asked.
+        """
+        recorder = self.recorder
+        before = recorder.turns_of(self.uid)
+        self._said = {}
+        try:
+            await work()
+            said = self._said or {}
+        finally:
+            self._said = None
+        # The agent's run keeps its turn in a task of its own once its stream
+        # ends: waited for, so that the turn is not kept twice.
+        await recorder.settled(self.uid)
+        if recorder.turns_of(self.uid) != before:
+            return
+        recorder.start(self.uid)
+        if recorder.kept("turn"):
+            recorder.turned(asked, "\n\n".join(text for text in said.values() if text))
 
     async def _files_code(self, text: str, given: List[UploadedFile]) -> None:
         """Give the code files sent without being asked (LOOP P-21): its
@@ -1125,7 +1153,11 @@ class LiveSession:
                 "content": f"{said}\n\n(Sent {names}.)" if said else f"Sent {names}.",
             }
         )
-        await self.host.files(self.session, given, said)
+        session = self.session
+        await self._code_turn(
+            f"{said}\n\n(Sent {names}.)" if said else f"Sent {names}.",
+            lambda: self.host.files(session, given, said),
+        )
 
     async def _action_code(
         self,

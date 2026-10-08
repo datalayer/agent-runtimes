@@ -341,6 +341,7 @@ class AppRecorder:
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
     _opened: Dict[str, str] = field(default_factory=dict, init=False)
     _signed: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
+    _turns: Dict[str, int] = field(default_factory=dict, init=False)
 
     def kept(self, kind: str) -> bool:
         # Nothing is kept of a conversation without an account (LOOP R-30).
@@ -568,6 +569,9 @@ class AppRecorder:
         asked = redact(asked.strip())[:TURN_LIMIT]
         if not asked:
             return
+        session = _SESSION.get()
+        if session:
+            self._turns[session] = self._turns.get(session, 0) + 1
         self.add(
             "turn",
             asked,
@@ -578,6 +582,12 @@ class AppRecorder:
                 **({"spoken": spoken} if spoken else {}),
             },
         )
+
+    def turns_of(self, session: str) -> int:
+        """How many turns of ``session`` this recorder kept: what a Python
+        application's code turn reads to tell whether the agent its code ran
+        kept the turn already (LOOP P-24)."""
+        return self._turns.get(session, 0)
 
     def stepped(self, step: Any) -> None:
         """Keep a step that ended, as the chain of thought shows it (LOOP P-16).

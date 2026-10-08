@@ -128,7 +128,10 @@ runtime behavior, and monitoring-friendly metadata (used by snapshots/streams).
 
 ### Programmatic Tooling (Sandbox, Codemode, Skills)
 
-- `sandbox_variant`: Selects execution sandbox (`eval` or `jupyter`).
+- `sandbox_variant`: Selects execution sandbox (`eval` or `jupyter`). `browser`
+  is Pyodide in the page: an agent that names it runs in the page only, and
+  `POST /api/v1/agents` refuses it on a runtime (422, *… runs its code in the
+  browser: it is not started on a runtime.*).
 - `enable_codemode` and codemode config: Enables MCP-discovery + programmatic composition.
 - `skills` / `enable_skills`: Enables reusable skill execution.
 

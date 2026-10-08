@@ -794,6 +794,18 @@ _DEFAULT_SANDBOX_VARIANT_NOTE = (
 )
 
 
+#: The sandbox that runs in the page (Pyodide), never on a runtime.
+BROWSER_SANDBOX = "browser"
+
+
+def browser_sandbox_refusal(agent: str) -> str:
+    """Why an agent whose sandbox is the page's is not started on a runtime."""
+    return (
+        f"{agent} runs its code in the browser: it is not started on a runtime. "
+        "Give it a sandbox a runtime has (eval, jupyter-server), or run it in the page."
+    )
+
+
 def _sandbox_variant_note(variant: str) -> str:
     """What to tell the model about the sandbox it has been given.
 
@@ -1969,6 +1981,15 @@ async def create_agent(
         effective_variant = request.sandbox_variant or (
             "jupyter-server" if request.jupyter_sandbox else "eval"
         )
+        # The `browser` sandbox is Pyodide in the page: no sandbox of a
+        # runtime is it, and none stands in for it (STUDIO F-15, 2026-10-08).
+        if effective_variant == BROWSER_SANDBOX:
+            raise HTTPException(
+                status_code=422,
+                detail=browser_sandbox_refusal(
+                    getattr(library_spec, "id", "") or agent_id
+                ),
+            )
 
         # In K8s sidecar mode, a Jupyter container already runs in the pod.
         # "jupyter-server" variant means "start your own" — remap to "jupyter-server"
@@ -2477,6 +2498,12 @@ async def create_agent(
                 )
                 # The session API writes a session's start to it (R-04).
                 keep_agent_recorder(agent_id, recorder)
+                # The runtime knows the application this agent runs: what is
+                # asked of "the runtime's application" — its feedback, its
+                # rules — is answered on a kept runtime too (LOOP P-24).
+                from agent_runtimes.routes.apps import keep_running
+
+                keep_running(agent_id, running_app)
                 # And runs its sessions with the deployment's code (R-14).
                 from agent_runtimes.loop.apps.sessions import serve_agent_code
 
@@ -3321,9 +3348,11 @@ async def delete_agent(
     # And what the session API knew of it (LOOP R-04), and the code it ran (R-14).
     from agent_runtimes.loop.apps.record import keep_agent_recorder
     from agent_runtimes.loop.apps.sessions import serve_agent_code
+    from agent_runtimes.routes.apps import keep_running
 
     keep_agent_recorder(agent_id, None)
     serve_agent_code(agent_id, None)
+    keep_running(agent_id, None)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.

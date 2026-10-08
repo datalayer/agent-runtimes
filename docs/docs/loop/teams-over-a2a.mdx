@@ -429,8 +429,11 @@ catalog's JSON Schema (`component_node`), the values sit in the surface's
 data model and the nodes read them by path (`/sources`, `/rows`,
 `/points`), and a surface the catalog would not draw — nothing to show, an
 empty list, a point without its `x` or `y`, a link that is not a web
-address, a choice of one option — is refused with a sentence the model acts
-on (`ModelRetry`), twice at most. At most three surfaces per answer. Like
+address, a choice of one option, a row of more values than columns — is
+not shown, and the call answers why (*Nothing was shown: The table has
+nothing in it…*): the call does not fail, and the agent says in its answer
+what was not shown and why, or shows it again corrected. A table's row may
+be its values in the columns' order. At most three surfaces per answer. Like
 `write_notebook`, `show_components` touches nothing outside the run: the
 rules decide it as reading, and a visitor's run shows them too.
 

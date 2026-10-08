@@ -262,8 +262,9 @@ def _components_instructions(outputs: RunOutputs) -> str:
         "send or delete — which you do not do yourself — say what you would do and "
         "show it as a choice: that action, its `does` what it would do, and *Not now* "
         "(`read`); a person decides, and your rules apply when it is pressed. Every "
-        "value comes from what you read: invent no row, point, source or link. Still "
-        "answer in words, and say in one sentence what is shown."
+        "value comes from what you read: invent no row, point, source or link; with "
+        "nothing read for it — no row, no point — show nothing, and say so. Still "
+        "answer in words, and say in one sentence what is shown, or why it is not."
     )
 
 
@@ -468,7 +469,9 @@ class ShownTable(BaseModel):
 
     title: str = Field(default="", description="What the table is, above it")
     columns: list[str] = Field(description="The columns, in order: the rows' keys")
-    rows: list[dict[str, Any]] = Field(description="The rows, each by its columns")
+    rows: list[dict[str, Any] | list[Any]] = Field(
+        description="The rows, each by its columns, or its values in the columns' order"
+    )
 
 
 class ShownChart(BaseModel):
@@ -576,10 +579,19 @@ def surface_of_components(
                 else ShownTable.model_validate(table)
             )
             _items("table", shown.rows)
-            data["rows"] = [
-                {column: row.get(column, "") for column in shown.columns}
-                for row in shown.rows
-            ]
+            data["rows"] = []
+            for index, row in enumerate(shown.rows):
+                if isinstance(row, list):
+                    # Its values in the columns' order, as a model often gives them.
+                    if len(row) > len(shown.columns):
+                        raise SurfaceRefused(
+                            f"Row {index + 1} of the table has {len(row)} values "
+                            f"for {len(shown.columns)} columns."
+                        )
+                    row = dict(zip(shown.columns, row))
+                data["rows"].append(
+                    {column: row.get(column, "") for column in shown.columns}
+                )
             nodes.append(
                 component_node(
                     "table",
@@ -702,10 +714,9 @@ def show_components(
     Returns
     -------
     str
-        That it is shown, or why not.
+        That it is shown, or why not: a refusal is the call's answer, not its
+        failure, and the answer says it in words (H-02, 2026-10-08).
     """
-    from pydantic_ai import ModelRetry
-
     outputs = current_run_outputs()
     if outputs is None or not outputs.accepts(A2UI_MEDIA_TYPE):
         return "Who asked does not draw components: answer in words only."
@@ -714,9 +725,24 @@ def show_components(
     try:
         surface = surface_of_components(title, sources, table, chart, choice)
     except SurfaceRefused as refused:
-        raise ModelRetry(f"Nothing was shown. {refused}") from None
+        return shown_refusal(refused)
     outputs.surfaces.append(surface)
     return "Shown beside your answer."
+
+
+def shown_refusal(refused: SurfaceRefused) -> str:
+    """What ``show_components`` answers when the catalog would not draw what was given.
+
+    The call succeeds with it: a refused surface is not a failed tool call
+    (the transcript said *show_components failed* when Odoo had no open
+    invoice and the table came empty, 2026-10-08). The agent is told why, and
+    to say it in its answer — or to show it again, corrected, when it read
+    what the surface needs.
+    """
+    return (
+        f"Nothing was shown: {refused} Say in your answer, in a sentence, what "
+        "was not shown and why; or call it again with what you read, corrected."
+    )
 
 
 def refused_action(message: Any) -> str:
@@ -761,7 +787,8 @@ def outputs_toolset(outputs: Sequence[str]) -> Any:
         return None
     from pydantic_ai.toolsets import FunctionToolset
 
-    # A refused output is composed again: twice more, then the run says why.
+    # A refused notebook is written again: twice more, then the run says why.
+    # A refused surface is answered, not retried: the answer says why.
     return FunctionToolset(tools, id="outputs", max_retries=2)
 
 

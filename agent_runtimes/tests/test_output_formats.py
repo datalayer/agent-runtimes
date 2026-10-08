@@ -373,6 +373,41 @@ class TestTheComponents:
         assert part["media_type"] == formats.A2UI_MEDIA_TYPE
         assert part["data"]["title"] == "Open invoices"
 
+    def test_a_refused_surface_is_the_calls_answer_not_its_failure(self) -> None:
+        """H-02/H-25, 2026-10-08: Odoo had no open invoice, Accounting showed an
+        empty table, and the refusal (`ModelRetry`) made the transcript say
+        *show_components failed*. The call now answers why, for the answer to
+        say; nothing is kept; a correct call after it is shown."""
+        outputs = RunOutputs(accepted=(formats.A2UI_MEDIA_TYPE,))
+        token = enter_run_outputs(outputs)
+        try:
+            said = formats.show_components(
+                "Open invoices",
+                table=formats.ShownTable(columns=["invoice", "due"], rows=[]),
+            )
+            assert said.startswith("Nothing was shown: The table has nothing in it")
+            assert "Say in your answer" in said
+            assert outputs.surfaces == []
+            # A row of values in the columns' order is a row of the table.
+            shown = formats.show_components(
+                "Open invoices",
+                table=formats.ShownTable(
+                    columns=["invoice", "due"], rows=[["INV/2026/0007", 1200]]
+                ),
+            )
+            too_long = formats.show_components(
+                "Open invoices",
+                table=formats.ShownTable(columns=["invoice"], rows=[["a", "b"]]),
+            )
+        finally:
+            leave_run_outputs(token)
+        assert shown.startswith("Shown")
+        assert "Row 1 of the table has 2 values for 1 columns." in too_long
+        [surface] = outputs.surfaces
+        model = surface["messages"][2]["updateDataModel"]["value"]
+        assert model["rows"] == [{"invoice": "INV/2026/0007", "due": 1200}]
+        assert "show nothing, and say so" in outputs_instructions(outputs)
+
     def test_both_tools_for_an_agent_that_gives_both(self) -> None:
         toolset = outputs_toolset(
             ["text/markdown", NOTEBOOK_MEDIA_TYPE, formats.A2UI_MEDIA_TYPE]

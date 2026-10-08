@@ -645,3 +645,173 @@ def test_a_woken_session_running_code_keeps_its_run_turn_and_output(
     finally:
         sessions.serve_agent_code("r14-tick", None)
         principal.forget_principal_token("dep-14")
+
+
+def _kept_answering(answers_itself: bool) -> Application:
+    """A deployment's code kept always on: it answers by itself, or its agent does."""
+    application = Application.from_spec(
+        {
+            "schema": "loop.app/v1",
+            "id": "p24-kept",
+            "name": "Kept Desk",
+            "kind": "chat",
+            "agent": "cog-crawler:0.0.1",
+            "record": {
+                "keep_for": "30_days",
+                "include": ["conversations", "outputs", "feedback"],
+            },
+        }
+    )
+    if answers_itself:
+
+        @application.message
+        async def reply(session: Session, text: str) -> None:
+            await session.send(f"Three runs, asked {text}.")
+
+    return application
+
+
+@pytest.mark.parametrize("answers_itself", [True, False])
+def test_a_kept_runtimes_code_keeps_each_turn_and_takes_feedback(
+    runtime: Runtime,  # noqa: F811 - the fixture
+    remote: TestClient,  # noqa: F811 - the fixture
+    answers_itself: bool,
+) -> None:
+    """LOOP P-24, drilled 2026-10-08: a hosted Python application on its kept
+    runtime, whose code answered with no model, showed *0 turns* after three
+    questions and was not found by the words asked; its page's feedback was
+    refused, *This runtime runs no application.* Each question is now a turn
+    — once, whether its code answered or its agent did — and the feedback is
+    kept on the conversation's application, with no `/apps/configure`."""
+    from agent_runtimes.routes import apps as routes
+
+    async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
+        return {
+            "access_token": "p-token",
+            "expires_in": 3600,
+            "principal_uid": "principal-24",
+        }
+
+    principal.use_asker(ask)
+    principal.forget_principal_token("dep-24")
+    application = _kept_answering(answers_itself)
+    kept = {"app_uid": "app-24", "deployment_uid": "dep-24", "version": 4}
+    runtime.make("p24-kept", application.document, kept)
+    sessions.serve_agent_code("p24-kept", application)
+    routes._RUNNING.clear()
+    url = "/api/v1/apps/agents/p24-kept/ag-ui/"
+    try:
+        said: List[Dict[str, Any]] = []
+        for index, question in enumerate(["runs", "costs", "models"]):
+            said.append({"id": f"m{index}", "role": "user", "content": question})
+            events = events_of(
+                remote.post(
+                    url,
+                    headers=as_("owner"),
+                    json={
+                        "threadId": "thread-p24",
+                        "runId": f"run-{index}",
+                        "state": None,
+                        "messages": list(said),
+                        "tools": [],
+                        "context": [],
+                        "forwardedProps": {},
+                    },
+                )
+            )
+            assert answer_of(events)
+        turns = [
+            e["payload"]
+            for e in runtime.entries("turn")
+            if e["session_uid"] == "thread-p24"
+        ]
+        assert [turn["asked"] for turn in turns] == ["runs", "costs", "models"]
+        if answers_itself:
+            assert turns[0]["answered"] == "Three runs, asked runs."
+        # The page's thumb, on the conversation's application.
+        given = remote.post(
+            "/api/v1/apps/feedback",
+            headers=as_("owner"),
+            json={
+                "session": "thread-p24",
+                "liked": True,
+                "comment": "Clear.",
+                "message": "answer-1",
+            },
+        )
+        assert given.status_code == 200, given.text
+        assert given.json()["kept"] is True
+        assert [
+            e["payload"]["comment"]
+            for e in runtime.entries("feedback")
+            if e["session_uid"] == "thread-p24"
+        ] == ["Clear."]
+        # A conversation this runtime never recorded is said, not guessed at.
+        unknown = remote.post(
+            "/api/v1/apps/feedback",
+            headers=as_("owner"),
+            json={"session": "thread-none", "liked": False},
+        )
+        assert (unknown.status_code, unknown.json()["detail"]) == (
+            404,
+            routes.RUNS_NONE,
+        )
+    finally:
+        sessions.serve_agent_code("p24-kept", None)
+        principal.forget_principal_token("dep-24")
+        routes._RUNNING.clear()
+
+
+def test_the_runtimes_application_is_its_kept_agents(
+    creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
+) -> None:
+    """The agents route keeps the application an agent is made for, as
+    `/apps/configure` does its own: a kept runtime answers what its
+    application is (LOOP P-24), several say which is meant, and an agent
+    deleted takes it away."""
+    from agent_runtimes.routes import apps as routes
+    from agent_runtimes.routes.acp import _agents
+    from agent_runtimes.routes.agents import (
+        CreateAgentRequest,
+        create_agent,
+        delete_agent,
+    )
+
+    spec = tick_spec()
+    routes._RUNNING.clear()
+    principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
+    try:
+        asyncio.run(
+            create_agent(
+                CreateAgentRequest(
+                    name="r24-kept-agent",
+                    transport="ag-ui",
+                    app_spec=spec,
+                    app_instance=TICK_DEPLOYMENT,
+                    app_code=TICK_CODE,
+                ),
+                _DummyRequest(),
+            )
+        )
+        current = routes.running_app()
+        assert current is not None and current.id == spec["id"]
+        assert routes.running_app("r24-kept-agent") is current
+        # Two applications: which is meant is not guessed, and the routes
+        # that answer for "the runtime's application" say so.
+        routes._RUNNING["another-agent"] = "another-app"
+        assert routes.running_app() is None
+        several = routes.no_running_app()
+        assert several.status_code == 409
+        assert several.detail == (
+            "This runtime runs several applications (another-app, "
+            f"{spec['id']}): say which, by its conversation or its agent."
+        )
+        routes._RUNNING.pop("another-agent")
+        _agents["r24-kept-agent"] = (None, None)  # type: ignore[assignment, unused-ignore]
+        asyncio.run(delete_agent("r24-kept-agent"))
+        _agents.pop("r24-kept-agent", None)
+        assert routes.running_app() is None
+    finally:
+        principal.forget_principal_token("dep-14")
+        sessions.serve_agent_code("r24-kept-agent", None)
+        routes._RUNNING.clear()

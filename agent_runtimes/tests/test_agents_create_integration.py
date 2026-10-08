@@ -346,6 +346,38 @@ async def test_sandbox_without_codemode_keeps_execute_code_enabled(
 
 
 @pytest.mark.asyncio
+async def test_an_agent_whose_sandbox_is_the_browser_is_refused_on_a_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    """The `browser` sandbox is Pyodide in the page: an agent that names it is
+    refused in a sentence (422), not failed (500, *Unknown sandbox variant:
+    browser*, drilled 2026-10-08 with `jupyter-notebook-reviewer`)."""
+    from fastapi import HTTPException
+
+    # The catalogue's own: its spec names the browser's sandbox.
+    request = CreateAgentRequest(
+        name="Reviewer", agent_spec_id="jupyter-notebook-reviewer"
+    )
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(request, _DummyRequest())
+    assert refused.value.status_code == 422
+    assert refused.value.detail == (
+        "jupyter-notebook-reviewer runs its code in the browser: it is not "
+        "started on a runtime. Give it a sandbox a runtime has (eval, "
+        "jupyter-server), or run it in the page."
+    )
+    # Said for a request that names it as well.
+    with pytest.raises(HTTPException) as named:
+        await create_agent(
+            CreateAgentRequest(name="In Page", sandbox_variant="browser"),
+            _DummyRequest(),
+        )
+    assert named.value.status_code == 422
+    assert named.value.detail.startswith("in-page runs its code in the browser")
+
+
+@pytest.mark.asyncio
 async def test_create_agent_disable_tool_approvals_request_override(
     monkeypatch: pytest.MonkeyPatch,
     creation_spy: dict[str, object],

@@ -1041,6 +1041,12 @@ async def reply(session, text):
 - `session.metadata`: a dict of names and JSON values, at most 10,000
   characters written. Every change is kept.
 
+**Turns.** Each message a person sends is a turn of the thread — what they
+asked and what was answered, kept when `record.include` names
+`conversations` — whether the code's agent answered it or the code answered
+by itself (`session.send` with no model): the history counts it, and finds
+the thread by the words asked. A turn its agent answered is kept once.
+
 Each change is a `thread` entry of the record, always kept and sent at once;
 the latest one stands. The history lists the thread under the person's own
 word over the code's: their title over its, its tags and theirs, their
@@ -1052,7 +1058,12 @@ and a comment are offered under each answer. What a person says is kept as
 a `feedback` entry of the session — `{"liked", "comment", "message", "by"}`,
 `message` naming the answer by its place in the conversation (`answer-2`) —
 and then `@app.feedback(session, feedback)` runs; what it sends is kept in
-the conversation. Its owner lists a thread's feedback from the terminal:
+the conversation. Feedback is kept on the conversation's application —
+the one whose agent recorded it on that runtime, a deployment's kept always
+on (whose agent runs the version's `app.py`) as much as a configured one; a
+conversation the runtime did not record is refused (404, *This runtime runs
+no application.* when it runs none). Its owner lists a thread's feedback
+from the terminal:
 
 ```bash
 loop apps threads <app> --search export --tag csv   # your threads, newest first, each with its id

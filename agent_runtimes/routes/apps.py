@@ -74,9 +74,15 @@ from agent_runtimes.voice import hear, spoken_of, voice_settings
 
 router = APIRouter(prefix="/apps", tags=["apps"])
 
-#: The id of the application each agent of this runtime runs, by agent name.
-#: The application itself is a contribution of its plugin.
+#: The id of the application each agent of this runtime runs, by agent name:
+#: ``default`` for the one ``/apps/configure`` made, and each agent made for an
+#: application (``POST /api/v1/agents`` with its Appspec — a kept runtime's,
+#: LOOP R-14) under its own id. The application itself is a contribution of
+#: its plugin.
 _RUNNING: Dict[str, str] = {}
+
+#: Said when the runtime's application is asked of a runtime that runs none.
+RUNS_NONE = "This runtime runs no application."
 
 
 class ConfigureAppRequest(BaseModel):
@@ -151,10 +157,51 @@ class FeedbackRequest(BaseModel):
     )
 
 
-def running_app(agent: str = "default") -> Optional[AppSpec]:
-    """The application an agent of this runtime runs, or None."""
-    app_id = _RUNNING.get(agent)
+def keep_running(agent: str, app: Optional[AppSpec]) -> None:
+    """Say which application an agent of this runtime runs; ``None`` forgets it.
+
+    The agent ``/apps/configure`` makes is ``default``; an agent made for an
+    application by the agents route — a kept runtime's (LOOP R-14) — is kept
+    under its own id, so that what is asked of "the runtime's application"
+    (its feedback, its rules, which it is) is answered on that runtime too.
+    """
+    if app is None:
+        _RUNNING.pop(agent, None)
+    else:
+        _RUNNING[agent] = app.id
+
+
+def running_app(agent: str = "") -> Optional[AppSpec]:
+    """The application an agent of this runtime runs, or None.
+
+    Unnamed, the runtime's application: the one it was configured for, else
+    the one its agents run when they all run the same one — a kept runtime's
+    (LOOP R-14) — and None when they run none, or several
+    (`no_running_app` says which).
+    """
+    if agent:
+        app_id = _RUNNING.get(agent, "")
+    elif "default" in _RUNNING:
+        app_id = _RUNNING["default"]
+    else:
+        running = set(_RUNNING.values())
+        app_id = running.pop() if len(running) == 1 else ""
     return find_app(app_id) if app_id else None
+
+
+def no_running_app() -> HTTPException:
+    """Why the runtime's application is not known, as the 404 or 409 that says it."""
+    running = sorted(set(_RUNNING.values()))
+    if len(running) > 1:
+        return HTTPException(
+            status_code=409,
+            detail=(
+                "This runtime runs several applications ("
+                + ", ".join(running)
+                + "): say which, by its conversation or its agent."
+            ),
+        )
+    return HTTPException(status_code=404, detail=RUNS_NONE)
 
 
 @dataclass(frozen=True)
@@ -517,7 +564,7 @@ async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, A
     """Which application the runtime runs."""
     app = authorized.app
     if app is None:
-        raise HTTPException(status_code=404, detail="This runtime runs no application.")
+        raise no_running_app()
     return {
         "id": app.id,
         "version": app.version,
@@ -536,7 +583,7 @@ async def decide(
     """What the application would do about a tool call, and why — without making it."""
     app = authorized.app
     if app is None:
-        raise HTTPException(status_code=404, detail="This runtime runs no application.")
+        raise no_running_app()
     enforced = rules_for(app).decide(body.tool, body.arguments)
     decision = enforced.decision
     return {
@@ -558,10 +605,20 @@ async def decide(
 
 
 @router.post("/feedback")
-async def feedback(
-    body: FeedbackRequest, authorized: Authorized = Depends(a_caller)
-) -> Dict[str, Any]:
-    """Keep a person's word on a conversation in the application's record (V-18)."""
+async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
+    """Keep a person's word on a conversation in the application's record (V-18).
+
+    The application is the conversation's: the one whose agent recorded it on
+    this runtime — a configured runtime's, or a kept runtime's agent made with
+    the application's code (LOOP R-14, P-24) — else the runtime's own.
+    """
+    recorded = recorder_of(body.session)
+    authorized = await _authorize(
+        request,
+        False,
+        recorded.app if recorded is not None else None,
+        recorded.app_uid if recorded is not None else "",
+    )
     if authorized.caller.kind == "visitor":
         from agent_runtimes.loop.apps.visitors import NOTHING_KEPT
 
@@ -578,7 +635,7 @@ async def feedback(
             )
     app = authorized.app
     if app is None:
-        raise HTTPException(status_code=404, detail="This runtime runs no application.")
+        raise no_running_app()
     recorder = recorder_of(body.session)
     if recorder is None or recorder.app.id != app.id:
         raise HTTPException(
