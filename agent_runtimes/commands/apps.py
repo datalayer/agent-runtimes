@@ -62,6 +62,7 @@ app = typer.Typer(
     name="apps",
     help="Applications: build, run, validate, deploy.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 # Wide and unwrapped: a verdict and a path are read, and grepped, on one line.

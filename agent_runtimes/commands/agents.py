@@ -36,6 +36,7 @@ app = typer.Typer(
     name="agents",
     help="Agent runtime management commands.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

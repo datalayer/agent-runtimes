@@ -27,6 +27,7 @@ app = typer.Typer(
     name="events",
     help="Agent event management commands",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 

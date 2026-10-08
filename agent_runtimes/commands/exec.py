@@ -30,6 +30,7 @@ app = typer.Typer(
     name="exec",
     help="Execute files or notebooks on code sandboxes",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

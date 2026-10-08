@@ -63,16 +63,34 @@ app = typer.Typer(
     name="evals",
     help="Launch and monitor SaaS evalsets, experiments, runs, and live monitoring.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
-evals_app = typer.Typer(name="evalsets", help="Manage evalsets.")
-experiments_app = typer.Typer(name="experiments", help="Manage evalset experiments.")
-runs_app = typer.Typer(name="runs", help="Launch and monitor evalset runs.")
+evals_app = typer.Typer(
+    name="evalsets",
+    help="Manage evalsets.",
+    pretty_exceptions_show_locals=False,
+)
+experiments_app = typer.Typer(
+    name="experiments",
+    help="Manage evalset experiments.",
+    pretty_exceptions_show_locals=False,
+)
+runs_app = typer.Typer(
+    name="runs",
+    help="Launch and monitor evalset runs.",
+    pretty_exceptions_show_locals=False,
+)
 launches_app = typer.Typer(
     name="launches",
     help="Launches: one submission of a benchmark across its experiments (BENCHMARK.md, B2-03).",
+    pretty_exceptions_show_locals=False,
 )
-live_app = typer.Typer(name="live", help="Inspect live evalset monitoring.")
+live_app = typer.Typer(
+    name="live",
+    help="Inspect live evalset monitoring.",
+    pretty_exceptions_show_locals=False,
+)
 
 console = Console()
 

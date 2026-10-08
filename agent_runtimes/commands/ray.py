@@ -24,17 +24,20 @@ app = typer.Typer(
     name="ray",
     help="Manage Ray clusters and Ray jobs through the Datalayer runtimes service.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 clusters_app = typer.Typer(
     name="clusters",
     help="Manage Ray clusters.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 jobs_app = typer.Typer(
     name="jobs",
     help="Manage Ray jobs.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

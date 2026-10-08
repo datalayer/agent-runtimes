@@ -50,6 +50,7 @@ app = typer.Typer(
     name="scenes",
     help="Scenes: the catalogue, and a scene's rehearsal.",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console(soft_wrap=True)

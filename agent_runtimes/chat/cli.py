@@ -233,6 +233,7 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=False,
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 
