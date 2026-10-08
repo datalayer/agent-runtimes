@@ -1,6 +1,6 @@
 {
     "name": "@datalayer/agent-runtimes",
-    "version": "1.3.92",
+    "version": "1.3.93",
     "type": "module",
     "workspaces": [
         ".",
@@ -31,7 +31,7 @@
         "schema/*.json",
         "patches/",
         "scripts/",
-        "dist-embed/datalayer-app.{js,css}"
+        "dist-embed/"
     ],
     "main": "lib/index.js",
     "types": "lib/index.d.ts",

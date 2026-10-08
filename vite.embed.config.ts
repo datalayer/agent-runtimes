@@ -45,6 +45,12 @@ export default defineConfig(async env => {
     config.build.rollupOptions.output = {
       ...(config.build.rollupOptions.output as object),
       inlineDynamicImports: true,
+      // The element links `/embed/datalayer-app.css` (EMBED_STYLESHEET_PATH):
+      // the stylesheet beside the script, not under `assets/`.
+      assetFileNames: (info: { names?: string[] }) =>
+        (info.names ?? []).some(name => name.endsWith('.css'))
+          ? 'datalayer-app.css'
+          : 'assets/[name]-[hash][extname]',
     };
   }
   return config;

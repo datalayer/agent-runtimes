@@ -68,6 +68,7 @@ jobs:
           npm run build:embed
           test -s dist-embed/datalayer-app.js
           test -s dist-embed/datalayer-app.css
+          ls -R dist-embed
 
       - name: Check the frontend the wheel serves is complete
         run: |

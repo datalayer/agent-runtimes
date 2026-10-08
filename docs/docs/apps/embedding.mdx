@@ -516,7 +516,7 @@ npm run build:embed
 
 Serve both files from a Datalayer origin at `/embed/`.
 
-A release builds them: the release workflow runs `npm run build:embed`, and the npm package `@datalayer/agent-runtimes` carries `dist-embed/datalayer-app.js` and `dist-embed/datalayer-app.css` from 1.3.92 on, so the element is versioned with the runtime it talks to. The Datalayer landing copies `dist-embed` from the package it installs into its `/embed/`, and refuses a production build whose package has none.
+A release builds them: the release workflow runs `npm run build:embed`, and the npm package `@datalayer/agent-runtimes` carries `dist-embed/` (`datalayer-app.js`, `datalayer-app.css` beside it, and the workers the script loads under `assets/`) from 1.3.93 on, so the element is versioned with the runtime it talks to. The Datalayer landing copies `dist-embed` from the package it installs into its `/embed/`, and refuses a production build whose package has none.
 
 ## What is tested, and what is not
 
