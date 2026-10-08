@@ -26,7 +26,6 @@
 
 import { definePlugin } from '@datalayer/reactor';
 import type { ReactorReactOutput } from '@datalayer/reactor/react';
-import { GraphPlugin } from '@datalayer/reactor-graph';
 import { PluginsManagerView } from '@datalayer/reactor-manager';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 
@@ -42,8 +41,14 @@ export const PLUGINS_PANEL_PLUGIN_NAME = '@datalayer/loop-plugin-plugins-panel';
  */
 export const SIDEBAR_WIDTH = 420;
 
-/** The generic graph plugin, which the loop's own adapter wraps. */
-const REACTOR_GRAPH_PLUGIN_NAME = GraphPlugin.name;
+/**
+ * The generic graph plugin, which the loop's own adapter wraps: by its name
+ * (`GraphPlugin.name`), not its module — importing `@datalayer/reactor-graph`
+ * for a string would bring ECharts to every workspace with this panel, and
+ * to every one built by the preset, embedded applications too (STUDIO D-08).
+ * `plugins-panel.test` holds it to the plugin's own name.
+ */
+export const REACTOR_GRAPH_PLUGIN_NAME = '@datalayer/reactor-graph';
 
 export const PluginsPanelPlugin = definePlugin<
   Record<string, never>,
