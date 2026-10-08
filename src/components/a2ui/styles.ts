@@ -47,12 +47,20 @@ export const A2UI_RENDER_SCOPE_SX: BetterSystemStyleObject = {
       'var(--a2ui-text-caption-color, var(--a2ui-color-on-surface, #656d76))',
   },
 
+  /*
+   * A button is the theme's filled button (STUDIO P-04, T-30): its fill and
+   * its label are Primer's primary-button properties, which every theme and
+   * an application's accent set together (`themeAccentVars`), so the label
+   * is always the accent's own text on it. The label is a Text inside the
+   * button, which the `.a2ui-text` rule above paints in the surface's ink —
+   * a dark label on Spatial's dark accent — so it inherits the button's.
+   */
   '& .a2ui-button': {
     appearance: 'none',
     cursor: 'pointer',
-    border: '1px solid var(--a2ui-color-primary, #1f883d)',
-    background: 'var(--a2ui-color-primary, #1f883d)',
-    color: 'var(--a2ui-color-on-primary, #ffffff)',
+    border: '1px solid var(--button-primary-bgColor-rest)',
+    background: 'var(--button-primary-bgColor-rest)',
+    color: 'var(--button-primary-fgColor-rest)',
     borderRadius: 'var(--a2ui-button-border-radius, 6px)',
     padding: 'var(--a2ui-button-padding, 5px 16px)',
     fontWeight: 'var(--a2ui-button-font-weight, 500)',
@@ -60,9 +68,13 @@ export const A2UI_RENDER_SCOPE_SX: BetterSystemStyleObject = {
     transition: 'background-color 0.15s ease, border-color 0.15s ease',
   },
 
+  '& .a2ui-button .a2ui-text': {
+    color: 'inherit',
+  },
+
   '& .a2ui-button:hover': {
-    background: 'var(--a2ui-color-primary-hover, #1a7f37)',
-    borderColor: 'var(--a2ui-color-primary-hover, #1a7f37)',
+    background: 'var(--button-primary-bgColor-hover)',
+    borderColor: 'var(--button-primary-bgColor-hover)',
   },
 
   '& .a2ui-button:disabled': {

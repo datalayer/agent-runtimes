@@ -43,14 +43,17 @@ export const answerIdOf = (answers: number): string | undefined =>
 /** What the feedback strip says, in a person's words. */
 export const FEEDBACK_WORDS = {
   ask: 'Was this answer useful?',
-  liked: 'Useful',
-  disliked: 'Not useful',
+  // The thumbs' names (P-24): what pressing one says of the answer.
+  liked: 'This answer was useful',
+  disliked: 'This answer was not useful',
   comment: 'Anything to add? (optional)',
   send: 'Send',
   kept: (app: string): string => `Thank you. Kept in ${app}’s record.`,
   where: (app: string): string =>
     `What you say is kept with this conversation in ${app}’s record, for its builder to read.`,
   tooLong: `A comment is at most ${FEEDBACK_COMMENT_LIMIT} characters.`,
+  noRuntime:
+    'No runtime is assigned to this conversation, so nothing can be sent.',
   noSession:
     'This conversation has no name the application knows yet: send a message first.',
 } as const;

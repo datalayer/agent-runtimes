@@ -120,6 +120,7 @@ import {
   LoopFrontendTool,
   LoopRunProps,
   LoopSlots,
+  agentServerOf,
   canOpenView,
   runForwardedProps,
   onPromptFocusRequest,
@@ -1192,8 +1193,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * opened against. Addressing the latter would be talking to a machine that
    * has never heard of it. The same value for every other target, where the
    * two are the same server.
+   *
+   * Nothing while a Datalayer runtime is not assigned (the pool had none, or
+   * it is still being given): the chat is off and says so below, rather than
+   * sending to the host's server — on a hosted page, the page's own origin.
    */
-  const agentServerUrl = workspace.sandbox.agentBaseUrl || workspace.serverUrl;
+  const agentServerUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);
 
   /*
    * Who a single request may be addressed to.
@@ -1293,13 +1298,29 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Studio's Preview and the hosted page, rather than left unanswered.
    */
   const ambient = useChatAvailability();
+  /*
+   * No agent to talk to: a Datalayer runtime not assigned (STUDIO P-24,
+   * round 9). Said in a sentence — why, when its launch was refused — and
+   * nothing is sent; the header does not say *Ready*.
+   */
+  const noRuntime =
+    agentServerUrl === undefined
+      ? workspace.sandbox.state === 'error'
+        ? chatText.noRuntime(workspace.sandbox.errorReason ?? '')
+        : chatText.runtimeStarting
+      : undefined;
   const chatDisabled =
-    gateBlocked || keyExpired || Boolean(inPageRefusal) || ambient.disabled;
+    gateBlocked ||
+    keyExpired ||
+    Boolean(inPageRefusal) ||
+    Boolean(noRuntime) ||
+    ambient.disabled;
   const disabledReason = keyExpired
     ? expiredKeyIsTemporary
       ? chatText.demoKeyExpired
       : chatText.keyExpired
     : (inPageRefusal ??
+      noRuntime ??
       gateReason ??
       (ambient.disabled ? ambient.disableReason : undefined));
 
@@ -1527,7 +1548,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ? openedThread.thread
       : undefined
     : givenThread;
-  const protocol = useMemo<ProtocolConfig>(
+  /*
+   * None without a server (`noRuntime`): the chat is off and connects to
+   * nothing — no address is made up for it.
+   */
+  const protocol = useMemo<ProtocolConfig | undefined>(
     () =>
       inPage
         ? browserProtocolConfig({
@@ -1561,23 +1586,25 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             // its session API does on a runtime.
             modeEffect: blueprintTurn?.modeEffect,
           })
-        : {
-            type: 'ag-ui',
-            // An application's agent is spoken to through its session API
-            // (LOOP R-04): each thread a session, recorded under its uid,
-            // run in the name the application runs in, and taking what the
-            // page did besides the message — the same AG-UI events back.
-            endpoint: runsApp
-              ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
-              : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
-            ...(runsApp && iamToken ? { authToken: iamToken } : {}),
-            agentId,
-            // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
-            // strip one trailing `config`/`configure` segment to find the API
-            // base, so the longer form doubles it.
-            configEndpoint: `${agentServerUrl}/api/v1/configure`,
-            enableConfigQuery: true,
-          },
+        : agentServerUrl !== undefined
+          ? {
+              type: 'ag-ui',
+              // An application's agent is spoken to through its session API
+              // (LOOP R-04): each thread a session, recorded under its uid,
+              // run in the name the application runs in, and taking what the
+              // page did besides the message — the same AG-UI events back.
+              endpoint: runsApp
+                ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
+                : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
+              ...(runsApp && iamToken ? { authToken: iamToken } : {}),
+              agentId,
+              // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
+              // strip one trailing `config`/`configure` segment to find the API
+              // base, so the longer form doubles it.
+              configEndpoint: `${agentServerUrl}/api/v1/configure`,
+              enableConfigQuery: true,
+            }
+          : undefined,
     [
       agentId,
       inPage,
@@ -1607,7 +1634,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const configQuery = useConfig(
     !inPage,
-    protocol.type === 'ag-ui' ? protocol.configEndpoint : undefined,
+    protocol?.type === 'ag-ui' ? protocol.configEndpoint : undefined,
     undefined,
     agentId,
   );
@@ -1630,7 +1657,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
      * catalogue that was never going to arrive. The agentspecs catalogue below
      * is the answer for this case and needs no request at all.
      */
-    if (inPage) {
+    if (inPage || agentServerUrl === undefined) {
       return undefined;
     }
     let cancelled = false;
@@ -1737,7 +1764,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const selectModel = useCallback(
     async (model: string) => {
       setPickedModel(model);
-      if (inPage) {
+      if (inPage || agentServerUrl === undefined) {
         return;
       }
       await fetch(`${agentServerUrl}/api/v1/configure/inference/provider`, {
@@ -2119,7 +2146,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // An application says what it is doing, in plain words, beside
               // its name (T-08); an agent's chat keeps its header as it is.
               headerContent={
-                presence ? <PresenceLine state={presenceNow} /> : undefined
+                // Not *Ready* with no runtime: the header says why instead.
+                presence && !noRuntime ? (
+                  <PresenceLine state={presenceNow} />
+                ) : undefined
               }
               emptyState={{
                 // An application's own face, at the page's size of the three

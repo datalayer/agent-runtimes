@@ -9,6 +9,8 @@
  * thread, and a refusal said in the runtime's own sentence.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { LoopPromptPanel } from '../core';
@@ -92,6 +94,26 @@ describe('feedback on an application’s answers', () => {
     expect(feedbackEndpoint('http://a//')).toBe(
       'http://a/api/v1/apps/feedback',
     );
+  });
+
+  it('names its thumbs, on the buttons themselves, and says which is pressed (P-24)', () => {
+    expect(FEEDBACK_WORDS.liked).toBe('This answer was useful');
+    expect(FEEDBACK_WORDS.disliked).toBe('This answer was not useful');
+    const strip = readFileSync(
+      join(__dirname, '..', 'apps', 'AppFeedback.tsx'),
+      'utf8',
+    );
+    expect(strip).toMatch(
+      /aria-label=\{FEEDBACK_WORDS\.liked\}\s+aria-pressed=\{choice === true\}\s+unsafeDisableTooltip/,
+    );
+    expect(strip).toMatch(
+      /aria-label=\{FEEDBACK_WORDS\.disliked\}\s+aria-pressed=\{choice === false\}\s+unsafeDisableTooltip/,
+    );
+    // Sent to the runtime that answered, never to a stand-in server.
+    expect(strip).toContain(
+      'agentServerOf(workspace.sandbox, workspace.serverUrl)',
+    );
+    expect(strip).not.toContain('workspace.serverUrl ||');
   });
 
   it('is a strip above the prompt, one plugin per application', () => {

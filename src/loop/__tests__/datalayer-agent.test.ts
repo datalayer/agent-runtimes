@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { agentServerOf } from '../core';
 import { TARGET_SPECS } from '../plugins/agents/switchable';
 
 const AGENTS = join(__dirname, '..', 'plugins', 'agents');
@@ -98,13 +99,40 @@ describe('addressing the agent', () => {
       'utf8',
     );
     expect(chat).toContain(
-      'workspace.sandbox.agentBaseUrl || workspace.serverUrl',
+      'agentServerOf(workspace.sandbox, workspace.serverUrl)',
     );
     expect(chat).toContain('${agentServerUrl}/api/v1/ag-ui/');
     // An application's agent, through its session API (LOOP R-04).
     expect(chat).toContain('${agentServerUrl}/api/v1/apps/agents/');
     // And nothing still reaches for the host's URL directly.
     expect(chat).not.toContain('${workspace.serverUrl}/api/v1/');
+  });
+});
+
+describe('the server a workspace’s agent is on', () => {
+  it('is the runtime’s on Datalayer, and nothing until one is assigned', () => {
+    // No stand-in: on a hosted page the host's server is the page itself.
+    expect(
+      agentServerOf({ target: 'datalayer' }, 'http://localhost:3063'),
+    ).toBeUndefined();
+    expect(
+      agentServerOf(
+        { target: 'datalayer', agentBaseUrl: 'https://r1.example/rt' },
+        'http://localhost:3063',
+      ),
+    ).toBe('https://r1.example/rt');
+  });
+
+  it('is the host’s elsewhere, unless its sandbox names one', () => {
+    expect(agentServerOf({ target: 'local' }, 'http://localhost:8765')).toBe(
+      'http://localhost:8765',
+    );
+    expect(
+      agentServerOf(
+        { target: 'jupyter', agentBaseUrl: 'http://pod:8765' },
+        'http://localhost:8765',
+      ),
+    ).toBe('http://pod:8765');
   });
 });
 

@@ -78,6 +78,27 @@ export type SandboxSnapshot = {
 };
 
 /**
+ * The agent-runtimes server a workspace's agent is on, or nothing while
+ * there is none.
+ *
+ * On Datalayer the agent is on its runtime and nowhere else: until one is
+ * assigned there is nothing to address, and the host's own server is not a
+ * stand-in — on a hosted page it is the page's own origin, which answered a
+ * question with a 404 while the pool had no runtime (STUDIO P-24, round 9).
+ * Every other target's agent is on the host's server, or on the one its
+ * sandbox names.
+ */
+export function agentServerOf(
+  sandbox: Pick<SandboxSnapshot, 'target' | 'agentBaseUrl'>,
+  serverUrl: string,
+): string | undefined {
+  if (sandbox.target === 'datalayer') {
+    return sandbox.agentBaseUrl || undefined;
+  }
+  return sandbox.agentBaseUrl || serverUrl;
+}
+
+/**
  * What a view reads while the sandbox plugin is absent.
  *
  * Every plugin that watches the sandbox has to call `useSignalValue`

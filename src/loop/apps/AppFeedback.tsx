@@ -29,6 +29,7 @@ import type { AppSpec } from '../../types/agentspecs';
 import {
   LoopChatTurn,
   LoopPromptPanel,
+  agentServerOf,
   type ChatTurnSnapshot,
   type ConversationEntry,
   type LoopWorkspaceContext,
@@ -77,10 +78,18 @@ export function AppFeedback({
   const thread = turn.thread;
   const choice = liked?.turn === turn.id ? liked.liked : null;
   const done = said?.turn === turn.id ? said : null;
-  const agentBaseUrl =
-    workspace.sandbox.agentBaseUrl || workspace.serverUrl || '';
+  // The runtime that answered: none, nothing is sent (no stand-in server).
+  const agentBaseUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);
   const send = async () => {
     if (choice === null) {
+      return;
+    }
+    if (agentBaseUrl === undefined) {
+      setSaid({
+        turn: turn.id,
+        state: 'refused',
+        says: FEEDBACK_WORDS.noRuntime,
+      });
       return;
     }
     setSaid({ turn: turn.id, state: 'sending', says: '' });
@@ -131,13 +140,16 @@ export function AppFeedback({
           {FEEDBACK_WORDS.ask}
         </Text>
         {/* Reactions in the theme (LOOP T-06, T-17): line icons in the
-            ink, the chosen one on a quiet ground — no colour, no fill. */}
+            ink, the chosen one on a quiet ground — no colour, no fill.
+            Named on the button itself, and pressed when chosen (P-24): a
+            tooltip-label would name it only through a hidden element. */}
         <IconButton
           size="small"
           variant={choice === true ? 'default' : 'invisible'}
           icon={ThumbsupIcon}
           aria-label={FEEDBACK_WORDS.liked}
           aria-pressed={choice === true}
+          unsafeDisableTooltip
           onClick={() => setLiked({ turn: turn.id, liked: true })}
         />
         <IconButton
@@ -146,6 +158,7 @@ export function AppFeedback({
           icon={ThumbsdownIcon}
           aria-label={FEEDBACK_WORDS.disliked}
           aria-pressed={choice === false}
+          unsafeDisableTooltip
           onClick={() => setLiked({ turn: turn.id, liked: false })}
         />
       </div>

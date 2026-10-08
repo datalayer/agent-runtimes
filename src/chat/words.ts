@@ -42,6 +42,13 @@ export type ChatWords = {
   demoKeyExpired: string;
   /** The person's key has run out. */
   keyExpired: string;
+  /**
+   * No runtime is assigned to the conversation on Datalayer (the pool had
+   * none, or its launch was refused), with why: nothing is sent.
+   */
+  noRuntime: (reason: string) => string;
+  /** Its runtime is still being assigned: nothing is sent until it is. */
+  runtimeStarting: string;
   /** The empty chat's title. */
   startConversation: string;
   /** The empty chat's line when it has no starters. */
@@ -129,6 +136,9 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'This demo runs on a shared key, and its time is up. Sign in to keep going.',
     keyExpired: 'Your key has expired. Sign in to keep going.',
+    noRuntime: reason =>
+      `No runtime is assigned to this conversation, so nothing can be sent. ${reason}`,
+    runtimeStarting: 'Its runtime is being assigned: you can send once it is.',
     startConversation: 'Start a conversation',
     sendToBegin: 'Send a message to begin chatting',
     copyTurn: 'Copy this turn',
@@ -203,6 +213,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'Cette démo utilise une clé partagée, et son temps est écoulé. Connectez-vous pour continuer.',
     keyExpired: 'Votre clé a expiré. Connectez-vous pour continuer.',
+    noRuntime: reason =>
+      `Aucun runtime n’est attribué à cette conversation : rien ne peut être envoyé. ${reason}`,
+    runtimeStarting:
+      'Son runtime est en cours d’attribution : vous pourrez envoyer une fois qu’il le sera.',
     startConversation: 'Commencer une conversation',
     sendToBegin: 'Envoyez un message pour commencer',
     copyTurn: 'Copier cet échange',
@@ -279,6 +293,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'Esta demo usa una clave compartida y su tiempo se ha agotado. Inicia sesión para continuar.',
     keyExpired: 'Tu clave ha caducado. Inicia sesión para continuar.',
+    noRuntime: reason =>
+      `No hay ningún runtime asignado a esta conversación, así que no se puede enviar nada. ${reason}`,
+    runtimeStarting:
+      'Se le está asignando un runtime: podrás enviar cuando lo tenga.',
     startConversation: 'Empieza una conversación',
     sendToBegin: 'Envía un mensaje para empezar',
     copyTurn: 'Copiar este turno',
@@ -356,6 +374,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
       'Diese Demo läuft mit einem geteilten Schlüssel, und ihre Zeit ist abgelaufen. Melde dich an, um weiterzumachen.',
     keyExpired:
       'Dein Schlüssel ist abgelaufen. Melde dich an, um weiterzumachen.',
+    noRuntime: reason =>
+      `Diesem Gespräch ist keine Runtime zugewiesen, daher kann nichts gesendet werden. ${reason}`,
+    runtimeStarting:
+      'Eine Runtime wird zugewiesen: Du kannst senden, sobald sie da ist.',
     startConversation: 'Ein Gespräch beginnen',
     sendToBegin: 'Sende eine Nachricht, um zu beginnen',
     copyTurn: 'Diesen Austausch kopieren',
@@ -433,6 +455,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'Questa demo usa una chiave condivisa e il suo tempo è scaduto. Accedi per continuare.',
     keyExpired: 'La tua chiave è scaduta. Accedi per continuare.',
+    noRuntime: reason =>
+      `Nessun runtime è assegnato a questa conversazione, quindi non si può inviare nulla. ${reason}`,
+    runtimeStarting:
+      'Gli si sta assegnando un runtime: potrai inviare appena sarà pronto.',
     startConversation: 'Inizia una conversazione',
     sendToBegin: 'Invia un messaggio per iniziare',
     copyTurn: 'Copia questo scambio',
@@ -511,6 +537,10 @@ export const CHAT_WORDS: Record<string, ChatWords> = {
     demoKeyExpired:
       'Esta demonstração usa uma chave compartilhada e o tempo dela acabou. Entre para continuar.',
     keyExpired: 'Sua chave expirou. Entre para continuar.',
+    noRuntime: reason =>
+      `Nenhum runtime está atribuído a esta conversa, então nada pode ser enviado. ${reason}`,
+    runtimeStarting:
+      'Um runtime está sendo atribuído: você poderá enviar assim que estiver.',
     startConversation: 'Comece uma conversa',
     sendToBegin: 'Envie uma mensagem para começar',
     copyTurn: 'Copiar esta troca',

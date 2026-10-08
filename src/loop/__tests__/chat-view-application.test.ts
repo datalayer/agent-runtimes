@@ -46,10 +46,24 @@ describe('an application in the chat', () => {
   it('is switched off, with the reason, when its host says there is nothing to talk to (LOOP R-27)', () => {
     expect(chat).toContain('const ambient = useChatAvailability();');
     expect(chat).toMatch(
-      /const chatDisabled =\s+gateBlocked \|\| keyExpired \|\| Boolean\(inPageRefusal\) \|\| ambient\.disabled;/,
+      /const chatDisabled =\s+gateBlocked \|\|\s+keyExpired \|\|\s+Boolean\(inPageRefusal\) \|\|\s+Boolean\(noRuntime\) \|\|\s+ambient\.disabled;/,
     );
     expect(chat).toContain(
       '(ambient.disabled ? ambient.disableReason : undefined)',
     );
+  });
+
+  it('says so, sends nothing and is not Ready while no runtime is assigned (P-24)', () => {
+    // The chat's server is the runtime's, with no stand-in: on a hosted page
+    // the host's was the page's own origin, which answered a question 404.
+    expect(chat).toContain(
+      'const agentServerUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);',
+    );
+    expect(chat).toContain('chatText.noRuntime(workspace.sandbox.errorReason');
+    expect(chat).toContain(': chatText.runtimeStarting');
+    // No protocol, so no connection and no send.
+    expect(chat).toContain('useMemo<ProtocolConfig | undefined>(');
+    expect(chat).toMatch(/: agentServerUrl !== undefined\s+\? \{/);
+    expect(chat).toMatch(/presence && !noRuntime \? \(\s+<PresenceLine/);
   });
 });
