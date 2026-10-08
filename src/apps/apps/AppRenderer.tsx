@@ -649,7 +649,6 @@ export function AppRenderer({
         sidebarRail={sidebar || computer}
         teamPicker={false}
         showAgentVariants={false}
-        graph={false}
         pluginsPanel={false}
         datalayerAgentSpecId={DATALAYER_BOOTSTRAP_AGENTSPEC}
         // Where an application runs is decided by its host — the Studio's

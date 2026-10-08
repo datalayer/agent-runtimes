@@ -37,6 +37,7 @@ import { useReactor, useSignalValue } from '@datalayer/reactor/react';
 import { buildLoopReactor, LoopWorkspace } from '../apps/shell';
 import { loopPlugins } from '../apps/presets';
 import { WindowFrame } from '../apps/plugins/window-frame';
+import { GraphViewPlugin } from '../apps/plugins/graph';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
@@ -197,8 +198,8 @@ export function LoopWorkspaceExample({
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
-      buildLoopReactor(
-        loopPlugins({
+      buildLoopReactor([
+        ...loopPlugins({
           serverUrl,
           target: initialTarget,
           defaultEditor,
@@ -211,14 +212,15 @@ export function LoopWorkspaceExample({
           // The demonstration's switches. Each is left out rather than
           // mounted-and-hidden: the sidebar is drawn only when something
           // contributes to it, so leaving these out is what removes the column.
-          graph: showGraph,
           commandPalette: showCommandPalette,
           // Opens the title bar's two slots; the frame itself is composed below,
           // because a plugin cannot wrap the shell.
           windowFrame: showWindowFrame,
           pluginsPanel: showPluginsManager,
         }),
-      ),
+        // The graph is the host's to add: the preset leaves it out.
+        ...(showGraph ? [GraphViewPlugin] : []),
+      ]),
     [
       serverUrl,
       initialTarget,

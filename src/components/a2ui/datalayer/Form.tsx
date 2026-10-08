@@ -25,11 +25,16 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Form as SchemaForm } from '@datalayer/primer-rjsf';
-import validator from '@rjsf/validator-ajv8';
+import { ReactorLazy } from '@datalayer/reactor/react';
 import { BlockFrame, Problem, isRecord } from './parts';
 import { ownImplementation, type OwnCommon } from './implementation';
-import { FORM_WIDGETS } from './formWidgets';
+import type { SchemaFormProps } from './SchemaForm';
+
+/** The form and its checker (rjsf, Ajv), fetched when a form is first drawn. */
+const loadSchemaForm = () => import('./SchemaForm');
+const formRefused = (error: Error) => (
+  <Problem>{`The form could not be drawn: ${error.message}`}</Problem>
+);
 
 export type FormProps = OwnCommon & {
   title?: string;
@@ -83,26 +88,28 @@ export function FormView({ props }: { props: FormProps }) {
       {problem ? (
         <Problem>{problem}</Problem>
       ) : (
-        <SchemaForm
-          schema={schema as never}
-          uiSchema={uiSchema}
-          widgets={FORM_WIDGETS as never}
-          formData={values}
-          validator={validator}
-          liveValidate={touched}
-          onBlur={() => setTouched(true)}
-          onError={() => setTouched(true)}
-          showErrorList={false}
-          onChange={event => {
-            const filled = (event.formData ?? {}) as Record<string, unknown>;
-            setLocal(filled);
-            if (live) {
-              setValues(filled);
-            }
-          }}
-          onSubmit={event => {
-            setValues((event.formData ?? {}) as Record<string, unknown>);
-            action?.();
+        <ReactorLazy<SchemaFormProps>
+          load={loadSchemaForm}
+          errorFallback={formRefused}
+          props={{
+            schema: schema as never,
+            uiSchema,
+            formData: values,
+            liveValidate: touched,
+            onBlur: () => setTouched(true),
+            onError: () => setTouched(true),
+            showErrorList: false,
+            onChange: event => {
+              const filled = (event.formData ?? {}) as Record<string, unknown>;
+              setLocal(filled);
+              if (live) {
+                setValues(filled);
+              }
+            },
+            onSubmit: event => {
+              setValues((event.formData ?? {}) as Record<string, unknown>);
+              action?.();
+            },
           }}
         />
       )}

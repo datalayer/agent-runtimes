@@ -11,7 +11,7 @@
 
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildReactorFromPlugins } from '@datalayer/reactor';
 import { basicCatalog } from '@a2ui/react/v0_9';
 import { MessageProcessor, type A2uiMessage } from '@a2ui/web_core/v0_9';
@@ -41,6 +41,12 @@ import {
   InlineSurface,
   type InlineSurfaceModel,
 } from '../plugins/a2ui-surface/InlineSurface';
+
+// A Form block's form is fetched when first drawn (STUDIO D-08): fetched once
+// here, so a test's draw finds it there and renders it in its act().
+beforeAll(async () => {
+  await import('../../components/a2ui/datalayer/SchemaForm');
+});
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }

@@ -13,7 +13,7 @@
 
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@primer/react';
 import {
   buildReactorFromPlugins,
@@ -42,6 +42,12 @@ import {
   runPageIn,
 } from '../plugins/app-page';
 import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
+
+// A Form block's form is fetched when first drawn (STUDIO D-08): fetched once
+// here, so a test's draw finds it there and renders it in its act().
+beforeAll(async () => {
+  await import('../../components/a2ui/datalayer/SchemaForm');
+});
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }

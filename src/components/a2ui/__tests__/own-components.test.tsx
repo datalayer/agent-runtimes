@@ -14,7 +14,7 @@
 
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import {
   InlineSurface,
@@ -44,6 +44,15 @@ vi.mock('echarts-for-react', () => ({
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+
+// A form and a chart are fetched when first drawn (STUDIO D-08): fetched once
+// here, so a test's draw finds them there and renders them in its act().
+beforeAll(async () => {
+  await Promise.all([
+    import('../datalayer/SchemaForm'),
+    import('echarts-for-react'),
+  ]);
+});
 
 type Node = Record<string, unknown> & { id: string; component: string };
 

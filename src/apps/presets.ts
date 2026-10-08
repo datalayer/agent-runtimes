@@ -22,6 +22,11 @@
  * <LoopWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />
  * ```
  *
+ * The plugin graph is not among them: a host that shows it adds
+ * `GraphViewPlugin` (`./plugins/graph`) to the list itself. It brings
+ * `@datalayer/reactor-graph` and ECharts with it, which a workspace that never
+ * draws the graph — an embedded application (STUDIO D-08) — should not load.
+ *
  * @module apps/presets
  */
 
@@ -49,7 +54,6 @@ import { DocumentViewPlugin } from './plugins/document-view';
 import { InputPromptPlugin } from './plugins/input-prompt';
 import { NotebookViewPlugin } from './plugins/notebook-view';
 import { LoopCommandsPlugin } from './plugins/commands';
-import { GraphViewPlugin } from './plugins/graph';
 import { ModelsPlugin } from './plugins/models';
 import { PluginsPanelPlugin } from './plugins/plugins-panel';
 import { WindowFramePlugin } from './plugins/window-frame';
@@ -235,14 +239,6 @@ export type LoopPresetOptions = {
    * would eventually disagree about what is open.
    */
   editorSelector?: boolean;
-  /**
-   * The plugin graph, reachable from the sidebar.
-   *
-   * Left out rather than mounted-and-hidden: it pulls the generic
-   * `@datalayer/reactor-graph` in as a dependency, and mounting both to show
-   * neither would put two plugins in the sidebar that do nothing.
-   */
-  graph?: boolean;
   /** Ctrl-K over whatever the mounted plugins contribute. */
   commandPalette?: boolean;
   /** The sidebar that switches plugins on and off. */
@@ -311,7 +307,6 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     editorSelector = false,
     editors = true,
     conversation = true,
-    graph = false,
     commandPalette = false,
     pluginsPanel = false,
     windowFrame = false,
@@ -328,7 +323,6 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
         defaultEditor: 'none',
         showSelector: false,
       }),
-      ...(graph ? [GraphViewPlugin] : []),
       ...(commandPalette ? [LoopCommandsPlugin] : []),
       ...(pluginsPanel ? [PluginsPanelPlugin] : []),
       ...(windowFrame ? [WindowFramePlugin] : []),
@@ -435,7 +429,6 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
           }),
         ]
       : []),
-    ...(graph ? [GraphViewPlugin] : []),
     ...(commandPalette ? [LoopCommandsPlugin] : []),
     ...(pluginsPanel ? [PluginsPanelPlugin] : []),
     ...(windowFrame ? [WindowFramePlugin] : []),

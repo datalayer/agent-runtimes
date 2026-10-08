@@ -170,7 +170,6 @@ export function LoopEmbed({
       preset.editorSelector,
       preset.editors,
       preset.conversation,
-      preset.graph,
       preset.commandPalette,
       preset.pluginsPanel,
       preset.windowFrame,
