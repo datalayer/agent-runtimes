@@ -21,6 +21,7 @@ export {
 export {
   createMCPUIRenderer,
   MCPUIPluginImpl,
+  MCP_UI_NOT_DRAWN,
   type MCPUIMessage,
   type MCPUIResource,
 } from './MCPUIPlugin';

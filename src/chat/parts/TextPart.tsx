@@ -15,6 +15,7 @@ import { Text, IconButton } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { CopyIcon, SyncIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../messages/markdownWithoutHtml';
 
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
@@ -95,7 +96,9 @@ export function TextPart({
         )}
       </Box>
       <Box sx={streamdownMarkdownStyles}>
-        <Streamdown>{text}</Streamdown>
+        <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+          {text}
+        </Streamdown>
       </Box>
     </Box>
   );

@@ -9,7 +9,8 @@ made for an application:
 - ``GET``: its parts — browse, files, shell, each on or off — whether it has
   started, and who has taken it over;
 - ``GET …/files?path=``: a directory of its working directory, read-only;
-- ``GET …/file?path=``: one of its files, to download;
+- ``GET …/file?path=``: one of its files, to download — always a download
+  (`download_headers`): never a page a browser draws, whatever it holds;
 - ``POST …/take-over``: the person takes it: what runs on it is interrupted,
   and its agent's calls to it wait;
 - ``POST …/run``: code the person who took it over runs on it;
@@ -26,6 +27,7 @@ ai-agents decides, asked with the caller's own token
 from __future__ import annotations
 
 from typing import Any, Dict, Tuple
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
@@ -53,6 +55,30 @@ class RunRequest(BaseModel):
     """Code the person runs on the computer they took over."""
 
     code: str = Field(..., min_length=1, description="Python, as its sandbox runs it")
+
+
+def download_headers(path: str) -> Dict[str, str]:
+    """The headers a file of its computer is served with (STUDIO D-22).
+
+    Whatever it holds — a person's upload, what its agent wrote — it is saved,
+    never drawn: an attachment, of no type a browser would sniff into a page,
+    and sandboxed should it be opened all the same (no script, an origin of
+    its own). Its name is said in ASCII and in full (RFC 6266), with nothing
+    that could end the header.
+    """
+    name = path.rstrip("/").rsplit("/", 1)[-1]
+    ascii_name = "".join(
+        char if 32 <= ord(char) < 127 and char not in '"\\;' else "_" for char in name
+    )
+    return {
+        "Content-Disposition": (
+            f'attachment; filename="{ascii_name or "file"}"; '
+            f"filename*=UTF-8''{quote(name, safe='')}"
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox; default-src 'none'",
+        "Cache-Control": "no-store",
+    }
 
 
 def _refused(refused: ComputerRefused) -> HTTPException:
@@ -151,11 +177,10 @@ async def download(agent: str, request: Request, path: str) -> Response:
         content = read_file(agent, path)
     except ComputerRefused as refused:
         raise _refused(refused) from None
-    name = path.rstrip("/").rsplit("/", 1)[-1].replace('"', "")
     return Response(
         content=content,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+        headers=download_headers(path),
     )
 
 

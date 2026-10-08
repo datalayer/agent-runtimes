@@ -15,6 +15,7 @@
 import type { JSX } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from './markdownWithoutHtml';
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 import { normalizeAssistantMarkdown } from './assistantMarkdown';
 
@@ -42,7 +43,9 @@ export function ChatMarkdown({
           : {}),
       }}
     >
-      <Streamdown>{normalizeAssistantMarkdown(text)}</Streamdown>
+      <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+        {normalizeAssistantMarkdown(text)}
+      </Streamdown>
     </Box>
   );
 }

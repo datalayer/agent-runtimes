@@ -295,6 +295,31 @@ def test_the_machine_sees_takes_over_runs_and_hands_back(held: None) -> None:
         assert local.get(BASE).json()["held"] is None
 
 
+def test_a_file_of_its_computer_is_a_download_never_a_page(held: None) -> None:
+    """STUDIO D-22: an uploaded page is saved, not drawn, whatever it holds."""
+    page = '<script>alert(document.cookie)</script><img src=x onerror="alert(1)">'
+    sandbox_of("desk").files.write("files/s1/page.html", page)
+    sandbox_of("desk").files.write('files/s1/r"é;port.svg', "<svg onload=1/>")
+    with _client("127.0.0.1") as local:
+        saved = local.get(f"{BASE}/file", params={"path": "files/s1/page.html"})
+        assert saved.status_code == 200
+        assert saved.text == page
+        assert saved.headers["content-type"] == "application/octet-stream"
+        assert saved.headers["content-disposition"].startswith(
+            'attachment; filename="page.html"'
+        )
+        assert saved.headers["x-content-type-options"] == "nosniff"
+        assert saved.headers["content-security-policy"] == (
+            "sandbox; default-src 'none'"
+        )
+        odd = local.get(f"{BASE}/file", params={"path": 'files/s1/r"é;port.svg'})
+        assert odd.status_code == 200
+        assert odd.headers["content-type"] == "application/octet-stream"
+        assert odd.headers["content-disposition"] == (
+            "attachment; filename=\"r___port.svg\"; filename*=UTF-8''r%22%C3%A9%3Bport.svg"
+        )
+
+
 def test_it_is_shown_only_to_whoever_talks_to_it(held: None) -> None:
     with _client("10.0.0.4") as remote:
         ada = {"Authorization": "Bearer ada"}

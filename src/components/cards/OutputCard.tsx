@@ -20,6 +20,7 @@ import {
   formatRelativeTime,
 } from '@datalayer/core/lib/utils';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../../chat/messages/markdownWithoutHtml';
 
 import { streamdownMarkdownStyles } from '../../chat/styles/streamdownStyles';
 
@@ -213,7 +214,9 @@ export function OutputCard({
                 </summary>
                 <Box mt={2}>
                   <Box sx={streamdownMarkdownStyles}>
-                    <Streamdown>{outputText}</Streamdown>
+                    <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+                      {outputText}
+                    </Streamdown>
                   </Box>
                 </Box>
               </details>

@@ -7,6 +7,13 @@
  * MCP-UI plugin for chat component.
  * Renders MCP UI protocol messages and resources.
  *
+ * What it never draws (STUDIO D-22): the markup of a resource (`text/html`)
+ * and a UI element built from a tool's props. Either is markup a server or a
+ * model supplies, and the chat may sit on the platform's origin, where people
+ * are signed in: each is refused in a sentence, in place, with no fallback.
+ * A host that holds an origin of its own for such pages registers its own
+ * renderer for the type (`registerMimeTypeRenderer`).
+ *
  * @module components/uiPlugins/MCPUIPlugin
  */
 
@@ -55,6 +62,32 @@ export interface MCPUIMessage {
     children?: MCPUIMessage[];
   };
 }
+
+/**
+ * What the chat says in place of the MCP UI's markup (STUDIO D-22).
+ */
+export const MCP_UI_NOT_DRAWN = {
+  html: 'This answer carries a page of HTML from its MCP server. It is not drawn here: no markup from a server or a model reaches this page.',
+  element:
+    'This answer carries an interface built by its MCP server. It is not drawn here: no markup from a server or a model reaches this page.',
+} as const;
+
+/** A sentence in place of what is not drawn. */
+const NotDrawn: React.FC<{ children: string }> = ({ children }) => (
+  <p
+    className="mcp-ui-not-drawn"
+    data-mcp-ui-not-drawn=""
+    style={{
+      padding: '8px 12px',
+      margin: '4px 0',
+      borderRadius: '6px',
+      border: '1px solid var(--color-border-default)',
+      color: 'var(--color-fg-muted)',
+    }}
+  >
+    {children}
+  </p>
+);
 
 /**
  * MCP-UI context for tracking state
@@ -126,9 +159,9 @@ export function createMCPUIRenderer(
         return <ResourceContent resource={content} />;
       }
 
-      // Handle UI element
+      // A UI element is markup built from a tool's props: not drawn.
       if (mcpData.uiElement) {
-        return <UIElement element={mcpData.uiElement} />;
+        return <NotDrawn>{MCP_UI_NOT_DRAWN.element}</NotDrawn>;
       }
 
       // Fallback: render raw data
@@ -189,18 +222,8 @@ const ResourceContent: React.FC<{ resource: MCPUIResource }> = ({
   ) {
     const text = resource.text || (resource.content as string);
 
-    if (mimeType === 'text/html') {
-      return (
-        <div
-          className="mcp-ui-html"
-          dangerouslySetInnerHTML={{ __html: text }}
-          style={{
-            padding: '12px',
-            backgroundColor: 'var(--color-canvas-subtle)',
-            borderRadius: '6px',
-          }}
-        />
-      );
+    if (mimeType.split(';', 1)[0].trim().toLowerCase() === 'text/html') {
+      return <NotDrawn>{MCP_UI_NOT_DRAWN.html}</NotDrawn>;
     }
 
     if (mimeType === 'text/markdown') {
@@ -298,49 +321,6 @@ const ResourceContent: React.FC<{ resource: MCPUIResource }> = ({
     >
       Resource: {resource.uri}
     </div>
-  );
-};
-
-/**
- * UI Element component for rendering MCP UI elements
- */
-const UIElement: React.FC<{ element: MCPUIMessage['uiElement'] }> = ({
-  element,
-}) => {
-  if (!element) return null;
-
-  const { type, props = {}, children } = element;
-
-  // Map MCP UI element types to HTML elements
-  const elementMap: Record<string, string> = {
-    container: 'div',
-    text: 'span',
-    button: 'button',
-    input: 'input',
-    form: 'form',
-    list: 'ul',
-    listItem: 'li',
-    heading: 'h3',
-    paragraph: 'p',
-    link: 'a',
-    image: 'img',
-    code: 'code',
-    pre: 'pre',
-  };
-
-  const htmlTag = elementMap[type] || 'div';
-
-  return React.createElement(
-    htmlTag,
-    {
-      ...props,
-      style: {
-        ...((props.style as React.CSSProperties) || {}),
-      },
-    },
-    children?.map((child, index) => (
-      <UIElement key={index} element={child.uiElement} />
-    )),
   );
 };
 

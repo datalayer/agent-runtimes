@@ -38,6 +38,7 @@ import { signal } from '@datalayer/reactor';
 import { TurnFooter } from '../../../chat/messages/TurnFooter';
 import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../../../chat/messages/markdownWithoutHtml';
 import { streamdownMarkdownStyles } from '../../../chat/styles/streamdownStyles';
 import { normalizeAssistantMarkdown } from '../../../chat/messages/assistantMarkdown';
 import {
@@ -191,7 +192,7 @@ export function TurnPanel({
         >
           {turn.assistant ? (
             <Box sx={{ ...streamdownMarkdownStyles, fontSize: 0 }}>
-              <Streamdown>
+              <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
                 {normalizeAssistantMarkdown(turn.assistant)}
               </Streamdown>
             </Box>

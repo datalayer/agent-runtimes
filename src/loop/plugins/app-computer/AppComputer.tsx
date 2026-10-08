@@ -146,7 +146,11 @@ function Terminal({
 }
 
 function save(blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob);
+  // A file of its computer is saved, never opened: its address on this page's
+  // origin carries no type a browser would draw (STUDIO D-22).
+  const url = URL.createObjectURL(
+    new Blob([blob], { type: 'application/octet-stream' }),
+  );
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = name;

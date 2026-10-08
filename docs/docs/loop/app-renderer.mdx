@@ -209,6 +209,43 @@ kind and size beside it, a line under it; pressing it saves the file, from
 an `https://` link or a `data:` URL, and a link of any other kind is not
 followed — the block says so in its place.
 
+## No markup in its conversation
+
+An application may be hosted on the platform's own origin, where people are
+signed in (LOOP D-22), so nothing a model, a connection or an application
+writes as markup reaches the page — in its Preview, at its address and
+embedded alike:
+
+- **Markdown without HTML.** Every renderer of an agent's words — the chat's
+  messages (`ChatMarkdown`, `TextPart`, `ReasoningPart`), the page layout's
+  turn panel, the output and notification cards — hands Streamdown
+  `REHYPE_PLUGINS_WITHOUT_HTML` (`chat/messages/markdownWithoutHtml`):
+  Streamdown's rehype plugins without `rehype-raw`, the HTML written in the
+  markdown turned into text first (`rehypeHtmlAsText`). `<script>…</script>`,
+  `<img onerror=…>` or an `<iframe>` in an answer reads as those characters;
+  bold, lists, tables, code, maths and links are drawn as before. A link
+  opens in a new tab with `rel="noreferrer"` (no opener); a `javascript:`
+  link is not kept.
+- **No MCP UI markup.** The MCP UI renderer (`createMCPUIRenderer`) draws a
+  resource of `text/html` and a `uiElement` built from a tool's props as a
+  sentence in their place (`MCP_UI_NOT_DRAWN`), with no fallback. Its text,
+  images, JSON and files are shown as before. A host holding an origin of its
+  own for such pages registers its own renderer for the type
+  (`registerMimeTypeRenderer`).
+- **Its files are downloads.** `GET …/computer/file` answers
+  `application/octet-stream`, `Content-Disposition: attachment` with its name
+  in ASCII and in full (RFC 6266), `X-Content-Type-Options: nosniff`,
+  `Content-Security-Policy: sandbox; default-src 'none'` and
+  `Cache-Control: no-store` — a person's upload or what its agent wrote is
+  saved, never drawn, from the runtime's host and not the page's. The card
+  saves it as an `application/octet-stream` blob.
+
+A2UI's `Text` renders markdown with `markdown-it` (HTML off) and DOMPurify,
+and a component of the application's own runs in a frame of no origin (see
+*The blocks a page draws*). Tested in vitest `app-conversation-markup` and
+pytest `test_app_computer` (*a file of its computer is a download, never a
+page*).
+
 ## Beside its page: rules, approvals, activity, computer
 
 Asked for its `sidebar`, `AppRenderer` adds three plugins to the workspace's
