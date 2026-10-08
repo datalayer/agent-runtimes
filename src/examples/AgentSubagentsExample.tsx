@@ -25,8 +25,8 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentSubagentsPlugin } from '../loop/plugins/agent-subagents';
+import { LoopEmbed } from '../apps';
+import { AgentSubagentsPlugin } from '../apps/plugins/agent-subagents';
 import { SubagentChatPanel } from '../chat/messages/ChatMessageList';
 import {
   useAgentRuntimeActiveSubagentToolCallId,

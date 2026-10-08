@@ -20,7 +20,7 @@ import {
 import {
   WINDOW_NOT_YET,
   postWindowMessage,
-} from '../../../loop/embed/embedSession';
+} from '../../../apps/embed/embedSession';
 
 const sse = (...events: unknown[]): string =>
   events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('');

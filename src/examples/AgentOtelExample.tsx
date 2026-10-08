@@ -44,9 +44,9 @@ import {
 import { useCoreStore } from '@datalayer/core';
 import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import { uniqueAgentId } from './utils/agentId';
-import { AgentOtelPlugin } from '../loop/plugins/agent-otel';
+import { AgentOtelPlugin } from '../apps/plugins/agent-otel';
 import { Protocol } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 

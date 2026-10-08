@@ -19,7 +19,7 @@ import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { AppRenderer } from '../loop/apps/AppRenderer';
+import { AppRenderer } from '../apps/apps/AppRenderer';
 import { APP_CATALOGUE } from '../specs/apps';
 import type { AppSpec } from '../types/agentspecs';
 

@@ -76,7 +76,7 @@ listComponents().filter(c => !c.standard).map(c => c.id);
 
 ## Where they are read
 
-- **The application checks** (`src/loop/apps/checks.ts`): `componentNamed` is
+- **The application checks** (`src/apps/apps/checks.ts`): `componentNamed` is
   `getComponent`, and `checkApp` says an application is not ready when its
   `interface.components`, or a node of its `surface`, names a component the catalog does
   not have — the same sentences as `app_problems` in Agentspecs.

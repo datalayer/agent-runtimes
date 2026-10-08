@@ -50,9 +50,9 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { AgentMonitoringPlugin } from '../loop/plugins/agent-monitoring';
-import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
+import { LoopEmbed } from '../apps';
+import { AgentMonitoringPlugin } from '../apps/plugins/agent-monitoring';
+import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';

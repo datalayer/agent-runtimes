@@ -29,7 +29,7 @@ classes, so a read connection carries no tool that writes, and a tool nobody
 classed is taken to write.
 
 The same decision is written in `agentspecs.apps.behaviour_for`, and in
-TypeScript in `src/loop/apps/rules.ts`. `APP_BEHAVIOURS`, generated from
+TypeScript in `src/apps/apps/rules.ts`. `APP_BEHAVIOURS`, generated from
 agentspecs, is what all three have to agree on.
 """
 

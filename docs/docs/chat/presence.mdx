@@ -90,8 +90,8 @@ reduced motion, the ring does not breathe.
 
 ## `ChatPresence`, for a host
 
-The chat plugin of the [Loop workspace](/loop) takes who is answering as
-`presence` (`ChatPresence`, in `loop/plugins/chat`):
+The chat plugin of the [Loop workspace](/apps) takes who is answering as
+`presence` (`ChatPresence`, in `apps/plugins/chat`):
 
 ```ts
 interface ChatPresence {
@@ -128,7 +128,7 @@ page's hero does — is told the state as it changes:
 
 ```tsx
 import { useState } from 'react';
-import { AppRenderer } from '@datalayer/agent-runtimes/lib/loop';
+import { AppRenderer } from '@datalayer/agent-runtimes/lib/apps';
 import type { PresenceState } from '@datalayer/agent-runtimes/lib/chat/presence/presenceStatus';
 import { PRESENCE_LINES } from '@datalayer/agent-runtimes/lib/chat/presence/presenceStatus';
 

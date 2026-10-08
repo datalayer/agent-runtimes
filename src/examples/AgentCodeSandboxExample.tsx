@@ -46,8 +46,8 @@ import {
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentCodeSandboxPlugin } from '../loop/plugins/agent-code-sandbox';
+import { LoopEmbed } from '../apps';
+import { AgentCodeSandboxPlugin } from '../apps/plugins/agent-code-sandbox';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
 import type { SandboxAggregateStatus } from '../types/sandbox';

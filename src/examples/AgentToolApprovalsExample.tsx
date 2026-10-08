@@ -21,8 +21,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { waitForAgent } from './utils/waitForAgent';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { createAgentToolApprovalsPlugin } from '../loop/plugins/agent-tool-approvals';
+import { LoopEmbed } from '../apps';
+import { createAgentToolApprovalsPlugin } from '../apps/plugins/agent-tool-approvals';
 import { useAgentRuntimeApprovals } from '../stores/agentRuntimeStore';
 
 const queryClient = new QueryClient();

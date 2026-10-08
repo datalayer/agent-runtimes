@@ -12,14 +12,14 @@
  * The chat reads them in the language its host says (`ChatLanguage`, which
  * `AppRenderer` and the embed set from their `language`), else in the first
  * the browser prefers that is here, else in English: as an application's own
- * words are picked (`loop/apps/language`).
+ * words are picked (`apps/apps/language`).
  *
  * Pure: no React ({@link useChatWords} is in `ChatLanguage`).
  *
  * @module chat/words
  */
 
-import { pickLanguage } from '../loop/apps/language';
+import { pickLanguage } from '../apps/apps/language';
 
 /** A tool line's words around the tool's name: "Using " list_invoices "…". */
 export type AroundName = { before: string; after: string };

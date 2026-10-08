@@ -27,9 +27,9 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentA2APlugin } from '../loop/plugins/agent-a2a';
-import { A2ASidebarPlugin } from '../loop/plugins/a2a-sidebar';
+import { LoopEmbed } from '../apps';
+import { AgentA2APlugin } from '../apps/plugins/agent-a2a';
+import { A2ASidebarPlugin } from '../apps/plugins/a2a-sidebar';
 import { getAgentspecs } from '../specs/agents';
 
 const AGENT_NAME = 'a2a-example-agent';

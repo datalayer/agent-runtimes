@@ -25,8 +25,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { createAgentInferencePlugin } from '../loop/plugins/agent-inference';
+import { LoopEmbed } from '../apps';
+import { createAgentInferencePlugin } from '../apps/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
 
 const AGENTSPEC_ID = 'example-inference';

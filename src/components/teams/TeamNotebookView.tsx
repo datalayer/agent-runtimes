@@ -6,7 +6,7 @@
 /**
  * The notebook a member of the team gave, on the browser sandbox.
  *
- * What the loop's notebook view does (`loop/plugins/notebook/NotebookView`),
+ * What the loop's notebook view does (`apps/plugins/notebook/NotebookView`),
  * for a notebook that arrived over A2A: the browser sandbox
  * (`createBrowserSandboxService`, a JupyterLite Pyodide kernel in the page)
  * is started, and `EphemeralNotebook` is bound to its manager and its
@@ -28,7 +28,7 @@ import { Box } from '@datalayer/primer-addons';
 import { useSignalValue } from '@datalayer/reactor/react';
 import { notebookStore } from '@datalayer/jupyter-react';
 import { EphemeralNotebook } from '../../chat/notebook/EphemeralNotebook';
-import { createBrowserSandboxService } from '../../loop/plugins/agents/browserService';
+import { createBrowserSandboxService } from '../../apps/plugins/agents/browserService';
 import { teamNotebookKernel } from './teamNotebookKernel';
 import type { A2APeerArtifact } from '../../runtimes/browser/a2aPeer';
 

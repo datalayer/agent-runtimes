@@ -58,7 +58,7 @@ import { buildReactorFromPlugins } from '@datalayer/reactor';
 import {
   AssistantCharactersPlugin,
   assistantCharacterNamed,
-} from '../../loop/plugins/assistant-characters';
+} from '../../apps/plugins/assistant-characters';
 import { OwlCharacterPlugin } from '../../examples/utils/owlCharacterPlugin';
 import type { DisplayItem } from '../../types/chat';
 

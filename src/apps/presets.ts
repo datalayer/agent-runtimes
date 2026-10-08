@@ -1,0 +1,445 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The plugins a Loop workspace normally has.
+ *
+ * A host builds a workspace by choosing plugins, which is the point of the
+ * architecture and also a lot to get right before seeing anything. This is the
+ * set the examples app runs, as a function, so a third party can start from a
+ * working Loop and take things out rather than assemble one from nothing.
+ *
+ * It exists because the landing page was importing the *example* to get it.
+ * An example is written to be read: its props are demonstration switches, its
+ * wiring is whatever made the demo clearest, and nothing about it is a promise.
+ * A page that embeds Loop needs the plugins, not the demonstration — and the
+ * two drifting apart should not be able to break somebody's home page.
+ *
+ * ```tsx
+ * const reactor = buildLoopReactor(loopPlugins({ serverUrl, target: 'browser' }));
+ * <LoopWorkspace reactor={reactor} serverUrl={serverUrl} agentId={agentId} />
+ * ```
+ *
+ * @module apps/presets
+ */
+
+import { configurePlugin, type PluginRef } from '@datalayer/reactor';
+import { ThemePlugin } from '@datalayer/primer-addons/lib/reactor';
+import { SubagentActivityPlugin } from './plugins/subagent-activity';
+import { A2uiPlugin } from './plugins/a2ui';
+import { ShellPlugin } from './plugins/shell';
+import { PromptPlugin } from './plugins/prompt';
+import { AgentspecsPlugin } from './plugins/agentspecs';
+import {
+  AgentsPlugin,
+  type AgentsConfig,
+  type SandboxTarget,
+} from './plugins/agents';
+import {
+  ChatPlugin,
+  type ChatPluginConfig,
+  type ChatPresence,
+} from './plugins/chat';
+import { ChatHeaderPlugin } from './plugins/chat-header';
+import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
+import { ChatViewPlugin } from './plugins/chat-view';
+import { DocumentViewPlugin } from './plugins/document-view';
+import { InputPromptPlugin } from './plugins/input-prompt';
+import { NotebookViewPlugin } from './plugins/notebook-view';
+import { LoopCommandsPlugin } from './plugins/commands';
+import { GraphViewPlugin } from './plugins/graph';
+import { ModelsPlugin } from './plugins/models';
+import { PluginsPanelPlugin } from './plugins/plugins-panel';
+import { WindowFramePlugin } from './plugins/window-frame';
+import { DocumentExtension, NotebookExtension } from './extensions';
+import { LoopPageLayoutPlugin, type PageSize } from './plugins/page-layout';
+import type { ResumedThread, ThemeOverrides } from '../types/chat';
+
+export type LoopPresetOptions = {
+  /** Where the agent runtimes service is. */
+  serverUrl?: string;
+  /** Where code runs: in the page, on a local server, or on Datalayer. */
+  target?: SandboxTarget;
+  /**
+   * Which surface opens beside the chat.
+   *
+   * A surface id rather than a fixed union, because the surfaces are
+   * contributed: an editor plugin the preset has never heard of is still a
+   * valid answer, and `'none'` is how a host asks for the chat alone.
+   *
+   * The notebook when unsaid, and none when `editors` is off. Said with
+   * `editors` off, it is honoured: the surface of a plugin the host mounts —
+   * an application's page — opens beside the chat without the notebook and
+   * the document.
+   */
+  defaultEditor?: ChatPluginConfig['defaultSurface'];
+  /** Whether the chat offers its surface switcher. */
+  showViewSelector?: boolean;
+  /** Whether the chat draws its own header. */
+  hideChatHeader?: boolean;
+  /**
+   * Whether the chat's header offers `+` (a new chat) and the bin (clear).
+   * Off by default; see `ChatPluginConfig.headerButtons`.
+   */
+  chatHeaderButtons?: boolean;
+  /** Where the prompt sits. Passed through to the chat plugin. */
+  promptPlacement?: ChatPluginConfig['promptPlacement'];
+  /**
+   * Whether the composer takes the caret when the workspace opens. True by
+   * default — the workspace is there to be typed into. A host that embeds the
+   * loop as one section of a longer page passes `false`, so that mounting it
+   * does not scroll the reader into the middle of the page.
+   */
+  autoFocusPrompt?: boolean;
+  /**
+   * Whether the openers show as labels by the composer. True by default; the
+   * composer's suggestions menu offers them either way. See
+   * `ChatPluginConfig.suggestionLabels`.
+   */
+  suggestionLabels?: boolean;
+  /**
+   * Pixels to reserve at the top of the workspace when it goes full screen,
+   * for a host's own fixed header. Passed through to the chat plugin — see
+   * `ChatPluginConfig.fullScreenTopOffset` for what it changes and why
+   * setting it also keeps full screen off the browser's real API.
+   */
+  fullScreenTopOffset?: number | string;
+  /** Whether a person may choose between agent variants. */
+  showAgentVariants?: boolean;
+  /**
+   * Whether the header offers the team's member picker. True by default; a
+   * host that renders the choice itself passes `false`.
+   */
+  teamPicker?: boolean;
+  /**
+   * The page layout: the editor on a centred sheet, like a document, with
+   * the composer docked above it at the sheet's own width and the
+   * conversation in a panel beside it. Mounts `LoopPageLayoutPlugin`, which
+   * hands the chat view's parts to primer-addons' page layout through the
+   * `LoopChatLayout` point.
+   */
+  pageLayout?: boolean;
+  /**
+   * How the page layout arranges the parts: `page` (the default), the work
+   * on a sheet with the conversation in a panel; or `split`, the
+   * conversation and the work side by side with a hairline to drag. Only
+   * read with `pageLayout`.
+   */
+  pageLayoutArrangement?: 'page' | 'split';
+  /**
+   * Where the page layout hangs the current turn on the composer: `below`
+   * (the default), `above`, or `none`. Only read with `pageLayout`.
+   */
+  pageLayoutTurnPanel?: 'below' | 'above' | 'none';
+  /**
+   * How the page layout stands the composer over the page: `docked` (the
+   * default) in a band above the canvas at the sheet's width, or `floating`
+   * as a draggable card over the top of the canvas.
+   */
+  pageLayoutPrompt?: 'docked' | 'floating';
+  /**
+   * Which edge a floating composer starts at: `top` (the default) or
+   * `bottom`. It is dragged from there either way. Only read with
+   * `pageLayoutPrompt: 'floating'`.
+   */
+  pageLayoutPromptAnchor?: 'top' | 'bottom';
+  /**
+   * The page layout's sheet: free (the default) at its reading width, or a
+   * paper — `{ format: 'letter' }`, `{ format: 'a4' }` — whose width it
+   * takes and whose height it is at least; a free `width` or `height` over
+   * either. Only read with `pageLayout`.
+   */
+  pageLayoutSize?: PageSize;
+  /**
+   * What the turn panel draws under the reply: the full turn footer
+   * (counters, copy, dismiss — the default), `actions` only, or `none`.
+   */
+  pageLayoutTurnPanelFooter?: 'full' | 'actions' | 'none';
+  /**
+   * The agent summary badge in the workspace header. On by default; a host
+   * whose page already introduces the agent switches it off.
+   */
+  agentSummary?: boolean;
+  /** The team whose agents are offered. */
+  teamId?: string;
+  /** What a local agent is created from, when one is. */
+  localAgent?: AgentsConfig['localAgent'];
+  /** The agentspec a Datalayer runtime is allocated with (the `datalayer` target). */
+  datalayerAgentSpecId?: string;
+  /** What the agent on that runtime is created with besides its spec — an `app_spec`. */
+  datalayerCreatePayload?: Record<string, unknown>;
+  /** A conversation without an account, on the visitors' runtime (LOOP R-30). */
+  datalayerVisitors?: AgentsConfig['datalayerVisitors'];
+  /** A deployment's agent, already on the runtime it is kept on (LOOP R-33). */
+  datalayerKept?: AgentsConfig['datalayerKept'];
+  /** An embed token: the embedded application's session, and nothing else (LOOP R-20). */
+  embedToken?: string;
+  /** The target is the host's to fix, even with the agent control hidden. */
+  targetFixed?: boolean;
+  /** The theme the conversation wears, by name; the person's unless said. */
+  themeVariant?: string;
+  /** Laid over that theme, by mode: an application's accent (LOOP T-05). */
+  themeOverrides?: ThemeOverrides;
+  /** The mode the conversation is drawn in, when the host decides it; the person's unless said. */
+  colorMode?: 'light' | 'dark';
+  /** Who is answering, as the person meets them (LOOP T-08). */
+  presence?: ChatPresence;
+  /** Whether the counters are shown under the prompt; on unless said. */
+  showTokenUsage?: boolean;
+  /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
+  thread?: ResumedThread;
+  /**
+   * The agentspec the local agent is created from, by id.
+   *
+   * Shorthand for the `localAgent` payload every host was writing out by
+   * hand; `localAgent`, when both are given, wins — it is the longhand.
+   */
+  localAgentSpec?: string;
+  /**
+   * The chat's composer in a floating, draggable card.
+   *
+   * Sets the chat's `promptPlacement` to `'floating'` — it is the same
+   * composer, card included — and mounts `PromptPlugin` for the `/prompt`
+   * command that focuses it: the two halves of one decision, taken together.
+   * Wins over `promptPlacement` when both are given.
+   */
+  floatingPrompt?: boolean;
+  /**
+   * Whether the notebook and document editors are mounted beside the chat.
+   *
+   * True by default. A host that wants the chat alone passes `false`: the
+   * two editor plugins, their toolbars and the surface strip all stay out,
+   * and the chat opens on no surface — rather than mounting editors and
+   * hiding the way to them, which leaves a workspace that still speaks of
+   * cells and documents.
+   */
+  editors?: boolean;
+  /**
+   * Whether the workspace holds a conversation at all.
+   *
+   * True by default. A host whose one view is a page of its own — an
+   * application that answers in its page and has no agent to talk to, a
+   * decision (LOOP R-02) — passes `false`: the chat and its composer, the
+   * agents, the models, the editors and the page layout all stay out, so
+   * that nothing is launched or fetched for a conversation nobody has, and
+   * the workspace opens on the view a host's plugin contributes.
+   */
+  conversation?: boolean;
+  /**
+   * The editor choice in the workspace header rather than above the chat.
+   *
+   * Mounts `EditorsPlugin` and switches the chat's own surface strip off —
+   * again both halves of one decision: two controls offering the same choice
+   * would eventually disagree about what is open.
+   */
+  editorSelector?: boolean;
+  /**
+   * The plugin graph, reachable from the sidebar.
+   *
+   * Left out rather than mounted-and-hidden: it pulls the generic
+   * `@datalayer/reactor-graph` in as a dependency, and mounting both to show
+   * neither would put two plugins in the sidebar that do nothing.
+   */
+  graph?: boolean;
+  /** Ctrl-K over whatever the mounted plugins contribute. */
+  commandPalette?: boolean;
+  /** The sidebar that switches plugins on and off. */
+  pluginsPanel?: boolean;
+  /**
+   * The window chrome's slots.
+   *
+   * The frame itself is composed by the host — see `WindowFrame` — but the
+   * plugin is what opens its title bar to contributions, so a host that frames
+   * Loop wants this on.
+   */
+  windowFrame?: boolean;
+  /**
+   * Called once, the first time a person sends a message through the
+   * composer. Passed straight through to `InputPromptPlugin`'s own config —
+   * see `InputPromptPluginConfig.firstPromptHook` for what it is for and
+   * when it fires.
+   */
+  firstPromptHook?: () => void;
+};
+
+/**
+ * The standard set, with the options a host usually varies.
+ *
+ * Defaults are the embeddable ones: code runs in the page, so nothing has to
+ * be installed or signed into, and the switches a demonstration wants are off.
+ */
+export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
+  const {
+    serverUrl,
+    target = 'browser',
+    defaultEditor: askedEditor,
+    showViewSelector = true,
+    hideChatHeader = false,
+    chatHeaderButtons = false,
+    promptPlacement,
+    autoFocusPrompt = true,
+    suggestionLabels = true,
+    fullScreenTopOffset = 0,
+    showAgentVariants = false,
+    agentSummary = true,
+    teamId,
+    teamPicker = true,
+    pageLayout = false,
+    pageLayoutArrangement = 'page',
+    pageLayoutTurnPanel = 'below',
+    pageLayoutPrompt = 'docked',
+    pageLayoutPromptAnchor = 'top',
+    pageLayoutSize,
+    pageLayoutTurnPanelFooter = 'full',
+    localAgent,
+    localAgentSpec,
+    datalayerAgentSpecId,
+    datalayerCreatePayload,
+    datalayerVisitors,
+    datalayerKept,
+    embedToken,
+    targetFixed,
+    themeVariant,
+    themeOverrides,
+    colorMode,
+    presence,
+    showTokenUsage,
+    thread,
+    floatingPrompt = false,
+    editorSelector = false,
+    editors = true,
+    conversation = true,
+    graph = false,
+    commandPalette = false,
+    pluginsPanel = false,
+    windowFrame = false,
+    firstPromptHook,
+  } = options;
+  const defaultEditor = askedEditor ?? (editors ? 'notebook' : 'none');
+
+  // A workspace without a conversation: the theme, the shell's points, and
+  // the host's chrome; its view is a host's plugin's.
+  if (!conversation) {
+    return [
+      ThemePlugin,
+      configurePlugin(ShellPlugin, {
+        defaultEditor: 'none',
+        showSelector: false,
+      }),
+      ...(graph ? [GraphViewPlugin] : []),
+      ...(commandPalette ? [LoopCommandsPlugin] : []),
+      ...(pluginsPanel ? [PluginsPanelPlugin] : []),
+      ...(windowFrame ? [WindowFramePlugin] : []),
+    ] as PluginRef[];
+  }
+
+  return [
+    // The chat owns the editor beside it, so which one opens is its
+    // configuration rather than the workspace's.
+    configurePlugin(ChatPlugin, {
+      defaultSurface: defaultEditor,
+      // The chat's strip stands down when the header selector offers the
+      // same choice; see `editorSelector` — and when there is no editor
+      // to choose.
+      showSurfaceSelector: editors && showViewSelector && !editorSelector,
+      hideHeader: hideChatHeader,
+      headerButtons: { newChat: chatHeaderButtons, clear: chatHeaderButtons },
+      promptPlacement: floatingPrompt ? 'floating' : promptPlacement,
+      autoFocusPrompt,
+      suggestionLabels,
+      fullScreenTopOffset,
+      themeVariant,
+      themeOverrides,
+      colorMode,
+      presence,
+      showTokenUsage,
+      ...(thread ? { thread } : {}),
+    }),
+    // The composer and the title bar are plugins of their own: the chat
+    // assembles their props, these render them. In the preset by default —
+    // a chat without a composer is a demonstration, not a chat — and each is
+    // still switched individually in the plugins panel.
+    configurePlugin(InputPromptPlugin, { firstPromptHook }),
+    ChatHeaderPlugin,
+    // An agent whose spec binds a tool to the `a2ui-surface` renderer gets
+    // its surfaces drawn and submitted without a line of host code. Idle
+    // for every other agent: it answers only for tools some spec bound.
+    A2uiSurfacePlugin,
+    // One footer icon per view, in the composer where the writing hand
+    // already is. Each editor's icon withdraws while its editor is not
+    // contributed, so mounting these unconditionally costs an absent editor
+    // nothing.
+    ChatViewPlugin,
+    ...(editors ? [NotebookViewPlugin, DocumentViewPlugin] : []),
+    configurePlugin(AgentsPlugin, {
+      serverUrl,
+      target,
+      datalayerAgentSpecId,
+      datalayerCreatePayload,
+      datalayerVisitors,
+      datalayerKept,
+      embedToken,
+      targetFixed,
+      showAgentVariants,
+      showAgentSummary: agentSummary,
+      teamId,
+      showTeamPicker: teamPicker,
+      localAgent:
+        localAgent ??
+        (localAgentSpec
+          ? {
+              createPayload: {
+                description: `Local agent from the ${localAgentSpec} spec`,
+                agent_library: 'pydantic-ai',
+                agent_spec_id: localAgentSpec,
+                enable_codemode: false,
+              },
+            }
+          : undefined),
+    }),
+    // Two extensions rather than four plugins: each delivers an editor and the
+    // toolbar that reports on it. Every member is still switched individually.
+    ...(editors ? [NotebookExtension, DocumentExtension] : []),
+    A2uiPlugin,
+    AgentspecsPlugin,
+    ModelsPlugin,
+    // The Primer portal root, kept in the application's color mode, and the
+    // command that toggles it. Unconditional: every workspace portals
+    // something, and the palette's dependency alone would tie the theme to
+    // whether Ctrl-K happens to be mounted.
+    ThemePlugin,
+    // A delegation, visible: the subagent's icon pulses in the prompt's
+    // header while it works. Unconditional, because a parent that has handed
+    // work off is otherwise indistinguishable from one that has stopped.
+    SubagentActivityPlugin,
+    // The shell plugin is unconditional: it declares the points the others
+    // extend, and a workspace where extending works only if a selector
+    // happens to be on is a workspace with a trap in it. The selector itself
+    // stays behind the old switch.
+    configurePlugin(ShellPlugin, {
+      defaultEditor,
+      showSelector: editors && editorSelector,
+    }),
+    ...(floatingPrompt ? [PromptPlugin] : []),
+    ...(pageLayout
+      ? [
+          configurePlugin(LoopPageLayoutPlugin, {
+            arrangement: pageLayoutArrangement,
+            turnPanel: pageLayoutTurnPanel,
+            turnPanelFooter: pageLayoutTurnPanelFooter,
+            prompt: pageLayoutPrompt,
+            promptAnchor: pageLayoutPromptAnchor,
+            pageSize: pageLayoutSize,
+          }),
+        ]
+      : []),
+    ...(graph ? [GraphViewPlugin] : []),
+    ...(commandPalette ? [LoopCommandsPlugin] : []),
+    ...(pluginsPanel ? [PluginsPanelPlugin] : []),
+    ...(windowFrame ? [WindowFramePlugin] : []),
+  ] as PluginRef[];
+}
+
+export default loopPlugins;

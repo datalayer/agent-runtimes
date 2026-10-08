@@ -46,9 +46,9 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import { useAgentRuntimeStore } from '../stores';
-import { AgentNotificationsPlugin } from '../loop/plugins/agent-notifications';
+import { AgentNotificationsPlugin } from '../apps/plugins/agent-notifications';
 
 const queryClient = new QueryClient();
 

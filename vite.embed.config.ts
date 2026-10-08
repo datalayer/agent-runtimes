@@ -31,7 +31,7 @@ export default defineConfig(async env => {
       emptyOutDir: true,
       cssCodeSplit: false,
       lib: {
-        entry: path.resolve(__dirname, 'src/loop/embed/datalayer-app.ts'),
+        entry: path.resolve(__dirname, 'src/apps/embed/datalayer-app.ts'),
         name: 'DatalayerApp',
         formats: ['iife'],
         fileName: () => 'datalayer-app.js',

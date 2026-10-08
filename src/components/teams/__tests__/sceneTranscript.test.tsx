@@ -35,7 +35,7 @@ import {
 import { SceneTranscript } from '../SceneTranscript';
 import { SceneView } from '../SceneView';
 import type { A2ATeamConnection } from '../a2aTeamFlow';
-import type { RecordEntry } from '../../../loop/apps/records';
+import type { RecordEntry } from '../../../apps/apps/records';
 
 const ODOO: A2ATeamConnection = {
   id: 'odoo-accounting',

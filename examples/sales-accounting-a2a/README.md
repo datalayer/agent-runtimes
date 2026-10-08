@@ -4,7 +4,7 @@ Two applications from agentspecs' team `sales-and-accounting`. Sales runs in the
 browser and asks Accounting over A2A with `@a2a-js/sdk`. Accounting runs on a
 runtime, is served with fasta2a, and reads Odoo without changing it. The browser
 side is the `AgentA2ATeamExample` of the examples app. The documentation is
-`docs/docs/loop/teams-over-a2a.mdx`.
+`docs/docs/apps/teams-over-a2a.mdx`.
 
 - `serve_accounting.py --url http://127.0.0.1:8765` serves Accounting on a
   runtime that is already running. The examples' local server is one, and from

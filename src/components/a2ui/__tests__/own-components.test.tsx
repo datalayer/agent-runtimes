@@ -19,7 +19,7 @@ import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import {
   InlineSurface,
   SURFACE_CATALOG_ID,
-} from '../../../loop/plugins/a2ui-surface/InlineSurface';
+} from '../../../apps/plugins/a2ui-surface/InlineSurface';
 import { COMPONENT_CATALOGUE } from '../../../specs/uiPlugins';
 import {
   OWN_COMPONENT_IDS,

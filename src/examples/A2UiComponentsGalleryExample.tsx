@@ -17,8 +17,8 @@
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../loop';
-import { defineA2uiScenePlugin } from '../loop/plugins/a2ui-scene';
+import { LoopEmbed } from '../apps';
+import { defineA2uiScenePlugin } from '../apps/plugins/a2ui-scene';
 
 setupPrimerPortals();
 

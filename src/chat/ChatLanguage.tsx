@@ -17,7 +17,7 @@ import {
   type JSX,
   type ReactNode,
 } from 'react';
-import { preferredLanguages } from '../loop/apps/language';
+import { preferredLanguages } from '../apps/apps/language';
 import { CHAT_WORDS, chatLanguage, type ChatWords } from './words';
 
 /** The language the host says, as BCP 47 tags it; unsaid, the browser's. */

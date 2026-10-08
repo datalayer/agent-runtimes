@@ -24,10 +24,10 @@
 import React, { useMemo } from 'react';
 import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { defineA2uiScenePlugin } from '../loop/plugins/a2ui-scene';
+import { defineA2uiScenePlugin } from '../apps/plugins/a2ui-scene';
 
 setupPrimerPortals();
 

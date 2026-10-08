@@ -6,7 +6,7 @@ title: Chat
 # Chat
 
 The React chat components in `@datalayer/agent-runtimes` — the conversation,
-the composer, and everything around them. The [Loop Web](/loop) workspace
+the composer, and everything around them. The [Loop Web](/apps) workspace
 assembles these into a full workspace; this page is the components
 themselves, for a host embedding a chat of its own.
 
@@ -145,7 +145,7 @@ its balloon, and the floating popup that blinks and speaks on hover.
 workspace — in place of its chat (`conversation`): the window, the button,
 the panel and the assistant stay, and the host tells it what the
 conversation is doing and what it last said. That is how an embedded
-application floats ([Embedding an application](../loop/embedding.mdx)).
+application floats ([Embedding an application](../apps/embedding.mdx)).
 
 ## An application's presence
 
@@ -160,4 +160,4 @@ In the Loop workspace, all of this is assembled by the chat *plugin*: the
 composer's placement (`bottom`, `bottom-chat`, `floating`) is plugin
 configuration, the agent's tools arrive through the `LoopFrontendTool`
 extension point, and the editors beside the conversation are contributions
-the shell hosts. See [Loop Web](/loop).
+the shell hosts. See [Loop Web](/apps).

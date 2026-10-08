@@ -27,7 +27,7 @@ import type { AssistantCharacterData } from '../../chat/assistant/formats/types'
 import {
   AssistantCharactersPlugin,
   assistantCharactersOf,
-} from '../../loop/plugins/assistant-characters';
+} from '../../apps/plugins/assistant-characters';
 import { OWL_CHARACTER, OwlCharacterPlugin } from './owlCharacterPlugin';
 import { NotebookPreview } from '../../components/teams/NotebookPreview';
 import { notebookBalloonVisual } from '../../components/teams/TeamNotebook';

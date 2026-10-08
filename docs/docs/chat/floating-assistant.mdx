@@ -556,15 +556,15 @@ outline.
 ## A character from a plugin
 
 The characters are a contribution point, `loop.assistant.character`
-(`LoopAssistantCharacter` in `loop/core`): the catalogue is what the enabled
+(`LoopAssistantCharacter` in `apps/core`): the catalogue is what the enabled
 plugins contribute and nothing else. Datalayer's four come from their own
-plugin (`AssistantCharactersPlugin`, `loop/plugins/assistant-characters`);
+plugin (`AssistantCharactersPlugin`, `apps/plugins/assistant-characters`);
 disabled, they leave the catalogue. A plugin contributes a character — a
 drawing, as Datalayer's are, or a character read from a file — under an id:
 
 ```tsx
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopAssistantCharacter } from '@datalayer/agent-runtimes/lib/loop/core';
+import { LoopAssistantCharacter } from '@datalayer/agent-runtimes/lib/apps/core';
 import type { AssistantCharacter } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
 
 const OWL: AssistantCharacter = {
@@ -623,19 +623,19 @@ product has none there: the application's own character, else the paper clip,
 looked up with `assistantCharacterFor` in what Datalayer's characters and the
 host's plugins contribute (`AppEmbed`'s `plugins`; the element takes none, so
 it draws one of the four). An id nothing contributes is said in the element's
-place. See [Embedding](../loop/embedding).
+place. See [Embedding](../apps/embedding).
 
 ### In the LOOP workspace
 
-`LoopAssistantPlugin` (`loop/plugins/assistant`) draws the assistant over a
+`LoopAssistantPlugin` (`apps/plugins/assistant`) draws the assistant over a
 LOOP workspace — the `loop` page, an application's page, its Preview —
 through the workspace's `root` slot, from what the enabled plugins contribute.
 It is configured with the application's character and the person's:
 
 ```tsx
 import { configurePlugin } from '@datalayer/reactor';
-import { AssistantCharactersPlugin } from '@datalayer/agent-runtimes/lib/loop/plugins/assistant-characters';
-import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/loop/plugins/assistant';
+import { AssistantCharactersPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant-characters';
+import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant';
 
 <AppRenderer
   app={app}

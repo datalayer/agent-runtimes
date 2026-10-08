@@ -34,18 +34,18 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
-import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
-import { loopPlugins } from '../loop/presets';
-import { WindowFrame } from '../loop/plugins/window-frame';
+import { buildLoopReactor, LoopWorkspace } from '../apps/shell';
+import { loopPlugins } from '../apps/presets';
+import { WindowFrame } from '../apps/plugins/window-frame';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
-} from '../loop/core';
+} from '../apps/core';
 import {
   AGENTS_PLUGIN_NAME,
   type AgentsOutput,
   type SandboxTarget,
-} from '../loop/plugins/agents';
+} from '../apps/plugins/agents';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';

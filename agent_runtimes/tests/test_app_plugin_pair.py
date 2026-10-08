@@ -8,7 +8,7 @@ The runtime's plugin and the page's share the application's name,
 used without, both are delivered as one extension of that name, and the page
 follows what the runtime holds through ``/api/v1/apps/<id>/plugins/state``.
 Written as a spec or ejected to an ``app.py``, an application is the same pair
-(the page's half, and its Canvas round trip, in ``src/loop/__tests__/plugin-pair.test.ts``).
+(the page's half, and its Canvas round trip, in ``src/apps/__tests__/plugin-pair.test.ts``).
 """
 
 from __future__ import annotations

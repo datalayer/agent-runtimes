@@ -17,7 +17,7 @@ import { MessageProcessor, type A2uiMessage } from '@a2ui/web_core/v0_9';
 import {
   InlineSurface,
   SURFACE_CATALOG_ID,
-} from '../../../loop/plugins/a2ui-surface/InlineSurface';
+} from '../../../apps/plugins/a2ui-surface/InlineSurface';
 import { OWN_COMPONENT_IDS, VISIBLE_WHEN, datalayerCatalog, isShown } from '..';
 
 (

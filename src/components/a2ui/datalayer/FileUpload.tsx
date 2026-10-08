@@ -22,7 +22,7 @@ import { UploadIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import { BlockFrame, CARD_RADIUS, Problem, Quiet, isRecord } from './parts';
 import { ownImplementation, type OwnCommon } from './implementation';
-import { acceptsFile } from '../../../loop/apps/uploads';
+import { acceptsFile } from '../../../apps/apps/uploads';
 
 export type FileUploadProps = OwnCommon & {
   label: string;

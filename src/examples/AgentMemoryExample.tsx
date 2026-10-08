@@ -42,8 +42,8 @@ import { waitForAgent } from './utils/waitForAgent';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { AgentMemoryPlugin } from '../loop/plugins/agent-memory';
+import { LoopEmbed } from '../apps';
+import { AgentMemoryPlugin } from '../apps/plugins/agent-memory';
 import { listRuntimeMemories } from '../api/runtimes/runtimes';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';

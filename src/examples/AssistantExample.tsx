@@ -28,7 +28,7 @@ import {
   AssistantCharactersPlugin,
   assistantCharacterNamed,
   assistantCharactersOf,
-} from '../loop/plugins/assistant-characters';
+} from '../apps/plugins/assistant-characters';
 import { OwlCharacterPlugin } from './utils/owlCharacterPlugin';
 import { readTestSpriteCharacter } from './utils/testSpriteCharacter';
 import {

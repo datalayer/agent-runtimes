@@ -22,8 +22,8 @@ import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import {
   InlineSurface,
   SURFACE_CATALOG_ID,
-} from '../../loop/plugins/a2ui-surface/InlineSurface';
-import { readA2uiToolResult } from '../../loop/plugins/a2ui-surface/toolResult';
+} from '../../apps/plugins/a2ui-surface/InlineSurface';
+import { readA2uiToolResult } from '../../apps/plugins/a2ui-surface/toolResult';
 import { pressedOf, type AnswerSurfacesProps } from './AnswerSurfaces';
 import type { A2ATeamSurface } from './useA2ATeam';
 

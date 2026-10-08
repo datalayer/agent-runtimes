@@ -30,7 +30,7 @@ import type {
   AppCustomComponentSpec,
   AppSpec,
 } from '../../../types/agentspecs';
-import { customComponentEntry } from '../../../loop/apps/customComponents';
+import { customComponentEntry } from '../../../apps/apps/customComponents';
 import { componentSchemaOf } from '../datalayer/schema';
 import { BlockFrame, Problem } from '../datalayer/parts';
 import {
@@ -137,14 +137,12 @@ export function CustomComponentView({
     };
     window.addEventListener('message', listen);
     return () => window.removeEventListener('message', listen);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [component, fetcher]);
 
   useEffect(() => {
     if (ready) {
       tell({ tag: FRAME_TAG, kind: 'props', props: given });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, given]);
 
   return (

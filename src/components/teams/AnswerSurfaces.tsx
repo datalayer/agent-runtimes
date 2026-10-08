@@ -27,7 +27,7 @@
 import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { Text } from '@primer/react';
-import { answerAction } from '../../loop/plugins/a2ui-surface/toolResult';
+import { answerAction } from '../../apps/plugins/a2ui-surface/toolResult';
 import type { A2APeerAction } from '../../runtimes/browser/a2aPeer';
 import type { A2ATeamSurface } from './useA2ATeam';
 

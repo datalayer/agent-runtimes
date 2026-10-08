@@ -18,7 +18,7 @@
 
 import type { JSX } from 'react';
 import { contribution, definePlugin } from '@datalayer/reactor';
-import { LoopAssistantCharacter } from '../../loop/core';
+import { LoopAssistantCharacter } from '../../apps/core';
 import type {
   AssistantCharacter,
   AssistantColorMode,

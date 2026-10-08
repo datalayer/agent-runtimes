@@ -59,10 +59,10 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import { agentRuntimeStore } from '../stores';
-import { AgentGuardrailsPlugin } from '../loop/plugins/agent-guardrails';
-import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
+import { AgentGuardrailsPlugin } from '../apps/plugins/agent-guardrails';
+import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 

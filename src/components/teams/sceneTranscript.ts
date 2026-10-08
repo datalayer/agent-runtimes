@@ -25,7 +25,7 @@
  */
 
 import type { OtelSpan } from '@datalayer/core/lib/otel/types';
-import type { RecordEntry } from '../../loop/apps/records';
+import type { RecordEntry } from '../../apps/apps/records';
 import { connectionOfTool, type A2ATeamConnection } from './a2aTeamFlow';
 
 /** A member of the scene, as the transcript names it. */

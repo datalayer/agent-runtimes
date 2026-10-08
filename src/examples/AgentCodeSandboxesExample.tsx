@@ -23,11 +23,11 @@ import { CodespacesIcon, SyncIcon } from '@primer/octicons-react';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import {
   SANDBOX_CAPACITIES,
   SandboxCapacityPlugins,
-} from '../loop/plugins/agent-code-sandboxes';
+} from '../apps/plugins/agent-code-sandboxes';
 
 /** A variant launched: the capacity behind it and the agent made for it. */
 interface LaunchedSandbox {

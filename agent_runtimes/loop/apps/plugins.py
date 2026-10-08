@@ -4,7 +4,7 @@
 """Applications as Reactor plugins, on the runtime's side (LOOP §5.4, F-12, F-13).
 
 An application runs as two Reactor plugins of one name, ``loop-app-<id>``
-(LOOP F-15): the page's (`defineAppPlugin`, in `src/loop/apps/AppRenderer.tsx`)
+(LOOP F-15): the page's (`defineAppPlugin`, in `src/apps/apps/AppRenderer.tsx`)
 and this one. Each declares the other — the page's ``requiredBackendPlugins``,
 this manifest's ``frontend_dependencies`` — and both say the same
 ``extension``, which is how Reactor's manager and graph show the pair as one
@@ -129,7 +129,7 @@ def revision_of(registry: Optional[ContributionRegistry] = None) -> int:
 
 def app_plugin_name(app_id: str) -> str:
     """The one name of an application's two plugins, the page's and the runtime's
-    (LOOP F-15): ``src/loop/apps/pluginPair.ts`` says the same.
+    (LOOP F-15): ``src/apps/apps/pluginPair.ts`` says the same.
     """
     return f"loop-app-{app_id}"
 

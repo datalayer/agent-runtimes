@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestDatalayerAPI } from '@datalayer/core/lib/api';
 
 import { createRuntime } from '../actions';
-import { appLaunchOf } from '../../loop/plugins/agents/appLaunch';
+import { appLaunchOf } from '../../apps/plugins/agents/appLaunch';
 
 vi.mock('@datalayer/core/lib/api', () => ({
   requestDatalayerAPI: vi.fn(),
@@ -171,7 +171,7 @@ describe('the hook and the bridge', () => {
   });
 
   it('gives the hook the application of the payload', () => {
-    const bridge = read('loop/plugins/agents/DatalayerAgentBridge.tsx');
+    const bridge = read('apps/plugins/agents/DatalayerAgentBridge.tsx');
     expect(bridge).toContain('appLaunchOf(createPayload)');
     expect(bridge).toContain('...(appLaunch ? { appLaunch } : {})');
   });

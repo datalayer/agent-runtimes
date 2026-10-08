@@ -28,8 +28,8 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
-import { LoopEmbed } from '../loop';
-import { AgentSkillsPlugin } from '../loop/plugins/agent-skills';
+import { LoopEmbed } from '../apps';
+import { AgentSkillsPlugin } from '../apps/plugins/agent-skills';
 import { useSkills, useSkillActions } from '../hooks';
 import type { SkillInfo } from '../types';
 

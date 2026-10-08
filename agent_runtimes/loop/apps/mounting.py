@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 #: Where Datalayer serves the embed's script, by default.
 EMBED_ORIGIN = "https://datalayer.ai"
 
-#: The script of the embed, on its origin (`src/loop/embed/embedConfig.ts`).
+#: The script of the embed, on its origin (`src/apps/embed/embedConfig.ts`).
 EMBED_SCRIPT_PATH = "/embed/datalayer-app.js"
 
 #: What gives the page the visit's embed token: called with the request.

@@ -37,12 +37,12 @@ import { ThemedProvider } from './utils/themedProvider';
 import { AuthRequiredView } from './components';
 import { uniqueAgentId } from './utils/agentId';
 import { useAIAgentsWebSocket } from '../hooks';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 import {
   AgentCodemodePlugin,
   AgentNoCodemodePlugin,
-} from '../loop/plugins/agent-codemode';
-import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
+} from '../apps/plugins/agent-codemode';
+import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import {
   ContextPanel,
   type ContextSnapshotResponse,

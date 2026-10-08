@@ -13,8 +13,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { ErrorView } from './components';
-import { LoopEmbed } from '../loop';
-import { AgentParametersPlugin } from '../loop/plugins/agent-parameters';
+import { LoopEmbed } from '../apps';
+import { AgentParametersPlugin } from '../apps/plugins/agent-parameters';
 
 const LOOP_PLUGINS_AGENTPAR = [AgentParametersPlugin];
 

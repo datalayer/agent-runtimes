@@ -27,8 +27,8 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { registerDeckComponents, registerDecks } from '@datalayer/decks';
 import { exampleDeckComponents, exampleDecks } from '@datalayer/decks/examples';
-import { LoopEmbed } from '../loop';
-import { DeckViewPlugin, LoopDecksPlugin } from '../loop/plugins/decks';
+import { LoopEmbed } from '../apps';
+import { DeckViewPlugin, LoopDecksPlugin } from '../apps/plugins/decks';
 
 // The package's example decks, so the catalog has something to open and the
 // agent's suggestions point at decks that exist. Once, at module load.

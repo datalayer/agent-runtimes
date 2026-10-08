@@ -20,8 +20,8 @@ import { Box, setupPrimerPortals } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentHooksPlugin } from '../loop/plugins/agent-hooks';
+import { LoopEmbed } from '../apps';
+import { AgentHooksPlugin } from '../apps/plugins/agent-hooks';
 
 setupPrimerPortals();
 

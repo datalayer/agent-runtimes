@@ -34,8 +34,8 @@ import {
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../loop';
-import { createAgentCompactionPlugin } from '../loop/plugins/agent-compaction';
+import { LoopEmbed } from '../apps';
+import { createAgentCompactionPlugin } from '../apps/plugins/agent-compaction';
 import { useAgentRuntimeCompaction, agentRuntimeStore } from '../stores';
 import { getAgentspecs } from '../specs/agents';
 import { AI_MODEL_CATALOGUE } from '../specs';

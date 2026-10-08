@@ -23,7 +23,7 @@ import {
   transcriptOfSpans,
   type SceneTranscriptMember,
 } from '../sceneTranscript';
-import type { RecordEntry } from '../../../loop/apps/records';
+import type { RecordEntry } from '../../../apps/apps/records';
 
 type Fixture = {
   members: SceneTranscriptMember[];

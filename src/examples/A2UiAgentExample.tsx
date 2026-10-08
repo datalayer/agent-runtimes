@@ -41,11 +41,11 @@ import {
   createA2uiSurfacePlugin,
   validateA2uiSubmission,
   type A2uiFieldRule,
-} from '../loop/plugins/a2ui-surface';
+} from '../apps/plugins/a2ui-surface';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../loop';
-import { AgentA2uiPlugin } from '../loop/plugins/agent-a2ui';
+import { LoopEmbed } from '../apps';
+import { AgentA2uiPlugin } from '../apps/plugins/agent-a2ui';
 
 setupPrimerPortals();
 

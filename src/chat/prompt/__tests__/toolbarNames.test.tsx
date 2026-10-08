@@ -17,8 +17,8 @@ import { computeAccessibleName } from 'dom-accessibility-api';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BaseStyles, ThemeProvider } from '@primer/react';
 import { InputPrompt, type InputPromptProps } from '../InputPrompt';
-import { defineAppComposerPlugin } from '../../../loop/apps/AppComposer';
-import { parseAppspec } from '../../../loop/apps/appspec';
+import { defineAppComposerPlugin } from '../../../apps/apps/AppComposer';
+import { parseAppspec } from '../../../apps/apps/appspec';
 import type { McpToolsetsStatusResponse } from '../../../types/mcp';
 
 afterEach(cleanup);

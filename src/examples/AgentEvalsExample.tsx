@@ -56,8 +56,8 @@ import {
 } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
-import { LoopEmbed } from '../loop';
-import { AgentEvalsPlugin } from '../loop/plugins/agent-evals';
+import { LoopEmbed } from '../apps';
+import { AgentEvalsPlugin } from '../apps/plugins/agent-evals';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
 const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];

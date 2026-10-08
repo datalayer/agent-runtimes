@@ -34,9 +34,9 @@ import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesU
 import {
   AppRenderer,
   appDatalayerCreatePayload,
-} from '../loop/apps/AppRenderer';
-import { AssistantCharactersPlugin } from '../loop/plugins/assistant-characters';
-import { LoopAssistantPlugin } from '../loop/plugins/assistant';
+} from '../apps/apps/AppRenderer';
+import { AssistantCharactersPlugin } from '../apps/plugins/assistant-characters';
+import { LoopAssistantPlugin } from '../apps/plugins/assistant';
 import { APP_CATALOGUE } from '../specs/apps';
 
 setupPrimerPortals();
