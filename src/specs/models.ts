@@ -159,6 +159,7 @@ export const ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
   tokensLimit: 8192,
+  pricing: { inputUsdPerMillion: 0.8, outputUsdPerMillion: 4.0 },
 };
 
 export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
@@ -172,6 +173,7 @@ export const ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
   tokensLimit: 32000,
+  pricing: { inputUsdPerMillion: 15.0, outputUsdPerMillion: 75.0 },
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
@@ -186,6 +188,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
   tokensLimit: 64000,
+  pricing: { inputUsdPerMillion: 3.0, outputUsdPerMillion: 15.0 },
 };
 
 export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
@@ -199,6 +202,7 @@ export const ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['ANTHROPIC_API_KEY'],
   tokensLimit: 64000,
+  pricing: { inputUsdPerMillion: 3.0, outputUsdPerMillion: 15.0 },
 };
 
 export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
@@ -286,6 +290,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 64000,
+  pricing: { inputUsdPerMillion: 11.0, outputUsdPerMillion: 55.0 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
@@ -303,6 +308,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 32000,
+  pricing: { inputUsdPerMillion: 5.5, outputUsdPerMillion: 27.5 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
@@ -320,6 +326,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 32000,
+  pricing: { inputUsdPerMillion: 5.5, outputUsdPerMillion: 27.5 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
@@ -337,6 +344,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 32000,
+  pricing: { inputUsdPerMillion: 15.0, outputUsdPerMillion: 75.0 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
@@ -354,6 +362,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1: AIModel = {
     'AWS_DEFAULT_REGION',
   ],
   tokensLimit: 32000,
+  pricing: { inputUsdPerMillion: 5.5, outputUsdPerMillion: 27.5 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel =
@@ -372,6 +381,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1: AIModel
       'AWS_DEFAULT_REGION',
     ],
     tokensLimit: 64000,
+    pricing: { inputUsdPerMillion: 3.3, outputUsdPerMillion: 16.5 },
   };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
@@ -391,6 +401,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1: AIModel = {
   tokensLimit: 64000,
   capabilities: ['chat', 'tools', 'decider'],
   contextWindow: 200000,
+  pricing: { inputUsdPerMillion: 3.3, outputUsdPerMillion: 16.5 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
@@ -409,6 +420,7 @@ export const BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1: AIModel =
       'AWS_DEFAULT_REGION',
     ],
     tokensLimit: 64000,
+    pricing: { inputUsdPerMillion: 3.0, outputUsdPerMillion: 15.0 },
   };
 
 export const CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1: AIModel = {
@@ -449,6 +461,7 @@ export const CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 256000,
   aliases: ['cloudflare:google/gemma-4-26b-a4b-it'],
+  pricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.3 },
 };
 
 export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
@@ -468,6 +481,7 @@ export const CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 262144,
   aliases: ['cloudflare:zai-org/glm-5.2'],
+  pricing: { inputUsdPerMillion: 1.4, outputUsdPerMillion: 4.4 },
 };
 
 export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
@@ -488,6 +502,7 @@ export const CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 128000,
   aliases: ['cloudflare:openai/gpt-oss-120b'],
+  pricing: { inputUsdPerMillion: 0.35, outputUsdPerMillion: 0.75 },
 };
 
 export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
@@ -507,6 +522,7 @@ export const CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 262144,
   aliases: ['cloudflare:moonshotai/kimi-k2.6'],
+  pricing: { inputUsdPerMillion: 0.95, outputUsdPerMillion: 4.0 },
 };
 
 export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel =
@@ -528,6 +544,7 @@ export const CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1: AIModel 
     route: 'workers-ai',
     contextWindow: 24000,
     aliases: ['cloudflare:meta/llama-3.3-70b-instruct-fp8-fast'],
+    pricing: { inputUsdPerMillion: 0.293, outputUsdPerMillion: 2.253 },
   };
 
 export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
@@ -548,6 +565,7 @@ export const CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1: AIModel = {
   route: 'workers-ai',
   contextWindow: 262144,
   aliases: ['cloudflare:qwen/qwen3.8-27b'],
+  pricing: { inputUsdPerMillion: 0.45, outputUsdPerMillion: 3.2 },
 };
 
 export const CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1: AIModel = {
@@ -629,6 +647,7 @@ export const OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 0.4, outputUsdPerMillion: 1.6 },
 };
 
 export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -642,6 +661,7 @@ export const OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.4 },
 };
 
 export const OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -655,6 +675,7 @@ export const OPENAI_GPT_4_1_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 2.0, outputUsdPerMillion: 8.0 },
 };
 
 export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -668,6 +689,7 @@ export const OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 16384,
+  pricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.6 },
 };
 
 export const OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -681,6 +703,7 @@ export const OPENAI_GPT_4O_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 16384,
+  pricing: { inputUsdPerMillion: 2.5, outputUsdPerMillion: 10.0 },
 };
 
 export const OPENAI_O3_MINI_0_0_1: AIModel = {
@@ -694,6 +717,7 @@ export const OPENAI_O3_MINI_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['OPENAI_API_KEY'],
   tokensLimit: 100000,
+  pricing: { inputUsdPerMillion: 1.1, outputUsdPerMillion: 4.4 },
 };
 
 // ============================================================================
