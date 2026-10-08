@@ -2122,7 +2122,7 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   notifications: ['email'],
   enabled: false,
   unavailable_because:
-    'Ten of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.',
+    'Seven of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.',
   tags: ['example', 'worker', 'sales', 'reporting'],
   icon: 'graph',
   emoji: '📈',
@@ -5039,7 +5039,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     notifications: ['email'],
     enabled: false,
     unavailable_because:
-      'Ten of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.',
+      'Seven of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.',
     tags: ['example', 'worker', 'sales', 'reporting'],
     icon: 'graph',
     emoji: '📈',

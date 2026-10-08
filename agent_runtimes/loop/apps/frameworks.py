@@ -716,6 +716,15 @@ class FrameworkAgent:
             except ModelRetry as retry:
                 raise AppCheckBlockedError(str(retry)) from None
 
+    async def _preflight(self, prompt: str) -> None:
+        """The checks of a session's start, once per session (R-06); refused,
+        `AppCheckBlockedError` with their sentences."""
+        from agent_runtimes.loop.apps.guards import AppChecksCapability
+
+        for capability in self.capabilities:
+            if isinstance(capability, AppChecksCapability):
+                await capability.preflight(self.session.id, prompt)
+
     def _answer_checked(self) -> bool:
         """Whether its answer is checked whole before it is given: a Gate, or its code."""
         return bool(self.app.checks.gates) or any(
@@ -834,6 +843,9 @@ class FrameworkAgent:
         token = _RUN.set(run)
         given: List[str] = []
         try:
+            # The session's start (R-06): its preflight checks, once, before
+            # its code is first asked; a stop is recorded as any other.
+            await self._preflight(prompt)
             pieces = self._pieces(run, prompt, context)
             if self._answer_checked():
                 whole = "".join([piece async for piece in self._withheld(pieces)])

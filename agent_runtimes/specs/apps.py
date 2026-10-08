@@ -1962,7 +1962,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "notifications": ["email"],
         "decision": None,
         "enabled": False,
-        "unavailable_because": "Ten of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.",
+        "unavailable_because": "Seven of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.",
         "tags": ["example", "worker", "sales", "reporting"],
         "icon": "graph",
         "emoji": "📈",

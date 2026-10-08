@@ -378,7 +378,10 @@ the application in this process, a session of its own — its rules, its
 checks and its code's own tools and checks attached — and what came of it is
 read in this order, the first that fails naming the check:
 
-- **a check stopped it on the way**: a tool call a catalogue Gate or a check
+- **a check stopped it on the way**: a session stopped at its start by a
+  preflight Guard it names (the Required Frame, Permission and Data Source
+  Authorization Guards, run before its model is first asked) or by a
+  credential in its instructions, a tool call a catalogue Gate or a check
   of its code stopped, an answer a check asked again until the model gave up,
   a rule that held it back — said with the check's own sentence;
 - **nothing sensitive leaves**: a credential in the answer; and every

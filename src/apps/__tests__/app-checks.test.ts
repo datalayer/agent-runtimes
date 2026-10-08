@@ -283,6 +283,25 @@ describe('the instant checks', () => {
     ]);
   });
 
+  it("need no attention for the Guards the runtime executes, at a session's start included (R-06)", () => {
+    const check = checkAppspec({
+      ...BASE,
+      checks: {
+        guards: [
+          'required-frame-guard:0.0.1',
+          'permission-guard:0.0.1',
+          'data-source-authorization-guard:0.0.1',
+          'sensitive-data-guard:0.0.1',
+          'tool-use-policy-guard:0.0.1',
+        ],
+        gates: ['configuration-check:0.0.1'],
+      },
+    });
+    expect(
+      check.attention.filter(note => note.includes('does not run yet')),
+    ).toEqual([]);
+  });
+
   it('count a rule on a versioned tool as a rule on that tool', () => {
     const slack = checkAppspec({
       ...BASE,

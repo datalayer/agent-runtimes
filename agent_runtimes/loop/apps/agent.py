@@ -71,6 +71,7 @@ def app_capabilities(
     ask_check: Optional[CheckAsk] = None,
     registry: Optional[ContributionRegistry] = None,
     given: Optional[List[Any]] = None,
+    organization: Optional[OrganizationFrames] = None,
 ) -> List[Any]:
     """The capabilities an application's agent runs with, in their order.
 
@@ -97,6 +98,9 @@ def app_capabilities(
         What the runtime already made the agent with, from its agent's spec
         (its guardrails, its context usage): placed after the record, before
         the application's own tools.
+    organization : OrganizationFrames, optional
+        The contexts of the organization it belongs to, which the Required
+        Frame Guard reads at a session's start (R-06); none known when unsaid.
 
     Returns
     -------
@@ -146,6 +150,8 @@ def app_capabilities(
         record=recorder.checked,
         notify=notifier.approval_asked,
         answered=recorder.answered,
+        # What the Required Frame Guard reads at a session's start (R-06).
+        organization=organization,
     )
     capabilities: List[Any] = [
         rules,

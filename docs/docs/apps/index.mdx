@@ -560,6 +560,60 @@ every application's session as a value (`forwardedProps.loop.settings`). A butto
 written, is refused in a sentence on the page; a tree the A2UI catalog refuses
 is said where it would have been drawn.
 
+### Checks
+
+An application's checks run beside its rules, enforced by the runtime
+(`loop/apps/guards.py`, `AppChecksCapability`; LOOP R-06). agentspecs
+declares Guards and Gates; this runtime executes them. Three moments:
+
+- **At a session's start** (`preflight`), once per session, before its model
+  is first asked — after every capability's `before_run`, so the record is
+  open. The built-in check first: nothing shaped like a credential in what
+  the application tells its model (its instructions, its modes', its
+  profiles'); one found stops the session — *The instructions hold a GitHub
+  token: nothing sensitive is given to its model.* — since R-19 would withhold
+  it anyway and a secret written there is a fault of the Appspec. Then each
+  preflight Guard it names under `checks.guards`, run on its Appspec:
+  - the **Required Frame Guard** (`frames_missing`): every context under
+    `context` resolves in the catalogue and is enabled; an organization's own
+    (`org-…`) is one its organization has, which the agent was given at its
+    creation (`app_capabilities(organization=…)`);
+  - the **Permission Guard** (`permission_denied`): what the application does
+    needs permissions its guardrail (`default-platform-user`) grants —
+    `read:data` for its connections, documents and Spaces; `write:data` for a
+    connection or a Space granted to write, or a tool that writes or deletes;
+    `execute:code` for a computer with a shell; `access:internet` for one
+    that browses; `send:email` for a tool that sends; `deploy:production` for
+    one that publishes (`permissions_needed`);
+  - the **Data Source Authorization Guard** (`unauthorized_source`): its
+    connections' servers are among its guardrail's `allowed_systems`
+    (`data-engineering-power-user`: postgresql, mongodb, s3, kafka), its
+    documents and Spaces among the allowed objects and not among the denied,
+    and no word of its instructions or of what the session was opened with
+    matches a denied field (`*SSN*`, `*Bank*`, `*IBAN*`); an empty allowed
+    list allows every one.
+
+  Every Guard's verdict is a `check` entry of the record (R-07) —
+  `stage: preflight`, `guard`, `passed`, `gate` when a Gate read it
+  (`configuration-check`), and its sentence. A Guard that fails **stops the
+  session** with that sentence, a Gate naming it or not: there is nothing to
+  send back before the first turn, and nothing is warned about and let run.
+  Its next turn is checked, and stopped, again. A Python application's
+  session preflights the same way before its code is first asked.
+- **On every tool call** (`in_flight`): the built-in check stops a call whose
+  arguments hold a credential; the Sensitive Data Guard adds its guardrail's
+  denied fields, the Tool Use Policy Guard a tool the application does not
+  declare; the Gates decide — `sensitive-data-stop` stops,
+  `tool-violation-retry` sends the step back, one that asks a person asks
+  through the tool-approval path. What stops a step is a `check` entry
+  (`stage: in_flight`, `guard: built-in` or the Guard's id, `passed: false`).
+- **On the answer** (`post_run`): a credential in it has the model answer
+  again without it; what streams is withheld as it streams.
+
+A Guard judged by a Cog or a person is not run: `loop apps validate` and the
+Studio's instant checks say so (*Needs attention*), and `AppChecks.unexecuted`
+is logged at each run's start — never passed in silence.
+
 ### Credentials
 
 A credential is never shown to the model. A connection uses a stored secret

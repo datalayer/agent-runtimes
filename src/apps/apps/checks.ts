@@ -739,8 +739,15 @@ function attentionNotes(app: AppSpec): string[] {
   return notes;
 }
 
-/** The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`). */
+/**
+ * The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`): the
+ * three of a session's start, run once before its model is first asked and
+ * each written to the record, and the two of every tool call and the answer.
+ */
 export const EXECUTED_GUARDS: readonly string[] = [
+  'required-frame-guard',
+  'permission-guard',
+  'data-source-authorization-guard',
   'sensitive-data-guard',
   'tool-use-policy-guard',
 ];

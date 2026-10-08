@@ -1832,7 +1832,9 @@ async def create_agent(
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
             # its own (LOOP U-31, U-32), read from IAM with the caller's
-            # token; what cannot be read stops it.
+            # token; what cannot be read stops it. Kept for the Required
+            # Frame Guard at each session's start (R-06).
+            organization_frames = None
             if running_app.context:
                 from datalayer_core.utils.urls import DatalayerURLs
 
@@ -2532,6 +2534,7 @@ async def create_agent(
                     recorder=recorder,
                     agent_id=agent_id,
                     given=capabilities,
+                    organization=organization_frames,
                 )
                 logger.info(
                     "Application %s on agent %s: its rules, checks and record attached.",

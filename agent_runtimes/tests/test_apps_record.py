@@ -437,3 +437,104 @@ async def test_an_ag_ui_turn_keeps_the_question_from_its_messages():
     turn = next(entry for entry in sent[0]["entries"] if entry["kind"] == "turn")
     assert turn["payload"]["asked"] == "What is Python?"
     assert turn["payload"]["answered"] == "Python is a language."
+
+
+# --- the checks of a session's start, and a credential stopped (LOOP R-06) ----
+
+
+def app_checked(**fields: Any) -> AppSpec:
+    """An application keeping its checks, naming the preflight Guards, with more fields."""
+    from agent_runtimes.tests.test_apps_guards import (
+        CONFIGURATION_CHECK,
+        PREFLIGHT_GUARDS,
+    )
+
+    return AppSpec.model_validate(
+        {
+            **app(["actions", "outputs", "checks"]).model_dump(
+                by_alias=True, exclude_defaults=True
+            ),
+            "checks": {"guards": PREFLIGHT_GUARDS, "gates": CONFIGURATION_CHECK},
+            **fields,
+        }
+    )
+
+
+async def test_a_session_whose_instructions_hold_a_token_fails_preflight_with_its_checks():
+    from agent_runtimes.tests.test_apps_guards import GITHUB
+
+    spec = app_checked(instructions=f"Call GitHub with {GITHUB}.")
+    agent, sent = recorded(spec, "done")
+    with pytest.raises(AppCheckBlockedError, match="GitHub token"):
+        await agent.run("hello")
+    entries = sent[0]["entries"]
+    assert [entry["kind"] for entry in entries] == [
+        "session",
+        "run",
+        "check",
+        "check",
+        "check",
+        "check",
+        "output",
+    ]
+    checks = [entry for entry in entries if entry["kind"] == "check"]
+    assert checks[0]["payload"] == {
+        "stage": "preflight",
+        "action": "stop",
+        "gate": "built-in",
+        "guard": "built-in",
+        "passed": False,
+    }
+    assert "GitHub token" in checks[0]["summary"]
+    assert [
+        (c["payload"]["guard"], c["payload"]["passed"], c["payload"]["stage"])
+        for c in checks[1:]
+    ] == [
+        ("required-frame-guard", True, "preflight"),
+        ("permission-guard", True, "preflight"),
+        ("data-source-authorization-guard", True, "preflight"),
+    ]
+    assert entries[-1]["summary"].startswith("Stopped:")
+    assert GITHUB not in str(sent[0])
+
+
+async def test_a_sound_session_records_each_preflight_guard_passed_then_answers():
+    spec = app_checked(context=["datalayer:0.0.1"])
+    agent, sent = recorded(spec, "done")
+    assert (await agent.run("hello")).output == "done"
+    entries = sent[0]["entries"]
+    assert [entry["kind"] for entry in entries] == [
+        "session",
+        "run",
+        "check",
+        "check",
+        "check",
+        "output",
+    ]
+    assert all(
+        entry["payload"]["passed"] is True
+        for entry in entries
+        if entry["kind"] == "check"
+    )
+    # Preflighted once: the next turn of the session records no check again.
+    assert (await agent.run("and again")).output == "done"
+
+
+async def test_a_call_carrying_a_github_token_is_stopped_and_recorded():
+    from agent_runtimes.tests.test_apps_guards import GITHUB
+
+    spec = app(["actions", "outputs", "checks"])
+    agent, sent = recorded(spec, ("search", {"q": f"with {GITHUB}"}), "done")
+    with pytest.raises(AppCheckBlockedError, match="GitHub token"):
+        await agent.run("search with my token")
+    entries = sent[0]["entries"]
+    assert [entry["kind"] for entry in entries] == ["session", "run", "check", "output"]
+    assert entries[2]["payload"] == {
+        "stage": "in_flight",
+        "action": "stop",
+        "gate": "built-in",
+        "guard": "built-in",
+        "passed": False,
+    }
+    assert "The arguments of `search` hold a GitHub token" in entries[2]["summary"]
+    assert GITHUB not in str(sent[0])
