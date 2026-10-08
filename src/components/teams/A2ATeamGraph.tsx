@@ -884,8 +884,8 @@ const LinkEdge = memo(function LinkEdge({
         path={path}
         style={{
           stroke: data?.connected
-            ? 'var(--borderColor-accent-emphasis, #0969da)'
-            : 'var(--borderColor-muted, #d0d7de)',
+            ? 'var(--borderColor-accent-emphasis)'
+            : 'var(--borderColor-muted)',
           strokeWidth: 2,
           strokeDasharray: data?.connected ? undefined : '6 6',
           opacity: flow === 'still' ? 0.6 : 0.25,
@@ -897,12 +897,12 @@ const LinkEdge = memo(function LinkEdge({
             d={path}
             fill="none"
             className={`a2a-team-flow a2a-team-flow-${flow}`}
-            stroke="var(--fgColor-accent, #0969da)"
+            stroke="var(--fgColor-accent)"
             strokeWidth={3}
             strokeLinecap="round"
             strokeDasharray="10 14"
           />
-          <path d={arrow} fill="var(--fgColor-accent, #0969da)" />
+          <path d={arrow} fill="var(--fgColor-accent)" />
         </g>
       )}
       <EdgeLabelRenderer>
@@ -945,7 +945,7 @@ export const CallEdge = memo(function CallEdge({
         id={id}
         path={path}
         style={{
-          stroke: 'var(--borderColor-default, #d0d7de)',
+          stroke: 'var(--borderColor-default)',
           strokeWidth: 2,
           opacity: calling ? 0.3 : 0.8,
         }}
@@ -956,12 +956,12 @@ export const CallEdge = memo(function CallEdge({
             d={path}
             fill="none"
             className="a2a-team-flow a2a-team-call"
-            stroke="var(--fgColor-accent, #0969da)"
+            stroke="var(--fgColor-accent)"
             strokeWidth={3}
             strokeLinecap="round"
             strokeDasharray="6 8"
           />
-          <path d={arrow} fill="var(--fgColor-accent, #0969da)" />
+          <path d={arrow} fill="var(--fgColor-accent)" />
         </g>
       )}
       {calling && (
