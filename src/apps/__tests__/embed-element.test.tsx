@@ -8,8 +8,10 @@
  * T-13): the application drawn in the element's shadow root, in its mode, in
  * its theme; the floating modes as `ChatFloating`'s chrome holding the
  * application as `AppRenderer` draws it (R-01), the assistant with the
- * application's character; a decision, or an application named without a
- * token, framed as before.
+ * application's character; a decision framed as before; a public chat or
+ * widget named without a token run as a visitor without an account on the
+ * visitors' runtime, in every mode (D-07), one a visitor may not talk to
+ * said in place.
  *
  * `ChatFloating`, `AppRenderer` and the runtime hook are stood in for: what
  * is tested is what the embed hands them.
@@ -25,6 +27,9 @@ import { emptyAppspec, dumpAppspec } from '../apps/appspec';
 import { LoopAssistantCharacter } from '../core';
 import { ASSISTANT_CHARACTERS } from '../../chat/assistant/characters';
 import type { AppSpec } from '../../types/agentspecs';
+
+/** A decision's id on Datalayer. */
+const ULID = '01M4DF584YAF36ACJRTYG341E5';
 
 const seen = vi.hoisted(() => ({
   floating: [] as Array<Record<string, any>>,
@@ -627,23 +632,84 @@ deployment:
     await act(async () => element.remove());
   });
 
-  it('frames a public application named by its id, as before', async () => {
+  it('frames a decision named by its id, as before', async () => {
     const element = document.createElement('datalayer-app');
-    element.setAttribute('app', '01M');
+    element.setAttribute('app', ULID);
     await act(async () => {
       document.body.appendChild(element);
     });
     await settle();
     const frame = element.shadowRoot!.querySelector('iframe')!;
     expect(frame.getAttribute('src')).toBe(
-      'https://datalayer.app/public/apps/01M/run?embed=1',
+      `https://datalayer.app/public/apps/${ULID}/run?embed=1`,
     );
     // The visitor's language, told to the framed page (P-26).
     await act(async () => element.setAttribute('language', 'pt-BR'));
     await settle();
     expect(
       element.shadowRoot!.querySelector('iframe')!.getAttribute('src'),
-    ).toBe('https://datalayer.app/public/apps/01M/run?embed=1&language=pt-BR');
+    ).toBe(
+      `https://datalayer.app/public/apps/${ULID}/run?embed=1&language=pt-BR`,
+    );
+    await act(async () => element.remove());
+  });
+
+  it('runs a public example without a token as a visitor, on the visitors’ runtime, in every mode (D-07)', async () => {
+    // Nobody signed in: the visitor's token is the chat's to mint.
+    for (const mode of ['inline', 'bubble', 'panel', 'assistant'] as const) {
+      seen.renderer.length = 0;
+      seen.floating.length = 0;
+      const element = document.createElement('datalayer-app');
+      element.setAttribute('app', 'web-research');
+      element.setAttribute('api', 'https://r1.datalayer.run');
+      element.setAttribute('mode', mode);
+      await act(async () => {
+        document.body.appendChild(element);
+      });
+      await settle();
+      expect(element.getAttribute('data-embed-mode')).toBe(mode);
+      expect(element.shadowRoot!.querySelector('iframe')).toBeNull();
+      const props = mode === 'inline' ? seen.renderer.at(-1)! : held();
+      expect(props).toMatchObject({
+        target: 'datalayer',
+        datalayerVisitors: {
+          url: 'https://r1.datalayer.run/api/loop-visitors',
+          app: 'web-research',
+          inferenceUrl: 'https://r1.datalayer.run',
+        },
+      });
+      expect(props.app.id).toBe('web-research');
+      expect(seen.runtimes).toHaveLength(0);
+      await act(async () => element.remove());
+    }
+  });
+
+  it('says, before anything is drawn, an address a visitor may not talk to, and the token it takes (D-07)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        expect(url).toBe(
+          'https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/private-desk',
+        );
+        return new Response(
+          JSON.stringify({ detail: 'No application is at this address.' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } },
+        );
+      }),
+    );
+    const element = document.createElement('datalayer-app');
+    element.setAttribute('app', 'private-desk');
+    element.setAttribute('api', 'https://r1.datalayer.run/');
+    element.setAttribute('mode', 'bubble');
+    await act(async () => {
+      document.body.appendChild(element);
+    });
+    await settle();
+    expect(element.shadowRoot!.textContent).toBe(
+      'datalayer-app: No application is at this address. Embedded for a visitor it refuses, it takes its embed token (the "token" attribute).',
+    );
+    expect(seen.renderer).toHaveLength(0);
+    expect(seen.floating).toHaveLength(0);
     await act(async () => element.remove());
   });
 

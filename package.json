@@ -123,6 +123,7 @@
         "test:integration": "vitest run --project=integration",
         "test:pictures": "playwright test -c pictures/playwright.config.ts",
         "test:pictures:accept": "playwright test -c pictures/playwright.config.ts --update-snapshots=changed",
+        "test:e2e": "playwright test -c e2e/playwright.config.ts",
         "test:ui": "vitest --ui --project=unit --project=general",
         "test:unit": "vitest run --project=unit",
         "test:watch": "vitest --project=unit --project=general",

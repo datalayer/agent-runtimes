@@ -1,0 +1,192 @@
+<!doctype html>
+<!--
+  Copyright (c) 2025-2026 Datalayer, Inc.
+  Distributed under the terms of the Modified BSD License.
+
+  A host page on another origin, embedding a Datalayer application
+  (STUDIO D-07, D-08, D-10): one script tag and one element, the page
+  passing its context and offering one function, and logging what the
+  application tells it. Serve it from this folder on a port of its own:
+
+      python3 -m http.server 8788 --directory examples/embed-host
+
+  then open http://127.0.0.1:8788/ — a different origin from the one that
+  serves the embed bundle, so that the module and its chunks are fetched
+  with CORS as a real host fetches them.
+
+  What it embeds is read from the query, each with a default:
+
+      ?embed=http://localhost:3063/embed/datalayer-app.js  the script a host writes
+      &origin=http://localhost:3063                         where Datalayer is
+      &api=https://r1.datalayer.run                         Datalayer's services (ai-agents, ai-inference)
+      &app=web-research                                     a public example, an address, or a decision's id
+      &mode=inline                                          inline, bubble, panel or assistant
+      &token=…                                              an embed token, for a private application
+      &server=…                                             an agent-runtimes server of the host's own
+
+  Without a token, a public application runs for the visitor as it does on
+  Datalayer's own pages: the element reads what it is, mints a visitor's
+  token and talks to the visitors' runtime. A private one says it needs its
+  token, in place.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed host</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        max-width: 1100px;
+        margin-inline: auto;
+        background: #f6f1e7;
+        color: #2b2520;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #221d19;
+          color: #efe7da;
+        }
+      }
+      h1 {
+        font-weight: normal;
+        font-size: 1.6rem;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 16px;
+        line-height: 1.5;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      datalayer-app {
+        display: block;
+        min-height: 320px;
+      }
+      #log {
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: rgba(0, 0, 0, 0.06);
+        padding: 12px;
+        border-radius: 8px;
+        min-height: 320px;
+        margin: 0;
+      }
+      #log [data-event] {
+        display: block;
+      }
+      code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>A page of its own, with a Datalayer application in it</h1>
+    <p id="about">
+      This page is served on its own origin. It writes one script tag and one
+      <code>&lt;datalayer-app&gt;</code> element, passes the element its
+      <code>context</code> (who is reading, which page), offers it one function
+      (<code>open_ticket</code>), and logs every event the element raises.
+    </p>
+    <main>
+      <section id="mount"></section>
+      <section>
+        <p>What the application told the page:</p>
+        <pre id="log" aria-live="polite"></pre>
+      </section>
+    </main>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var defaults = {
+          embed: 'http://localhost:3063/embed/datalayer-app.js',
+          origin: 'http://localhost:3063',
+          api: 'https://r1.datalayer.run',
+          app: 'web-research',
+          mode: 'inline',
+        };
+        var read = function (name) {
+          return params.get(name) || defaults[name] || '';
+        };
+        var log = document.getElementById('log');
+        var say = function (event, detail) {
+          var line = document.createElement('span');
+          line.setAttribute('data-event', event);
+          line.textContent =
+            new Date().toISOString().slice(11, 19) +
+            ' ' +
+            event +
+            ' ' +
+            (detail === undefined ? '' : JSON.stringify(detail));
+          log.appendChild(line);
+        };
+
+        // The script a host writes, from where the bundle is served.
+        var script = document.createElement('script');
+        script.src = read('embed');
+        script.async = true;
+        script.addEventListener('error', function () {
+          say('script-error', { src: script.src });
+        });
+        document.head.appendChild(script);
+
+        // The element, with what the query says.
+        var app = document.createElement('datalayer-app');
+        app.setAttribute('app', read('app'));
+        app.setAttribute('origin', read('origin'));
+        app.setAttribute('api', read('api'));
+        app.setAttribute('mode', read('mode'));
+        ['token', 'server', 'accent', 'theme', 'height', 'language'].forEach(
+          function (name) {
+            if (params.get(name)) {
+              app.setAttribute(name, params.get(name));
+            }
+          }
+        );
+
+        // What the page passes (D-10): read by the application's agent with
+        // `host_context`, for the names its Appspec lists.
+        app.context = {
+          user: { name: 'Ada', plan: 'team' },
+          page: { url: location.href, title: document.title },
+        };
+        // One function the page offers (D-10): called by the agent as
+        // `host_open_ticket`, as the rule naming it decides.
+        app.functions = {
+          open_ticket: function (args) {
+            say('open_ticket called', args);
+            return { ticket: Math.floor(Math.random() * 1000), title: args.title };
+          },
+        };
+        ['message', 'action', 'decision', 'token-expired', 'window-message'].forEach(
+          function (name) {
+            app.addEventListener(name, function (event) {
+              say(name, event.detail);
+            });
+          }
+        );
+        document.getElementById('mount').appendChild(app);
+        say('mounted', {
+          app: read('app'),
+          mode: read('mode'),
+          embed: read('embed'),
+          api: read('api'),
+        });
+      })();
+    </script>
+  </body>
+</html>

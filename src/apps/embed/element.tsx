@@ -18,9 +18,16 @@
  *    (`<script type="application/yaml">…</script>`);
  * 2. an Appspec at an address (`spec="https://…/support-desk.yaml"`);
  * 3. an application on Datalayer (`app`), read with its embed token
- *    (`token`). A decision, or an application given without a token, is
- *    framed as before: Datalayer's run page in an iframe, sized to it, its
- *    `decision` and `token-expired` events raised on the element.
+ *    (`token`), or — with no token — a public one read as a visitor
+ *    without an account reads it (STUDIO D-07, R-30, `visitorApp`): an
+ *    example Datalayer keeps warm for visitors, or an application at its
+ *    address that its owner lets anybody talk to. The conversation then
+ *    runs on the visitors' runtime with a visitor's token the chat mints
+ *    from ai-inference itself (`api`), in every mode; one a visitor may not
+ *    talk to says so in a sentence, with the embed token as what it takes.
+ *    A decision is framed as before: Datalayer's run page in an iframe,
+ *    sized to it, its `decision` and `token-expired` events raised on the
+ *    element.
  *
  * Every other application is drawn here, in the element's shadow root, by
  * `AppEmbed` — inline, or floating over the page as a bubble, a panel or the
@@ -62,6 +69,7 @@ import { getThemeConfig } from '@datalayer/primer-addons';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import type { AppSpec } from '../../types/agentspecs';
 import { parseAppspec, type ParsedAppspec } from '../apps/appspec';
+import type { DatalayerVisitors } from '../apps/visitorToken';
 import { readAppspecYaml } from '../apps/yaml';
 import { AppEmbed, embedAssistantCharacter } from './AppEmbed';
 import type { AppEmbedHost, HostFunction, WindowPost } from './hostBridge';
@@ -75,11 +83,15 @@ import {
   inlineHeightOf,
   languageOf,
   resumeOf,
+  runnable,
   type EmbedAttribute,
   type EmbedInputs,
   type EmbedLook,
 } from './embedConfig';
 import { embedShadowCss } from './embedTheme';
+import { DEFAULT_API, readVisitorApp } from './visitorApp';
+
+export { runnable };
 
 /** What the framed run page and the element say to each other. */
 export const EMBED_MESSAGES = {
@@ -93,7 +105,8 @@ export const EMBED_MESSAGES = {
 
 /** Where an application comes from, once read. */
 export type EmbedSource =
-  | { kind: 'spec'; app: AppSpec }
+  /** An Appspec to draw; with `visitors`, run as a visitor without an account on the visitors' runtime (D-07). */
+  | { kind: 'spec'; app: AppSpec; visitors?: DatalayerVisitors }
   | { kind: 'frame'; src: string }
   | { kind: 'said'; text: string; expired?: boolean };
 
@@ -129,27 +142,6 @@ export function appspecOfText(text: string): AppSpec {
     parsed = readAppspecYaml(trimmed);
   }
   return runnable(parsed);
-}
-
-/**
- * An application the embed can run, or a sentence saying why not: one with
- * an id, and an agent to answer — what the spec tolerates in a draft, an
- * embed cannot run.
- */
-export function runnable({ app, problems }: ParsedAppspec): AppSpec {
-  if (!app.id) {
-    throw new EmbedAttributeError(
-      `datalayer-app: the Appspec names no application${
-        problems.length ? ` (${problems[0]})` : ''
-      }.`,
-    );
-  }
-  if (app.kind !== 'decision' && !app.agent) {
-    throw new EmbedAttributeError(
-      `datalayer-app: “${app.name || app.id}” names no agent to answer; an embedded application is run by an agent (a team is not supported yet).`,
-    );
-  }
-  return app;
 }
 
 /** The run page an application on Datalayer is framed from. */
@@ -476,18 +468,33 @@ export function defineDatalayerAppElement(
       }
       const token = this.token;
       if (!token) {
-        // A public application: Datalayer's run page, framed.
-        return { kind: 'frame', src: frameSrcOf(this.origin(), app) };
+        // A public application, as a visitor without an account (D-07):
+        // an example kept warm or an address open to visitors, run on the
+        // visitors' runtime; a decision framed; a refusal said.
+        const visitor = await readVisitorApp({ api: this.api(), app });
+        if (visitor.kind === 'decision') {
+          return { kind: 'frame', src: frameSrcOf(this.origin(), visitor.app) };
+        }
+        if (visitor.kind === 'said') {
+          return { kind: 'said', text: visitor.text };
+        }
+        return { kind: 'spec', app: visitor.app, visitors: visitor.visitors };
       }
       return readEmbeddedApp({
-        api:
-          this.getAttribute('api') ||
-          coreStore.getState().configuration?.spacerUrl ||
-          'https://prod1.datalayer.run',
+        api: this.api(),
         origin: this.origin(),
         app,
         token,
       });
+    }
+
+    /** Datalayer's services: the `api` attribute, else the platform's, else prod1's. */
+    private api(): string {
+      return (
+        this.getAttribute('api') ||
+        coreStore.getState().configuration?.spacerUrl ||
+        DEFAULT_API
+      ).replace(/\/+$/, '');
     }
 
     private async load(): Promise<void> {
@@ -626,6 +633,9 @@ export function defineDatalayerAppElement(
             // The visit's embed token goes with the conversation to the
             // host's server, which runs the application's deployment (R-20).
             {...(server && this.token ? { embedToken: this.token } : {})}
+            // A public application for a visitor without an account: on the
+            // visitors' runtime, with a visitor's token (D-07, R-30).
+            {...(source.visitors ? { visitors: source.visitors } : {})}
             height={inlineHeightOf(this.getAttribute('height'))}
             ownPortal
             host={this.host}

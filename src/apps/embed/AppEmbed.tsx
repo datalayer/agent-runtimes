@@ -82,6 +82,7 @@ import {
   assistantCharactersFrom,
   type AssistantCharacterChosen,
 } from '../plugins/assistant-characters';
+import type { DatalayerVisitors } from '../apps/visitorToken';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
 import { createChatExtrasPlugin } from '../plugins/chat-extras';
 import {
@@ -138,6 +139,14 @@ export type AppEmbedProps = {
    * session of that deployment, and reaches nothing else.
    */
   embedToken?: string;
+  /**
+   * A conversation without an account (STUDIO D-07, R-30): a public
+   * application run on the visitors' runtime, which the chat speaks to with
+   * a visitor's token it mints from ai-inference for that one application —
+   * what the element gives a public `app` with no token. Nothing is launched
+   * and nothing is kept; the visitor's limits are the runtime's.
+   */
+  visitors?: DatalayerVisitors;
   /** Height of an inline application. */
   height?: number | string;
   /**
@@ -683,6 +692,7 @@ export function AppEmbed({
   serverUrl,
   instance,
   embedToken,
+  visitors,
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
@@ -690,6 +700,12 @@ export function AppEmbed({
   resume = true,
 }: AppEmbedProps): JSX.Element {
   const bridge = useHostBridge(app, host);
+  // Where a visitor without an account runs it (D-07): one object, so that
+  // the renderer never reads a change.
+  const renderer = useMemo(
+    () => (visitors ? { datalayerVisitors: visitors } : undefined),
+    [visitors],
+  );
   const kept = useEmbedSession({ app, serverUrl, embedToken, resume });
   // Window messages from the page, on the host's own server (P-25).
   const session = useWindowPort({
@@ -754,6 +770,7 @@ export function AppEmbed({
             character={character}
             host={host}
             session={session}
+            {...(renderer ? { renderer } : {})}
             {...(language ? { language } : {})}
           />
         ) : !session.ready ? null : (
@@ -766,6 +783,8 @@ export function AppEmbed({
               // Only on the host's server: a Datalayer runtime is launched with
               // a person's credentials, which an embed token never stands for.
               {...(serverUrl && embedToken ? { embedToken } : {})}
+              // A visitor without an account, on the visitors' runtime (D-07).
+              {...(renderer ?? {})}
               instance={instance}
               // The host's accent and face over the application's own, inside
               // its conversation too, in the embed's mode: the host's or its

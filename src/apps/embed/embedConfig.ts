@@ -23,7 +23,11 @@ import type {
   AppSpec,
   AppThemeVariant,
 } from '../../types/agentspecs';
-import { APP_ACCENTS, APP_EMBED_MODES } from '../apps/appspec';
+import {
+  APP_ACCENTS,
+  APP_EMBED_MODES,
+  type ParsedAppspec,
+} from '../apps/appspec';
 import { LANGUAGE_TAG } from '../apps/language';
 
 /** The element's name: the one a host writes. */
@@ -116,6 +120,27 @@ export class EmbedAttributeError extends Error {
     super(message);
     this.name = 'EmbedAttributeError';
   }
+}
+
+/**
+ * An application the embed can run, or a sentence saying why not: one with
+ * an id, and an agent to answer — what the spec tolerates in a draft, an
+ * embed cannot run.
+ */
+export function runnable({ app, problems }: ParsedAppspec): AppSpec {
+  if (!app.id) {
+    throw new EmbedAttributeError(
+      `datalayer-app: the Appspec names no application${
+        problems.length ? ` (${problems[0]})` : ''
+      }.`,
+    );
+  }
+  if (app.kind !== 'decision' && !app.agent) {
+    throw new EmbedAttributeError(
+      `datalayer-app: “${app.name || app.id}” names no agent to answer; an embedded application is run by an agent (a team is not supported yet).`,
+    );
+  }
+  return app;
 }
 
 const listed = (values: readonly string[]): string =>

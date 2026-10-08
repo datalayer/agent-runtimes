@@ -219,4 +219,5 @@ python-dist
 
 # Pictures as tests (pictures/): what a run leaves; the baselines are kept
 pictures/test-results/
+e2e/test-results/
 pictures/playwright-report/
