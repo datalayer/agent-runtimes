@@ -199,32 +199,60 @@ function embedSizes(): Plugin {
           byPackage.set(key, (byPackage.get(key) ?? 0) + info.renderedLength);
         }
       }
-      // Who brings each package in: its modules' importers from elsewhere.
-      const broughtBy = new Map<string, Set<string>>();
+      // How each package is reached: the shortest chain of static imports
+      // from the entry, through the modules the initial chunks hold.
+      const held = new Set<string>();
       for (const name of initial) {
         for (const id of Object.keys(chunks.get(name)?.modules ?? {})) {
-          const key = packageOf(id);
-          for (const importer of this.getModuleInfo(id)?.importers ?? []) {
-            if (packageOf(importer) !== key) {
-              const by = broughtBy.get(key) ?? new Set<string>();
-              by.add(path.relative(__dirname, importer.replace(/^\0/, '')));
-              broughtBy.set(key, by);
+          held.add(id);
+        }
+      }
+      const entryId = [...held].find(
+        id => this.getModuleInfo(id)?.isEntry === true,
+      );
+      const parent = new Map<string, string | null>();
+      if (entryId) {
+        parent.set(entryId, null);
+        const queue = [entryId];
+        for (let at = 0; at < queue.length; at += 1) {
+          for (const next of this.getModuleInfo(queue[at])?.importedIds ?? []) {
+            if (held.has(next) && !parent.has(next)) {
+              parent.set(next, queue[at]);
+              queue.push(next);
             }
           }
         }
       }
+      const firstOf = new Map<string, string>();
+      for (const id of parent.keys()) {
+        const key = packageOf(id);
+        if (!firstOf.has(key)) {
+          firstOf.set(key, id);
+        }
+      }
+      const chainTo = (id: string): string => {
+        const steps: string[] = [];
+        for (let at: string | null = id; at; at = parent.get(at) ?? null) {
+          const clean = at.replace(/^\0/, '');
+          const step = clean.includes('node_modules/')
+            ? packageOf(clean)
+            : path.relative(__dirname, clean);
+          if (steps[0] !== step) {
+            steps.unshift(step);
+          }
+        }
+        return steps.slice(1).join(' > ');
+      };
       log.push(
-        'Initial load by package (rendered, before minifying names), and what imports it:',
+        'Initial load by package (rendered, before minifying names), and how it is reached:',
       );
       for (const [key, bytes] of [...byPackage.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 60)) {
-        const by = [...(broughtBy.get(key) ?? [])];
+        const first = firstOf.get(key);
         log.push(
           `  ${kb(bytes).padStart(12)}  ${key}` +
-            (by.length > 0
-              ? `  <- ${by.slice(0, 4).join(', ')}${by.length > 4 ? `, +${by.length - 4}` : ''}`
-              : ''),
+            (first ? `  via ${chainTo(first)}` : ''),
         );
       }
       console.log(log.join('\n'));
@@ -278,18 +306,7 @@ export default defineConfig(async env => {
     embedSizes(),
   ];
   const rollupOptions = (config.build!.rollupOptions ??= {});
-  // `package.json` says this package's modules have no side effects but its
-  // stylesheets ("sideEffects"), and a bundler of `lib/` (the landing's
-  // webpack) drops a module none of whose exports is used. Rollup is told the
-  // same of `src/`, which it otherwise keeps whenever a module calls something
-  // at its top level — `definePlugin(…)`, a store — used or not. The entry
-  // runs for what it does.
-  const sources = path.resolve(__dirname, 'src') + path.sep;
   const entry = path.resolve(__dirname, 'src/apps/embed/datalayer-app.ts');
-  rollupOptions.treeshake = {
-    moduleSideEffects: (id: string) =>
-      id === entry || !id.startsWith(sources) || !/\.(ts|tsx|js|jsx)$/.test(id),
-  };
   // The app's pages are its inputs; the embed's is its module.
   rollupOptions.input = {
     'datalayer-app-main': entry,
