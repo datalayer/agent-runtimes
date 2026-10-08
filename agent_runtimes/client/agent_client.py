@@ -550,14 +550,21 @@ def _post_vercel_ai_chat(
     prompt: str,
     timeout: int,
     source_label: str,
+    chat_id: str = "",
 ) -> dict[str, Any]:
-    """POST a single prompt to a Vercel AI chat endpoint."""
+    """POST a single prompt to a Vercel AI chat endpoint.
+
+    ``chat_id`` is the chat's id, the conversation the runtime records the
+    turn under (an application's session, LOOP R-07): a caller that reads
+    the record afterwards (the Evals engine, STUDIO V-08) names it; one is
+    made up otherwise.
+    """
     message_id = f"chat-{int(time.time() * 1000)}"
     parts = [{"type": "text", "text": prompt}]
     message = {"id": message_id, "role": "user", "parts": parts}
     body = {
         "trigger": "submit-message",
-        "id": f"chat-{message_id}",
+        "id": chat_id or f"chat-{message_id}",
         "message": message,
         "messages": [message],
     }
@@ -681,8 +688,13 @@ def run_cloud_agent_chat(
     prompt: str,
     route_candidates: list[str],
     timeout: int = 300,
+    chat_id: str = "",
 ) -> dict[str, Any]:
-    """Send a single prompt to a cloud runtime agent via Vercel AI."""
+    """Send a single prompt to a cloud runtime agent via Vercel AI.
+
+    ``chat_id`` names the chat — the session an application records the
+    turn under — for a caller that reads that record afterwards.
+    """
     base_url = build_agent_runtimes_base_url(ingress)
     candidates = [c for c in route_candidates if str(c or "").strip()]
     if not candidates:
@@ -699,6 +711,7 @@ def run_cloud_agent_chat(
             prompt=prompt,
             timeout=timeout,
             source_label="Cloud agent",
+            chat_id=chat_id,
         )
         if str(result.get("status") or "").strip().lower() == "completed":
             return result

@@ -357,7 +357,20 @@ read in this order, the first that fails naming the check:
   (`@app.test`, see [Python applications](/apps/python-applications#code-where-plain-words-are-not-enough))
   or, for a test in words, by a judge — the model named with `--judge`, or
   the AI Inference service when `DATALAYER_AI_INFERENCE_URL` is set. With no
-  judge, a test in words is not run, and says so.
+  judge, a test in words is not run, and says so. The judge reads the
+  conversation's record beside its answer — each tool it called and with
+  what, what its rules decided, what its checks said, each person it asked
+  and their answer — and grades on what it did: *it never sends without
+  asking* fails when the record shows the send done with nobody asked,
+  whatever the answer says.
+
+The Studio's *Run its tests* grades the same way on Datalayer: the Evals
+engine asks each test in a conversation of its own, reads that
+conversation's record back from ai-agents — a test's session keeps every
+entry, whatever `record.include` says — names the check that stopped it,
+and otherwise hands the judge the record beside the answer. A test whose
+record cannot be read fails (`record_unavailable`) rather than being graded
+on its answer alone.
 
 Each test is `passed`, `failed` or `not_run`; a failed one names the check
 (`check`: `sensitive`, `shape`, `sources`, `expected`, a Guard's or a Gate's

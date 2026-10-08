@@ -582,17 +582,38 @@ class Conversed:
     again, a person asked."""
     tools: Tuple[str, ...] = ()
     """The tools it called, in order, as its rules decided them (LOOP R-05)."""
+    record: Tuple[Dict[str, Any], ...] = ()
+    """Its record, every entry as ai-agents would keep it (``{kind, summary,
+    payload}``): what a test is graded on beside its answer (STUDIO V-08)."""
 
 
 class _WatchedRecorder(AppRecorderBase):
     """A recorder that sends nothing and keeps what the checks and the rules
-    said, for the run that asked (LOOP V-08).
+    said, and the whole record of the conversation, for the run that asked
+    (LOOP V-08). A test's: it keeps every entry, whatever ``record.include``
+    says (`record.AppRecorder.kept`).
     """
 
     def __init__(self, app: AppSpec) -> None:
-        super().__init__(app=app, send=_keep_nothing)
+        super().__init__(app=app, send=_keep_nothing, purpose="test")
         self.verdicts: List[Tuple[str, Any]] = []
         self.tools: List[str] = []
+        self.entries: List[Dict[str, Any]] = []
+
+    def add(
+        self, kind: str, summary: str, payload: Optional[Dict[str, Any]] = None
+    ) -> None:
+        from agent_runtimes.guardrails.credentials import redact, redacted
+
+        if self.kept(kind):
+            self.entries.append(
+                {
+                    "kind": kind,
+                    "summary": redact(summary)[:2000],
+                    "payload": redacted(payload or {}),
+                }
+            )
+        super().add(kind, summary, payload)
 
     def checked(self, stage: str, verdict: Any) -> None:
         self.verdicts.append((stage, verdict))
@@ -652,6 +673,7 @@ async def converse_in_process(
                     error=_why(error),
                     checks=tuple(recorder.verdicts),
                     tools=tuple(recorder.tools),
+                    record=tuple(recorder.entries),
                 )
             )
             continue
@@ -661,6 +683,7 @@ async def converse_in_process(
                 asked,
                 checks=tuple(recorder.verdicts),
                 tools=tuple(recorder.tools),
+                record=tuple(recorder.entries),
             )
         )
     return conversed

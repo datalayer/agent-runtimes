@@ -26,6 +26,16 @@ order, the first that fails naming the check:
 - **it does what it should**: decided by the function its code names
   (``code``, `own.verdict_of`), else by a judge (`safety.JudgeCall`, as the
   Studio's run judges it) — with no judge, the case is not run and says so.
+  The judge is handed the conversation's record beside its answer (STUDIO
+  V-08): the tools it called, what its rules decided, what its checks said
+  and the people it asked (`what_it_did`), so a test such as *it never sends
+  without asking* is graded on what it did, not on what it said.
+
+The Evals engine grades a run of the Studio's (*Run its tests*) the same way:
+it reads each case's record from ai-agents — what the runtime wrote of that
+session (`app_instance.purpose: test`) — names the check that stopped it
+(`stopped_on_record`), and hands the judge the same lines; a case whose record
+cannot be read is not graded on its answer alone (`RecordUnavailable`).
 
 A case is `own.PASSED`, `own.FAILED` or `own.NOT_RUN`, as a beat of a scene's
 rehearsal is (`scenes.rehearsal`); a failed case names the check (`check`) and
@@ -218,6 +228,131 @@ def sources_read(spec: AppSpec, tools: Sequence[str]) -> Optional[str]:
     return WORDS["not_from_sources"]
 
 
+# --- the record of a conversation -------------------------------------------------
+
+
+class RecordUnavailable(Exception):
+    """The record of a test's conversation could not be read: the test is not
+    graded on its answer alone (STUDIO V-08)."""
+
+
+#: The entries of a record the test is graded on: what it did, not that it ran.
+GRADED_KINDS: Tuple[str, ...] = ("tool_call", "decision", "check", "approval")
+
+#: How many lines of a record the judge is handed, and how long each is.
+MAX_RECORD_LINES = 60
+MAX_RECORD_LINE = 300
+
+#: What ends the turn on the record, by the error the run stopped with.
+STOPPED_BY_ERROR = {
+    "AppRuleBlockedError": CHECK_RULES,
+    "AppCheckBlockedError": CHECK_SENSITIVE,
+}
+
+#: What a stopped turn's output entry starts with (`record.AppRecordCapability`).
+STOPPED = "Stopped:"
+
+
+def _payload(entry: Dict[str, Any]) -> Dict[str, Any]:
+    payload = entry.get("payload")
+    return payload if isinstance(payload, dict) else {}
+
+
+def _line(text: str) -> str:
+    text = " ".join(str(text).split())
+    return (
+        text if len(text) <= MAX_RECORD_LINE else text[:MAX_RECORD_LINE].rstrip() + "…"
+    )
+
+
+def what_it_did(entries: Sequence[Dict[str, Any]]) -> List[str]:
+    """The record of one conversation, in lines a judge reads: each tool it
+    called and with what, each decision of its rules, each check that did
+    not let it pass, each person it asked and what they answered, and how
+    the turn stopped when it did — in the order they happened.
+
+    Entries are as ai-agents keeps them (``{kind, summary, payload}``,
+    `record.AppRecorder`); the others (its session, its runs, its turns) say
+    that it ran, not what it did, and are left out.
+    """
+    lines: List[str] = []
+    for entry in entries:
+        kind = str(entry.get("kind") or "")
+        summary = str(entry.get("summary") or "")
+        payload = _payload(entry)
+        if kind == "tool_call":
+            tool = payload.get("tool") or summary.removesuffix(" called")
+            arguments = payload.get("arguments") or ""
+            result = payload.get("result") or ""
+            said = f"It called {tool}"
+            if arguments:
+                said += f" with {arguments}"
+            if result:
+                said += f"; it gave {result}"
+            lines.append(_line(said))
+        elif kind == "decision":
+            because = payload.get("because") or ""
+            said = f"Its rules decided {summary}"
+            if because:
+                said += f", because {because}"
+            lines.append(_line(said))
+        elif kind == "check":
+            gate = payload.get("gate") or "a check"
+            stage = payload.get("stage") or ""
+            action = payload.get("action") or ""
+            said = f"{gate}" + (f" on {stage}" if stage else "")
+            said += f" said {action}" if action else ""
+            lines.append(_line(f"{said}: {summary}" if summary else said))
+        elif kind == "approval":
+            lines.append(_line(f"A person was asked: {summary}"))
+        elif kind == "output" and payload.get("error"):
+            lines.append(
+                _line(f"The turn stopped: {summary.removeprefix(STOPPED).strip()}")
+            )
+    if len(lines) > MAX_RECORD_LINES:
+        left = len(lines) - MAX_RECORD_LINES
+        lines = lines[:MAX_RECORD_LINES] + [f"(and {left} more entries)"]
+    return lines
+
+
+def stopped_on_record(entries: Sequence[Dict[str, Any]]) -> Optional[Tuple[str, str]]:
+    """The check that stopped the turn, read from its record: its name and its
+    sentence, as `_stopped_by` reads them from a conversation in this process.
+
+    A check that stopped a step or asked a person (``check`` entries whose
+    action is ``stop`` or ``ask``) is named by its Gate, ``sensitive`` for the
+    built-in checks; a turn that stopped on an error after a check spoke is
+    that check's; a turn its rules held back is ``rules``. None when nothing
+    stopped it.
+    """
+    checks = [entry for entry in entries if entry.get("kind") == "check"]
+    stops = [
+        entry for entry in checks if _payload(entry).get("action") in ("stop", "ask")
+    ]
+
+    def named(entry: Dict[str, Any]) -> Tuple[str, str]:
+        gate = str(_payload(entry).get("gate") or "")
+        return (CHECK_SENSITIVE if gate in ("", "built-in") else gate), str(
+            entry.get("summary") or ""
+        )
+
+    if stops:
+        return named(stops[-1])
+    ended = [
+        entry
+        for entry in entries
+        if entry.get("kind") == "output" and _payload(entry).get("error")
+    ]
+    if not ended:
+        return None
+    if checks:
+        return named(checks[-1])
+    check = STOPPED_BY_ERROR.get(str(_payload(ended[-1]).get("error")))
+    if check is None:
+        return None
+    return check, str(ended[-1].get("summary") or "").removeprefix(STOPPED).strip()
+
+
 # --- the report -----------------------------------------------------------------
 
 
@@ -348,9 +483,19 @@ def expected_rubric(ask: str) -> str:
 
 
 def judge_expected(
-    ask: str, expect: str, answer: str, judge: JudgeCall, *, model: str = ""
+    ask: str,
+    expect: str,
+    answer: str,
+    judge: JudgeCall,
+    *,
+    model: str = "",
+    did: Optional[Sequence[str]] = None,
 ) -> Tuple[bool, str]:
-    """The test itself, judged as the Evals engine judges it: whether it passed, and why not."""
+    """The test itself, judged as the Evals engine judges it: whether it passed, and why not.
+
+    ``did`` is the conversation's record (`what_it_did`): the judge grades
+    on it beside the answer; ``None`` is a judge of the answer alone.
+    """
     from agent_runtimes.evals.remote.evaluators import run_case_evaluators
 
     graded = run_case_evaluators(
@@ -365,6 +510,7 @@ def judge_expected(
                     "failure_modes": [NOT_AS_EXPECTED],
                     "_judge": judge,
                     "model": model,
+                    **({"_record": list(did)} if did is not None else {}),
                 },
             }
         ],
@@ -507,7 +653,9 @@ async def result_of(
         return CaseResult(ask, expect, FAILED, CHECK_EXPECTED, why, clipped, code)
     if judge is None:
         return CaseResult(ask, expect, NOT_RUN, "", WORDS["no_judge"], clipped, code)
-    passed, why = judge_expected(ask, expect, answer, judge, model=model)
+    passed, why = judge_expected(
+        ask, expect, answer, judge, model=model, did=what_it_did(had.record)
+    )
     if passed:
         return CaseResult(ask, expect, PASSED, "", WORDS["passed"], clipped, code)
     return CaseResult(ask, expect, FAILED, CHECK_EXPECTED, why, clipped, code)
@@ -646,6 +794,7 @@ __all__ = [
     "WORDS",
     "AttachRefused",
     "CaseResult",
+    "RecordUnavailable",
     "ValidationReport",
     "attach",
     "attach_path",
@@ -657,4 +806,6 @@ __all__ = [
     "sensitive_in",
     "shape_of",
     "sources_read",
+    "stopped_on_record",
+    "what_it_did",
 ]

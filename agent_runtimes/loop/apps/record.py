@@ -12,7 +12,9 @@ the living instances of applications. Only what the application's
 A session run to test the application (the Evals engine's runs) says so:
 the instance names its `purpose`, `test`, and the launch that ran it, and
 both are sent with its entries, so that ai-agents reads tests apart from
-real use. A session that names no purpose is real use.
+real use. A session that names no purpose is real use. A test's session
+keeps every entry, whatever `record.include` says: the engine grades the
+test on it (STUDIO V-08).
 
 A session nobody opened says what woke it (LOOP R-14): the instance, or the
 host that ran it, names `woken_by` — ``{"kind": "schedule", ...}`` with the
@@ -352,6 +354,11 @@ class AppRecorder:
         # What a channel was sent, or why it was not, is always kept: a
         # notification that reached nobody is never silent (LOOP R-37).
         if kind in ALWAYS_KEPT:
+            return True
+        # A test's session keeps everything: its record is what the test is
+        # graded on — the tools it called, its rules' decisions, its checks
+        # (STUDIO V-08) — and it is nobody's conversation, read apart.
+        if self.purpose == "test":
             return True
         return INCLUDED_BY.get(kind) in kept_of(self.app).include
 

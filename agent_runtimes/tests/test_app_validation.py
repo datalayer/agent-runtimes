@@ -30,6 +30,7 @@ from agent_runtimes.loop.apps import Application, Conversation, validation
 from agent_runtimes.loop.apps.own import FAILED, NOT_RUN, PASSED
 from agent_runtimes.loop.apps.validation import (
     CHECK_EXPECTED,
+    CHECK_RULES,
     CHECK_SENSITIVE,
     CHECK_SOURCES,
     AttachRefused,
@@ -38,6 +39,8 @@ from agent_runtimes.loop.apps.validation import (
     attach,
     run_tests,
     shape_of,
+    stopped_on_record,
+    what_it_did,
 )
 
 pytest.importorskip("agentspecs.apps")
@@ -240,6 +243,124 @@ def test_the_sources_check_reads_what_it_did_not_the_words_of_its_answer() -> No
         judge_saying({}),
     )
     assert [(case.state, case.check) for case in read.cases] == [(PASSED, "")]
+
+
+def test_the_judge_grades_on_what_the_record_says_it_did_not_on_its_words() -> None:
+    """STUDIO V-08: the judge is handed the conversation's record beside its
+    answer — an answer that says it looked nothing up, while its record shows
+    the lookup, is graded on the lookup."""
+    app = desk(
+        tests={"cases": [{"ask": "Look up Bo", "expect": "It looks nothing up."}]}
+    )
+    asked: List[str] = []
+
+    def judge(prompt: str, _model: str) -> str:
+        asked.append(prompt)
+        did = "It called lookup" in prompt
+        return json.dumps(
+            {
+                "score": 0.0 if did else 1.0,
+                "passed": not did,
+                "explanation": "Its record shows the lookup." if did else "",
+                "failure_mode": "not_as_expected" if did else "",
+            }
+        )
+
+    report = _run(
+        app,
+        {
+            "Look up Bo": [
+                ("lookup", {"record": {"name": "Bo"}}),
+                "I looked nothing up.",
+            ]
+        },
+        judge,
+    )
+    [prompt] = asked
+    assert "What the runtime recorded it doing" in prompt
+    assert "It called lookup with" in prompt and "it gave found" in prompt
+    assert [(case.state, case.check) for case in report.cases] == [
+        (FAILED, CHECK_EXPECTED)
+    ]
+    assert (
+        report.cases[0].says
+        == "It did not do what it should. Its record shows the lookup."
+    )
+
+
+def test_what_it_did_and_what_stopped_it_read_from_a_record() -> None:
+    """The record as ai-agents keeps it, read as the Evals engine reads it."""
+    entries = [
+        {"kind": "session", "summary": "A session of Desk started", "payload": {}},
+        {"kind": "run", "summary": "Desk is working", "payload": {}},
+        {
+            "kind": "decision",
+            "summary": "send_gmail_message: ask_me",
+            "payload": {
+                "tool": "send_gmail_message",
+                "behaviour": "ask_me",
+                "because": "it sends",
+            },
+        },
+        {"kind": "approval", "summary": "send_gmail_message: declined", "payload": {}},
+        {
+            "kind": "tool_call",
+            "summary": "lookup called",
+            "payload": {
+                "tool": "lookup",
+                "arguments": "{'name': 'Bo'}",
+                "result": "found",
+            },
+        },
+        {"kind": "turn", "summary": "Look up Bo", "payload": {}},
+        {"kind": "output", "summary": "Done.", "payload": {"length": 5}},
+    ]
+    assert what_it_did(entries) == [
+        "Its rules decided send_gmail_message: ask_me, because it sends",
+        "A person was asked: send_gmail_message: declined",
+        "It called lookup with {'name': 'Bo'}; it gave found",
+    ]
+    assert what_it_did(entries[:2]) == []
+    assert stopped_on_record(entries) is None
+    # A Gate that stopped a step, named by its id; a built-in check, `sensitive`.
+    gate = {
+        "kind": "check",
+        "summary": "A person approves every refund.",
+        "payload": {"stage": "tool_call", "action": "ask", "gate": "refund-gate"},
+    }
+    assert stopped_on_record([*entries, gate]) == (
+        "refund-gate",
+        "A person approves every refund.",
+    )
+    built_in = {
+        **gate,
+        "payload": {"stage": "answer", "action": "stop", "gate": "built-in"},
+    }
+    assert stopped_on_record([built_in])[0] == CHECK_SENSITIVE
+    # A check that asked again, then a turn that stopped: that check's.
+    retried = {
+        **gate,
+        "payload": {"stage": "answer", "action": "retry", "gate": "built-in"},
+    }
+    stopped = {
+        "kind": "output",
+        "summary": "Stopped: gave up",
+        "payload": {"error": "UnexpectedModelBehavior"},
+    }
+    assert stopped_on_record([retried, stopped]) == (
+        CHECK_SENSITIVE,
+        "A person approves every refund.",
+    )
+    # A turn its rules held back.
+    held = {
+        "kind": "output",
+        "summary": "Stopped: payments are left to you",
+        "payload": {"error": "AppRuleBlockedError"},
+    }
+    assert stopped_on_record([held]) == (CHECK_RULES, "payments are left to you")
+    assert what_it_did([held]) == ["The turn stopped: payments are left to you"]
+    # Another error is not a check's.
+    assert stopped_on_record([stopped]) is None
 
 
 def test_without_a_judge_a_case_its_code_does_not_decide_is_not_run_and_says_so() -> (
