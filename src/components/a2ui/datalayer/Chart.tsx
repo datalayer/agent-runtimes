@@ -17,11 +17,21 @@
  */
 
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import ReactECharts from 'echarts-for-react';
+import type { EChartsReactProps } from 'echarts-for-react';
 import { Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
+import { ReactorLazy } from '@datalayer/reactor/react';
 import { BlockFrame, Problem, Quiet, asWords, isRecord } from './parts';
 import { ownImplementation, type OwnCommon } from './implementation';
+
+/**
+ * ECharts, fetched when a chart is first drawn: the catalogue is in every
+ * surface (and in the embed, STUDIO D-08), a chart only in some.
+ */
+const loadECharts = () => import('echarts-for-react');
+const chartRefused = (error: Error) => (
+  <Problem>{`The chart could not be drawn: ${error.message}`}</Problem>
+);
 
 export type ChartKind = 'bar' | 'line' | 'scatter' | 'area';
 
@@ -212,12 +222,17 @@ export function ChartView({ props }: { props: ChartProps }) {
         ) : (
           <Box as="figure" aria-label={label} m={0}>
             <div aria-hidden="true">
-              <ReactECharts
-                option={option}
-                style={{ height: 240, width: '100%' }}
-                opts={{ renderer: 'svg' }}
-                notMerge
-                lazyUpdate
+              <ReactorLazy<EChartsReactProps>
+                load={loadECharts}
+                errorFallback={chartRefused}
+                fallback={<Box height={240} />}
+                props={{
+                  option,
+                  style: { height: 240, width: '100%' },
+                  opts: { renderer: 'svg' },
+                  notMerge: true,
+                  lazyUpdate: true,
+                }}
               />
             </div>
             <Box as="details" fontSize={1}>

@@ -199,11 +199,33 @@ function embedSizes(): Plugin {
           byPackage.set(key, (byPackage.get(key) ?? 0) + info.renderedLength);
         }
       }
-      log.push('Initial load by package (rendered, before minifying names):');
+      // Who brings each package in: its modules' importers from elsewhere.
+      const broughtBy = new Map<string, Set<string>>();
+      for (const name of initial) {
+        for (const id of Object.keys(chunks.get(name)?.modules ?? {})) {
+          const key = packageOf(id);
+          for (const importer of this.getModuleInfo(id)?.importers ?? []) {
+            if (packageOf(importer) !== key) {
+              const by = broughtBy.get(key) ?? new Set<string>();
+              by.add(path.relative(__dirname, importer.replace(/^\0/, '')));
+              broughtBy.set(key, by);
+            }
+          }
+        }
+      }
+      log.push(
+        'Initial load by package (rendered, before minifying names), and what imports it:',
+      );
       for (const [key, bytes] of [...byPackage.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 60)) {
-        log.push(`  ${kb(bytes).padStart(12)}  ${key}`);
+        const by = [...(broughtBy.get(key) ?? [])];
+        log.push(
+          `  ${kb(bytes).padStart(12)}  ${key}` +
+            (by.length > 0
+              ? `  <- ${by.slice(0, 4).join(', ')}${by.length > 4 ? `, +${by.length - 4}` : ''}`
+              : ''),
+        );
       }
       console.log(log.join('\n'));
       const initialGzip = sum(initialRows, 'gzip');
@@ -256,12 +278,21 @@ export default defineConfig(async env => {
     embedSizes(),
   ];
   const rollupOptions = (config.build!.rollupOptions ??= {});
+  // `package.json` says this package's modules have no side effects but its
+  // stylesheets ("sideEffects"), and a bundler of `lib/` (the landing's
+  // webpack) drops a module none of whose exports is used. Rollup is told the
+  // same of `src/`, which it otherwise keeps whenever a module calls something
+  // at its top level — `definePlugin(…)`, a store — used or not. The entry
+  // runs for what it does.
+  const sources = path.resolve(__dirname, 'src') + path.sep;
+  const entry = path.resolve(__dirname, 'src/apps/embed/datalayer-app.ts');
+  rollupOptions.treeshake = {
+    moduleSideEffects: (id: string) =>
+      id === entry || !id.startsWith(sources) || !/\.(ts|tsx|js|jsx)$/.test(id),
+  };
   // The app's pages are its inputs; the embed's is its module.
   rollupOptions.input = {
-    'datalayer-app-main': path.resolve(
-      __dirname,
-      'src/apps/embed/datalayer-app.ts',
-    ),
+    'datalayer-app-main': entry,
   };
   rollupOptions.output = {
     format: 'es',
