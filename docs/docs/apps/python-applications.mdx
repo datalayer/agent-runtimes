@@ -28,15 +28,21 @@ declared, a host opens its sessions and drives them, and its agent answers
 with its rules, checks and record on. It is tested (see the end of the
 page).
 
+**A Python application of your own runs on a deployment's runtime** (since
+1.3.9x, R-14 and P-24): pushed with `loop apps push app.py --app <id>`, the
+file is kept with the version, and the runtime of a deployment — its
+scheduled ticks, its always-on runtime, the hosted page's sessions — is
+handed the code when its agent is made, and runs its `start`, `message` and
+`schedule` handlers through the [Session API](./session-api). The deployed
+version is the authority: an `app.py` whose `SPEC` says no version runs as
+the version stored, and one that says another application's is refused. A
+Preview, or a runtime with no deployment and no principal, is refused the
+code in a sentence. On your own machine, the same file is served mounted
+into your own FastAPI (see
+[Mounted into your own FastAPI](#mounted-into-your-own-fastapi)).
+
 What does **not** exist yet:
 
-- **A Python application of your own on a hosted runtime.** A runtime runs
-  the code of the catalogue's Python examples through the
-  [Session API](./session-api) — its channel the session, what it shows
-  streamed as AG-UI events, what it asks answered from the page — and an
-  `app.py` deployed on Datalayer runs as the spec it builds, answered by its
-  agent. Your own code runs on a runtime you serve: mounted into your own
-  FastAPI (see [Mounted into your own FastAPI](#mounted-into-your-own-fastapi)).
 - **An agent with tools in process.** An application whose agent needs
   connections to MCP servers, skills, tools or a team runs on a runtime;
   built in this process, it is refused with the reason (see
@@ -44,14 +50,15 @@ What does **not** exist yet:
 
 ## Where its code runs
 
-**On a runtime, never in a service** (LOOP R-21). On the platform, the only
-Python application code that runs is the catalogue's — its examples'
-`app.py`, shipped with agentspecs — and it runs on a runtime, the sandbox a
-person's agent runs in, through the [Session API](./session-api). An
-`app.py` of your own is built on your machine into the spec it amounts to
-(`loop apps build`, `push`); the platform keeps and runs the spec, never the
-file: an application saved with an example's id and another version runs as
-its agent answers, not as the example's code.
+**On a runtime, never in a service** (LOOP R-21). On the platform,
+application code runs on a runtime only — the sandbox a person's agent runs
+in, through the [Session API](./session-api) — never inside ai-agents or
+durable. An `app.py` of your own is built on your machine into the spec it
+amounts to (`loop apps build`, `push`); the platform keeps the file beside
+the spec, versioned with it, and hands it to the deployment's runtime as
+`app_code` when its agent is made (its always-on runtime, a tick's, a hosted
+session's). A deployment whose record carries no code — one deployed before
+the file was kept — is refused a relaunch in a sentence: deploy it again.
 
 The services — ai-agents, durable — import only what reads a spec:
 `load_app`, `schedule_triggers`, `session_payload`; the scheduler starts a
@@ -471,8 +478,9 @@ code did not declare — one of the Appspec's own — asks the agent its
 prompt. When the trigger at that position is not the schedule the code
 declared (another cron: code and Appspec of different versions), the
 session is refused and the tick fails, saying so. An `app.py` of your own
-is built into its spec, and the spec is what runs: its handlers run where an
-`AppHost` runs them (`host.schedule(name)`), not on the tick.
+runs on the tick the same way: the deployment's runtime is handed its code,
+and its `schedule` handler runs there (`host.schedule(name)`), with nobody
+present.
 
 Woken, nobody is present: the session only reads unless one of the
 application's rules says otherwise (see *With nobody present* in the

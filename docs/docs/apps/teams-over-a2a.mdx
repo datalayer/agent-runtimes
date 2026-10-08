@@ -339,7 +339,11 @@ loop apps deploy <application uid> --slug demo-accounting \
 #  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a/  (open to visitors)
 ```
 
-or with `PATCH /api/ai-agents/v1/apps/deployments/{uid}`:
+`--no-a2a` and `--no-visitors` turn each off; `--not-always-on` stops keeping
+it, `--version` picks the version and `--site` the site of its address (see
+[the CLI](/cli#deploy-an-application-at-its-address)). The command sends
+`PATCH /api/ai-agents/v1/apps/deployments/{uid}` with `visibility`,
+`always_on`, `spend_limit` and these two:
 
 | Field | What it is |
 | --- | --- |
@@ -365,7 +369,8 @@ an application's agent that is already made there (by `/api/v1/agents`, from
 the deployment) over A2A. Its card names `url`. `DELETE /api/v1/apps/a2a`
 stops serving it. Both need a person's token or the machine itself. An agent
 that is not on the runtime gets 404, and one that is not an application's
-agent gets 409.
+agent gets 409, and a `url` that is not http(s) 422
+(`test_apps_serve_kept_over_a2a`).
 
 ## Output formats
 

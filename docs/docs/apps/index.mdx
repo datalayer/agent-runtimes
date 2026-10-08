@@ -74,7 +74,7 @@ inside the Datalayer app, and inside a JupyterLab panel.
 
 | Point | Declared by | Filled by |
 |---|---|---|
-| `LoopViewType` | shell plugin | chat (`chat` view), graph, a2ui |
+| `LoopViewType` | shell plugin | chat (`chat` view), a2ui — and graph, when a host adds `GraphViewPlugin` |
 | `LoopEditorView` | shell plugin | notebook, document — each entry appears in the segmented editor control and renders in the editor column |
 | `LoopFrontendTool` | chat plugin | notebook (cell tools), document (lexical tools) — the tools the chat hands its agent |
 | `LoopChatComposer` | chat plugin | input-prompt plugin — the chat assembles the composer's props, the contribution renders them |
@@ -187,7 +187,7 @@ LoopWorkspace (shell component — renders the view host, slots, header)
 ├── @datalayer/loop-plugin-a2ui             view 'a2ui' (server-rendered surfaces)
 ├── @datalayer/loop-plugin-agentspecs       agent picker, /agents ⌥⌘A
 ├── @datalayer/loop-plugin-models           /models ⌥⌘M
-├── @datalayer/loop-plugin-graph            the plugin graph as a view, /graph ⌥⌘G
+├── (@datalayer/loop-plugin-graph           the plugin graph as a view, /graph ⌥⌘G — not in the preset: a host adds `GraphViewPlugin` from `./plugins/graph`)
 ├── @datalayer/loop-plugin-plugins-panel    the sidebar of on/off switches
 └── @datalayer/loop-plugin-window-frame     browser-window chrome, full-screen icon
 ```
@@ -230,7 +230,7 @@ handlers and the browser's defaults.
 | `/editor` (cycle) | `Mod+Alt+E` | shell |
 | `/prompt` (focus) | `Mod+Alt+P` | prompt |
 | `/new` (reset) | `Mod+Alt+R` | prompt |
-| `/graph` | `Mod+Alt+G` | graph |
+| `/graph` | `Mod+Alt+G` | graph (only when the host adds `GraphViewPlugin`) |
 | `/models` | `Mod+Alt+M` | models |
 | `/agents` | `Mod+Alt+A` | agentspecs |
 | `/surface` (a2ui) | `Mod+Alt+U` | a2ui |
@@ -389,7 +389,7 @@ switch except where noted:
 | `showAgentVariants` | `false` | The browser/local/cloud control |
 | `teamId`, `localAgent`, `localAgentSpec` | — | Which agent answers, and what a Local target creates |
 | `commandPalette` | `false` | Ctrl-K over the contributed commands |
-| `graph`, `pluginsPanel`, `windowFrame` | `false` | The demonstration chrome |
+| `pluginsPanel`, `windowFrame` | `false` | The demonstration chrome. The plugin graph is no `loopPlugins` option: a host that shows it adds `GraphViewPlugin` (`./plugins/graph`) beside the preset, as the Loop Workspace example does. |
 
 ## Try it
 
@@ -397,7 +397,8 @@ The examples app ships two Loop demonstrations, both running on the browser
 sandbox with no account:
 
 - **Loop Workspace** — everything on: the sidebar of plugin switches, the
-  graph, the browser/local/cloud control. The proof that the extension model
+  graph (added by the example itself, `GraphViewPlugin`), the
+  browser/local/cloud control. The proof that the extension model
   is real: untick the chat and the prompt goes with it; untick the notebook
   and it leaves the editor control.
 - **Loop Shell** — the opposite pole: a blank canvas, a floating draggable

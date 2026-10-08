@@ -66,9 +66,16 @@ is not there or runs no application.
   Preview whose token cannot be had runs nothing (`403`, in a sentence), and
   an application not saved on Datalayer is not previewed with a person's
   token: it has no grants to hold it to. A Preview the machine itself opens
-  (`localhost`, no token) runs as that machine, as before. **Not yet held:**
-  the Datalayer MCP gateway's own tools, which a session's AG-UI run reaches
-  with the runtime's key, a Preview's as a deployment's.
+  (`localhost`, no token) runs as that machine, as before. **The Datalayer MCP
+gateway's own tools are held the same way** (STUDIO R-25,
+`gateway_toolsets_of_the_run` in `agent_runtimes.loop.apps.principal`, used
+by the AG-UI and Vercel AI transports): a session's run reaches the gateway
+as the application — a deployment with its principal's token, or the
+person's for a connection `as: user`; a Preview with its run token, narrowed
+to its granted Spaces — never with the runtime's key. The gateway's
+notebooks are those of the Spaces Spacer says the application is in, its
+spaces toolset lists only the Spaces granted, and a Space not granted is
+refused in the runtime's sentence (`test_app_gateway_toolsets`).
 
 A start names what it expects — a deployment, or none for a Preview — and is
 refused when the agent runs something else: a Preview is never run by a

@@ -628,8 +628,9 @@ Tested (vitest, `src/apps/__tests__/embed-config.test.ts`,
 Not done yet:
 
 - A reload has not been tried in a browser against a running server.
-- The script bundle has not been built.
-- The element has not been seen in a browser.
+- The element has not been seen in a browser loading its loader, its module
+  and its chunks from `/embed/` on a host page (the bundle is built by the
+  release and by PR CI, under its 2.5 MB gzipped budget).
 - `@scope`, which scopes the theme's stylesheet, needs a recent browser. Where
   it is missing, the controls keep Primer's corners.
 - Two embeds on one page share Primer's portal root: the second one's overlays

@@ -269,8 +269,8 @@ Next: cd desk && loop apps run app.yaml
 `loop apps run <app>.yaml --a2a` serves the application over A2A, at
 `/api/v1/a2a/agents/<its id>/`, to the members of its team that ask it, and
 prints its address and its agent card. With `--cloud`, it is a Datalayer
-runtime, a new one or the one `-r <runtime uid>` names, and `--keep` leaves
-it serving once `loop` stops.
+runtime, a new one or the one `-r <runtime>` names (by its uid or its name),
+and `--keep` leaves it serving once `loop` stops.
 
 ```bash
 loop apps run accounting.yaml --cloud --a2a --keep                    # a key granted to its route is answered
@@ -280,13 +280,47 @@ loop apps run accounting.yaml --cloud -r <uid> --a2a --visitors --keep # the sam
 
 | Option | What it does |
 | --- | --- |
-| `--a2a` | Serve it over A2A, and wait until Ctrl-C. |
+| `--a2a` | Serve it over A2A to the members of its team, and wait until Ctrl-C: its address and its agent card are printed, and the session is the runtime's, not the terminal's. |
 | `--visitors` | With `--a2a`: also answer visitors without an account, with a visitor's token from ai-inference that names this application. Their runs only read, and are counted (a few a day each). |
 | `--visitors-key <token>` | With `--visitors`: the owner's key visitors' runs act with, a token from a task grant on this application's A2A route. Unsaid, they act with the runtime's own credential. |
 
 `--visitors` without `--a2a`, or `--visitors-key` without `--visitors`, is
 refused before anything is launched. See
 [A team of applications over A2A](/apps/teams-over-a2a#open-to-visitors).
+
+### Deploy: an application at its address
+
+`loop apps deploy <app id>` deploys a saved version at the application's
+hosted address, `/apps/<slug>`, as the Ship tab does (LOOP S-06) — and, kept
+always on, serves it over A2A at a **stable address** that names the
+deployment and no runtime (STUDIO A-08):
+`/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/`. The address stays the
+same when its runtime is started again or the deployment moves to another
+version; ai-agents passes each request to the runtime it is kept on now.
+
+```bash
+loop apps deploy <id> --slug desk                                   # version: the latest saved; who may open it: private
+loop apps deploy <id> --slug desk --visibility public               # anybody
+loop apps deploy <id> --slug desk --always-on --spend-limit 50 --a2a          # kept on a runtime of its own, served over A2A
+loop apps deploy <id> --slug desk --visibility link --always-on --spend-limit 50 --a2a --visitors   # visitors may ask it too
+loop apps deploy <id> --no-a2a                                      # stop serving it over A2A
+```
+
+| Option | What it does |
+| --- | --- |
+| `--version`, `-v` | The version to deploy; the latest saved by default. |
+| `--slug` | Its address, `/apps/<slug>`, on a first deploy. |
+| `--site` | The site its address is on (`DATALAYER_SITE_URL`). |
+| `--visibility` | Who may open it: `private`, `link` or `public`, as the Ship tab says it. |
+| `--always-on` / `--not-always-on` | Keep it on a runtime of its own, paid by you, within `--spend-limit`. |
+| `--spend-limit` | The most it may spend in a day, in credits (from midnight UTC). Required with `--always-on`; a public deployment without one has 50. |
+| `--a2a` / `--no-a2a` | Kept always on, serve it over A2A at its stable address. |
+| `--visitors` / `--no-visitors` | Served over A2A and open to anyone with the link: visitors without an account may ask it too — their runs only read, a few a day each. |
+
+It prints the address, the `A2A:` line when it is served, and the embed
+snippet for the site. Pause, resume, roll back and take down stay on the Ship
+tab and on `/studio/deployments`. See
+[A team of applications over A2A, A kept deployment at a stable address](/apps/teams-over-a2a).
 
 ### Eject: an application into Python
 
@@ -309,9 +343,14 @@ Your conversations with an application, and what was said of their answers
 (LOOP P-24):
 
 ```bash
-loop apps threads <id> [--search words] [--tag tag]   # newest first: title, turns, tags, session id
-loop apps feedback <session>                         # each thumb, the answer, who, the comment
+loop apps threads [<id>] [--search words] [--tag tag] [--limit 50]   # newest first: title, turns, tags, session id
+loop apps feedback <session>                                        # each thumb, the answer, who, the comment
 ```
+
+`threads` lists every application's conversations when no id is given;
+`--search` (`-s`) keeps those whose title or questions say the words, `--tag`
+those that carry the tag, `--limit` how many (50 by default, 1000 at most).
+`feedback` takes the conversation's session id, as `threads` prints it.
 
 ### An application's safety set
 
@@ -428,11 +467,15 @@ not hold (`must_say`, `must_not_say`), and the time it may take (`within`).
 
 ```bash
 loop scenes ls                                   # the catalogue: faces, members, setup, Live or not
-loop scenes rehearse sales-and-accounting        # every beat, here, in this process
+loop scenes ls --json
+loop scenes rehearse sales-and-accounting        # every beat, here, in this process (--local, the default)
 loop scenes rehearse sales-and-accounting --beat open-invoices
 loop scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # every runtime member on a cloud runtime, over A2A
+loop scenes rehearse sales-and-accounting --cloud -e ai-env -m 20 --keep   # the environment, the minutes reserved, left running
 loop scenes rehearse scenes/my-scene.yaml --json
 ```
+
+Both need agentspecs 0.0.61 or later, which carries the scenes.
 
 `rehearse` plays each beat's cue through the scene the way `loop apps run`
 runs one application: the entry's application in this process, with a tool
@@ -654,6 +697,8 @@ The CLI includes server/control commands plus runtime-management command groups.
 | `mcp-servers-config` | Display MCP servers from the user's config |
 | `start-mcp-servers` | Start MCP servers for a running agent |
 | `stop-mcp-servers` | Stop MCP servers for a running agent |
+| `apps` | Applications: `init`, `build`, `eject`, `validate`, `run`, `deploy`, `pull`, `push`, `threads`, `feedback` (see above) |
+| `scenes` | Scenes: `ls` the catalogue, `rehearse` a scene (see above) |
 | `agents` | Agent runtime lifecycle commands |
 | `agent-nodes` | Agent Node commands |
 | `benchmarks` | Benchmarking commands |
