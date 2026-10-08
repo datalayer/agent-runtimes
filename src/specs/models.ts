@@ -217,6 +217,7 @@ export const AZURE_OPENAI_GPT_4_1_MINI_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 0.4, outputUsdPerMillion: 1.6 },
 };
 
 export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
@@ -231,6 +232,7 @@ export const AZURE_OPENAI_GPT_4_1_NANO_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.4 },
 };
 
 export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
@@ -245,6 +247,7 @@ export const AZURE_OPENAI_GPT_4_1_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 32768,
+  pricing: { inputUsdPerMillion: 2.0, outputUsdPerMillion: 8.0 },
 };
 
 export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
@@ -259,6 +262,7 @@ export const AZURE_OPENAI_GPT_4O_MINI_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 16384,
+  pricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.6 },
 };
 
 export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
@@ -273,6 +277,7 @@ export const AZURE_OPENAI_GPT_4O_0_0_1: AIModel = {
   available: false,
   requiredEnvVars: ['AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_ENDPOINT'],
   tokensLimit: 16384,
+  pricing: { inputUsdPerMillion: 2.5, outputUsdPerMillion: 10.0 },
 };
 
 export const BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1: AIModel = {

@@ -229,6 +229,7 @@ AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.4, output_usd_per_million=1.6),
 )
 
 AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -242,6 +243,7 @@ AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.1, output_usd_per_million=0.4),
 )
 
 AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -255,6 +257,7 @@ AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=2.0, output_usd_per_million=8.0),
 )
 
 AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -268,6 +271,7 @@ AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=0.15, output_usd_per_million=0.6),
 )
 
 AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -281,6 +285,7 @@ AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=2.5, output_usd_per_million=10.0),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
