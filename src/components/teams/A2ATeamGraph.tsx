@@ -229,7 +229,6 @@ const CONNECTIONS_APART = 16;
 /** Where a member's connections start: right of it. */
 const CONNECTION_X = NODE_WIDTH + CONNECTION_GAP;
 /** Below the character's middle, so the A2A edge leaving it passes above. */
-const CONNECTION_DROP = 12;
 /** What a member's connections take beside it. */
 const CONNECTIONS_BESIDE = CONNECTION_GAP + CONNECTION_WIDTH;
 
@@ -985,14 +984,18 @@ export const CallEdge = memo(function CallEdge({
 const NODE_TYPES = { member: MemberNode, connection: ConnectionNode };
 const EDGE_TYPES = { a2a: LinkEdge, mcp: CallEdge };
 
-/** Where a member's connections sit: right of it, one under another from its character's middle. */
+/**
+ * Where a member's connections sit: right of it, the first one's mark level
+ * with the character's middle (a mark half the character's size, so a
+ * quarter down), the next ones under it.
+ */
 function connectionsY(
   memberY: number,
   size: number,
   count: number,
   connectionHeight: number,
 ): number[] {
-  const top = memberY + size / 2 + CONNECTION_DROP;
+  const top = memberY + size / 4;
   return Array.from(
     { length: count },
     (_, at) => top + at * (connectionHeight + CONNECTIONS_APART),
@@ -1006,8 +1009,7 @@ function connectionsReach(
   connectionHeight: number,
 ): number {
   return count
-    ? size / 2 +
-        CONNECTION_DROP +
+    ? size / 4 +
         count * connectionHeight +
         (count - 1) * CONNECTIONS_APART
     : 0;
