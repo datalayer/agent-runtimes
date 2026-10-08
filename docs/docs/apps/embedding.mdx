@@ -506,17 +506,63 @@ embedSnippetOf({ origin: 'https://datalayer.app', app: '01M…', mode: 'assistan
 // <datalayer-app app="01M…" origin="https://datalayer.app" mode="assistant"></datalayer-app>
 ```
 
+## What loads when
+
+The script a host writes, `datalayer-app.js`, is a classic script of a few
+hundred bytes. It imports the element's module from beside it, and the module
+imports, from beside it in turn, only what it draws:
+
+| When | What | Files |
+| --- | --- | --- |
+| With the page | The loader | `datalayer-app.js` |
+| Before the element draws | React, Primer, the element, `AppRenderer`, the conversation and its prompt, the A2UI catalogue, the theme | `datalayer-app-main.js`, `datalayer-app.css` |
+| When it is shown | The companion notebook (JupyterLab's notebook), the document (Lexical), a deck, the agent's details and their charts | `chunks/` |
+| When a message needs it | A diagram (Mermaid and its layouts), a highlighted language (one chunk each), a chart (ECharts), a form (rjsf and Ajv), maths fonts | `chunks/`, `assets/` |
+| When it runs | Workers and WebAssembly (Loro); Pyodide, for a browser sandbox, from its CDN | `assets/` |
+
+Every file is found relative to the one that asks for it, so `/embed/` can be
+served from any Datalayer origin. The module and its chunks are ES modules: a
+host on another origin fetches them with CORS, so the origin serving
+`/embed/` answers `Access-Control-Allow-Origin: *` (Datalayer's does).
+
+When a file does not come, the element says so in a sentence where it would
+have drawn: *The application could not be loaded: … did not load* in place of
+the element when the module fails, *The notebook could not be loaded: …*,
+*The chart could not be drawn: …* or *The form could not be drawn: …* in
+place of a part.
+
+The sizes, gzipped, as CI's build measured them on 2026-10-08 (kB and MB of 1000 bytes):
+
+| | Before (1.3.93) | Now |
+| --- | --- | --- |
+| Fetched before the element draws | 15.7 MB (one script of 61.3 MB) and 4.2 MB of CSS (8.7 MB, its fonts and images inlined) | 2.36 MB (a module of 8.8 MB) and 197 kB of CSS (1.07 MB) |
+| Fetched only when shown | nothing: all of it was in the script | 11.7 MB in 978 chunks, each fetched when what it draws is shown, and the fonts and images as files |
+
+The build fails when what is fetched before the element draws — the module and
+the chunks it imports statically — is over **2.5 MB gzipped**
+(`INITIAL_GZIP_BUDGET` in `vite.embed.config.ts`), and prints every file's
+size and the initial load by package, with how each is reached. The budget
+sits a little above today's size, so a change that adds to the first load is
+seen, and moved behind an `import()`, before it ships. What still weighs in the
+initial load is the conversation itself: it is written against JupyterLab's
+services and `@datalayer/jupyter-react` (its kernel indicator, its notebook
+store, its theme), streamdown with KaTeX for answers, the browser agent's AI
+SDK and the agentspecs catalogue. Taking those out is the way below the budget.
+
 ## Building the script
 
 ```bash
 npm run build:embed
-# dist-embed/datalayer-app.js   — the element, React and the renderer, in one file
-# dist-embed/datalayer-app.css  — the stylesheet the element links into its shadow root
+# dist-embed/datalayer-app.js       — the script a host writes: it imports the module
+# dist-embed/datalayer-app-main.js  — the element's module
+# dist-embed/chunks/                — what is fetched when shown
+# dist-embed/assets/                — fonts, images, WebAssembly, workers
+# dist-embed/datalayer-app.css      — the stylesheet the element links into its shadow root
 ```
 
-Serve both files from a Datalayer origin at `/embed/`.
+Serve the whole folder from a Datalayer origin at `/embed/`.
 
-A release builds them: the release workflow runs `npm run build:embed`, and the npm package `@datalayer/agent-runtimes` carries `dist-embed/` (`datalayer-app.js`, `datalayer-app.css` beside it, and the workers the script loads under `assets/`) from 1.3.93 on, so the element is versioned with the runtime it talks to. The Datalayer landing copies `dist-embed` from the package it installs into its `/embed/`, and refuses a production build whose package has none.
+A release builds it: the release workflow runs `npm run build:embed`, and the npm package `@datalayer/agent-runtimes` carries `dist-embed/` from 1.3.93 on, so the element is versioned with the runtime it talks to. Pull requests build it too, so the sizes are seen before a release. The Datalayer landing copies `dist-embed` from the package it installs into its `/embed/`, and refuses a production build whose package has none.
 
 ## What is tested, and what is not
 
@@ -534,6 +580,13 @@ Tested (vitest, `src/apps/__tests__/embed-config.test.ts`,
   (`test_app_embed_sessions.py`): a visit reads its session's conversation,
   another visit and a session the runtime let go get a 404;
 
+- what stays out of the first load (`embed-weight.test.ts`): the plugin
+  graph not in the preset and the plugins panel naming reactor-graph's
+  plugin without importing it, the agent's details and the companion
+  notebook imported when shown, ECharts, rjsf and Ajv when a chart or a form
+  is drawn. The build measures the load against its budget in CI. Not seen
+  in a browser: the element on a host page, fetching its module and chunks
+  from `/embed/`;
 - the modes and the chat each one floats in;
 - `AppFloating` as the character alone, on the visitors' runtime too;
 - the host's tools (`host-bridge.test.ts`): the values named and no others,

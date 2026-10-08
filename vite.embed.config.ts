@@ -53,10 +53,17 @@ const EMBED_STYLESHEET_FILE = 'datalayer-app.css';
 
 /**
  * What a page fetches before it can draw an application, gzipped: the module
- * and every chunk it imports statically. See `docs/docs/apps/embedding.mdx`
- * for what that is and why the number.
+ * and every chunk it imports statically.
+ *
+ * 2.5 MB: the initial load measured 2.36 MB on 2026-10-08 (from 15.7 MB in
+ * one script), and what is left in it is the conversation's own weight —
+ * JupyterLab's services and `@datalayer/jupyter-react`, KaTeX through
+ * streamdown, the browser agent's AI SDK, the agentspecs catalogue — which
+ * an import() cannot move without changing the chat. A little above that, so
+ * a change that adds a library to the first load fails here instead of
+ * shipping. See `docs/docs/apps/embedding.mdx` (What loads when).
  */
-const INITIAL_GZIP_BUDGET = 4.5 * 1024 * 1024;
+const INITIAL_GZIP_BUDGET = 2_500_000;
 
 /** The app build's plugins an embed has no use for. */
 const NOT_FOR_THE_EMBED = new Set([
@@ -93,7 +100,8 @@ function embedLoader(): Plugin {
   };
 }
 
-const kb = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
+/** In kB of 1000 bytes, as Vite's own report counts them. */
+const kb = (bytes: number) => `${(bytes / 1000).toFixed(1)} kB`;
 
 /** The package a module of the bundle comes from, or the source folder. */
 function packageOf(id: string): string {
