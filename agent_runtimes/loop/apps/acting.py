@@ -19,25 +19,47 @@ The gateway's servers in the person's name are reached with it, the others
 with the principal's. When the person has not let it act in their name, those
 servers are reached with no token of theirs: the gateway refuses, in its
 sentence, and the agent says so.
+
+**A session woken for a person** (STUDIO W-03): a session nobody opened,
+woken by an event of one person's own source — a message in their mailbox
+— runs on the owner's temporary key, with which IAM would list what the
+*owner* let applications do, never the person's. The scheduler, which wakes
+it, mints that person's token naming the application from their grant (as
+its mail watch does to read the mailbox) and gives it with the session
+request, in :data:`ACTING_TOKEN_HEADER`, minted per wake and never kept
+anywhere; the route puts it where a person's own session's would be
+(`given`), keyed on the request's bearer, so every run of the session finds
+it through `acting_token` as any session does — Gmail and the gateway's
+servers in the person's name alike. A token given is the only one that
+session acts with: ended, nothing more is reached in their name, and IAM is
+never asked with the owner's key in its place.
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Iterable, Optional
+from typing import Any, Awaitable, Callable, Iterable, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "ACTING_TOKEN_HEADER",
     "REFRESH_MARGIN_SECONDS",
     "acting_token",
     "forget_acting",
+    "given",
+    "person_woken_for",
     "remember_servers_in_users_name",
     "servers_in_users_name",
     "use_iam",
 ]
+
+#: The request header a session woken for a person is given their token in.
+ACTING_TOKEN_HEADER = "X-Datalayer-Acting-Token"
 
 #: Asked again when less than this is left.
 REFRESH_MARGIN_SECONDS = 120
@@ -80,6 +102,98 @@ def servers_in_users_name(agent_id: str | None) -> frozenset[str]:
 def forget_acting() -> None:
     """Forget every token held: a test, or a runtime told to."""
     _HELD.clear()
+
+
+def person_woken_for(woken_by: Optional[Mapping[str, Any]]) -> tuple[str, str]:
+    """Whose own source an event woke a session for, and their grant: ``("", "")`` when nobody's.
+
+    An event's details are ids (`deployments.event_details`); a mail watch
+    names the ``person`` whose mailbox the message arrived in and the
+    ``grant`` they gave the application (STUDIO W-03).
+    """
+    if not isinstance(woken_by, Mapping):
+        return "", ""
+    details = woken_by.get("details")
+    if not isinstance(details, Mapping):
+        return "", ""
+    return str(details.get("person") or "").strip(), str(
+        details.get("grant") or ""
+    ).strip()
+
+
+def _claims_of(token: str) -> dict[str, Any]:
+    """What a token says, unverified: IAM verifies it wherever it is used."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise ValueError("not a token IAM minted")
+    try:
+        payload = parts[1] + "=" * (-len(parts[1]) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload.encode("ascii")))
+    except (ValueError, UnicodeError, TypeError):
+        raise ValueError("not a token IAM minted") from None
+    if not isinstance(claims, dict):
+        raise ValueError("not a token IAM minted")
+    return claims
+
+
+def given(
+    deployment_uid: str,
+    bearer: str,
+    token: str,
+    *,
+    person: str,
+    grant: str = "",
+) -> None:
+    """A person's token naming the application, given with the request of a
+    session woken for their own source (STUDIO W-03): held where the
+    session's runs find it, as a person's own session's is.
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment the woken session runs.
+    bearer : str
+        The session request's own bearer: the owner's key the scheduler
+        runs the session with, which every run of the session carries.
+    token : str
+        The token IAM minted for the person from their grant, as the
+        scheduler was given it.
+    person : str
+        Who the event says the session is woken for: the token's ``sub``.
+    grant : str
+        Their grant, when the event names it: the token's ``task_grant_uid``.
+
+    Raises
+    ------
+    ValueError
+        The token is not one IAM minted for that person from that grant, or
+        has ended, in a sentence: the session is refused, never run with
+        the owner's or the principal's in its place.
+    """
+    if not deployment_uid or not bearer:
+        raise ValueError(
+            "A token naming the application is given to a deployment's session only."
+        )
+    try:
+        claims = _claims_of(token)
+    except ValueError as why:
+        raise ValueError(f"The token given naming the application is {why}.") from None
+    if str(claims.get("sub") or "") != person:
+        raise ValueError(
+            f"The token given naming the application is not {person}'s, whose source the session is woken for."
+        )
+    if grant and str(claims.get("task_grant_uid") or "") != grant:
+        raise ValueError(
+            "The token given naming the application was not minted from the grant the event names."
+        )
+    try:
+        expires_at = float(claims.get("exp") or 0)
+    except (TypeError, ValueError):
+        expires_at = 0.0
+    if expires_at <= time.time():
+        raise ValueError("The token given naming the application has ended.")
+    key = (hashlib.sha256(bearer.encode()).hexdigest(), deployment_uid)
+    _HELD[key] = {"token": token, "expires_at": expires_at, "given": True}
 
 
 async def _ask_iam(deployment_uid: str, bearer: str) -> Optional[dict[str, Any]]:
@@ -159,6 +273,18 @@ async def acting_token(deployment_uid: str, bearer: Optional[str]) -> str:
         return ""
     key = (hashlib.sha256(bearer.encode()).hexdigest(), deployment_uid)
     held = _HELD.get(key)
+    if held is not None and held.get("given"):
+        # Given with the session's request (STUDIO W-03): the only token this
+        # session acts with. Ended, nothing is asked in its place — the
+        # request's bearer is the owner's key, whose grants are not the person's.
+        if held["expires_at"] > time.time():
+            return str(held["token"])
+        logger.warning(
+            "The token given in the person's name for a session of deployment %s ended: "
+            "nothing more is reached in their name.",
+            deployment_uid,
+        )
+        return ""
     if held is not None and held["expires_at"] - time.time() > REFRESH_MARGIN_SECONDS:
         return str(held["token"])
     try:

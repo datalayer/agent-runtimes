@@ -582,6 +582,7 @@ def start_session(
     attempts: int = 12,
     wait_seconds: float = 5.0,
     client: Optional[httpx.Client] = None,
+    acting_token: str = "",
 ) -> dict[str, Any]:
     """Create the deployment's agent on a runtime that was just launched
     (`create_agent`), then open a session of it on the session API
@@ -593,6 +594,14 @@ def start_session(
     schedule at that trigger runs that handler, with the session; any other
     is asked the prompt. Either way the session has nobody present, and only
     reads unless a rule says otherwise (R-16).
+
+    A session woken for one person's own source — a message in their
+    mailbox (STUDIO W-03) — is given that person's token naming the
+    application, ``acting_token``, which the scheduler minted from their
+    grant for this one wake: sent with the session request alone, in
+    `acting.ACTING_TOKEN_HEADER`, never with the agent's creation, never
+    kept here; the runtime refuses the session without it, and runs the
+    session's Gmail and gateway servers in the person's name with it.
 
     Answers the agent's id, the session's uid and its result: ``status``
     ``completed``, ``failed`` or ``waiting`` (it asked somebody something),
@@ -634,6 +643,8 @@ def start_session(
             "opener": prompt,
             "woken_by": dict(woken_by),
         }
+        from agent_runtimes.loop.apps.acting import ACTING_TOKEN_HEADER
+
         with http.stream(
             "POST",
             f"{base}/api/v1/apps/sessions",
@@ -641,6 +652,7 @@ def start_session(
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "text/event-stream",
+                **({ACTING_TOKEN_HEADER: acting_token} if acting_token else {}),
             },
             timeout=httpx.Timeout(float(timeout), connect=30.0),
         ) as response:

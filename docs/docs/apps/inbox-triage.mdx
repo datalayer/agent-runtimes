@@ -64,6 +64,24 @@ who has not let it act in their name, Gmail not connected or connected at a
 lower level — has no Gmail tool, and why is logged in a sentence: nobody
 else's mailbox is reached, and its other tools still work.
 
+**The session a message wakes reads the mailbox it was woken for** (STUDIO
+W-03). Nobody is talking to it: the scheduler runs it on the owner's key,
+with which IAM would list what the owner let applications do, never the
+person's. So the event names the person and their grant (`person`, `grant`,
+ids among its details), and the scheduler mints, per wake, that person's
+token naming the application from the grant — as its mail watch does to read
+the mailbox — and gives it with the session request alone, in
+`X-Datalayer-Acting-Token` (`deployments.start_session(acting_token=)`).
+The route holds it where a person's own session's token would be
+(`loop.apps.acting.given`, keyed on the request's bearer), so every run of
+the session finds it through `acting_token` as any session does — the Gmail
+toolset and the gateway's servers in the person's name alike: one path. It
+is the only token that session acts with: ended, nothing more is reached in
+their name, and IAM is never asked with the owner's key in its place. A
+session woken for a person without it is refused (422), as is a token not
+minted for that person from that grant, or given to a session not woken for
+a person (`test_app_woken_for_a_person.py`).
+
 ## The mail source it runs against today
 
 `agent_runtimes.loop.apps.mail` is the mail source a worker runs against
@@ -194,7 +212,9 @@ consent, callback, token and disconnect routes are tested in IAM
 (`test_google_workspace.py`).
 
 **Not done:** no real mailbox has been read — that waits for IAM's deploy and
-a person's consent in Google's screen; and something that watches a real
-mailbox (Gmail's push through Pub/Sub, or its history) to tell ai-agents what
-arrived. Outside Datalayer's own domain, Google's verification of the
-restricted scopes comes first. Nothing is deployed.
+a person's consent in Google's screen. The watch exists in the platform's
+scheduler (Gmail's history polled once a minute, each new message's id told
+to ai-agents, the woken session given the person's token), and waits to be
+deployed and drilled on a connected mailbox. Outside Datalayer's own domain,
+Google's verification of the restricted scopes comes first. Nothing is
+deployed.

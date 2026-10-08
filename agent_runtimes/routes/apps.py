@@ -1000,6 +1000,58 @@ def _signed_user(
         raise HTTPException(status_code=refused.status, detail=refused.reason) from None
 
 
+def _given_in_their_name(
+    request: Request, body: StartSessionRequest, instance: Dict[str, Any], bearer: str
+) -> None:
+    """A session woken for one person's own source — a message in their
+    mailbox (STUDIO W-03) — is given that person's token naming the
+    application with its request (`acting.ACTING_TOKEN_HEADER`), minted by
+    the scheduler from their grant: held where every run of the session
+    finds it, as a person's own session's is (`acting.given`).
+
+    Refused (422), never run with another token in its place: a session
+    woken for a person without one, one given to a session not woken for a
+    person, a Preview's, and a token not minted for that person from that
+    grant, or ended.
+    """
+    from agent_runtimes.loop.apps.acting import (
+        ACTING_TOKEN_HEADER,
+        given,
+        person_woken_for,
+    )
+
+    token = str(request.headers.get(ACTING_TOKEN_HEADER) or "").strip()
+    person, grant = person_woken_for(body.woken_by)
+    if not person:
+        if token:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "A token naming the application is given only to a session woken for "
+                    "the person it names (an event naming `person`): this session is not."
+                ),
+            )
+        return
+    deployment = str(instance.get("deployment_uid") or "")
+    if not deployment:
+        raise HTTPException(
+            status_code=422,
+            detail="A session woken for a person's own source is a deployment's, not a Preview's.",
+        )
+    if not token:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"The session is woken for the source of {person} and carries no token of theirs "
+                "naming the application: nothing is read in their name."
+            ),
+        )
+    try:
+        given(deployment, bearer, token, person=person, grant=grant)
+    except ValueError as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+
+
 def _prune() -> None:
     """Forget the oldest idle sessions beyond what a runtime holds."""
     from agent_runtimes.loop.apps import sessions
@@ -1149,6 +1201,9 @@ async def start_session(body: StartSessionRequest, request: Request) -> Any:
     bearer = bearer_of(request.headers.get("authorization"))
     set_request_user_jwt(bearer or None)
     acts_as = await _acts_as(instance, authorized.caller, bearer, app)
+    # Woken for one person's own source, it is given their token naming the
+    # application, held where its runs find it (W-03).
+    _given_in_their_name(request, body, instance, bearer or "")
     # Who its user is, embedded, when it takes only one its host signed (D-21).
     user = _signed_user(app, instance, body.user_token, woken=bool(body.woken_by))
     # A host's retry is answered the original session and turn (plans/SLACK.md §4.3, 2).
