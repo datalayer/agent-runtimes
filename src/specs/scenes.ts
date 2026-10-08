@@ -296,6 +296,39 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
     },
   },
   setup: ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
+  played: {
+    at: '2026-10-08T17:44:37+00:00',
+    where: 'on Datalayer',
+    passed: false,
+    says: 'Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live.',
+    beats: [
+      {
+        beat: 'vigour-this-season',
+        state: 'not_run',
+        says: "Crop monitoring is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Crop monitoring is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'fields-to-watch',
+        state: 'not_run',
+        says: "Crop monitoring is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Crop monitoring is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'imagery-available',
+        state: 'not_run',
+        says: "Crop monitoring is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Crop monitoring is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'save-granules',
+        state: 'not_run',
+        says: "Crop monitoring is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Crop monitoring is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+    ],
+    runtime: '1.3.93',
+  },
 };
 
 export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
@@ -702,6 +735,39 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
     "The agent 'worker-disaster-assessment:0.0.1' is not enabled.",
     "The agent 'worker-change-detection:0.0.1' is not enabled.",
   ],
+  played: {
+    at: '2026-10-08T17:43:28+00:00',
+    where: 'on Datalayer',
+    passed: false,
+    says: 'Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live.',
+    beats: [
+      {
+        beat: 'flood',
+        state: 'not_run',
+        says: "Disaster assessment is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Disaster assessment is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped. Change detection is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Change detection is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'wildfire',
+        state: 'not_run',
+        says: "Change detection is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Change detection is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'storm',
+        state: 'not_run',
+        says: "Disaster assessment is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Disaster assessment is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+      {
+        beat: 'alert',
+        state: 'not_run',
+        says: "Disaster assessment is not set up: the MCP server tavily needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. Disaster assessment is not set up: the skill crawl needs TAVILY_API_KEY, which this runtime was not given: add it to the account's secrets (or set it before a local run), then configure it again. The runtime was stopped.",
+        seconds: 0.0,
+      },
+    ],
+    runtime: '1.3.93',
+  },
 };
 
 export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
@@ -989,6 +1055,39 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
     "The agent 'worker-month-end-close:0.0.1' is not enabled.",
     "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
   ],
+  played: {
+    at: '2026-10-08T17:37:33+00:00',
+    where: 'on Datalayer',
+    passed: false,
+    says: 'Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live.',
+    beats: [
+      {
+        beat: 'close-checklist',
+        state: 'not_run',
+        says: 'Month-end close refused the request (403): {"detail": "This key was granted to another route than month-end-close\'s on this runtime."}',
+        seconds: 0.0,
+      },
+      {
+        beat: 'accruals',
+        state: 'not_run',
+        says: 'Month-end close refused the request (403): {"detail": "This key was granted to another route than month-end-close\'s on this runtime."}',
+        seconds: 0.0,
+      },
+      {
+        beat: 'expenses-by-month',
+        state: 'not_run',
+        says: 'Month-end close refused the request (403): {"detail": "This key was granted to another route than month-end-close\'s on this runtime."}',
+        seconds: 0.0,
+      },
+      {
+        beat: 'post-accruals',
+        state: 'not_run',
+        says: 'Month-end close refused the request (403): {"detail": "This key was granted to another route than month-end-close\'s on this runtime."}',
+        seconds: 0.0,
+      },
+    ],
+    runtime: '1.3.93',
+  },
 };
 
 export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
@@ -1342,6 +1441,39 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
     "The agent 'worker-accountant:0.0.1' is not enabled.",
     "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
   ],
+  played: {
+    at: '2026-10-08T17:33:33+00:00',
+    where: 'on Datalayer',
+    passed: false,
+    says: 'Rehearsal: 0 of 4 beats passed. 4 failed. The scene is not Live.',
+    beats: [
+      {
+        beat: 'open-invoices',
+        state: 'failed',
+        says: 'Expected “Accounting → Odoo: odoo_accounting_list_invoices” after “Sales → Accounting”; the transcript went on: “Accounting: could not answer: Accounting refused the request (403): {"detail": "This key was granted to another route than accounting\'s on this runtime."} (failed)”; “Sales: I have all the details I need to ask Accounting. Let me pull that now.I\'m sorry — Accounting was unable to fulfil that request. Here is exactly what it returned:\n\n> **Error 403 – Access Denied**\n> *"This key was granted to another route than accounting\'s on this runtime."*\n\nThis means the connection to the Accounting system is currently not authorised for this session. No figures have been retrieved, and nothing has been changed.\n\n**Recommended next steps:**\n1. **Check API credentials** – Confirm that the correct API key for the Accounting route has been configured in this runtime environment.\n2. **Re-authorise the session** – Contact your system administrator or the platform owner to ensure this assistant\'s runtime is granted access to the Accounting route.\n3. **Retry** – Once access is restored, ask again and I will immediately pull the open invoice list with full details and a grand total.\n\nI will not estimate or fill in any figures in the meantime. Please let me know once access has been corrected and I\'ll resubmit the request straight away.”. It said “error”.',
+        seconds: 10.665683396000532,
+      },
+      {
+        beat: 'aged-receivables',
+        state: 'failed',
+        says: 'Expected “Accounting → Odoo: odoo_accounting_aged_balance” after “Sales → Accounting”; the transcript went on: “Accounting: could not answer: Accounting refused the request (403): {"detail": "This key was granted to another route than accounting\'s on this runtime."} (failed)”; “Sales: I have all the details I need — the report type (aged receivables, by customer, as a chart), and "today" as the as-of date. Let me ask Accounting now.Accounting was unable to fulfil the request. Here is exactly what it returned:\n\n> **Could not answer — Accounting refused the request (403):** *"This key was granted to another route than accounting\'s on this runtime."*\n\nThis indicates an access/permissions issue on the Accounting system\'s side — specifically, the API key in use has not been authorised for the Accounting route in this runtime environment. No data was returned, and nothing has been changed.\n\n**Recommended next steps:**\n1. **Check the API key configuration** — confirm that the key assigned to this session is the one provisioned for the Accounting route, not a different service route.\n2. **Contact your system administrator** to re-authorise or swap the correct key for the Accounting integration.\n3. Once access is restored, resubmit the request and Accounting will produce the aged-receivables-by-customer chart.\n\nLet me know how you\'d like to proceed!”. It did not say “days”.',
+        seconds: 8.296730125002796,
+      },
+      {
+        beat: 'largest-balance',
+        state: 'failed',
+        says: "Expected “Sales → Accounting” after “You → Sales”; the transcript went on: “Sales: I need a couple of details before I pull this from Accounting:\n\n1. **Which company or customer** should I look this up for — one specific customer, a region, or your whole book of business?\n2. **Which period** — for example, all open/outstanding invoices as of today, or a specific date range?\n\nOnce you confirm those, I'll ask Accounting to list each invoice individually.”.",
+        seconds: 3.205051746001118,
+      },
+      {
+        beat: 'payment-reminders',
+        state: 'failed',
+        says: 'Expected “Accounting → Odoo: odoo_accounting_aged_balance” after “Sales → Accounting”; the transcript went on: “Accounting: could not answer: Accounting refused the request (403): {"detail": "This key was granted to another route than accounting\'s on this runtime."} (failed)”; “Sales: Before I send anything to Accounting, I want to be transparent with you: **I can request this action, but I will only confirm it is done if Accounting confirms it.** I will not assume anything was sent.\n\nLet me submit this request now.Accounting was **unable to process this request** and returned a refusal — here is exactly what it said:\n\n> *"This key was granted to another route than accounting\'s on this runtime."*\n\nThis means the action was **not carried out**. No reminders have been sent.\n\n**What to do next:**\n- Please contact your Accounting team or system administrator directly to send the reminders through the correct access route or permissions.\n- Once they confirm the reminders have gone out, I can help you log or follow up on those overdue accounts within the sales pipeline report.\n\nWould you like help with anything else on the pipeline board?”.',
+        seconds: 7.237016560000484,
+      },
+    ],
+    runtime: '1.3.93',
+  },
 };
 
 export const SCENE_CATALOGUE: Record<string, SceneSpec> = {

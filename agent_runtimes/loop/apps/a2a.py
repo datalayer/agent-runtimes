@@ -164,8 +164,8 @@ def task_prefix(app_id: str, runtime_id: Optional[str] = None) -> str:
     Returns
     -------
     str
-        ``a2a:<runtime>:<application>:``, which a key's ``task_uid`` begins
-        with. What follows tells one key from another.
+        ``a2a:<runtime>:<application>:``, which a key's ``task_id`` claim
+        begins with. What follows tells one key from another.
     """
     runtime = (
         runtime_id or os.environ.get("DATALAYER_RUNTIME_ID") or ""
@@ -349,7 +349,7 @@ def visitors_key_problem(
             "whose task is this application's A2A route, reaching its connections read only."
         )
     prefix = task_prefix(app_id, runtime_id)
-    if not str(claims.get("task_uid") or "").startswith(prefix):
+    if not str(claims.get("task_id") or "").startswith(prefix):
         return f"visitors_key was granted to another route than {prefix}…"
     return ""
 
@@ -513,7 +513,11 @@ class A2AGate:
         except CallerRefused as refused:
             return refused.status, refused.reason
         claims = _unverified_claims(token)
-        task = str(claims.get("task_uid") or "")
+        # The task a grant's token names is its `task_id` claim: what IAM
+        # mints (oauth_provider, since 2026-09-26) and what the gateway reads
+        # (datalayer_common.auth.GRANT_CLAIMS). Read as `task_uid`, no real
+        # key ever passed this gate: every one was "another route's".
+        task = str(claims.get("task_id") or "")
         if caller.kind != "person" or not claims.get("task_grant_uid"):
             return 403, (
                 f"{self.app_id} answers a key granted to its A2A route, and this "

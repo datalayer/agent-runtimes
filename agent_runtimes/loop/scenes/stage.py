@@ -221,6 +221,10 @@ class StageMember:
     """Where it is served over A2A, when it is asked there rather than in this process."""
     key: str = ""
     """A key granted to its A2A route, sent as a bearer token."""
+    notes: List[str] = field(default_factory=list)
+    """What its runtime says is to set up — an agent or a server the catalogue
+    does not offer by default — kept as the verdict's notes; it plays all the
+    same, as ``loop apps run`` serves it."""
 
     @property
     def transcript_member(self) -> SceneMember:

@@ -355,13 +355,15 @@ def list_agents(
                 rich=True,
             )
 
+            # An unmetered runtime says '' (never expires), not None: the
+            # listing said Never for one and crashed on the other.
             expired_at = runtime.expired_at
             table.add_row(
                 runtime_name,
                 str(runtime.name or ""),
                 str(runtime.environment or ""),
                 display_billing_uid,
-                "Never" if expired_at is None else timestamp_to_local_date(expired_at),
+                "Never" if not expired_at else timestamp_to_local_date(expired_at),
             )
 
         console.print(table)

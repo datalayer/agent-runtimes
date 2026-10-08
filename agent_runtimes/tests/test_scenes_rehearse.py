@@ -428,7 +428,12 @@ def test_a_member_at_an_address_that_fails_is_a_failed_line(scene: Any) -> None:
 # --- the command --------------------------------------------------------------------------
 
 
-def test_ls_lists_the_catalogue_with_faces_members_and_setup() -> None:
+def test_ls_lists_the_catalogue_with_faces_members_and_setup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The catalogue keeps each scene's last rehearsal beside its spec (A-14):
+    # read as none here, so the listing says the spec's own `verified` words.
+    monkeypatch.setattr(scenes, "scene_played", lambda _id: None)
     result = runner.invoke(scenes_command.app, ["ls"])
     assert result.exit_code == 0, result.output
     assert (
@@ -562,10 +567,14 @@ def _cloud(
             raise launch
         return launch or _Launch()
 
-    def configure_on(base_url: str, document: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+    def configure_on(
+        base_url: str, document: Dict[str, Any], **kwargs: Any
+    ) -> Dict[str, Any]:
         asked["configures"].append((base_url, document["id"], kwargs))
         return configured or {
-            "a2a": {"url": f"{kwargs.get('a2a_url')}/api/v1/a2a/agents/{document['id']}/"},
+            "a2a": {
+                "url": f"{kwargs.get('a2a_url')}/api/v1/a2a/agents/{document['id']}/"
+            },
             "setup": [],
         }
 
@@ -653,27 +662,69 @@ def test_a_launch_datalayer_does_not_set_up_is_the_member_s_sentence(
         scene, keys={}, environment=None, minutes=None, status=lambda _m: None
     )
     assert launches == []
-    assert stage.members["accounting"].reason.startswith("Datalayer did not set up rt-9")
+    assert stage.members["accounting"].reason.startswith(
+        "Datalayer did not set up rt-9"
+    )
 
 
-def test_a_member_whose_setup_is_incomplete_says_the_runtime_s_sentence(
+def test_what_the_runtime_says_is_to_set_up_is_the_member_s_notes(
     monkeypatch: pytest.MonkeyPatch, scene: Any
 ) -> None:
+    # The catalogue's own notes come back from the configure (an agent or a
+    # server not offered by default); the member is served all the same, as
+    # `loop apps run` serves it. A secret not given is a refusal, not a note.
     _cloud(
         monkeypatch,
         configured={
-            "a2a": {"url": "x"},
+            "a2a": {"url": "https://r1.example/api/v1/a2a/agents/accounting/"},
             "setup": [
-                "the MCP server odoo-accounting needs DATALAYER_API_KEY, which this runtime was not given."
+                "The agent 'worker-accountant:0.0.1' is not enabled.",
+                "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
             ],
         },
     )
     stage, _ = scenes_command.stage_in_cloud(
-        scene, keys={"accounting": "k"}, environment=None, minutes=None, status=lambda _m: None
+        scene,
+        keys={"accounting": "k"},
+        environment=None,
+        minutes=None,
+        status=lambda _m: None,
+    )
+    accounting = stage.members["accounting"]
+    assert accounting.reason == "" and accounting.key == "k"
+    assert accounting.address == "https://r1.example/api/v1/a2a/agents/accounting/"
+    assert accounting.notes == [
+        "The agent 'worker-accountant:0.0.1' is not enabled.",
+        "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
+    ]
+
+
+def test_a_runtime_that_refuses_the_configure_is_the_member_s_sentence(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    import typer
+
+    from agent_runtimes.commands import apps as apps_module
+
+    _cloud(monkeypatch)
+
+    def refusing(
+        base_url: str, document: Dict[str, Any], **kwargs: Any
+    ) -> Dict[str, Any]:
+        raise typer.BadParameter(
+            "the MCP server odoo-accounting needs DATALAYER_API_KEY, which this runtime was not given."
+        )
+
+    monkeypatch.setattr(apps_module, "configure_on", refusing)
+    stage, _ = scenes_command.stage_in_cloud(
+        scene,
+        keys={"accounting": "k"},
+        environment=None,
+        minutes=None,
+        status=lambda _m: None,
     )
     assert stage.members["accounting"].reason == (
-        "Accounting is not set up: the MCP server odoo-accounting needs DATALAYER_API_KEY, "
-        "which this runtime was not given."
+        "the MCP server odoo-accounting needs DATALAYER_API_KEY, which this runtime was not given."
     )
 
 
@@ -706,12 +757,18 @@ def test_live_is_read_from_the_rehearsal_that_was_played(
     monkeypatch.setattr(
         scenes,
         "scene_played",
-        lambda _id: _played(passed=False, says="Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live."),
+        lambda _id: _played(
+            passed=False,
+            says="Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live.",
+        ),
     )
     assert scenes_command.verified_state(scene) == "Not Live"
+
     # A result that cannot be read is not a pass.
     def refused(_id: str) -> Any:
-        raise scenes.SceneError("rehearsal.json of 'sales-and-accounting' is not a rehearsal's result")
+        raise scenes.SceneError(
+            "rehearsal.json of 'sales-and-accounting' is not a rehearsal's result"
+        )
 
     monkeypatch.setattr(scenes, "scene_played", refused)
     assert scenes_command.verified_state(scene) == "Not verified yet"
@@ -719,7 +776,10 @@ def test_live_is_read_from_the_rehearsal_that_was_played(
     monkeypatch.setattr(scenes, "scene_played", lambda _id: _played())
     result = runner.invoke(scenes_command.app, ["ls"])
     assert "Sales & Accounting (sales-and-accounting)  Live" in result.output
-    assert "Rehearsed on Datalayer on 2026-10-08: Rehearsal: 4 of 4 beats passed." in result.output
+    assert (
+        "Rehearsed on Datalayer on 2026-10-08: Rehearsal: 4 of 4 beats passed."
+        in result.output
+    )
     result = runner.invoke(scenes_command.app, ["ls", "--json"])
     listed = {item["id"]: item for item in json.loads(result.output)}
     assert listed["sales-and-accounting"]["state"] == "Live"

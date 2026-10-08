@@ -330,8 +330,8 @@ def stage_in_cloud(
     ``addresses`` entry is asked there instead, and nothing is launched for
     it. A member the scene puts in the browser is played here, as the browser
     plays it. A launch Datalayer refuses, or does not set up in time, is the
-    member's sentence, never a crash. Returns the stage and the launches, to
-    finish.
+    member's sentence, never a crash; what its runtime says is to set up is
+    the member's notes. Returns the stage and the launches, to finish.
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
     from agent_runtimes.commands.apps import BOOTSTRAP_AGENT_SPEC_ID, configure_on
@@ -384,11 +384,11 @@ def stage_in_cloud(
         except (typer.BadParameter, RuntimeError) as refused:
             member.reason = getattr(refused, "message", None) or str(refused)
             continue
-        setup = [str(note) for note in configured.get("setup") or []]
-        if setup:
-            # What it needs is not there: its setup, in the runtime's sentences.
-            member.reason = f"{member.name} is not set up: " + " ".join(setup)
-            continue
+        # What the runtime says is to set up — the catalogue's own notes, an
+        # agent or a server not offered by default — is kept for the verdict;
+        # it is served all the same, as `loop apps run` serves it. A secret it
+        # was not given is a refusal of the configure, said above.
+        member.notes = [str(note) for note in configured.get("setup") or []]
         member.address = str((configured.get("a2a") or {}).get("url") or "")
         member.key = keys.get(member.id, "")
         if not member.key:
@@ -508,6 +508,11 @@ def scenes_rehearse(
             )
         else:
             stage = stage_here(scene)
+        for member in stage.members.values():
+            for note in getattr(member, "notes", None) or []:
+                notes.append(f"{member.name}, on its runtime: {note}")
+                if not as_json:
+                    console.print(f"  · {notes[-1]}", highlight=False)
         with _quiet():
             verdict = asyncio.run(
                 rehearse(

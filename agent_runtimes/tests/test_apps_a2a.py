@@ -56,7 +56,7 @@ def _token(**claims: Any) -> str:
     )
 
 
-KEY = _token(task_grant_uid="grant-1", task_uid="a2a:local:accounting:k1")
+KEY = _token(task_grant_uid="grant-1", task_id="a2a:local:accounting:k1")
 
 
 @pytest.fixture
@@ -338,12 +338,12 @@ class TestWhoIsAnswered:
             ("refused", 401, "does not accept"),
             (_token(), 403, "not granted to it"),
             (
-                _token(task_grant_uid="g", task_uid="a2a:local:sales:k1"),
+                _token(task_grant_uid="g", task_id="a2a:local:sales:k1"),
                 403,
                 "another route",
             ),
             (
-                _token(task_grant_uid="g", task_uid="a2a:01other:accounting:k1"),
+                _token(task_grant_uid="g", task_id="a2a:01other:accounting:k1"),
                 403,
                 "another route",
             ),
@@ -520,7 +520,7 @@ class TestLoopServesIt:
 
 
 #: The owner's key for visitors: granted to the route, reaching Odoo read only.
-VISITORS_KEY = _token(task_grant_uid="grant-v", task_uid="a2a:local:accounting:v1")
+VISITORS_KEY = _token(task_grant_uid="grant-v", task_id="a2a:local:accounting:v1")
 
 
 def _visitor_token(visitor: str = "tab-ada-0001", app: str = "accounting") -> str:
@@ -728,7 +728,7 @@ class TestVisitors:
             (_visitor_token(), "a visitor's token"),
             (_token(), "not a key granted to a route"),
             (
-                _token(task_grant_uid="g", task_uid="a2a:local:sales:k"),
+                _token(task_grant_uid="g", task_id="a2a:local:sales:k"),
                 "another route",
             ),
         ],
