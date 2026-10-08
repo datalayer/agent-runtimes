@@ -448,6 +448,14 @@ class MCPLifecycleManager:
                     self._failed_servers[server_id] = problem
                     return None
 
+                if config.transport == "streamable-http" and config.url:
+                    # Its command runs as a local HTTP process, reached at its
+                    # url (STUDIO W-02: Gmail, whose every request carries a
+                    # token IAM minted for whom the run acts for).
+                    return await self._start_http_process_server(
+                        server_id, config, env, expanded_args
+                    )
+
                 pydantic_server = MCPToolset(
                     StdioTransport(
                         command=config.command,
@@ -611,6 +619,62 @@ class MCPLifecycleManager:
                     return None
 
             return None
+
+    async def _start_http_process_server(
+        self,
+        server_id: str,
+        config: MCPServer,
+        env: dict[str, str],
+        args: list[str],
+    ) -> MCPServerInstance | None:
+        """Start a server's command as a local HTTP process, reached at its url.
+
+        Nothing is asked of it here: a server that opens what each request's
+        token says (Gmail, STUDIO W-02) answers nobody without one, so its
+        tools are listed by each run's own toolset
+        (`google_workspace.toolset_for_the_run`), never by the process's.
+        """
+        from pydantic_ai.mcp import MCPToolset
+
+        from agent_runtimes.mcp.google_workspace import (
+            start_http_process,
+            stop_http_process,
+        )
+
+        storage = self._config_servers if config.is_config else self._catalog_servers
+        try:
+            process = await start_http_process(
+                server_id,
+                str(config.command or ""),
+                args,
+                env,
+                config.url,
+                MCP_SERVER_STARTUP_TIMEOUT,
+            )
+        except Exception as error:  # noqa: BLE001 - said, as any start that fails
+            detail = redact(f"Failed to start MCP server '{server_id}': {error}")
+            logger.error(f"✗ {detail}")
+            self._failed_servers[server_id] = detail
+            return None
+        exit_stack = AsyncExitStack()
+        await exit_stack.__aenter__()
+        exit_stack.push_async_callback(stop_http_process, process)
+        config.tools = []
+        config.is_available = True
+        config.is_running = True
+        instance = MCPServerInstance(
+            server_id=server_id,
+            config=config,
+            # Never entered: each run is given a toolset of its own in its
+            # place, bound to whom it acts for.
+            pydantic_server=MCPToolset(config.url, id=server_id),
+            exit_stack=exit_stack,
+            tools=[],
+        )
+        storage[server_id] = instance
+        self._failed_servers.pop(server_id, None)
+        logger.info(f"✓ MCP server '{server_id}' listens at {config.url}")
+        return instance
 
     async def stop_server(self, server_id: str, is_config: bool = False) -> bool:
         """

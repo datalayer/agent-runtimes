@@ -41,8 +41,8 @@ export interface MCPServer {
   args: string[];
   /** Whether the server is available (based on tool discovery) */
   isAvailable: boolean;
-  /** Transport type: 'stdio' or 'http' */
-  transport: 'stdio' | 'http';
+  /** Transport type: 'stdio', 'http', or 'streamable-http' for a server its command runs as a local HTTP process at `url` */
+  transport: 'stdio' | 'http' | 'streamable-http';
   /** Environment variables required by this server (e.g., API keys) */
   requiredEnvVars?: string[];
   /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */

@@ -2649,6 +2649,13 @@ async def create_agent(
             remember_servers_in_users_name(
                 agent_id, running_app.connections if running_app is not None else None
             )
+            # In whose name it reaches Gmail, with a token IAM mints per run
+            # for them (STUDIO W-02).
+            from agent_runtimes.mcp.google_workspace import remember_gmail_connection
+
+            remember_gmail_connection(
+                agent_id, running_app.connections if running_app is not None else None
+            )
             # Credentials are never shown to the model (LOOP R-19): last, so
             # it wraps every tool call innermost and reads every request last.
             from agent_runtimes.guardrails.credentials import credentials_withheld

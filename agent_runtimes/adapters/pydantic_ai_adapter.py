@@ -31,6 +31,7 @@ from ..guardrails.tool_approvals import (
     ToolApprovalManager,
     ToolApprovalRejectedError,
 )
+from ..mcp.google_workspace import GOOGLE_WORKSPACE_SERVER
 from ..mcp.lifecycle import get_mcp_lifecycle_manager
 from .base import (
     AgentContext,
@@ -583,6 +584,25 @@ class PydanticAIAdapter(BaseAgent):
                 instance = lifecycle_manager.get_running_server(
                     server_id, is_config=None
                 )
+                if (
+                    instance
+                    and instance.is_running
+                    and server_id == GOOGLE_WORKSPACE_SERVER
+                ):
+                    from ..context.identities import get_request_user_jwt
+                    from ..mcp.google_workspace import toolset_for_the_run
+
+                    # Gmail, for this run only, in the name of whom it acts
+                    # for: every request carries a token IAM minted for them
+                    # (STUDIO W-02), never the process's or anybody else's.
+                    toolsets.append(
+                        toolset_for_the_run(
+                            self._agent_id,
+                            get_request_user_jwt(),
+                            instance.config.url,
+                        )
+                    )
+                    continue
                 if instance and instance.is_running:
                     pydantic_server = instance.pydantic_server
                     # Debug: log toolset details to help trace errors

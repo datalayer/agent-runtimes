@@ -121,6 +121,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 "    tools=[],",
             ]
         )
+        # A server its command runs as a local HTTP process: where it is
+        # reached (STUDIO W-02, `google-workspace`).
+        if spec.get("url"):
+            lines.append(f'    url="{spec["url"]}",')
 
         # Add env field if present
         if env_formatted:
@@ -280,7 +284,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: '{description}',",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
-                "  url: '',",
+                f"  url: '{spec.get('url', '')}',",
                 f"  command: '{spec['command']}',",
                 f"  args: {args_formatted},",
                 f"  transport: '{spec.get('transport', 'stdio')}',",

@@ -22,10 +22,47 @@ server serves them — `google-workspace__search_gmail_messages`,
 and nothing else, with codemode off, so that every call is decided with its
 arguments.
 
-**The Google Workspace server is not enabled on Datalayer**, and no real
-mailbox has been read: reaching a person's Gmail needs Google's consent
-screen, and, outside Datalayer's own domain, Google's review of the
-restricted Gmail scopes.
+**The Google Workspace server is not enabled on Datalayer yet**, and no real
+mailbox has been read. Outside Datalayer's own domain, Google's review of the
+restricted Gmail scopes comes first.
+
+## How it reaches a person's Gmail
+
+The person connects Gmail in Google's own consent screen, from the
+application's *Permissions*, at one of two levels:
+
+| Level | Google's scopes | The connection |
+| --- | --- | --- |
+| *can read* | `gmail.readonly` | `access: read` |
+| *can read and send* | `gmail.modify`, `gmail.send` | `access: write` |
+
+Datalayer's IAM keeps the refresh token as the person's secret — never
+answered by any secret route, never in a runtime. The `google-workspace`
+server runs on the runtime as a local HTTP process in its external OAuth
+provider mode (`MCP_ENABLE_OAUTH21`, `EXTERNAL_OAUTH21_PROVIDER`): it holds no
+Google credential and opens the mailbox of whichever access token each
+request carries.
+
+Each run of a deployed application's agent is given a toolset of its own
+(`agent_runtimes.mcp.google_workspace.toolset_for_the_run`), whose every
+request carries an access token of an hour that IAM mints
+(`POST /api/iam/v1/oauth2/google-workspace/token`) for whom the run acts for:
+
+- a connection `as: user` — the person talking to it, asked with their token
+  naming the application (what they let it do in their name);
+- a connection `as: owner` — its owner, asked with the application's
+  principal's token.
+
+IAM narrows the token to the connection's level: a *can read* connection on
+a *can read and send* consent gets a token that cannot send, and a *can read
+and send* connection on a *can read* consent is refused, saying to connect
+Gmail again. The token is held in memory until two minutes before it ends,
+withheld wherever it would be shown, and never in the model's context.
+
+A run nobody's Gmail can be reached for — a Preview or a local run, a person
+who has not let it act in their name, Gmail not connected or connected at a
+lower level — has no Gmail tool, and why is logged in a sentence: nobody
+else's mailbox is reached, and its other tools still work.
 
 ## The mail source it runs against today
 
@@ -149,11 +186,15 @@ in TypeScript: `app-rules.test.ts`. ai-agents (`test_app_deployments_api.py`)
 and the scheduler (`test_an_event_wakes_a_session.py`) test the events, the
 wake, *Pause* and the measures.
 
-**Not done:** no real mailbox has been read. Real Gmail needs the Google
-Workspace server enabled, with an OAuth client of Datalayer's, the person's
-consent in Google's own screen at two levels — *can read* and *can read and
-send* — and the credential kept for the tool, never shown to the model; and
-something that watches a real mailbox (Gmail's push through Pub/Sub, or its
-history) to tell ai-agents what arrived. Outside Datalayer's own domain,
-Google's verification of the restricted scopes comes first. Nothing is
-deployed.
+The Gmail connection (`test_google_workspace_gmail.py`): the server as the
+catalogue serves it, in whose name each run asks IAM, the token held and
+asked again, every request carrying it, a run with no Gmail tool when none
+can be had, the server's process started, waited for and stopped. IAM's
+consent, callback, token and disconnect routes are tested in IAM
+(`test_google_workspace.py`).
+
+**Not done:** no real mailbox has been read — that waits for IAM's deploy and
+a person's consent in Google's screen; and something that watches a real
+mailbox (Gmail's push through Pub/Sub, or its history) to tell ai-agents what
+arrived. Outside Datalayer's own domain, Google's verification of the
+restricted scopes comes first. Nothing is deployed.

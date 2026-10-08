@@ -161,20 +161,24 @@ export const GOOGLE_WORKSPACE_MCP_SERVER_0_0_1: MCPServer = {
   id: 'google-workspace',
   version: '0.0.1',
   name: 'Google Workspace',
-  description: 'Google Drive, Gmail, Calendar, and Docs integration',
+  description:
+    'Gmail of the person an application acts for, read or read and send, with a token Datalayer mints per call',
   icon: '@datalayer/icons-react:google',
   emoji: '📧',
-  url: '',
+  url: 'http://127.0.0.1:9711/mcp',
   command: 'uvx',
-  args: ['workspace-mcp'],
-  transport: 'stdio',
+  args: [
+    'workspace-mcp',
+    '--transport',
+    'streamable-http',
+    '--permissions',
+    'gmail:send',
+  ],
+  transport: 'streamable-http',
   enabled: false,
   isAvailable: false,
   tools: [],
-  requiredEnvVars: [
-    'GOOGLE_OAUTH_CLIENT_ID:0.0.1',
-    'GOOGLE_OAUTH_CLIENT_SECRET:0.0.1',
-  ],
+  requiredEnvVars: [],
 };
 
 export const HUGGINGFACE_MCP_SERVER_0_0_1: MCPServer = {

@@ -165,25 +165,29 @@ GOOGLE_WORKSPACE_MCP_SERVER_0_0_1 = MCPServer(
     id="google-workspace",
     version="0.0.1",
     name="Google Workspace",
-    description="Google Drive, Gmail, Calendar, and Docs integration",
+    description="Gmail of the person an application acts for, read or read and send, with a token Datalayer mints per call",
     icon="@datalayer/icons-react:google",
     emoji="📧",
     command="uvx",
     args=[
         "workspace-mcp",
+        "--transport",
+        "streamable-http",
+        "--permissions",
+        "gmail:send",
     ],
-    transport="stdio",
+    transport="streamable-http",
     enabled=False,
     tools=[],
+    url="http://127.0.0.1:9711/mcp",
     env={
-        "GOOGLE_OAUTH_CLIENT_ID": "${GOOGLE_OAUTH_CLIENT_ID}",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "${GOOGLE_OAUTH_CLIENT_SECRET}",
-        "WORKSPACE_MCP_PORT": "9000",
+        "MCP_ENABLE_OAUTH21": "true",
+        "EXTERNAL_OAUTH21_PROVIDER": "true",
+        "GOOGLE_OAUTH_CLIENT_ID": "datalayer-iam",
+        "WORKSPACE_MCP_HOST": "127.0.0.1",
+        "WORKSPACE_MCP_PORT": "9711",
     },
-    required_env_vars=[
-        "GOOGLE_OAUTH_CLIENT_ID:0.0.1",
-        "GOOGLE_OAUTH_CLIENT_SECRET:0.0.1",
-    ],
+    required_env_vars=[],
 )
 
 HUGGINGFACE_MCP_SERVER_0_0_1 = MCPServer(
