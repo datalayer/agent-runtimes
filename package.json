@@ -30,7 +30,8 @@
         "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
         "schema/*.json",
         "patches/",
-        "scripts/"
+        "scripts/",
+        "dist-embed/datalayer-app.{js,css}"
     ],
     "main": "lib/index.js",
     "types": "lib/index.d.ts",

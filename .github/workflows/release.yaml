@@ -59,6 +59,16 @@ jobs:
       - name: Build the frontend
         run: npm run build
 
+      # `dist-embed/` for the npm package: the `<datalayer-app>` element's one
+      # script and its stylesheet (STUDIO D-08), versioned with the runtime it
+      # talks to. The landing copies it from the package into `/embed/`.
+      - name: Build the embed bundle
+        run: |
+          set -euo pipefail
+          npm run build:embed
+          test -s dist-embed/datalayer-app.js
+          test -s dist-embed/datalayer-app.css
+
       - name: Check the frontend the wheel serves is complete
         run: |
           set -euo pipefail
@@ -77,6 +87,10 @@ jobs:
           ls dist-npm
           name="$(tar -xzOf dist-npm/*.tgz package/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).name")"
           test "$name" = "@datalayer/agent-runtimes"
+          # The embed bundle is in the package, not left behind.
+          tar -tzf dist-npm/*.tgz > npm-files.txt
+          grep -qx 'package/dist-embed/datalayer-app.js' npm-files.txt
+          grep -qx 'package/dist-embed/datalayer-app.css' npm-files.txt
 
       # The hatch build hook copies dist/ into agent_runtimes/static/dist, so
       # the frontend has to be built first (above). It refuses a build that
