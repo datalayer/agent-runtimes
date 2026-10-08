@@ -1896,6 +1896,7 @@ def _agent_maker(agent_id: str) -> Callable[[Session], AppAgent]:
 
     def make(session: Session) -> AppAgent:
         """The runtime's agent of the application, for this session."""
+        from agent_runtimes.routes.agents import get_stored_agent_spec
         from agent_runtimes.routes.agui import get_agui_adapter
 
         adapter = get_agui_adapter(agent_id)
@@ -1903,6 +1904,7 @@ def _agent_maker(agent_id: str) -> Callable[[Session], AppAgent]:
             raise SessionRefused(
                 410, f"The agent of {session.app.name} is no longer on this runtime."
             )
+        stored = get_stored_agent_spec(agent_id) or {}
         return AppAgent(
             app=session.app,
             agent=adapter._get_pydantic_agent(),
@@ -1910,6 +1912,10 @@ def _agent_maker(agent_id: str) -> Callable[[Session], AppAgent]:
             # Made with the application's rules, checks and record already.
             capabilities=[],
             toolsets=list(adapter._get_runtime_toolsets()),
+            # A model its modes choose is called as the agent's own is: through
+            # its provider, naming the instance it serves (STUDIO R-09).
+            inference_provider=stored.get("inference_provider") or None,
+            app_instance=dict(stored.get("app_instance") or {}) or None,
         )
 
     return make

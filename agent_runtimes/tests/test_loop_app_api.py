@@ -1162,7 +1162,7 @@ async def test_the_mode_the_user_is_in_is_told_to_the_agent(monkeypatch):
     monkeypatch.setattr(
         models,
         "resolve_model_for_inference_provider",
-        lambda model, provider: f"resolved {model}",
+        lambda model, provider, app_instance=None: f"resolved {model}",
     )
     kwargs = session.agent._run_kwargs({})
     assert (kwargs["model"], kwargs["instructions"]) == (

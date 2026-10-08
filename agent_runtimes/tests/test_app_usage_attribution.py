@@ -12,6 +12,7 @@ record on the caller's account.
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 import httpx
 
@@ -119,3 +120,58 @@ def test_the_header_names_are_ai_inference_s():
     spelled differently is a call nobody attributes."""
     assert models.APP_UID_HEADER == "X-Datalayer-App-Uid"
     assert models.DEPLOYMENT_UID_HEADER == "X-Datalayer-Deployment-Uid"
+
+
+def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
+    """STUDIO R-09: on a runtime, a model a mode chooses (P-19) is called
+    through the agent's provider, naming the instance it serves — not
+    around ai-inference, unmetered on the application."""
+    from pydantic_ai import Agent
+
+    from agent_runtimes.loop.apps.agent import AppAgent
+    from agent_runtimes.loop.apps.composer import ModeEffect
+    asked: list[tuple[Any, ...]] = []
+
+    def resolve(model, provider, app_instance=None):
+        asked.append((model, provider, app_instance))
+        return "test"
+
+    monkeypatch.setattr(models, "resolve_model_for_inference_provider", resolve)
+    agent = AppAgent(
+        app=None,  # what it runs is not read to choose its model
+        agent=Agent("test"),
+        session_id="s",
+        inference_provider="datalayer",
+        app_instance=DEPLOYMENT,
+        mode=ModeEffect(model="alibaba:qwen-max"),
+    )
+    agent._run_kwargs({})
+    assert asked == [("alibaba:qwen-max", "datalayer", DEPLOYMENT)]
+
+
+def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeypatch):
+    """The agent a runtime's session runs (R-04) is told the provider and the
+    instance its agent was created with."""
+    from agent_runtimes.loop.apps import sessions
+    from agent_runtimes.routes import agents, agui
+
+    class Adapter:
+        def _get_pydantic_agent(self):
+            return "the-agent"
+
+        def _get_runtime_toolsets(self):
+            return []
+
+    monkeypatch.setattr(agui, "get_agui_adapter", lambda agent_id: Adapter())
+    monkeypatch.setattr(
+        agents,
+        "get_stored_agent_spec",
+        lambda agent_id: {"inference_provider": "datalayer", "app_instance": DEPLOYMENT},
+    )
+
+    class Session:
+        app = None
+        id = "s"
+
+    made = sessions._agent_maker("agent-1")(Session())
+    assert (made.inference_provider, made.app_instance) == ("datalayer", DEPLOYMENT)

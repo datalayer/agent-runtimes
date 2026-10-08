@@ -337,6 +337,16 @@ class AppAgent:
     """What the modes the person chose tell every run, and the model it runs
     on (LOOP P-19); set by the session."""
 
+    inference_provider: Optional[str] = None
+    """Where a model the person's modes choose is called (P-19): on a
+    runtime, through the provider its agent was made with — ``datalayer``,
+    ai-inference — never around it."""
+
+    app_instance: Optional[dict[str, Any]] = None
+    """The application instance it serves on a runtime: a model its modes
+    choose names its application and deployment on every call, as the
+    agent's own model does, so it is metered on them (STUDIO R-09)."""
+
     def _run_kwargs(self, context: dict[str, Any]) -> dict[str, Any]:
         """What a run is given: its turn's context and modes, the session's history."""
         from agent_runtimes.models.models import resolve_model_for_inference_provider
@@ -348,7 +358,13 @@ class AppAgent:
             "capabilities": self.capabilities,
             "toolsets": self.toolsets or None,
             **(
-                {"model": resolve_model_for_inference_provider(self.mode.model, None)}
+                {
+                    "model": resolve_model_for_inference_provider(
+                        self.mode.model,
+                        self.inference_provider,
+                        app_instance=self.app_instance,
+                    )
+                }
                 if self.mode.model
                 else {}
             ),
