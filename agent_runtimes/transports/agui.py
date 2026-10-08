@@ -549,6 +549,18 @@ class AGUITransport(BaseTransport):
 
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = transport_self._get_runtime_toolsets()
+                # An application's run reaches the Datalayer MCP gateway as
+                # the application, never with the process's key: a session's
+                # run of a deployment as its principal (LOOP I-03), of a
+                # Preview with the token the session gives the run, narrowed
+                # to its granted Spaces (R-25) — which the gateway holds.
+                from ..loop.apps.principal import gateway_toolsets_of_the_run
+
+                runtime_toolsets = await gateway_toolsets_of_the_run(
+                    agent_id,
+                    runtime_toolsets,
+                    extract_jwt_token(request.headers.get("authorization"), None),
+                )
 
                 # Log detailed toolset information
                 if runtime_toolsets:

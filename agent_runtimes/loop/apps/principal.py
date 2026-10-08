@@ -53,6 +53,7 @@ __all__ = [
     "ensure_preview_token",
     "ensure_principal_token",
     "forget_principal_token",
+    "gateway_toolsets_of_the_run",
     "give_principal_token",
     "preview_key",
     "preview_token",
@@ -281,6 +282,55 @@ def api_key_for(deployment_uid: str) -> Callable[[], Awaitable[str]]:
         return str(_HELD[deployment_uid]["token"])
 
     return api_key
+
+
+async def gateway_toolsets_of_the_run(
+    agent_id: Optional[str], toolsets: list[Any], bearer: Optional[str]
+) -> list[Any]:
+    """
+    An application's run reaches the Datalayer MCP gateway as the application, never with the runtime's key.
+
+    A deployment's run with its principal's token (LOOP I-03) — its servers in
+    each user's name with the token of the person talking to it (I-04) — and
+    a Preview's with the token its run carries, the person's narrowed to the
+    Spaces its application is granted (R-25): the gateway holds each to those
+    Spaces. Any other agent's toolsets are left as they are.
+
+    Parameters
+    ----------
+    agent_id : str | None
+        The agent running.
+    toolsets : list[Any]
+        Its toolsets, as the process holds them.
+    bearer : str | None
+        The token the run's request carries.
+
+    Returns
+    -------
+    list[Any]
+        The toolsets, the gateway's reached with the application's token.
+    """
+    from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
+    from agent_runtimes.models.models import app_instance_of
+
+    instance = app_instance_of(agent_id)
+    if not instance or not str(instance.get("app_uid") or "").strip():
+        return toolsets
+    deployment = deployment_of(instance)
+    if not deployment:
+        # A Preview: its session's run carries the person's token narrowed to
+        # the granted Spaces (`sessions.LiveSession.run_token`); without one,
+        # the gateway is reached with none and refuses.
+        return toolsets_for_the_run(toolsets, bearer or "")
+    from agent_runtimes.loop.apps.acting import acting_token, servers_in_users_name
+
+    in_users_name = servers_in_users_name(agent_id)
+    return toolsets_for_the_run(
+        toolsets,
+        principal_token(deployment) or "",
+        in_users_name=in_users_name,
+        users_token=(await acting_token(deployment, bearer) if in_users_name else ""),
+    )
 
 
 # --- a Preview, held to its application's Space grants (LOOP R-25) ----------

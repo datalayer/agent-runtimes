@@ -1077,7 +1077,6 @@ class VercelAITransport(BaseTransport):
             PrincipalTokenMissing,
             deployment_of,
             ensure_principal_token,
-            principal_token,
         )
         from ..models.models import app_instance_of as _app_instance_of
 
@@ -1403,30 +1402,18 @@ class VercelAITransport(BaseTransport):
             async with IdentityContextManager(identities_from_request):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
-                if serving_deployment:
-                    from ..loop.apps.acting import acting_token, servers_in_users_name
-                    from ..mcp.datalayer_gateway import toolsets_for_the_run
+                # The Datalayer MCP gateway is reached as the application,
+                # never with the process's key: a deployment as its principal
+                # (LOOP I-03), its servers in each user's name with the token of
+                # the person talking to it (I-04), a Preview with its run's
+                # token, narrowed to its granted Spaces (R-25).
+                from ..loop.apps.principal import gateway_toolsets_of_the_run
 
-                    # The Datalayer MCP gateway is reached as the deployment's
-                    # principal, never with the process's key (LOOP I-03); its
-                    # servers in each user's name with the token of the person
-                    # talking to it, from what they let it do (LOOP I-04).
-                    in_users_name = servers_in_users_name(self._agent_id)
-                    runtime_toolsets = toolsets_for_the_run(
-                        runtime_toolsets,
-                        principal_token(serving_deployment) or "",
-                        in_users_name=in_users_name,
-                        users_token=(
-                            await acting_token(
-                                serving_deployment,
-                                extract_jwt_token(
-                                    request.headers.get("authorization"), None
-                                ),
-                            )
-                            if in_users_name
-                            else ""
-                        ),
-                    )
+                runtime_toolsets = await gateway_toolsets_of_the_run(
+                    self._agent_id,
+                    runtime_toolsets,
+                    extract_jwt_token(request.headers.get("authorization"), None),
+                )
 
                 # Filter MCP toolsets to only expose tools the user has enabled.
                 # We check if each tool's name is in the known MCP tool inventory;
