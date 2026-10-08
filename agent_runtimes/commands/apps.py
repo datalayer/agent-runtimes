@@ -1658,12 +1658,43 @@ def apps_deploy(
         envvar="DATALAYER_SITE_URL",
         help="The site its address is on.",
     ),
+    visibility: str = typer.Option(
+        None,
+        "--visibility",
+        help="Who may open it: private, link or public (as the Ship tab says it).",
+    ),
+    always_on: bool = typer.Option(
+        None,
+        "--always-on/--not-always-on",
+        help="Keep it on a runtime of its own, paid by you, within --spend-limit.",
+    ),
+    spend_limit: float = typer.Option(
+        None,
+        "--spend-limit",
+        min=0,
+        help="The most it may spend in a day, in credits.",
+    ),
+    a2a: bool = typer.Option(
+        None,
+        "--a2a/--no-a2a",
+        help=(
+            "Kept always on, serve it over A2A at its stable address, "
+            "/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/ (STUDIO A-08)."
+        ),
+    ),
+    visitors: bool = typer.Option(
+        None,
+        "--visitors/--no-visitors",
+        help="Served over A2A and open to anyone with the link: visitors may ask it too.",
+    ),
 ) -> None:
     """Deploy a version at the application's hosted address (LOOP S-06).
 
     The deployment the Studio's Ship tab shows: deploying another version
     moves it, and deploying a paused one resumes it. Prints the address and
-    the snippet that embeds it.
+    the snippet that embeds it. With --visibility, --always-on,
+    --spend-limit, --a2a or --visitors, the deployment is then changed as
+    the Ship tab would change it, and where it answers over A2A is printed.
     """
     import logging
 
@@ -1683,13 +1714,19 @@ def apps_deploy(
     except NotSignedIn as refused:
         console.print(f"[red]✗[/red] {refused} Sign in with `datalayer login`.")
         raise typer.Exit(1)
+    if visibility is not None and visibility not in ("private", "link", "public"):
+        console.print(
+            "[red]✗[/red] --visibility is private, link or public; invite people in the Ship tab."
+        )
+        raise typer.Exit(1)
+    deployments = Deployments(
+        client.urls.spacer_url,
+        token,
+        ai_agents_url=client.urls.ai_agents_url,
+    )
     try:
         deployment, done = deploy(
-            Deployments(
-                client.urls.spacer_url,
-                token,
-                ai_agents_url=client.urls.ai_agents_url,
-            ),
+            deployments,
             app_uid,
             version,
             slug,
@@ -1705,6 +1742,35 @@ def apps_deploy(
         "unchanged": "Already at",
     }[done]
     console.print(f"[green]✓[/green] {said} version {deployment.version}.")
+    changes = {
+        "visibility": visibility,
+        "always_on": always_on,
+        "spend_limit": spend_limit,
+        "a2a": a2a,
+        "a2a_visitors": visitors,
+    }
+    if any(value is not None for value in changes.values()):
+        try:
+            changed = deployments.change(deployment.uid, **changes)
+            kept = deployments.kept(deployment.uid)
+        except (DeployRefused, httpx.HTTPError) as refused:
+            console.print(f"[red]✗[/red] {refused}")
+            raise typer.Exit(1)
+        state = (kept.get("kept") or {}).get("state") or "off"
+        why = (kept.get("kept") or {}).get("why") or ""
+        console.print(
+            f"  Open to: {changed.get('visibility', 'private')}; always on: "
+            f"{'yes' if kept.get('always_on') else 'no'} ({state}{': ' + why if why else ''}); "
+            f"limit {kept.get('limit')} credits a day.",
+            highlight=False,
+        )
+        served = kept.get("a2a") or {}
+        if served.get("url"):
+            console.print(
+                f"  A2A: {served['url']}"
+                + ("  (open to visitors)" if served.get("visitors") else ""),
+                highlight=False,
+            )
     console.print(
         f"  {origin}{deployment_path(deployment.slug)}  (private to you until it is shared)"
     )

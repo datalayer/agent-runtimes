@@ -308,6 +308,65 @@ live in the runtime's process: a restart starts them again. The visitor's
 own model calls (Sales, in the browser) are ai-inference's to limit: its
 anonymous rate and its ceiling for the day.
 
+## At a stable address: a deployment kept always on
+
+`loop apps run --cloud --a2a` serves an application from a runtime, at that
+runtime's address. When the runtime is launched again, the address changes,
+and every caller has to be told the new one. A **deployment** kept always on
+answers over A2A at an address that names its slug, not a runtime:
+
+```text
+https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/
+```
+
+ai-agents keeps the deployment on a runtime of its own (LOOP R-33). Each
+time it launches that runtime, it makes the deployment's agent there and
+then asks the runtime to serve it over A2A, with a card that names the
+stable address (`PUT /api/v1/apps/a2a`, below). What is asked at the stable
+address — the card at `.well-known/agent-card.json`, and the JSON-RPC
+requests — is forwarded to whichever runtime keeps the deployment now. A
+streamed answer (`SendStreamingMessage`, SSE) is relayed as it streams.
+Callers keep the same address when the runtime is replaced, when the
+deployment moves to another version, and after a restart.
+
+Its owner turns it on from the terminal, after pushing a version and
+deploying it:
+
+```bash
+loop apps push accounting.yaml --app <application uid>
+loop apps deploy <application uid> --slug demo-accounting \
+  --visibility public --always-on --spend-limit 50 --a2a --visitors
+#  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a/  (open to visitors)
+```
+
+or with `PATCH /api/ai-agents/v1/apps/deployments/{uid}`:
+
+| Field | What it is |
+| --- | --- |
+| `a2a` | Served over A2A at its stable address. Only a hosted deployment kept always on (`always_on`, with a spend limit). |
+| `a2a_visitors` | Open there to visitors without an account too, as `--visitors` opens a runtime (above). Only with `a2a`, and only when anyone with the link may open it (`visibility` `link` or `public`). Making it private while visitors are let in is refused. |
+
+A change of either is sent to the runtime already running.
+`GET …/deployments/{uid}/kept` says where it answers:
+`a2a: {on, visitors, url}`.
+
+**Who it answers** is the runtime's gate, as above: a key granted to the
+route, and a visitor's token from ai-inference naming the application when
+it is open to visitors. The stable address adds no access of its own.
+
+**When nothing answers**, the address says why: `404` when it is not served
+over A2A (*… its owner has not turned it on.*) or no deployment has that
+slug; `503` when it is paused, no longer kept always on, or its computer is
+starting or waiting (the keeper's reason, such as its limit for the day);
+`502` when its runtime did not answer.
+
+**On the runtime**, `PUT /api/v1/apps/a2a` `{agent, url, visitors}` serves
+an application's agent that is already made there (by `/api/v1/agents`, from
+the deployment) over A2A. Its card names `url`. `DELETE /api/v1/apps/a2a`
+stops serving it. Both need a person's token or the machine itself. An agent
+that is not on the runtime gets 404, and one that is not an application's
+agent gets 409.
+
 ## Output formats
 
 An application says the formats its answers come in, by media type, words

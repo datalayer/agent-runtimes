@@ -21,7 +21,11 @@ Studio's Python tab (LOOP P-10, P-13); a person's, nothing kept here.
 `GET /api/v1/apps/memories/{app}` is what an
 application remembers of the caller — its owner, or a visitor apart (LOOP
 R-36) — and `DELETE` forgets one thing of it, or everything once the caller
-confirmed how many (LOOP R-18).
+confirmed how many (LOOP R-18). `PUT /api/v1/apps/a2a` serves an
+application's agent made here over A2A, with a card naming the address its
+callers reach it at — what ai-agents asks of the runtime a deployment is kept
+on, so that it answers at the deployment's stable address (STUDIO A-08) —
+and `DELETE` serves nothing any more.
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
@@ -483,6 +487,87 @@ async def configure_app(
         "plugins_off_says": plugins_off.says,
         **({"a2a": a2a} if a2a else {}),
     }
+
+
+class ServeOverA2ARequest(BaseModel):
+    """What ai-agents sends to serve a kept deployment's agent over A2A."""
+
+    agent: str = Field(
+        ...,
+        description=(
+            "The application's agent on this runtime, by its id, as "
+            "/api/v1/agents made it from the deployment (its application's id)"
+        ),
+    )
+    url: str = Field(
+        ...,
+        description=(
+            "Where its callers reach its A2A route, for its agent card: a kept "
+            "deployment's stable address, which ai-agents forwards to this "
+            "runtime (STUDIO A-08), not the runtime's own"
+        ),
+    )
+    visitors: bool = Field(
+        False,
+        description=(
+            "Also open to visitors without an account (LOOP R-30), as its "
+            "deployment says: their runs only read and are counted"
+        ),
+    )
+
+
+@router.put("/a2a")
+async def serve_agent_over_a2a(
+    body: ServeOverA2ARequest,
+    authorized: Authorized = Depends(a_person),
+) -> Dict[str, Any]:
+    """Serve an application's agent already made here over A2A (STUDIO A-08).
+
+    What ai-agents asks of the runtime a deployment is kept on (LOOP R-33),
+    once it has made the deployment's agent there: its A2A route, behind its
+    gate — keys granted to the route, and visitors when the deployment is
+    open to them — with a card that names the deployment's stable address.
+    Whatever this runtime served over A2A before is no longer served.
+    """
+    from agent_runtimes.loop.apps.a2a import serve_app_over_a2a
+    from agent_runtimes.loop.apps.plugins import find_app
+    from agent_runtimes.routes.acp import _agents
+
+    held = _agents.get(body.agent)
+    if held is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No agent {body.agent} on this runtime: make it before serving it.",
+        )
+    app = find_app(body.agent)
+    if app is None:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{body.agent} is not an application's agent: only an application "
+                "is served over A2A here."
+            ),
+        )
+    url = body.url.strip()
+    if not url.startswith(("https://", "http://")):
+        raise HTTPException(
+            status_code=422,
+            detail="Say where its callers reach it as an http(s) address.",
+        )
+    served = serve_app_over_a2a(app, held[0], url, visitors=body.visitors)
+    return {"success": True, "a2a": served}
+
+
+@router.delete("/a2a")
+async def stop_serving_over_a2a(
+    authorized: Authorized = Depends(a_person),
+) -> Dict[str, Any]:
+    """Serve nothing over A2A here any more: its deployment no longer is."""
+    from agent_runtimes.loop.apps.a2a import served_apps, stop_serving_apps
+
+    stopped = served_apps()
+    stop_serving_apps()
+    return {"success": True, "stopped": stopped}
 
 
 class BuildRequest(BaseModel):

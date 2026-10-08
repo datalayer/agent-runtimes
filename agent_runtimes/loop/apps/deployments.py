@@ -211,6 +211,32 @@ class Deployments:
         )
         return deployment_of(body.get("deployment"))
 
+    def change(self, uid: str, **changes: Any) -> dict[str, Any]:
+        """Change what a deployment is beside its version — who may open it,
+        kept always on and its spend limit, served over A2A at its stable
+        address and open there to visitors (STUDIO A-08) — as ai-agents
+        answers it, whole.
+        """
+        body = self._answer(
+            self.http.patch(
+                f"{self.agents}/{quote(uid, safe='')}",
+                json={
+                    key: value for key, value in changes.items() if value is not None
+                },
+            ),
+            "The deployment could not be changed",
+        )
+        return dict(body.get("deployment") or {})
+
+    def kept(self, uid: str) -> dict[str, Any]:
+        """What keeping a deployment always on says now: its computer, its
+        limit, and where it answers over A2A (`a2a.url`).
+        """
+        return self._answer(
+            self.http.get(f"{self.agents}/{quote(uid, safe='')}/kept"),
+            "What keeps the deployment on could not be read",
+        )
+
     def delete(self, uid: str) -> None:
         self._answer(
             self.http.delete(f"{self.agents}/{quote(uid, safe='')}"),
