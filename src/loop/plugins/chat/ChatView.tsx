@@ -121,6 +121,7 @@ import {
   LoopRunProps,
   LoopSlots,
   agentServerOf,
+  noRuntimeSaid,
   canOpenView,
   runForwardedProps,
   onPromptFocusRequest,
@@ -1305,9 +1306,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const noRuntime =
     agentServerUrl === undefined
-      ? workspace.sandbox.state === 'error'
-        ? chatText.noRuntime(workspace.sandbox.errorReason ?? '')
-        : chatText.runtimeStarting
+      ? noRuntimeSaid(workspace.sandbox, chatText)
       : undefined;
   const chatDisabled =
     gateBlocked ||

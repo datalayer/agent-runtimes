@@ -34,9 +34,12 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import type { A2uiClientAction, A2uiMessage } from '@a2ui/web_core/v0_9';
 import type { AppSpec } from '../../../types/agentspecs';
 import { catalogOfBlocks } from '../../../components/a2ui';
+import { useChatWords } from '../../../chat/ChatLanguage';
 import {
   LoopCanvasBlock,
   LoopChatTurn,
+  agentServerOf,
+  noRuntimeSaid,
   type ChatTurnSnapshot,
   type ConversationEntry,
   type LoopWorkspaceContext,
@@ -148,12 +151,25 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
     [app, turn, conversation, outputs],
   );
   const token = useIAMStore(state => state.token) ?? '';
-  const pageContext = useRef<PageRunContext>({ serverUrl: '', agentId: '' });
-  pageContext.current = {
-    serverUrl: workspace.sandbox?.agentBaseUrl || workspace.serverUrl || '',
-    agentId: workspace.agentId || app.id,
-    token: token || undefined,
-  };
+  const chatText = useChatWords();
+  /*
+   * Where its page runs: the runtime its agent is on, or nothing while none
+   * is assigned — then a run is not sent and the page says why, rather than
+   * reaching for the host's server (on a hosted page, the page's own origin).
+   */
+  const pageServer = agentServerOf(workspace.sandbox, workspace.serverUrl);
+  const pageContext = useRef<PageRunContext | null>(null);
+  pageContext.current =
+    pageServer === undefined
+      ? null
+      : {
+          serverUrl: pageServer,
+          agentId: workspace.agentId || app.id,
+          token: token || undefined,
+        };
+  const noRuntime = useRef('');
+  noRuntime.current =
+    pageServer === undefined ? noRuntimeSaid(workspace.sandbox, chatText) : '';
   const pageSession = useRef<Promise<string> | null>(null);
   const pageRunning = useRef(false);
   const pageNext = useRef<Record<string, unknown> | null>(null);
@@ -171,6 +187,10 @@ export function AppPage({ app, workspace }: AppPageProps): JSX.Element {
         const next = pageNext.current;
         pageNext.current = null;
         const context = pageContext.current;
+        if (!context) {
+          setRefusal(noRuntime.current);
+          continue;
+        }
         try {
           pageSession.current ??= openPageSession(context);
           const turn = await runPageIn(

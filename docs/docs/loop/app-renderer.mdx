@@ -277,8 +277,10 @@ The computer view (`app-computer`) shows, beside its page:
   meanwhile the person runs Python on it themselves. **Hand back**: its
   agent's waiting calls go on.
 
-It reads the runtime its agent runs on (`sandbox.agentBaseUrl`, else
-`serverUrl`), with the person's token:
+It reads the runtime its agent runs on (`agentServerOf`: on Datalayer the
+runtime's `agentBaseUrl` alone; elsewhere it, else `serverUrl`), with the
+person's token. While no runtime is assigned it asks nothing and says why, in
+the chat's sentences; a widget's page likewise runs nothing and says it.
 
 | Route                                                  | What it does                                                                            |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------- |

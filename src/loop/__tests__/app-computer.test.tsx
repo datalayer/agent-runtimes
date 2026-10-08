@@ -43,6 +43,7 @@ import {
   type LoopWorkspaceContext,
 } from '../core';
 import { AppComputer } from '../plugins/app-computer';
+import { ENGLISH_CHAT_WORDS } from '../../chat/words';
 import { APP_CATALOGUE } from '../../specs/apps';
 import type { AppSpec } from '../../types/agentspecs';
 
@@ -442,5 +443,30 @@ describe('the computer view', () => {
       <AppComputer app={app({ shell: true })} workspace={workspace} />,
     );
     expect(container.textContent).toContain('No GET ');
+  });
+
+  it('asks nothing and says why while no runtime is assigned (P-24)', async () => {
+    const calls = runtime({});
+    const reason = 'No runtime available. At capacity.';
+    const { container } = await render(
+      <AppComputer
+        app={app({ shell: true })}
+        workspace={
+          {
+            ...workspace,
+            serverUrl: 'http://localhost:3063',
+            sandbox: {
+              state: 'error',
+              target: 'datalayer',
+              errorReason: reason,
+            },
+          } as LoopWorkspaceContext
+        }
+      />,
+    );
+    expect(container.textContent).toContain(
+      ENGLISH_CHAT_WORDS.noRuntime(reason),
+    );
+    expect(calls).toHaveLength(0);
   });
 });

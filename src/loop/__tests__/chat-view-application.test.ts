@@ -59,8 +59,7 @@ describe('an application in the chat', () => {
     expect(chat).toContain(
       'const agentServerUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);',
     );
-    expect(chat).toContain('chatText.noRuntime(workspace.sandbox.errorReason');
-    expect(chat).toContain(': chatText.runtimeStarting');
+    expect(chat).toContain('noRuntimeSaid(workspace.sandbox, chatText)');
     // No protocol, so no connection and no send.
     expect(chat).toContain('useMemo<ProtocolConfig | undefined>(');
     expect(chat).toMatch(/: agentServerUrl !== undefined\s+\? \{/);

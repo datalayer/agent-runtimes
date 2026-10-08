@@ -29,8 +29,12 @@ import { signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppSpec } from '../../../types/agentspecs';
+import { useChatWords } from '../../../chat/ChatLanguage';
 import {
   LoopChatTurn,
+  agentServerOf,
+  noRuntimeSaid,
+  IDLE_SANDBOX_SNAPSHOT,
   type ChatTurnSnapshot,
   type ConversationEntry,
   type LoopWorkspaceContext,
@@ -368,11 +372,26 @@ export function AppComputer({
       setEnded(turn.id);
     }
   }, [settled, turn.id]);
-  const serverUrl =
-    workspace?.sandbox.agentBaseUrl || workspace?.serverUrl || '';
+  const chatText = useChatWords();
+  /*
+   * The runtime its agent is on, or nothing while none is assigned: then the
+   * computer is asked nothing and says why, rather than asking the host's
+   * server (on a hosted page, the page's own origin). Outside a workspace
+   * there is none either.
+   */
+  const serverUrl = workspace
+    ? agentServerOf(workspace.sandbox, workspace.serverUrl)
+    : undefined;
+  const noRuntime =
+    serverUrl === undefined
+      ? noRuntimeSaid(workspace?.sandbox ?? IDLE_SANDBOX_SNAPSHOT, chatText)
+      : undefined;
   const agentId = workspace?.agentId || app.id;
-  const context = useMemo<ComputerContext>(
-    () => ({ serverUrl, agentId, token: token || undefined }),
+  const context = useMemo<ComputerContext | undefined>(
+    () =>
+      serverUrl === undefined
+        ? undefined
+        : { serverUrl, agentId, token: token || undefined },
     [serverUrl, agentId, token],
   );
   const parts = computerParts(app);
@@ -388,6 +407,9 @@ export function AppComputer({
     };
   }, []);
   const read = useCallback(() => {
+    if (!context) {
+      return;
+    }
     readComputer(context).then(
       found => {
         if (alive.current) {
@@ -402,11 +424,14 @@ export function AppComputer({
   }, [context]);
   const used = hasComputer(parts);
   useEffect(() => {
-    if (used && serverUrl) {
+    if (used && context) {
       read();
     }
-  }, [used, serverUrl, read, ended]);
+  }, [used, context, read, ended]);
   const act = (step: (context: ComputerContext) => Promise<unknown>) => {
+    if (!context) {
+      return;
+    }
     setBusy(true);
     step(context).then(
       () => {
@@ -439,12 +464,21 @@ export function AppComputer({
           <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', m: 0, mt: 1 }}>
             {COMPUTER_WORDS.noBrowser}
           </Text>
+          {noRuntime ? (
+            <Text
+              as="p"
+              role="status"
+              sx={{ fontSize: 1, color: 'fg.default', m: 0, mt: 2 }}
+            >
+              {noRuntime}
+            </Text>
+          ) : null}
           {error ? (
             <Text as="p" sx={{ fontSize: 1, color: 'danger.fg', m: 0, mt: 2 }}>
               {error}
             </Text>
           ) : null}
-          {state ? (
+          {state && context ? (
             <Box mt={2} data-testid="computer-holder">
               <Text as="p" sx={{ fontSize: 1, m: 0, mb: 1 }}>
                 {!state.held
@@ -477,7 +511,7 @@ export function AppComputer({
             </Box>
           ) : null}
           <Terminal conversation={conversation} />
-          {state ? (
+          {state && context ? (
             <Files context={context} state={state} ended={ended} />
           ) : null}
         </>

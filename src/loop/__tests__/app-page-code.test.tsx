@@ -23,6 +23,7 @@ import {
 import { useReactor } from '@datalayer/reactor/react';
 import type { AppPageSpec, AppSpec } from '../../types/agentspecs';
 import { LoopChatTurn, type LoopWorkspaceContext } from '../core';
+import { ENGLISH_CHAT_WORDS } from '../../chat/words';
 import { dumpAppspec, emptyAppspec, parseAppspec } from '../apps/appspec';
 import { checkAppspec, pageProblems } from '../apps/checks';
 import { createTurnFeed } from '../plugins/chat/turnState';
@@ -385,6 +386,7 @@ describe('the page drawn', () => {
     const workspace = {
       serverUrl: 'http://runtime',
       agentId: 'quote',
+      sandbox: { state: 'running' },
       viewControls: { send },
       prompts: { submit: vi.fn() },
     } as unknown as LoopWorkspaceContext;
@@ -434,5 +436,56 @@ describe('the page drawn', () => {
     expect(container.textContent).toContain('36 €');
     expect(container.textContent).not.toContain('120 €');
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('runs nothing and says why while no runtime is assigned (P-24)', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    const feed = createTurnFeed();
+    const plugin = definePlugin({
+      name: 'test-chat-turn',
+      contributes: [
+        contribution(
+          LoopChatTurn,
+          { id: 'turn', turn: feed.turn, conversation: feed.conversation },
+          { id: 'turn' },
+        ),
+      ],
+    });
+    // On Datalayer, the pool had none: the host's server is no stand-in.
+    const reason = 'No runtime available. At capacity.';
+    const workspace = {
+      serverUrl: 'http://localhost:3063',
+      agentId: 'quote',
+      sandbox: { state: 'error', target: 'datalayer', errorReason: reason },
+      viewControls: { send: vi.fn() },
+      prompts: { submit: vi.fn() },
+    } as unknown as LoopWorkspaceContext;
+    const app = widget();
+    function Harness() {
+      const reactor = React.useMemo(
+        () => buildReactorFromPlugins([plugin, ...CANVAS_BLOCK_PLUGINS]),
+        [],
+      );
+      useReactor(reactor);
+      return (
+        <ThemeProvider>
+          <AppPage app={app} workspace={workspace} />
+        </ThemeProvider>
+      );
+    }
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mounted.push({ root, container });
+    await act(async () => root.render(<Harness />));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PAGE_RUN_DELAY_MS + 10);
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(container.textContent).toContain(
+      ENGLISH_CHAT_WORDS.noRuntime(reason),
+    );
   });
 });

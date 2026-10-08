@@ -68,6 +68,7 @@ async function drawPage(
     ],
   });
   const workspace = {
+    sandbox: { state: 'running' },
     viewControls: { send },
     prompts: { submit: vi.fn() },
   } as unknown as LoopWorkspaceContext;

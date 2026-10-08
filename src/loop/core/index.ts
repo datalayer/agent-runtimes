@@ -28,6 +28,7 @@ import type { ContextSnapshotData } from '../../types/context';
 import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
+import type { ChatWords } from '../../chat/words';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -96,6 +97,20 @@ export function agentServerOf(
     return sandbox.agentBaseUrl || undefined;
   }
   return sandbox.agentBaseUrl || serverUrl;
+}
+
+/**
+ * What is said while {@link agentServerOf} names no server: the runtime is
+ * being assigned, or — its launch refused, the pool empty — none is, and
+ * why. One sentence for the chat, the page and the computer alike.
+ */
+export function noRuntimeSaid(
+  sandbox: Pick<SandboxSnapshot, 'state' | 'errorReason'>,
+  words: Pick<ChatWords, 'noRuntime' | 'runtimeStarting'>,
+): string {
+  return sandbox.state === 'error'
+    ? words.noRuntime(sandbox.errorReason ?? '')
+    : words.runtimeStarting;
 }
 
 /**
