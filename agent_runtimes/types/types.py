@@ -3449,6 +3449,31 @@ class SceneRehearsalSpec(BaseModel):
     verified: AppVerifiedSpec = Field(default_factory=AppVerifiedSpec)
 
 
+class ScenePlayedBeatSpec(BaseModel):
+    """One beat of a rehearsal that was played: its verdict, in the Validate tab's words."""
+
+    beat: str = Field(...)
+    state: str = Field(..., description="`passed`, `failed` or `not_run`")
+    says: str = Field(default="", description="What differed, or why it was not run")
+    seconds: float = Field(default=0.0)
+
+
+class ScenePlayedSpec(BaseModel):
+    """What came of the last rehearsal `loop scenes rehearse --cloud` played (LOOP A-14).
+
+    Kept beside the specs in ``<id>/rehearsal.json``, written by the command
+    and never by hand. A scene is *Live* when it ``passed``; one that did not
+    says so with ``says``.
+    """
+
+    at: str = Field(..., description="When it was played, ISO 8601")
+    where: str = Field(default="on Datalayer")
+    passed: bool = Field(...)
+    says: str = Field(..., description="The verdict in one sentence")
+    beats: List[ScenePlayedBeatSpec] = Field(default_factory=list)
+    runtime: str = Field(default="", description="The agent-runtimes that played it")
+
+
 class SceneDeploymentSpec(BaseModel):
     """Where the scene plays."""
 
@@ -3495,4 +3520,8 @@ class SceneSpec(BaseModel):
     setup: List[str] = Field(
         default_factory=list,
         description="What it names that is not enabled, in sentences",
+    )
+    played: Optional[ScenePlayedSpec] = Field(
+        default=None,
+        description="The last rehearsal played on Datalayer, what *Live* is read from",
     )

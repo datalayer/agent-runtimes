@@ -150,13 +150,21 @@ plays each beat's cue through the scene and judges it:
 
 - **The stage** (`agent_runtimes.loop.scenes.stage`): the entry's application
   runs in this process as `loop apps run` runs one (`AppHost`, its agent from
-  `local_agent` or one a test gives), with a tool per member it talks to,
-  `ask_<member>`, declared as a tool of its own that reads. The ask is an A2A
-  request: to the member in this process (a session of its own) or, with
-  `--cloud`, to the member served over A2A on a cloud runtime of its own, as
-  `serve_accounting.py` serves Accounting, asked with a key granted to its
-  route (`--key <member>=<key>`), its tool calls read off the working
-  statuses of the stream as `askA2APeer` reads them.
+  `local_agent` — or `browser_agent` for a member the scene puts in the
+  browser, as the page plays it: its model and prompt without the
+  connections, skills and backend tools a browser has not — or one a test
+  gives), with a tool per member it talks to, `ask_<member>`, declared as a
+  tool of its own that reads. The ask is an A2A request: to the member in
+  this process (a session of its own) or, with `--cloud`, to the member served
+  over A2A on a cloud runtime of its own — launched for its application, so
+  that the runtime is given the secrets its connections declare (R-19) — as
+  `serve_accounting.py` serves Accounting, or at an address it is already
+  served at (`--address <member>=<url>`, or the variable the scene's
+  `deployment.addresses` names: a deployment's stable address, a runtime kept
+  with `--keep`), asked with a key granted to its route (`--key
+  <member>=<key>`), its tool calls read off the working statuses of the
+  stream as `askA2APeer` reads them. A runtime Datalayer refuses or does not
+  set up in time is the member's sentence; nothing crashes.
 - **One grammar**: what happens is recorded as the spans the Agent Inspector
   reads (`invoke_agent`, `execute_tool`, `a2a`, each with the attributes
   above) and read back by `agent_runtimes.loop.scenes.transcript`, the Python
@@ -176,10 +184,19 @@ plays each beat's cue through the scene and judges it:
   recording and no live run says its recording stands. Exit codes are `loop
   apps validate`'s (1 failed, 3 not run); a scene whose every beat passed is
   *Live*.
+- **What was played is kept**: a rehearsal of every beat on Datalayer of a
+  catalogue scene is written beside the specs as the scene's last
+  (`agentspecs.scenes.write_played`, `<id>/rehearsal.json`: when, where,
+  whether it passed, the verdict's sentence, each beat's verdict, the
+  agent-runtimes that played it). *Live* is read from it — by `loop scenes
+  ls`, by the generated catalogue (`played` on the scene spec, `make specs`)
+  and by the home page — never from a sentence written by hand; a scene whose
+  last rehearsal did not pass says so. A beat alone, a local run or a scene
+  file is not kept. With `--json`, stdout is the verdict and nothing else.
 
 `loop scenes ls` lists the catalogue: each scene's face, members (where each
-runs, whom it asks, what it reaches), beats, setup, and whether it was
-verified live. The whole is on the [CLI page](/cli#a-scenes-rehearsal); the
+runs, whom it asks, what it reaches), beats, setup, and whether it is *Live*,
+with its last rehearsal's day and sentence. The whole is on the [CLI page](/cli#a-scenes-rehearsal); the
 tests are `test_scenes_rehearse.py` (a scripted scene: fake members answering
 fixed lines, to a pass, a fail and a not run; the command's words and exit
 codes).

@@ -453,7 +453,9 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup() -> None:
 def _here(monkeypatch: pytest.MonkeyPatch, factory: Callable[[Any], Agent]) -> None:
     from agent_runtimes.loop.apps import agent as agent_module
 
+    # A member on a runtime is built by `local_agent`, one in the browser by `browser_agent`.
     monkeypatch.setattr(agent_module, "local_agent", factory)
+    monkeypatch.setattr(agent_module, "browser_agent", factory)
 
 
 def test_rehearse_passes_in_the_validate_tab_s_words(
@@ -512,6 +514,268 @@ def test_rehearse_refuses_an_unknown_scene_or_beat() -> None:
     )
     assert result.exit_code == 2
     assert "has no beat 'encore'" in result.output
+
+
+def test_a_browser_member_is_played_as_the_browser_plays_it(scene: Any) -> None:
+    # Sales, in the browser: its agent names skills and backend tools, which the
+    # page has not; the rehearsal leaves them out as the page does (A-13, A-14).
+    # Accounting, on a runtime, is still refused in this process.
+    from agent_runtimes.loop.scenes.stage import refused_here
+
+    sales, accounting = members_of(scene)[0]
+    assert refused_here(sales) == ""
+    assert "which this process does not bring" in refused_here(accounting)
+
+
+# --- the cloud ---------------------------------------------------------------------------
+
+
+class _Launch:
+    runtime_name = "rt-1"
+    ingress = "https://r1.example/agent-runtimes/rt-1"
+    server_url = "http://127.0.0.1:1"
+    attached = False
+
+    def __init__(self) -> None:
+        self.stopped = False
+
+    def stop(self) -> bool:
+        self.stopped = True
+        return True
+
+
+def _cloud(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    launch: Any = None,
+    configured: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Datalayer faked: what `launch_cloud` and `configure_on` were asked, kept."""
+    from agent_runtimes.commands import apps as apps_module
+    from agent_runtimes.loop import launch as launch_module
+
+    asked: Dict[str, Any] = {"launches": [], "configures": []}
+
+    def launch_cloud(agent_id: str, **kwargs: Any) -> Any:
+        asked["launches"].append((agent_id, kwargs))
+        if isinstance(launch, Exception):
+            raise launch
+        return launch or _Launch()
+
+    def configure_on(base_url: str, document: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+        asked["configures"].append((base_url, document["id"], kwargs))
+        return configured or {
+            "a2a": {"url": f"{kwargs.get('a2a_url')}/api/v1/a2a/agents/{document['id']}/"},
+            "setup": [],
+        }
+
+    monkeypatch.setattr(launch_module, "launch_cloud", launch_cloud)
+    monkeypatch.setattr(apps_module, "configure_on", configure_on)
+    return asked
+
+
+def test_a_runtime_member_is_launched_for_its_application_and_needs_a_key(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    asked = _cloud(monkeypatch)
+    stage, launches = scenes_command.stage_in_cloud(
+        scene, keys={}, environment=None, minutes=None, status=lambda _m: None
+    )
+    # Launched for Accounting's own Appspec, so that the runtime is given the
+    # secrets its connections declare (R-19), not the bootstrap agent's none.
+    [(agent_id, kwargs)] = asked["launches"]
+    assert agent_id == "example-simple" and kwargs["app_spec"]["id"] == "accounting"
+    assert kwargs["label"] == "🧾 Accounting"
+    assert [launch.runtime_name for launch in launches] == ["rt-1"]
+    accounting = stage.members["accounting"]
+    assert accounting.address.endswith("/api/v1/a2a/agents/accounting/")
+    assert accounting.reason.startswith("Accounting is served at https://r1.example")
+    assert "--key accounting=<key>" in accounting.reason
+    assert "--address accounting=https://r1.example" in accounting.reason
+    # Sales, in the browser, is played here.
+    assert stage.members["sales"].reason == ""
+
+
+def test_a_member_at_an_address_is_not_launched(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    asked = _cloud(monkeypatch)
+    stage, launches = scenes_command.stage_in_cloud(
+        scene,
+        keys={"accounting": "k"},
+        addresses={"accounting": "https://deployed/api/v1/a2a/agents/accounting/"},
+        environment=None,
+        minutes=None,
+        status=lambda _m: None,
+    )
+    assert asked["launches"] == [] and launches == []
+    accounting = stage.members["accounting"]
+    assert accounting.address == "https://deployed/api/v1/a2a/agents/accounting/"
+    assert accounting.key == "k" and accounting.reason == ""
+    # Without a key, the address alone is not enough: said, not launched.
+    stage, _ = scenes_command.stage_in_cloud(
+        scene,
+        keys={},
+        addresses={"accounting": "https://deployed/a2a"},
+        environment=None,
+        minutes=None,
+        status=lambda _m: None,
+    )
+    assert asked["launches"] == []
+    assert "DATALAYER_SCENE_KEY_ACCOUNTING" in stage.members["accounting"].reason
+
+
+def test_addresses_are_read_from_the_option_and_the_scene_s_variable(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    assert scenes_command._addresses_of([], scene) == {}
+    monkeypatch.setenv("DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL", " https://demo/a2a ")
+    assert scenes_command._addresses_of([], scene) == {"accounting": "https://demo/a2a"}
+    assert scenes_command._addresses_of(["accounting=https://kept/a2a"], scene) == {
+        "accounting": "https://kept/a2a"
+    }
+    import typer
+
+    with pytest.raises(typer.BadParameter, match="--address takes member=URL"):
+        scenes_command._addresses_of(["accounting"], scene)
+
+
+def test_a_launch_datalayer_does_not_set_up_is_the_member_s_sentence(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    _cloud(
+        monkeypatch,
+        launch=RuntimeError(
+            "Datalayer did not set up rt-9 in time (the account's secrets and model token are given then); it was stopped."
+        ),
+    )
+    stage, launches = scenes_command.stage_in_cloud(
+        scene, keys={}, environment=None, minutes=None, status=lambda _m: None
+    )
+    assert launches == []
+    assert stage.members["accounting"].reason.startswith("Datalayer did not set up rt-9")
+
+
+def test_a_member_whose_setup_is_incomplete_says_the_runtime_s_sentence(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    _cloud(
+        monkeypatch,
+        configured={
+            "a2a": {"url": "x"},
+            "setup": [
+                "the MCP server odoo-accounting needs DATALAYER_API_KEY, which this runtime was not given."
+            ],
+        },
+    )
+    stage, _ = scenes_command.stage_in_cloud(
+        scene, keys={"accounting": "k"}, environment=None, minutes=None, status=lambda _m: None
+    )
+    assert stage.members["accounting"].reason == (
+        "Accounting is not set up: the MCP server odoo-accounting needs DATALAYER_API_KEY, "
+        "which this runtime was not given."
+    )
+
+
+# --- Live, read from the rehearsal that was played ----------------------------------------
+
+
+def _played(**changes: Any) -> Any:
+    played = {
+        "at": "2026-10-08T18:39:08+00:00",
+        "passed": True,
+        "says": "Rehearsal: 4 of 4 beats passed. The scene is Live.",
+        "beats": [],
+        "runtime": "1.3.94",
+    }
+    played.update(changes)
+    return scenes.ScenePlayed.model_validate(played)
+
+
+def test_live_is_read_from_the_rehearsal_that_was_played(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    # Nothing played: the scene's own `verified` sentences say it.
+    monkeypatch.setattr(scenes, "scene_played", lambda _id: None)
+    assert scenes_command.verified_state(scene) == "Not verified yet"
+    monkeypatch.setattr(scenes, "scene_played", lambda _id: _played())
+    assert scenes_command.verified_state(scene) == "Live"
+    assert scenes_command.played_says(_played()) == (
+        "Rehearsed on Datalayer on 2026-10-08: Rehearsal: 4 of 4 beats passed. The scene is Live."
+    )
+    monkeypatch.setattr(
+        scenes,
+        "scene_played",
+        lambda _id: _played(passed=False, says="Rehearsal: 0 of 4 beats passed. 4 not run. The scene is not Live."),
+    )
+    assert scenes_command.verified_state(scene) == "Not Live"
+    # A result that cannot be read is not a pass.
+    def refused(_id: str) -> Any:
+        raise scenes.SceneError("rehearsal.json of 'sales-and-accounting' is not a rehearsal's result")
+
+    monkeypatch.setattr(scenes, "scene_played", refused)
+    assert scenes_command.verified_state(scene) == "Not verified yet"
+    # `ls` says it, and `ls --json` carries it.
+    monkeypatch.setattr(scenes, "scene_played", lambda _id: _played())
+    result = runner.invoke(scenes_command.app, ["ls"])
+    assert "Sales & Accounting (sales-and-accounting)  Live" in result.output
+    assert "Rehearsed on Datalayer on 2026-10-08: Rehearsal: 4 of 4 beats passed." in result.output
+    result = runner.invoke(scenes_command.app, ["ls", "--json"])
+    listed = {item["id"]: item for item in json.loads(result.output)}
+    assert listed["sales-and-accounting"]["state"] == "Live"
+    assert listed["sales-and-accounting"]["played"]["runtime"] == "1.3.94"
+
+
+def test_a_cloud_rehearsal_of_a_catalogue_scene_is_kept_as_its_last(
+    monkeypatch: pytest.MonkeyPatch, scene: Any, tmp_path: Any
+) -> None:
+    kept: List[Any] = []
+
+    def write_played(scene_id: str, played: Any, directory: Any = None) -> Any:
+        kept.append((scene_id, played))
+        return tmp_path / scene_id / "rehearsal.json"
+
+    monkeypatch.setattr(scenes, "write_played", write_played)
+    monkeypatch.setattr(scenes, "scene_played", lambda _id: None)
+
+    def stage_in_cloud(scene: Any, **kwargs: Any) -> Any:
+        members, entry = members_of(scene)
+        return Stage(members, entry, agent=cast()), []
+
+    monkeypatch.setattr(scenes_command, "stage_in_cloud", stage_in_cloud)
+    result = runner.invoke(
+        scenes_command.app, ["rehearse", "sales-and-accounting", "--cloud", "--json"]
+    )
+    # The fakes answer the first beat's shape alone: the rest fail, and what
+    # was found is kept all the same — a scene that did not pass says so.
+    assert result.exit_code == 1, result.output
+    # stdout is the verdict alone: what else is said goes to stderr.
+    verdict = json.loads(result.stdout)
+    assert verdict["live"] is False and verdict["where"] == "on Datalayer"
+    assert "Kept as the scene's last rehearsal:" in result.stderr
+    [(scene_id, played)] = kept
+    assert scene_id == "sales-and-accounting" and played.passed is False
+    assert played.where == "on Datalayer" and played.says == verdict["says"]
+    assert [beat.beat for beat in played.beats] == [
+        "open-invoices",
+        "aged-receivables",
+        "largest-balance",
+        "payment-reminders",
+    ]
+    assert played.beats[0].state == PASSED and played.beats[1].state == FAILED
+    assert played.beats[1].says.startswith("Expected") and played.at.startswith("20")
+    from agent_runtimes._version import __version__
+
+    assert played.runtime == __version__
+    # One beat alone, or a local run, is not the scene's last rehearsal.
+    kept.clear()
+    runner.invoke(
+        scenes_command.app,
+        ["rehearse", "sales-and-accounting", "--cloud", "--beat", "open-invoices"],
+    )
+    _here(monkeypatch, cast())
+    runner.invoke(scenes_command.app, ["rehearse", "sales-and-accounting"])
+    assert kept == []
 
 
 def test_a_verdict_as_a_dict_carries_each_beat_s_word() -> None:

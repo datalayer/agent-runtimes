@@ -206,6 +206,34 @@ export interface SceneRehearsalSpec {
   verified: AppVerifiedSpec;
 }
 
+/** One beat of a rehearsal that was played: its verdict, in the Validate tab's words. */
+export interface ScenePlayedBeatSpec {
+  beat: string;
+  state: 'passed' | 'failed' | 'not_run';
+  /** What differed, or why it was not run. */
+  says: string;
+  seconds: number;
+}
+
+/**
+ * What came of the last rehearsal `loop scenes rehearse --cloud` played
+ * (LOOP A-14): kept beside the specs in `<id>/rehearsal.json`, written by the
+ * command and never by hand. A scene is *Live* when it `passed`; one that did
+ * not says so with `says`.
+ */
+export interface ScenePlayedSpec {
+  /** When it was played, ISO 8601. */
+  at: string;
+  /** Where it was played: *on Datalayer*. */
+  where: string;
+  passed: boolean;
+  /** The verdict in one sentence. */
+  says: string;
+  beats: ScenePlayedBeatSpec[];
+  /** The agent-runtimes that played it, by version. */
+  runtime: string;
+}
+
 /** Where the scene plays. */
 export interface SceneDeploymentSpec {
   account: string;
@@ -242,4 +270,6 @@ export interface SceneSpec {
   deployment: SceneDeploymentSpec;
   /** What it names that is not enabled today, in sentences. */
   setup: string[];
+  /** The last rehearsal played on Datalayer, what *Live* is read from; none when never played. */
+  played?: ScenePlayedSpec;
 }

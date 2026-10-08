@@ -9,17 +9,28 @@ and its rehearsal, the shape each beat's transcript must take.
 
 - ``loop scenes ls`` lists the catalogue: each scene's face and name, its
   members (where each runs, what it reaches), what it needs set up, and
-  whether its rehearsal was verified live.
+  whether it is *Live*: its last rehearsal on Datalayer passed
+  (`agentspecs.scenes.scene_played`, the file `<id>/rehearsal.json` beside
+  the specs); one that did not says so.
 - ``loop scenes rehearse <scene>`` plays each beat's cue through the scene —
   the entry's application run the way `loop apps run` runs one, in this
-  process, or with ``--cloud`` every member on a runtime served over A2A on
-  a cloud runtime of its own — reads the transcript from what happened and
-  compares it to the beat's expected lines, words and time. Each beat is
-  **passed**, **failed** with what differed, or **not run** with why, in
-  the Validate tab's words; the exit code is `loop apps validate`'s (1 when a
-  beat failed, 3 when one was not run). A member whose setup is incomplete
-  makes the beats that need it *not run* with the setup's sentence. A scene
-  with a recording and no live run says its recording stands.
+  process (a member the scene puts in the browser played as the browser
+  plays it), or with ``--cloud`` every member on a runtime served over A2A
+  on a cloud runtime of its own, launched for its application so that it is
+  given the secrets its connections declare (LOOP R-19), or at an address
+  it is already served at (``--address member=URL``, or the variable the
+  scene's ``deployment.addresses`` names: a deployment's stable address, a
+  runtime kept with ``--keep``), asked with a key granted to its route
+  (``--key``) — reads the transcript from what happened and compares it to
+  the beat's expected lines, words and time. Each beat is **passed**,
+  **failed** with what differed, or **not run** with why, in the Validate
+  tab's words; the exit code is `loop apps validate`'s (1 when a beat failed,
+  3 when one was not run). A member whose setup is incomplete, or whose
+  runtime Datalayer refused or did not set up, makes the beats that need it
+  *not run* with that sentence; nothing crashes. A scene with a recording
+  and no live run says its recording stands. What a rehearsal on Datalayer
+  found is kept as the catalogue scene's last (`write_played`), which is what
+  *Live* reads — never a local run's, never a scene file's.
 """
 
 from __future__ import annotations
@@ -28,6 +39,8 @@ import asyncio
 import json
 import os
 from pathlib import Path
+import logging
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import typer
@@ -40,6 +53,7 @@ app = typer.Typer(
 )
 
 console = Console(soft_wrap=True)
+logger = logging.getLogger(__name__)
 
 HERE = "on this machine"
 CLOUD = "on Datalayer"
@@ -83,8 +97,30 @@ def scene_of(name: str) -> Any:
     return scene
 
 
+def played_of(scene: Any) -> Any:
+    """What the scene's last rehearsal on Datalayer found, or None (LOOP A-14)."""
+    module = _require_scenes()
+    read = getattr(module, "scene_played", None)
+    if read is None:
+        return None
+    try:
+        return read(scene.id)
+    except Exception as refused:  # noqa: BLE001 - a result that cannot be read is not a pass
+        logger.warning("The last rehearsal of %s is not read: %s", scene.id, refused)
+        return None
+
+
 def verified_state(scene: Any) -> str:
-    """What the scene says of its rehearsal: *Live*, *Recorded*, or *Not verified yet*."""
+    """What the scene's rehearsal says: *Live*, *Not Live*, *Recorded*, or *Not verified yet*.
+
+    *Live* is read from the last rehearsal played on Datalayer (`played_of`),
+    not from a sentence written by hand; one that did not pass is *Not Live*.
+    Without one, what the scene's `verified` says: *Live* when a person says
+    it was tried live, *Recorded* when a recording stands.
+    """
+    played = played_of(scene)
+    if played is not None:
+        return "Live" if played.passed else "Not Live"
     verified = scene.rehearsal.verified
     if verified.unverified:
         return "Not verified yet"
@@ -93,6 +129,47 @@ def verified_state(scene: Any) -> str:
     if verified.recorded or scene.rehearsal.recording is not None:
         return "Recorded"
     return "Not verified yet"
+
+
+def played_says(played: Any) -> str:
+    """The last rehearsal in one line: when, where, and its verdict."""
+    day = str(played.at)[:10]
+    return f"Rehearsed {played.where} on {day}: {played.says}"
+
+
+def keep_played(module: Any, scene: Any, verdict: Any) -> Optional[Any]:
+    """Keep a verdict as the scene's last rehearsal beside the specs; where it went, or None.
+
+    None when the installed agentspecs keeps no rehearsal (before 0.0.67),
+    or when the file cannot be written: said in the log, never a crash.
+    """
+    from agent_runtimes._version import __version__
+
+    write = getattr(module, "write_played", None)
+    played_type = getattr(module, "ScenePlayed", None)
+    if write is None or played_type is None:
+        return None
+    played = played_type(
+        at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        where=verdict.where,
+        passed=bool(verdict.live),
+        says=verdict.says,
+        beats=[
+            {
+                "beat": beat.beat,
+                "state": beat.state,
+                "says": beat.says,
+                "seconds": float(beat.seconds or 0.0),
+            }
+            for beat in verdict.beats
+        ],
+        runtime=__version__,
+    )
+    try:
+        return write(scene.id, played)
+    except OSError as refused:
+        logger.warning("The rehearsal of %s was not kept: %s", scene.id, refused)
+        return None
 
 
 def member_lines(scene: Any) -> List[str]:
@@ -152,6 +229,11 @@ def scenes_ls(
                         "members": member_lines(scene),
                         "setup": module.scene_setup(scene),
                         "state": verified_state(scene),
+                        "played": (
+                            played_of(scene).model_dump(mode="json")
+                            if played_of(scene) is not None
+                            else None
+                        ),
                         "beats": [beat.id for beat in scene.script],
                         "recording": scene.rehearsal.recording.path
                         if scene.rehearsal.recording
@@ -177,6 +259,9 @@ def scenes_ls(
             console.print(f"   {line}", highlight=False)
         beats = ", ".join(beat.id for beat in scene.script)
         console.print(f"   Beats: {beats or 'none'}", highlight=False)
+        played = played_of(scene)
+        if played is not None:
+            console.print(f"   {played_says(played)}", highlight=False)
         for sentence in module.scene_setup(scene):
             console.print(f"   · To set up: {sentence}", highlight=False)
 
@@ -193,6 +278,26 @@ def _keys_of(keys: List[str], members: List[Any]) -> Dict[str, str]:
             raise typer.BadParameter(f"--key takes member=KEY, not {item!r}.")
         member_id, key = item.split("=", 1)
         given[member_id.strip()] = key.strip()
+    return given
+
+
+def _addresses_of(addresses: List[str], scene: Any) -> Dict[str, str]:
+    """Where a member is already served over A2A: ``--address member=URL``, else the scene's variable.
+
+    The scene's ``deployment.addresses`` names, for each member on a runtime,
+    the variable its address is read from (``DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL``):
+    a deployment's stable address, or a runtime kept with ``--keep``. A member
+    at an address is asked there and no runtime is launched for it.
+    """
+    given: Dict[str, str] = {}
+    for member_id, variable in (scene.deployment.addresses or {}).items():
+        if os.environ.get(variable):
+            given[member_id] = os.environ[variable].strip()
+    for item in addresses:
+        if "=" not in item:
+            raise typer.BadParameter(f"--address takes member=URL, not {item!r}.")
+        member_id, url = item.split("=", 1)
+        given[member_id.strip()] = url.strip()
     return given
 
 
@@ -214,23 +319,45 @@ def stage_in_cloud(
     environment: Optional[str],
     minutes: Optional[int],
     status: Callable[[str], None],
+    addresses: Optional[Dict[str, str]] = None,
 ) -> Tuple[Any, List[Any]]:
     """The scene's stage with every runtime member served over A2A on a cloud runtime of its own.
 
-    Returns the stage and the launches, to finish.
+    A member on a runtime is launched for its application (``app_spec``), so
+    that the runtime is given the secrets its connections declare and no
+    other (LOOP R-19), then configured with it and served over A2A. One at an
+    ``addresses`` entry is asked there instead, and nothing is launched for
+    it. A member the scene puts in the browser is played here, as the browser
+    plays it. A launch Datalayer refuses, or does not set up in time, is the
+    member's sentence, never a crash. Returns the stage and the launches, to
+    finish.
     """
     from agent_runtimes.client.agent_client import build_agent_runtimes_base_url
     from agent_runtimes.commands.apps import BOOTSTRAP_AGENT_SPEC_ID, configure_on
     from agent_runtimes.loop.launch import CloudRefused, NotSignedIn, launch_cloud
     from agent_runtimes.loop.scenes.stage import Stage, members_of, refused_here
 
-    members, entry = members_of(scene)
+    members, entry = members_of(
+        scene,
+        addresses={
+            member_id: (url, keys.get(member_id, ""))
+            for member_id, url in (addresses or {}).items()
+        },
+    )
     launches: List[Any] = []
     for member in members:
         if member.reason:
             continue
         if member.runs_in != "runtime":
             member.reason = refused_here(member)
+            continue
+        if member.address:
+            if not member.key:
+                member.reason = (
+                    f"{member.name} is served at {member.address} and answers a key granted "
+                    f"to its route: give it with --key {member.id}=<key> "
+                    f"(or DATALAYER_SCENE_KEY_{member.id.upper().replace('-', '_')})."
+                )
             continue
         try:
             launch = launch_cloud(
@@ -239,11 +366,12 @@ def stage_in_cloud(
                 environment=environment,
                 minutes=minutes,
                 status=status,
+                app_spec=member.document,
             )
         except NotSignedIn:
             member.reason = "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
             continue
-        except CloudRefused as refused:
+        except (CloudRefused, RuntimeError) as refused:
             member.reason = str(refused)
             continue
         launches.append(launch)
@@ -266,7 +394,8 @@ def stage_in_cloud(
             member.reason = (
                 f"{member.name} is served at {member.address} and answers a key granted "
                 f"to its route: give it with --key {member.id}=<key> "
-                f"(examples/sales-accounting-a2a/make_temp_key.py --runtime {launch.runtime_name})."
+                f"(examples/sales-accounting-a2a/make_temp_key.py --runtime {launch.runtime_name}); "
+                f"with --keep, rehearse again at it with --address {member.id}={member.address}."
             )
     return Stage(members, entry), launches
 
@@ -305,6 +434,11 @@ def scenes_rehearse(
         None,
         "--key",
         help="With --cloud: a key granted to a member's A2A route, as member=KEY (or DATALAYER_SCENE_KEY_<MEMBER>).",
+    ),
+    addresses: List[str] = typer.Option(
+        None,
+        "--address",
+        help="With --cloud: where a member is already served over A2A, as member=URL (or the variable the scene's deployment names); no runtime is launched for it.",
     ),
     environment: str = typer.Option(
         None, "--environment", "-e", help="The Datalayer environment (with --cloud)."
@@ -351,6 +485,12 @@ def scenes_rehearse(
         )
         for note in notes:
             console.print(f"  · {note}", highlight=False)
+    # With --json, stdout is the verdict and nothing else: the rest goes to stderr.
+    aside: Callable[[str], None] = (
+        (lambda message: typer.echo(message, err=True))
+        if as_json
+        else (lambda message: console.print(message, highlight=False))
+    )
     try:
         if cloud:
             stage, launches = stage_in_cloud(
@@ -358,10 +498,11 @@ def scenes_rehearse(
                 keys=_keys_of(
                     keys or [], [_Named(member.member) for member in scene.cast_of()]
                 ),
+                addresses=_addresses_of(addresses or [], scene),
                 environment=environment,
                 minutes=minutes,
-                status=lambda message: (
-                    None if as_json else console.print(f"[cyan]{message}[/cyan]")
+                status=lambda message: aside(
+                    message if as_json else f"[cyan]{message}[/cyan]"
                 ),
             )
         else:
@@ -381,8 +522,13 @@ def scenes_rehearse(
             from agent_runtimes.loop.launch import finish_cloud
 
             for launch in launches:
-                finish_cloud(launch, keep=keep, can_ask=False)
+                finish_cloud(launch, keep=keep, can_ask=False, say=aside)
     verdict.notes = notes + verdict.notes
+    if cloud and not (beats or []) and module.get_scene(scene.id) is scene:
+        # Every beat, on Datalayer, of a catalogue scene: kept as its last rehearsal (A-14).
+        kept = keep_played(module, scene, verdict)
+        if kept is not None:
+            aside(f"Kept as the scene's last rehearsal: {kept}")
     if as_json:
         typer.echo(json.dumps(verdict.as_dict(), indent=2, ensure_ascii=False))
     else:

@@ -247,6 +247,34 @@ def local_agent(
         When the application needs a runtime, names no model, or names a
         context its organization does not have.
     """
+    return _agent_from_spec(app, organization, as_browser=False)
+
+
+def browser_agent(
+    app: AppSpec, organization: Optional[OrganizationFrames] = None
+) -> Agent:
+    """The agent of an application as a visitor's browser plays it (LOOP A-13, A-14).
+
+    A scene's member *in the browser* — Sales, the entry of Sales & Accounting —
+    is played by the page with its model (the application's, else its
+    agent's), its agent's prompt, its contexts and its own instructions, and
+    the tools the page gives it: one to ask each member it talks to over A2A
+    (`useA2ATeam`). What only a runtime brings — connections, skills, backend
+    tools — the browser has not, and so leaves out, where `local_agent`
+    refuses: the rehearsal plays a browser member as the browser does.
+
+    Raises
+    ------
+    AppNotRunnable
+        When the application runs a team, names an agent that is not known
+        here, names no model, or names a context its organization does not have.
+    """
+    return _agent_from_spec(app, organization, as_browser=True)
+
+
+def _agent_from_spec(
+    app: AppSpec, organization: Optional[OrganizationFrames], *, as_browser: bool
+) -> Agent:
     from agent_runtimes.models.models import resolve_model_for_inference_provider
 
     spec = _agent_spec(app.agent) if app.agent else None
@@ -267,7 +295,7 @@ def local_agent(
         (spec.backend_tools if spec else [], "its agent's backend tools"),
     ]
     for items, what in needs:
-        if items:
+        if items and not as_browser:
             problems.append(
                 f"{app.id} has {what}, which this process does not bring: "
                 "run it on a runtime, or give the host an agent of your own."

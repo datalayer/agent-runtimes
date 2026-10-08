@@ -472,20 +472,32 @@ loop scenes rehearse sales-and-accounting        # every beat, here, in this pro
 loop scenes rehearse sales-and-accounting --beat open-invoices
 loop scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # every runtime member on a cloud runtime, over A2A
 loop scenes rehearse sales-and-accounting --cloud -e ai-env -m 20 --keep   # the environment, the minutes reserved, left running
+loop scenes rehearse sales-and-accounting --cloud --address accounting=<A2A url> --key accounting=<key>   # at a runtime kept, or a deployment's stable address
 loop scenes rehearse scenes/my-scene.yaml --json
 ```
 
-Both need agentspecs 0.0.61 or later, which carries the scenes.
+Both need agentspecs 0.0.61 or later, which carries the scenes; the
+rehearsal that was played is kept from 0.0.67.
 
 `rehearse` plays each beat's cue through the scene the way `loop apps run`
 runs one application: the entry's application in this process, with a tool
 per member it talks to (`ask_accounting`, declared as a tool of its own that
 reads, so its rules let it through) that asks that member — in this process
-too, a session of its own, or over A2A where it is served. With `--cloud`,
-every member that runs on a runtime gets a cloud runtime of its own,
-configured with its application and served over A2A as `serve_accounting.py`
+too, a session of its own, or over A2A where it is served. A member the scene
+puts in the browser (Sales) is played as the page plays it: its model and its
+prompt, without the connections, skills and backend tools a browser has not.
+With `--cloud`, every member that runs on a runtime gets a cloud runtime of
+its own, launched for its application so that the runtime is given the
+secrets its connections declare and no other (R-19: the account's
+`DATALAYER_API_KEY` for the Odoo books through the gateway, `TAVILY_API_KEY`
+for the crawl), configured with it and served over A2A as `serve_accounting.py`
 does; its route answers a key granted to it, given as `--key <member>=<key>`
-or `DATALAYER_SCENE_KEY_<MEMBER>` (`examples/sales-accounting-a2a/make_temp_key.py`).
+or `DATALAYER_SCENE_KEY_<MEMBER>` (`examples/sales-accounting-a2a/make_temp_key.py`,
+which needs the runtime's uid: launch with `--keep`, mint, then rehearse
+again at the kept runtime with `--address <member>=<its A2A url>`, and no
+runtime is launched for it). The variable the scene's `deployment.addresses`
+names — `DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL` — is read as that address
+too: a deployment's stable address is rehearsed as the page reaches it.
 What happens is recorded as the spans the Agent Inspector reads and read
 back as the transcript by the one grammar (`agent_runtimes.loop.scenes.transcript`,
 the Python twin of the page's `sceneTranscript.ts`, both held to one fixture),
@@ -498,9 +510,16 @@ on the entry's answer, and `within` on the time the beat took.
 Each beat gets a verdict in the words of the Validate tab: **passed**,
 **failed** with what differed, or **not run** with why. A member whose setup
 is incomplete — its agent cannot be built here, its runtime refused it or
-says what it needs, no key for its route — makes the beats that need it *not
-run* with that sentence; nothing crashes. A scene with a recording and no
-live run says its recording stands.
+says what it needs, no key for its route, Datalayer refused its launch or
+did not set it up in time — makes the beats that need it *not run* with that
+sentence; nothing crashes. A scene with a recording and no live run says its
+recording stands. A rehearsal of every beat on Datalayer of a catalogue scene
+is kept beside the specs as the scene's last (`<id>/rehearsal.json`, agentspecs
+0.0.67's `write_played`): *Live* — in `loop scenes ls`, in the generated
+catalogue and on the home page — is read from it, never from a sentence
+written by hand, and a scene whose last rehearsal did not pass says so with
+its day and the verdict's sentence. With `--json`, stdout is the verdict and
+nothing else; what else is said goes to stderr.
 
 ```text
 🤝  Sales & Accounting (sales-and-accounting), rehearsed on this machine

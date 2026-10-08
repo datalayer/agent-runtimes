@@ -95,6 +95,11 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
         for beat, data in zip(scene.script, spec["script"]):
             data["shows"] = [kind.value for kind in beat.shown]
         spec["setup"] = scenes_module.scene_setup(scene)
+        # The last rehearsal played on Datalayer (agentspecs >= 0.0.67): what
+        # *Live* is read from; none when it was never played.
+        read_played = getattr(scenes_module, "scene_played", None)
+        played = read_played(identity, specs_dir) if read_played is not None else None
+        spec["played"] = played.model_dump(mode="json") if played is not None else None
         for key in ("description",):
             spec[key] = _flat(spec.get(key))
         spec["setting"]["assumes"] = _flat(spec["setting"].get("assumes"))

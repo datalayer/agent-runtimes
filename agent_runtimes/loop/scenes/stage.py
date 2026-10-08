@@ -5,11 +5,14 @@
 
 The rehearsal plays each beat's cue through the scene the way `loop apps
 run` runs one application: the entry's application in this process
-(`AppHost`, its agent built by `local_agent` or one a test gives), with a
-tool per member it talks to — ``ask_accounting`` — that asks that member
-in this process too (a session of its own), or over A2A at the address it
-is served at (a cloud runtime configured with it, as ``serve_accounting.py``
-does; a key granted to its route). What happens is recorded as the spans
+(`AppHost`, its agent built by `local_agent` — or, for a member the scene
+puts *in the browser*, by `browser_agent`, as the page plays it: its model
+and prompt without the connections, skills and backend tools a browser has
+not — or one a test gives), with a tool per member it talks to —
+``ask_accounting`` — that asks that member in this process too (a session of
+its own), or over A2A at the address it is served at (a cloud runtime
+configured with it, as ``serve_accounting.py`` does, or a deployment's
+stable address; a key granted to its route). What happens is recorded as the spans
 the Agent Inspector reads — an ``invoke_agent`` turn, ``execute_tool``
 calls, an ``a2a`` request with its answer, a peer's calls told by its
 working statuses — so that the transcript is read from them by the one
@@ -574,9 +577,7 @@ class Stage:
         self, member: StageMember, recording: Recording
     ) -> Callable[[Any], Any]:
         """The member's agent, with a tool per member it talks to."""
-        from agent_runtimes.loop.apps.agent import local_agent
-
-        base = self._agent or local_agent
+        base = self._agent or _agent_builder_for(member)
 
         def factory(spec: Any) -> Any:
             agent = base(spec)
@@ -741,6 +742,18 @@ def _why(error: BaseException) -> str:
 
 def _ask_tool_name(peer_id: str) -> str:
     return "ask_" + re.sub(r"[^a-z0-9]+", "_", peer_id.lower()).strip("_")
+
+
+def _agent_builder_for(member: StageMember) -> Callable[[Any], Any]:
+    """How a member's agent is built in this process: as the browser plays it, or as a runtime would.
+
+    A member the scene puts in the browser (`runs_in: browser`) is played with
+    its model and prompt alone, as the page does (`browser_agent`); any other
+    is `local_agent`, which refuses what only a runtime brings.
+    """
+    from agent_runtimes.loop.apps.agent import browser_agent, local_agent
+
+    return browser_agent if member.runs_in == "browser" else local_agent
 
 
 def with_ask_tools(
@@ -937,14 +950,13 @@ def refused_here(
     """Why a member's agent cannot be built in this process, in sentences; empty when it can."""
     if member.reason or member.address or not member.document:
         return member.reason
-    from agent_runtimes.loop.apps.agent import local_agent
     from agent_runtimes.loop.apps.application import Application
     from agent_runtimes.loop.apps.loading import AppNotRunnable
 
     try:
         application = Application.from_spec(member.document)
         if application.handler("message") is None and application.code_agent is None:
-            (agent or local_agent)(application.spec)
+            (agent or _agent_builder_for(member))(application.spec)
     except AppNotRunnable as refused:
         return " ".join(refused.problems)
     except Exception as refused:  # noqa: BLE001 - its agent cannot be built here
