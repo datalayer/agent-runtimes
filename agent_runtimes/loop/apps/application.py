@@ -112,6 +112,11 @@ EVENTS = (
 )
 
 
+#: The version of an application whose code says none, until it is
+#: deployed: the spec's own default (agentspecs `AppSpec.version`).
+FIRST_VERSION: str = str(AppSpec.model_fields["version"].default)
+
+
 class Application:
     """An application: its Appspec, and the code that reacts to its sessions.
 
@@ -135,8 +140,10 @@ class Application:
         The model, in place of its agent's.
     goal : str
         For a worker: what it works toward.
-    version : str
-        The application's version.
+    version : str, optional
+        The application's version. Unsaid, the spec's first version
+        (``0.0.1``) until it is deployed: a deployment's stored version is
+        then the version of a code that says none (`declared_version`).
     """
 
     def __init__(
@@ -151,12 +158,12 @@ class Application:
         instructions: str = "",
         model: str = "",
         goal: str = "",
-        version: str = "0.0.1",
+        version: Optional[str] = None,
     ) -> None:
         document: Dict[str, Any] = {
             "schema": "loop.app/v1",
             "id": id,
-            "version": version,
+            "version": version if version is not None else FIRST_VERSION,
             "name": name or id.replace("-", " ").replace("_", " ").capitalize(),
             "kind": kind,
         }
@@ -171,6 +178,7 @@ class Application:
             if value:
                 document[key] = value
         self._document = document
+        self._version_declared = version is not None
         self._spec: Optional[AppSpec] = None
         self._handlers: Dict[str, Handler] = {}
         self._actions: Dict[str, Handler] = {}
@@ -204,10 +212,13 @@ class Application:
                 exclude_defaults=True,
                 exclude={"setup": True, "record": {"retention_days"}},
             )
+            declared = "version" in spec.model_fields_set
         else:
             document = dict(spec)
+            declared = "version" in document
         application = cls.__new__(cls)
         application._document = document
+        application._version_declared = declared
         application._spec = None
         application._handlers = {}
         application._actions = {}
@@ -229,6 +240,39 @@ class Application:
     def id(self) -> str:
         """The application's id."""
         return str(self._document["id"])
+
+    @property
+    def declared_version(self) -> Optional[str]:
+        """The version the code says itself; ``None`` when it says none.
+
+        A code that says no version (an ``app.py`` written by *Eject*, whose
+        ``SPEC`` holds none) is of whatever version it is deployed as: the
+        deployment's stored version is the authority (LOOP P-24, R-14).
+        """
+        if not self._version_declared:
+            return None
+        return str(self._document["version"])
+
+    def at_version(self, version: str) -> None:
+        """Take the version a deployment stored, for a code that says none.
+
+        Parameters
+        ----------
+        version : str
+            The deployed Appspec's version.
+
+        Raises
+        ------
+        ValueError
+            When the code says another version itself.
+        """
+        declared = self.declared_version
+        if declared is not None and declared != version:
+            raise ValueError(
+                f"The code says it is {self.id} {declared}, not {version}."
+            )
+        self._document["version"] = version
+        self._spec = None
 
     @property
     def spec(self) -> AppSpec:

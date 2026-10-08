@@ -577,8 +577,10 @@ def get_stored_agent_spec(agent_id: str) -> dict[str, Any] | None:
 def _application_code_of(code: dict[str, Any], app: Any) -> Any:
     """The `Application` a deployment's ``app.py`` defines (LOOP R-14), loaded
     from the text the request carries: refused (422) when it is not an
-    ``app.py``, does not load, or defines another application or version
-    than the Appspec the agent runs — code and spec of different versions.
+    ``app.py``, does not load, defines another application than the
+    Appspec the agent runs, or says itself another version. A code that
+    says no version takes the deployed one: the stored version is the
+    authority (LOOP P-24).
     """
     from agent_runtimes.loop.apps.application import load_application_source
     from agent_runtimes.loop.apps.deployments import DeployRefused, code_carried
@@ -599,15 +601,27 @@ def _application_code_of(code: dict[str, Any], app: Any) -> Any:
             status_code=422,
             detail=f"The application's code does not load: {type(wrong).__name__}: {wrong}",
         ) from None
-    if (application.spec.id, application.spec.version) != (app.id, app.version):
+    if application.id != app.id:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"The code defines {application.spec.id} {application.spec.version}, "
-                f"not {app.id} {app.version} the agent runs: its code and its "
-                "Appspec are of different versions."
+                f"The code defines {application.id}, not {app.id} the agent "
+                "runs: its code is another application's."
             ),
         )
+    # The deployment's stored version is the authority (LOOP P-24): a code
+    # that says no version of its own (an ejected ``app.py``) is of the
+    # version deployed; one that says another is refused.
+    declared = application.declared_version
+    if declared is not None and declared != app.version:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"The code says it is {app.id} {declared}, not {app.version} the "
+                "agent runs: its code and its Appspec are of different versions."
+            ),
+        )
+    application.at_version(app.version)
     return application
 
 

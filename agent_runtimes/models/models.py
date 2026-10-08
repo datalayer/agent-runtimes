@@ -513,6 +513,60 @@ def resolve_model_for_inference_provider(
     )
 
 
+class RequestModelRefused(ValueError):
+    """A model a chat request names that cannot be called: said in a sentence."""
+
+
+def bedrock_region() -> str:
+    """The AWS region a direct Bedrock call would use, or ``""``.
+
+    ``AWS_REGION``, ``AWS_DEFAULT_REGION``, else the region boto3 reads from
+    its configuration (``~/.aws/config``).
+    """
+    for name in ("AWS_REGION", "AWS_DEFAULT_REGION"):
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return value
+    try:
+        import boto3
+    except ImportError:
+        return ""
+    return str(boto3.session.Session().region_name or "").strip()
+
+
+def model_of_request(agent_id: str | None, model: str) -> Any:
+    """A model a chat request names, called as the agent's own model is.
+
+    Through the provider the agent was made with (`agent_inference_provider`):
+    on a Datalayer runtime, ai-inference, naming the application instance it
+    serves (LOOP R-09) — never a direct call around it. A direct Bedrock call
+    with no region to call is refused here, in a sentence, rather than at the
+    model with boto3's.
+
+    Raises
+    ------
+    RequestModelRefused
+        When the model would be called directly on Bedrock with no region.
+    """
+    from agent_runtimes.models.offered import agent_inference_provider
+
+    provider = agent_inference_provider(agent_id)
+    resolved = resolve_model_for_inference_provider(
+        model, provider, app_instance=app_instance_of(agent_id)
+    )
+    if (
+        isinstance(resolved, str)
+        and resolved.strip().lower().startswith("bedrock:")
+        and not bedrock_region()
+    ):
+        raise RequestModelRefused(
+            f"{model} would be called on Bedrock directly, and this runtime has "
+            "no AWS region (AWS_REGION or AWS_DEFAULT_REGION) nor routes its "
+            "inference through Datalayer: nothing was asked."
+        )
+    return resolved
+
+
 def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
     """
     Create default AI model configurations from the generated model catalogue.

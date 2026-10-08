@@ -428,7 +428,7 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
             create("r14-other", TICK_DEPLOYMENT, other)
         assert (
             refused.value.status_code == 422
-            and "different versions" in refused.value.detail
+            and "another application's" in refused.value.detail
         )
         with pytest.raises(HTTPException) as refused:
             create(
@@ -461,6 +461,75 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
             "r14-none",
         ):
             sessions.serve_agent_code(name, None)
+
+
+def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
+    creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
+) -> None:
+    """Drilled 2026-10-08 (P-24): the Studio stamps the deployed Appspec
+    `version: 0.0.4` while the version's ejected `app.py` holds a `SPEC`
+    with no version — the kept runtime refused it 422 three times. A code
+    that says no version is of the version deployed; one that says another
+    is refused, in a sentence."""
+    from fastapi import HTTPException
+
+    from agent_runtimes.loop.apps.application import (
+        Application,
+        load_application_source,
+    )
+    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+
+    unsaid = TICK_SOURCE.replace('        "version": "0.0.1",\n', "")
+    assert '"version"' not in unsaid
+    assert load_application_source(unsaid, "app.py").declared_version is None
+    deployed = {**tick_spec(), "version": "0.0.4"}
+
+    def create(name: str, text: str) -> None:
+        request = CreateAgentRequest(
+            name=name,
+            transport="ag-ui",
+            app_spec=deployed,
+            app_instance=TICK_DEPLOYMENT,
+            app_code={"file": "app.py", "text": text},
+        )
+        asyncio.run(create_agent(request, _DummyRequest()))
+
+    principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
+    try:
+        create("p24-unsaid", unsaid)
+        served = sessions.code_of(load_app(deployed), "p24-unsaid")
+        assert served is not None
+        assert served.spec.version == "0.0.4" and served.declared_version is None
+        assert served.schedule_at(1) == "tick"
+        # A code that says its own version, another, is refused.
+        with pytest.raises(HTTPException) as refused:
+            create(
+                "p24-other-version",
+                TICK_SOURCE.replace('"version": "0.0.1"', '"version": "0.0.2"'),
+            )
+        assert refused.value.status_code == 422
+        assert refused.value.detail == (
+            "The code says it is r14-tick 0.0.2, not 0.0.4 the agent runs: "
+            "its code and its Appspec are of different versions."
+        )
+        assert sessions.code_of(load_app(deployed), "p24-other-version") is None
+        # The same version said is accepted.
+        create(
+            "p24-same-version",
+            TICK_SOURCE.replace('"version": "0.0.1"', '"version": "0.0.4"'),
+        )
+        assert sessions.code_of(load_app(deployed), "p24-same-version") is not None
+    finally:
+        principal.forget_principal_token("dep-14")
+        for name in ("p24-unsaid", "p24-other-version", "p24-same-version"):
+            sessions.serve_agent_code(name, None)
+    # The class tells a version given from one left to the spec's default.
+    assert Application("a", agent="x").declared_version is None
+    assert Application("a", agent="x").document["version"] == "0.0.1"
+    assert Application("a", agent="x", version="0.0.1").declared_version == "0.0.1"
+    with pytest.raises(ValueError, match="says it is a 0.0.2, not 0.0.3"):
+        Application("a", agent="x", version="0.0.2").at_version("0.0.3")
 
 
 def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(

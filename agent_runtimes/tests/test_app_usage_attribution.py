@@ -130,6 +130,7 @@ def test_a_model_the_persons_modes_choose_names_the_deployment_too(monkeypatch):
 
     from agent_runtimes.loop.apps.agent import AppAgent
     from agent_runtimes.loop.apps.composer import ModeEffect
+
     asked: list[tuple[Any, ...]] = []
 
     def resolve(model, provider, app_instance=None):
@@ -166,7 +167,10 @@ def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeyp
     monkeypatch.setattr(
         agents,
         "get_stored_agent_spec",
-        lambda agent_id: {"inference_provider": "datalayer", "app_instance": DEPLOYMENT},
+        lambda agent_id: {
+            "inference_provider": "datalayer",
+            "app_instance": DEPLOYMENT,
+        },
     )
 
     class Session:
@@ -175,3 +179,109 @@ def test_the_runtimes_session_agent_carries_what_its_agent_was_made_with(monkeyp
 
     made = sessions._agent_maker("agent-1")(Session())
     assert (made.inference_provider, made.app_instance) == ("datalayer", DEPLOYMENT)
+
+
+# --- a model the chat request names (drilled 2026-10-08, P-24) ---------------------
+
+BEDROCK = "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+
+def _no_region(monkeypatch, tmp_path) -> None:
+    for name in ("AWS_REGION", "AWS_DEFAULT_REGION", "AWS_PROFILE"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("AWS_CONFIG_FILE", str(tmp_path / "no-config"))
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", str(tmp_path / "no-credentials"))
+
+
+def _transport(agent_id: str):
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+
+    from agent_runtimes.transports.agui import AGUITransport
+
+    class Adapter:
+        _agent = Agent(TestModel())
+        _agent_id = agent_id
+
+    return AGUITransport(Adapter(), agent_id=agent_id)  # type: ignore[arg-type]
+
+
+def _post(transport, model: str, monkeypatch) -> tuple[Any, list[Any]]:
+    from starlette.responses import PlainTextResponse
+    from starlette.testclient import TestClient
+
+    from agent_runtimes.transports import agui as agui_transport
+
+    called: list[Any] = []
+
+    async def dispatch(request, **kwargs):
+        called.append(kwargs.get("model"))
+        return PlainTextResponse("ran")
+
+    monkeypatch.setattr(agui_transport.AGUIAdapter, "dispatch_request", dispatch)
+    response = TestClient(transport.get_app()).post(
+        "/",
+        json={
+            "threadId": "t",
+            "runId": "r",
+            "messages": [{"id": "m", "role": "user", "content": "Show me the runs"}],
+            "tools": [],
+            "context": [],
+            "state": None,
+            "forwardedProps": None,
+            "model": model,
+        },
+    )
+    return response, called
+
+
+def test_a_hosted_pages_model_goes_through_ai_inference_as_its_agents_does(
+    monkeypatch, tmp_path
+):
+    """The hosted page's AG-UI request names its model: on a Datalayer runtime
+    (no AWS region) it was handed to pydantic-ai as a bare `bedrock:` string,
+    called directly — *You must provide a `region_name` or a boto3 client for
+    Bedrock Runtime.* It is called through ai-inference, naming the deployment."""
+    from pydantic_ai.models.openai import OpenAIChatModel
+
+    _no_region(monkeypatch, tmp_path)
+    monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "datalayer")
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
+    remember_app_instance("hosted-agent", DEPLOYMENT)
+    try:
+        response, called = _post(_transport("hosted-agent"), BEDROCK, monkeypatch)
+    finally:
+        remember_app_instance("hosted-agent", None)
+    assert response.status_code == 200 and response.text == "ran"
+    assert len(called) == 1 and isinstance(called[0], OpenAIChatModel)
+    assert called[0].model_name == BEDROCK
+    headers = called[0].client._client.headers
+    assert headers["X-Datalayer-Deployment-Uid"] == "01DEP"
+
+
+def test_a_direct_bedrock_call_with_no_region_is_refused_in_a_sentence(
+    monkeypatch, tmp_path
+):
+    from agent_runtimes.models.models import RequestModelRefused, model_of_request
+
+    _no_region(monkeypatch, tmp_path)
+    monkeypatch.setenv("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE", "local")
+    response, called = _post(_transport("local-agent"), BEDROCK, monkeypatch)
+    assert response.status_code == 400 and called == []
+    assert response.json()["detail"] == (
+        f"{BEDROCK} would be called on Bedrock directly, and this runtime has no "
+        "AWS region (AWS_REGION or AWS_DEFAULT_REGION) nor routes its inference "
+        "through Datalayer: nothing was asked."
+    )
+    # With a region, the direct call is the person's to make.
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    assert model_of_request("local-agent", BEDROCK) == BEDROCK
+    # Another provider is not Bedrock's to refuse.
+    monkeypatch.delenv("AWS_DEFAULT_REGION")
+    assert model_of_request("local-agent", "openai:gpt-4.1") == "openai:gpt-4.1"
+    try:
+        model_of_request("local-agent", BEDROCK)
+    except RequestModelRefused:
+        pass
+    else:
+        raise AssertionError("refused")

@@ -173,9 +173,19 @@ app = Application(
     instructions="Never ask a leading question.",
     model="",                          # in place of its agent's model
     goal="",                           # for a worker
-    version="0.0.1",
+    version="0.0.1",                   # optional: see below
 )
 ```
+
+**Its version.** Leave `version` out and the application is at `0.0.1`
+while you run it here, and at **the version it is deployed as** on the
+platform: the version the Studio stored is the authority, and a code that
+says no version of its own takes it (`app.declared_version` is `None`). Say
+a version — `version=` here, or `version:` in the spec `Application.from_spec`
+reads — and the runtime checks it: a deployment of `0.0.4` whose code says
+`0.0.2` is refused, *The code says it is customer-interview 0.0.2, not 0.0.4
+the agent runs: its code and its Appspec are of different versions.* Code of
+another application is refused whatever its version.
 
 Or attach code to an Appspec that already exists — read from its YAML, or as
 an `AppSpec`:
@@ -1101,6 +1111,14 @@ is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.
 
+On a Datalayer runtime the agent's model is called through ai-inference,
+naming the application and deployment it serves — and so is a model the
+page's chat names on a request (its model picker, a hosted page's agent):
+it is called as the agent's own model is, never directly. A runtime of your
+own that calls Bedrock directly needs an AWS region (`AWS_REGION` or
+`AWS_DEFAULT_REGION`); without one, a request naming a Bedrock model is
+refused before anything is asked, saying so.
+
 ## An agent of your own: other frameworks
 
 `app.agent(...)` gives the application an agent written in your code, in
@@ -1401,7 +1419,10 @@ done; see the [CLI](../cli#eject-an-application-into-python). The Studio's
 Python tab has the same *Eject*: `POST /api/v1/apps/eject` with `{"spec": …}`
 answers the `app.py` and the spec it builds — checked to be the same, else
 refused with why — and the Studio saves both as the application's next
-version, the ones before it kept.
+version, the ones before it kept. The `SPEC` an ejected `app.py` holds says no
+`version`: the Studio numbers each version as it saves it, and the deployed
+version is the one the code runs as (see *Its version* under `Application`).
+Write a `version` into it only to pin the file to one version.
 
 `loop apps run app.py` runs it as it runs a spec — a runtime here
 (`--local`) or on Datalayer (`--cloud`), configured with the built Appspec,

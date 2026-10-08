@@ -331,6 +331,22 @@ class AGUITransport(BaseTransport):
                         f"Could not extract model/identities from AG-UI request body: {e}"
                     )
 
+                # A model the request names is called as the agent's own is:
+                # through its provider — ai-inference on a Datalayer runtime,
+                # naming the application it serves — never handed to
+                # pydantic-ai as a bare string it would call directly (a
+                # hosted page's agent called Bedrock with no region, P-24).
+                run_model: Any = model
+                if isinstance(model, str) and model:
+                    from ..models.models import RequestModelRefused, model_of_request
+
+                    try:
+                        run_model = model_of_request(transport_self._agent_id, model)
+                    except RequestModelRefused as refused:
+                        from starlette.responses import JSONResponse
+
+                        return JSONResponse({"detail": str(refused)}, status_code=400)
+
                 # Apply per-turn enablement to backend guardrail state.
                 try:
                     from agent_runtimes.streams.loop import (
@@ -575,7 +591,7 @@ class AGUITransport(BaseTransport):
                     response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
-                        model=model,
+                        model=run_model,
                         toolsets=runtime_toolsets,
                         on_complete=on_complete,
                         **({"instructions": told} if told else {}),

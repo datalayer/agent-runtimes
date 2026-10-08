@@ -584,9 +584,21 @@ class AppRecorder:
         )
 
     def turns_of(self, session: str) -> int:
-        """How many turns of ``session`` this recorder kept: what a Python
-        application's code turn reads to tell whether the agent its code ran
-        kept the turn already (LOOP P-24)."""
+        """How many turns of ``session`` this recorder kept.
+
+        What a Python application's code turn reads to tell whether the
+        agent its code ran kept the turn already (LOOP P-24).
+
+        Parameters
+        ----------
+        session : str
+            The session's id.
+
+        Returns
+        -------
+        int
+            The turns kept.
+        """
         return self._turns.get(session, 0)
 
     def stepped(self, step: Any) -> None:

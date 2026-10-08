@@ -484,7 +484,11 @@ async def test_a_space_not_granted_is_refused_before_anybody_is_asked() -> None:
     assert entry["summary"] == f"{SAVE_TOOL}: refused (not granted to write that Space)"
     assert {
         key: entry["payload"][key] for key in ("behaviour", "because", "refused")
-    } == {"behaviour": "refused", "because": SPACE_NOT_GRANTED, "refused": SPACE_NOT_GRANTED}
+    } == {
+        "behaviour": "refused",
+        "because": SPACE_NOT_GRANTED,
+        "refused": SPACE_NOT_GRANTED,
+    }
     assert asked == []
     assert written.calls == []
     assert returned == [
