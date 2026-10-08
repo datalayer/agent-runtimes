@@ -25,6 +25,7 @@ import React, {
   useState,
 } from 'react';
 import { Text, Spinner, IconButton } from '@primer/react';
+import { ReactorLazy } from '@datalayer/reactor/react';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -63,7 +64,7 @@ import type {
   EphemeralSurfaceMode,
   ModelConfig,
 } from '../../types/chat';
-import { AgentDetails } from '../../agents/AgentDetails';
+import type { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
 import {
   AI_MODEL_CATALOGUE,
@@ -118,7 +119,7 @@ import {
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
-import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
 import {
   initialModelId,
   isOffered,
@@ -132,6 +133,24 @@ const EphemeralDocument = React.lazy(() =>
     default: m.EphemeralDocument,
   })),
 );
+// The agent's details (its context charts draw with ECharts) and the
+// companion notebook (JupyterLab's notebook) are opened by a click, not drawn
+// with the conversation: each is its own chunk, fetched when first shown, so
+// a chat — and an embedded application (STUDIO D-08) — loads without them.
+// A chunk that cannot load says so where the view would be.
+const loadAgentDetails = () =>
+  import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
+const loadEphemeralNotebook = () =>
+  import('../notebook/EphemeralNotebook').then(m => ({
+    default: m.EphemeralNotebook,
+  }));
+const lazyViewRefused = (what: string) => (error: Error) => (
+  <Text as="p" sx={{ p: 3, color: 'danger.fg' }}>
+    {`The ${what} could not be loaded: ${error.message}`}
+  </Text>
+);
+const agentDetailsRefused = lazyViewRefused('agent details');
+const ephemeralNotebookRefused = lazyViewRefused('notebook');
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
 import { useAgentInspectorTracer } from '../../components/inspector/agentSpans';
@@ -5057,15 +5076,19 @@ function ChatBaseInner({
           display="flex"
           flexDirection="column"
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            icon={brandIcon}
-            protocol={protocol?.type ?? 'unknown'}
-            url={protocol?.endpoint || ''}
-            messageCount={displayItems.length}
-            agentId={activeAgentId}
-            apiBase={protocol?.configEndpoint}
-            onBack={() => setShowDetails(false)}
+          <ReactorLazy<React.ComponentProps<typeof AgentDetails>>
+            load={loadAgentDetails}
+            errorFallback={agentDetailsRefused}
+            props={{
+              name: title || 'AI Agent',
+              icon: brandIcon,
+              protocol: protocol?.type ?? 'unknown',
+              url: protocol?.endpoint || '',
+              messageCount: displayItems.length,
+              agentId: activeAgentId,
+              apiBase: protocol?.configEndpoint,
+              onBack: () => setShowDetails(false),
+            }}
           />
         </Box>
       )}
@@ -5130,17 +5153,22 @@ function ChatBaseInner({
                 mode={notebookVisible ? 'notebook' : 'document'}
               />
             ) : notebookVisible ? (
-              <EphemeralNotebook
-                notebookId={ephemeralNotebookId}
-                runtimeName={runtimeId || activeAgentId}
-                runtimeOverride={ephemeralRuntimeOverride}
-                themeVariant={themeVariant}
-                colorMode={colorMode}
-                nbformat={persistedEphemeralNbformat ?? undefined}
-                onNbformatChange={handleEphemeralNotebookChange}
-                toolbarComponent={ephemeralNotebookToolbar}
-                toolbarExtraItems={notebookToolbarItems}
-                collaborationProvider={ephemeralNotebookCollaborationProvider}
+              <ReactorLazy<React.ComponentProps<typeof EphemeralNotebook>>
+                load={loadEphemeralNotebook}
+                errorFallback={ephemeralNotebookRefused}
+                fallback={<CompanionSurfaceSkeleton mode="notebook" />}
+                props={{
+                  notebookId: ephemeralNotebookId,
+                  runtimeName: runtimeId || activeAgentId,
+                  runtimeOverride: ephemeralRuntimeOverride,
+                  themeVariant,
+                  colorMode,
+                  nbformat: persistedEphemeralNbformat ?? undefined,
+                  onNbformatChange: handleEphemeralNotebookChange,
+                  toolbarComponent: ephemeralNotebookToolbar,
+                  toolbarExtraItems: notebookToolbarItems,
+                  collaborationProvider: ephemeralNotebookCollaborationProvider,
+                }}
               />
             ) : (
               <React.Suspense fallback={null}>

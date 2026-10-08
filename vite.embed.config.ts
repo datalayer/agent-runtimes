@@ -4,54 +4,275 @@
  */
 
 /**
- * The embed's one script (LOOP D-08): `<datalayer-app>`, React and the
- * application renderer in a single file a host loads with one script tag,
- * and the stylesheet the element links into its shadow root beside it.
+ * The embed (LOOP D-08): `<datalayer-app>` for a host that writes one script
+ * tag and one element.
  *
- *   npm run build:embed  →  dist-embed/datalayer-app.js, dist-embed/datalayer-app.css
+ *   npm run build:embed  →  dist-embed/
+ *     datalayer-app.js        the script a host writes: a classic script of a
+ *                             few hundred bytes that imports the module beside it
+ *     datalayer-app-main.js   the element's module: React, the element,
+ *                             AppRenderer and the conversation
+ *     chunks/*.js             what is drawn only when shown — the notebook and
+ *                             the document, the agent's details and their
+ *                             charts, diagrams, maths, each highlighted
+ *                             language — fetched from beside the module
+ *     assets/*                fonts, images, wasm and workers, fetched by URL
+ *     datalayer-app.css       the stylesheet the element links into its shadow root
+ *
+ * Everything is found relative to where it was loaded from (`base: './'`,
+ * `import.meta.url`), so `/embed/` can sit on any Datalayer origin. Being
+ * modules, the files are fetched with CORS when the host is another origin:
+ * the origin serving `/embed/` answers `Access-Control-Allow-Origin`.
+ *
+ * The build fails when what a page fetches before it can draw an application
+ * — the module and the chunks it imports statically — is larger, gzipped,
+ * than `INITIAL_GZIP_BUDGET`, and prints the size of every file it wrote.
  *
  * The app's build, as `vite.config.ts` sets it up (its plugins, its
- * dependency fixes), as a library of one entry instead of the HTML pages.
+ * dependency fixes), with one entry instead of the HTML pages.
  */
 
+import fs from 'fs';
 import path from 'path';
-import { defineConfig, mergeConfig, type UserConfig } from 'vite';
+import zlib from 'zlib';
+import {
+  defineConfig,
+  mergeConfig,
+  type Plugin,
+  type PluginOption,
+  type UserConfig,
+} from 'vite';
 import base from './vite.config';
+
+/** The script a host writes. */
+const EMBED_SCRIPT_FILE = 'datalayer-app.js';
+/** The module it imports: `MODULE_FILE` in `src/apps/embed/loader.ts`. */
+const EMBED_MODULE_FILE = 'datalayer-app-main.js';
+/** The stylesheet beside the script: `EMBED_STYLESHEET_PATH` in `embedConfig.ts`. */
+const EMBED_STYLESHEET_FILE = 'datalayer-app.css';
+
+/**
+ * What a page fetches before it can draw an application, gzipped: the module
+ * and every chunk it imports statically. See `docs/docs/apps/embedding.mdx`
+ * for what that is and why the number.
+ */
+const INITIAL_GZIP_BUDGET = 4.5 * 1024 * 1024;
+
+/** The app build's plugins an embed has no use for. */
+const NOT_FOR_THE_EMBED = new Set([
+  // JupyterLite's service worker claims the scope of the page it is served
+  // from: a host's page is another origin, where it can claim nothing.
+  'serve-jupyterlite-service-worker',
+  // The app's HTML pages; the embed has none.
+  'flatten-html-output',
+]);
+
+/** `datalayer-app.js`: the loader, transpiled on its own, imported by nothing. */
+function embedLoader(): Plugin {
+  return {
+    name: 'datalayer-app-loader',
+    apply: 'build',
+    async generateBundle() {
+      const esbuild = await import('esbuild');
+      const source = fs.readFileSync(
+        path.resolve(__dirname, 'src/apps/embed/loader.ts'),
+        'utf8',
+      );
+      const { code } = await esbuild.transform(source, {
+        loader: 'ts',
+        format: 'iife',
+        target: 'es2020',
+        minify: true,
+      });
+      this.emitFile({
+        type: 'asset',
+        fileName: EMBED_SCRIPT_FILE,
+        source: code,
+      });
+    },
+  };
+}
+
+const kb = (bytes: number) => `${(bytes / 1024).toFixed(1)} kB`;
+
+/** The package a module of the bundle comes from, or the source folder. */
+function packageOf(id: string): string {
+  const clean = id.replace(/^\0/, '').replace(/\?.*$/, '');
+  const at = clean.lastIndexOf('node_modules/');
+  if (at >= 0) {
+    const parts = clean.slice(at + 'node_modules/'.length).split('/');
+    return parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0];
+  }
+  const src = clean.indexOf('/src/');
+  if (src >= 0) {
+    return clean
+      .slice(src + 1)
+      .split('/')
+      .slice(0, 3)
+      .join('/');
+  }
+  return path.basename(clean);
+}
+
+/**
+ * Every file's size, the initial load's per package, and the budget.
+ *
+ * The initial load is the module and the chunks it imports statically —
+ * what the browser fetches before the element can draw. A chunk only
+ * reached by `import()` is fetched when what it draws is shown.
+ */
+function embedSizes(): Plugin {
+  return {
+    name: 'datalayer-app-sizes',
+    apply: 'build',
+    writeBundle(_options, bundle) {
+      const gzip = (source: string | Uint8Array) =>
+        zlib.gzipSync(source, { level: 9 }).length;
+      const files = Object.values(bundle);
+      const chunks = new Map(
+        files.flatMap(file =>
+          file.type === 'chunk' ? [[file.fileName, file] as const] : [],
+        ),
+      );
+      if (!chunks.has(EMBED_MODULE_FILE)) {
+        this.error(`The embed build wrote no ${EMBED_MODULE_FILE}.`);
+      }
+      const initial = new Set<string>();
+      const pending = [EMBED_MODULE_FILE];
+      while (pending.length > 0) {
+        const name = pending.pop()!;
+        if (!initial.has(name)) {
+          initial.add(name);
+          pending.push(...(chunks.get(name)?.imports ?? []));
+        }
+      }
+      const rows = files
+        .map(file => {
+          const source = file.type === 'chunk' ? file.code : file.source;
+          const raw =
+            typeof source === 'string'
+              ? Buffer.byteLength(source)
+              : source.byteLength;
+          const compressible =
+            file.type === 'chunk' || /\.(js|css|json|svg)$/.test(file.fileName);
+          return {
+            name: file.fileName,
+            raw,
+            gzip: compressible ? gzip(source) : raw,
+            initial: initial.has(file.fileName),
+          };
+        })
+        .sort(
+          (a, b) =>
+            Number(b.initial) - Number(a.initial) ||
+            b.gzip - a.gzip ||
+            a.name.localeCompare(b.name),
+        );
+      const sum = (list: typeof rows, key: 'raw' | 'gzip') =>
+        list.reduce((total, row) => total + row[key], 0);
+      const initialRows = rows.filter(row => row.initial);
+      const lazyRows = rows.filter(row => !row.initial && chunks.has(row.name));
+      const otherRows = rows.filter(
+        row => !row.initial && !chunks.has(row.name),
+      );
+      const line = (row: (typeof rows)[number]) =>
+        `  ${kb(row.raw).padStart(12)} ${kb(row.gzip).padStart(12)}  ${row.name}`;
+      const log: string[] = [
+        '',
+        'Embed bundle (raw, gzip):',
+        `Initial load: ${EMBED_MODULE_FILE} and the chunks it imports statically`,
+        ...initialRows.map(line),
+        `  ${kb(sum(initialRows, 'raw')).padStart(12)} ${kb(sum(initialRows, 'gzip')).padStart(12)}  total (budget ${kb(INITIAL_GZIP_BUDGET)} gzip)`,
+        `Lazy chunks: fetched when what they draw is shown (${lazyRows.length})`,
+        ...lazyRows.map(line),
+        `  ${kb(sum(lazyRows, 'raw')).padStart(12)} ${kb(sum(lazyRows, 'gzip')).padStart(12)}  total`,
+        `The script, the stylesheet and the assets (${otherRows.length})`,
+        ...otherRows.map(line),
+      ];
+      // What the initial load is made of, by package: what to move next.
+      const byPackage = new Map<string, number>();
+      for (const name of initial) {
+        for (const [id, info] of Object.entries(
+          chunks.get(name)?.modules ?? {},
+        )) {
+          const key = packageOf(id);
+          byPackage.set(key, (byPackage.get(key) ?? 0) + info.renderedLength);
+        }
+      }
+      log.push('Initial load by package (rendered, before minifying names):');
+      for (const [key, bytes] of [...byPackage.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 60)) {
+        log.push(`  ${kb(bytes).padStart(12)}  ${key}`);
+      }
+      console.log(log.join('\n'));
+      const initialGzip = sum(initialRows, 'gzip');
+      if (initialGzip > INITIAL_GZIP_BUDGET) {
+        this.error(
+          `The embed's initial load is ${kb(initialGzip)} gzipped, over its budget of ${kb(INITIAL_GZIP_BUDGET)}: ` +
+            'move what is not drawn with the conversation behind an import().',
+        );
+      }
+    },
+  };
+}
 
 export default defineConfig(async env => {
   const shared = (
     typeof base === 'function' ? await base(env) : base
   ) as UserConfig;
   const config = mergeConfig(shared, {
-    // Nothing is copied from `public/`: the embed is its two files.
+    // Every URL relative to the file that asks for it: chunks to the module,
+    // assets to the module or the stylesheet.
+    base: './',
+    // Nothing is copied from `public/`.
     publicDir: false,
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     build: {
       outDir: 'dist-embed',
       emptyOutDir: true,
+      // One stylesheet, linked once into the element's shadow root.
       cssCodeSplit: false,
-      lib: {
-        entry: path.resolve(__dirname, 'src/apps/embed/datalayer-app.ts'),
-        name: 'DatalayerApp',
-        formats: ['iife'],
-        fileName: () => 'datalayer-app.js',
-        cssFileName: 'datalayer-app',
-      },
+      // A host's <head> is not the embed's to add preload links to.
+      modulePreload: false,
+      // The size of every file is printed below, against the budget.
+      chunkSizeWarningLimit: Number.POSITIVE_INFINITY,
+      reportCompressedSize: false,
     },
   }) as UserConfig;
-  // The app's pages are its inputs; the library's entry is this one.
-  if (config.build?.rollupOptions) {
-    delete config.build.rollupOptions.input;
-    config.build.rollupOptions.output = {
-      ...(config.build.rollupOptions.output as object),
-      inlineDynamicImports: true,
-      // The element links `/embed/datalayer-app.css` (EMBED_STYLESHEET_PATH):
-      // the stylesheet beside the script, not under `assets/`.
-      assetFileNames: (info: { names?: string[] }) =>
-        (info.names ?? []).some(name => name.endsWith('.css'))
-          ? 'datalayer-app.css'
-          : 'assets/[name]-[hash][extname]',
-    };
-  }
+  config.plugins = [
+    ...(config.plugins ?? [])
+      .flat(Infinity as 1)
+      .filter(
+        (plugin: PluginOption) =>
+          !(
+            plugin &&
+            typeof plugin === 'object' &&
+            'name' in plugin &&
+            NOT_FOR_THE_EMBED.has(plugin.name)
+          ),
+      ),
+    embedLoader(),
+    embedSizes(),
+  ];
+  const rollupOptions = (config.build!.rollupOptions ??= {});
+  // The app's pages are its inputs; the embed's is its module.
+  rollupOptions.input = {
+    'datalayer-app-main': path.resolve(
+      __dirname,
+      'src/apps/embed/datalayer-app.ts',
+    ),
+  };
+  rollupOptions.output = {
+    format: 'es',
+    entryFileNames: EMBED_MODULE_FILE,
+    chunkFileNames: 'chunks/[name]-[hash].js',
+    // The element links the stylesheet beside the script (EMBED_STYLESHEET_PATH),
+    // not under `assets/`.
+    assetFileNames: (info: { names?: string[] }) =>
+      (info.names ?? []).some(name => name.endsWith('.css'))
+        ? EMBED_STYLESHEET_FILE
+        : 'assets/[name]-[hash][extname]',
+  };
   return config;
 });

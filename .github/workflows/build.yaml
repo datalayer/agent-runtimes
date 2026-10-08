@@ -50,6 +50,18 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
+      # The `<datalayer-app>` embed (STUDIO D-08), as the release builds it:
+      # its build prints every file's size and fails over the initial load's
+      # budget (vite.embed.config.ts), so a pull request sees what it costs.
+      - name: Build the embed bundle
+        if: matrix.node-version == '22.x'
+        run: |
+          set -euo pipefail
+          npm run build:embed
+          test -s dist-embed/datalayer-app.js
+          test -s dist-embed/datalayer-app-main.js
+          test -s dist-embed/datalayer-app.css
+
       # `tsc -b` in the build has checked the package; the workspaces here,
       # rather than in a workflow of their own that installs and builds again.
       - name: Type check the workspaces
