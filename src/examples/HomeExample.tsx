@@ -71,7 +71,7 @@ const HomeExample: React.FC<HomeExampleProps> = ({
           <Box
             border="1px dashed"
             borderColor="border.default"
-            borderRadius={3}
+            borderRadius="card"
             p={4}
             textAlign="center"
             color="fg.muted"
