@@ -406,7 +406,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                     "schedule": "",
                     "event": "",
                 },
-                "narration": "Event response asks both specialists; each searches the imagery around the date.",
+                "narration": "Event response asks one specialist at a time, waiting for each answer; each searches the imagery around the date.",
                 "moves": [
                     {
                         "who": "event-response",

@@ -428,7 +428,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         event: '',
       },
       narration:
-        'Event response asks both specialists; each searches the imagery around the date.',
+        'Event response asks one specialist at a time, waiting for each answer; each searches the imagery around the date.',
       moves: [
         {
           who: 'event-response',
