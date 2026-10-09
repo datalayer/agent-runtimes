@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { agUiRefusal, refusalBody } from '../protocols/agUiRefusal';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -145,8 +146,14 @@ export function useAgUi(options: UseAGUIOptions = {}) {
         });
 
         if (!response.ok) {
+          // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+          // address means the agent is not on this runtime.
           throw new Error(
-            `AG-UI request failed: ${response.status} ${response.statusText}`,
+            agUiRefusal(
+              response.status,
+              response.statusText,
+              await refusalBody(response),
+            ),
           );
         }
 

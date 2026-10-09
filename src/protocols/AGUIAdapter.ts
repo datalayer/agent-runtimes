@@ -13,6 +13,7 @@ import type { ProtocolAdapterConfig, AGUI } from '../types';
 import type { ChatMessage, ContentPart } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
+import { agUiRefusal, refusalBody } from './agUiRefusal';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 
 /**
@@ -320,8 +321,15 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       });
 
       if (!response.ok) {
+        // Why, in the page's own words (F-15): a 404 at an agent's AG-UI
+        // address means the agent is not on this runtime, which the status
+        // alone never said.
         throw new Error(
-          `AG-UI request failed: ${response.status} ${response.statusText}`,
+          agUiRefusal(
+            response.status,
+            response.statusText,
+            await refusalBody(response),
+          ),
         );
       }
 
