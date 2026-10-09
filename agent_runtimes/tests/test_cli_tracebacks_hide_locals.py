@@ -25,7 +25,13 @@ PACKAGE = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _every_typer(root: typer.Typer) -> Iterator[typer.Typer]:
-    """Yield a Typer app and every group registered under it."""
+    """Yield a Typer app and every group registered under it.
+
+    Yields
+    ------
+    typer.Typer
+        The app itself, then each group under it, depth first.
+    """
     yield root
     for group in root.registered_groups:
         if group.typer_instance is not None:

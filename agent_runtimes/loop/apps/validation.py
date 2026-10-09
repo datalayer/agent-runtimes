@@ -233,7 +233,8 @@ def sources_read(spec: AppSpec, tools: Sequence[str]) -> Optional[str]:
 
 class RecordUnavailable(Exception):
     """The record of a test's conversation could not be read: the test is not
-    graded on its answer alone (STUDIO V-08)."""
+    graded on its answer alone (STUDIO V-08).
+    """
 
 
 #: The entries of a record the test is graded on: what it did, not that it ran.

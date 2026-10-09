@@ -106,7 +106,7 @@ def forget_tokens() -> None:
 
 
 async def _ask_iam(bearer: str) -> dict[str, Any]:
-    """IAM's access token on Gmail for whom ``bearer`` acts, or `GmailRefused` with its sentence."""
+    """Ask IAM for the access token on Gmail for whom ``bearer`` acts, or raise `GmailRefused`."""
     from datalayer_core.utils.urls import DatalayerURLs
 
     url = str(getattr(DatalayerURLs.from_environment(), "iam_url", "") or "").rstrip(

@@ -718,7 +718,8 @@ class FrameworkAgent:
 
     async def _preflight(self, prompt: str) -> None:
         """The checks of a session's start, once per session (R-06); refused,
-        `AppCheckBlockedError` with their sentences."""
+        `AppCheckBlockedError` with their sentences.
+        """
         from agent_runtimes.loop.apps.guards import AppChecksCapability
 
         for capability in self.capabilities:

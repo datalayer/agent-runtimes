@@ -83,7 +83,6 @@ def download_headers(path: str) -> Dict[str, str]:
     }
 
 
-
 def served_from() -> str:
     """Where a file of this computer is served from (STUDIO D-22).
 
@@ -99,6 +98,7 @@ def served_from() -> str:
     and the runtime's own host serves them, as it did.
     """
     return (os.environ.get("DATALAYER_USER_APPS_URL") or "").strip()
+
 
 def _refused(refused: ComputerRefused) -> HTTPException:
     """A refusal of the computer as an HTTP one."""

@@ -745,7 +745,8 @@ class AppRecorder:
         """A check's verdict: the stage, what it did, the Gate that decided
         and the Guard that checked (``built-in`` for the built-in check),
         and whether it passed — at a session's start every Guard's verdict is
-        kept, passed or failed (LOOP R-06); later, those that stop a step."""
+        kept, passed or failed (LOOP R-06); later, those that stop a step.
+        """
         guard = getattr(verdict, "guard", "")
         passed = getattr(verdict, "passed", None)
         self.add(

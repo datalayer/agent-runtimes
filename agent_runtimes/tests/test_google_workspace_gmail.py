@@ -52,7 +52,7 @@ def deployed() -> None:
 
 @pytest.fixture
 def iam() -> list[str]:
-    """IAM's token route, as a list of the bearers it was asked with."""
+    """Collect the bearers IAM's token route was asked with."""
     asked: list[str] = []
 
     async def mint(bearer: str) -> dict[str, Any]:
@@ -75,14 +75,15 @@ def test_the_catalogue_server_is_gmail_over_http_with_no_credential_of_its_own()
         server.transport == "streamable-http"
         and server.url == "http://127.0.0.1:9711/mcp"
     )
+    env = server.env or {}
     assert (
-        server.env["MCP_ENABLE_OAUTH21"] == "true"
-        and server.env["EXTERNAL_OAUTH21_PROVIDER"] == "true"
+        env["MCP_ENABLE_OAUTH21"] == "true"
+        and env["EXTERNAL_OAUTH21_PROVIDER"] == "true"
     )
-    assert server.env["WORKSPACE_MCP_HOST"] == "127.0.0.1"
+    assert env["WORKSPACE_MCP_HOST"] == "127.0.0.1"
     # No Google client secret, no account secret: what it opens is each request's token.
     assert server.required_env_vars == []
-    assert not any("${" in value for value in (server.env or {}).values())
+    assert not any("${" in value for value in env.values())
     assert "gmail:send" in server.args
 
 
@@ -229,7 +230,7 @@ async def test_a_run_nobodys_gmail_is_reached_for_has_no_gmail_tool(
 
     toolset = gw.GoogleWorkspaceToolset(
         wrapped=Inner(), agent_id=AGENT, bearer="persons-own-token"
-    )  # type: ignore[arg-type]
+    )
     async with toolset:
         assert await toolset.get_tools(None) == {}
     assert "deployed application" in toolset.refusal

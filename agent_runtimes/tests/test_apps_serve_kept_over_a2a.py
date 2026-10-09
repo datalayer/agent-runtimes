@@ -12,7 +12,7 @@ address — where ai-agents forwards its callers — not the runtime's own.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 import pytest
@@ -33,7 +33,7 @@ AUTHORIZED = apps_routes.Authorized(LOCAL, None)
 
 
 @pytest.fixture
-def runtime(monkeypatch: Any) -> Accounting:
+def runtime(monkeypatch: Any) -> Iterator[Accounting]:
     """A runtime with the Accounting deployment's agent made, nothing served yet.
 
     Yields

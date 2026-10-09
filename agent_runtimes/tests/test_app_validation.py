@@ -336,7 +336,8 @@ def test_what_it_did_and_what_stopped_it_read_from_a_record() -> None:
         **gate,
         "payload": {"stage": "answer", "action": "stop", "gate": "built-in"},
     }
-    assert stopped_on_record([built_in])[0] == CHECK_SENSITIVE
+    said = stopped_on_record([built_in])
+    assert said is not None and said[0] == CHECK_SENSITIVE
     # A check that asked again, then a turn that stopped: that check's.
     retried = {
         **gate,

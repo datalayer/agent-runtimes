@@ -99,12 +99,13 @@ def fresh() -> Iterator[None]:
 
 @pytest.fixture()
 def never_asked() -> List[str]:
-    """IAM's acting routes, which a session given its token never reaches."""
+    """Watch IAM's acting routes, which a session given its token never reaches."""
     asked: List[str] = []
 
     async def ask(deployment: str, bearer: str) -> Dict[str, Any]:
         asked.append(bearer)
         pytest.fail("IAM was asked with the owner's key in the person's place")
+        raise AssertionError("unreachable: pytest.fail does not return")
 
     acting.use_iam(ask)
     return asked

@@ -354,7 +354,8 @@ def _id_of(ref: str) -> str:
 
 def instructions_of(app: AppSpec) -> List[str]:
     """What the application tells its model besides its agent's own: its
-    instructions, and each mode option's and each profile's."""
+    instructions, and each mode option's and each profile's.
+    """
     texts = [app.instructions]
     for mode in app.interface.modes:
         texts.extend(option.instructions for option in mode.options)
