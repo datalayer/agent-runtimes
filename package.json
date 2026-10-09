@@ -58,6 +58,8 @@
         "build-storybook": "storybook build",
         "build:all": "npm run build && npm run build:examples",
         "build:embed": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --config vite.embed.config.ts",
+        "dist-embed": "node scripts/dist-embed.mjs",
+        "dist-embed:release": "node scripts/dist-embed.mjs --release",
         "build:examples": "npm run build:nextjs",
         "build:lib": "npm run clean:lib && gulp resources-to-lib && tsc -b",
         "build:nextjs": "npm run build --workspace=nextjs-notebook-example",
