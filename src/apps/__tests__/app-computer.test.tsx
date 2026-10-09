@@ -172,7 +172,7 @@ function runtime(routes: Record<string, Route>) {
   return calls;
 }
 
-const state = (held: unknown = null, yours = false) => ({
+const state = (held: unknown = null, yours = false, servedFrom = '') => ({
   agent: 'web-research',
   app: 'web-research',
   parts: { browse: false, files: true, shell: true },
@@ -180,6 +180,7 @@ const state = (held: unknown = null, yours = false) => ({
   started: true,
   held,
   yours,
+  servedFrom,
 });
 
 describe('the computer, as words', () => {
@@ -361,6 +362,60 @@ describe('the computer view', () => {
       'http://runtime.test/api/v1/apps/agents/web-research/computer/file?path=files%2Fa.csv',
     );
     expect(created).toEqual(['blob:1']);
+    expect(saved).toHaveBeenCalledTimes(1);
+    saved.mockRestore();
+  });
+
+  it('downloads a file from the origin the runtime named (D-22)', async () => {
+    /*
+     * The runtimes' host is every runtime's, so a file served from it is
+     * same-origin with every other runtime. The runtime says which host is
+     * kept for what applications serve (`servedFrom`), and the panel fetches
+     * the file from that one: the same runtime, the same path, another name.
+     * Its state and its directories are still read from the runtime itself.
+     */
+    iamStore.setState({ token: 'jwt' } as never);
+    const files = {
+      entries: [
+        {
+          name: 'a.csv',
+          path: 'files/a.csv',
+          type: 'file',
+          size: 1234,
+          modified: 0,
+        },
+      ],
+    };
+    const calls = runtime({
+      'GET ': () => state(null, false, 'https://user-apps.datalayer.run'),
+      'GET /files': () => files,
+      // The file is asked of the other origin, so the stub sees its whole URL.
+      'GET https://user-apps.datalayer.run/api/v1/apps/agents/web-research/computer/file':
+        () => 'a,b',
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:1');
+    URL.revokeObjectURL = vi.fn();
+    const saved = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+    const { container } = await render(
+      <AppComputer app={app({ files: true })} workspace={workspace} />,
+    );
+    const button = (label: string) =>
+      [...container.querySelectorAll('button')].find(
+        each => each.textContent === label,
+      )!;
+    await act(async () => button(COMPUTER_WORDS.download).click());
+    for (let i = 0; i < 4; i += 1) {
+      await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
+    }
+    const asked = calls.map(([url]) => String(url));
+    expect(asked).toContain(
+      'https://user-apps.datalayer.run/api/v1/apps/agents/web-research/computer/file?path=files%2Fa.csv',
+    );
+    expect(asked.some(url => url.startsWith('http://runtime.test/'))).toBe(
+      true,
+    );
     expect(saved).toHaveBeenCalledTimes(1);
     saved.mockRestore();
   });

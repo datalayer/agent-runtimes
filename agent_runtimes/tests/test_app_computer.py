@@ -320,6 +320,20 @@ def test_a_file_of_its_computer_is_a_download_never_a_page(held: None) -> None:
         )
 
 
+def test_it_says_which_origin_serves_its_files(held: None, monkeypatch) -> None:
+    """STUDIO D-22: the host kept for what applications serve, or none.
+
+    The runtimes' host is every runtime's, so a file served there is
+    same-origin with all of them. A plane that keeps a host for what
+    applications serve says so in the pod's environment, and the computer
+    repeats it, because a page cannot know the name a runtime answers to.
+    """
+    with _client("127.0.0.1") as local:
+        monkeypatch.delenv("DATALAYER_USER_APPS_URL", raising=False)
+        assert local.get(BASE).json()["servedFrom"] == ""
+        monkeypatch.setenv("DATALAYER_USER_APPS_URL", " https://user-apps.datalayer.run ")
+        assert local.get(BASE).json()["servedFrom"] == "https://user-apps.datalayer.run"
+
 def test_it_is_shown_only_to_whoever_talks_to_it(held: None) -> None:
     with _client("10.0.0.4") as remote:
         ada = {"Authorization": "Bearer ada"}

@@ -203,6 +203,12 @@ export type ComputerState = {
   held: ComputerHolder | null;
   /** Whether the person asking is who has it. */
   yours: boolean;
+  /**
+   * The origin its files are served from, as the runtime says it (D-22):
+   * the host kept for what applications serve, or empty where the plane
+   * keeps none and the runtime's own host serves them.
+   */
+  servedFrom?: string;
 };
 
 /** One entry of a directory of its computer. */
@@ -225,11 +231,45 @@ export type ComputerContext = {
   agentId: string;
   /** The person's token; none on the machine itself. */
   token?: string;
+  /**
+   * Where what an application serves a person is served from (STUDIO D-22):
+   * `user-apps.datalayer.run`, the same runtime behind another name. A file
+   * fetched from the runtimes' host would be same-origin with every other
+   * runtime; from this one it is origin of its own. Unset, the runtime's own
+   * host serves it, as it did.
+   */
+  userAppsUrl?: string;
 };
 
 /** The computer's routes, for an agent. */
 export const computerUrl = (context: ComputerContext, tail = ''): string =>
   `${context.serverUrl.replace(/\/+$/, '')}/api/v1/apps/agents/${encodeURIComponent(context.agentId)}/computer${tail}`;
+
+/**
+ * Where a file of its computer is read (STUDIO D-22): the same path, on the
+ * host kept for what applications serve when there is one. Only the origin
+ * changes — the runtime is the same, and its prefix is answered there too.
+ */
+export function computerFileUrl(
+  context: ComputerContext,
+  path: string,
+): string {
+  const url = computerUrl(context, `/file?path=${encodeURIComponent(path)}`);
+  const served = (context.userAppsUrl || '').trim();
+  if (!served) {
+    return url;
+  }
+  try {
+    const asked = new URL(url);
+    const host = new URL(served);
+    asked.protocol = host.protocol;
+    asked.host = host.host;
+    return asked.toString();
+  } catch {
+    // An address that is not one: the runtime's own host serves it.
+    return url;
+  }
+}
 
 async function asked(
   context: ComputerContext,
@@ -275,12 +315,30 @@ export const listComputerFiles = async (
   return body.entries;
 };
 
-/** One of its files, to save. */
+/**
+ * One of its files, to save. Fetched from the host kept for what
+ * applications serve when there is one (D-22), with the person's token: the
+ * runtime is the same, only the name it answers to differs.
+ */
 export const downloadComputerFile = async (
   context: ComputerContext,
   path: string,
-): Promise<Blob> =>
-  (await asked(context, `/file?path=${encodeURIComponent(path)}`)).blob();
+): Promise<Blob> => {
+  const response = await fetch(computerFileUrl(context, path), {
+    headers: context.token ? { Authorization: `Bearer ${context.token}` } : {},
+  });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+    } catch {
+      // A refusal without a sentence: its status says it.
+    }
+    throw new Error(detail);
+  }
+  return response.blob();
+};
 
 /** Take it over: what runs is interrupted, its agent's calls wait. */
 export const takeOverComputer = async (

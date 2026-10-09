@@ -7,7 +7,8 @@ Under ``/api/v1/apps/agents/{agent}/computer``, for the agent the platform
 made for an application:
 
 - ``GET``: its parts — browse, files, shell, each on or off — whether it has
-  started, and who has taken it over;
+  started, who has taken it over, and the origin its files are served from
+  (``servedFrom``, STUDIO D-22);
 - ``GET …/files?path=``: a directory of its working directory, read-only;
 - ``GET …/file?path=``: one of its files, to download — always a download
   (`download_headers`): never a page a browser draws, whatever it holds;
@@ -26,6 +27,7 @@ ai-agents decides, asked with the caller's own token
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Tuple
 from urllib.parse import quote
 
@@ -80,6 +82,23 @@ def download_headers(path: str) -> Dict[str, str]:
         "Cache-Control": "no-store",
     }
 
+
+
+def served_from() -> str:
+    """Where a file of this computer is served from (STUDIO D-22).
+
+    A hosted application hands a person files — a download it wrote, an
+    upload read back — and the runtime serves them. The runtimes' host is
+    *every* runtime's, so a file served there is same-origin with all of
+    them. `DATALAYER_USER_APPS_URL` names a host kept for what applications
+    serve, in front of the same route on the same runtime: the operator puts
+    it on the runtime's ingress and in its environment, and this says it, so
+    the page builds its file links on that origin instead.
+
+    Empty where no such host is configured — a laptop, a plane without one —
+    and the runtime's own host serves them, as it did.
+    """
+    return (os.environ.get("DATALAYER_USER_APPS_URL") or "").strip()
 
 def _refused(refused: ComputerRefused) -> HTTPException:
     """A refusal of the computer as an HTTP one."""
@@ -154,6 +173,8 @@ async def describe(agent: str, request: Request) -> Dict[str, Any]:
         # Whether the caller is who has it.
         "yours": holder is not None
         and (holder.kind, holder.uid) == (caller.kind, caller.uid),
+        # Where its files are served from, when a host is kept for them.
+        "servedFrom": served_from(),
     }
 
 

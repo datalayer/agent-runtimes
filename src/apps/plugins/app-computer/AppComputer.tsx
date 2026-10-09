@@ -391,15 +391,31 @@ export function AppComputer({
       ? noRuntimeSaid(workspace?.sandbox ?? IDLE_SANDBOX_SNAPSHOT, chatText)
       : undefined;
   const agentId = workspace?.agentId || app.id;
+  const [state, setState] = useState<ComputerState | undefined>();
+  /*
+   * Where its files come from (STUDIO D-22).
+   *
+   * The runtime says it when the plane keeps a host for what applications
+   * serve (`servedFrom`, `DATALAYER_USER_APPS_URL`): a file is then fetched
+   * from that origin rather than from the runtimes' host, which is every
+   * runtime's and so same-origin with all of them. Read from the computer's
+   * own answer rather than configured here, because it is the runtime that
+   * knows which names it answers to; unsaid, nothing changes.
+   */
+  const servedFrom = state?.servedFrom ?? '';
   const context = useMemo<ComputerContext | undefined>(
     () =>
       serverUrl === undefined
         ? undefined
-        : { serverUrl, agentId, token: token || undefined },
-    [serverUrl, agentId, token],
+        : {
+            serverUrl,
+            agentId,
+            token: token || undefined,
+            userAppsUrl: servedFrom || undefined,
+          },
+    [serverUrl, agentId, token, servedFrom],
   );
   const parts = computerParts(app);
-  const [state, setState] = useState<ComputerState | undefined>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   // Nothing is set once it is gone: an answer may come back after.
