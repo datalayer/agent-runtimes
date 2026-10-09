@@ -2704,7 +2704,7 @@ export const SALES_APP_0_0_1: AppSpec = {
       {
         label: 'Payment reminders',
         message:
-          'Send a payment reminder to every customer more than 60 days late.',
+          'Send a payment reminder to every customer whose invoice is overdue.',
       },
     ],
     commands: [],
@@ -5473,7 +5473,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           label: 'Payment reminders',
           message:
-            'Send a payment reminder to every customer more than 60 days late.',
+            'Send a payment reminder to every customer whose invoice is overdue.',
         },
       ],
       assistant: 'paperclip',

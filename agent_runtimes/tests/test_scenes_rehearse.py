@@ -322,13 +322,16 @@ def test_the_time_a_beat_may_take_is_read_on_its_seconds(scene: Any) -> None:
     assert seconds_of("") is None
     assert time_difference(72, "60s") == ["It took 72 s; the beat allows 60s."]
     assert time_difference(12, "60s") == []
+    # The beat's own time, whatever the spec says it is: a beat that takes
+    # twice it fails with both numbers.
     beat = scene.rehearsal.beats[0]
+    allowed = seconds_of(beat.within)
     played = asyncio.run(stage_of(scene, cast()).play(scene.script[0].cue.text))
-    played.seconds = 90
+    played.seconds = allowed * 2
     verdict = verdict_of(beat, played, scene_names(scene))
     assert (verdict.state, verdict.says) == (
         FAILED,
-        "It took 90 s; the beat allows 60s.",
+        f"It took {allowed * 2:.0f} s; the beat allows {beat.within}.",
     )
 
 
@@ -404,6 +407,113 @@ def test_a_member_at_an_address_is_asked_there_and_its_steps_are_lines(
     ]
     assert verdict.beats[0].state == PASSED, verdict.beats[0].says
     assert "Accounting → Odoo: odoo_accounting_list_invoices" in verdict.beats[0].lines
+
+
+def test_a_member_at_an_address_is_asked_for_what_it_can_show_and_its_surface_is_read(
+    monkeypatch: pytest.MonkeyPatch, scene: Any
+) -> None:
+    # A caller that names nothing is answered in words alone, and a chart drawn
+    # in words is not a chart: the stage names what it accepts, as the page
+    # does, and reads the kinds off the surface the answer came with.
+    import httpx
+
+    from agent_runtimes.loop.scenes.stage import (
+        ACCEPTED_OUTPUT_MODES,
+        ask_over_a2a,
+    )
+
+    surface = {
+        "surfaceId": "answer-1",
+        "catalogId": "loop.answer",
+        "title": "Aged receivables",
+        "messages": [
+            {
+                "version": "v0.9",
+                "updateComponents": {
+                    "surfaceId": "answer-1",
+                    "components": [
+                        {"id": "root", "component": "Column", "children": ["aged"]},
+                        {"id": "aged", "component": "Chart"},
+                    ],
+                },
+            }
+        ],
+    }
+    events = [
+        'data: {"result": {"kind": "artifact-update", "artifact": {"artifactId": "a1", '
+        '"parts": [{"text": "The receivables, aged."}]}}}',
+        'data: {"result": {"kind": "artifact-update", "artifact": {"artifactId": "a2", '
+        '"parts": [{"mediaType": "application/json+a2ui", "data": '
+        + json.dumps(surface)
+        + "}]}}}",
+        'data: {"result": {"kind": "status-update", "status": {"state": "completed", '
+        '"message": {"parts": []}}}}',
+    ]
+    sent: List[Dict[str, Any]] = []
+
+    class _Stream:
+        status_code = 200
+
+        async def __aenter__(self) -> "_Stream":
+            return self
+
+        async def __aexit__(self, *_: Any) -> bool:
+            return False
+
+        async def aiter_lines(self) -> Any:
+            for line in events:
+                yield line
+
+    class _Client:
+        def __init__(self, **_: Any) -> None:
+            pass
+
+        async def __aenter__(self) -> "_Client":
+            return self
+
+        async def __aexit__(self, *_: Any) -> bool:
+            return False
+
+        def stream(self, _method: str, _url: str, **kwargs: Any) -> _Stream:
+            sent.append(kwargs["json"])
+            return _Stream()
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    member = members_of(
+        scene, addresses={"accounting": ("http://runtime/a2a/accounting", "")}
+    )[0][1]
+    answered = asyncio.run(ask_over_a2a(member, "Chart the aged receivables."))
+    [body] = sent
+    # The scene shows a table, a chart, the sources and a choice, every one of
+    # them a component: words and a surface, and no notebook composed for nobody.
+    assert body["params"]["configuration"]["acceptedOutputModes"] == list(
+        ACCEPTED_OUTPUT_MODES
+    )
+    assert "application/x-ipynb+json" not in ACCEPTED_OUTPUT_MODES
+    assert answered.failed == "" and answered.text == "The receivables, aged."
+    assert [node["component"] for node in answered.components] == ["Column", "Chart"]
+    assert shown_kinds(answered.text, answered.components) == ("words", "chart")
+
+
+def test_the_cast_s_brief_is_given_over_the_application_s_instructions(
+    scene: Any,
+) -> None:
+    # The brief is "what it is for in this scene, over its application's
+    # instructions": Sales's application may ask the person which period it
+    # means, and in the scene there is nobody to answer — so the brief wins.
+    from agent_runtimes.loop.scenes.stage import with_ask_tools, with_brief
+
+    sales = members_of(scene)[0][0]
+    document = with_brief(sales, with_ask_tools(sales, {}))
+    instructions = document["instructions"]
+    assert sales.document["instructions"] in instructions
+    assert sales.brief.strip() in instructions
+    assert instructions.index(sales.brief.strip()) > instructions.index(
+        sales.document["instructions"]
+    )
+    assert "the brief is what you do" in instructions
+    # A member with no brief is left as its application is.
+    assert with_brief(StageMember("x", "X", document={"a": 1}), {"a": 1}) == {"a": 1}
 
 
 def test_a_member_at_an_address_that_fails_is_a_failed_line(scene: Any) -> None:

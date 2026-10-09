@@ -8,12 +8,14 @@ runtime, where its route answers the machine itself and a key granted to that
 route (`agent_runtimes.loop.apps.a2a`). This script mints that key with IAM's
 task grants (O1-06, O1-17), and it reaches exactly this:
 
-- **the route**: the grant's task is ``a2a:<runtime uid>:accounting:<nonce>``,
+- **the route**: the grant's task is ``a2a:<runtime uid>:<application>:<nonce>``,
   and the runtime's gate answers only a key whose task begins with its own
   uid and the application's id: that one runtime's ``/api/v1/a2a/agents/accounting/``;
 - **Odoo, read only**: one ``datalayer_connection`` detail, the Datalayer MCP
   gateway in the owner's name, ``read``, ``only: ["odoo_accounting_*"]``, and
-  the scope ``data:read``. The gateway lets it call the ``odoo_accounting_*``
+  the scope ``data:read``. A scene's other members are served the same way,
+  with ``--app <id>`` and one ``--only`` per pattern their servers' tools take
+  (``earthdata_*``, ``tavily_*``). The gateway lets it call the ``odoo_accounting_*``
   tools whose classes are all ``read``, and nothing else. The run on the
   runtime uses this key for the gateway, never the runtime's own;
 - **for a few hours**: the token lives until ``--hours`` from now, four by
@@ -34,6 +36,8 @@ agent-runtimes by default, which git ignores, made readable by its owner
 only) and never printed.
 
     python examples/sales-accounting-a2a/make_temp_key.py --runtime <runtime uid>
+    python examples/sales-accounting-a2a/make_temp_key.py --runtime <uid> \
+        --app crop-monitoring --only "earthdata_*" --only "tavily_*"
     python examples/sales-accounting-a2a/make_temp_key.py --revoke <grant uid>
 """
 
@@ -42,33 +46,46 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, Sequence
 
 import httpx
 
-#: The application whose route the key is granted to.
+#: The application whose route the key is granted to, unless ``--app`` says another:
+#: a scene's other members are served the same way (``month-end-close``,
+#: ``crop-monitoring``, ``disaster-assessment``, ``change-detection``).
 APP_ID = "accounting"
 
-#: What the key reaches through the Datalayer MCP gateway.
-AUTHORIZATION_DETAILS = [
-    {
-        "type": "datalayer_connection",
-        "server": "datalayer",
-        "actions": ["read"],
-        "as": "owner",
-        "only": ["odoo_accounting_*"],
-    }
-]
+#: What the key reaches at the Datalayer MCP gateway, unless ``--only`` says:
+#: the tools of the member's own servers, and nothing else.
+ONLY = ("odoo_accounting_*",)
 
 #: The scope the Odoo tools that read need at the gateway (`tool_policy`).
 SCOPES = "data:read"
 
-#: The variables the example reads.
-KEY_VARIABLE = "VITE_A2A_ACCOUNTING_KEY"
-URL_VARIABLE = "VITE_A2A_ACCOUNTING_URL"
+
+def _details(only: Sequence[str]) -> list[dict[str, Any]]:
+    """What the key reaches through the gateway: those tools, read, in the owner's name."""
+    return [
+        {
+            "type": "datalayer_connection",
+            "server": "datalayer",
+            "actions": ["read"],
+            "as": "owner",
+            "only": list(only),
+        }
+    ]
+
+
+def _variables(app_id: str) -> tuple[str, str]:
+    """The variables the key and the address are written as, after the application's id."""
+    name = re.sub(r"[^A-Z0-9]+", "_", app_id.upper()).strip("_")
+    return f"VITE_A2A_{name}_KEY", f"VITE_A2A_{name}_URL"
+
 
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / ".env.local"
 SERVICE_KEYS = (
@@ -131,13 +148,14 @@ def mint(args: argparse.Namespace) -> None:
     if not 0 < args.hours <= 24:
         sys.exit("--hours is more than 0 and at most 24: the grant itself lives a day.")
     owner = _owner_uid(args)
-    task_uid = f"a2a:{args.runtime}:{APP_ID}:{secrets.token_hex(6)}"
+    key_variable, url_variable = _variables(args.app)
+    task_uid = f"a2a:{args.runtime}:{args.app}:{secrets.token_hex(6)}"
     until = datetime.now(timezone.utc) + timedelta(hours=args.hours)
     grant = {
         "task_uid": task_uid,
         "user_uid": owner,
         "scopes": SCOPES,
-        "authorization_details": AUTHORIZATION_DETAILS,
+        "authorization_details": _details(args.only or ONLY),
         **({"org_uid": args.org_uid} if args.org_uid else {}),
     }
     print("This asks IAM for a task grant, and a token from it:")
@@ -145,7 +163,7 @@ def mint(args: argparse.Namespace) -> None:
     print(
         f"The token lives until {until.isoformat(timespec='minutes')} ({args.hours} h)."
     )
-    print(f"It is written to {args.out} as {KEY_VARIABLE}; it is not printed.")
+    print(f"It is written to {args.out} as {key_variable}; it is not printed.")
     if not args.yes and input("Mint it? [y/N] ").strip().lower() != "y":
         sys.exit("Nothing was minted.")
     headers = {"X-API-Key": _service_key()}
@@ -168,9 +186,9 @@ def mint(args: argparse.Namespace) -> None:
             f"IAM did not exchange the grant ({response.status_code}): {response.text[:300]}"
         )
     token = response.json()
-    values = {KEY_VARIABLE: token["access_token"]}
+    values = {key_variable: token["access_token"]}
     if args.url:
-        values[URL_VARIABLE] = args.url
+        values[url_variable] = args.url
     _write(Path(args.out), values)
     print(
         f"Granted: {granted['uid']} (scopes: {' '.join(granted.get('scopes') or []) or 'none'})."
@@ -207,8 +225,22 @@ def main() -> None:
     )
     parser.add_argument("--org-uid", help="The organization the grant is for, if any.")
     parser.add_argument(
+        "--app",
+        default=APP_ID,
+        help=f"The application whose A2A route the key is granted to ({APP_ID} when unsaid).",
+    )
+    parser.add_argument(
+        "--only",
+        action="append",
+        metavar="PATTERN",
+        help=(
+            "A tool pattern the key reaches at the gateway, repeatable "
+            f"({' '.join(ONLY)} when unsaid)."
+        ),
+    )
+    parser.add_argument(
         "--url",
-        help=f"Accounting's A2A address, written as {URL_VARIABLE} beside the key.",
+        help="The application's A2A address, written as VITE_A2A_<APP>_URL beside the key.",
     )
     parser.add_argument(
         "--out", default=str(DEFAULT_OUT), help="The env file the key is written to."

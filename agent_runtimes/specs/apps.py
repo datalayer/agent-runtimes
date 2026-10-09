@@ -2440,7 +2440,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
                 },
                 {
                     "label": "Payment reminders",
-                    "message": "Send a payment reminder to every customer more than 60 days late.",
+                    "message": "Send a payment reminder to every customer whose invoice is overdue.",
                 },
             ],
             "commands": [],

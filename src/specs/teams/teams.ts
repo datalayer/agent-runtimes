@@ -1782,7 +1782,7 @@ export const SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1: TeamSpec = {
       emoji: '🔎',
     },
     {
-      text: 'Send a payment reminder to every customer more than 60 days late.',
+      text: 'Send a payment reminder to every customer whose invoice is overdue.',
       emoji: '✉️',
     },
   ],

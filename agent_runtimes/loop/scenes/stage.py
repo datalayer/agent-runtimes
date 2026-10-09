@@ -67,6 +67,37 @@ _KIND_WORDS = re.compile(
 #: The catalog's components that show a kind not named in theirs (STUDIO H-02).
 _COMPONENT_KINDS = {"evidence": "sources", "button": "choice"}
 
+#: A2UI's media type, as an answer's surface comes under it.
+A2UI_MEDIA_TYPE = "application/json+a2ui"
+
+#: A Jupyter notebook's, the one kind that is a format of its own.
+NOTEBOOK_MEDIA_TYPE = "application/x-ipynb+json"
+
+#: What the stage accepts of an answer over A2A (``acceptedOutputModes``), as the
+#: page does (`a2aPeer.ts`'s ``accept``): words, and the components a surface
+#: draws — a table, a chart, the sources, a choice all arrive that way. A caller
+#: that names nothing is answered in words alone
+#: (`agent_runtimes.output.formats.accepted_formats`), so a scene that named
+#: none of them could never be shown a chart: it would be drawn in words, which
+#: is not a chart. Nothing else is asked for — a format a scene never shows is
+#: one more thing composed for nobody, and the beat waits for it.
+ACCEPTED_OUTPUT_MODES = (
+    "text/plain",
+    "text/markdown",
+    A2UI_MEDIA_TYPE,
+)
+
+
+def accepted_of(scene: Any) -> Tuple[str, ...]:
+    """The formats a scene asks its members for: words and components, a notebook when a beat shows one."""
+    shows = {
+        kind for beat in getattr(scene, "script", []) for kind in (beat.shows or ())
+    }
+    if "notebook" in shows:
+        return ACCEPTED_OUTPUT_MODES + (NOTEBOOK_MEDIA_TYPE,)
+    return ACCEPTED_OUTPUT_MODES
+
+
 _MARKDOWN_TABLE = re.compile(r"^\s*\|.*\|\s*\n\s*\|?\s*:?-{2,}", re.MULTILINE)
 
 #: The span a member's calls and asks nest under while it works.
@@ -225,6 +256,9 @@ class StageMember:
     """What its runtime says is to set up — an agent or a server the catalogue
     does not offer by default — kept as the verdict's notes; it plays all the
     same, as ``loop apps run`` serves it."""
+    accepts: Tuple[str, ...] = ACCEPTED_OUTPUT_MODES
+    """The formats it is asked for over A2A (``acceptedOutputModes``): the
+    scene's own (`accepted_of`)."""
 
     @property
     def transcript_member(self) -> SceneMember:
@@ -250,6 +284,10 @@ class A2AAnswer:
     steps: Tuple[A2AStep, ...] = ()
     failed: str = ""
     """How it ended, when it did not complete."""
+    components: Tuple[Mapping[str, Any], ...] = ()
+    """The components of the catalogue its surfaces drew, when it drew any:
+    what the answer was shown with, which only its surfaces say (its words
+    hold a table at most)."""
 
 
 @dataclass
@@ -290,6 +328,31 @@ def _parts_text(parts: Any) -> str:
         for part in parts
         if isinstance(part, dict) and isinstance(part.get("text"), str)
     )
+
+
+def _components_of(parts: Any) -> List[Mapping[str, Any]]:
+    """The components an artifact's A2UI part draws (`a2aPeer.ts`'s ``givenOf``).
+
+    A surface is ``{surfaceId, catalogId, title, messages}`` and its nodes sit
+    in the ``updateComponents`` messages: ``Table``, ``Chart``, ``Evidence``,
+    a ``Row`` of ``Button`` for a choice. They are what an answer *shows*, so
+    the rehearsal's *a chart* can only be met through them.
+    """
+    found: List[Mapping[str, Any]] = []
+    for part in parts or []:
+        if not isinstance(part, dict) or part.get("mediaType") != A2UI_MEDIA_TYPE:
+            continue
+        surface = part.get("data")
+        if not isinstance(surface, dict):
+            continue
+        for message in surface.get("messages") or []:
+            update = (
+                message.get("updateComponents") if isinstance(message, dict) else None
+            )
+            for node in (update or {}).get("components") or []:
+                if isinstance(node, dict):
+                    found.append(node)
+    return found
 
 
 def _steps_of(parts: Any) -> List[A2AStep]:
@@ -335,7 +398,12 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
                 "role": "ROLE_USER",
                 "parts": [{"text": request}],
             },
-            "configuration": {"returnImmediately": False},
+            "configuration": {
+                "returnImmediately": False,
+                # Named, or its answer is words alone and what it shows is
+                # drawn in text: the rehearsal reads the kinds off its surfaces.
+                "acceptedOutputModes": list(member.accepts or ACCEPTED_OUTPUT_MODES),
+            },
         },
     }
     headers = {"Accept": "text/event-stream"}
@@ -344,6 +412,7 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
         hold(member.key)
         headers["Authorization"] = f"Bearer {member.key}"
     texts: Dict[str, str] = {}
+    shown: Dict[str, List[Mapping[str, Any]]] = {}
     steps: List[A2AStep] = []
     final = ""
     ended = ""
@@ -392,6 +461,9 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
                     artifact = artifact_update.get("artifact") or {}
                     text = _parts_text(artifact.get("parts"))
                     key = str(artifact.get("artifactId") or "")
+                    components = _components_of(artifact.get("parts"))
+                    if components:
+                        shown[key] = components
                     before = texts.get(key, "")
                     texts[key] = (
                         before + text
@@ -411,7 +483,8 @@ async def ask_over_a2a(member: StageMember, request: str) -> A2AAnswer:
             failed=f"{member.name} {how}{': ' + final if final else '.'}",
         )
     answer = "\n".join(text for text in texts.values() if text) or final
-    return A2AAnswer(answer, tuple(steps))
+    drawn = tuple(node for nodes in shown.values() for node in nodes)
+    return A2AAnswer(answer, tuple(steps), components=drawn)
 
 
 class Stage:
@@ -496,7 +569,9 @@ class Stage:
         from agent_runtimes.loop.apps.session import Message
 
         try:
-            application = Application.from_spec(with_ask_tools(member, self.members))
+            application = Application.from_spec(
+                with_brief(member, with_ask_tools(member, self.members))
+            )
         except AppNotRunnable as refused:
             raise _CannotPlay(" ".join(refused.problems)) from None
         except Exception as refused:  # noqa: BLE001 - its spec is not an application here
@@ -721,7 +796,7 @@ class Stage:
             if own:
                 raise _CannotPlay(answered.failed)
             return f"could not answer: {answered.failed}", ()
-        shows = shown_kinds(answered.text)
+        shows = shown_kinds(answered.text, answered.components)
         recording.event(
             span, "a2a.artifact_update", {"a2a.message.text": answered.text}
         )
@@ -797,6 +872,30 @@ def with_ask_tools(
     if tools:
         document["tools"] = tools
     return document
+
+
+def with_brief(member: StageMember, document: Dict[str, Any]) -> Dict[str, Any]:
+    """The member's spec document with its brief over its application's instructions.
+
+    The cast says what a member is for *in this scene* — agentspecs' ``brief``,
+    "what it is for in this scene, over its application's instructions" — so it
+    is given last and said to win. An application is written for its own desk,
+    where it may ask the person a question and wait; cast in a scene it is
+    played one cue at a time, with an audience that is watching rather than
+    answering, and the brief is where the scene says so.
+    """
+    brief = member.brief.strip()
+    if not brief:
+        return document
+    staged = dict(document)
+    instructions = str(staged.get("instructions") or "").strip()
+    said = f"In this scene you are cast with a brief: {brief}"
+    staged["instructions"] = (
+        f"{instructions}\n\n{said}\nWhere the brief differs from the above, the brief is what you do."
+        if instructions
+        else said
+    )
+    return staged
 
 
 def _ask_tool_doc(peer: StageMember) -> str:
@@ -896,6 +995,7 @@ def members_of(
     team = scene.team_of()
     entry = scene.entry_of(team)
     members: List[StageMember] = []
+    accepts = accepted_of(scene)
     for cast in scene.cast_of():
         app_id = cast.app.split(":")[0] if cast.app else ""
         app = APP_CATALOGUE.get(app_id) if app_id else None
@@ -943,6 +1043,7 @@ def members_of(
                 reason=reason,
                 address=address,
                 key=key,
+                accepts=accepts,
             )
         )
     return members, entry
