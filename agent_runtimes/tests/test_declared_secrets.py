@@ -184,10 +184,10 @@ def test_a_subagent_by_reference_declares_what_its_agentspec_does() -> None:
 
 def test_a_missing_secret_is_said_in_a_sentence() -> None:
     [sentence] = declared_secrets(BARE_AGENT, mcp_servers=[PROBE_SERVER]).missing(
-        lambda name: False, "Crop monitoring"
+        lambda name: False, "Crop Monitoring"
     )
     assert sentence.startswith(
-        "Crop monitoring is not set up: the MCP server r19-probe needs R19_SERVER_TOKEN"
+        "Crop Monitoring is not set up: the MCP server r19-probe needs R19_SERVER_TOKEN"
     )
 
 
@@ -437,7 +437,7 @@ def test_a_launch_waiting_for_its_set_up_says_why_it_was_refused(
 
     from agent_runtimes.loop import launch
 
-    said = "Crop monitoring is not set up: the MCP server earthdata needs DATALAYER_API_KEY."
+    said = "Crop Monitoring is not set up: the MCP server earthdata needs DATALAYER_API_KEY."
     monkeypatch.setattr(
         httpx,
         "get",

@@ -125,7 +125,7 @@ describe('a team of three', () => {
     const peers = [
       {
         app: DISASTER_ASSESSMENT_APP_0_0_1,
-        peer: peerNamed('Disaster assessment'),
+        peer: peerNamed('Disaster Assessment'),
         connections: [EARTHDATA],
       },
       {
@@ -156,7 +156,7 @@ describe('a team of three', () => {
       true,
     );
     expect(instructions).toContain(
-      'ask Disaster assessment with `ask_disaster_assessment`, Change detection with `ask_change_detection`',
+      'ask Disaster Assessment with `ask_disaster_assessment`, Change detection with `ask_change_detection`',
     );
     // A team of two keeps the entry's instructions as they are.
     expect(
@@ -174,7 +174,7 @@ describe('a team of three', () => {
         peers: [
           {
             app: DISASTER_ASSESSMENT_APP_0_0_1,
-            peer: peerNamed('Disaster assessment'),
+            peer: peerNamed('Disaster Assessment'),
           },
           { app: CHANGE_DETECTION_APP_0_0_1, peer: null },
         ],
@@ -193,7 +193,7 @@ describe('a team of three', () => {
     const peers = [
       {
         app: DISASTER_ASSESSMENT_APP_0_0_1,
-        peer: peerNamed('Disaster assessment'),
+        peer: peerNamed('Disaster Assessment'),
         connections: [EARTHDATA],
       },
       {
@@ -217,7 +217,7 @@ describe('a team of three', () => {
       saying: 'I compare before and after.',
       insist: true,
     });
-    const assessor = told.tools.get('Disaster assessment');
+    const assessor = told.tools.get('Disaster Assessment');
     const detector = told.tools.get('Change detection');
     expect(assessor && detector).toBeTruthy();
     act(() => {
@@ -335,13 +335,13 @@ describe('an entry on a runtime', () => {
     expect(result.current.ready).toBe(false);
     expect(agents.made).toHaveLength(0);
     expect(result.current.peers).toEqual([]);
-    rerender({ peer: peerNamed('Month-end close') });
+    rerender({ peer: peerNamed('Month-end Close') });
     expect(result.current.ready).toBe(true);
     await act(async () => {
       await result.current.send('How did the month close?');
     });
     expect(told.asked).toEqual([
-      { peer: 'Month-end close', request: 'How did the month close?' },
+      { peer: 'Month-end Close', request: 'How did the month close?' },
     ]);
     expect(result.current.turns).toEqual([
       { role: 'user', text: 'How did the month close?' },

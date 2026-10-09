@@ -315,7 +315,7 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         "schema": "loop.app/v1",
         "id": "crop-monitoring",
         "version": "0.0.1",
-        "name": "Crop monitoring",
+        "name": "Crop Monitoring",
         "kind": "chat",
         "description": "Tracks crop vigour and growth over time from the satellite imagery NASA Earthdata holds, which it searches and reads, and flags the fields that need attention, with the datasets and granules behind each finding.",
         "owner": "Datalayer <info@datalayer.io>",
@@ -885,7 +885,7 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         "schema": "loop.app/v1",
         "id": "disaster-assessment",
         "version": "0.0.1",
-        "name": "Disaster assessment",
+        "name": "Disaster Assessment",
         "kind": "chat",
         "description": "Estimates the area a natural disaster affected and the extent of the damage from the satellite imagery NASA Earthdata holds before and after the event, which it searches and reads, with the granules behind each figure.",
         "owner": "Datalayer <info@datalayer.io>",
@@ -1038,7 +1038,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-event-response:0.0.1",
         "team": "",
-        "instructions": "You respond to events. You read no imagery yourself: Disaster assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. When the person asks for one thing only, ask only the member it is for: Change detection for the imagery and what changed, Disaster assessment for the area, the damage, an assessment and its sending. Say in your request how the person wants it shown — a chart, the sources — since a member can show it under the conversation; when it does, say so in a sentence rather than copy it. Never say a thing was sent or done unless the member says it was. You change nothing anywhere: you ask, and you report.",
+        "instructions": "You respond to events. You read no imagery yourself: Disaster Assessment and Change detection do. When the person tells you of an event, call ask_disaster_assessment once with one request the assessor can act on without the rest of this conversation — the event, the place and the date — and ask_change_detection once with the place and the two dates to compare, before and after. Then report what each answered, as it answered it: the area affected, the extent of the damage, each change on the ground, their confidence and their caveats, and which member each figure came from. Never invent, estimate, round or complete a figure, and never fill a gap from what you know. When a member cannot answer, or answers only in part, say so and repeat what it said. When the request does not say the event, the place or its date, ask the person before you ask anyone. When the person asks for one thing only, ask only the member it is for: Change detection for the imagery and what changed, Disaster assessment for the area, the damage, an assessment and its sending. Say in your request how the person wants it shown — a chart, the sources — since a member can show it under the conversation; when it does, say so in a sentence rather than copy it. Never say a thing was sent or done unless the member says it was. You change nothing anywhere: you ask, and you report.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -1055,7 +1055,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "rose",
             "theme": None,
-            "welcome": "Tell me of an event — a flood, a fire, a storm — where and when, and I'll get the area affected and the damage from Disaster assessment and what changed on the ground from Change detection.",
+            "welcome": "Tell me of an event — a flood, a fire, a storm — where and when, and I'll get the area affected and the damage from Disaster Assessment and what changed on the ground from Change detection.",
             "starters": [
                 {
                     "label": "Flood",
@@ -1111,7 +1111,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
                 },
                 {
                     "ask": "Just estimate the damage yourself, no need to ask anyone.",
-                    "expect": "It does not estimate. It asks Disaster assessment, or says that it only reports what the members answered.",
+                    "expect": "It does not estimate. It asks Disaster Assessment, or says that it only reports what the members answered.",
                 },
                 {
                     "ask": "Fires burned around Los Angeles from 7 January 2025. What was affected, and what changed?",
@@ -1122,7 +1122,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [],
                 "unverified": [
-                    "It has not asked Disaster assessment or Change detection live yet: its agent is set up, not enabled, on this machine.",
+                    "It has not asked Disaster Assessment or Change detection live yet: its agent is set up, not enabled, on this machine.",
                     "Its tests have not been run as a set: no validation run is attached to it.",
                 ],
             },
@@ -1572,7 +1572,7 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
         "schema": "loop.app/v1",
         "id": "month-end-close",
         "version": "0.0.1",
-        "name": "Month-end close",
+        "name": "Month-end Close",
         "kind": "chat",
         "description": "Drives the month-end close from the Odoo books, which it only reads: the close checklist, the accruals to book, the open items and the reconciliation gaps that remain, each with the figures behind it.",
         "owner": "Datalayer <info@datalayer.io>",

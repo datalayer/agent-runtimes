@@ -723,8 +723,8 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
 export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'crop-monitoring',
   version: '0.0.1',
-  name: 'Crop monitoring',
-  description: `One agent, its data: Crop monitoring follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.`,
+  name: 'Crop Monitoring',
+  description: `One agent, its data: Crop Monitoring follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.`,
   tags: [
     'example',
     'scene',
@@ -741,7 +741,7 @@ export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
   orchestrationProtocol: 'a2a',
   executionMode: 'supervisor',
   supervisor: {
-    name: 'Crop monitoring',
+    name: 'Crop Monitoring',
     ref: '',
     app: 'crop-monitoring:0.0.1',
     model: '',
@@ -750,7 +750,7 @@ export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
     approval: 'auto',
     canTerminate: true,
   },
-  routingInstructions: `Crop monitoring answers every request from the imagery itself, one search at a time, and reports what the granules show without adding to it.`,
+  routingInstructions: `Crop Monitoring answers every request from the imagery itself, one search at a time, and reports what the granules show without adding to it.`,
   entry: 'crop-monitoring',
   suggestions: [
     {
@@ -800,8 +800,8 @@ export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
 export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'disaster-assessment',
   version: '0.0.1',
-  name: 'Disaster assessment',
-  description: `An event desk in the browser that gets the area a disaster affected and the damage from Disaster assessment, and what changed on the ground from Change detection, each on a runtime over A2A, each reading NASA Earthdata. Event response takes the event and reports; the two others read the imagery and answer.`,
+  name: 'Disaster Assessment',
+  description: `An event desk in the browser that gets the area a disaster affected and the damage from Disaster Assessment, and what changed on the ground from Change detection, each on a runtime over A2A, each reading NASA Earthdata. Event response takes the event and reports; the two others read the imagery and answer.`,
   tags: [
     'example',
     'scene',
@@ -828,7 +828,7 @@ export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
     approval: 'auto',
     canTerminate: true,
   },
-  routingInstructions: `Event response asks Disaster assessment for the area and the damage, and Change detection for the change on the ground, one request each, and reports what they answer without adding to it.`,
+  routingInstructions: `Event response asks Disaster Assessment for the area and the damage, and Change detection for the change on the ground, one request each, and reports what they answer without adding to it.`,
   entry: 'event-response',
   suggestions: [
     {
@@ -867,7 +867,7 @@ export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
         { member: 'change-detection', over: 'a2a' },
       ],
       role: 'initiator',
-      goal: `Take the person's event, ask Disaster assessment and Change detection for it, and report what they answered.`,
+      goal: `Take the person's event, ask Disaster Assessment and Change detection for it, and report what they answered.`,
       dependsOn: [],
       subagents: [],
       model: '',
@@ -1139,8 +1139,8 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
 export const MONTH_END_CLOSE_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'month-end-close',
   version: '0.0.1',
-  name: 'Month-end close',
-  description: `One agent, its data: Month-end close drives the close from the Odoo books, which it only reads — the checklist, the accruals to book, the reconciliation gaps that remain.`,
+  name: 'Month-end Close',
+  description: `One agent, its data: Month-end Close drives the close from the Odoo books, which it only reads — the checklist, the accruals to book, the reconciliation gaps that remain.`,
   tags: ['example', 'scene', 'accounting', 'finance', 'odoo', 'a2a'],
   enabled: true,
   icon: 'sync',
@@ -1150,7 +1150,7 @@ export const MONTH_END_CLOSE_TEAM_SPEC_0_0_1: TeamSpec = {
   orchestrationProtocol: 'a2a',
   executionMode: 'supervisor',
   supervisor: {
-    name: 'Month-end close',
+    name: 'Month-end Close',
     ref: '',
     app: 'month-end-close:0.0.1',
     model: '',
@@ -1159,7 +1159,7 @@ export const MONTH_END_CLOSE_TEAM_SPEC_0_0_1: TeamSpec = {
     approval: 'auto',
     canTerminate: true,
   },
-  routingInstructions: `Month-end close answers every request from the books itself, one read at a time, and reports what the books hold without adding to it.`,
+  routingInstructions: `Month-end Close answers every request from the books itself, one read at a time, and reports what the books hold without adding to it.`,
   entry: 'month-end-close',
   suggestions: [
     {

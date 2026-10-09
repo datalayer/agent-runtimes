@@ -239,7 +239,7 @@ describe('the Scenes example', () => {
     expect(
       container.querySelector('.react-flow')?.getAttribute('aria-label'),
     ).toBe(
-      'Event response and Disaster assessment, Change detection, over A2A',
+      'Event response and Disaster Assessment, Change detection, over A2A',
     );
     // Earthdata under each specialist.
     expect(
@@ -264,7 +264,7 @@ describe('the Scenes example', () => {
       'change-detection',
     ]);
     expect(needs[0].textContent).toContain(
-      'Disaster assessment is not reachable at http://127.0.0.1:8769/api/v1/a2a/agents/disaster-assessment: fetch failed',
+      'Disaster Assessment is not reachable at http://127.0.0.1:8769/api/v1/a2a/agents/disaster-assessment: fetch failed',
     );
     expect(needs[0].textContent).toContain(
       "The agent 'worker-disaster-assessment:0.0.1' is not enabled.",

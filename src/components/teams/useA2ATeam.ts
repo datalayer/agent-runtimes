@@ -15,7 +15,7 @@
  * assessment and Change detection), one `ask_<peer>` tool per peer, with
  * {@link a2aPeerTool}. A team of two names its peer as `peerApp`; a team of
  * N names them as `peers` (LOOP A-08). An entry that runs on a runtime
- * itself (a scene of one member: Month-end close, Crop monitoring) is asked
+ * itself (a scene of one member: Month-end Close, Crop Monitoring) is asked
  * over A2A from the page, with no agent in the browser: `entryPeer`.
  *
  * What each of them does is kept as a persona — the state its character

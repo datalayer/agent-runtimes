@@ -19,7 +19,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'crop-monitoring',
   version: '0.0.1',
-  name: 'Crop monitoring',
+  name: 'Crop Monitoring',
   description:
     'One agent follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.',
   tags: ['example', 'scene', 'earthdata', 'agriculture', 'a2a'],
@@ -36,7 +36,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
       role: 'initiator',
       runsIn: 'runtime',
       persona: {
-        name: 'Crop monitoring',
+        name: 'Crop Monitoring',
         face: '🌾',
         line: 'I search the imagery and tell you how the fields are doing.',
       },
@@ -56,7 +56,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
     period: 'the last three months',
     language: 'en',
     assumes:
-      'One agent, its data: Crop monitoring on Datalayer, searching the satellite imagery NASA Earthdata holds.',
+      'One agent, its data: Crop Monitoring on Datalayer, searching the satellite imagery NASA Earthdata holds.',
   },
   script: [
     {
@@ -236,10 +236,10 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'vigour-this-season',
         lines: [
-          'You → Crop monitoring',
-          'Crop monitoring → Earthdata: search_earth_datasets',
-          'Crop monitoring → Earthdata: search_earth_datagranules',
-          'Crop monitoring: a chart',
+          'You → Crop Monitoring',
+          'Crop Monitoring → Earthdata: search_earth_datasets',
+          'Crop Monitoring → Earthdata: search_earth_datagranules',
+          'Crop Monitoring: a chart',
         ],
         mustSay: ['vigour'],
         mustNotSay: ['downloaded'],
@@ -248,9 +248,9 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'fields-to-watch',
         lines: [
-          'You → Crop monitoring',
-          'Crop monitoring → Earthdata: search_earth_datagranules',
-          'Crop monitoring: a table',
+          'You → Crop Monitoring',
+          'Crop Monitoring → Earthdata: search_earth_datagranules',
+          'Crop Monitoring: a table',
         ],
         mustSay: ['drop'],
         within: '90s',
@@ -258,9 +258,9 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'imagery-available',
         lines: [
-          'You → Crop monitoring',
-          'Crop monitoring → Earthdata: search_earth_*',
-          'Crop monitoring: sources',
+          'You → Crop Monitoring',
+          'Crop Monitoring → Earthdata: search_earth_*',
+          'Crop Monitoring: sources',
         ],
         mustSay: ['granule'],
         mustNotSay: ['downloaded'],
@@ -269,9 +269,9 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'save-granules',
         lines: [
-          'You → Crop monitoring',
-          'Crop monitoring → Earthdata: search_earth_datagranules',
-          'Crop monitoring: an approval',
+          'You → Crop Monitoring',
+          'Crop Monitoring → Earthdata: search_earth_datagranules',
+          'Crop Monitoring: an approval',
         ],
         mustSay: ['granule'],
         mustNotSay: ['downloaded', 'saved them'],
@@ -335,7 +335,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'disaster-assessment',
   version: '0.0.1',
-  name: 'Disaster assessment',
+  name: 'Disaster Assessment',
   description:
     'An event desk asks two specialists what a disaster affected and what changed on the ground, each reading NASA Earthdata, and reports.',
   tags: ['example', 'scene', 'earthdata', 'disaster', 'insurance', 'a2a'],
@@ -367,7 +367,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         line: 'Tell me what happened; I ask the specialists and report.',
       },
       brief:
-        'Take the event, ask Disaster assessment for the area and the damage and Change detection for the change on the ground, one request each, and report what they answer without adding to it.',
+        'Take the event, ask Disaster Assessment for the area and the damage and Change detection for the change on the ground, one request each, and report what they answer without adding to it.',
     },
     {
       member: 'disaster-assessment',
@@ -377,7 +377,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
       role: 'contributor',
       runsIn: 'runtime',
       persona: {
-        name: 'Disaster assessment',
+        name: 'Disaster Assessment',
         face: '🌊',
         line: 'I estimate the area affected and the damage from the imagery.',
       },
@@ -478,7 +478,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         },
       ],
       expect:
-        'The area affected and the damage from Disaster assessment, the changes on the ground from Change detection with their granules, reported by Event response without a figure of its own.',
+        'The area affected and the damage from Disaster Assessment, the changes on the ground from Change detection with their granules, reported by Event response without a figure of its own.',
       shows: ['words', 'table'],
       pace: 'slow',
       branch: [
@@ -571,7 +571,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         {
           who: 'event-response',
           asks: '',
-          what: 'what Disaster assessment answered',
+          what: 'what Disaster Assessment answered',
           tool: '',
           answers: 'words',
         },
@@ -622,7 +622,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         },
       ],
       expect:
-        'Disaster assessment says what it would send and asks first — Send it · Not now — and sends nothing; a visitor who approves is refused in a sentence: without an account it only reads.',
+        'Disaster Assessment says what it would send and asks first — Send it · Not now — and sends nothing; a visitor who approves is refused in a sentence: without an account it only reads.',
       shows: ['approval'],
     },
   ],
@@ -661,9 +661,9 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         beat: 'flood',
         lines: [
           'You → Event response',
-          'Event response → Disaster assessment',
-          'Disaster assessment → Earthdata: search_earth_datagranules',
-          'Disaster assessment: words',
+          'Event response → Disaster Assessment',
+          'Disaster Assessment → Earthdata: search_earth_datagranules',
+          'Disaster Assessment: words',
           'Event response → Change detection',
           'Change detection → Earthdata: search_earth_datagranules',
           'Change detection: a table',
@@ -689,9 +689,9 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         beat: 'storm',
         lines: [
           'You → Event response',
-          'Event response → Disaster assessment',
-          'Disaster assessment → Earthdata: search_earth_datagranules',
-          'Disaster assessment: a chart',
+          'Event response → Disaster Assessment',
+          'Disaster Assessment → Earthdata: search_earth_datagranules',
+          'Disaster Assessment: a chart',
           'Event response: words',
         ],
         mustSay: ['Ahr'],
@@ -701,9 +701,9 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         beat: 'alert',
         lines: [
           'You → Event response',
-          'Event response → Disaster assessment',
-          'Disaster assessment → Earthdata: search_earth_datagranules',
-          'Disaster assessment: an approval',
+          'Event response → Disaster Assessment',
+          'Disaster Assessment → Earthdata: search_earth_datagranules',
+          'Disaster Assessment: an approval',
           'Event response: words',
         ],
         mustSay: ['Valencia'],
@@ -774,7 +774,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'month-end-close',
   version: '0.0.1',
-  name: 'Month-end close',
+  name: 'Month-end Close',
   description:
     'One agent drives the close from the Odoo books it only reads: where the close stands, what is to book, what is still open.',
   tags: ['example', 'scene', 'odoo', 'finance', 'a2a'],
@@ -791,7 +791,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
       role: 'initiator',
       runsIn: 'runtime',
       persona: {
-        name: 'Month-end close',
+        name: 'Month-end Close',
         face: '🗓️',
         line: 'I read the books and tell you where the close stands.',
       },
@@ -810,7 +810,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
     period: 'last month',
     language: 'en',
     assumes:
-      "One agent, its data: Month-end close on Datalayer, on Datalayer's own books in Odoo, read only.",
+      "One agent, its data: Month-end Close on Datalayer, on Datalayer's own books in Odoo, read only.",
   },
   script: [
     {
@@ -992,10 +992,10 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'close-checklist',
         lines: [
-          'You → Month-end close',
-          'Month-end close → Odoo: odoo_accounting_get_lock_dates',
-          'Month-end close → Odoo: odoo_accounting_bank_status',
-          'Month-end close: a table',
+          'You → Month-end Close',
+          'Month-end Close → Odoo: odoo_accounting_get_lock_dates',
+          'Month-end Close → Odoo: odoo_accounting_bank_status',
+          'Month-end Close: a table',
         ],
         mustSay: ['close'],
         mustNotSay: ['I posted'],
@@ -1004,9 +1004,9 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'accruals',
         lines: [
-          'You → Month-end close',
-          'Month-end close → Odoo: odoo_accounting_*',
-          'Month-end close: sources',
+          'You → Month-end Close',
+          'Month-end Close → Odoo: odoo_accounting_*',
+          'Month-end Close: sources',
         ],
         mustSay: ['accrual'],
         mustNotSay: ['I posted'],
@@ -1015,9 +1015,9 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'expenses-by-month',
         lines: [
-          'You → Month-end close',
-          'Month-end close → Odoo: odoo_accounting_trial_balance',
-          'Month-end close: a chart',
+          'You → Month-end Close',
+          'Month-end Close → Odoo: odoo_accounting_trial_balance',
+          'Month-end Close: a chart',
         ],
         mustSay: ['expense'],
         within: '60s',
@@ -1025,9 +1025,9 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
       {
         beat: 'post-accruals',
         lines: [
-          'You → Month-end close',
-          'Month-end close → Odoo: odoo_accounting_list_journal_entries',
-          'Month-end close: an approval',
+          'You → Month-end Close',
+          'Month-end Close → Odoo: odoo_accounting_list_journal_entries',
+          'Month-end Close: an approval',
         ],
         mustSay: ['accrual'],
         mustNotSay: ['I posted'],

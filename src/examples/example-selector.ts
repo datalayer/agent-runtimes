@@ -278,7 +278,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'ScenesExample',
     () => import('./ScenesExample'),
-    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end close, Crop monitoring, Disaster assessment — each its graph and transcript, its cues as suggestions, played against the local servers (LOOP A-15).',
+    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (LOOP A-15).',
     ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
   ),
   makeEntry(

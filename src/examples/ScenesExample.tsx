@@ -17,7 +17,7 @@
  * are served over A2A by `examples/sales-accounting-a2a/serve_scenes.py`,
  * Accounting on :8767 as before and each other member on a runtime of its
  * own from :8768 (`sceneRuntimePorts`), or wherever `VITE_A2A_<MEMBER>_URL`
- * says. A scene whose entry runs on a runtime itself (Month-end close, Crop
+ * says. A scene whose entry runs on a runtime itself (Month-end Close, Crop
  * monitoring) is asked over A2A from the page, as the person
  * (`useA2ATeam`'s `entryPeer`). A member that is not reached is drawn all
  * the same, and the box says what its application needs (`setup`) and how
