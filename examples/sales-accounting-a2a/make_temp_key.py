@@ -14,8 +14,16 @@ task grants (O1-06, O1-17), and it reaches exactly this:
 - **Odoo, read only**: one ``datalayer_connection`` detail, the Datalayer MCP
   gateway in the owner's name, ``read``, ``only: ["odoo_accounting_*"]``, and
   the scope ``data:read``. A scene's other members are served the same way,
-  with ``--app <id>`` and one ``--only`` per pattern their servers' tools take
-  (``earthdata_*``, ``tavily_*``). The gateway lets it call the ``odoo_accounting_*``
+  with ``--app <id>`` and one ``--only`` per pattern their servers' tools take.
+  **A pattern matches a tool's own name, which is not its server's name with a
+  prefix**: Earthdata's three tools are ``search_earth_datasets``,
+  ``search_earth_datagranules`` and ``download_earth_data_granules``, so the
+  read pair is ``search_earth_*`` and ``earthdata_*`` matches nothing — a
+  member keyed from that pattern is refused every tool at the gateway
+  (2026-10-09, A-14's drill). Tavily's happen to be named for it
+  (``tavily_search``, ``tavily_extract``, …), so ``tavily_*`` is right. Read
+  the names in the catalogue's server (``agentspecs/mcp-servers/<server>.yaml``)
+  rather than guessing from the server's name. The gateway lets it call the ``odoo_accounting_*``
   tools whose classes are all ``read``, and nothing else. The run on the
   runtime uses this key for the gateway, never the runtime's own;
 - **for a few hours**: the token lives until ``--hours`` from now, four by
@@ -37,7 +45,7 @@ only) and never printed.
 
     python examples/sales-accounting-a2a/make_temp_key.py --runtime <runtime uid>
     python examples/sales-accounting-a2a/make_temp_key.py --runtime <uid> \
-        --app crop-monitoring --only "earthdata_*" --only "tavily_*"
+        --app crop-monitoring --only "search_earth_*"
     python examples/sales-accounting-a2a/make_temp_key.py --revoke <grant uid>
 """
 
