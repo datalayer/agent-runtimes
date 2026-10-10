@@ -368,6 +368,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Create fresh request-bound DPoP proofs while withholding proof, token, nonce, identifiers, and key material.',
   ),
   makeEntry(
+    'PapSessionLifecycleExample',
+    () => import('./PapSessionLifecycleExample'),
+    'Start, retry, and renew a signed-out PAP Session while credentials remain host-owned.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',

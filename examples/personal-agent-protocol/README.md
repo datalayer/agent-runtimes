@@ -10,6 +10,7 @@ feature while keeping protocol secrets outside model context.
 | [`session-assertion`](./session-assertion/)             | Pairwise identity and short-lived assertion claims   | Policy only; no subject or `jti`             |
 | [`direct-sign-in-boundary`](./direct-sign-in-boundary/) | State, S256 PKCE and browser handoff                 | Security properties only                     |
 | [`dpop-proof`](./dpop-proof/)                           | Method, URL, token, nonce and replay binding         | Verified policy; all proof material withheld |
+| [`session-lifecycle`](./session-lifecycle/)             | Start, nonce retry, and renewal over HTTP            | Lifecycle evidence; credentials withheld     |
 
 The first two examples use Agent Runtimes' Python
 `PapPersonalAgentCapability`. The remaining examples use PAP primitives inside

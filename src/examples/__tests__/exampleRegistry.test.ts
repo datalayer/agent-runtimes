@@ -89,6 +89,7 @@ describe('the Personal Agent Protocol group', () => {
       'PapAgentIdentityExample',
       'PapAuthorizationBoundaryExample',
       'PapDpopProofExample',
+      'PapSessionLifecycleExample',
     ]);
     for (const id of papIds) {
       expect(getExampleGroup(id)).toBe('Personal Agent Protocol');

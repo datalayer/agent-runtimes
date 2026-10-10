@@ -71,3 +71,10 @@ evidence to the model. The browser gallery adds a Reactor-contributed view that
 uses non-exportable Web Crypto key material and retains neither generated
 proof in React state. Protocol details remain canonical in the PAP
 [JOSE and DPoP guide](https://personal-agent-protocol.datalayer.tech/guides/cryptography/).
+
+The `session-lifecycle` pair drives the real `SessionClient` through signed-out
+start, one DPoP nonce challenge, and renewal. Its deterministic company
+transport makes the wire behavior observable without external credentials,
+while the Loop tool returns only lifecycle evidence. Session IDs, pairwise
+subjects, assertions, proofs, nonces, and tokens remain host-owned. See the
+canonical [Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).
