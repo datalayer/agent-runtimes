@@ -3,7 +3,13 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { Button, Heading, IconButton, Label, Text } from '@primer/react';
@@ -579,7 +585,7 @@ const ChatPhone: React.FC<{
               }}
               padding={2}
               emptyContent={null}
-              messagesEndRef={messagesEndRef}
+              messagesEndRef={messagesEndRef as RefObject<HTMLDivElement>}
               onRespond={async () => undefined}
               density="comfortable"
             />
