@@ -370,6 +370,43 @@ describe('the A2A capture', () => {
     expect(describeAgentSpan(request)).toBe('completed · Open invoices?');
   });
 
+  it('records an answer once when its last chunk says it whole again', async () => {
+    // The runtime streams `append` chunks, then the whole answer once more
+    // without `append`: a visitor's refusal, said in one chunk, came out twice
+    // in the transcript (STUDIO H-03, 2026-10-10).
+    const refusal =
+      'Without an account it only reads: `Post` would do more than read.';
+    const result = (text: string, append?: boolean) => ({
+      artifactUpdate: {
+        taskId: 't1',
+        contextId: 'c1',
+        artifact: { artifactId: 'r', name: 'result', parts: [{ text }] },
+        ...(append ? { append: true, lastChunk: false } : {}),
+      },
+    });
+    const { tracer, response } = await ask([
+      { task },
+      result(refusal, true),
+      result(refusal),
+      {
+        statusUpdate: {
+          taskId: 't1',
+          contextId: 'c1',
+          status: { state: 'TASK_STATE_COMPLETED' },
+        },
+      },
+    ]);
+    await response.text();
+    await flush();
+    const request = tracer
+      .spans()
+      .find(span => span.span_name === 'a2a SendStreamingMessage')!;
+    const [artifact] = request.events!.filter(
+      event => event.name === 'a2a.artifact_update',
+    );
+    expect(artifact.attributes?.['a2a.message.text']).toBe(refusal);
+  });
+
   it('records a failed task, a refused request and a network error as errors', async () => {
     const { tracer: failedTask } = await ask([
       { task },

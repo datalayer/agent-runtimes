@@ -304,7 +304,11 @@ class ResponseRecorder {
           typeof media === 'string' ? media : undefined,
       },
     };
-    chunk.text += text;
+    // An `append` chunk adds to what came; one that is not says the artifact
+    // whole — the runtime's last chunk carries the whole answer again. Added
+    // to it, an answer said in one chunk (a visitor's refusal) was written
+    // twice in the transcript (STUDIO H-03, 2026-10-10).
+    chunk.text = update.append ? chunk.text + text : text;
     chunk.events.push(message);
     if (update.append && !update.lastChunk) {
       // A chunk of an artifact being streamed: one event once it is whole.
