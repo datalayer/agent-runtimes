@@ -37,10 +37,10 @@ def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> Ap
     (`frames.frames_instructions`), not here: the document does not say its
     organization.
     """
+    from agentspecs import apps as spec
     from agentspecs.frames import is_organization_frame
 
     from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
-    from agentspecs import apps as spec
 
     try:
         validated = spec.parse_app(dict(document))
