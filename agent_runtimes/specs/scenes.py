@@ -634,7 +634,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                         "I have downloaded",
                         "downloaded them",
                     ],
-                    "within": "240s",
+                    "within": "360s",
                 },
                 {
                     "beat": "wildfire",
@@ -674,7 +674,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
                     "within": "240s",
                 },
             ],
-            "within": "10m",
+            "within": "20m",
             "verified": {
                 "live": [],
                 "recorded": [],

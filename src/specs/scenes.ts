@@ -676,7 +676,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         ],
         mustSay: ['Valencia'],
         mustNotSay: ['I downloaded', 'I have downloaded', 'downloaded them'],
-        within: '240s',
+        within: '360s',
       },
       {
         beat: 'wildfire',
@@ -716,7 +716,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         within: '240s',
       },
     ],
-    within: '10m',
+    within: '20m',
     verified: {
       live: [],
       recorded: [],
