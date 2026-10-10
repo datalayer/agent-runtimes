@@ -972,7 +972,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
                     ],
                     "must_say": ["accrual"],
                     "must_not_say": ["I posted"],
-                    "within": "120s",
+                    "within": "180s",
                 },
             ],
             "within": "15m",

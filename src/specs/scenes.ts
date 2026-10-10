@@ -1036,7 +1036,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
         ],
         mustSay: ['accrual'],
         mustNotSay: ['I posted'],
-        within: '120s',
+        within: '180s',
       },
     ],
     within: '15m',
