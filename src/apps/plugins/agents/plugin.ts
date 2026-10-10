@@ -207,8 +207,11 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         //
         // And never on a target this page holds: *Local*, the default, is
         // held on the web (`heldTargetReason`), so a page starts in itself.
+        // A host that names no target gets the service's own default, Local —
+        // read here, so that it is held on the web like any other.
         initialTarget: offeredTarget(
-          showVariants || config.targetFixed ? config.target : 'browser',
+          (showVariants || config.targetFixed ? config.target : 'browser') ??
+            'local',
         ),
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
