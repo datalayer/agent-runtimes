@@ -516,9 +516,12 @@ class SessionNotStarted(RuntimeError):
 
 
 class ApplicationRefused(SessionNotStarted):
-    """The runtime answered and refused the application (400, 422): asking
-    again changes nothing — the application, not the runtime, is what is to
-    change. `reason` is the runtime's own sentence."""
+    """
+    The runtime answered and refused the application (400, 422).
+
+    Asking again changes nothing — the application, not the runtime, is what
+    is to change. `reason` is the runtime's own sentence.
+    """
 
     def __init__(self, reason: str) -> None:
         super().__init__(f"The runtime refused the application: {reason}")
@@ -526,8 +529,11 @@ class ApplicationRefused(SessionNotStarted):
 
 
 def _refusal_of(response: httpx.Response) -> str:
-    """The runtime's sentence for a refused application: its ``detail``, or
-    its ``detail.problems`` joined, else the body as it came."""
+    """
+    The runtime's sentence for a refused application.
+
+    Its ``detail``, or its ``detail.problems`` joined, else the body as it came.
+    """
     try:
         detail = (response.json() or {}).get("detail")
     except ValueError:

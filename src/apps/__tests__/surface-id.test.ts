@@ -66,9 +66,14 @@ describe('what an in-page agent can reach', () => {
     expect(chat).toContain('frontendTools: agentTools');
   });
 
-  it('does not also hand them to the chat', () => {
-    // The harness runs them itself. Giving them to both runs each tool twice.
+  it('hands them to the chat for a server agent only, never doubled in the page', () => {
+    // In the page the harness runs them itself: giving them to the chat too
+    // would run each tool twice. An agent on a server is sent them with each
+    // run, and the chat runs the one it calls (STUDIO D-10).
     const source = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
-    expect(source).not.toMatch(/frontendTools=\{/);
+    const handed = source.match(/frontendTools=\{[^}]*\}/g) ?? [];
+    expect(handed).toEqual([
+      'frontendTools={inPage ? undefined : chatExtras.frontendTools}',
+    ]);
   });
 });
