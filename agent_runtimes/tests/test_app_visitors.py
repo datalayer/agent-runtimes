@@ -54,6 +54,7 @@ from agent_runtimes.tests.test_app_sessions import (
     Runtime,
     answer_of,
     events_of,
+    remote,  # noqa: F401  (the fixture, registered under its own name)
     runtime,  # noqa: F401  (the fixture, registered under its own name)
 )
 
@@ -491,3 +492,105 @@ def test_a_visitor_is_let_in_to_a_deployment_as_nobody() -> None:
         opening.use_opener(None)
     # Asked with no token, once for every visitor alike.
     assert asked == [("dep-1", "")]
+
+
+# --- a visitor's page, before it follows the application (STUDIO D-15) ------------------
+
+
+@pytest.fixture()
+def made_address(runtime: Runtime) -> Iterator[Address]:
+    """An address whose agent is made as the create route makes it.
+
+    Yields
+    ------
+    Address
+        The address, and what was made of it.
+    """
+    found = Address()
+
+    async def make(name: str, body: Optional[Dict[str, Any]]) -> Tuple[int, str]:
+        """Make the agent as the create route does, and note it."""
+        found.made.append((name, body))
+        if body is not None:
+            runtime.make(name, body["app_spec"], body["app_instance"])
+        return 200, ""
+
+    use_address_resolver(found.resolve, make)
+    yield found
+    use_address_resolver()
+
+
+AGENT = "/api/v1/apps/visitors/agent"
+STATE = "/api/v1/apps/notes-assistant/plugins/state"
+
+
+def test_a_visitors_page_has_its_address_made_before_it_follows_it(
+    made_address: Address, visitors_runtime: TestClient
+) -> None:
+    """Made when asked, held then, and the chat speaks to it by the token's name."""
+    # Nothing held for the application until its agent is made: the page's
+    # plugin would stand down, and its chat have nothing to speak to.
+    assert visitors_runtime.get(STATE).json()["plugins"] == []
+    visitor = as_visitor("tab-ada-0001", "at:notes")
+    said = visitors_runtime.post(AGENT, headers=visitor)
+    assert said.status_code == 200, said.text
+    # The agent the token reaches, and the application the page follows.
+    assert said.json() == {"agent": "at-notes", "app_id": "notes-assistant"}
+    held = visitors_runtime.get(STATE).json()["plugins"]
+    assert [plugin["name"] for plugin in held] == ["loop-app-notes-assistant"]
+    # Asked again, it is not made again.
+    assert visitors_runtime.post(AGENT, headers=visitor).status_code == 200
+    assert [name for name, body in made_address.made if body] == ["at-notes"]
+    # The chat speaks to that agent, and to no agent named by the application.
+    answered = visitors_runtime.post(
+        "/api/v1/apps/agents/at-notes/ag-ui/",
+        headers=visitor,
+        json=agui("thread-at"),
+    )
+    assert answered.status_code == 200 and answer_of(events_of(answered))
+    named = visitors_runtime.post(
+        "/api/v1/apps/agents/notes-assistant/ag-ui/",
+        headers=visitor,
+        json=agui("thread-named"),
+    )
+    assert named.status_code == 403
+    assert named.json()["detail"] == OTHER_APPLICATION
+
+
+def test_an_example_kept_warm_is_said_as_it_is(
+    runtime: Runtime, visitors_runtime: TestClient
+) -> None:
+    """An example kept warm is answered as it is, nothing made."""
+    make_example(runtime)
+    said = visitors_runtime.post(AGENT, headers=as_visitor("tab-ada-0001"))
+    assert said.json() == {"agent": "notes-assistant", "app_id": "notes-assistant"}
+
+
+def test_what_a_visitor_may_not_have_made_is_refused_in_its_sentence(
+    made_address: Address, visitors_runtime: TestClient
+) -> None:
+    """Refused in ai-agents' or the runtime's sentence, and nothing made."""
+    made_address.opens = False
+    closed = visitors_runtime.post(
+        AGENT, headers=as_visitor("tab-ada-0001", "at:notes")
+    )
+    assert closed.status_code == 401
+    assert closed.json()["detail"] == "Without an account it is not run."
+    missing = visitors_runtime.post(
+        AGENT, headers=as_visitor("tab-ada-0001", "at:elsewhere")
+    )
+    assert missing.status_code == 404
+    # An example this runtime does not keep: no agent of it here.
+    absent = visitors_runtime.post(AGENT, headers=as_visitor("tab-ada-0001"))
+    assert absent.status_code == 404
+    nobody = visitors_runtime.post(AGENT)
+    assert nobody.status_code == 401
+    person = visitors_runtime.post(AGENT, headers={"Authorization": "Bearer ada"})
+    assert person.status_code == 403 and person.json()["detail"] == ONLY_VISITORS
+    assert made_address.made == []
+
+
+def test_no_runtime_but_the_visitors_makes_a_visitors_agent(remote: TestClient) -> None:
+    """Any other runtime refuses it."""
+    refused = remote.post(AGENT, headers=as_visitor("tab-ada-0001", "at:notes"))
+    assert refused.status_code == 404 and refused.json()["detail"] == NOT_HERE

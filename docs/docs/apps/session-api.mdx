@@ -186,10 +186,14 @@ visitors' runtime only.*), and this one refuses anybody signed in.
 - **Limits.** `AGENT_RUNTIMES_VISITOR_TURNS` turns a day per visitor (10),
   `AGENT_RUNTIMES_VISITOR_SESSION_MINUTES` minutes per session from its start
   (15), each refused with a sentence (`429`).
-- **An application at its address** (`at:<slug>`) is made here as it is first
-  talked to, from what ai-agents shows somebody not signed in
-  (`/apps/deployments/at/{slug}`), and made again when its owner moves it to
-  another version. ai-agents lets a visitor talk to one that anyone with the
+- **An application at its address** (`at:<slug>`) is made here as its page
+  opens — the page asks `POST /api/v1/apps/visitors/agent` with the visitor's
+  token before it follows the application, so that the runtime holds it
+  (`/apps/<id>/plugins/state`) — from what ai-agents shows somebody not
+  signed in (`/apps/deployments/at/{slug}`), and made again when its owner
+  moves it to another version. Its agent is `at-<slug>`, whatever the
+  application's id, and the chat speaks to it by that name: a visitor's
+  token reaches no other. ai-agents lets a visitor talk to one that anyone with the
   link or everyone may open, when it is a chat or a widget naming no
   connection and no documents — which its principal reaches with its owner's
   grant; otherwise its sentence says why.
@@ -218,6 +222,7 @@ as `GET` says it — then the turn's events.
 | `GET /sessions/{uid}/messages` | **Its conversation**, as AG-UI messages: `{uid, messages}`. What a page that reloaded draws again. |
 | `GET /sessions` | The caller's sessions on this runtime (`?agent=`). |
 | `POST /agents/{agent}/ag-ui/` | The application's agent over **AG-UI**, each thread a session, opened at its first run. |
+| `POST /visitors/agent` | On the visitors' runtime, for a visitor's token only: **the agent the token names**, made if it is not (an address's), as `{agent, app_id}` — `at-<slug>` and the application it runs, or an example's id. Refused in ai-agents' sentence for an address a visitor may not talk to, `404` for an example not kept and on any other runtime. |
 
 What `GET` says of a session:
 

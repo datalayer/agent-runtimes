@@ -15,6 +15,7 @@ import { APP_CATALOGUE } from '../../specs/apps';
 import { themeAccentVars } from '@datalayer/primer-addons';
 import {
   agentIdOf,
+  appAgentOf,
   appDatalayerCreatePayload,
   appThemeOverrides,
   defineAppPlugin,
@@ -122,5 +123,31 @@ describe('the application’s accent in its conversation (LOOP T-05, T-18)', () 
         '--button-primary-bgColor-rest'
       ],
     ).toBe('#8CCBF9');
+  });
+});
+
+describe('the agent its chat speaks to (STUDIO D-15)', () => {
+  const research = APP_CATALOGUE['web-research'];
+
+  it('is its own, under its id', () => {
+    expect(appAgentOf(research)).toEqual({ agentId: 'web-research' });
+  });
+
+  it('is, for a visitor, the one their token reaches', () => {
+    expect(appAgentOf(research, 'web-research')).toEqual({
+      agentId: 'web-research',
+    });
+    // At its address, whatever the application's id.
+    expect(appAgentOf(research, 'at:desk')).toEqual({ agentId: 'at-desk' });
+  });
+
+  it('is a problem said, never another application', () => {
+    expect(appAgentOf(research, 'customer-interview')).toEqual({
+      problem:
+        'This visitor’s token is for customer-interview, not for web-research.',
+    });
+    expect(appAgentOf(research, 'at:Not A Slug')).toEqual({
+      problem: '“at:Not A Slug” is no application’s address.',
+    });
   });
 });

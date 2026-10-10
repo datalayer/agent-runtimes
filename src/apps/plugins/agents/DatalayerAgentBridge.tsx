@@ -26,10 +26,11 @@
  */
 
 import type { JSX } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useReactorPlatform, useSignalValue } from '@datalayer/reactor/react';
 
 import { useAgentRuntimes } from '../../../hooks/useAgentRuntimes';
+import { ensureVisitorAgent } from '../../apps/visitorToken';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
 import { appLaunchOf } from './appLaunch';
@@ -63,6 +64,60 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   const service = useOptionalSandboxService();
   const target = useSignalValue(service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL);
   const onDatalayer = target === 'datalayer';
+
+  /*
+   * On the visitors' runtime, the application's agent made before the page
+   * follows it (STUDIO D-15): an application at its address has none until
+   * a visitor opens it, and its runtime holds no plugin of it until then —
+   * so the page's plugin of the pair (F-15) would stand down and its chat
+   * have nothing to speak to. Asked with a visitor's token, the runtime
+   * makes it and says which agent it is; the runtime is reported only then,
+   * and its refusal is said in its sentence.
+   */
+  const visitorAppId = (createPayload?.app_spec as { id?: unknown } | undefined)
+    ?.id;
+  const [visitorAgent, setVisitorAgent] = useState<{
+    ready?: boolean;
+    error?: string;
+  }>({});
+  useEffect(() => {
+    setVisitorAgent({});
+    if (!visitors || !onDatalayer) {
+      return;
+    }
+    if (typeof visitorAppId !== 'string' || !visitorAppId) {
+      setVisitorAgent({
+        error:
+          'A conversation without an account runs an application: none was given.',
+      });
+      return;
+    }
+    let current = true;
+    ensureVisitorAgent(visitors, visitorAppId)
+      .then(() => {
+        if (current) {
+          setVisitorAgent({ ready: true });
+        }
+      })
+      .catch((error: unknown) => {
+        if (current) {
+          setVisitorAgent({
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+    return () => {
+      current = false;
+    };
+    // By what it is, not by the host's object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    visitors?.url,
+    visitors?.app,
+    visitors?.inferenceUrl,
+    visitorAppId,
+    onDatalayer,
+  ]);
 
   /*
    * The agent hook, asked for a spec.
@@ -129,6 +184,16 @@ export function DatalayerAgentBridge(): JSX.Element | null {
     if (!service || !onDatalayer) {
       return;
     }
+    if (visitors) {
+      if (visitorAgent.error) {
+        service.setState('error', visitorAgent.error);
+        return;
+      }
+      if (!visitorAgent.ready) {
+        service.setState('starting');
+        return;
+      }
+    }
     if (already) {
       service.report({
         variant: 'datalayer',
@@ -173,7 +238,16 @@ export function DatalayerAgentBridge(): JSX.Element | null {
       // host's server for an agent that is not on it.
       agent_base_url: runtime.agentBaseUrl,
     });
-  }, [service, onDatalayer, runtime, status, error, already]);
+  }, [
+    service,
+    onDatalayer,
+    runtime,
+    status,
+    error,
+    already,
+    visitors,
+    visitorAgent,
+  ]);
 
   return null;
 }

@@ -79,6 +79,23 @@ describe('the Datalayer target', () => {
     expect(read('plugin.ts')).toContain('datalayerKept?: { url: string }');
   });
 
+  it('has a visitor’s agent made before the page follows the runtime (STUDIO D-15)', () => {
+    // An application at its address has no agent on the visitors' runtime
+    // until a visitor opens it, and the runtime holds no plugin of it until
+    // then: the runtime is reported only once the agent is made, and its
+    // refusal is said with its reason.
+    const bridge = read('DatalayerAgentBridge.tsx');
+    expect(bridge).toContain('ensureVisitorAgent(visitors, visitorAppId)');
+    expect(bridge).toContain("service.setState('error', visitorAgent.error)");
+    expect(bridge.indexOf('if (!visitorAgent.ready)')).toBeLessThan(
+      bridge.indexOf('agent_base_url: already'),
+    );
+    // The reason reaches the chat through the switchable service.
+    expect(read('switchable.ts')).toContain(
+      'active.peek().setState(state, reason)',
+    );
+  });
+
   it('is loaded lazily, so its runtime stack is not everyone’s', () => {
     // The agent hook reaches JupyterLab, Lumino and the web components. In the
     // plugin's static imports that lands in every host that merely mounts it.

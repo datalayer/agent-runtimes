@@ -162,3 +162,89 @@ export function useVisitorToken(visitors: DatalayerVisitors | undefined): {
   }, [app, inferenceUrl]);
   return state;
 }
+
+/** What a token for an application at its address names: `at:<slug>`. */
+const AT_PREFIX = 'at:';
+
+/** The slug of an address, as ai-agents allows it. */
+const SLUG = /^[a-z0-9][a-z0-9-]{0,99}$/;
+
+/**
+ * The agent of the visitors' runtime a visitor's token reaches, as the
+ * runtime names it (`agent_of` in `agent_runtimes.loop.apps.visitors`): an
+ * example's by its id, an application at its address by `at-<slug>`. The
+ * chat speaks to that agent and to no other: the token reaches no other.
+ *
+ * @throws When `app` is an address with no valid slug.
+ */
+export function visitorAgentOf(app: string): string {
+  if (!app.startsWith(AT_PREFIX)) {
+    return app;
+  }
+  const slug = app.slice(AT_PREFIX.length);
+  if (!SLUG.test(slug)) {
+    throw new Error(`“${app}” is no application’s address.`);
+  }
+  return `at-${slug}`;
+}
+
+/** The agent the visitors' runtime holds for a visitor, and the application it runs. */
+export type VisitorAgent = { agent: string; appId: string };
+
+/**
+ * Ask the visitors' runtime for the agent a visitor's token names, made
+ * there if it is not (`POST /api/v1/apps/visitors/agent`, STUDIO D-15): an
+ * application at its address has its agent made as it is first opened, so
+ * that the runtime holds the application before the page follows it.
+ * Throws with the runtime's sentence when it refuses.
+ */
+export async function fetchVisitorAgent(
+  runtimeUrl: string,
+  token: string,
+  fetcher: typeof fetch = fetch,
+): Promise<VisitorAgent> {
+  const base = runtimeUrl.replace(/\/+$/, '');
+  const response = await fetcher(`${base}/api/v1/apps/visitors/agent`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = (await response.json().catch(() => ({}))) as {
+    agent?: string;
+    app_id?: string;
+    detail?: string;
+  };
+  if (!response.ok || !body.agent || !body.app_id) {
+    throw new Error(
+      body.detail ||
+        `The visitors’ runtime at ${base} did not make the application’s agent (HTTP ${response.status}).`,
+    );
+  }
+  return { agent: body.agent, appId: body.app_id };
+}
+
+/**
+ * The application's agent made on the visitors' runtime for this visitor,
+ * and checked to be the one the page runs: the agent the token reaches
+ * (`visitorAgentOf`) running the application of `appId`. Throws with the
+ * sentence a visitor is told otherwise.
+ */
+export async function ensureVisitorAgent(
+  visitors: DatalayerVisitors,
+  appId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<VisitorAgent> {
+  const minted = await fetchVisitorToken(
+    visitors.inferenceUrl,
+    visitors.app,
+    keptVisitorId(),
+    fetcher,
+  );
+  const held = await fetchVisitorAgent(visitors.url, minted.token, fetcher);
+  const expected = visitorAgentOf(visitors.app);
+  if (held.agent !== expected || held.appId !== appId) {
+    throw new Error(
+      `The visitors’ runtime holds ${held.appId} as ${held.agent} for “${visitors.app}”, not ${appId} as ${expected}: reload the page.`,
+    );
+  }
+  return held;
+}

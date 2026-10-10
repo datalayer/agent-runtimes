@@ -25,7 +25,11 @@ confirmed how many (LOOP R-18). `PUT /api/v1/apps/a2a` serves an
 application's agent made here over A2A, with a card naming the address its
 callers reach it at — what ai-agents asks of the runtime a deployment is kept
 on, so that it answers at the deployment's stable address (STUDIO A-08) —
-and `DELETE` serves nothing any more.
+and `DELETE` serves nothing any more. `POST /api/v1/apps/visitors/agent`, on
+the visitors' runtime, makes the agent a visitor's token names when it is not
+made yet — an application at its address — and says it and the application
+it runs: what a visitor's page asks before it follows the application here
+(STUDIO D-15).
 
 Every route checks who is calling before anything else (LOOP R-32,
 `agent_runtimes.loop.apps.callers`): a person for `configure`; for the
@@ -316,6 +320,54 @@ async def _visitors_agent(agent: str, request: Request) -> None:
             raise HTTPException(
                 status_code=refused.status, detail=refused.reason
             ) from None
+
+
+@router.post("/visitors/agent")
+async def visitor_agent(request: Request) -> Dict[str, str]:
+    """The agent a visitor's token names on the visitors' runtime, made if it is not.
+
+    What a visitor's page asks before it follows the application's plugins
+    here (LOOP F-15, STUDIO D-15): an application at its address has its
+    agent made as ai-agents shows it to somebody not signed in (R-30, D-02),
+    so that ``/apps/<id>/plugins/state`` holds it before the page's chat
+    speaks to it; an example is one this runtime keeps warm. Answers the
+    agent — ``at-<slug>`` for an address, the example's id — and the id of
+    the application it runs, which the page names its chat's agent and
+    follows by. Refused anywhere but the visitors' runtime, and to anybody
+    but a visitor.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused, agent_app
+    from agent_runtimes.loop.apps.visitors import (
+        AT_PREFIX,
+        NOT_HERE,
+        ONLY_VISITORS,
+        AddressRefused,
+        agent_of,
+        ensure_address_agent,
+        visitors_runtime,
+    )
+
+    if not visitors_runtime():
+        raise HTTPException(status_code=404, detail=NOT_HERE)
+    caller = (await _authorize(request, False)).caller
+    if caller.kind != "visitor":
+        raise HTTPException(status_code=403, detail=ONLY_VISITORS)
+    try:
+        agent = agent_of(caller.app_uid)
+    except ValueError as wrong:
+        raise HTTPException(status_code=403, detail=str(wrong)) from None
+    if caller.app_uid.startswith(AT_PREFIX):
+        try:
+            await ensure_address_agent(caller.app_uid)
+        except AddressRefused as refused:
+            raise HTTPException(
+                status_code=refused.status, detail=refused.reason
+            ) from None
+    try:
+        app, _ = agent_app(agent)
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+    return {"agent": agent, "app_id": app.id}
 
 
 async def a_person(request: Request) -> Authorized:

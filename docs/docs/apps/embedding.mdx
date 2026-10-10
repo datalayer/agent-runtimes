@@ -90,7 +90,9 @@ The element looks in three places and uses the first one it finds:
    draws it in its mode and runs it on **the visitors' runtime**: the
    conversation mints a visitor's token from ai-inference for that one
    application (`POST …/anonymous/token {app}`), minted again before it
-   runs out, and talks to the runtime with it. Nothing is launched and
+   runs out, and talks to the runtime with it. An address's agent is made
+   there as the element opens, before its conversation is ready, and is
+   named `at-<slug>`. Nothing is launched and
    nothing is kept; the visitor's limits are the runtime's (ten turns a day,
    fifteen minutes a session). An application a visitor may not talk to — a
    private address, one that reaches its owner's connections or documents,

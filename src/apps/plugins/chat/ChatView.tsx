@@ -1460,7 +1460,19 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * An application's session checks who is calling (LOOP R-32, R-04): its
    * chat says so with the person's token. The embed hands its own.
    */
-  const runsApp = Boolean(blueprintTurn?.createPayload?.app_spec);
+  /*
+   * Whether its host runs an application here, said by the host — not by
+   * whether the application's plugin is up: while its runtime does not hold
+   * it, its page plugin stands down (F-15), and its chat is then never sent
+   * to the runtime's bare agent route — on the visitors' runtime one that is
+   * not published (STUDIO D-15). It speaks to the application's session API,
+   * whose refusal says why.
+   */
+  const runsApp = Boolean(
+    blueprintTurn?.createPayload?.app_spec ||
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerCreatePayload
+      ?.app_spec,
+  );
   const memberToken = useIAMStore(state => state.token);
   /*
    * Without an account (LOOP R-30) the application runs on the visitors'

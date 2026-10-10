@@ -391,8 +391,9 @@ export function createSwitchableSandboxService({
     report(next) {
       active.peek().report(next);
     },
-    setState(state) {
-      active.peek().setState(state);
+    setState(state, reason) {
+      // With its reason: the chat says why there is nothing to talk to.
+      active.peek().setState(state, reason);
     },
     execute(code) {
       return active.peek().execute(code);

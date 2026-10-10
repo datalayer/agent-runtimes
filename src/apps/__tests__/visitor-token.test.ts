@@ -12,9 +12,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  ensureVisitorAgent,
+  fetchVisitorAgent,
   fetchVisitorToken,
   isVisitorId,
   keptVisitorId,
+  visitorAgentOf,
   visitorTokenRequest,
 } from '../apps/visitorToken';
 
@@ -79,5 +82,79 @@ describe('a visitor token', () => {
         }),
       ),
     ).rejects.toThrow("A visitor's id is 8 to 64 letters, digits or dashes.");
+  });
+});
+
+/** Answers each URL its own way, in the order asked. */
+function answers(
+  byUrl: Record<string, [number, unknown]>,
+): typeof fetch & { mock: { calls: unknown[][] } } {
+  return vi.fn(async (url: string) => {
+    const [status, body] = byUrl[url] ?? [404, { detail: `no ${url}` }];
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as unknown as typeof fetch & { mock: { calls: unknown[][] } };
+}
+
+const VISITORS = {
+  url: 'https://r1.datalayer.run/api/loop-visitors/',
+  app: 'at:desk',
+  inferenceUrl: 'https://r1.datalayer.run',
+};
+const TOKEN_URL =
+  'https://r1.datalayer.run/api/ai-inference/v1/anonymous/token';
+const AGENT_URL =
+  'https://r1.datalayer.run/api/loop-visitors/api/v1/apps/visitors/agent';
+
+describe("a visitor's agent (STUDIO D-15)", () => {
+  it('is the one the runtime names: an example by its id, an address by at-<slug>', () => {
+    expect(visitorAgentOf('web-research')).toBe('web-research');
+    expect(visitorAgentOf('at:d15-visitors')).toBe('at-d15-visitors');
+    expect(() => visitorAgentOf('at:')).toThrow('is no application’s address');
+  });
+
+  it('is asked of the visitors’ runtime with the visitor’s token', async () => {
+    const fetcher = answers({
+      [AGENT_URL]: [200, { agent: 'at-desk', app_id: 'helpdesk' }],
+    });
+    expect(
+      await fetchVisitorAgent(VISITORS.url, 'visitor-token', fetcher),
+    ).toEqual({ agent: 'at-desk', appId: 'helpdesk' });
+    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(AGENT_URL);
+    expect(init.method).toBe('POST');
+    expect(init.headers).toEqual({ Authorization: 'Bearer visitor-token' });
+  });
+
+  it("says the runtime's sentence when it refuses", async () => {
+    await expect(
+      fetchVisitorAgent(
+        VISITORS.url,
+        'visitor-token',
+        answers({
+          [AGENT_URL]: [401, { detail: 'Without an account it is not run.' }],
+        }),
+      ),
+    ).rejects.toThrow('Without an account it is not run.');
+  });
+
+  it('is made before the page follows it, and checked to run the application drawn', async () => {
+    const fetcher = answers({
+      [TOKEN_URL]: [200, { token: 'visitor-token', expires_in: 300 }],
+      [AGENT_URL]: [200, { agent: 'at-desk', app_id: 'helpdesk' }],
+    });
+    expect(await ensureVisitorAgent(VISITORS, 'helpdesk', fetcher)).toEqual({
+      agent: 'at-desk',
+      appId: 'helpdesk',
+    });
+    expect(fetcher.mock.calls.map(call => call[0])).toEqual([
+      TOKEN_URL,
+      AGENT_URL,
+    ]);
+    await expect(
+      ensureVisitorAgent(VISITORS, 'another-app', fetcher),
+    ).rejects.toThrow('not another-app as at-desk');
   });
 });

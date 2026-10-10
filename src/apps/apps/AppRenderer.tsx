@@ -101,6 +101,7 @@ import { ChatLanguage } from '../../chat/ChatLanguage';
 import { defineAppRuntimePlugin } from './AppRuntimePlugins';
 import { hasFolderModules } from './customComponents';
 import { appPluginPair } from './pluginPair';
+import { visitorAgentOf } from './visitorToken';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -507,6 +508,33 @@ export function appThemeOverrides(app: AppSpec): ThemeOverrides | undefined {
     : undefined;
 }
 
+/**
+ * The agent an application's chat speaks to (STUDIO D-15): its own, made
+ * under its id — or, for a visitor without an account, the one of the
+ * visitors' runtime their token reaches (`visitorAgentOf`): an example's by
+ * its id, an application at its address by `at-<slug>`. A token for another
+ * example than the one drawn is a problem said in place, never spoken with.
+ */
+export function appAgentOf(
+  app: Pick<AppSpec, 'id'>,
+  visitorsApp?: string,
+): { agentId: string } | { problem: string } {
+  if (!visitorsApp) {
+    return { agentId: app.id };
+  }
+  try {
+    const agentId = visitorAgentOf(visitorsApp);
+    if (!visitorsApp.startsWith('at:') && agentId !== app.id) {
+      return {
+        problem: `This visitor’s token is for ${visitorsApp}, not for ${app.id}.`,
+      };
+    }
+    return { agentId };
+  } catch (error) {
+    return { problem: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export function AppRenderer({
   app,
   plugins = NO_PLUGINS,
@@ -624,10 +652,17 @@ export function AppRenderer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [accent],
   );
-  if ('problem' in preset) {
+  const agent = appAgentOf(app, embed.datalayerVisitors?.app);
+  const problem =
+    'problem' in preset
+      ? preset.problem
+      : 'problem' in agent
+        ? agent.problem
+        : undefined;
+  if ('problem' in preset || 'problem' in agent) {
     return (
       <div role="status" style={{ padding: 16 }}>
-        {preset.problem}
+        {problem}
       </div>
     );
   }
@@ -637,8 +672,9 @@ export function AppRenderer({
     <ChatLanguage language={language}>
       <LoopEmbed
         // The application's own agent: created under its id, so that its
-        // spec is applied to an agent of its own, never to the one it extends.
-        agentId={app.id}
+        // spec is applied to an agent of its own, never to the one it extends
+        // — or, for a visitor, the one their token reaches (D-15).
+        agentId={agent.agentId}
         // Drawn as its kind and its layout say: the conversation alone, the
         // page with the conversation over it, the two side by side, or — a
         // decision — its host's page alone.

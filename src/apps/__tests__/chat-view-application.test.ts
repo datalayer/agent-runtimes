@@ -65,4 +65,13 @@ describe('an application in the chat', () => {
     expect(chat).toMatch(/: agentServerUrl !== undefined\s+\? \{/);
     expect(chat).toMatch(/presence && !noRuntime \? \(\s+<PresenceLine/);
   });
+
+  it('speaks to its session API whether or not its plugin is up (STUDIO D-15)', () => {
+    // The host says it runs an application: while its runtime does not hold
+    // it, its page plugin stands down, and its chat is still never sent to
+    // the runtime's bare agent route.
+    expect(chat).toMatch(
+      /const runsApp = Boolean\(\s+blueprintTurn\?\.createPayload\?\.app_spec \|\|\s+reactor\.getConfig<AgentsConfig>\(AGENTS_PLUGIN_NAME\)\?\.datalayerCreatePayload\s+\?\.app_spec,\s+\);/,
+    );
+  });
 });
