@@ -89,9 +89,16 @@ const MOUNTS: Mount[] = [
   {
     name: 'the element on a host page',
     unreachable: notReachable(PROBES.bundle, PROBES.hostPage),
+    // The same application as the hosted page when an address is named
+    // (STUDIO D-15: an `at:` address's agent, made as the element opens);
+    // else an example the visitors' runtime keeps warm.
     openAnswering: page =>
-      page.goto(hostPage({ app: exampleId() })).then(() => undefined),
-    notAnswering: notReachable(PROBES.visitors),
+      page
+        .goto(hostPage({ app: address() || exampleId() }))
+        .then(() => undefined),
+    notAnswering: address()
+      ? notReachable(PROBES.address, PROBES.visitors)
+      : notReachable(PROBES.visitors),
     openRefused: page =>
       page.goto(hostPage({ app: refusedAddress() })).then(() => undefined),
     notRefusing: notReachable(PROBES.refused),

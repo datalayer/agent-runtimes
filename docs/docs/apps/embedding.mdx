@@ -559,7 +559,9 @@ landing (`E2E_LANDING_URL`), the bundle at its `/embed/` or at
 import it), the visitors' runtime (`E2E_DATALAYER_API`),
 the address open to visitors (`E2E_ADDRESS`) and the one that refuses
 (`E2E_REFUSED_ADDRESS`, `demo-accounting`) before any browser opens; what is
-not reachable skips its cases with a sentence.
+not reachable skips its cases with a sentence. With an address named, both
+mounts talk to that one application — the element embeds the address, not an
+example — so the same application passes the same cases on both.
 
 ## Mounted from Python
 
