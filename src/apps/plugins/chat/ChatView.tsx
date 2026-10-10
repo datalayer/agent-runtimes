@@ -539,6 +539,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * put in. Read by `sendNow`, set below.
    */
   const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
+  /**
+   * Why its host closed the conversation (`ChatAvailabilityProvider`), or
+   * nothing: a page's own send is refused with it as the composer is — a
+   * stopped deployment, a visitor's turns all taken. Set below.
+   */
+  const hostClosedRef = useRef<string | undefined>(undefined);
   /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
   const runProps = useContributions(LoopRunProps);
   const runPropsRef = useRef(runProps);
@@ -561,6 +567,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const sendNow = useCallback(
     (message: string, given?: Record<string, unknown>): string | void => {
+      if (hostClosedRef.current) {
+        return hostClosedRef.current;
+      }
       const forwardedProps = runForwardedProps(
         runPropsRef.current.map(entry => entry.value),
         given,
@@ -1359,6 +1368,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * Studio's Preview and the hosted page, rather than left unanswered.
    */
   const ambient = useChatAvailability();
+  hostClosedRef.current = ambient.disabled
+    ? ambient.disableReason || 'This conversation is closed here.'
+    : undefined;
   /*
    * No agent to talk to: a Datalayer runtime not assigned (STUDIO P-24,
    * round 9). Said in a sentence — why, when its launch was refused — and
