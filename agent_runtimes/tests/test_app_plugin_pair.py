@@ -19,12 +19,12 @@ from pathlib import Path
 import yaml
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps.application import load_application
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.loop.apps.plugins import (
-    REGISTRY,
+    PLATFORM,
     app_plugin_name,
     app_plugins_state,
     manifest_of,
@@ -53,7 +53,7 @@ def test_the_pair_has_one_name_declared_each_way() -> None:
 
 
 def test_the_state_says_the_applications_own_plugin_once_it_is_held() -> None:
-    registry = ContributionRegistry()
+    registry = PluginPlatform()
     app = APP_CATALOGUE["web-research"]
     before = app_plugins_state(app.id, registry)
     # Known from the catalogue, not configured: its own plugin is not held.
@@ -95,7 +95,7 @@ def test_the_routes_answer_reactors_shape_for_one_application() -> None:
     unregister_app(app.id)
     try:
         state = client.get(f"/api/v1/apps/{app.id}/plugins/state").json()
-        assert state == {"revision": revision_of(REGISTRY), "plugins": []}
+        assert state == {"revision": revision_of(PLATFORM), "plugins": []}
         register_app(app)
         state = client.get(f"/api/v1/apps/{app.id}/plugins/state").json()
         assert [p["name"] for p in state["plugins"]] == ["loop-app-web-research"]
@@ -122,7 +122,7 @@ def test_a_spec_and_the_app_py_eject_writes_give_the_same_pair(tmp_path: Path) -
     spec_path = written.folder / "app.yaml"
     from_spec = manifest_of(load_app(yaml.safe_load(spec_path.read_text())))
     application = load_application(eject(spec_path))
-    from_python = register_application(application, ContributionRegistry())
+    from_python = register_application(application, PluginPlatform())
     assert (
         _pair(from_spec)
         == _pair(from_python)

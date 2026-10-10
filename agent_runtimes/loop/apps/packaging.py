@@ -27,9 +27,12 @@ half of any capability (REACTOR.md §5, *Python-packaged extensions*):
   component of a file of the folder is fetched from there and drawn in its
   sandboxed frame, as any other (`AppRuntimePlugins`).
 
-The plugin the wheel carries is generated, and holds no code of the
-developer's: the folder's modules never run in the page, only in their frames
-(LOOP D-22).
+The extension the entry point advertises is the application's own
+(`Application.extension`, LOOP P-35): its Python half the application's plugin
+— its module, loaded from the package — and the plugins it composes; its
+frontend half the folder's files. The page-side module the wheel carries is
+generated, and holds no code of the developer's: the folder's modules never
+run in the page, only in their frames (LOOP D-22).
 """
 
 from __future__ import annotations
@@ -40,22 +43,26 @@ import re
 import shutil
 import subprocess
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from reactor import ExtensionManifest, PluginManifest, PluginPlatform
-from reactor.extensions import (
+from reactor import (
     EXTENSION_ENTRY_POINT_GROUP,
     SHARE_DIRECTORY,
     FrontendExtension,
     FrontendPlugin,
+    PluginPlatform,
     ReactorExtension,
     find_extension_frontend,
 )
 
-from agent_runtimes.loop.apps.plugins import app_plugin_name, manifest_of
+from agent_runtimes.loop.apps.plugins import (
+    AppPlugin,
+    app_plugin_name,
+    register_application,
+)
 from agent_runtimes.types import AppSpec
 
 #: The module the wheel's page side is entered by: generated, data only.
@@ -65,8 +72,8 @@ PAGE_SIDE_ENTRY = "index.js"
 #: (`src/apps/core/appFiles.ts` defines the same): where a folder's files are.
 APP_FILES_POINT = "loop.app.files"
 
-#: What the package says of its application, beside its module.
-APPLICATION_FILE = "application.json"
+#: The application's module in its package.
+APPLICATION_MODULE = "app.py"
 
 #: Where Reactor's route serves an extension's files, under the base the page
 #: reads the application's plugins from (``/api/v1/apps/<id>``).
@@ -131,69 +138,51 @@ export default {{
 """
 
 
-class PackagedApplication:
-    """The Python half of a packaged application, as Reactor registers it.
-
-    The application's own plugin of the pair is registered by the runtime
-    that runs it (`register_application`); this says which module holds it.
-    """
-
-    def __init__(self, module: str):
-        self.module = module
-
-    def __repr__(self) -> str:
-        return f"PackagedApplication({self.module!r})"
-
-
 def packaged_extension(package_file: str) -> ReactorExtension:
-    """What a packaged application's entry point resolves to.
+    """What a packaged application's entry point resolves to: its extension.
 
     Called by the ``extension()`` of the package ``loop apps package`` wrote,
-    with its ``__file__``: the application as its package says it, its built
-    page side found where the wheel put it (`find_extension_frontend`).
+    with its ``__file__``: the application loaded from the package's
+    ``app.py``, as `Application.extension` delivers it — its plugin and the
+    plugins it composes — with its built page side found where the wheel put
+    it (`find_extension_frontend`).
 
     Raises
     ------
     LookupError
         When its page side is not installed with it.
     """
+    from agent_runtimes.loop.apps.application import load_application
+
     here = Path(package_file).resolve().parent
-    said = json.loads((here / APPLICATION_FILE).read_text())
-    name = app_plugin_name(said["id"])
+    application = load_application(here / APPLICATION_MODULE)
+    app = application.spec
+    name = app_plugin_name(app.id)
     directory = find_extension_frontend(package_file, name)
     if directory is None:
         raise LookupError(
             f"{name}'s page side is not installed with it: no "
             f"{SHARE_DIRECTORY}/{name} beside {here}."
         )
-    manifest = PluginManifest(**said["manifest"])
-    return ReactorExtension(
-        manifest=ExtensionManifest(
-            name=name,
-            version=manifest.version,
-            display_name=manifest.display_name,
-            description=manifest.description,
-            emoji=manifest.emoji,
-        ),
-        plugins=[(manifest, PackagedApplication(f"{here.name}.app"))],
+    return application.extension(
         frontend=FrontendExtension(
             directory=directory,
             entry=PAGE_SIDE_ENTRY,
             plugins=[
                 FrontendPlugin(
-                    name=page_side_plugin_name(said["id"]),
-                    version=manifest.version,
-                    display_name=f"{manifest.display_name}'s page side",
+                    name=page_side_plugin_name(app.id),
+                    version=app.version,
+                    display_name=f"{app.name}'s page side",
                     description=(
                         "Where the files of its folder are served: "
-                        + ", ".join(said["files"])
+                        + ", ".join(folder_files(app))
                         + "."
                     ),
-                    emoji=manifest.emoji,
+                    emoji=app.emoji,
                     required_backend_plugins=[name],
                 )
             ],
-        ),
+        )
     )
 
 
@@ -216,12 +205,19 @@ def installed_platform(app_id: str) -> PluginPlatform:
     importlib.invalidate_caches()
     for entry in entry_points(group=EXTENSION_ENTRY_POINT_GROUP, name=name):
         extension = entry.load()()
-        if not isinstance(extension, ReactorExtension) or extension.name != name:
+        plugin = None
+        if isinstance(extension, ReactorExtension) and extension.name == name:
+            plugin = next(
+                (impl for manifest, impl in extension.plugins if manifest.name == name),
+                None,
+            )
+        if not isinstance(plugin, AppPlugin):
             raise LookupError(
                 f"The entry point {name} of {EXTENSION_ENTRY_POINT_GROUP} is not "
                 f"the application {app_id}'s extension."
             )
-        platform._register_extension_object(entry.name, extension)
+        # As the application registers anywhere: what it uses first.
+        register_application(plugin.application, platform, frontend=extension.frontend)
     return platform
 
 
@@ -304,14 +300,17 @@ packages = [{_toml(module)}]
 
 
 def _init(app: AppSpec) -> str:
-    return f'''# Written by `loop apps package` (LOOP P-29).
-"""{app.name}, packaged: its application in ``.app``, its page side in the wheel."""
+    return f'''# Written by `loop apps package` (LOOP P-29, P-35).
+"""{app.name}, packaged: its application in ``app.py``, its page side in the wheel."""
+
+from functools import cache
 
 from agent_runtimes.loop.apps.packaging import packaged_extension
 
 
+@cache
 def extension():
-    """The Reactor extension its entry point advertises."""
+    """The Reactor extension its entry point advertises: the application's own."""
     return packaged_extension(__file__)
 '''
 
@@ -356,27 +355,8 @@ def write_project(path: Path, out: Path, *, force: bool = False) -> Packaged:
         shutil.rmtree(project)
     package = project / module
     package.mkdir(parents=True)
-    shutil.copyfile(path, package / "app.py")
+    shutil.copyfile(path, package / APPLICATION_MODULE)
     (package / "__init__.py").write_text(_init(app))
-    manifest = {
-        key: value
-        for key, value in asdict(manifest_of(app)).items()
-        if key
-        in (
-            "name",
-            "version",
-            "description",
-            "display_name",
-            "emoji",
-            "tags",
-            "extension",
-            "frontend_dependencies",
-        )
-    }
-    (package / APPLICATION_FILE).write_text(
-        json.dumps({"id": app.id, "files": files, "manifest": manifest}, indent=2)
-        + "\n"
-    )
     share = project / SHARE_DIRECTORY / name
     share.mkdir(parents=True)
     for file in files:
@@ -444,6 +424,7 @@ def package(
 
 __all__ = [
     "APP_FILES_POINT",
+    "APPLICATION_MODULE",
     "NotPackageable",
     "PAGE_SIDE_ENTRY",
     "Packaged",

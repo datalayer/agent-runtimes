@@ -17,7 +17,12 @@ developer's own FastAPI:
   rest react to its sessions, as an example of the catalogue's does;
 - **a page** at ``/assistant`` itself: the application, embedded with
   ``<datalayer-app server="…/assistant">``, its Appspec written in the
-  element.
+  element;
+- **its routes** (LOOP P-35): what its Reactor plugin provides with an
+  endpoint (``@app.route``, and the plugins it uses), mounted under
+  ``/assistant`` by Reactor's ``include_plugin_routes`` from a platform the
+  mount registers it on — as the application was when mounted: a route
+  changed under ``--watch`` is mounted again on the next start.
 
 ``loop apps run --web`` (LOOP P-08) serves an application the same way on
 this machine, with a `HotReload` (`agent_runtimes.loop.apps.serving`): the
@@ -49,6 +54,9 @@ from typing import (
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from reactor import PluginPlatform, include_plugin_routes
+
+from agent_runtimes.loop.apps.plugins import register_application
 
 if TYPE_CHECKING:
     from agent_runtimes.app import ServerConfig
@@ -279,6 +287,12 @@ def mount(
     # The page first, so that the mount does not answer its address.
     for address in (path, f"{path}/"):
         api.add_api_route(address, page, methods=["GET"], include_in_schema=False)
+    # Its routes, as its plugin provides them, before the runtime's mount
+    # would answer their paths (LOOP P-35).
+    platform = PluginPlatform()
+    register_application(application, platform)
+    platform.start()
+    include_plugin_routes(api, platform, prefix=path)
     if hot_reload is not None:
         api.add_api_route(
             events, hot_reload.events, methods=["GET"], include_in_schema=False
@@ -293,11 +307,15 @@ def mount(
         async with outer(app) as state:
             async with runtime.router.lifespan_context(runtime):
                 await create_agent(runtime, payload, settings.api_prefix)
-                if hot_reload is None:
-                    yield state
-                else:
-                    async with hot_reload.watching(runtime, settings.api_prefix):
+                try:
+                    if hot_reload is None:
                         yield state
+                    else:
+                        async with hot_reload.watching(runtime, settings.api_prefix):
+                            yield state
+                finally:
+                    # Its plugins told the host stops (Reactor's on_reactor_stop).
+                    platform.stop()
 
     api.router.lifespan_context = lifespan
     return runtime

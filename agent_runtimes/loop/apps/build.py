@@ -88,6 +88,14 @@ def is_python(path: Union[str, Path]) -> bool:
     return Path(path).suffix == ".py"
 
 
+def _named(handler: Any, name: str = "") -> str:
+    """A handler's name; a Reactor command's id when one answers (LOOP P-35)."""
+    command = getattr(handler, "command", None)
+    if isinstance(command, str) and not hasattr(handler, "__name__"):
+        return f"the Reactor command {command}"
+    return name or str(handler.__name__)
+
+
 def _where(handler: Any, source: str) -> str:
     code = getattr(handler, "__code__", None)
     return f"{source}:{code.co_firstlineno}" if code is not None else source
@@ -131,7 +139,7 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         marks.append(CodeMark(f"schedule {name}", name, _where(handler, source)))
     for name, handler in application.commands.items():
         marks.append(
-            CodeMark(f"command {name}", handler.__name__, _where(handler, source))
+            CodeMark(f"command {name}", _named(handler), _where(handler, source))
         )
     # Code where plain words are not enough (LOOP P-06), declared in the spec
     # by name: here, where its code is.
@@ -141,7 +149,11 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
         ("test", application.tests),
     ):
         for name, handler in named.items():
-            marks.append(CodeMark(f"{kind} {name}", name, _where(handler, source)))
+            marks.append(
+                CodeMark(
+                    f"{kind} {name}", _named(handler, name), _where(handler, source)
+                )
+            )
     return marks
 
 

@@ -35,6 +35,25 @@ def command_prompt(command: AppCommandSpec, words: str = "") -> str:
     return f"{command.prompt}\n\n{words}" if words else command.prompt
 
 
+@dataclass(frozen=True)
+class ReactorCommandRun:
+    """What answers a command of the composer that runs a Reactor command
+    (LOOP P-35): ``app.command(name, description, run=<command id>)``.
+
+    Called as any command its code answers, ``(session, words)``: the
+    command runs on the session's platform with the words typed after it,
+    and what it returns, said, is the answer.
+    """
+
+    command: str
+    """The Reactor command's id."""
+
+    async def __call__(self, session: Any, words: str) -> None:
+        said = await session.execute_command(self.command, words)
+        if said is not None:
+            await session.send(str(said))
+
+
 def command_called(app: AppSpec, text: str) -> Optional[Tuple[AppCommandSpec, str]]:
     """The application's command a message calls, ``/<name> words``, and its words; or None."""
     said = text.lstrip()

@@ -344,14 +344,14 @@ def test_what_a_check_and_a_test_say_is_read_strictly() -> None:
 async def test_a_later_plugin_answers_in_place_of_its_tool() -> None:
     app = desk()
     host, _, _ = hosted(app)
-    original = reaction_of(app.id, "tool", "lookup_order", host.registry)
+    original = reaction_of(app.id, "tool", "lookup_order", host.platform)
     assert original is app.tools["lookup_order"]
     assert (
-        reaction_of(app.id, "check", "no_prices", host.registry)
+        reaction_of(app.id, "check", "no_prices", host.platform)
         is app.checks["no_prices"]
     )
     host.dispose()
-    assert reaction_of(app.id, "tool", "lookup_order", host.registry) is None
+    assert reaction_of(app.id, "tool", "lookup_order", host.platform) is None
 
 
 # --- its tests ---------------------------------------------------------------------

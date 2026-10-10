@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps import opening, plugins, principal, sessions
 from agent_runtimes.loop.apps.agent import app_capabilities
@@ -203,7 +203,7 @@ class Verifier:
 def runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Runtime]:
     # The sandbox an agent runs code in writes where the runtime runs: here.
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     monkeypatch.setattr(routes, "VERIFIER", Verifier())
     # Everybody may open every deployment, unless a test says otherwise (D-02).
     opening.use_opener(_lets_everybody_in)

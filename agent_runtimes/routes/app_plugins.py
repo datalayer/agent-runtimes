@@ -33,7 +33,7 @@ from typing import Any, AsyncIterator, Dict, List
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from reactor.web import _CONTENT_TYPES as EXTENSION_CONTENT_TYPES
+from reactor import EXTENSION_CONTENT_TYPES
 
 from agent_runtimes.loop.apps.packaging import (
     app_extension_file,

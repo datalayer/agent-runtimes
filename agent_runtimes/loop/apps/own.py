@@ -48,6 +48,44 @@ Handler = Callable[..., Any]
 # --- its tools --------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class CommandTool:
+    """A tool of a plugin the application uses, run as the Reactor command it
+    names (LOOP P-35): ``app.uses(plugin, tools={...})``.
+
+    Contributed unbound; the host that runs a session binds it to its
+    platform (`on`), where the command is registered.
+    """
+
+    command: str
+    """The Reactor command's id."""
+
+    platform: Any = None
+    """The platform it runs on, once bound."""
+
+    def on(self, platform: Any) -> "CommandTool":
+        """The tool, run on that platform."""
+        return CommandTool(self.command, platform)
+
+    async def __call__(self, **arguments: Any) -> Any:
+        """Run it, as any tool of its code is called."""
+        return await self.run(**arguments)
+
+    async def run(self, **arguments: Any) -> Any:
+        """Run the command with the call's arguments, and answer what it returns.
+
+        Raises
+        ------
+        RuntimeError
+            When it is not bound to a platform.
+        """
+        if self.platform is None:
+            raise RuntimeError(
+                f"The tool running {self.command} is not bound to a platform."
+            )
+        return await self.platform.execute_command(self.command, arguments)
+
+
 def own_toolset(app: AppSpec, handlers: Mapping[str, Optional[Handler]]) -> Any:
     """The tools its code gives its agent, as one toolset; None when it has none.
 
@@ -67,7 +105,18 @@ def own_toolset(app: AppSpec, handlers: Mapping[str, Optional[Handler]]) -> Any:
     from pydantic_ai.toolsets import FunctionToolset
 
     tools = [
-        Tool(handler, takes_ctx=False, name=tool.name, description=tool.description)
+        # A plugin's tool runs its command with its declared parameters: there
+        # is no signature of its own to read them from (LOOP P-35).
+        Tool.from_schema(
+            handler.run,
+            name=tool.name,
+            description=tool.description,
+            json_schema=tool.parameters,
+        )
+        if isinstance(handler, CommandTool)
+        else Tool(
+            handler, takes_ctx=False, name=tool.name, description=tool.description
+        )
         for tool in app.tools
         if (handler := handlers.get(tool.name)) is not None
     ]

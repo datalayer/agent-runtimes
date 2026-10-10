@@ -12,7 +12,7 @@ from typing import Any, List
 import jwt
 import pytest
 from fastapi.testclient import TestClient
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps import callers, plugins
 from agent_runtimes.loop.apps.callers import (
@@ -190,7 +190,7 @@ def remote(monkeypatch: pytest.MonkeyPatch) -> Any:
     platform = Platform()
     monkeypatch.setattr(callers, "VERIFIER", CallerVerifier(fetch=platform))
     monkeypatch.setattr(routes, "VERIFIER", callers.VERIFIER)
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     routes._RUNNING.clear()
     with TestClient(create_app(), client=("10.0.0.4", 50000)) as client:
         client.platform = platform
@@ -249,7 +249,7 @@ def test_a_page_elsewhere_cannot_reach_a_local_runtime_through_the_browser(
 ) -> None:
     from agent_runtimes.app import create_app
 
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     routes._RUNNING.clear()
     with TestClient(create_app(), client=("127.0.0.1", 50000)) as local:
         hostile = {"Origin": "https://evil.example"}

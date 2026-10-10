@@ -921,7 +921,7 @@ async def test_run_sync_and_cache():
 
 
 async def test_an_application_is_its_plugin_each_reaction_a_contribution():
-    from reactor import ContributionRegistry, PluginContributions
+    from reactor import PluginManifest, PluginPlatform
 
     from agent_runtimes.loop.apps.plugins import (
         APP_POINT,
@@ -944,42 +944,55 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
     @app.action("save")
     def save(session: Session, payload: dict) -> None: ...
 
-    registry = ContributionRegistry()
+    platform = PluginPlatform()
     host, channel, _ = hosted(app)
     host = AppHost(
-        app, channel, agent=host._agent, recorder=host.recorder, registry=registry
+        app, channel, agent=host._agent, recorder=host.recorder, platform=platform
     )
     # Its identity is the plugin's manifest; its spec and every reaction are
-    # contributions of that plugin.
+    # contributions of that plugin, delivered as its extension (LOOP P-35).
     assert host.plugin.name == "loop-app-customer-interview"
-    assert find_app("customer-interview", registry) == app.spec
-    assert [(c.plugin, c.id) for c in registry.get(REACTION_POINTS["message"])] == [
-        ("loop-app-customer-interview", "customer-interview")
-    ]
-    assert reaction_of("customer-interview", "action", "save", registry) is save
-    assert reactions_named("customer-interview", "action", registry) == ["save"]
-    assert reaction_of("customer-interview", "stop", registry=registry) is None
+    assert [e["name"] for e in platform.list_extensions()] == [host.plugin.name]
+    assert find_app("customer-interview", platform) == app.spec
+    assert [
+        (c.plugin, c.id) for c in platform.get_contributions(REACTION_POINTS["message"])
+    ] == [("loop-app-customer-interview", "customer-interview")]
+    assert reaction_of("customer-interview", "action", "save", platform) is save
+    assert reactions_named("customer-interview", "action", platform) == ["save"]
+    assert reaction_of("customer-interview", "stop", platform=platform) is None
     with pytest.raises(ValueError, match="A reaction is one of"):
-        reaction_of("customer-interview", "on_message", registry=registry)
+        reaction_of("customer-interview", "on_message", platform=platform)
 
     # Another plugin's later contribution answers in its place.
     async def louder(session: Session, text: str) -> None:
         await session.send(f"HEARD {text.upper()}.")
 
-    PluginContributions(registry, "shouting").contribute(
-        REACTION_POINTS["message"], louder, contribution_id="customer-interview"
-    )
+    class Shouting:
+        def provide_contributions(self, contributions) -> None:
+            contributions.contribute(
+                REACTION_POINTS["message"], louder, contribution_id="customer-interview"
+            )
+
+    platform.register_plugin(PluginManifest(name="shouting", version="1"), Shouting())
     session = await host.open()
     await host.message(session, "hi")
     assert [m.text for m in channel.messages] == ["Hello.", "HEARD HI."]
-    registry.dispose_plugin("shouting")
+    platform.unregister_plugin("shouting")
     await host.message(session, "hi")
     assert channel.messages[-1].text == "Heard hi."
 
-    # Disposed with its plugin: its spec, its reactions.
+    # Reactor's switch: disabled, its reactions are not read.
+    platform.disable_plugin(host.plugin.name)
+    assert reaction_of("customer-interview", "message", platform=platform) is None
+    platform.enable_plugin(host.plugin.name)
+
+    # Disposed with its extension: its spec, its reactions.
     host.dispose()
-    assert not registry.get(APP_POINT, plugins=[host.plugin.name])
-    assert reaction_of("customer-interview", "message", registry=registry) is None
+    assert not platform.has_plugin(host.plugin.name)
+    assert not [
+        c for c in platform.get_contributions(APP_POINT) if c.plugin == host.plugin.name
+    ]
+    assert reaction_of("customer-interview", "message", platform=platform) is None
     with pytest.raises(KeyError, match="no action 'save'"):
         await host.action(session, "save", {})
 

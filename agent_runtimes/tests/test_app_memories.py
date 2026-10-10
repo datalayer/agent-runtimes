@@ -24,7 +24,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai.toolsets import FunctionToolset
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
 from agent_runtimes.loop.apps import memory as app_memories
@@ -393,7 +393,7 @@ def remote(
 ) -> Iterator[TestClient]:
     from agent_runtimes.app import create_app
 
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     monkeypatch.setattr(routes, "VERIFIER", Verifier())
     with TestClient(create_app(), client=("10.0.0.4", 50000)) as client:
         yield client

@@ -36,14 +36,37 @@ import asyncio
 import inspect
 import sys
 import types
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
-from reactor import ContributionRegistry
+from reactor import (
+    Command,
+    ContributionPoint,
+    FrontendExtension,
+    PluginManifest,
+    PluginPlatform,
+    ReactorExtension,
+    define_contribution_point,
+)
 
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, local_agent
 from agent_runtimes.loop.apps.components import placer
-from agent_runtimes.loop.apps.composer import COMMAND_INPUT, command_called
+from agent_runtimes.loop.apps.composer import (
+    COMMAND_INPUT,
+    ReactorCommandRun,
+    command_called,
+)
 from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.frameworks import (
     CodeAgent,
@@ -51,7 +74,12 @@ from agent_runtimes.loop.apps.frameworks import (
     code_agent_problems,
 )
 from agent_runtimes.loop.apps.loading import AppNotRunnable, load_app
-from agent_runtimes.loop.apps.own import CHECK_STAGES, own_checks, own_toolset
+from agent_runtimes.loop.apps.own import (
+    CHECK_STAGES,
+    CommandTool,
+    own_checks,
+    own_toolset,
+)
 from agent_runtimes.loop.apps.pages import (
     OUTPUT_SHOWS,
     PAGE_ACTION,
@@ -62,7 +90,13 @@ from agent_runtimes.loop.apps.pages import (
     page_values,
     run_page,
 )
-from agent_runtimes.loop.apps.plugins import reaction_of, register_application
+from agent_runtimes.loop.apps.plugins import (
+    AppPlugin,
+    extension_manifest_of,
+    manifest_of,
+    reaction_of,
+    register_application,
+)
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import BEHAVIOURS
 from agent_runtimes.loop.apps.session import (
@@ -115,6 +149,28 @@ EVENTS = (
 #: The version of an application whose code says none, until it is
 #: deployed: the spec's own default (agentspecs `AppSpec.version`).
 FIRST_VERSION: str = str(AppSpec.model_fields["version"].default)
+
+#: A Reactor plugin an application composes: its manifest and implementation,
+#: as ``PluginPlatform.register_plugin`` and ``ReactorExtension.plugins`` take it.
+UsedPlugin = Tuple[PluginManifest, Any]
+
+
+@dataclass(frozen=True)
+class Contributed:
+    """One contribution its author made in Reactor's vocabulary (LOOP P-35):
+    to a point (``app.contribute``), or to one contribution of it
+    (``app.extend``, ``target`` the contribution extended).
+    """
+
+    point: ContributionPoint[Any]
+    value: Any
+    id: Optional[str] = None
+    order: int = 0
+    target: Optional[str] = None
+
+
+def _point(point: Union[str, ContributionPoint[Any]]) -> ContributionPoint[Any]:
+    return define_contribution_point(point) if isinstance(point, str) else point
 
 
 class Application:
@@ -179,6 +235,10 @@ class Application:
                 document[key] = value
         self._document = document
         self._version_declared = version is not None
+        self._attach_code()
+
+    def _attach_code(self) -> None:
+        """No code yet: no handler, and nothing contributed in Reactor's vocabulary."""
         self._spec: Optional[AppSpec] = None
         self._handlers: Dict[str, Handler] = {}
         self._actions: Dict[str, Handler] = {}
@@ -191,6 +251,13 @@ class Application:
         self._tests: Dict[str, Handler] = {}
         self._code_agent: Optional[CodeAgent] = None
         self._page_signature: Optional[PageSignature] = None
+        # Reactor's vocabulary (LOOP P-35).
+        self._contributed: List[Contributed] = []
+        self._points: List[str] = []
+        self._used_plugins: List[UsedPlugin] = []
+        self._used_extensions: List[ReactorExtension] = []
+        self._reactor_commands: List[Command] = []
+        self._routes: List[Dict[str, Any]] = []
 
     @classmethod
     def from_spec(cls, spec: Union[AppSpec, Mapping[str, Any]]) -> "Application":
@@ -219,18 +286,7 @@ class Application:
         application = cls.__new__(cls)
         application._document = document
         application._version_declared = declared
-        application._spec = None
-        application._handlers = {}
-        application._actions = {}
-        application._schedules = {}
-        application._schedule_crons = {}
-        application._schedule_positions = {}
-        application._commands = {}
-        application._tools = {}
-        application._checks = {}
-        application._tests = {}
-        application._code_agent = None
-        application._page_signature = None
+        application._attach_code()
         application.spec  # noqa: B018 - refused here, not at the first session
         return application
 
@@ -543,7 +599,7 @@ class Application:
         return form
 
     def command(
-        self, name: str, description: str, *, prompt: str = ""
+        self, name: str, description: str, *, prompt: str = "", run: str = ""
     ) -> Callable[[Handler], Handler]:
         """Offer a slash command in the composer (LOOP P-19).
 
@@ -559,6 +615,13 @@ class Application:
             @app.command("export", "Export the table")
             async def export(session: Session, words: str) -> None: ...
 
+        With ``run``, a Reactor command answers it (LOOP P-35) — the
+        application's own (`reactor_command`) or one of a plugin it uses
+        (`uses`): run on its host's platform with the words typed after it,
+        what it returns sent as the answer::
+
+            app.command("lookup", "Look a customer up", run="crm.lookup")
+
         Parameters
         ----------
         name : str
@@ -568,6 +631,8 @@ class Application:
         prompt : str
             What picking it sends; ``/<name> {input}`` when unsaid, for the
             code to answer.
+        run : str
+            The id of the Reactor command that answers it.
 
         Returns
         -------
@@ -577,6 +642,10 @@ class Application:
         commands = self._document.get("interface", {}).get("commands", [])
         if any(command.get("name") == name for command in commands):
             raise ValueError(f"{self.id} already has a command /{name}.")
+        if run and prompt:
+            raise ValueError(
+                f"The command /{name} sends its prompt or runs {run}: not both."
+            )
         self._declare(
             "commands",
             AppCommandSpec(
@@ -586,11 +655,14 @@ class Application:
             ),
             under="interface",
         )
+        if run:
+            self._commands[name] = ReactorCommandRun(run)
 
         def decorate(handler: Handler) -> Handler:
-            if prompt:
+            if prompt or run:
                 raise ValueError(
-                    f"The command /{name} sends its prompt: one its code answers has none."
+                    f"The command /{name} sends its prompt or runs {run or 'a command'}: "
+                    "one its code answers has neither."
                 )
             self._commands[name] = handler
             return handler
@@ -1510,6 +1582,332 @@ class Application:
         """The commands its code answers, by name; a copy."""
         return dict(self._commands)
 
+    # --- Reactor, first class (LOOP P-35) ---------------------------------------
+
+    @property
+    def manifest(self) -> PluginManifest:
+        """Return its Reactor plugin's manifest: ``loop-app-<id>`` (LOOP F-15), the
+        plugins it uses as its dependencies, the points it declares as its own.
+        """
+        return replace(
+            manifest_of(self.spec),
+            dependencies=self._dependencies(),
+            contribution_points=list(self._points),
+        )
+
+    def _dependencies(self) -> List[str]:
+        names = [manifest.name for manifest, _ in self._used_plugins]
+        for extension in self._used_extensions:
+            names.extend(manifest.name for manifest, _ in extension.plugins)
+        return names
+
+    def extension(
+        self, frontend: Optional[FrontendExtension] = None
+    ) -> ReactorExtension:
+        """The application as one Reactor extension, ``loop-app-<id>``.
+
+        Its Python half: the plugins it composes (`uses`, a manifest and an
+        implementation each), then its own plugin (`AppPlugin`) — its spec, its
+        code's reactions, and what it contributes. Its frontend half: its page
+        side, the files of its folder (LOOP P-29), as its installed package
+        says them; none when unsaid. What ``loop apps package`` advertises
+        under Reactor's entry-point group, and what a host registers with
+        ``PluginPlatform.register_extension_object``.
+
+        Parameters
+        ----------
+        frontend : FrontendExtension, optional
+            Its page side, where its package installed it.
+
+        Returns
+        -------
+        ReactorExtension
+            The extension.
+        """
+        manifest = self.manifest
+        return ReactorExtension(
+            manifest=extension_manifest_of(manifest),
+            plugins=[*self._used_plugins, (manifest, AppPlugin(self))],
+            frontend=frontend,
+        )
+
+    def contribute(
+        self,
+        point: Union[str, ContributionPoint[Any]],
+        value: Any,
+        *,
+        id: Optional[str] = None,
+        order: int = 0,
+    ) -> None:
+        """Contribute to a Reactor contribution point, as its plugin.
+
+        Any point: the host's (``loop.app.start``, a point of agent-runtimes'),
+        another plugin's (one it `uses` declares), its own
+        (`contribution_point`). Collected when its plugin activates on a
+        host's platform, disposed with it::
+
+            app.contribute("crm.sources", {"name": "orders"}, id="orders")
+
+        Parameters
+        ----------
+        point : str or ContributionPoint
+            The point, or its id.
+        value : any
+            What is contributed: the point's owner says what it reads.
+        id : str, optional
+            Its identity in the point; the plugin's name when unsaid.
+        order : int
+            Lower is read first.
+        """
+        self._contributed.append(Contributed(_point(point), value, id, order))
+
+    def extend(
+        self,
+        point: Union[str, ContributionPoint[Any]],
+        target: str,
+        value: Any,
+        *,
+        id: Optional[str] = None,
+        order: int = 0,
+    ) -> None:
+        """Add to one contribution of a point, as Reactor's ``extend`` does.
+
+        Parameters
+        ----------
+        point : str or ContributionPoint
+            The point, or its id.
+        target : str
+            The id of the contribution extended.
+        value : any
+            What is added: the point's owner says what it reads.
+        id : str, optional
+            Its identity; the plugin's name when unsaid.
+        order : int
+            Lower is read first.
+        """
+        self._contributed.append(
+            Contributed(_point(point), value, id, order, target=target)
+        )
+
+    def contribution_point(self, point_id: str) -> ContributionPoint[Any]:
+        """Declare a point of its own, that other plugins contribute to.
+
+        Said in its manifest (``contribution_points``), so a host draws it
+        before anybody contributed; what is contributed is read from a session
+        with ``session.contributions(point)``::
+
+            GREETINGS = app.contribution_point("greeter.greetings")
+
+        Parameters
+        ----------
+        point_id : str
+            The point's id, namespaced by convention.
+
+        Returns
+        -------
+        ContributionPoint
+            The point.
+        """
+        if point_id in self._points:
+            raise ValueError(f"{self.id} already declares the point {point_id}.")
+        point = define_contribution_point(point_id)
+        self._points.append(point_id)
+        return point
+
+    def uses(
+        self,
+        used: Union[ReactorExtension, UsedPlugin],
+        *,
+        tools: Optional[Mapping[str, Union[str, Sequence[str]]]] = None,
+    ) -> None:
+        """Compose a Reactor plugin: registered with the application, before it.
+
+        A plugin — ``(PluginManifest, implementation)`` — is delivered in the
+        application's own extension and goes with it; an extension — a
+        ``ReactorExtension``, an installed capability — is registered on the
+        host's platform when it is not there yet, and stays. Either is a
+        dependency of its plugin: Reactor activates it first.
+
+        ``tools`` gives the application's agent the agent tools the plugin
+        offers (Reactor's ``provide_agent_tools``), by name, each with what it
+        does — as ``@app.tool`` says it, what its rules decide: declared in
+        its spec, so that the Canvas lists it and a rule can name it, and run
+        as the Reactor command it names, on the host's platform::
+
+            app.uses(crm.extension(), tools={"lookup_customer": "read"})
+
+        Parameters
+        ----------
+        used : ReactorExtension or tuple
+            The extension, or a plugin's manifest and implementation.
+        tools : mapping, optional
+            The agent tools given, by name, with what each does.
+
+        Raises
+        ------
+        ValueError
+            For a plugin used twice, a tool it does not offer, or a tool beside
+            an agent of its code.
+        """
+        if isinstance(used, ReactorExtension):
+            plugins = list(used.plugins)
+            plugin = used.name
+            known = [extension.name for extension in self._used_extensions]
+            if used.name in known:
+                raise ValueError(f"{self.id} already uses {used.name}.")
+            self._used_extensions.append(used)
+        else:
+            manifest, _ = used
+            plugins = [used]
+            plugin = manifest.name
+            if manifest.name in self._dependencies():
+                raise ValueError(f"{self.id} already uses {manifest.name}.")
+            self._used_plugins.append(used)
+        wanted = dict(tools or {})
+        if not wanted:
+            return
+        if self._code_agent is not None:
+            raise ValueError(_GIVES_ITS_OWN)
+        offered: Dict[str, Dict[str, Any]] = {}
+        for _, implementation in plugins:
+            provider = getattr(implementation, "provide_agent_tools", None)
+            for bundle in provider() if callable(provider) else []:
+                for command in bundle.get("commands") or []:
+                    offered[str(command["name"])] = dict(command)
+        for name, does in wanted.items():
+            command = offered.get(name)
+            if command is None:
+                raise ValueError(
+                    f"{plugin} offers {self.id} no agent tool {name!r}: it "
+                    f"offers {', '.join(sorted(offered)) or 'none'}."
+                )
+            if name in self._tools:
+                raise ValueError(f"{self.id} already has a tool {name!r}.")
+            classes = [does] if isinstance(does, str) else list(does)
+            if not classes:
+                raise TypeError(
+                    f"Say what the tool {name!r} does: read, write, send, buy, "
+                    "delete or publish."
+                )
+            self._declare(
+                "tools",
+                AppToolSpec(
+                    name=name,
+                    description=str(command.get("description") or name),
+                    parameters=dict(
+                        command.get("parameters")
+                        or {"type": "object", "properties": {}}
+                    ),
+                    does=classes,
+                ),
+            )
+            self._tools[name] = CommandTool(str(command["command"]))
+
+    def reactor_command(
+        self, command_id: str, name: str, **presentation: Any
+    ) -> Callable[[Handler], Handler]:
+        """Register a Reactor command, as its plugin: ``handler(argument)``.
+
+        Listed by its host's platform (``list_commands``) beside every other
+        plugin's, run by id (``execute_command``) — from the composer when a
+        command of the application names it (``app.command(..., run=...)``),
+        from an agent tool, from another plugin::
+
+            @app.reactor_command("greeter.greet", "Greet somebody")
+            def greet(who: str) -> str:
+                return f"Hello, {who}."
+
+        Parameters
+        ----------
+        command_id : str
+            Its id, namespaced by convention.
+        name : str
+            What a palette says.
+        **presentation
+            Reactor's ``Command`` fields: ``description`` (its docstring's
+            first line when unsaid), ``octicon``, ``emoji``, ``category``.
+
+        Returns
+        -------
+        callable
+            The decorator.
+        """
+        if any(command.id == command_id for command in self._reactor_commands):
+            raise ValueError(f"{self.id} already has the command {command_id}.")
+
+        def decorate(handler: Handler) -> Handler:
+            said = dict(presentation)
+            said.setdefault("description", _first_line(handler))
+            self._reactor_commands.append(
+                Command(id=command_id, name=name, execute=handler, **said)
+            )
+            return handler
+
+        return decorate
+
+    def route(
+        self, path: str, *, methods: Sequence[str] = ("GET",)
+    ) -> Callable[[Handler], Handler]:
+        """Serve a route of its own, as its plugin provides it (``provide_routes``).
+
+        A FastAPI endpoint, mounted by the host that serves the application —
+        ``app.mount`` and ``loop apps run --web`` — under the application's
+        path (Reactor's ``include_plugin_routes``)::
+
+            @app.route("/status")
+            def status() -> dict:
+                return {"ok": True}
+
+        Parameters
+        ----------
+        path : str
+            Its path, from ``/``.
+        methods : sequence of str
+            Its HTTP methods.
+
+        Returns
+        -------
+        callable
+            The decorator.
+        """
+        if not path.startswith("/"):
+            raise ValueError(f"A route's path starts with '/', not {path!r}.")
+
+        def decorate(endpoint: Handler) -> Handler:
+            for method in methods:
+                said = method.upper()
+                if any(
+                    route["path"] == path and route["method"] == said
+                    for route in self._routes
+                ):
+                    raise ValueError(f"{self.id} already serves {said} {path}.")
+                self._routes.append(
+                    {"path": path, "method": said, "endpoint": endpoint}
+                )
+            return endpoint
+
+        return decorate
+
+    @property
+    def contributions(self) -> List[Contributed]:
+        """What its author contributed in Reactor's vocabulary; a copy."""
+        return list(self._contributed)
+
+    @property
+    def used_extensions(self) -> List[ReactorExtension]:
+        """The extensions it uses, registered on a host before it; a copy."""
+        return list(self._used_extensions)
+
+    @property
+    def reactor_commands(self) -> List[Command]:
+        """Return its Reactor commands; a copy."""
+        return list(self._reactor_commands)
+
+    @property
+    def routes(self) -> List[Dict[str, Any]]:
+        """Return its routes, each with its endpoint; a copy."""
+        return [dict(route) for route in self._routes]
+
     # --- where it is served (LOOP P-25) ----------------------------------------
 
     def mount(
@@ -1601,11 +1999,13 @@ class AppHost:
         The agent a session's code calls, made for that session: on a
         runtime, the agent the runtime made for the application (LOOP R-04);
         built from ``agent`` when unsaid.
-    registry : ContributionRegistry, optional
-        The Reactor registry the application is loaded into, as its plugin
-        (LOOP P-28); one of the host's own when unsaid. What a moment calls is
-        what the registry holds for it, so a later contribution — another
-        plugin's — answers in the application's place.
+    platform : PluginPlatform, optional
+        The Reactor platform the application is registered on, as its
+        extension (LOOP P-28, P-35); one of the host's own when unsaid, started
+        here and stopped with it. What a moment calls is what the platform
+        holds for it, so a later contribution — another plugin's — answers in
+        the application's place; its sessions read the points it declares, and
+        run commands, on it.
     """
 
     def __init__(
@@ -1616,12 +2016,15 @@ class AppHost:
         agent: AgentFactory = local_agent,
         recorder: Optional[AppRecorder] = None,
         agent_maker: Optional[Callable[[Session], AppAgent]] = None,
-        registry: Optional[ContributionRegistry] = None,
+        platform: Optional[PluginPlatform] = None,
     ) -> None:
         self.app = app
-        self.registry = registry if registry is not None else ContributionRegistry()
-        self.plugin = register_application(app, self.registry)
-        """The application's plugin, as the registry holds it."""
+        self._owns_platform = platform is None
+        self.platform = platform if platform is not None else PluginPlatform()
+        self.plugin = register_application(app, self.platform)
+        """The application's plugin, as the platform holds it."""
+        if self._owns_platform:
+            self.platform.start()
         self.channel = channel
         self.spec = app.spec
         self._agent = agent
@@ -1633,10 +2036,8 @@ class AppHost:
 
     def _session(self, **kwargs: Any) -> Session:
         # What its code adds to its agent (LOOP P-06): its tools, and its
-        # checks at their stages — what the registry holds for each now.
-        tools = {
-            tool.name: self._reaction("tool", tool.name) for tool in self.spec.tools
-        }
+        # checks at their stages — what the platform holds for each now.
+        tools = {tool.name: self._tool(tool.name) for tool in self.spec.tools}
         checks = {
             check.name: self._reaction("check", check.name)
             for check in self.spec.checks.code
@@ -1653,15 +2054,27 @@ class AppHost:
             agent_maker=maker,
             toolsets=[toolset] if toolset is not None else [],
             capabilities=[capability] if capability is not None else [],
+            platform=self.platform,
             **kwargs,
         )
 
     def _reaction(self, reaction: str, name: str = "") -> Optional[Handler]:
-        return reaction_of(self.spec.id, reaction, name, self.registry)
+        return reaction_of(self.spec.id, reaction, name, self.platform)
+
+    def _tool(self, name: str) -> Optional[Handler]:
+        """A tool its plugin holds; a Reactor command's run on this platform."""
+        handler = self._reaction("tool", name)
+        if isinstance(handler, CommandTool):
+            return handler.on(self.platform)
+        return handler
 
     def dispose(self) -> None:
-        """Take the application's plugin away: its spec and every reaction."""
-        self.registry.dispose_plugin(self.plugin.name)
+        """Take the application's extension away: its spec, every reaction and
+        contribution, the plugins it delivered; a platform of its own stops.
+        """
+        self.platform.unregister_extension(self.plugin.name)
+        if self._owns_platform:
+            self.platform.stop()
 
     def _open(self, session: Session) -> None:
         if session.id in self._ended:
@@ -1953,7 +2366,7 @@ class AppHost:
     async def scheduled(self, session: Session, name: str) -> None:
         """Run a schedule's handler in a session already open — one the
         platform's scheduler woke on a runtime (LOOP R-14) — as a command's
-        code runs: what the registry holds for it, as one turn of the session.
+        code runs: what the platform holds for it, as one turn of the session.
 
         Parameters
         ----------

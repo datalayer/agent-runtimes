@@ -471,7 +471,7 @@ application's code — an `app.py` of the catalogue, at the version the
 runtime has: the scheduler knows a schedule by its position among the
 application's triggers, the runtime finds the handler the code declared
 there (`app.schedule_at(position)`) and runs it with the session, in place
-of the prompt, as a command's code runs — what the registry holds for
+of the prompt, as a command's code runs — what the platform holds for
 `loop.app.schedule` under `<id>/<name>` (`AppHost.scheduled(session, name)`).
 The code's `start` runs first, as in any session opened. A schedule the
 code did not declare — one of the Appspec's own — asks the agent its
@@ -611,7 +611,7 @@ Tool Approvals page and its channels say whose it is.
 
 ## `AppHost`
 
-`AppHost(app, channel, *, agent=local_agent, recorder=None, registry=None)`
+`AppHost(app, channel, *, agent=local_agent, recorder=None, platform=None)`
 runs an application in this process. A runtime, a test or a script drives it:
 
 | Method | Does |
@@ -652,29 +652,105 @@ contribution of that plugin to a point of its own — `loop.app.start`,
 `loop.app.end`, `loop.app.logout`, and `loop.app.action` and
 `loop.app.schedule` known as `<id>/<name>` — beside its spec on `loop.app`.
 
-An `AppHost` loads the application so (`register_application`) into its
-`registry` — one of its own unless given — and calls what the points hold
-(`reaction_of`): a later contribution to the same moment of the same
-application, another plugin's, answers in its place, and is gone when that
-plugin is disposed. `host.dispose()` takes the application's plugin away —
-its spec and every reaction; an action then raises `KeyError`. `loop apps
-run` and a runtime's [session](./session-api) load it the same way, each
-session's host with its own registry.
+An `AppHost` registers the application on a Reactor `PluginPlatform` — its
+`platform`, one of its own unless given, started with it — as one extension of
+that name (`register_application`, with Reactor's `register_extension_object`)
+and calls what the points hold (`reaction_of`): a later contribution to the
+same moment of the same application, another plugin's, answers in its place,
+and is gone when that plugin is unregistered. The platform's switches are
+Reactor's: a disabled application's reactions are not read. `host.dispose()`
+takes the application's extension away (`unregister_extension`) — its spec,
+every reaction and contribution, the plugins it delivered; an action then
+raises `KeyError`. `loop apps run` and a runtime's [session](./session-api)
+load it the same way, each session's host with a platform of its own; the
+runtime's own platform (`plugins.PLATFORM`) holds agent-runtimes' plugin, the
+catalogue, and the plugin of each application it is configured with.
 
 ```python
-from reactor import ContributionRegistry, PluginContributions
+from reactor import PluginManifest, PluginPlatform
 from agent_runtimes.loop.apps.plugins import REACTION_POINTS
 
-registry = ContributionRegistry()
-host = AppHost(app, channel, registry=registry)
+platform = PluginPlatform()
+host = AppHost(app, channel, platform=platform)
 
 async def louder(session, text):
     await session.send(text.upper())
 
-PluginContributions(registry, "shouting").contribute(
-    REACTION_POINTS["message"], louder, contribution_id=app.id
-)  # answers in place of app's own @app.message, until disposed
+class Shouting:
+    def provide_contributions(self, contributions):
+        contributions.contribute(
+            REACTION_POINTS["message"], louder, contribution_id=app.id
+        )
+
+# Answers in place of app's own @app.message, until unregistered.
+platform.register_plugin(PluginManifest(name="shouting", version="1"), Shouting())
 ```
+
+### Extending with Reactor
+
+The application's plugin is yours to extend, in Reactor's own vocabulary —
+whatever a Reactor plugin can do, an `app.py` says the same way, and the host
+that runs it honours it.
+
+| Call | Is, in Reactor | Honoured by |
+| --- | --- | --- |
+| `app.manifest` | Its `PluginManifest`: `loop-app-<id>`, the plugins it uses as its `dependencies`, its own points as its `contribution_points`. | Every host: listed, switched, drawn on the graph. |
+| `app.extension(frontend=None)` | Its `ReactorExtension`: the plugins it composes and its own plugin; its frontend half, its page side when packaged ([below](#its-page-side-as-a-package)). | `register_extension_object`; the entry point `loop apps package` writes. |
+| `app.contribute(point, value, id=None, order=0)` | A contribution to any point — one of agent-runtimes' (`loop.app.start`…), one of a plugin it uses, one of its own. | Whoever reads the point, on the host's platform. |
+| `app.extend(point, target, value, id=None)` | An extension of one contribution of a point (`PluginContributions.extend`). | `get_contribution_extensions`. |
+| `app.contribution_point(id)` | A point of its own (`define_contribution_point`), said in its manifest, that other plugins contribute to. | Its code: `session.contributions(point)`. |
+| `app.uses(plugin, tools={...})` | A plugin it composes — a `(PluginManifest, implementation)` pair, delivered in its extension and gone with it, or a `ReactorExtension`, registered on the host when it is not there yet and kept — a dependency, activated first. `tools` gives its agent the plugin's agent tools (`provide_agent_tools`) by name, each with what it does. | The host's platform; its agent's tools, decided by its rules. |
+| `@app.reactor_command(id, name)` | A Reactor `Command` of its plugin (`provide_slash_commands`). | `platform.list_commands()`, `execute_command`, `session.execute_command`. |
+| `app.command(name, description, run=id)` | A command of its composer that a Reactor command answers — its own or a used plugin's — with the words typed after it; what it returns is the answer. | The composer (`/name words`), the terminal. |
+| `@app.route(path, methods=["GET"])` | A route of its plugin (`provide_routes`), with its endpoint. | `app.mount` and `loop apps run --web`, under the application's path (Reactor's `include_plugin_routes`). |
+
+```python
+from agent_runtimes.loop.apps import Application, Session
+from support_crm import SOURCES, extension   # a Reactor extension, installed
+
+app = Application(id="support-desk-plus", kind="chat", agent="example-blank:0.0.1",
+                  instructions="Look a customer up with lookup_customer.")
+
+GREETINGS = app.contribution_point("support-desk-plus.greetings")   # others extend it
+app.uses(extension(), tools={"lookup_customer": "read"})          # its agent tool, given
+app.contribute(SOURCES, {"name": "support-desk-plus"}, id="tickets")
+
+@app.reactor_command("support-desk-plus.hours", "Opening hours")
+def hours(argument=None) -> str:
+    return "Monday to Friday, 9:00 to 17:00 CET."
+
+app.command("hours", "When the desk is open", run="support-desk-plus.hours")
+app.command("lookup", "Look a customer up", run="crm.lookup")       # the CRM's command
+
+@app.route("/health")
+def health() -> dict:
+    return {"ok": True}
+
+@app.start
+async def greet(session: Session) -> None:
+    await session.send(" ".join(c.value for c in session.contributions(GREETINGS)))
+```
+
+What a used plugin's agent tool does is said by the application, as for
+`@app.tool`: it is declared in its spec (`tools`), so that the Canvas lists it
+and a rule can name it, and every call is decided by its rules; it runs the
+Reactor command the plugin's bundle names, on the host's platform. A tool the
+plugin does not offer is refused (*support-crm offers support-desk-plus no
+agent tool 'nothing': it offers lookup_customer.*). `loop apps build` marks a
+command or a tool a Reactor command answers as such (*tool lookup_customer:
+the Reactor command crm.lookup*). A hook a plugin implements for Reactor's
+lifecycle (`@hookimpl def on_reactor_start`) runs when the host's platform
+starts; a route is mounted when the application is mounted, so a route changed
+under `--watch` is mounted again on the next start.
+
+Not from Python: a point of the page — the Canvas's `loop.canvas.part`, a
+block of its palette — is the page's, contributed by the application's page
+side ([below](#its-page-side-as-a-package)); the server's platform does not
+reach a browser.
+
+`examples/reactor-extensible/` is such an application, its CRM a Reactor
+extension beside it (`support_crm.py`): run on a real model in this process,
+its agent looked a customer up through the CRM's command.
 
 ## `Session`
 
@@ -905,8 +981,10 @@ loop apps run app.py --web                # or app.mount(api) in your own FastAP
   `share/datalayer/reactor/extensions/loop-app-<id>/`, beside a generated
   page-side module. It is advertised under Reactor's
   `datalayer.reactor.extensions` entry point, by the name of the
-  application's plugin pair, `loop-app-<id>`. A file its components name that
-  is not in the folder is refused.
+  application's plugin pair, `loop-app-<id>`, and the entry point resolves to
+  the application's own extension, `app.extension()` — its plugin, the
+  plugins it uses, its page side. A file its components name that is not in
+  the folder is refused.
 - The server running the application finds it installed by that name — when
   the page asks, so a wheel installed beside a running server is found on
   the next load — and serves it beside the application's plugin state, as
@@ -1723,8 +1801,8 @@ to an existing one, one handler per moment; start, message, action,
 settings, stop, resume, end, logout and schedule through an `AppHost` (an
 ended session taking nothing more, and reopened by `resume`); messages
 updated and removed, `run_sync` and `cache`; the application loaded as its
-Reactor plugin, another plugin's reaction answering in its place, and
-disposed; the agent
+Reactor plugin, another plugin's reaction answering in its place, switched
+off and on, and taken away; the agent
 answering, streamed, when there is no message handler; `send`, `stream`,
 nested steps and their errors, kept in the record; what an answer shows, checked against the
 catalog; `ask` with text, choice, file and form, wrong
@@ -1752,6 +1830,16 @@ the application's instructions alone. The chat's drawing of a step as it
 streams is tested with vitest (`loopStep`). Both were also run on a real
 model (Bedrock) in this process: the SQL written into its step in 17 pieces
 over 0.7 s, and both tool calls of the assistant shown as steps.
+`agent_runtimes/tests/test_app_reactor.py` covers *Extending with Reactor*:
+the manifest and the extension, a contribution to another plugin's point and
+an extension of it, a point of its own extended by a composed plugin and read
+by its code, a used extension registered first and started, its commands
+listed and run from the composer, a used plugin's agent tool declared and run
+as its command, its routes mounted by `app.mount` and described without their
+endpoints, the marks of `build`, and `examples/reactor-extensible`; the example
+was also run on a real model (Bedrock) in this process — its agent called
+`lookup_customer`, which ran the CRM's `crm.lookup` — and served by `loop apps
+run --web`, its `/app/health` answering.
 `agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
 `loop.element` events of the Session API, drawn again on a resume.

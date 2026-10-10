@@ -790,9 +790,11 @@ class Session:
         profile: Optional[str] = None,
         toolsets: Sequence[Any] = (),
         capabilities: Sequence[Any] = (),
+        platform: Any = None,
     ) -> None:
         self.app = app
         """The application, as its spec says it."""
+        self._platform = platform
         self.id = id or _new_id()
         """The session's id: its conversation, and its record."""
         self.user = user
@@ -816,6 +818,47 @@ class Session:
         self._title = ""
         self._tags: List[str] = []
         self._metadata = ThreadMetadata(self._named)
+
+    # --- Reactor, from a session (LOOP P-35) -------------------------------------
+
+    def _host_platform(self) -> Any:
+        if self._platform is None:
+            raise RuntimeError(
+                f"Session {self.id} has no Reactor platform: it was not opened "
+                "by an AppHost."
+            )
+        return self._platform
+
+    def contributions(self, point: Any) -> List[Any]:
+        """What the plugins of its host's platform contributed to a point:
+        one the application declared (``app.contribution_point``), or any.
+
+        Parameters
+        ----------
+        point : ContributionPoint or str
+            The point, or its id.
+
+        Returns
+        -------
+        list of Contribution
+            Reactor's contributions, in their order: each its ``plugin``,
+            ``id`` and ``value``.
+        """
+        from reactor import define_contribution_point
+
+        if isinstance(point, str):
+            point = define_contribution_point(point)
+        return list(self._host_platform().get_contributions(point))
+
+    async def execute_command(self, command_id: str, argument: Any = None) -> Any:
+        """Run a Reactor command of its host's platform, and answer what it returns.
+
+        Raises
+        ------
+        KeyError
+            When no enabled plugin registered it.
+        """
+        return await self._host_platform().execute_command(command_id, argument)
 
     # --- what the conversation is called (LOOP P-24) ----------------------------
 

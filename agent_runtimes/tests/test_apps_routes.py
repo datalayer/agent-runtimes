@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps import plugins
 from agent_runtimes.loop.apps.loading import (
@@ -87,7 +87,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
     ):
         monkeypatch.setenv(name, "declared-for-this-test")
     routes._RUNNING.clear()
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
         test_client.created = created
         yield test_client
@@ -185,7 +185,7 @@ def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
         app["id"]: app["name"] for app in client.get("/api/v1/apps").json()["apps"]
     }
     assert names["web-research"] == "Web research, edited"
-    assert plugins.REGISTRY.get(plugins.APP_POINT, plugins=["loop-app-web-research"])
+    assert plugins.PLATFORM.has_plugin("loop-app-web-research")
 
 
 def test_feedback_on_a_conversation_is_kept_in_the_record(

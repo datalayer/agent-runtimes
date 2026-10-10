@@ -29,7 +29,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.run import AgentRunResultEvent
 from pydantic_ai.settings import ModelSettings
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps.composer import ModeEffect
 from agent_runtimes.loop.apps.documents import AppDocumentsCapability, knows_documents
@@ -70,7 +70,7 @@ def app_capabilities(
     agent_id: Optional[str] = None,
     ask_rule: Optional[RuleAsk] = None,
     ask_check: Optional[CheckAsk] = None,
-    registry: Optional[ContributionRegistry] = None,
+    platform: Optional[PluginPlatform] = None,
     given: Optional[List[Any]] = None,
     organization: Optional[OrganizationFrames] = None,
 ) -> List[Any]:
@@ -93,8 +93,8 @@ def app_capabilities(
         How the person is asked when a rule says so; the tool-approval path when unsaid.
     ask_check : callable, optional
         How the person is asked when a Gate says so; the tool-approval path when unsaid.
-    registry : ContributionRegistry, optional
-        The Reactor registry the rules are found in; the runtime's when unsaid.
+    platform : PluginPlatform, optional
+        The Reactor platform the rules are found on; the runtime's when unsaid.
     given : list, optional
         What the runtime already made the agent with, from its agent's spec
         (its guardrails, its context usage): placed after the record, before
@@ -114,7 +114,7 @@ def app_capabilities(
     """
     from agent_runtimes.loop.apps.notifications import AppNotifier
 
-    rules = rules_for(app, agent_id=agent_id, registry=registry)
+    rules = rules_for(app, agent_id=agent_id, platform=platform)
     rules.record = recorder.decided
     # What the person answered when asked is an entry of its own (LOOP R-07).
     rules.answered = recorder.answered

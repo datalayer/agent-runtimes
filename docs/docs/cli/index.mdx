@@ -296,7 +296,9 @@ reload](/apps/python-applications#in-a-browser-page-with-hot-reload).
 files of its folder (`source="components/dial.js"`) as a Python distribution,
 `loop-app-<id>`, and builds its wheel: the application's module, and those
 files under `share/datalayer/reactor/extensions/loop-app-<id>/`, advertised
-as a Reactor extension of the application's name. Installed beside the
+as a Reactor extension of the application's name — the application's own,
+`app.extension()`: its plugin, the plugins it uses, its page side ([Extending
+with Reactor](/apps/python-applications#extending-with-reactor)). Installed beside the
 server that runs the application — `loop apps run app.py --web`, or your own
 FastAPI with `app.mount` — its page draws them from that server.
 

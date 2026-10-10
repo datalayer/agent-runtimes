@@ -11,7 +11,6 @@ plugin state, as Reactor's routes serve an extension's.
 
 from __future__ import annotations
 
-import json
 import shutil
 import sys
 import zipfile
@@ -89,10 +88,16 @@ def test_its_project_carries_the_application_and_the_files_it_names(
     share = project / "share/datalayer/reactor/extensions/loop-app-dial-desk"
     assert (share / "components/dial.js").read_text() == DIAL_JS
     assert (share / "index.js").is_file()
-    said = json.loads((project / "loop_app_dial_desk/application.json").read_text())
-    assert said["manifest"]["name"] == "loop-app-dial-desk"
-    assert said["manifest"]["frontend_dependencies"] == ["loop-app-dial-desk"]
+    # Its application is its module: nothing said of it beside (LOOP P-35).
+    assert sorted(p.name for p in (project / "loop_app_dial_desk").iterdir()) == [
+        "__init__.py",
+        "app.py",
+    ]
     assert (project / "loop_app_dial_desk/app.py").read_text() == APP_PY
+    assert (
+        "return packaged_extension(__file__)"
+        in (project / "loop_app_dial_desk/__init__.py").read_text()
+    )
     with pytest.raises(NotPackageable, match="is there already; --force"):
         write_project(folder / "app.py", tmp_path / "out")
     assert write_project(folder / "app.py", tmp_path / "out", force=True).files
@@ -110,7 +115,13 @@ def test_a_file_it_names_that_is_not_there_is_refused(
 
 @pytest.fixture
 def installed(folder: Path, tmp_path: Path, monkeypatch) -> Iterator[Path]:
-    """The wheel built and laid out as pip installs one, on ``sys.path``."""
+    """The wheel built and laid out as pip installs one, on ``sys.path``.
+
+    Yields
+    ------
+    Path
+        The site directory it is installed in.
+    """
     packaged = package(folder / "app.py", tmp_path / "dist")
     assert packaged.wheel is not None and packaged.wheel.suffix == ".whl"
     prefix = tmp_path / "prefix"
@@ -158,6 +169,33 @@ def test_the_installed_page_side_is_served_beside_its_plugin_state(
     assert client.get(f"{base}/missing.js").status_code == 404
     other = "/api/v1/apps/other/reactor-extensions/loop-app-dial-desk/index.js"
     assert client.get(other).status_code == 404
+
+
+def test_the_entry_point_advertises_the_applications_own_extension(
+    installed: Path,
+) -> None:
+    """LOOP P-35: what the wheel's entry point resolves to is
+    ``Application.extension()`` — its plugin, its page side."""
+    from importlib.metadata import entry_points
+
+    from reactor import EXTENSION_ENTRY_POINT_GROUP, PluginPlatform
+
+    from agent_runtimes.loop.apps.plugins import AppPlugin
+
+    (entry,) = entry_points(
+        group=EXTENSION_ENTRY_POINT_GROUP, name="loop-app-dial-desk"
+    )
+    extension = entry.load()()
+    assert extension.name == "loop-app-dial-desk"
+    ((manifest, plugin),) = extension.plugins
+    assert manifest.name == "loop-app-dial-desk" and isinstance(plugin, AppPlugin)
+    assert plugin.application.spec.id == "dial-desk"
+    assert extension.frontend is not None
+    assert extension.frontend.resolve("components/dial.js") is not None
+    # A host registers it with Reactor's public API, and takes it away.
+    platform = PluginPlatform()
+    assert platform.register_extension_object(extension) == ["loop-app-dial-desk"]
+    assert platform.unregister_extension("loop-app-dial-desk") == ["loop-app-dial-desk"]
 
 
 def test_an_application_with_no_package_installed_has_no_page_side() -> None:

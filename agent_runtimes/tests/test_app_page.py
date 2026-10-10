@@ -210,7 +210,7 @@ def test_the_page_is_a_contribution_of_its_plugin_and_marked_as_code() -> None:
 
     application = quote_app()
     host = host_of(application)
-    reaction = reaction_of("quote", "page", registry=host.registry)
+    reaction = reaction_of("quote", "page", platform=host.platform)
     assert reaction is not None and reaction.__name__ == "quote"
     marks = [(m.moment, m.handler) for m in code_marks(application, "app.py")]
     assert ("page", "quote") in marks

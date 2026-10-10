@@ -27,7 +27,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.mcp import lifecycle
 from agent_runtimes.mcp.lifecycle import MCPLifecycleManager
@@ -184,7 +184,7 @@ def client(monkeypatch: pytest.MonkeyPatch, manager: Any) -> Any:
     monkeypatch.setitem(agents._agentspecs, "default", None)
     saved = _agents.pop("default", None)
     routes._RUNNING.clear()
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
     with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
         test_client.deletes = deletes
         yield test_client
