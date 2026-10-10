@@ -31,7 +31,12 @@ byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on
 own.* when nobody opened the session (R-16) — and the document's metadata
 names the application (its id, uid, name and face), its deployment, the
 person it acted for (who opened the session, by uid), whether it wrote it on
-its own, and the session (`authorship`).
+its own, and the session (`authorship`). The byline names that person by their
+name — *Written by 📬 Inbox Triage, for Ana Lopez.* — when it is known (the
+user the host's server signed, else the profile of the token that opened the
+session), and names nobody rather than a uid. What it sends through a
+connection is signed with the same sentence (`signature`, `signed`; the rules
+sign it before the call, `enforcement`).
 """
 
 from __future__ import annotations
@@ -160,18 +165,31 @@ def authorship(
     return about
 
 
-def byline(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
-    """The last line of a page it saves: its face and name, and *on its own*
-    when nobody was there — or the user it wrote for, when the host's server
-    signed them (D-21).
+def signature(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
+    """Who wrote it, in a sentence (LOOP I-10): its face and name, and *on its
+    own* when nobody was there — or the person it wrote for, by name, when it
+    is known (the user the host's server signed, D-21, or who opened it).
     """
     face = f"{app.emoji} " if app.emoji else ""
     who = f"{face}{app.name or app.id}"
     if on_its_own:
-        return f"*Written by {who}, on its own.*"
-    return (
-        f"*Written by {who}, for {for_name}.*" if for_name else f"*Written by {who}.*"
-    )
+        return f"Written by {who}, on its own."
+    return f"Written by {who}, for {for_name}." if for_name else f"Written by {who}."
+
+
+def byline(app: AppSpec, *, on_its_own: bool, for_name: str = "") -> str:
+    """The last line of a page it saves: its `signature`, in italics."""
+    return f"*{signature(app, on_its_own=on_its_own, for_name=for_name)}*"
+
+
+def signed(text: str, sentence: str) -> str:
+    """What it sends, closed with who wrote it — once: a text already closed
+    with that sentence (a draft sent as it was drafted) is left as it is.
+    """
+    body = text.rstrip()
+    if body.endswith(sentence):
+        return text
+    return f"{body}\n\n{sentence}" if body else sentence
 
 
 def link_of(space: Mapping[str, Any], document_uid: str) -> str:
@@ -284,6 +302,10 @@ class AppSavingCapability(AbstractCapability[Any]):
     user: Optional[Callable[[str], Dict[str, Any]]] = None
     """The user the host's server signed for a session, embedded — ``{sub, name}`` — or ``{}`` (D-21)."""
 
+    named: Optional[Callable[[str], str]] = None
+    """The name of the person it acts for in a session, ``""`` when not known —
+    who its byline says it wrote for, never a uid (I-10)."""
+
     write: Optional[Write] = None
     """How Spacer is written to; over HTTP, with the token of the run, when unsaid."""
 
@@ -336,7 +358,7 @@ class AppSavingCapability(AbstractCapability[Any]):
             session=session,
             user=user,
         )
-        signed_name = "" if on_its_own else str(user.get("name") or "")
+        signed_name = "" if on_its_own or self.named is None else self.named(session)
         state = markdown_document(
             title,
             f"{content}\n\n{byline(self.app, on_its_own=on_its_own, for_name=signed_name)}",
@@ -390,6 +412,8 @@ __all__ = [
     "link_of",
     "not_granted",
     "saves",
+    "signature",
+    "signed",
     "writable_spaces",
     "write_on_spacer",
 ]

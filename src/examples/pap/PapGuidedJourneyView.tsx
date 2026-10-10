@@ -3,19 +3,30 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@datalayer/primer-addons';
-import { Button, Heading, Label, Text } from '@primer/react';
+import { contribution, definePlugin } from '@datalayer/reactor';
+import { Button, Heading, IconButton, Label, Text } from '@primer/react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@primer/octicons-react';
 import {
+  ConversationClient,
+  DpopFetchClient,
+  DpopProofProviders,
+  SecretValue,
+  buildPapReactor,
   buildDirectSignInRequest,
   buildSessionAssertionClaims,
   parseDiscoveryDocument,
+  type ConversationResponse,
+  type SessionToken,
 } from '@datalayer/personal-agent-protocol';
+import { ChatMessageList } from '../../chat/messages/ChatMessageList';
+import type { DisplayItem } from '../../types/chat';
 import { PapExamplePage } from './PapExamplePage';
 
 type Speaker = 'user' | 'atlas' | 'company';
 
-type Message = {
+type JourneyMessage = {
   speaker: Speaker;
   text: string;
 };
@@ -25,7 +36,7 @@ type JourneyStep = {
   summary: string;
   channel: string;
   phoneMode?: 'signin';
-  messages: readonly Message[];
+  messages: readonly JourneyMessage[];
   facts: readonly { label: string; value: string }[];
   method: 'GET' | 'POST';
   target: string;
@@ -34,7 +45,7 @@ type JourneyStep = {
   response: string;
 };
 
-const conversationStart: readonly Message[] = [
+const conversationStart: readonly JourneyMessage[] = [
   {
     speaker: 'user',
     text: "My Trailhead jacket keeps the rain out, but it isn't warm enough. Can I return it?",
@@ -157,19 +168,32 @@ Location: https://atlas.example/oauth/callback
 DPoP: [fresh proof]
 Content-Type: application/json
 
-{ "message_id": "msg_offer", "text": "The user has signed in." }`,
-    response: `200 OK
 {
-  "text": "Choose an even exchange or refund.",
-  "data": { "options": ["exchange", "refund"] },
-  "responder": { "type": "ai", "name": "Northstar" }
+  "message": {
+    "id": "msg_offer",
+    "sender": "agent",
+    "text": "The user has signed in. Continue the return request."
+  }
+}`,
+    response: `202 Accepted
+{
+  "conversation_id": "cnv_return",
+  "events": [{
+    "type": "message",
+    "message": {
+      "role": "company",
+      "text": "Choose an even exchange or refund."
+    }
+  }],
+  "status": "idle",
+  "responder": "agent"
 }`,
   },
   {
     title: 'The exchange is set',
     summary:
       "Atlas passes on the user's exact choice. Northstar confirms the exchange and the conversation closes with a durable result.",
-    channel: 'Operation + result',
+    channel: 'Conversation result',
     messages: [
       ...conversationStart,
       { speaker: 'company', text: 'Please sign in so I can find the order.' },
@@ -191,18 +215,30 @@ Content-Type: application/json
     ],
     method: 'POST',
     target:
-      'https://api.northstar.example/poppy/operations/op_exchange/confirm',
-    detailLabel: 'Exact user-authorized action',
+      'https://api.northstar.example/poppy/conversations/cnv_return/messages',
+    detailLabel: 'Atlas ↔ company agent',
     request: `Authorization: DPoP [host-only Session Token]
 DPoP: [fresh proof]
-Idempotency-Key: msg_exchange_choice
+Content-Type: application/json
 
-{ "revision": 1, "choice": "exchange" }`,
-    response: `200 OK
 {
-  "status": "succeeded",
-  "result": { "return_code": "NRT-7K4Q" },
-  "conversation_status": "closed"
+  "message": {
+    "id": "msg_exchange_choice",
+    "sender": "agent",
+    "text": "The user chose the even exchange."
+  }
+}`,
+    response: `202 Accepted
+{
+  "conversation_id": "cnv_return",
+  "events": [{
+    "type": "message",
+    "message": {
+      "role": "company",
+      "text": "The exchange is arranged."
+    }
+  }],
+  "status": "closed"
 }`,
   },
 ];
@@ -213,7 +249,29 @@ const speakerName: Record<Speaker, string> = {
   company: 'Northstar',
 };
 
-const validateJourneyFixtures = async (): Promise<void> => {
+const companyReply = (response: ConversationResponse): string => {
+  if (!('events' in response)) {
+    throw new Error('Northstar returned a receipt without a message');
+  }
+  const reply = response.events.find(
+    event => event.type === 'message' && event.message?.role === 'company',
+  )?.message?.text;
+  if (!reply) {
+    throw new Error('Northstar returned no company reply');
+  }
+  return reply;
+};
+
+/**
+ * Run the visible transcript through the actual PAP conversation client.
+ *
+ * The company side is deliberately an in-page deterministic simulator: this
+ * makes the example runnable without an account while ensuring that requests,
+ * proof-bound transport, response parsing, and messages all use the real SDK.
+ */
+const runJourney = async (): Promise<
+  readonly (readonly JourneyMessage[])[]
+> => {
   parseDiscoveryDocument({
     protocol_version: '0.1',
     organization: { name: 'Northstar Outfitters', domain: 'northstar.example' },
@@ -243,154 +301,315 @@ const validateJourneyFixtures = async (): Promise<void> => {
     redirectUri: 'https://atlas.example/oauth/callback',
     scopes: ['orders:read', 'orders:return'],
   });
+
+  const replies = [
+    'I can help with that. Please sign in so I can find the order.',
+    'Order NS-48213 can be exchanged for the warmer Summit jacket at no extra cost, or refunded in full.',
+    'The exchange is arranged. The Summit jacket ships tomorrow, and return code NRT-7K4Q is ready.',
+  ] as const;
+  let requestIndex = 0;
+  const localCompanyFetch: typeof globalThis.fetch = async (_input, init) => {
+    const index = requestIndex++;
+    const reply = replies[index];
+    if (!reply) {
+      return new Response(JSON.stringify({ error: 'unexpected_request' }), {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    const incoming = JSON.parse(String(init?.body ?? '{}')) as {
+      message?: { id?: string };
+    };
+    return new Response(
+      JSON.stringify({
+        conversation_id: 'cnv_return',
+        events: [
+          {
+            id: `evt_${index + 1}`,
+            type: 'message',
+            created_at: `2026-10-10T09:4${index}:00Z`,
+            message: {
+              id: `reply_${index + 1}`,
+              sender: 'agent',
+              role: 'company',
+              text: reply,
+              context: { in_reply_to: incoming.message?.id ?? 'unknown' },
+            },
+          },
+        ],
+        cursor: `cursor_${index + 1}`,
+        has_more: false,
+        status: index === replies.length - 1 ? 'closed' : 'idle',
+        responder: 'agent',
+      }),
+      {
+        status: index === 0 ? 201 : 202,
+        headers: { 'content-type': 'application/json' },
+      },
+    );
+  };
+  const securityPlugin = definePlugin({
+    name: '@datalayer/loop-example-pap-guided-security',
+    contributes: [
+      contribution(
+        DpopProofProviders,
+        {
+          async create() {
+            return new SecretValue(`host-only-proof-${requestIndex + 1}`);
+          },
+        },
+        { id: 'guided-example-dpop' },
+      ),
+    ],
+  });
+  const reactor = buildPapReactor({ fetch: localCompanyFetch }, [
+    securityPlugin,
+  ]);
+  try {
+    const transport = new DpopFetchClient({
+      reactor,
+      fetch: localCompanyFetch,
+    });
+    const conversations = new ConversationClient({ reactor, transport });
+    const session = (signedIn: boolean): SessionToken => ({
+      accessToken: new SecretValue(
+        signedIn ? 'host-only-signed-in-token' : 'host-only-session-token',
+      ),
+      tokenType: 'DPoP',
+      expiresIn: 300,
+      scopes: signedIn ? ['orders:read', 'orders:return'] : ['poppy:read'],
+      sessionId: 'ses_guided_example',
+      signedIn,
+    });
+    const requestOptions = (token: SessionToken) => ({
+      token,
+      tenantId: 'guided-example',
+      pairwiseUserId: 'usr_host_only_journey',
+      issuer: 'https://auth.northstar.example',
+      wait: 0,
+    });
+    const endpoint = 'https://api.northstar.example/poppy/conversations';
+
+    const started = await conversations.start(
+      endpoint,
+      {
+        id: conversations.generateMessageId(),
+        sender: 'agent',
+        text: conversationStart[0]?.text,
+      },
+      requestOptions(session(false)),
+    );
+    const signInReply = companyReply(started);
+    const offer = companyReply(
+      await conversations.send(
+        endpoint,
+        'cnv_return',
+        {
+          id: conversations.generateMessageId(),
+          sender: 'agent',
+          text: 'The user has signed in. Continue the return request.',
+        },
+        requestOptions(session(true)),
+      ),
+    );
+    const confirmation = companyReply(
+      await conversations.send(
+        endpoint,
+        'cnv_return',
+        {
+          id: conversations.generateMessageId(),
+          sender: 'agent',
+          text: 'The user chose the even exchange.',
+        },
+        requestOptions(session(true)),
+      ),
+    );
+    const signedInMessages: readonly JourneyMessage[] = [
+      ...conversationStart,
+      { speaker: 'company', text: signInReply },
+      { speaker: 'user', text: "I'm signed in." },
+      { speaker: 'atlas', text: "Thanks. I'll continue the same request." },
+      { speaker: 'company', text: offer },
+    ];
+    return [
+      conversationStart,
+      [...conversationStart, { speaker: 'company', text: signInReply }],
+      conversationStart,
+      signedInMessages,
+      [
+        ...signedInMessages,
+        { speaker: 'user', text: "Let's do the exchange." },
+        { speaker: 'company', text: confirmation },
+      ],
+    ];
+  } finally {
+    reactor.stop();
+  }
 };
 
 const ChatPhone: React.FC<{
   step: JourneyStep;
+  messages: readonly JourneyMessage[];
   onAuthorized: () => void;
-}> = ({ step, onAuthorized }) => (
-  <Box
-    width="100%"
-    maxWidth={340}
-    height={560}
-    mx="auto"
-    border="10px solid"
-    borderColor="fg.default"
-    borderRadius={36}
-    bg="canvas.default"
-    overflow="hidden"
-    boxShadow="shadow.large"
-    display="flex"
-    flexDirection="column"
-  >
+}> = ({ step, messages, onAuthorized }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const displayItems = useMemo<DisplayItem[]>(
+    () =>
+      messages.map((message, index) => ({
+        id: `guided-${step.channel}-${index}`,
+        role: message.speaker === 'user' ? 'user' : 'assistant',
+        content: message.text,
+        createdAt: new Date(`2026-10-10T09:4${index}:00Z`),
+        speaker: {
+          id: message.speaker,
+          name: speakerName[message.speaker],
+          role:
+            message.speaker === 'atlas'
+              ? 'personal agent'
+              : message.speaker === 'company'
+                ? 'company agent'
+                : 'person',
+          tone: message.speaker === 'company' ? 'success' : 'accent',
+          initials:
+            message.speaker === 'company'
+              ? 'N'
+              : message.speaker === 'atlas'
+                ? 'A'
+                : 'Y',
+        },
+      })) as DisplayItem[],
+    [messages, step.channel],
+  );
+
+  return (
     <Box
-      px={3}
-      py={2}
+      width="100%"
+      maxWidth={340}
+      height={560}
+      mx="auto"
+      border="7px solid"
+      borderColor="fg.default"
+      borderRadius={20}
+      bg="canvas.default"
+      overflow="hidden"
+      boxShadow="shadow.large"
       display="flex"
-      justifyContent="space-between"
-      borderBottom="1px solid"
-      borderColor="border.default"
+      flexDirection="column"
     >
-      <Text sx={{ fontSize: 0, fontWeight: 600 }}>9:41</Text>
-      <Text sx={{ fontSize: 0, fontWeight: 600 }}>5G · 92%</Text>
-    </Box>
-    {step.phoneMode === 'signin' ? (
-      <Box flex={1} display="flex" flexDirection="column">
-        <Box bg="success.emphasis" color="fg.onEmphasis" p={3}>
-          <Text sx={{ fontWeight: 700 }}>N · Northstar Outfitters</Text>
-        </Box>
-        <Box p={3} display="flex" flexDirection="column" gap={3}>
-          <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
-            auth.northstar.example
-          </Text>
-          <Heading as="h2" sx={{ fontSize: 3 }}>
-            Let Atlas access your order?
-          </Heading>
-          <Text>
-            Atlas can read order NS-48213 and arrange the return you requested.
-          </Text>
-          <Box p={3} bg="canvas.subtle" borderRadius={2}>
-            <Text sx={{ fontWeight: 600 }}>Requested access</Text>
-            <Text as="p" sx={{ mt: 1, color: 'fg.muted' }}>
-              Read this order · Arrange one return
-            </Text>
-          </Box>
-          <Button variant="primary" block onClick={onAuthorized}>
-            Authorize Atlas
-          </Button>
-          <Text textAlign="center" sx={{ fontSize: 0, color: 'fg.muted' }}>
-            Passwords and account credentials stay with Northstar.
-          </Text>
-        </Box>
+      <Box
+        px={3}
+        py={2}
+        display="flex"
+        justifyContent="space-between"
+        borderBottom="1px solid"
+        borderColor="border.default"
+      >
+        <Text sx={{ fontSize: 0, fontWeight: 600 }}>9:41</Text>
+        <Text sx={{ fontSize: 0, fontWeight: 600 }}>5G · 92%</Text>
       </Box>
-    ) : (
-      <>
-        <Box px={3} py={2} display="flex" gap={2} alignItems="center">
-          <Box
-            width={30}
-            height={30}
-            borderRadius="50%"
-            bg="accent.emphasis"
-            color="fg.onEmphasis"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontWeight={700}
-          >
-            A
+      {step.phoneMode === 'signin' ? (
+        <Box flex={1} display="flex" flexDirection="column">
+          <Box bg="success.emphasis" color="fg.onEmphasis" p={3}>
+            <Text sx={{ fontWeight: 700 }}>N · Northstar Outfitters</Text>
           </Box>
-          <Box>
-            <Text as="div" sx={{ fontWeight: 700 }}>
-              Atlas
+          <Box p={3} display="flex" flexDirection="column" gap={3}>
+            <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
+              auth.northstar.example
             </Text>
-            <Text as="div" sx={{ fontSize: 0, color: 'fg.muted' }}>
-              Your personal agent
+            <Heading as="h2" sx={{ fontSize: 3 }}>
+              Let Atlas access your order?
+            </Heading>
+            <Text>
+              Atlas can read order NS-48213 and arrange the return you
+              requested.
+            </Text>
+            <Box p={3} bg="canvas.subtle" borderRadius={2}>
+              <Text sx={{ fontWeight: 600 }}>Requested access</Text>
+              <Text as="p" sx={{ mt: 1, color: 'fg.muted' }}>
+                Read this order · Arrange one return
+              </Text>
+            </Box>
+            <Button variant="primary" block onClick={onAuthorized}>
+              Authorize Atlas
+            </Button>
+            <Text textAlign="center" sx={{ fontSize: 0, color: 'fg.muted' }}>
+              Passwords and account credentials stay with Northstar.
             </Text>
           </Box>
         </Box>
-        <Box
-          flex={1}
-          overflow="auto"
-          bg="canvas.subtle"
-          p={2}
-          display="flex"
-          flexDirection="column"
-          gap={2}
-        >
-          {step.messages.map((message, index) => {
-            const fromUser = message.speaker === 'user';
-            return (
-              <Box
-                key={`${message.speaker}-${index}`}
-                alignSelf={fromUser ? 'flex-end' : 'flex-start'}
-                maxWidth="88%"
-                px={2}
-                py={2}
-                borderRadius={3}
-                color={fromUser ? 'fg.onEmphasis' : 'fg.default'}
-                bg={fromUser ? 'accent.emphasis' : 'canvas.default'}
-                border={fromUser ? 'none' : '1px solid'}
-                borderColor="border.default"
-              >
-                {!fromUser ? (
-                  <Text
-                    as="div"
-                    sx={{
-                      mb: 1,
-                      fontSize: 0,
-                      fontWeight: 700,
-                      color:
-                        message.speaker === 'company'
-                          ? 'success.fg'
-                          : 'accent.fg',
-                    }}
-                  >
-                    {speakerName[message.speaker]}
-                  </Text>
-                ) : null}
-                <Text sx={{ fontSize: 1 }}>{message.text}</Text>
-              </Box>
-            );
-          })}
-        </Box>
-      </>
-    )}
-  </Box>
-);
+      ) : (
+        <>
+          <Box px={3} py={2} display="flex" gap={2} alignItems="center">
+            <Box
+              width={30}
+              height={30}
+              borderRadius="50%"
+              bg="accent.emphasis"
+              color="fg.onEmphasis"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              fontWeight={700}
+            >
+              A
+            </Box>
+            <Box>
+              <Text as="div" sx={{ fontWeight: 700 }}>
+                Atlas
+              </Text>
+              <Text as="div" sx={{ fontSize: 0, color: 'fg.muted' }}>
+                Your personal agent
+              </Text>
+            </Box>
+          </Box>
+          <Box flex={1} overflow="auto" bg="canvas.subtle">
+            <ChatMessageList
+              displayItems={displayItems}
+              isLoading={false}
+              isStreaming={false}
+              showLoadingIndicator={false}
+              hideMessagesAfterToolUI={false}
+              avatarConfig={{
+                userAvatar: 'Y',
+                assistantAvatar: 'A',
+                showAvatars: true,
+                avatarSize: 26,
+                userAvatarBg: 'accent.muted',
+                assistantAvatarBg: 'accent.emphasis',
+              }}
+              padding={2}
+              emptyContent={null}
+              messagesEndRef={messagesEndRef}
+              onRespond={async () => undefined}
+              density="comfortable"
+            />
+          </Box>
+        </>
+      )}
+    </Box>
+  );
+};
 
 /** A five-step user, company, and wire-level PAP walkthrough. */
 const PapGuidedJourneyView: React.FC = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [fixtureState, setFixtureState] = useState<
+  const [interactionState, setInteractionState] = useState<
     'checking' | 'valid' | 'invalid'
   >('checking');
+  const [liveMessages, setLiveMessages] = useState<
+    readonly (readonly JourneyMessage[])[] | null
+  >(null);
   const step = STEPS[stepIndex] ?? STEPS[0];
+  const messages = liveMessages?.[stepIndex] ?? step.messages;
 
   useEffect(() => {
-    void validateJourneyFixtures()
-      .then(() => setFixtureState('valid'))
-      .catch(() => setFixtureState('invalid'));
+    void runJourney()
+      .then(result => {
+        setLiveMessages(result);
+        setInteractionState('valid');
+      })
+      .catch(() => setInteractionState('invalid'));
   }, []);
 
   const go = (next: number) => {
@@ -401,7 +620,7 @@ const PapGuidedJourneyView: React.FC = () => {
     <PapExamplePage
       eyebrow="PAP · Guided interaction"
       title="A return, from first request to confirmed exchange"
-      description="Follow what the user experiences, what the company is allowed to see, and which PAP exchange moves the work forward. The story uses SDK-validated discovery, Session, and Direct Sign-In fixtures; protocol credentials are always represented as host-only placeholders."
+      description="Follow what the user experiences, what the company is allowed to see, and which PAP exchange moves the work forward. Northstar's replies are parsed from real PAP ConversationClient requests against a deterministic in-page simulator; discovery and sign-in values use the SDK too. No external retailer, account, or language model is implied."
       maxWidth={1180}
     >
       <Box
@@ -425,25 +644,46 @@ const PapGuidedJourneyView: React.FC = () => {
             Atlas finds Northstar, keeps one Session, and asks before acting.
           </Text>
         </Box>
-        <Label variant={fixtureState === 'valid' ? 'success' : 'secondary'}>
-          {fixtureState === 'valid'
-            ? 'SDK fixtures validated'
-            : fixtureState === 'invalid'
-              ? 'Fixture validation failed'
-              : 'Validating SDK fixtures…'}
+        <Label variant={interactionState === 'valid' ? 'success' : 'secondary'}>
+          {interactionState === 'valid'
+            ? 'Live local PAP exchange complete'
+            : interactionState === 'invalid'
+              ? 'Local PAP exchange failed'
+              : 'Running local PAP exchange…'}
         </Label>
       </Box>
 
-      <Box display="flex" gap={2} flexWrap="wrap" aria-label="Journey steps">
-        {STEPS.map((candidate, index) => (
-          <Button
-            key={candidate.title}
-            variant={index === stepIndex ? 'primary' : 'default'}
-            onClick={() => go(index)}
-          >
-            {index + 1}. {candidate.channel}
-          </Button>
-        ))}
+      <Box display="flex" gap={2} alignItems="center">
+        <IconButton
+          icon={ChevronLeftIcon}
+          aria-label="Previous journey tab"
+          disabled={stepIndex === 0}
+          onClick={() => go(stepIndex - 1)}
+        />
+        <Box
+          display="flex"
+          gap={2}
+          overflow="auto"
+          flex={1}
+          aria-label="Journey steps"
+        >
+          {STEPS.map((candidate, index) => (
+            <Button
+              key={candidate.title}
+              variant={index === stepIndex ? 'primary' : 'default'}
+              onClick={() => go(index)}
+              sx={{ flexShrink: 0 }}
+            >
+              {index + 1}. {candidate.channel}
+            </Button>
+          ))}
+        </Box>
+        <IconButton
+          icon={ChevronRightIcon}
+          aria-label="Next journey tab"
+          disabled={stepIndex === STEPS.length - 1}
+          onClick={() => go(stepIndex + 1)}
+        />
       </Box>
 
       <Box
@@ -457,7 +697,11 @@ const PapGuidedJourneyView: React.FC = () => {
         gap={4}
         alignItems="start"
       >
-        <ChatPhone step={step} onAuthorized={() => go(stepIndex + 1)} />
+        <ChatPhone
+          step={step}
+          messages={messages}
+          onAuthorized={() => go(stepIndex + 1)}
+        />
 
         <Box
           minHeight={560}

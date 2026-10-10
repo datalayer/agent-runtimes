@@ -247,6 +247,26 @@ def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[
     return classes
 
 
+def signs_of(ref: str) -> str:
+    """The argument of a server's tool that carries what it sends, which is
+    signed with the application's byline (LOOP I-10); ``""`` when its spec
+    names none — a tool of the catalogue, or one that reads.
+
+    Answered by the entry that answers for the tool's classes: its name, else
+    the first pattern it matches, as `agentspecs.actions.server_tool_signs`.
+    """
+    server, name = split_ref(ref)
+    actions = SERVER_ACTIONS.get(server) if server is not None else None
+    if actions is None:
+        return ""
+    if name in actions.tools:
+        return actions.signs.get(name, "")
+    for pattern in actions.tools:
+        if is_pattern(pattern) and matches(name, pattern):
+            return actions.signs.get(pattern, "")
+    return ""
+
+
 def is_read_only(classes: Sequence[str]) -> bool:
     """Whether a tool only reads. An unknown tool — no class — does not."""
     return len(classes) > 0 and all(item == READ for item in classes)

@@ -41,6 +41,14 @@ of its files; there is no browser tool at all yet. The tools of its files are
 given here (`get_toolset`), and while a person has taken its computer over,
 each call to a tool of its computer waits until they hand it back.
 
+**What it sends says who wrote it** (LOOP I-10). A tool of a server whose
+spec names the argument carrying what it sends (`rules.signs_of`: a mail's
+body, a message's text) has that argument closed with the application's
+byline before the call is made — or shown to the person who approves it —
+*Written by 📬 Inbox Triage, for Ana Lopez.* (`signature`, given by its
+recorder). Through `call_tool` too; code that calls a tool shows no
+arguments, and is not signed. What only reads is never touched.
+
 Pure enough to test: the person is asked through `ask`, an awaitable the
 runtime gives (by default the tool-approval path that exists), and every
 decision is handed to `record` before it is acted on.
@@ -95,6 +103,7 @@ from agent_runtimes.loop.apps.rules import (
     decision_for,
     gives,
     matches,
+    signs_of,
 )
 from agent_runtimes.loop.apps.saving import (
     APPROVE_AND_SAVE,
@@ -102,7 +111,9 @@ from agent_runtimes.loop.apps.saving import (
     SAVE_TOOL,
     SPACE_NOT_GRANTED,
     not_granted,
+    signed,
 )
+from agent_runtimes.loop.apps.saving import signature as sentence_for
 from agent_runtimes.loop.apps.visitors import visitor_refusal
 from agent_runtimes.output.formats import OUTPUT_TOOLS, outputs_toolset, tool_given
 from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
@@ -257,6 +268,11 @@ class AppRulesCapability(AbstractCapability[Any]):
     """Whether the current run has nobody present — a session woken by a
     schedule (LOOP R-14): then it only reads, unless a rule says otherwise
     (R-16)."""
+
+    signature: Optional[Callable[[], str]] = None
+    """Who wrote what the current run sends, in a sentence (LOOP I-10): the
+    application and the person it acts for, by name (`saving.signature`);
+    its name alone, or *on its own* when nobody is present, when unsaid."""
 
     _catalogue: Dict[str, Set[str]] = field(
         default_factory=dict, init=False, repr=False
@@ -503,6 +519,46 @@ class AppRulesCapability(AbstractCapability[Any]):
 
         return CombinedToolset(toolsets)
 
+    # --- signing -----------------------------------------------------------------
+
+    def _sentence(self) -> str:
+        if self.signature is not None:
+            return self.signature()
+        alone = self.unattended is not None and self.unattended()
+        return sentence_for(self.app, on_its_own=alone)
+
+    def signed(
+        self, tool_name: str, args: Dict[str, Any], decision: Decision
+    ) -> Dict[str, Any]:
+        """The arguments of a call as they are sent: what a server's tool sends
+        closed with the application's byline (LOOP I-10), when its spec names
+        the argument carrying it (`signs_of`); untouched otherwise, and always
+        for a call that only reads.
+        """
+        if not _acts(decision):
+            return args
+        if tool_name == "call_tool":
+            requested = args.get("tool_name") or args.get("tool")
+            inner = args.get("arguments")
+            if not isinstance(requested, str) or not isinstance(inner, Mapping):
+                return args
+            signing = self._signed_arguments(requested, dict(inner))
+            return args if signing is None else {**args, "arguments": signing}
+        if tool_name in CODE_TOOLS or not self._is_mcp_tool(tool_name):
+            return args
+        signing = self._signed_arguments(tool_name, args)
+        return args if signing is None else signing
+
+    def _signed_arguments(
+        self, name: str, arguments: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        ref = self.mcp_ref(name)
+        argument = signs_of(ref) if ref is not None else ""
+        text = arguments.get(argument) if argument else None
+        if not isinstance(text, str) or not text.strip():
+            return None
+        return {**arguments, argument: signed(text, self._sentence())}
+
     # --- acting ------------------------------------------------------------------
 
     async def _ask(
@@ -565,6 +621,9 @@ class AppRulesCapability(AbstractCapability[Any]):
                 if self.record is not None:
                     self.record(replace(enforced, decision=stopped))
                 raise AppRuleBlockedError(stopped, unattended_sentence(unruled))
+        # What it sends says who wrote it (LOOP I-10): signed before it is
+        # asked, so that the person approves what goes out, as it goes out.
+        args = self.signed(call.tool_name, args, decision)
         if decision.behaviour == IF_ASKED and self.granted is not None:
             # *Do it if I asked* rests on what the person approved in advance
             # (LOOP U-25), never on a reading of the conversation.

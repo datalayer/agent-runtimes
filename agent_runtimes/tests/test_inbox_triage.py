@@ -47,6 +47,7 @@ from agent_runtimes.loop.apps.mail import (
 )
 from agent_runtimes.loop.apps.record import AppRecorder
 from agent_runtimes.loop.apps.rules import Decision, decision_for
+from agent_runtimes.loop.apps.saving import signed
 from agent_runtimes.specs.apps import APP_CATALOGUE
 
 ME = "eric@datalayer.io"
@@ -227,15 +228,20 @@ def test_woken_by_a_message_it_reads_sorts_and_drafts_alone_and_asks_before_send
     assert "Message ID: m4" in seen[0] and "Message ID: m1" in seen[0]
     assert box.message("m1").labels == ("UNREAD", "Newsletters")
     # It drafted the reply alone; the send waited for the person, the draft whole.
+    # Each says who wrote it, closed with its byline (LOOP I-10): nobody opened
+    # the session, so on its own.
+    reply = signed(REPLY, "Written by 📬 Inbox Triage, on its own.")
+    assert reply.endswith("Eric\n\nWritten by 📬 Inbox Triage, on its own.")
     [draft] = box.done("draft")
-    assert draft["body"] == REPLY and draft["to"] == ["client@acme.com"]
+    assert draft["body"] == reply and draft["to"] == ["client@acme.com"]
     [(tool, args, decision)] = asked.asked
     assert tool == f"{GW}send_gmail_message"
-    assert args["body"] == REPLY
+    assert args["body"] == reply
     assert (decision.behaviour, decision.rule) == ("ask_first", "Send a message")
     # Approved, it was sent once, as a reply in its thread.
     [message] = box.done("sent")
     assert message["thread_id"] == "t2" and message["to"] == ["client@acme.com"]
+    assert message["body"] == reply
     # Its record: the session woken by the message, each rule's decision, the approval.
     [session] = entries(sent, "session")
     assert session["payload"]["woken_by"] == WOKEN

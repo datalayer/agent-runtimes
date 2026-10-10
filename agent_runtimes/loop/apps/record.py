@@ -342,6 +342,7 @@ class AppRecorder:
     _started: Set[str] = field(default_factory=set, init=False)
     _woken: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
     _opened: Dict[str, str] = field(default_factory=dict, init=False)
+    _opener_names: Dict[str, str] = field(default_factory=dict, init=False)
     _signed: Dict[str, Dict[str, Any]] = field(default_factory=dict, init=False)
     _turns: Dict[str, int] = field(default_factory=dict, init=False)
 
@@ -377,12 +378,18 @@ class AppRecorder:
             }
         )
 
-    def opened(self, session: str, person_uid: str) -> None:
-        """Say which person opened ``session`` (LOOP R-31); ``""`` for nobody known."""
+    def opened(self, session: str, person_uid: str, name: str = "") -> None:
+        """Say which person opened ``session`` (LOOP R-31), and their name when
+        it is known (I-10); ``""`` for nobody known.
+        """
         if person_uid:
             self._opened[session] = person_uid
         else:
             self._opened.pop(session, None)
+        if person_uid and name:
+            self._opener_names[session] = name
+        else:
+            self._opener_names.pop(session, None)
 
     def opener(self, session: str) -> str:
         """The person who opened ``session``, or ``""``."""
@@ -398,6 +405,14 @@ class AppRecorder:
     def signed_user(self, session: str) -> Dict[str, Any]:
         """The user the host's server signed for ``session`` — ``{sub, name}`` — or ``{}``."""
         return dict(self._signed.get(session) or {})
+
+    def acts_for(self, session: str) -> str:
+        """The name of the person it acts for in ``session`` (LOOP I-10): the
+        user the host's server signed, else who opened it; ``""`` when no name
+        is known — never a uid.
+        """
+        signed = str((self._signed.get(session) or {}).get("name") or "").strip()
+        return signed or self._opener_names.get(session, "")
 
     def woken(self, session: str) -> Dict[str, Any]:
         """What woke a session: its own, or every session's; empty when a person opened it."""

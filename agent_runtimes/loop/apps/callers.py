@@ -90,6 +90,9 @@ class Caller:
     #: For a host: the one deployment its token was issued for; its
     #: installation is its ``visit`` (plans/SLACK.md §4.3).
     deployment_uid: str = ""
+    #: For a person: their name, as their verified token's profile says it
+    #: (`person_name`); ``""`` when it says none — never their uid (LOOP I-10).
+    name: str = ""
 
 
 LOCAL = Caller(kind="local")
@@ -145,6 +148,20 @@ def is_embed_token(claims: Dict[str, Any]) -> bool:
     return audience == APP_EMBED_AUDIENCE or (
         isinstance(audience, list) and APP_EMBED_AUDIENCE in audience
     )
+
+
+def person_name(claims: Dict[str, Any]) -> str:
+    """A person's name, as the profile their token carries says it (``user``:
+    ``firstName``, ``lastName``); ``""`` when it says none.
+
+    Read once IAM accepted the token: its claims are then IAM's own. What
+    signs for a person (LOOP I-10) names them by this, or not at all.
+    """
+    user = claims.get("user")
+    if not isinstance(user, dict):
+        return ""
+    parts = [str(user.get(key) or "").strip() for key in ("firstName", "lastName")]
+    return " ".join(part for part in parts if part)
 
 
 def _platform_url(name: str) -> str:
@@ -238,7 +255,9 @@ class CallerVerifier:
                 )
             status = await self._ask(f"{iam}/api/iam/v1/whoami", token)
             caller = Caller(
-                kind="person", uid=str(claims.get("sub") or claims.get("uid") or "")
+                kind="person",
+                uid=str(claims.get("sub") or claims.get("uid") or ""),
+                name=person_name(claims),
             )
         if status in (401, 403, 404):
             raise CallerRefused(401, "The platform does not accept this token.")

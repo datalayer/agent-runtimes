@@ -171,6 +171,12 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             },
             # What an argument makes it do besides.
             "conditions": {name: found for name, found in conditions.items() if found},
+            # The argument carrying what it sends, signed with the byline (I-10).
+            "signs": {
+                name: signs
+                for name in names
+                if (signs := actions_module.server_tool_signs(server, name))
+            },
         }
     actions = {
         "classes": [item.value for item in actions_module.ActionClass],

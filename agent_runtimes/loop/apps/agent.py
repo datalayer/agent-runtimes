@@ -63,6 +63,26 @@ def unattended_when_woken(rules: AppRulesCapability, recorder: AppRecorder) -> N
     rules.unattended = lambda: bool(recorder.woken(current_session()))
 
 
+def signed_as_recorded(rules: AppRulesCapability, recorder: AppRecorder) -> None:
+    """What it sends through a connection is signed with its byline (LOOP
+    I-10): the application, and the person it acts for in the current
+    session, by name — or *on its own* in a session nobody opened.
+    """
+    from agent_runtimes.loop.apps.record import current_session
+    from agent_runtimes.loop.apps.saving import signature
+
+    def sentence() -> str:
+        session = current_session()
+        on_its_own = bool(recorder.woken(session))
+        return signature(
+            rules.app,
+            on_its_own=on_its_own,
+            for_name="" if on_its_own else recorder.acts_for(session),
+        )
+
+    rules.signature = sentence
+
+
 def app_capabilities(
     app: AppSpec,
     *,
@@ -120,6 +140,7 @@ def app_capabilities(
     rules.answered = recorder.answered
     rules.app_uid = recorder.app_uid
     unattended_when_woken(rules, recorder)
+    signed_as_recorded(rules, recorder)
     if ask_rule is not None:
         rules.ask = ask_rule
     # Who is asked before it acts is told through the channels it names,
@@ -191,6 +212,8 @@ def app_capabilities(
                 woken=recorder.woken,
                 # The user the host's server signed, embedded (D-21).
                 user=recorder.signed_user,
+                # Who its byline names: that user, or who opened it, by name (I-10).
+                named=recorder.acts_for,
             )
         )
     # What it learns (LOOP R-26): skills proposed for its owner to review,

@@ -610,9 +610,13 @@ refused before anybody is asked. On a deployment the approval reaches its
 maker, as every approval of its rules does.
 
 **What it writes says who wrote it** (LOOP I-10). The page ends with its
-byline — *Written by 📬 Inbox Triage.*, or *Written by 📬 Inbox Triage, on its
-own.* in a session nobody opened — and the document's metadata names the
-application and the person it acted for (`authorship`):
+byline — *Written by 📬 Inbox Triage, for Ana Lopez.*, or *Written by 📬 Inbox
+Triage, on its own.* in a session nobody opened — and the document's metadata
+names the application and the person it acted for (`authorship`). The person
+is named by their name: the user the host's server signed (embedded), else
+the profile of the token IAM accepted when they opened the session
+(`firstName`, `lastName`); with no name known, the byline names the
+application alone — never a uid:
 
 ```json
 {
@@ -627,6 +631,16 @@ application and the person it acted for (`authorship`):
 
 On a deployment the page's creator is the application's principal; in a
 Preview, the person.
+
+**What it sends is signed the same way.** A mail, a draft or a message sent
+through a connection is written by the account the connection acts as, so
+the rules sign it before the call is made: the argument the catalogue says
+carries its words (`signs` in the server's `actions`, agentspecs — Gmail's
+`body`, Google Chat's `message_text`, Slack's `text`) is closed with the same
+sentence, without the italics, once. It is signed before the person is asked,
+so they approve what goes out as it goes out. A call through `call_tool` is
+signed in its `arguments`; code that calls a tool shows no arguments and is
+not signed; what only reads is never touched.
 
 ## What it learns
 

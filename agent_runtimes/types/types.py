@@ -2165,6 +2165,13 @@ class ServerActionsSpec(BaseModel):
         default_factory=dict,
         description="What an argument makes a tool do besides, by tool",
     )
+    signs: Dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "The argument carrying what a tool sends, signed with the "
+            "application's byline (LOOP I-10), by tool"
+        ),
+    )
 
 
 class AppConnectionSpec(BaseModel):

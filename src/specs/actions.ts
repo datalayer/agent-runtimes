@@ -62,6 +62,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   chart: {
     checked: '2026-10-02',
@@ -96,6 +97,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       generate_spreadsheet: ['read'],
     },
     conditions: {},
+    signs: {},
   },
   datalayer: {
     checked: '2026-10-05',
@@ -247,6 +249,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       mount_local_folder: ['read'],
     },
     conditions: {},
+    signs: {},
   },
   earthdata: {
     checked: '2026-10-07',
@@ -257,11 +260,13 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       download_earth_data_granules: ['write'],
     },
     conditions: {},
+    signs: {},
   },
   eurus: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   filesystem: {
     checked: '2026-10-02',
@@ -283,11 +288,13 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       list_allowed_directories: ['read'],
     },
     conditions: {},
+    signs: {},
   },
   github: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   'google-workspace': {
     checked: '2026-10-02',
@@ -556,21 +563,29 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
         },
       ],
     },
+    signs: {
+      send_gmail_message: 'body',
+      draft_gmail_message: 'body',
+      send_message: 'message_text',
+    },
   },
   huggingface: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   kaggle: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   odoo: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   'odoo-accounting': {
     checked: '2026-10-05',
@@ -627,11 +642,13 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       odoo_accounting_set_tax_grids: ['write'],
     },
     conditions: {},
+    signs: {},
   },
   salesforce: {
     default: [],
     tools: {},
     conditions: {},
+    signs: {},
   },
   slack: {
     checked: '2026-10-02',
@@ -647,6 +664,10 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       slack_get_user_profile: ['read'],
     },
     conditions: {},
+    signs: {
+      slack_post_message: 'text',
+      slack_reply_to_thread: 'text',
+    },
   },
   tavily: {
     checked: '2026-10-02',
@@ -659,6 +680,7 @@ export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = {
       tavily_research: ['read'],
     },
     conditions: {},
+    signs: {},
   },
 };
 

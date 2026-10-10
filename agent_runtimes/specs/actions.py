@@ -44,7 +44,7 @@ BACKEND_TOOL_ACTIONS: Dict[str, List[str]] = {
 #: names were read off the running server, or None when nobody looked.
 SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     "alphavantage": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "chart": ServerActionsSpec.model_validate(
         {
@@ -80,6 +80,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "generate_spreadsheet": ["read"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
     "datalayer": ServerActionsSpec.model_validate(
@@ -233,6 +234,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "mount_local_folder": ["read"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
     "earthdata": ServerActionsSpec.model_validate(
@@ -245,10 +247,11 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "download_earth_data_granules": ["write"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
     "eurus": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "filesystem": ServerActionsSpec.model_validate(
         {
@@ -271,10 +274,11 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "list_allowed_directories": ["read"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
     "github": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "google-workspace": ServerActionsSpec.model_validate(
         {
@@ -480,16 +484,21 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                     {"argument": "action", "classes": ["delete"], "equals": ["delete"]}
                 ],
             },
+            "signs": {
+                "send_gmail_message": "body",
+                "draft_gmail_message": "body",
+                "send_message": "message_text",
+            },
         }
     ),
     "huggingface": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "kaggle": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "odoo": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "odoo-accounting": ServerActionsSpec.model_validate(
         {
@@ -547,10 +556,11 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "odoo_accounting_set_tax_grids": ["write"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
     "salesforce": ServerActionsSpec.model_validate(
-        {"checked": None, "default": [], "tools": {}, "conditions": {}}
+        {"checked": None, "default": [], "tools": {}, "conditions": {}, "signs": {}}
     ),
     "slack": ServerActionsSpec.model_validate(
         {
@@ -567,6 +577,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "slack_get_user_profile": ["read"],
             },
             "conditions": {},
+            "signs": {"slack_post_message": "text", "slack_reply_to_thread": "text"},
         }
     ),
     "tavily": ServerActionsSpec.model_validate(
@@ -581,6 +592,7 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
                 "tavily_research": ["read"],
             },
             "conditions": {},
+            "signs": {},
         }
     ),
 }

@@ -396,6 +396,8 @@ export interface ServerActionsSpec {
   tools: Record<string, ActionClass[]>;
   /** What an argument makes a tool do besides, by tool. */
   conditions: Record<string, ActionConditionSpec[]>;
+  /** The argument carrying what a tool sends, signed with the application's byline (LOOP I-10), by tool. */
+  signs?: Record<string, string>;
 }
 
 /** What kind of application it is: what its user meets. */
