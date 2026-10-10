@@ -816,7 +816,7 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
     ],
     minConfidence: 0.0,
     scenarios: [],
-    decisionModel: 'cloudflare:gtw/typesafe/jev',
+    decisionModel: 'cloudflare:wrk/typesafe/jev',
   },
   samples: {
     documents: [],
@@ -1733,7 +1733,7 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
         },
       },
     ],
-    decisionModel: 'cloudflare:gtw/typesafe/jev',
+    decisionModel: 'cloudflare:wrk/typesafe/jev',
   },
   samples: {
     documents: [],
@@ -3105,7 +3105,7 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
         },
       },
     ],
-    decisionModel: 'cloudflare:gtw/typesafe/jev',
+    decisionModel: 'cloudflare:wrk/typesafe/jev',
   },
   samples: {
     documents: [],
@@ -3315,7 +3315,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
     ],
     minConfidence: 0.0,
     scenarios: [],
-    decisionModel: 'cloudflare:gtw/typesafe/jev',
+    decisionModel: 'cloudflare:wrk/typesafe/jev',
   },
   samples: {
     documents: [],
@@ -4352,7 +4352,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             'Can the proposed correction be applied without a person checking each row?',
         },
       ],
-      decision_model: 'cloudflare:gtw/typesafe/jev',
+      decision_model: 'cloudflare:wrk/typesafe/jev',
     },
     samples: {
       alternatives: [
@@ -4947,7 +4947,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           },
         },
       ],
-      decision_model: 'cloudflare:gtw/typesafe/jev',
+      decision_model: 'cloudflare:wrk/typesafe/jev',
     },
     samples: {
       alternatives: [
@@ -5930,7 +5930,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           },
         },
       ],
-      decision_model: 'cloudflare:gtw/typesafe/jev',
+      decision_model: 'cloudflare:wrk/typesafe/jev',
     },
     samples: {
       alternatives: [
@@ -6060,7 +6060,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           ],
         },
       ],
-      decision_model: 'cloudflare:gtw/typesafe/jev',
+      decision_model: 'cloudflare:wrk/typesafe/jev',
     },
     samples: {
       alternatives: [

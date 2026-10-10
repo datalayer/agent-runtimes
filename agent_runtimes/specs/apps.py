@@ -751,7 +751,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             ],
             "min_confidence": 0.0,
             "scenarios": [],
-            "decision_model": "cloudflare:gtw/typesafe/jev",
+            "decision_model": "cloudflare:wrk/typesafe/jev",
         },
         "samples": {
             "documents": [],
@@ -1587,7 +1587,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             ],
-            "decision_model": "cloudflare:gtw/typesafe/jev",
+            "decision_model": "cloudflare:wrk/typesafe/jev",
         },
         "samples": {
             "documents": [],
@@ -2778,7 +2778,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
                     },
                 },
             ],
-            "decision_model": "cloudflare:gtw/typesafe/jev",
+            "decision_model": "cloudflare:wrk/typesafe/jev",
         },
         "samples": {
             "documents": [],
@@ -2980,7 +2980,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             ],
             "min_confidence": 0.0,
             "scenarios": [],
-            "decision_model": "cloudflare:gtw/typesafe/jev",
+            "decision_model": "cloudflare:wrk/typesafe/jev",
         },
         "samples": {
             "documents": [],
