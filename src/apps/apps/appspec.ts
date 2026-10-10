@@ -42,6 +42,7 @@ import type {
   AppCriterionSpec,
   AppCustomComponentSpec,
   AppDecisionSpec,
+  AppSamplesSpec,
   AppDeploymentSpec,
   AppInterfaceSpec,
   AppVoiceSpec,
@@ -251,6 +252,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     triggers: [],
     memory: '',
     notifications: [],
+    samples: { documents: [], alternatives: [] },
     setup: [],
     enabled: true,
     unavailable_because: '',
@@ -294,6 +296,7 @@ const KNOWN_KEYS = [
   'memory',
   'notifications',
   'decision',
+  'samples',
   'enabled',
   'unavailable_because',
   'tags',
@@ -734,6 +737,28 @@ function parseDecision(data: Data): AppDecisionSpec {
   };
 }
 
+/** What it is tried on before it is anybody's (STUDIO E-06, E-11): read only. */
+function parseSamples(data: Data): AppSamplesSpec {
+  return {
+    documents: records(data.documents).map(document => ({
+      name: text(document.name),
+      file: text(document.file),
+      text: text(document.text),
+    })),
+    alternatives: records(data.alternatives).map(alternative => ({
+      name: text(alternative.name),
+      evidence: text(alternative.evidence),
+      metrics: Object.fromEntries(
+        Object.entries(
+          isData(alternative.metrics) ? alternative.metrics : {},
+        ).filter(
+          (entry): entry is [string, number] => typeof entry[1] === 'number',
+        ),
+      ),
+    })),
+  };
+}
+
 function parseDeployment(data: Data): AppDeploymentSpec {
   const deployment: AppDeploymentSpec = {};
   if (isData(data.hosted)) {
@@ -926,6 +951,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     triggers: records(data.triggers).map(parseTrigger),
     memory: text(data.memory),
     notifications: texts(data.notifications),
+    samples: parseSamples(isData(data.samples) ? data.samples : {}),
     enabled: flag(data.enabled, true),
     unavailable_because: text(data.unavailable_because),
     tags: texts(data.tags),
@@ -1235,6 +1261,31 @@ function dumpDecision(decision: AppDecisionSpec): Data {
     .text('decision_model', decision.decisionModel).data;
 }
 
+function dumpSamples(samples: AppSamplesSpec): Data {
+  return new Writer()
+    .list(
+      'documents',
+      samples.documents.map(
+        document =>
+          new Writer()
+            .text('name', document.name, '\u0000')
+            .text('file', document.file, '\u0000')
+            .text('text', document.text, '\u0000').data,
+      ),
+    )
+    .list(
+      'alternatives',
+      samples.alternatives.map(
+        alternative =>
+          new Writer()
+            .text('name', alternative.name, '\u0000')
+            .text('evidence', alternative.evidence, '\u0000')
+            // By criterion name, as written: the spec keeps their order.
+            .part('metrics', { ...alternative.metrics }).data,
+      ),
+    ).data;
+}
+
 /**
  * An application as the document its file holds.
  *
@@ -1430,6 +1481,7 @@ export function dumpAppspec(app: AppSpec): Data {
     writer.data.decision = dumpDecision(app.decision);
   }
   writer
+    .part('samples', dumpSamples(app.samples))
     .value('enabled', app.enabled, true)
     .text('unavailable_because', app.unavailable_because)
     .list('tags', app.tags)

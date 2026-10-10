@@ -2754,6 +2754,29 @@ class AppDecisionSpec(BaseModel):
     decision_model: str = Field(default="")
 
 
+class AppSampleDocumentSpec(BaseModel):
+    """A document of its `contents`, as Datalayer publishes it with the application."""
+
+    name: str
+    file: str
+    text: str
+
+
+class AppSampleAlternativeSpec(BaseModel):
+    """An alternative a decision is tried on, and what is known about it."""
+
+    name: str
+    evidence: str
+    metrics: Dict[str, float] = Field(default_factory=dict)
+
+
+class AppSamplesSpec(BaseModel):
+    """What it is tried on before it is anybody's (STUDIO E-06, E-11): read only."""
+
+    documents: List[AppSampleDocumentSpec] = Field(default_factory=list)
+    alternatives: List[AppSampleAlternativeSpec] = Field(default_factory=list)
+
+
 class AppSpec(BaseModel):
     """An application (`agentspecs/apps`): the Appspec.
 
@@ -2803,6 +2826,10 @@ class AppSpec(BaseModel):
     memory: str = Field(default="")
     notifications: List[str] = Field(default_factory=list)
     decision: Optional[AppDecisionSpec] = None
+    samples: AppSamplesSpec = Field(
+        default_factory=AppSamplesSpec,
+        description="What it is tried on before it is anybody's, published with it",
+    )
     setup: List[str] = Field(
         default_factory=list,
         description="What it names that is not enabled today, in sentences",

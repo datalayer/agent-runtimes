@@ -102,6 +102,8 @@ import { defineAppRuntimePlugin } from './AppRuntimePlugins';
 import { hasFolderModules } from './customComponents';
 import { appPluginPair } from './pluginPair';
 import { visitorAgentOf } from './visitorToken';
+import { defineAppBrowserSandboxPlugin } from './AppBrowserSandbox';
+import { browserSandboxNote, runsCodeInSandbox } from './browserSandbox';
 
 /** The id of an agent or a Cog, without its version. */
 export const agentIdOf = (app: Pick<AppSpec, 'agent' | 'team'>): string => {
@@ -162,8 +164,12 @@ export function defineAppPlugin(
     suggestions: startersAsOpeners(shown.interface.starters),
     // In the page, the agent is told what a runtime tells it: its own
     // spec's prompt, then the application's instructions; on the
-    // application's model when it names one (`apps/apps/agent`).
-    instructions: app.instructions,
+    // application's model when it names one (`apps/apps/agent`). An agent
+    // that computes in code is told where its code runs there, and where its
+    // documents are (STUDIO E-11, `browserSandbox`).
+    instructions: runsCodeInSandbox(app)
+      ? [app.instructions, browserSandboxNote(app)].filter(Boolean).join('\n\n')
+      : app.instructions,
     model: app.model,
     // Its modes and its profiles (LOOP P-19, P-20), as the session API
     // applies them: the profile's instructions and those of the options
@@ -405,6 +411,9 @@ export function appPreset(
       // page side read from it when its components are files of its folder
       // (P-29).
       defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
+      // Its code in the browser's sandbox, when it turns in the page and
+      // computes in code (STUDIO E-11): `execute_code`, its documents there.
+      ...(runsCodeInSandbox(app) ? [defineAppBrowserSandboxPlugin(app)] : []),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
       // The components its developer wrote (LOOP P-17): blocks of its page
       // and renderers of its page, its elements and its answers — its own.

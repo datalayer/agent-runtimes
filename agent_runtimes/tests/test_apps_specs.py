@@ -415,3 +415,22 @@ class TestTheGenerator:
         assert _said(text) != _said(text.replace("ask_first", "do_it", 1))
         # And a formatter's change is not one.
         assert _said(text) == _said(text.replace('"', "'").replace(",\n", "\n"))
+
+
+def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-06, E-11: an Appspec's samples, published with it by Datalayer
+    — Quote Calculator's price list, a decision's alternatives — are in the
+    generated catalogue, and a runtime given the application keeps them."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    quote = APP_CATALOGUE["quote-calculator"]
+    [prices] = quote.samples.documents
+    assert (prices.name, prices.file) == ("Price list", "price-list.csv")
+    supplier = APP_CATALOGUE["supplier-comparison"]
+    first = supplier.samples.alternatives[0]
+    assert (first.name, first.metrics["Price"]) == ("Northfield Components", 18400)
+    assert APP_CATALOGUE["web-research"].samples.documents == []
+    loaded = load_app(dump_app(spec_of("quote-calculator")))
+    assert loaded.samples == quote.samples

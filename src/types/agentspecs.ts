@@ -955,6 +955,35 @@ export interface AppDecisionSpec {
   decisionModel: string;
 }
 
+/** A document of its `contents`, as Datalayer publishes it with the application. */
+export interface AppSampleDocumentSpec {
+  /** The document, as its `contents` names it. */
+  name: string;
+  /** The file it is given as, in a sandbox: `price-list.csv`. */
+  file: string;
+  /** What it holds. */
+  text: string;
+}
+
+/** An alternative a decision is tried on, and what is known about it. */
+export interface AppSampleAlternativeSpec {
+  name: string;
+  /** What is known about it: the text its typed questions are asked on. */
+  evidence: string;
+  /** What each metric criterion found for it, by the criterion's name. */
+  metrics: Record<string, number>;
+}
+
+/**
+ * What it is tried on before it is anybody's (STUDIO E-06, E-11): published
+ * with it by Datalayer, read only — what a visitor without an account
+ * computes from, or decides on, in the browser.
+ */
+export interface AppSamplesSpec {
+  documents: AppSampleDocumentSpec[];
+  alternatives: AppSampleAlternativeSpec[];
+}
+
 /**
  * An application (`agentspecs/apps`): the Appspec. An agent with an interface,
  * rules, tests and a place to run — a chat, a widget, a decision or a worker.
@@ -999,6 +1028,8 @@ export interface AppSpec {
   memory: string;
   notifications: string[];
   decision?: AppDecisionSpec;
+  /** What it is tried on before it is anybody's, published with it. */
+  samples: AppSamplesSpec;
   /** What it names that is not enabled today, in sentences. */
   setup: string[];
   enabled: boolean;

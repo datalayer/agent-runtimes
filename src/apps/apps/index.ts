@@ -10,11 +10,13 @@
  */
 
 export * from './agent';
+export * from './AppBrowserSandbox';
 export * from './AppComposer';
 export * from './AppFeedback';
 export * from './AppKept';
 export * from './AppRenderer';
 export * from './appspec';
+export * from './browserSandbox';
 export * from './checks';
 export * from './composer';
 export * from './computer';

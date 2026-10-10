@@ -65,6 +65,8 @@ describe('the preset per kind', () => {
       // it which of them its runtime holds.
       'loop-app-web-research',
       '@datalayer/loop-plugin-app-runtime',
+      // Its code in the browser's sandbox, when it turns in the page (E-11).
+      '@datalayer/loop-plugin-app-browser-sandbox-web-research',
       '@datalayer/loop-plugin-app-feedback-web-research',
       '@datalayer/loop-plugin-app-elements',
     ]);

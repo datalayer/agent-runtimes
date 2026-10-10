@@ -58,8 +58,9 @@ CAMEL = {
     "custom_components": "customComponents",
 }
 
-#: The keys whose value is carried as it is written: a component tree, weights by name.
-VERBATIM = ("components", "weights")
+#: The keys whose value is carried as it is written: a component tree, weights
+#: and a sample's metrics by name.
+VERBATIM = ("components", "weights", "metrics")
 
 
 def _flat(text: Any) -> str:

@@ -97,7 +97,20 @@ import {
 } from '../../../stores';
 import { useIAMStore } from '../../../state';
 import { useVisitorToken } from '../../apps/visitorToken';
-import { AGENTS_PLUGIN_NAME, type AgentsConfig } from '../agents/plugin';
+import {
+  AGENTS_PLUGIN_NAME,
+  type AgentsConfig,
+  type AgentsOutput,
+} from '../agents/plugin';
+import type { SandboxService } from '../agents/service';
+import {
+  BROWSER_CODE_TOOL,
+  dataUrlBase64,
+  givenFilesSentence,
+  sandboxFileName,
+  writeFilesCode,
+  type SandboxFile,
+} from '../../apps/browserSandbox';
 import { useConfig } from '../../../hooks/useConfig';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type {
@@ -520,6 +533,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   >([]);
   /** Whether the agent is turned in this page: read by `sendNow`, set below. */
   const inPageRef = useRef(false);
+  /**
+   * The page's sandbox, when the agent turned in the page runs its code
+   * there (`execute_code`, STUDIO E-11): what a file given on the page is
+   * put in. Read by `sendNow`, set below.
+   */
+  const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
   /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
   const runProps = useContributions(LoopRunProps);
   const runPropsRef = useRef(runProps);
@@ -532,11 +551,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    *
    * What the page did besides the message goes with it as AG-UI's
    * `forwardedProps` (`loop`, LOOP R-04): the application's session takes a
-   * file there. An agent turned in this page has no session, and no file is
-   * handed to it: said, rather than dropped. What the workspace's plugins
-   * send with every run (`LoopRunProps`: the modes the person is in, LOOP
-   * P-19) goes under it — and an agent turned in this page applies the modes
-   * itself (`modeEffect`, `BrowserAgentAdapter`).
+   * file there. An agent turned in this page has no session: one that runs
+   * its code in the page's sandbox has the files put there, and the message
+   * names them (STUDIO E-11); to any other no file is handed — said, rather
+   * than dropped. What the workspace's plugins send with every run
+   * (`LoopRunProps`: the modes the person is in, LOOP P-19) goes under it —
+   * and an agent turned in this page applies the modes itself (`modeEffect`,
+   * `BrowserAgentAdapter`).
    */
   const sendNow = useCallback(
     (message: string, given?: Record<string, unknown>): string | void => {
@@ -547,7 +568,41 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       // The page's files, or those attached in the composer (LOOP P-21).
       const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
       if (inPageRef.current && loop?.files && loop.files.length > 0) {
-        return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
+        const sandbox = pageSandboxRef.current;
+        if (!sandbox) {
+          return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
+        }
+        let files: SandboxFile[];
+        try {
+          files = (
+            loop.files as Array<{ name?: unknown; data_url?: unknown }>
+          ).map(file => ({
+            file: sandboxFileName(String(file.name ?? '')),
+            base64: dataUrlBase64(String(file.data_url ?? '')),
+          }));
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+        // Put in the sandbox first, then sent: the message names where.
+        void sandbox.execute(writeFilesCode(files)).then(written => {
+          if (!written.success) {
+            setTransient(
+              `The files could not be put in the sandbox: ${written.error ?? 'it failed'}.`,
+            );
+            return;
+          }
+          // Sent as any message is, its files now in the sandbox.
+          sendNow(
+            `${message}\n\n${givenFilesSentence(files.map(file => file.file))}`,
+            {
+              ...forwardedProps,
+              loop: Object.fromEntries(
+                Object.entries(loop).filter(([key]) => key !== 'files'),
+              ),
+            },
+          );
+        });
+        return;
       }
       // A new turn: whatever the panel showed is gone, this message is it.
       turnFeedRef.current?.begin(message, controlsRef.current?.thread());
@@ -1185,6 +1240,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ...commandTools.filter(tool => !taken.has(tool.name)),
     ];
   }, [notebookTools, commandTools]);
+  // The page's sandbox, while the agent turned here runs its code in it.
+  pageSandboxRef.current =
+    inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)
+      ? reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox
+      : undefined;
 
   /*
    * Where this workspace's agent actually lives.

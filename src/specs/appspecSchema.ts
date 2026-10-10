@@ -1090,6 +1090,88 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppRule',
       type: 'object',
     },
+    AppSampleAlternative: {
+      additionalProperties: false,
+      description:
+        'An alternative a decision is tried on, and what is known about it.',
+      properties: {
+        name: {
+          description: 'Its name',
+          title: 'Name',
+          type: 'string',
+        },
+        evidence: {
+          description:
+            'What is known about it: the text its typed questions are asked on',
+          title: 'Evidence',
+          type: 'string',
+        },
+        metrics: {
+          additionalProperties: {
+            type: 'number',
+          },
+          description:
+            "What each metric criterion found for it, by the criterion's name",
+          title: 'Metrics',
+          type: 'object',
+        },
+      },
+      required: ['name', 'evidence'],
+      title: 'AppSampleAlternative',
+      type: 'object',
+    },
+    AppSampleDocument: {
+      additionalProperties: false,
+      description:
+        'A document it answers from, as Datalayer publishes it with the application.',
+      properties: {
+        name: {
+          description: 'The document, as its `contents` names it',
+          title: 'Name',
+          type: 'string',
+        },
+        file: {
+          description:
+            'The file it is given as, in a sandbox: `price-list.csv`',
+          title: 'File',
+          type: 'string',
+        },
+        text: {
+          description: 'What it holds',
+          title: 'Text',
+          type: 'string',
+        },
+      },
+      required: ['name', 'file', 'text'],
+      title: 'AppSampleDocument',
+      type: 'object',
+    },
+    AppSamples: {
+      additionalProperties: false,
+      description:
+        "What it is tried on before it is anybody's (STUDIO E-06, E-11).\n\nPublished with it by Datalayer and read only: what a visitor without an\naccount tries it on, in the browser.",
+      properties: {
+        documents: {
+          description:
+            'Documents of its `contents`, as Datalayer publishes them',
+          items: {
+            $ref: '#/$defs/AppSampleDocument',
+          },
+          title: 'Documents',
+          type: 'array',
+        },
+        alternatives: {
+          description: 'For a decision: alternatives with their evidence',
+          items: {
+            $ref: '#/$defs/AppSampleAlternative',
+          },
+          title: 'Alternatives',
+          type: 'array',
+        },
+      },
+      title: 'AppSamples',
+      type: 'object',
+    },
     AppScenario: {
       additionalProperties: false,
       description:
@@ -2026,6 +2108,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       ],
       default: null,
       description: 'For a decision: what it decides',
+    },
+    samples: {
+      $ref: '#/$defs/AppSamples',
+      description:
+        "What it is tried on before it is anybody's: published with it by Datalayer, read only",
     },
     enabled: {
       default: true,

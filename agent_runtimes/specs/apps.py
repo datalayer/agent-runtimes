@@ -149,6 +149,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "accounting", "finance", "odoo", "a2a", "team"],
@@ -292,6 +293,7 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": [
@@ -443,6 +445,7 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": [
@@ -595,6 +598,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "research", "python"],
@@ -749,6 +753,31 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
             "scenarios": [],
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
+        "samples": {
+            "documents": [],
+            "alternatives": [
+                {
+                    "name": "Prices in cents",
+                    "evidence": "In the sample orders dataset (12,480 rows), 38 rows from the EU shop carry a unit price one hundred times the catalogue price — 1999 for an item listed at 19.99 — all imported by the same job on 4 March. Divided by one hundred, each matches its catalogue price to the cent. Corrected, total revenue falls by 6.1%.",
+                    "metrics": {"Rows affected": 38.0, "Effect on the result": 6.1},
+                },
+                {
+                    "name": "Duplicate orders",
+                    "evidence": "96 order ids appear twice with identical lines, timestamps and amounts, all from a retried upload on 19 April. No order id appears three times. Removing the second copies lowers total revenue by 0.9%.",
+                    "metrics": {"Rows affected": 96.0, "Effect on the result": 0.9},
+                },
+                {
+                    "name": "Missing region",
+                    "evidence": "1,032 rows have an empty region, all imported on 2 March from the partner channel; their shipping addresses are filled in and name a country in every case. Total revenue does not move; revenue by region moves by up to 4.5% once the region is read from the address.",
+                    "metrics": {"Rows affected": 1032.0, "Effect on the result": 4.5},
+                },
+                {
+                    "name": "Very large orders",
+                    "evidence": "11 orders exceed 40,000 in value, the largest at 182,000. Each is from an account marked as a reseller, and each has an invoice and a delivery record that match its amount. Left out, total revenue would fall by 9.8%, but nothing suggests they are wrong.",
+                    "metrics": {"Rows affected": 11.0, "Effect on the result": 0.0},
+                },
+            ],
+        },
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "decision", "data-quality"],
@@ -869,6 +898,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "decisions", "jev"],
@@ -1009,6 +1039,7 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": [
@@ -1143,6 +1174,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": [
@@ -1340,6 +1372,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "mem0",
         "notifications": ["email"],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": False,
         "unavailable_because": "It reads and sorts your mail, and a mailbox cannot be connected yet: the Google Workspace connection is still being built.",
         "tags": ["example", "worker", "mail"],
@@ -1556,6 +1589,38 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             ],
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
+        "samples": {
+            "documents": [],
+            "alternatives": [
+                {
+                    "name": "Large model",
+                    "evidence": "A sample run of 50 support-ticket summaries: 46 passed. The four failures each left out the customer's account number, which the use case asks for. Every answer kept to the JSON format asked for. Its price per call is published on the Models page, and the run recorded a trajectory for each task.",
+                    "metrics": {
+                        "Pass rate": 0.92,
+                        "Cost per task": 1.8,
+                        "Latency": 6.2,
+                    },
+                },
+                {
+                    "name": "Medium model",
+                    "evidence": "The same 50 summaries: 43 passed. Of the seven failures, four left out the account number and three summarised the wrong ticket of a thread. Two answers broke the JSON format with a trailing comment. Its price per call is published, and every task has its trajectory.",
+                    "metrics": {
+                        "Pass rate": 0.86,
+                        "Cost per task": 0.6,
+                        "Latency": 3.1,
+                    },
+                },
+                {
+                    "name": "Small model",
+                    "evidence": "The same 50 summaries: 34 passed. Most of the 16 failures invented a resolution the thread never reached, and nine answers broke the JSON format. Its billing is not published on the Models page, and the run kept no trajectory for its failures.",
+                    "metrics": {
+                        "Pass rate": 0.68,
+                        "Cost per task": 0.2,
+                        "Latency": 1.4,
+                    },
+                },
+            ],
+        },
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "decision", "benchmarks", "models"],
@@ -1705,6 +1770,7 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "accounting", "finance", "odoo", "a2a", "scene"],
@@ -1965,6 +2031,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": ["email"],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": False,
         "unavailable_because": "Seven of the twelve checks it names before a report reaches the board cannot run yet, so no report it builds could pass them and be sent.",
         "tags": ["example", "worker", "sales", "reporting"],
@@ -2179,6 +2246,16 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {
+            "documents": [
+                {
+                    "name": "Price list",
+                    "file": "price-list.csv",
+                    "text": "plan,term,price_per_seat,billed,minimum_seats\nTeam,Monthly,15,each month,1\nTeam,Annual,144,each year,1\nBusiness,Monthly,30,each month,5\nBusiness,Annual,288,each year,5\nEnterprise,Monthly,55,each month,25\nEnterprise,Annual,528,each year,25\n",
+                }
+            ],
+            "alternatives": [],
+        },
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "widget"],
@@ -2389,6 +2466,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "widget", "python"],
@@ -2516,6 +2594,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "sales", "finance", "a2a", "team"],
@@ -2701,6 +2780,38 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
             ],
             "decision_model": "cloudflare:gtw/typesafe/jev",
         },
+        "samples": {
+            "documents": [],
+            "alternatives": [
+                {
+                    "name": "Current prompt",
+                    "evidence": "A sample run of 80 tasks of a reporting agent: 70 passed. Six of the ten failures gave a wrong total in a quarterly figure, which a reader would act on; four put the table's columns in another order than the template asks. Nobody who reads the reports has complained about the column order.",
+                    "metrics": {
+                        "Pass rate": 0.875,
+                        "Cost per task": 2.4,
+                        "Latency": 9.5,
+                    },
+                },
+                {
+                    "name": "With retrieval",
+                    "evidence": "The same 80 tasks with the reports of the last two quarters retrieved first: 76 passed. The four failures are all formatting — a missing unit in a table header — and every figure was right. Each task reads about twice as much, which shows in its cost.",
+                    "metrics": {
+                        "Pass rate": 0.95,
+                        "Cost per task": 3.9,
+                        "Latency": 12.8,
+                    },
+                },
+                {
+                    "name": "Smaller model",
+                    "evidence": "The same 80 tasks on a smaller model: 61 passed. Eleven of the nineteen failures gave a wrong figure, two of them a total off by a factor of a thousand; the others were formatting. It is the cheapest and the fastest of the three.",
+                    "metrics": {
+                        "Pass rate": 0.7625,
+                        "Cost per task": 0.7,
+                        "Latency": 4.1,
+                    },
+                },
+            ],
+        },
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "decision", "benchmarks"],
@@ -2870,6 +2981,38 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
             "min_confidence": 0.0,
             "scenarios": [],
             "decision_model": "cloudflare:gtw/typesafe/jev",
+        },
+        "samples": {
+            "documents": [],
+            "alternatives": [
+                {
+                    "name": "Northfield Components",
+                    "evidence": "Quotes 18,400 for the 5,000 units, delivery included. Its delivery records show 47 of 50 past deliveries on time. It can make 6,000 units a month. It meets the stated requirements: ISO 9001, delivery within three weeks and payment at 60 days.",
+                    "metrics": {
+                        "Price": 18400.0,
+                        "Delivery reliability": 0.94,
+                        "Capacity": 1.0,
+                    },
+                },
+                {
+                    "name": "Harbor Supply",
+                    "evidence": "Quotes 15,900 for the 5,000 units, plus 900 for delivery. 31 of 40 past deliveries arrived on time, the late ones by a week on average. It can make 4,000 units a month, so the order would ship in two parts. It is ISO 9001 certified, and asks for payment at 30 days.",
+                    "metrics": {
+                        "Price": 16800.0,
+                        "Delivery reliability": 0.775,
+                        "Capacity": 0.8,
+                    },
+                },
+                {
+                    "name": "Valley Works",
+                    "evidence": "Quotes 17,200 for the 5,000 units, delivery included. 12 of its 15 past deliveries arrived on time. It states a capacity of 10,000 units a month, but sent no figure for the last quarter. It meets the delivery and payment terms; its ISO 9001 certificate expired last year and is being renewed.",
+                    "metrics": {
+                        "Price": 17200.0,
+                        "Delivery reliability": 0.8,
+                        "Capacity": 1.0,
+                    },
+                },
+            ],
         },
         "enabled": True,
         "unavailable_because": "",
@@ -3127,6 +3270,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "support"],
@@ -3260,6 +3404,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "memory": "",
         "notifications": [],
         "decision": None,
+        "samples": {"documents": [], "alternatives": []},
         "enabled": True,
         "unavailable_because": "",
         "tags": ["example", "research"],

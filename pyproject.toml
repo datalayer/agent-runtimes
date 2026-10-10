@@ -33,7 +33,8 @@ dependencies = [
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
     # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
-    "agentspecs>=0.0.70",
+    # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
+    "agentspecs>=0.0.71",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
