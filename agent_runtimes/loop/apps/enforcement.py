@@ -79,6 +79,11 @@ from agent_runtimes.loop.apps.computer import (
 )
 from agent_runtimes.loop.apps.grants import Approval, Granted
 from agent_runtimes.loop.apps.guards import Answered, asked_and_answered
+from agent_runtimes.loop.apps.host_user import (
+    HOST_CONTEXT_TOOL,
+    HOST_TOOL_PREFIX,
+    host_tools,
+)
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -340,6 +345,8 @@ class AppRulesCapability(AbstractCapability[Any]):
             return self._decide_code(tool_name, args)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
+        if tool_name.startswith(HOST_TOOL_PREFIX):
+            return Enforced(tool_name, self._decide_host(tool_name))
         if tool_name in READING_TOOLS or tool_name in OUTPUT_TOOLS:
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=["read"])
@@ -393,6 +400,21 @@ class AppRulesCapability(AbstractCapability[Any]):
             )
         return Enforced(tool_name, _unclassed(tool_name))
 
+    def _decide_host(self, tool_name: str) -> Decision:
+        """A tool of the host page (LOOP D-10): run by the page, never here.
+
+        What the page passes (`host_context`) is reading. A function it
+        offers is decided by the rule that names its tool, as the page
+        decides it (`hostFrontendTools`): no rule, *Leave it to me*. A
+        `host_` tool its Appspec does not name is unknown, and left to the
+        person.
+        """
+        if tool_name not in host_tools(self.app):
+            return _unclassed(tool_name)
+        if tool_name == HOST_CONTEXT_TOOL:
+            return decision_for(self.app, tool_name, classes=["read"])
+        return decision_for(self.app, tool_name, classes=[])
+
     def _decide_mcp(
         self,
         name: str,
@@ -441,6 +463,11 @@ class AppRulesCapability(AbstractCapability[Any]):
         """
         if not computer_gives(self.app, tool_name):
             return False
+        if tool_name.startswith(HOST_TOOL_PREFIX):
+            # The page runs it, so no call of it ever reaches
+            # `before_tool_execute` (pydantic-ai hands it back as a deferred
+            # call): what its rules leave to the person is not shown at all.
+            return self._decide_host(tool_name).behaviour != LEAVE_TO_ME
         if tool_name in OUTPUT_TOOLS:
             # Only in a run whose caller accepts what it composes.
             return tool_given(tool_name)

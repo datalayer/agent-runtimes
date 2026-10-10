@@ -14,6 +14,7 @@
  * What it reaches is read from the environment, each with a default:
  *
  *   E2E_LANDING_URL      http://localhost:3063        the landing's dev server, which serves /embed/
+ *   E2E_EMBED_URL        <landing>/embed              the element's bundle, served with CORS
  *   E2E_DATALAYER_API    https://r1.datalayer.run     ai-agents and ai-inference
  *   E2E_EXAMPLE          web-research                 the element's application: a public example
  *   E2E_ADDRESS          (none)                       the hosted mount's address, one open to visitors

@@ -133,6 +133,27 @@ def reads_user(app: AppSpec) -> bool:
     return bool(host is not None and "user" in host.context)
 
 
+#: What the tools of a host page's functions are called: `host_<name>` (D-10).
+HOST_TOOL_PREFIX = "host_"
+
+
+def host_tools(app: AppSpec) -> frozenset[str]:
+    """The tools its agent is given for the host page (D-10), by name.
+
+    `host_context` when its Appspec lists what the page passes, and
+    `host_<name>` for each function the page offers — as agent-runtimes'
+    `hostToolsOf` names them in the page, which runs them.
+    """
+    embedded = app.deployment.embedded if app.deployment else None
+    host = embedded.host if embedded else None
+    if host is None:
+        return frozenset()
+    named = {f"{HOST_TOOL_PREFIX}{function.name}" for function in host.functions}
+    if host.context:
+        named.add(HOST_CONTEXT_TOOL)
+    return frozenset(named)
+
+
 def takes_signed_user(app: AppSpec) -> bool:
     """Whether its Appspec says its user is only one the host's server signed."""
     embedded = app.deployment.embedded if app.deployment else None

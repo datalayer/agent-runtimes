@@ -27,6 +27,13 @@ export const PROBES = {
 
 export const landingUrl = (): string =>
   (process.env.E2E_LANDING_URL || 'http://localhost:3063').replace(/\/+$/, '');
+/**
+ * Where the element's bundle is served: the landing's `/embed/` unless
+ * `E2E_EMBED_URL` names another — a released `dist-embed` served on an
+ * origin of its own, with `Access-Control-Allow-Origin`, as a CDN serves it.
+ */
+export const embedUrl = (): string =>
+  (process.env.E2E_EMBED_URL || `${landingUrl()}/embed`).replace(/\/+$/, '');
 export const apiUrl = (): string =>
   (process.env.E2E_DATALAYER_API || 'https://r1.datalayer.run').replace(
     /\/+$/,
@@ -114,16 +121,32 @@ export default async function globalSetup(): Promise<void> {
   );
 
   // The element needs the rebuilt bundle: the loader and the module beside
-  // it. The dev server's fallback (public/embed) serves the loader alone.
-  const loader = await reach(`${landingUrl()}/embed/datalayer-app.js`);
-  const module = await reach(`${landingUrl()}/embed/datalayer-app-main.js`);
+  // it, each answered with `Access-Control-Allow-Origin` — the host page is
+  // another origin, and the loader `import()`s the module with CORS. The
+  // landing's dev server falls back to public/embed, the loader alone.
+  const cors = { headers: { Origin: 'http://127.0.0.1:' + HOST_PAGE_PORT } };
+  const loaderUrl = `${embedUrl()}/datalayer-app.js`;
+  const moduleUrl = `${embedUrl()}/datalayer-app-main.js`;
+  const loader = await reach(loaderUrl);
+  let module: Response | { error: string };
+  try {
+    module = await fetch(moduleUrl, {
+      method: 'HEAD',
+      ...cors,
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (error) {
+    module = { error: error instanceof Error ? error.message : String(error) };
+  }
   set(
     PROBES.bundle,
     'error' in loader || loader.status !== 200
-      ? `${landingUrl()}/embed/datalayer-app.js is not served.`
+      ? `${loaderUrl} is not served.`
       : 'error' in module || module.status !== 200
-        ? `${landingUrl()}/embed/ serves no datalayer-app-main.js: the landing needs the rebuilt dist-embed from an agent-runtimes release (its dev server falls back to public/embed).`
-        : '',
+        ? `${embedUrl()}/ serves no datalayer-app-main.js: it needs the dist-embed of an agent-runtimes release (the landing's dev server falls back to public/embed, the loader alone).`
+        : !module.headers.get('access-control-allow-origin')
+          ? `${moduleUrl} is served without Access-Control-Allow-Origin, so a host page on another origin cannot import it.`
+          : '',
   );
 
   const host = await reach(hostPageUrl());

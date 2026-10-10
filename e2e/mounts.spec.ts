@@ -11,7 +11,7 @@
  * `/apps/<slug>`, read by a visitor without an account. The **element**
  * mount is `<datalayer-app>` on a host page of another origin
  * (`examples/embed-host/index.html`), its bundle fetched from the landing's
- * `/embed/`. Each runs the same four cases:
+ * `/embed/`, or from `E2E_EMBED_URL`. Each runs the same four cases:
  *
  * 1. the page loads: the application's conversation is drawn, its prompt
  *    ready;
@@ -31,6 +31,7 @@ import {
   PROBES,
   address,
   apiUrl,
+  embedUrl,
   exampleId,
   hostPageUrl,
   landingUrl,
@@ -87,7 +88,7 @@ const MOUNTS: Mount[] = [
   },
   {
     name: 'the element on a host page',
-    unreachable: notReachable(PROBES.landing, PROBES.bundle, PROBES.hostPage),
+    unreachable: notReachable(PROBES.bundle, PROBES.hostPage),
     openAnswering: page =>
       page.goto(hostPage({ app: exampleId() })).then(() => undefined),
     notAnswering: notReachable(PROBES.visitors),
@@ -105,7 +106,7 @@ const MOUNTS: Mount[] = [
 /** The host page, told what to embed and where Datalayer is. */
 function hostPage(query: Record<string, string>): string {
   const params = new URLSearchParams({
-    embed: `${landingUrl()}/embed/datalayer-app.js`,
+    embed: `${embedUrl()}/datalayer-app.js`,
     origin: landingUrl(),
     api: apiUrl(),
     mode: 'inline',
@@ -138,8 +139,11 @@ for (const mount of MOUNTS) {
 
       test('the page loads, the conversation ready', async () => {
         await expect(mount.prompt(page)).toBeVisible({ timeout: 120_000 });
-        // Nothing refused in place of the conversation.
-        await expect(mount.said(page)).not.toContainText('datalayer-app:');
+        // Nothing refused in place of the conversation (where nothing is
+        // said at all, there is nothing to read).
+        await expect(
+          mount.said(page).filter({ hasText: 'datalayer-app:' }),
+        ).toHaveCount(0);
       });
 
       test('a visitor’s message is answered', async () => {

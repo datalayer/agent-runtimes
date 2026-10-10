@@ -389,7 +389,12 @@ what it says:
   me*, is refused (`hostRefused`), and the checks say it (*No rule names
   “host_refund”…*); *ask me first* and *do it if I asked* ask the person on
   the page — `host.ask` in React, else the browser's `confirm` — and a call
-  they do not allow is refused; *do it* is done.
+  they do not allow is refused; *do it* is done. The runtime decides by the
+  same rule what its model is shown: a function no rule names, or *leave it
+  to me*, is never offered to it, and one the page does not name in the
+  Appspec neither. A call it makes is run by the page, never by the
+  runtime — the runtime hands it back to the page — so the page's decision
+  is the one that stands.
 
 In React, `AppEmbed` takes the same as `host`:
 `{ context: () => ({ user, page }), userToken, functions, onEvent, ask, onWindowPort }`.
@@ -543,8 +548,10 @@ same cases: the page loads with its conversation ready; a visitor's message
 is answered (one model request per mount); a component — a table, asked for
 — is drawn in that answer; an address a visitor may not talk to shows
 ai-agents' refusal and asks no model. `e2e/global-setup.ts` probes the
-landing (`E2E_LANDING_URL`), the rebuilt bundle at its `/embed/` (the loader
-and `datalayer-app-main.js`), the visitors' runtime (`E2E_DATALAYER_API`),
+landing (`E2E_LANDING_URL`), the bundle at its `/embed/` or at
+`E2E_EMBED_URL` (the loader, and `datalayer-app-main.js` answered with
+`Access-Control-Allow-Origin`, which a host page on another origin needs to
+import it), the visitors' runtime (`E2E_DATALAYER_API`),
 the address open to visitors (`E2E_ADDRESS`) and the one that refuses
 (`E2E_REFUSED_ADDRESS`, `demo-accounting`) before any browser opens; what is
 not reachable skips its cases with a sentence.
