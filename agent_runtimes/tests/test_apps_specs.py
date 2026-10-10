@@ -421,7 +421,8 @@ def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
     """STUDIO E-06, E-11: an Appspec's samples, published with it by Datalayer
     — Quote Calculator's price list, a decision's alternatives — are in the
     generated catalogue, and a runtime given the application keeps them."""
-    from agentspecs.apps import dump_app, get_app as spec_of
+    from agentspecs.apps import dump_app
+    from agentspecs.apps import get_app as spec_of
 
     from agent_runtimes.loop.apps.loading import load_app
 
