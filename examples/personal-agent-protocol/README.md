@@ -12,6 +12,7 @@ feature while keeping protocol secrets outside model context.
 | [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete Session upgrade and partial consent       | Lifecycle evidence; all secrets withheld     |
 | [`dpop-proof`](./dpop-proof/)                           | Method, URL, token, nonce and replay binding         | Verified policy; all proof material withheld |
 | [`session-lifecycle`](./session-lifecycle/)             | Start, nonce retry, and renewal over HTTP            | Lifecycle evidence; credentials withheld     |
+| [`browser-session`](./browser-session/)                 | Controlled form POST and one-use browser assertion   | Browser policy; all credentials withheld     |
 
 The first two examples use Agent Runtimes' Python
 `PapPersonalAgentCapability`. The remaining examples use PAP primitives inside
