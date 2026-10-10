@@ -51,11 +51,31 @@ export const CUSTOM_RESERVED_NAMES = [
 
 /**
  * Where its module is loaded from: an address served over HTTPS, or this
- * machine while it is written. A file of the application's folder waits for
- * its packaging (P-29).
+ * machine while it is written.
  */
 export const CUSTOM_SOURCE =
   /^(?:https:\/\/[A-Za-z0-9.-]+(?::\d+)?|http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?)\/\S*$/;
+
+/**
+ * Or a file of the application's folder, by its path in it (LOOP P-29): a
+ * `.js` or `.mjs` file inside the folder — no absolute path, no `..`.
+ * Packaged with the application (`loop apps package`), it is served by the
+ * server its package is installed beside (`LoopAppFiles`).
+ */
+export const CUSTOM_FILE =
+  /^(?:\.\/)?(?:[A-Za-z0-9_][A-Za-z0-9_.-]*\/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\.m?js$/;
+
+/** Whether a component's module is a file of its application's folder. */
+export const isFolderSource = (source: string): boolean =>
+  !/^[a-z][a-z0-9+.-]*:/.test(source) && CUSTOM_FILE.test(source);
+
+/**
+ * The address a file of the folder is fetched from, under the base its
+ * package's page side said (`LoopAppFiles`).
+ */
+export const folderSourceUrl = (source: string, base: string): string =>
+  new URL(source.replace(/^\.\//, ''), base.endsWith('/') ? base : `${base}/`)
+    .href;
 
 /** A Subresource Integrity hash: the module as it was reviewed. */
 export const INTEGRITY = /^sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}$/;
@@ -155,9 +175,11 @@ export function customComponentProblems(
     problems.push(`${said} says what it is for, under \`description\`.`);
   }
   if (!/^[a-z][a-z0-9+.-]*:/.test(component.source)) {
-    problems.push(
-      `${said}'s module “${component.source}” is a file of the application's folder: it is drawn once the application is packaged with it (LOOP P-29); give the address of a built ES module.`,
-    );
+    if (!CUSTOM_FILE.test(component.source)) {
+      problems.push(
+        `${said}'s module “${component.source}” is a file of the application's folder, named by its path in it: a \`.js\` or \`.mjs\` file inside the folder (\`gauge.js\`, \`components/gauge.js\`).`,
+      );
+    }
   } else if (!CUSTOM_SOURCE.test(component.source)) {
     problems.push(
       `${said}'s module “${component.source}” is loaded over \`https://\`, or from \`http://localhost\` while it is written.`,
@@ -258,6 +280,15 @@ export function customComponentProblems(
   }
   return problems;
 }
+
+/**
+ * Whether an application's page side is packaged (LOOP P-29): a component
+ * its developer wrote is a file of its folder.
+ */
+export const hasFolderModules = (app: Pick<AppSpec, 'interface'>): boolean =>
+  (app.interface.customComponents ?? []).some(component =>
+    isFolderSource(component.source),
+  );
 
 /** What stops the components an application's developer wrote, in sentences. */
 export function customComponentsProblems(app: AppSpec): string[] {

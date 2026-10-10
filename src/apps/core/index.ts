@@ -765,6 +765,10 @@ export {
   type A2uiComponentContribution,
 } from './a2uiComponents';
 
+// Where the files of an application's folder are served (LOOP P-29): said
+// by the page side its package carries.
+export { LoopAppFiles, type AppFilesContribution } from './appFiles';
+
 /**
  * The per-example chat extras a host feeds the loop's conversation live.
  *

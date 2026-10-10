@@ -443,5 +443,8 @@ export {
   customComponentOf,
   customComponentProblems,
   customComponentsProblems,
+  folderSourceUrl,
+  hasFolderModules,
+  isFolderSource,
   pageOutputShows,
 } from './apps';

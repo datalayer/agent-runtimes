@@ -1205,6 +1205,68 @@ def apps_build(
     )
 
 
+@app.command(name="package")
+def apps_package(
+    path: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="The application, an app.py file."
+    ),
+    out: Path = typer.Option(
+        None,
+        "--out",
+        "-o",
+        help="Where to write its project and its wheel; dist/ beside it when unsaid.",
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Write its project again when it is there."
+    ),
+    no_wheel: bool = typer.Option(
+        False, "--no-wheel", help="Write its project, and do not build its wheel."
+    ),
+) -> None:
+    """Package an app.py with its page side, as a Reactor extension (LOOP P-29).
+
+    Writes the Python distribution loop-app-<id> — the application's module,
+    and the files of its folder its components name, under
+    share/datalayer/reactor/extensions/loop-app-<id>/ — then builds its wheel.
+    Installed beside the server that runs the application (`loop apps run
+    --web`, `app.mount`), its page draws them from that server.
+    """
+    from agent_runtimes.loop.apps.build import is_python
+    from agent_runtimes.loop.apps.loading import AppNotRunnable
+    from agent_runtimes.loop.apps.packaging import NotPackageable, package
+
+    if not is_python(path):
+        console.print(
+            f"[red]✗[/red] {path} is not an app.py: a spec has no folder to package."
+        )
+        raise typer.Exit(1)
+    try:
+        packaged = package(
+            path,
+            out if out is not None else path.parent / "dist",
+            force=force,
+            wheel=not no_wheel,
+        )
+    except (AppNotRunnable, NotPackageable) as refused:
+        for problem in refused.problems:
+            console.print(f"[red]✗[/red] {problem}", highlight=False)
+        raise typer.Exit(1)
+    carried = (
+        f" with {', '.join(packaged.files)}"
+        if packaged.files
+        else ", no file of its folder"
+    )
+    console.print(
+        f"[green]✓[/green] {packaged.name} written to {packaged.project}{carried}.",
+        highlight=False,
+    )
+    if packaged.wheel is not None:
+        console.print(
+            f"[green]✓[/green] {packaged.wheel} built: pip install {packaged.wheel}",
+            highlight=False,
+        )
+
+
 def _watcher(path: Path, base_url: str) -> Any:
     """What builds the application again when its file changed, and reconfigures the runtime."""
     from agent_runtimes.loop.apps.loading import AppNotRunnable

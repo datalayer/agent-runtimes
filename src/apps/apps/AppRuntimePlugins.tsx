@@ -23,6 +23,15 @@
  *   its own runtime, and the pair is whole: nothing stands down, nothing is
  *   blank.
  *
+ * An application whose components are files of its folder (LOOP P-29) has
+ * its page side in its package, installed beside the server that runs it:
+ * once on a runtime, the page reads it there with Reactor's
+ * `bootstrapExtensions` (`<base>/plugins/frontend-extensions`) and installs
+ * it into the running platform — the extension `loop-app-<id>`, the
+ * application's, its page-side plugin saying where the folder's files are
+ * (`LoopAppFiles`). A runtime with no package of it answers nothing, and its
+ * components say so.
+ *
  * A plugin of its own, with no backend requirement, so that it keeps
  * listening while the application's plugin is stood down. It renders nothing.
  *
@@ -30,7 +39,11 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
+import {
+  bootstrapExtensions,
+  definePlugin,
+  type ReactorPlugin,
+} from '@datalayer/reactor';
 import {
   registerReactor,
   useBackendPluginStream,
@@ -55,7 +68,14 @@ const runningOf =
     names.includes(name);
 
 /** Follows the application's runtime, and tells the page what it holds. */
-export function AppRuntimePlugins({ appId }: { appId: string }): null {
+export function AppRuntimePlugins({
+  appId,
+  pageSide = false,
+}: {
+  appId: string;
+  /** Its page side is packaged, to be read from its runtime (P-29). */
+  pageSide?: boolean;
+}): null {
   const reactor = useReactorPlatform();
   const service = useOptionalSandboxService();
   const target = useSignalValue(service?.target ?? IDLE_SANDBOX_TARGET_SIGNAL);
@@ -94,14 +114,34 @@ export function AppRuntimePlugins({ appId }: { appId: string }): null {
   useBackendPluginStream(runtime ? appPluginsBase(runtime, appId) : undefined, {
     onState,
   });
+
+  // Its packaged page side, installed from its runtime (P-29): the
+  // application's extension only, whatever else the server holds.
+  useEffect(() => {
+    if (!runtime || !pageSide) {
+      return;
+    }
+    let current = true;
+    void bootstrapExtensions(appPluginsBase(runtime, appId)).then(found => {
+      for (const extension of found.filter(item => item.name === name)) {
+        if (current) {
+          void reactor.install(extension);
+        }
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [reactor, runtime, appId, name, pageSide]);
   return null;
 }
 
 /** The plugin that follows an application's runtime for its page. */
 export function defineAppRuntimePlugin(
   appId: string,
+  { pageSide = false }: { pageSide?: boolean } = {},
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
-  const Follow = () => <AppRuntimePlugins appId={appId} />;
+  const Follow = () => <AppRuntimePlugins appId={appId} pageSide={pageSide} />;
   return definePlugin({
     name: APP_RUNTIME_PLUGIN_NAME,
     displayName: 'Its runtime',

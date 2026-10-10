@@ -850,8 +850,9 @@ await session.show(session.component("now", "Gauge", label="Now", value=42), whe
   reviewed as a component of the catalog is: agentspecs refuses a name of the
   catalog's, a property of a type the renderer cannot tell apart, a binding
   that is also a property, an example its schema refuses, and a module that
-  is not a built ES module over `https://` (or `http://localhost` while you
-  write it). Where it is used, its properties are checked against its schema
+  is neither a built ES module over `https://` (or `http://localhost` while
+  you write it) nor a `.js` or `.mjs` file inside the application's folder
+  (no absolute path, no `..`). Where it is used, its properties are checked against its schema
   — by `app.component`, `session.component`, `session.show` and the page.
 - `session.component(id, component, **props)` makes a node of the catalog or
   of the application's own; `session.ui` keeps the catalog's typed calls.
@@ -870,14 +871,63 @@ await session.show(session.component("now", "Gauge", label="Now", value=42), whe
   }
   ```
 
-  A React component is bundled into such a module with its React; a module
-  of the application's folder, built and served with it, is LOOP P-29.
+  A React component is bundled into such a module with its React. The module
+  may also be a file of the application's folder, `source="components/dial.js"`:
+  see [Its page side, as a package](#its-page-side-as-a-package).
 - It runs in a sandboxed frame of no origin (`sandbox="allow-scripts"`): no
   cookie, no storage, no access to the page around it, and no request leaves
   it — the page fetches the module without credentials, checks it against
   `integrity`, and hands it over. It is given its properties and what it
   shows, and what it sends is taken under a name of `sends` only.
 
+### Its page side, as a package
+
+A component of your own can be a file of the application's folder — no
+server of yours to host it, no address to keep. The application then ships
+its page side the way a Reactor extension ships its browser half: in its
+wheel.
+
+```text
+dial-desk/
+  app.py               # app.custom_component("Dial", source="components/dial.js", ...)
+  components/dial.js   # export default function draw(root, { props, send }) { ... }
+```
+
+```bash
+loop apps package app.py                  # writes dist/loop-app-dial-desk/ and builds its wheel
+pip install dist/loop_app_dial_desk-0.0.1-py3-none-any.whl
+loop apps run app.py --web                # or app.mount(api) in your own FastAPI
+```
+
+- `loop apps package` writes the distribution `loop-app-<id>`: the
+  application's module (`loop_app_<id>.app`, so `from loop_app_dial_desk.app
+  import app` mounts it), and the files its components name under
+  `share/datalayer/reactor/extensions/loop-app-<id>/`, beside a generated
+  page-side module. It is advertised under Reactor's
+  `datalayer.reactor.extensions` entry point, by the name of the
+  application's plugin pair, `loop-app-<id>`. A file its components name that
+  is not in the folder is refused.
+- The server running the application finds it installed by that name — when
+  the page asks, so a wheel installed beside a running server is found on
+  the next load — and serves it beside the application's plugin state, as
+  Reactor's routes serve an extension:
+  `GET <server>/api/v1/apps/<id>/plugins/frontend-extensions` and
+  `GET <server>/api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>`.
+  Nothing outside the package's directory is served, and nothing of another
+  application.
+- The page reads it with Reactor's `bootstrapExtensions` and installs it into
+  the application's extension: its page-side plugin, `loop-app-<id>/page`,
+  needs the application's server plugin and says where the folder's files
+  are served. A component of the folder is fetched from there and drawn in
+  its sandboxed frame like any other: its module still never runs in the
+  page.
+- On a server where its package is not installed, the component says so in
+  its place: *Its module “components/dial.js” is a file of its application's
+  folder: it is drawn once the server running the application serves its
+  package.*
+
+`examples/packaged-page-side/` is such an application: a widget's page whose
+output is drawn by its folder's `components/dial.js`.
 ### Messages that change
 
 A message sent is not final:
@@ -1720,7 +1770,15 @@ surface and checked, of one application only, shown inline, in a panel and
 with an answer, and drawing a widget's page's output; the page side — its
 review, its palette entry, its frame, its module fetched and checked, what it
 sends — is tested with vitest (`app-custom-components`). No custom component
-has been drawn in a browser.
+has been drawn in a browser by the page's own code yet.
+`agent_runtimes/tests/test_app_packaging.py` covers a page side packaged:
+the project and the wheel `loop apps package` writes, a file it names that
+is missing refused, and the wheel laid out as pip installs it served beside
+the application's plugin state — its record, its files, nothing outside its
+directory and nothing for another application; the page reading it with
+Reactor's `bootstrapExtensions`, installing it, and drawing a component of
+the folder from where it says is tested with vitest
+(`app-packaged-page-side`).
 `agent_runtimes/tests/test_app_uploads.py` covers what a person sends: the
 kinds, sizes and counts of `uploads` refused with 422 in sentences, an image
 given to the model whole, `@app.file`, and a file waiting for what the code

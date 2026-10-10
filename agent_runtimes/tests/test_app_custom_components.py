@@ -59,8 +59,13 @@ def test_a_component_is_declared_in_its_spec_and_reviewed() -> None:
     assert own[0].source == GAUGE["source"] and own[0].height == 240
     assert app.document["interface"]["custom_components"][0]["shows"] == ["value"]
     # Refused in agentspecs' sentences, before anything runs.
+    # A file of its folder is named by its path in it (LOOP P-29).
     with pytest.raises(ValueError, match="is a file of the application's folder"):
-        app.custom_component("Dial", **{**GAUGE, "source": "./dial.js"})
+        app.custom_component("Dial", **{**GAUGE, "source": "../dial.js"})
+    assert (
+        app.custom_component("Dial", **{**GAUGE, "source": "./dial.js"})["source"]
+        == "./dial.js"
+    )
     with pytest.raises(
         ValueError, match="the component Table is a component of the catalog"
     ):

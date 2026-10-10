@@ -306,7 +306,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
         source: {
           description:
-            "The address of its module, a built ES module whose default export draws it (`export default function (root, {props, send})`): over `https://`, or `http://localhost` while it is written. A module of the application's folder waits for its packaging (LOOP P-29)",
+            "Its module, a built ES module whose default export draws it (`export default function (root, {props, send})`): an address over `https://`, or `http://localhost` while it is written; or a file of the application's folder, by its path in it (`gauge.js`), packaged with the application and served by the server its package is installed beside (LOOP P-29)",
           title: 'Source',
           type: 'string',
         },

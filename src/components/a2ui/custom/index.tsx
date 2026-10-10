@@ -19,7 +19,15 @@
  */
 
 import type { JSX } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import {
   createComponentImplementation,
   type ReactA2uiComponentProps,
@@ -30,7 +38,12 @@ import type {
   AppCustomComponentSpec,
   AppSpec,
 } from '../../../types/agentspecs';
-import { customComponentEntry } from '../../../apps/apps/customComponents';
+import {
+  customComponentEntry,
+  folderSourceUrl,
+  isFolderSource,
+} from '../../../apps/apps/customComponents';
+import { LoopAppFiles } from '../../../apps/core/appFiles';
 import { componentSchemaOf } from '../datalayer/schema';
 import { BlockFrame, Problem } from '../datalayer/parts';
 import {
@@ -68,20 +81,63 @@ export function givenToFrame(
 const setterOf = (name: string): string =>
   `set${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
+/**
+ * Where the files of an application's folder are served, as its package's
+ * page side said (`LoopAppFiles`, LOOP P-29); undefined until it says it —
+ * while its runtime starts, or for ever on a server it is not installed
+ * beside.
+ */
+export function useAppFilesBase(appId: string): string | undefined {
+  const reactor = useOptionalReactorPlatform();
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      reactor ? reactor.subscribe(listener) : () => undefined,
+    [reactor],
+  );
+  const revision = useSyncExternalStore(
+    subscribe,
+    () => reactor?.getRevision() ?? 0,
+  );
+  return useMemo(
+    () =>
+      reactor
+        ?.getContributions(LoopAppFiles)
+        .find(entry => entry.value.app === appId)?.value.base,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reactor, revision, appId],
+  );
+}
+
 /** A component its developer wrote, in its frame. */
 export function CustomComponentView({
   component,
   props,
   fetcher,
+  appId = '',
 }: {
   component: AppCustomComponentSpec;
   props: CustomProps;
   /** How its module is fetched; the page's `fetch` unless given (tests). */
   fetcher?: typeof fetch;
+  /**
+   * Its application's id: where a module that is a file of its folder is
+   * served is said for that application (LOOP P-29).
+   */
+  appId?: string;
 }): JSX.Element {
   const frame = useRef<HTMLIFrameElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [frameReady, setFrameReady] = useState(false);
+  // Its module's address: its own, or a file of its folder under the base
+  // its package's page side said — none until said.
+  const folder = isFolderSource(component.source);
+  const base = useAppFilesBase(appId);
+  const source = folder
+    ? base
+      ? folderSourceUrl(component.source, base)
+      : undefined
+    : component.source;
   const srcDoc = useMemo(
     () => customFrameDocument(frameNonce(), component.name),
     [component.name],
@@ -105,19 +161,7 @@ export function CustomComponentView({
         return;
       }
       if (said.kind === 'ready') {
-        customModule(component.source, component.integrity, fetcher)
-          .then(code => {
-            tell({
-              tag: FRAME_TAG,
-              kind: 'props',
-              props: givenToFrame(component, propsRef.current),
-            });
-            tell({ tag: FRAME_TAG, kind: 'module', code });
-            setReady(true);
-          })
-          .catch((error: unknown) =>
-            setProblem(error instanceof Error ? error.message : String(error)),
-          );
+        setFrameReady(true);
       } else if (said.kind === 'failed') {
         setProblem(`It could not be drawn: ${said.message}.`);
       } else if (said.kind === 'send') {
@@ -137,7 +181,36 @@ export function CustomComponentView({
     };
     window.addEventListener('message', listen);
     return () => window.removeEventListener('message', listen);
-  }, [component, fetcher]);
+  }, [component]);
+
+  // Its module, handed over once the frame is ready and its address known.
+  useEffect(() => {
+    if (!frameReady || !source) {
+      return;
+    }
+    let current = true;
+    customModule(source, component.integrity, fetcher)
+      .then(code => {
+        if (!current) {
+          return;
+        }
+        tell({
+          tag: FRAME_TAG,
+          kind: 'props',
+          props: givenToFrame(component, propsRef.current),
+        });
+        tell({ tag: FRAME_TAG, kind: 'module', code });
+        setReady(true);
+      })
+      .catch((error: unknown) => {
+        if (current) {
+          setProblem(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [frameReady, source, component, fetcher]);
 
   useEffect(() => {
     if (ready) {
@@ -152,6 +225,11 @@ export function CustomComponentView({
       testId={`custom-${component.name}`}
     >
       {problem ? <Problem>{problem}</Problem> : null}
+      {!problem && folder && !source ? (
+        <Problem>
+          {`Its module “${component.source}” is a file of its application's folder: it is drawn once the server running the application serves its package (loop apps package, installed beside that server).`}
+        </Problem>
+      ) : null}
       <iframe
         ref={frame}
         title={component.description || component.name}
@@ -178,6 +256,7 @@ export function customImplementation(
   component: AppCustomComponentSpec,
   version = '0.0.0',
   fetcher?: typeof fetch,
+  appId = '',
 ): ReactComponentImplementation {
   const entry = customComponentEntry(component, version);
   const api = { name: component.name, schema: componentSchemaOf(entry) };
@@ -186,6 +265,7 @@ export function customImplementation(
       component={component}
       props={props}
       fetcher={fetcher}
+      appId={appId}
     />
   );
   return createComponentImplementation(
@@ -196,11 +276,11 @@ export function customImplementation(
 
 /** The renderers of the components an application's developer wrote, for its page alone. */
 export function customImplementations(
-  app: Pick<AppSpec, 'interface' | 'version'>,
+  app: Pick<AppSpec, 'id' | 'interface' | 'version'>,
   fetcher?: typeof fetch,
 ): ReactComponentImplementation[] {
   return (app.interface.customComponents ?? []).map(component =>
-    customImplementation(component, app.version, fetcher),
+    customImplementation(component, app.version, fetcher, app.id),
   );
 }
 

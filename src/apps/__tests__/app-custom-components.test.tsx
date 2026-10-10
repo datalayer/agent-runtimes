@@ -99,7 +99,7 @@ describe('a component its developer wrote, reviewed', () => {
     const cases: Array<[Record<string, unknown>, string]> = [
       [{ name: 'Table' }, 'The component Table is a component of the catalog'],
       [{ name: 'gauge' }, 'a word starting with a capital letter'],
-      [{ source: './gauge.js' }, "is a file of the application's folder"],
+      [{ source: '../gauge.js' }, "is a file of the application's folder"],
       [
         { source: 'http://elements.example.com/g.js' },
         'is loaded over `https://`',

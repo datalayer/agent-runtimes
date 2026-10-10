@@ -27,6 +27,10 @@ Features demonstrated:
 - MCP Codemode examples: [ai/agent-codemode/examples/codemode_example.py](ai/agent-codemode/examples/codemode_example.py), [ai/agent-codemode/examples/codemode_patterns_example.py](ai/agent-codemode/examples/codemode_patterns_example.py)
 - Agent Skills examples: [ai/agent-skills/examples/skills_example.py](ai/agent-skills/examples/skills_example.py), [ai/agent-skills/examples/skills/SKILL.md](ai/agent-skills/examples/skills/SKILL.md)
 
+## Python applications
+
+- 🧭 [Packaged page side](./packaged-page-side/app.py): an application whose component is a file of its folder, packaged with `loop apps package` as a Reactor extension and drawn from the server it is installed beside (LOOP P-29).
+
 ## Datalayer Client Examples
 
 These examples demonstrate the Datalayer Client and runtime workflows.

@@ -99,6 +99,7 @@ import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import { ChatLanguage } from '../../chat/ChatLanguage';
 import { defineAppRuntimePlugin } from './AppRuntimePlugins';
+import { hasFolderModules } from './customComponents';
 import { appPluginPair } from './pluginPair';
 
 /** The id of an agent or a Cog, without its version. */
@@ -399,8 +400,10 @@ export function appPreset(
   return {
     plugins: [
       defineAppPlugin(app, shown),
-      // What its runtime holds, told to the page (F-15).
-      defineAppRuntimePlugin(app.id),
+      // What its runtime holds, told to the page (F-15), and its packaged
+      // page side read from it when its components are files of its folder
+      // (P-29).
+      defineAppRuntimePlugin(app.id, { pageSide: hasFolderModules(app) }),
       ...(withPage ? [defineAppPagePlugin(shown), ...blocks] : []),
       // The components its developer wrote (LOOP P-17): blocks of its page
       // and renderers of its page, its elements and its answers — its own.

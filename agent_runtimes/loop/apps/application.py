@@ -785,8 +785,10 @@ class Application:
         ``app.output("load", "Gauge", label="Load")`` draws a page's output
         with it. Its module is a built ES module, its default export drawing
         it (``export default function (root, {props, send})``), loaded in a
-        sandboxed frame of no origin; a file of the application's folder
-        waits for its packaging (P-29).
+        sandboxed frame of no origin. It may be a file of the application's
+        folder (``source="gauge.js"``): ``loop apps package`` puts it in the
+        application's wheel, and the server it is installed beside serves it
+        to its page (P-29).
 
         Parameters
         ----------
@@ -795,7 +797,8 @@ class Application:
         description : str
             What it is for, in a sentence.
         source : str
-            The address of its module: ``https://``, or ``http://localhost``.
+            Its module: an address over ``https://``, or ``http://localhost``;
+            or a file of the application's folder, by its path in it.
         props : mapping, optional
             Its properties, the JSON Schema of an object; none when unsaid.
         shows : sequence of str

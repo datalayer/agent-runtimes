@@ -13,7 +13,12 @@ follows the runtime's with Reactor's ``useBackendPluginStream``, which reads
 - ``GET /api/v1/apps/<id>/plugins/state``: Reactor's snapshot — a revision,
   and the application's own plugin when the runtime holds it;
 - ``GET /api/v1/apps/<id>/events/stream``: the same snapshot as server-sent
-  events, one whenever the revision moves.
+  events, one whenever the revision moves;
+- ``GET /api/v1/apps/<id>/plugins/frontend-extensions``: its page side when
+  its package is installed here (LOOP P-29), as Reactor's route of that name
+  answers — none, or the extension ``loop-app-<id>``;
+- ``GET /api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>``: a file
+  of it, as Reactor's route of that name serves one.
 
 Answered to anybody, as Reactor's are — a browser's ``EventSource`` sends no
 token — and about one application only, named by whoever asks: a runtime that
@@ -24,11 +29,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Dict
+from typing import Any, AsyncIterator, Dict, List
 
-from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse
+from reactor.web import _CONTENT_TYPES as EXTENSION_CONTENT_TYPES
 
+from agent_runtimes.loop.apps.packaging import (
+    app_extension_file,
+    app_frontend_extensions,
+)
 from agent_runtimes.loop.apps.plugins import app_plugins_state, revision_of
 
 router = APIRouter(prefix="/apps", tags=["apps"])
@@ -38,6 +48,33 @@ router = APIRouter(prefix="/apps", tags=["apps"])
 async def plugins_state(app_id: str) -> Dict[str, Any]:
     """Which of the application's plugins this runtime holds, and the revision."""
     return app_plugins_state(app_id)
+
+
+@router.get("/{app_id}/plugins/frontend-extensions")
+async def frontend_extensions(app_id: str) -> List[Dict[str, Any]]:
+    """The application's page side installed here, looked up now (LOOP P-29).
+
+    Reactor's answer for one extension, the application's: its entry is
+    relative to ``/api/v1/apps/<id>``, where the page reads it from.
+    """
+    return app_frontend_extensions(app_id)
+
+
+@router.get("/{app_id}/reactor-extensions/{extension}/{asset_path:path}")
+async def extension_file(app_id: str, extension: str, asset_path: str) -> FileResponse:
+    """A file of the application's installed page side (LOOP P-29).
+
+    Served as Reactor serves an extension's: from its directory alone, and
+    only of the types a browser is handed from there; anything else is not
+    found, as a file that is not there.
+    """
+    resolved = app_extension_file(app_id, extension, asset_path)
+    media_type = (
+        EXTENSION_CONTENT_TYPES.get(resolved.suffix.lower()) if resolved else None
+    )
+    if resolved is None or media_type is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(resolved, media_type=media_type)
 
 
 @router.get("/{app_id}/events/stream")

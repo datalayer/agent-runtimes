@@ -2413,7 +2413,13 @@ class AppCustomComponentSpec(BaseModel):
     sends: List[str] = Field(
         default_factory=list, description="What it sends back: bindings"
     )
-    source: str = Field(..., description="The address of its built ES module")
+    source: str = Field(
+        ...,
+        description=(
+            "Its built ES module: an address, or a file of the application's "
+            "folder served from its package (LOOP P-29)"
+        ),
+    )
     integrity: str = Field(
         default="", description="Its Subresource Integrity hash (`sha384-…`)"
     )

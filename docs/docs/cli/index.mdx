@@ -290,6 +290,33 @@ loop apps run app.py --web --embed-dir ../agent-runtimes/dist-embed   # a build 
 See [In a browser page, with hot
 reload](/apps/python-applications#in-a-browser-page-with-hot-reload).
 
+### Package an application with its page side
+
+`loop apps package app.py` packages an application whose components are
+files of its folder (`source="components/dial.js"`) as a Python distribution,
+`loop-app-<id>`, and builds its wheel: the application's module, and those
+files under `share/datalayer/reactor/extensions/loop-app-<id>/`, advertised
+as a Reactor extension of the application's name. Installed beside the
+server that runs the application — `loop apps run app.py --web`, or your own
+FastAPI with `app.mount` — its page draws them from that server.
+
+```bash
+loop apps package app.py                       # dist/loop-app-<id>/ and dist/loop_app_<id>-<version>-py3-none-any.whl
+pip install dist/loop_app_dial_desk-0.0.1-py3-none-any.whl
+loop apps run app.py --web
+```
+
+| Option | What it does |
+| --- | --- |
+| `--out`, `-o <dir>` | Where its project and its wheel are written: `dist/` beside it by default. |
+| `--force` | Write its project again when it is there. |
+| `--no-wheel` | Write its project, and do not build its wheel. |
+
+It is refused, with the reasons, for a file its components name that is not
+in its folder; building the wheel needs `build` and `hatchling` in the
+environment (`pip install build hatchling`). See [Its page side, as a
+package](/apps/python-applications#its-page-side-as-a-package).
+
 ### An application served over A2A
 
 `loop apps run <app>.yaml --a2a` serves the application over A2A, at

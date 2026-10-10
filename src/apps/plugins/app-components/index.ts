@@ -70,7 +70,12 @@ export function defineAppComponentsPlugin(
         {
           id: component.name,
           app: app.id,
-          implementation: customImplementation(component, app.version, fetcher),
+          implementation: customImplementation(
+            component,
+            app.version,
+            fetcher,
+            app.id,
+          ),
         },
         { id: component.name },
       ),
