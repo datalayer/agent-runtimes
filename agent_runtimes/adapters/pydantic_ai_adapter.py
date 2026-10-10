@@ -641,6 +641,8 @@ class PydanticAIAdapter(BaseAgent):
                     logger.warning(
                         f"PydanticAIAdapter [{self._name}]: {origin} MCP server '{server_id}' not running, skipping"
                     )
+                    # Started again for the next turn (STUDIO H-03).
+                    lifecycle_manager.retry_in_background(server_id)
 
         elif codemode_enabled:
             logger.info(

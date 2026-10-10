@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import re
+import time
 import traceback
 from contextlib import AsyncExitStack
 from pathlib import Path
@@ -34,6 +35,9 @@ MCP_SERVER_STARTUP_TIMEOUT = float(
 )
 MCP_SERVER_HANDSHAKE_TIMEOUT = MCP_SERVER_STARTUP_TIMEOUT
 MCP_SERVER_MAX_ATTEMPTS = 3
+#: How long a server that is not running waits before a turn that needs it
+#: starts it again (`MCPLifecycleManager.retry_in_background`).
+RETRY_SECONDS = 60.0
 
 #: An argument that sends a bearer token: empty, a remote server answers 401
 #: and ``mcp-remote`` falls back to an interactive OAuth sign-in, in a browser
@@ -121,6 +125,10 @@ class MCPLifecycleManager:
         self._catalog_servers: dict[str, MCPServerInstance] = {}  # From catalog
         self._failed_servers: dict[str, str] = _Failures()  # server_id -> error
         self._starting_servers: set[str] = set()  # server_ids currently starting
+        # What each server was first started with, to start it the same way
+        # again, and when it was last tried again (`retry_in_background`).
+        self._extra_envs: dict[str, dict[str, str] | None] = {}
+        self._retried_at: dict[str, float] = {}
         self._expected_servers: set[str] = set()  # server_ids declared in mcp.json
         self._initialization_event: asyncio.Event | None = None
         self._initialization_started: bool = False
@@ -331,6 +339,8 @@ class MCPLifecycleManager:
         """
         logger.info(f"🔄 start_server called for '{server_id}'")
 
+        if extra_env is not None or server_id not in self._extra_envs:
+            self._extra_envs[server_id] = extra_env
         self._starting_servers.add(server_id)
         try:
             return await self._start_server_inner(server_id, config, extra_env)
@@ -716,6 +726,39 @@ class MCPLifecycleManager:
             except Exception as e:
                 logger.warning(f"Error stopping MCP server '{server_id}': {e}")
                 return True
+
+    def retry_in_background(self, server_id: str) -> bool:
+        """
+        Start a server that is not running again, in the background, at most
+        once every :data:`RETRY_SECONDS`, the way it was first started.
+
+        A server that failed at a runtime's start was otherwise skipped by
+        every turn after: Disaster Assessment's `earthdata` started 11 ms
+        before the runtime's key was in its environment, its header expanded
+        empty, and the deployment answered without its tools for hours
+        (STUDIO H-03, 2026-10-10). The turn that finds it stopped goes on
+        without it; the next one finds it running.
+
+        Returns
+        -------
+        bool
+            Whether a start was asked for.
+        """
+        if server_id in self._starting_servers:
+            return False
+        now = time.monotonic()
+        if now - self._retried_at.get(server_id, float("-inf")) < RETRY_SECONDS:
+            return False
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return False
+        self._retried_at[server_id] = now
+        logger.info(f"MCP server '{server_id}' is not running: started again")
+        loop.create_task(
+            self.start_server(server_id, extra_env=self._extra_envs.get(server_id))
+        )
+        return True
 
     def get_running_server(
         self, server_id: str, is_config: bool | None = None
