@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.104
+
+- **An application's code runs in the page** (STUDIO E-11): turned in the page, its agent runs its code through `execute_code` in the browser sandbox (`AppBrowserSandbox`), its sample documents written to `/tmp/inputs/` first and a file given on the page put in the sandbox — so a visitor signed out tries *Quote Calculator* and *Report from a File* with only model calls leaving the page. A host closing the conversation refuses the widget's own Run too.
+- **`samples`** (STUDIO E-06, E-11; agentspecs 0.0.71, now required): an example's sample documents and a decision's alternatives, in the types, the Appspec reader and writer and the catalogue; the four decisions decide with `cloudflare:wrk/typesafe/jev`.
+- **A visitor's refusal said once in the transcript** (STUDIO H-03): the A2A spans read a chunk without `append` as the artifact whole, as the runtime's last chunk is. Test: agentInspector +1.
+
 ## 1.3.103
 
 - **A kept deployment's principal is renewed** (STUDIO A-08): a deployment kept always on that only answers over A2A called nothing about an hour after its agent was made, because its principal's token expired and nothing asked for it again. `POST /api/v1/apps/principal` now asks ai-agents again with the owner's key, whatever the runtime holds, and ai-agents' keeper calls it every half hour.
