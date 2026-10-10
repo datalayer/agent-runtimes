@@ -54,7 +54,7 @@
     },
     "scripts": {
         "apply:patches": "bash scripts/apply-patches.sh",
-        "build": "npm run clean && gulp resources-to-lib && tsc -b && cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
+        "build": "npm run clean && gulp resources-to-lib && tsc -b && cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build && npm run build:embed",
         "build-storybook": "storybook build",
         "build:all": "npm run build && npm run build:examples",
         "build:embed": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --config vite.embed.config.ts",

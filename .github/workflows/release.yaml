@@ -55,19 +55,19 @@ jobs:
       - name: Install
         run: npm install --workspaces --include-workspace-root --no-audit --no-fund
 
-      # `lib/` for the npm package, `dist/` (the Vite app) for the wheel.
-      - name: Build the frontend
-        run: npm run build
-
+      # `lib/` for the npm package, `dist/` (the Vite app) for the wheel, and
       # `dist-embed/` for the npm package: the `<datalayer-app>` element's
       # script, the module and chunks it imports, and its stylesheet (STUDIO
       # D-08), versioned with the runtime it talks to. The landing copies it
-      # from the package into `/embed/`. The build prints every file's size and
-      # fails when the initial load is over its budget (vite.embed.config.ts).
-      - name: Build the embed bundle
+      # from the package into `/embed/`. The embed's build prints every file's
+      # size and fails when the initial load is over its budget
+      # (vite.embed.config.ts).
+      - name: Build the frontend and the embed bundle
+        run: npm run build
+
+      - name: Check the embed bundle
         run: |
           set -euo pipefail
-          npm run build:embed
           test -s dist-embed/datalayer-app.js
           test -s dist-embed/datalayer-app-main.js
           test -s dist-embed/datalayer-app.css
