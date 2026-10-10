@@ -368,3 +368,35 @@ async def test_create_approval_does_not_reuse_executing_record() -> None:
         assert record.status == "pending"
     finally:
         await _reset_approvals()
+
+
+@pytest.mark.asyncio
+async def test_a_visitors_turn_refuses_a_call_that_waits_for_a_person() -> None:
+    """Nobody is there to approve for a visitor: the call is refused in the
+    visitor's sentence and the run goes on, rather than ending an A2A task
+    whose run takes no DeferredToolRequests (STUDIO H-03)."""
+    from agent_runtimes.loop.apps.visitors import enter_visitor_run, leave_visitor_run
+
+    await _reset_approvals()
+    token = enter_visitor_run("visitor-1")
+    try:
+        requests = DeferredToolRequests(
+            approvals=[
+                ToolCallPart(
+                    tool_name="runtime_sensitive_echo",
+                    args={"text": "hello"},
+                    tool_call_id="tool-v",
+                )
+            ]
+        )
+        result = await _capability().handle_deferred_tool_calls(None, requests=requests)
+        assert result is not None
+        denied = result.approvals["tool-v"]
+        assert isinstance(denied, ToolDenied)
+        assert denied.message == (
+            "Without an account nobody is asked: `runtime_sensitive_echo` waits "
+            "for a person, so it did nothing."
+        )
+    finally:
+        leave_visitor_run(token)
+        await _reset_approvals()

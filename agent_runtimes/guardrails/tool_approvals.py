@@ -1081,6 +1081,25 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         if not requests.approvals:
             return None
 
+        # A visitor's turn has nobody to ask: a call that waits for a person
+        # is refused in the visitor's sentence and the run goes on — deferred,
+        # it ended an A2A task whose run takes no `DeferredToolRequests`
+        # (Disaster Assessment's *Storm* on the home page, STUDIO H-03).
+        from agent_runtimes.loop.apps.rules import ASK_FIRST
+        from agent_runtimes.loop.apps.visitors import in_visitor_turn, visitor_refusal
+
+        if in_visitor_turn():
+            refused: dict[str, bool | ToolDenied] = {
+                call.tool_call_id: ToolDenied(
+                    visitor_refusal(call.tool_name, ["read"], ASK_FIRST)
+                )
+                for call in requests.approvals
+                if getattr(call, "tool_call_id", None)
+            }
+            if hasattr(requests, "build_results"):
+                return requests.build_results(approvals=refused)
+            return DeferredToolResults(approvals=refused)
+
         manager = self._get_manager()
         approvals: dict[str, bool | ToolDenied] = {}
         now = datetime.now(timezone.utc)
