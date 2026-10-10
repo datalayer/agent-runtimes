@@ -395,6 +395,9 @@ what it says:
   Appspec neither. A call it makes is run by the page, never by the
   runtime — the runtime hands it back to the page — so the page's decision
   is the one that stands.
+- **Set any time.** `context` and `functions` may be set as soon as the
+  element is written, before the script has defined it: what was set is
+  taken over when it is.
 
 In React, `AppEmbed` takes the same as `host`:
 `{ context: () => ({ user, page }), userToken, functions, onEvent, ask, onWindowPort }`.

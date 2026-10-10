@@ -273,6 +273,39 @@ const attributeValue = (value: string): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
+/**
+ * The element's properties a page may set (D-10, D-08): what it passes, the
+ * functions it offers and the embed token.
+ */
+export const EMBED_PROPERTIES = ['context', 'functions', 'token'] as const;
+
+/**
+ * Hand the element's own setters what the page set before it was defined.
+ *
+ * The script is loaded `async` and its module is imported after it, so a page
+ * that sets `element.functions` or `element.context` right after writing the
+ * element sets them on an element not yet upgraded: each becomes a property
+ * of that object, which shadows the class's accessor once it is defined, and
+ * the application was never offered the page's functions (seen 2026-10-10,
+ * STUDIO D-10: the run sent no tool). Called as the element is constructed.
+ */
+export function adoptPropertiesSetEarly(
+  element: object,
+  names: readonly string[] = EMBED_PROPERTIES,
+): string[] {
+  const adopted: string[] = [];
+  const record = element as Record<string, unknown>;
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(element, name)) {
+      const value = record[name];
+      delete record[name];
+      record[name] = value;
+      adopted.push(name);
+    }
+  }
+  return adopted;
+}
+
 /** What a snippet says beside the application's id. */
 export type EmbedSnippetOptions = {
   /** Where Datalayer is: the script's origin, and the element's. */

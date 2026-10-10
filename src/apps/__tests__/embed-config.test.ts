@@ -22,6 +22,7 @@ import { emptyAppspec } from '../apps/appspec';
 import {
   EMBED_OBSERVED_ATTRIBUTES,
   EmbedAttributeError,
+  adoptPropertiesSetEarly,
   checkedFont,
   embedLookOf,
   embedSnippetOf,
@@ -265,5 +266,53 @@ describe('the theme inside the element', () => {
     expect(css).toContain(loopControlsCss.trim().split('\n')[0]);
     // A floating mode takes no room in the page.
     expect(css).toContain(':host(:not([data-embed-mode="inline"]))');
+  });
+});
+
+describe('properties a page sets before the element is defined (D-10)', () => {
+  it('hands them to the class setters, which an own property shadowed', () => {
+    const offered: Record<string, unknown> = {};
+    let passed: unknown = undefined;
+    class Element {
+      get functions() {
+        return offered;
+      }
+      set functions(value: Record<string, unknown>) {
+        Object.assign(offered, value);
+      }
+      get context() {
+        return passed;
+      }
+      set context(value: unknown) {
+        passed = value;
+      }
+    }
+    // What a page does before the module defines the element: plain
+    // properties on the object, which hide the accessors of its class.
+    const element = Object.create(Element.prototype) as Record<string, unknown>;
+    const openTicket = () => ({ ticket: 1 });
+    Object.defineProperty(element, 'functions', {
+      value: { open_ticket: openTicket },
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    Object.defineProperty(element, 'context', {
+      value: { user: { name: 'Ada' } },
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    expect(Object.keys(offered)).toEqual([]);
+
+    expect(adoptPropertiesSetEarly(element)).toEqual(['context', 'functions']);
+
+    expect(Object.getOwnPropertyNames(element)).toEqual([]);
+    expect(offered).toEqual({ open_ticket: openTicket });
+    expect(passed).toEqual({ user: { name: 'Ada' } });
+  });
+
+  it('leaves an element nothing was set on as it is', () => {
+    expect(adoptPropertiesSetEarly({})).toEqual([]);
   });
 });

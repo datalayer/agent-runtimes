@@ -23,6 +23,8 @@
       &mode=inline                                          inline, bubble, panel or assistant
       &token=…                                              an embed token, for a private application
       &server=…                                             an agent-runtimes server of the host's own
+      &spec=…                                               an Appspec's address (YAML or JSON), run instead of app
+      &user-token=…                                         a user token the host's server signed (D-21)
 
   Without a token, a public application runs for the visitor as it does on
   Datalayer's own pages: the element reads what it is, mints a visitor's
@@ -77,7 +79,11 @@
         min-height: 320px;
       }
       #log {
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font:
+          12px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         background: rgba(0, 0, 0, 0.06);
@@ -146,17 +152,28 @@
 
         // The element, with what the query says.
         var app = document.createElement('datalayer-app');
-        app.setAttribute('app', read('app'));
+        // An Appspec at an address (`spec`) runs instead of `app`.
+        if (params.get('spec')) {
+          app.setAttribute('spec', params.get('spec'));
+        } else {
+          app.setAttribute('app', read('app'));
+        }
         app.setAttribute('origin', read('origin'));
         app.setAttribute('api', read('api'));
         app.setAttribute('mode', read('mode'));
-        ['token', 'server', 'accent', 'theme', 'height', 'language'].forEach(
-          function (name) {
-            if (params.get(name)) {
-              app.setAttribute(name, params.get(name));
-            }
+        [
+          'token',
+          'server',
+          'user-token',
+          'accent',
+          'theme',
+          'height',
+          'language',
+        ].forEach(function (name) {
+          if (params.get(name)) {
+            app.setAttribute(name, params.get(name));
           }
-        );
+        });
 
         // What the page passes (D-10): read by the application's agent with
         // `host_context`, for the names its Appspec lists.
@@ -169,19 +186,27 @@
         app.functions = {
           open_ticket: function (args) {
             say('open_ticket called', args);
-            return { ticket: Math.floor(Math.random() * 1000), title: args.title };
+            return {
+              ticket: Math.floor(Math.random() * 1000),
+              title: args.title,
+            };
           },
         };
-        ['message', 'action', 'decision', 'token-expired', 'window-message'].forEach(
-          function (name) {
-            app.addEventListener(name, function (event) {
-              say(name, event.detail);
-            });
-          }
-        );
+        [
+          'message',
+          'action',
+          'decision',
+          'token-expired',
+          'window-message',
+        ].forEach(function (name) {
+          app.addEventListener(name, function (event) {
+            say(name, event.detail);
+          });
+        });
         document.getElementById('mount').appendChild(app);
         say('mounted', {
-          app: read('app'),
+          app: params.get('spec') ? undefined : read('app'),
+          spec: params.get('spec') || undefined,
           mode: read('mode'),
           embed: read('embed'),
           api: read('api'),

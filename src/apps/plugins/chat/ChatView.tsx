@@ -2101,6 +2101,16 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               disableReason={disabledReason}
               protocol={protocol}
               /*
+                The page's own tools — a host page's functions (LOOP D-10), an
+                example's client tool — run by this chat when the agent is on a
+                server: sent with each run and executed here when it calls
+                one. An in-page agent is handed them in its protocol instead
+                (above); given to both, each would run twice. Without this an
+                embedded application's run carried no tool at all (seen
+                2026-10-10: `toolsForRequest: []`).
+              */
+              frontendTools={inPage ? undefined : chatExtras.frontendTools}
+              /*
                 The model this view is on, as the chat's opening pick.
 
                 `ChatBase` keeps the model it sends with, and opened on the

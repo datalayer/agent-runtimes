@@ -79,6 +79,7 @@ import {
   EMBED_OBSERVED_ATTRIBUTES,
   EMBED_TAG,
   EmbedAttributeError,
+  adoptPropertiesSetEarly,
   embedLookOf,
   inlineHeightOf,
   languageOf,
@@ -331,6 +332,8 @@ export function defineDatalayerAppElement(
       super();
       this.attachShadow({ mode: 'open' });
       this.onMessage = this.onMessage.bind(this);
+      // What the page set before the element was defined (D-10).
+      adoptPropertiesSetEarly(this);
     }
 
     /** An embed token, the attribute's. Set it to hand a new one over. */
