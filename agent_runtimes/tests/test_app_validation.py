@@ -649,3 +649,73 @@ def test_attach_says_the_refusal_in_its_sentence() -> None:
             version=3,
             report=report,
         )
+
+
+def test_the_judge_reads_what_its_code_kept() -> None:
+    """STUDIO E-01: what its code kept (``session.record``) is on the lines a
+    judge reads — an insight as feedback, a result as an output of its own —
+    and the runtime's own output of a turn is not."""
+    entries = [
+        {
+            "kind": "feedback",
+            "summary": "An insight",
+            "payload": {"insight": "Setup", "quote": "It took a week."},
+        },
+        {"kind": "output", "summary": "Done.", "payload": {"length": 5}},
+        {
+            "kind": "output",
+            "summary": "The interview's result",
+            "payload": {"goal": "Churn", "insights": [], "open_questions": []},
+        },
+        {"kind": "output", "summary": "Desk showed a table", "payload": {"shows": []}},
+    ]
+    assert what_it_did(entries) == [
+        'Its code kept An insight: {"insight": "Setup", "quote": "It took a week."}',
+        "Its code kept The interview's result: "
+        '{"goal": "Churn", "insights": [], "open_questions": []}',
+    ]
+
+
+def test_a_test_that_is_a_conversation_is_played_turn_by_turn() -> None:
+    """STUDIO E-01: Customer Interview's tests are conversations — its consent
+    answered by a choice, its goal by a message, its insight and result by its
+    actions — played in one session each, in this process, and judged whole on
+    what it said and what its code kept."""
+    from agent_runtimes.loop.apps.build import load_application
+
+    catalogue = Path(pytest.importorskip("agentspecs.apps").__file__).parent
+    application = load_application(catalogue / "customer-interview" / "app.py")
+    asked: List[str] = []
+
+    def judge(prompt: str, _model: str) -> str:
+        asked.append(prompt)
+        return json.dumps({"score": 1.0, "passed": True, "explanation": ""})
+
+    report = asyncio.run(
+        validation.run_tests(
+            application,
+            judge=judge,
+            agent=lambda spec: Agent(
+                by_prompt(
+                    {
+                        "I stopped using it when the trial ended.": "What did you expect from it?"
+                    }
+                )
+            ),
+        )
+    )
+    assert [case.state for case in report.cases] == [PASSED] * 4
+    declined, interviewed, saved, finished = asked
+    assert "The person chooses: No" in declined
+    assert "Understood: I ask nothing more. Thank you." in declined
+    assert "This interview was not consented to; I ask nothing more." in declined
+    assert "Its code kept" not in declined
+    assert "What did you expect from it?" in interviewed
+    assert "Its code kept An insight" in saved
+    assert "The price was fine, but the setup took a week." in saved
+    assert "Its code kept The interview's result" in finished
+    assert "We want to learn why people leave after the trial." in finished
+    assert report.cases[0].ask.splitlines() == [
+        "The person chooses: No",
+        "The person says: Ask me why I stopped after the trial.",
+    ]

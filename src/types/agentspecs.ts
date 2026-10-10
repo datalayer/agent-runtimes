@@ -799,8 +799,30 @@ export interface AppTestFileSpec {
   text: string;
 }
 
+/**
+ * One turn of a test's conversation: what the person says, the option of a
+ * choice they pick, or an action of its code they press with its payload —
+ * exactly one of `say`, `choose` and `press`.
+ */
+export interface AppTestTurnSpec {
+  /** What the person says. */
+  say?: string;
+  /** The option they pick, of the choice it asked. */
+  choose?: string;
+  /** The action of its code they press, by name (`@app.action`). */
+  press?: string;
+  /** What the action is given with its press. */
+  payload?: Record<string, unknown>;
+}
+
 export interface AppTestCaseSpec {
+  /** What it is asked, in one message; empty when it has `turns`. */
   ask: string;
+  /**
+   * The conversation it is had in, turn by turn, in place of one message,
+   * judged whole. Absent for a case of one message.
+   */
+  turns?: AppTestTurnSpec[];
   expect: string;
   /**
    * The function of its code that decides the case, by name (LOOP P-06:

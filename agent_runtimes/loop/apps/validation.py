@@ -238,7 +238,13 @@ class RecordUnavailable(Exception):
 
 
 #: The entries of a record the test is graded on: what it did, not that it ran.
-GRADED_KINDS: Tuple[str, ...] = ("tool_call", "decision", "check", "approval")
+GRADED_KINDS: Tuple[str, ...] = (
+    "tool_call",
+    "decision",
+    "check",
+    "approval",
+    "feedback",
+)
 
 #: How many lines of a record the judge is handed, and how long each is.
 MAX_RECORD_LINES = 60
@@ -266,11 +272,17 @@ def _line(text: str) -> str:
     )
 
 
+#: The keys of an ``output`` entry the runtime writes of a turn (its length,
+#: how it stopped, what it showed): one without them is what its code kept.
+RUNTIME_OUTPUT_KEYS = frozenset({"length", "error", "schedule", "shows"})
+
+
 def what_it_did(entries: Sequence[Dict[str, Any]]) -> List[str]:
     """The record of one conversation, in lines a judge reads: each tool it
     called and with what, each decision of its rules, each check that did
-    not let it pass, each person it asked and what they answered, and how
-    the turn stopped when it did — in the order they happened.
+    not let it pass, each person it asked and what they answered, what its
+    code kept (``session.record``: feedback, a result), and how the turn
+    stopped when it did — in the order they happened.
 
     Entries are as ai-agents keeps them (``{kind, summary, payload}``,
     `record.AppRecorder`); the others (its session, its runs, its turns) say
@@ -310,6 +322,13 @@ def what_it_did(entries: Sequence[Dict[str, Any]]) -> List[str]:
             lines.append(
                 _line(f"The turn stopped: {summary.removeprefix(STOPPED).strip()}")
             )
+        elif kind == "feedback" or (
+            kind == "output" and payload and not RUNTIME_OUTPUT_KEYS & set(payload)
+        ):
+            # What its code kept (`session.record`): an insight, a result —
+            # what a test that is a conversation is judged on (STUDIO E-01).
+            kept = json.dumps(payload, ensure_ascii=False, default=str)
+            lines.append(_line(f"Its code kept {summary or kind}: {kept}"))
     if len(lines) > MAX_RECORD_LINES:
         left = len(lines) - MAX_RECORD_LINES
         lines = lines[:MAX_RECORD_LINES] + [f"(and {left} more entries)"]
@@ -557,7 +576,7 @@ def _conversation_of(case: Any, had: Any) -> Conversation:
             steps.append(event)
     messages = tuple(shown.values())
     return Conversation(
-        ask=case.ask,
+        ask=case.in_words(),
         answer="\n".join(message.text for message in messages),
         messages=messages,
         steps=tuple(steps),
@@ -595,7 +614,7 @@ async def result_of(
     """
     from agent_runtimes.loop.apps.session import call
 
-    ask, expect, code = case.ask, case.expect, getattr(case, "code", "") or ""
+    ask, expect, code = case.in_words(), case.expect, getattr(case, "code", "") or ""
     stopped = _stopped_by(had)
     if stopped is not None:
         check, sentence = stopped

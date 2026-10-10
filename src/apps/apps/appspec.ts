@@ -55,6 +55,7 @@ import type {
   AppProfileSpec,
   AppRuleSpec,
   AppStarterSpec,
+  AppTestTurnSpec,
   AppTranslationSpec,
   AppFormSchema,
   AppSpec,
@@ -182,6 +183,22 @@ const texts = (value: unknown): string[] =>
 
 const records = (value: unknown): Data[] =>
   Array.isArray(value) ? value.filter(isData) : [];
+
+/**
+ * One turn of a test's conversation as its document says it (STUDIO E-01):
+ * what it says, chooses or presses, with a press's payload; nothing it does
+ * not say.
+ */
+function parseTestTurn(turn: Data): AppTestTurnSpec {
+  return {
+    ...(text(turn.say) ? { say: text(turn.say) } : {}),
+    ...(text(turn.choose) ? { choose: text(turn.choose) } : {}),
+    ...(text(turn.press) ? { press: text(turn.press) } : {}),
+    ...(isData(turn.payload) && Object.keys(turn.payload).length
+      ? { payload: { ...turn.payload } }
+      : {}),
+  };
+}
 
 const oneOf = <T extends string>(
   value: unknown,
@@ -918,6 +935,10 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       evalset: text(tests.evalset),
       cases: records(tests.cases).map(testCase => ({
         ask: text(testCase.ask),
+        // A conversation, turn by turn, when it is one (STUDIO E-01).
+        ...(records(testCase.turns).length
+          ? { turns: records(testCase.turns).map(parseTestTurn) }
+          : {}),
         expect: text(testCase.expect),
         // Decided by its code (LOOP P-06), when it names the function.
         ...(text(testCase.code) ? { code: text(testCase.code) } : {}),
@@ -1385,7 +1406,12 @@ export function dumpAppspec(app: AppSpec): Data {
         .list(
           'cases',
           app.tests.cases.map(testCase => ({
-            ask: testCase.ask,
+            // One message, or a conversation in its place (STUDIO E-01).
+            ...(testCase.turns?.length
+              ? {
+                  turns: testCase.turns.map(turn => parseTestTurn({ ...turn })),
+                }
+              : { ask: testCase.ask }),
             expect: testCase.expect,
             ...(testCase.code ? { code: testCase.code } : {}),
             ...(testCase.files?.length

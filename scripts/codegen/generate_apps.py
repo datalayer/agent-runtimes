@@ -131,6 +131,15 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             # A case given files names them; the others say nothing of them.
             if not case.get("files"):
                 case.pop("files", None)
+            # A conversation says its turns, each by what it does (`say`,
+            # `choose`, or `press` with its payload); a case of one message
+            # says none, and its `ask` is empty when it has them.
+            if not case.get("turns"):
+                case.pop("turns", None)
+            for turn in case.get("turns", []):
+                for key in ("say", "choose", "press", "payload"):
+                    if not turn.get(key):
+                        turn.pop(key, None)
         # Components of its own: said only when it has some.
         if not spec["interface"].get("custom_components"):
             spec["interface"].pop("custom_components", None)

@@ -3,6 +3,7 @@
 
 """Pydantic models for chat functionality and agent specifications."""
 
+import json
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -2585,10 +2586,38 @@ class AppTestFileSpec(BaseModel):
     text: str
 
 
-class AppTestCaseSpec(BaseModel):
-    """An example of what an application should do, in plain words."""
+class AppTestTurnSpec(BaseModel):
+    """One turn of a test's conversation: what the person says, the option of
+    a choice they pick, or an action of its code they press, with its payload."""
 
-    ask: str
+    say: str = ""
+    choose: str = ""
+    press: str = ""
+    payload: Dict[str, Any] = Field(default_factory=dict)
+
+    def in_words(self) -> str:
+        """The turn as a person reads it in a test's conversation."""
+        if self.say.strip():
+            return f"The person says: {self.say.strip()}"
+        if self.choose.strip():
+            return f"The person chooses: {self.choose.strip()}"
+        given = json.dumps(self.payload, ensure_ascii=False) if self.payload else ""
+        return f"The person presses {self.press}" + (f" with {given}" if given else "")
+
+
+class AppTestCaseSpec(BaseModel):
+    """An example of what an application should do, in plain words: one
+    message (``ask``), or a short conversation (``turns``) judged whole."""
+
+    ask: str = Field(
+        default="", description="What it is asked, in one message; none with turns"
+    )
+    turns: List[AppTestTurnSpec] = Field(
+        default_factory=list,
+        description=(
+            "The conversation it is had in, turn by turn, in place of one message"
+        ),
+    )
     expect: str
     code: str = Field(
         default="",
@@ -2601,6 +2630,12 @@ class AppTestCaseSpec(BaseModel):
         default_factory=list,
         description="Text files it is given with what it is asked, in the message after it",
     )
+
+    def in_words(self) -> str:
+        """What the test asks, as a person reads it: its message, or its turns."""
+        if not self.turns:
+            return self.ask
+        return "\n".join(turn.in_words() for turn in self.turns)
 
 
 class AppVerifiedSpec(BaseModel):

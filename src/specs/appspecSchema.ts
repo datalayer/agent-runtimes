@@ -1301,12 +1301,23 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppTestCase: {
       additionalProperties: false,
       description:
-        "An example of what the application should do, in plain words.\n\nWhen plain words are not enough, its code decides it (LOOP P-06): `code`\nnames the function of the application's `app.py` that is given the\nconversation and says whether it passed — `@app.test` writes it. `expect`\nstill says it in words: without its file, the case is judged by them.",
+        "An example of what the application should do, in plain words.\n\nA case is one message (`ask`) or a short conversation (`turns`): what\nthe person says, chooses and presses, in order, each after the\napplication answered the turn before — and what it should do is judged\non the whole conversation.\n\nWhen plain words are not enough, its code decides it (LOOP P-06): `code`\nnames the function of the application's `app.py` that is given the\nconversation and says whether it passed — `@app.test` writes it. `expect`\nstill says it in words: without its file, the case is judged by them.",
       properties: {
         ask: {
-          description: 'What it is asked',
+          default: '',
+          description:
+            'What it is asked, in one message; none when it has turns',
           title: 'Ask',
           type: 'string',
+        },
+        turns: {
+          description:
+            'The conversation it is had in, turn by turn, in place of one message: what the person says, chooses and presses',
+          items: {
+            $ref: '#/$defs/AppTestTurn',
+          },
+          title: 'Turns',
+          type: 'array',
         },
         expect: {
           description: 'What it should do',
@@ -1331,7 +1342,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'array',
         },
       },
-      required: ['ask', 'expect'],
+      required: ['expect'],
       title: 'AppTestCase',
       type: 'object',
     },
@@ -1353,6 +1364,41 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['name', 'text'],
       title: 'AppTestFile',
+      type: 'object',
+    },
+    AppTestTurn: {
+      additionalProperties: false,
+      description:
+        "One turn of a test's conversation: what the person says, the option of a\nchoice they pick, or an action of its code they press, with its payload.\n\nEach is sent as its page sends it, after the application answered the turn\nbefore: a message, a choice answered in its option's words, an action by\nits name (``@app.action``).",
+      properties: {
+        say: {
+          default: '',
+          description: 'What the person says',
+          title: 'Say',
+          type: 'string',
+        },
+        choose: {
+          default: '',
+          description: 'The option they pick, of the choice it asked',
+          title: 'Choose',
+          type: 'string',
+        },
+        press: {
+          default: '',
+          description:
+            'The action of its code they press, by name (`@app.action`)',
+          pattern: '^(?:[A-Za-z_][A-Za-z0-9_]*)?$',
+          title: 'Press',
+          type: 'string',
+        },
+        payload: {
+          additionalProperties: true,
+          description: 'What the action is given with its press',
+          title: 'Payload',
+          type: 'object',
+        },
+      },
+      title: 'AppTestTurn',
       type: 'object',
     },
     AppTests: {

@@ -1450,3 +1450,154 @@ def test_its_code_is_told_the_settings_the_page_changed_and_the_profile(
         == "sales: Warm: Hello"
     )
     assert told == [{"tone": "Warm"}]
+
+
+class _Streamed:
+    """A response of the in-process routes, as `requests` streams one."""
+
+    def __init__(self, response: Any) -> None:
+        self.status_code = response.status_code
+        self.text = response.text
+        self.encoding = None
+
+    def __enter__(self) -> "_Streamed":
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        return None
+
+    def iter_lines(self, decode_unicode: bool = False) -> Iterator[str]:
+        return iter(self.text.splitlines())
+
+
+def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
+    runtime: Runtime, remote: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """STUDIO E-01: a test that is a conversation is played on one session of
+    the application, named by its caller, each turn sent once the one before
+    was answered — a choice in its option's words, a message, an action by its
+    name with its payload — as its page sends them; its code answers, and its
+    record is kept under that session."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.client import agent_client
+
+    sent: List[Tuple[str, Dict[str, Any]]] = []
+
+    def post(
+        url: str, *, json: Dict[str, Any], headers: Dict[str, str], **_: Any
+    ) -> Any:
+        path = url.removeprefix("http://runtime")
+        sent.append((path, json))
+        return _Streamed(remote.post(path, json=json, headers=headers))
+
+    monkeypatch.setattr(agent_client.requests, "post", post)
+    spec = dump_app(spec_of("customer-interview"))
+    runtime.make(
+        "customer-interview",
+        spec,
+        {"app_uid": "app-ci", "version": 1, "purpose": "test"},
+    )
+    played = agent_client.run_cloud_app_conversation(
+        ingress="http://runtime",
+        token="ada",
+        agent="customer-interview",
+        session="test-run-1-case-1",
+        turns=[
+            {"choose": "Yes"},
+            {"say": "Why people leave after the trial."},
+            {"say": "The setup took a week."},
+            {
+                "press": "save",
+                "payload": {"insight": "Setup", "quote": "It took a week."},
+            },
+            {"press": "finish"},
+        ],
+    )
+    assert played["status"] == "completed", played
+    assert [path for path, _ in sent] == [
+        "/api/v1/apps/sessions",
+        *["/api/v1/apps/sessions/test-run-1-case-1/messages"] * 3,
+        *["/api/v1/apps/sessions/test-run-1-case-1/actions"] * 2,
+    ]
+    assert sent[0][1] == {
+        "agent": "customer-interview",
+        "session": "test-run-1-case-1",
+        "opener": "",
+    }
+    assert sent[4][1] == {
+        "name": "save",
+        "payload": {"insight": "Setup", "quote": "It took a week."},
+    }
+    said = played["output"]["text"].splitlines()
+    assert "The person chooses: Yes" in said
+    assert (
+        'The person presses save with {"insight": "Setup", "quote": "It took a week."}'
+        in said
+    )
+    assert any(line.startswith("It says: Heard") for line in said)
+    assert [turn["status"] for turn in played["turns"]] == [
+        "waiting",
+        "waiting",
+        "completed",
+        "completed",
+        "completed",
+        "completed",
+    ]
+    assert {entry["session_uid"] for entry in runtime.entries("feedback")} == {
+        "test-run-1-case-1"
+    }
+    [result] = [
+        entry for entry in runtime.entries("output") if "goal" in entry["payload"]
+    ]
+    assert result["payload"]["goal"] == "Why people leave after the trial."
+    assert result["payload"]["insights"] == [
+        {"insight": "Setup", "quote": "It took a week."}
+    ]
+
+
+def test_a_conversation_declined_is_answered_and_a_wrong_turn_refused(
+    runtime: Runtime, remote: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """STUDIO E-01: the decline answers the consent it asks, and what it says
+    after is its code's; a turn that is not one thing is refused before
+    anything is sent."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.client import agent_client
+
+    def post(
+        url: str, *, json: Dict[str, Any], headers: Dict[str, str], **_: Any
+    ) -> Any:
+        return _Streamed(
+            remote.post(url.removeprefix("http://runtime"), json=json, headers=headers)
+        )
+
+    monkeypatch.setattr(agent_client.requests, "post", post)
+    runtime.make(
+        "customer-interview",
+        dump_app(spec_of("customer-interview")),
+        {"app_uid": "app-ci", "version": 1, "purpose": "test"},
+    )
+    played = agent_client.run_cloud_app_conversation(
+        ingress="http://runtime",
+        token="ada",
+        agent="customer-interview",
+        session="test-run-1-case-2",
+        turns=[{"choose": "No"}, {"say": "Ask me about the trial."}],
+    )
+    assert played["status"] == "completed", played
+    said = played["output"]["text"]
+    assert "May this interview be recorded" in said
+    assert "It says: Understood: I ask nothing more. Thank you." in said
+    assert said.endswith(
+        "It says: This interview was not consented to; I ask nothing more."
+    )
+    with pytest.raises(ValueError, match="says, chooses or presses one thing"):
+        agent_client.run_cloud_app_conversation(
+            ingress="http://runtime",
+            token="ada",
+            agent="customer-interview",
+            session="test-run-1-case-3",
+            turns=[{"say": "Hi", "press": "save"}],
+        )

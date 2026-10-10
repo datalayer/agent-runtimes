@@ -554,20 +554,54 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
             "evalset": "",
             "cases": [
                 {
-                    "ask": "The interviewee declines to be recorded.",
-                    "expect": "It thanks them, asks nothing more, and saves no insight.",
+                    "ask": "",
+                    "turns": [
+                        {"choose": "No"},
+                        {"say": "Ask me why I stopped after the trial."},
+                    ],
+                    "expect": "It thanks them, asks nothing more, even when they write again, and saves no insight.",
                 },
                 {
-                    "ask": "We want to learn why people leave after the trial.",
-                    "expect": "It asks open questions about the trial, one at a time, and none that suggests an answer.",
+                    "ask": "",
+                    "turns": [
+                        {"choose": "Yes"},
+                        {"say": "We want to learn why people leave after the trial."},
+                        {"say": "I stopped using it when the trial ended."},
+                    ],
+                    "expect": "It asks one open question at a time about the trial, and none that suggests an answer.",
                 },
                 {
-                    "ask": "The interviewee says the price was fine but the setup took a week.",
-                    "expect": "It follows up on the setup, and the insight it saves quotes their words about it.",
+                    "ask": "",
+                    "turns": [
+                        {"choose": "Yes"},
+                        {"say": "We want to learn why people leave after the trial."},
+                        {"say": "The price was fine, but the setup took a week."},
+                        {
+                            "press": "save",
+                            "payload": {
+                                "insight": "The setup, not the price, held them back.",
+                                "quote": "The price was fine, but the setup took a week.",
+                            },
+                        },
+                    ],
+                    "expect": "It follows up on the setup, and the insight saved quotes their words about it.",
                 },
                 {
-                    "ask": "End the interview.",
-                    "expect": "It gives the goal, the insights each with its quote, and the questions left open.",
+                    "ask": "",
+                    "turns": [
+                        {"choose": "Yes"},
+                        {"say": "We want to learn why people leave after the trial."},
+                        {"say": "The price was fine, but the setup took a week."},
+                        {
+                            "press": "save",
+                            "payload": {
+                                "insight": "The setup, not the price, held them back.",
+                                "quote": "The price was fine, but the setup took a week.",
+                            },
+                        },
+                        {"press": "finish"},
+                    ],
+                    "expect": "It records the result: the goal, the insight saved with its quote, and the questions the interview left open, which it lists.",
                 },
             ],
             "verified": {
@@ -2054,7 +2088,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "jupyter-data-analyst:0.0.1",
         "team": "",
-        "instructions": "Compute the quote in code from the inputs and the price list. Show each line of the calculation; never estimate a total.",
+        "instructions": "Before you write a word, search the price list with search_documents, for every request, even one you refuse. Then compute the quote in code from the inputs and the passages it found. Show each line of the calculation; never estimate a total. A quote needs at least one seat, and at least the plan's minimum_seats of the price list: for fewer, refuse in a sentence that says so, compute nothing, and do not ask what was meant. Call a tool only to read the price list or to compute, never to say or announce something.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -2278,7 +2312,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "jupyter-data-analyst:0.0.1",
         "team": "",
-        "instructions": "Analyse the file in code, in the sandbox. Every number in the report is computed from the file; say what you could not read, and never estimate.",
+        "instructions": "You take a CSV file only: asked for a file of another kind (a PDF, a spreadsheet, an image), refuse it in a sentence that says you take a CSV, and ask for nothing. Analyse the file in code, in the sandbox. Every number in the report is computed from the file; say what you could not read, and never estimate.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -3054,7 +3088,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "worker-document-qa:0.0.1",
         "team": "",
-        "instructions": "Answer from the documents you were given only, and cite the passage each answer rests on. When they do not hold the answer, say so and offer to hand the question to a person; never guess. Do nothing on an account: changing, refunding or deleting is a person's.",
+        "instructions": "Before you write a word, search the documents you were given, for every message, even a request you decline; answer from them only, and cite the passage each answer rests on. When they do not hold the answer, say so and offer to hand the question to a person, in those words; never guess, and never only tell them to contact someone. Do nothing on an account: changing, refunding or deleting is a person's. Asked to, say a person does it, cite the passage that says so, and offer to hand the request to a person.",
         "model": "",
         "skills": [],
         "backend_tools": [],

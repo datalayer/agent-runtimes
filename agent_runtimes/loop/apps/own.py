@@ -241,7 +241,7 @@ class Conversation:
     """What a test case's conversation was: what a test of its code is given."""
 
     ask: str
-    """What it was asked."""
+    """What it was asked: its message, or its conversation's turns in words."""
 
     answer: str
     """What it answered, its messages one after the other."""
@@ -339,7 +339,7 @@ async def run_code_tests(
                 CodeTestResult(
                     case.code,
                     case.expect,
-                    case.ask,
+                    case.in_words(),
                     NOT_RUN,
                     f"{case.code} is not in its code.",
                 )
@@ -347,7 +347,9 @@ async def run_code_tests(
             continue
         if had.error:
             results.append(
-                CodeTestResult(case.code, case.expect, case.ask, NOT_RUN, had.error)
+                CodeTestResult(
+                    case.code, case.expect, case.in_words(), NOT_RUN, had.error
+                )
             )
             continue
         shown: Dict[str, Any] = {}
@@ -359,7 +361,7 @@ async def run_code_tests(
                 steps.append(event)
         messages = tuple(shown.values())
         conversation = Conversation(
-            ask=case.ask,
+            ask=case.in_words(),
             answer="\n".join(message.text for message in messages),
             messages=messages,
             steps=tuple(steps),
@@ -372,7 +374,7 @@ async def run_code_tests(
                 CodeTestResult(
                     case.code,
                     case.expect,
-                    case.ask,
+                    case.in_words(),
                     NOT_RUN,
                     f"{case.code} raised {type(error).__name__}: {error}",
                 )
@@ -380,7 +382,11 @@ async def run_code_tests(
             continue
         results.append(
             CodeTestResult(
-                case.code, case.expect, case.ask, PASSED if passed else FAILED, why
+                case.code,
+                case.expect,
+                case.in_words(),
+                PASSED if passed else FAILED,
+                why,
             )
         )
     return results

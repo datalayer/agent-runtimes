@@ -1283,8 +1283,33 @@ export function documentShapeProblems(document: unknown): string[] {
     }
     text(tests.evalset, 'tests.evalset');
     records(tests.cases, 'tests.cases', (item, where) => {
-      required(item, 'ask', where);
+      // One message (`ask`) or a conversation (`turns`), never both (E-01).
+      const asks = typeof item.ask === 'string' && item.ask.trim() !== '';
+      const converses = Array.isArray(item.turns) && item.turns.length > 0;
+      if (asks === converses) {
+        at(where, 'asks one message (ask) or has a conversation (turns)');
+      }
+      text(item.ask, `${where}.ask`);
       required(item, 'expect', where);
+      records(item.turns, `${where}.turns`, (turn, place) => {
+        const does = ['say', 'choose', 'press'].filter(key => {
+          const said = turn[key];
+          return typeof said === 'string' && said.trim() !== '';
+        });
+        if (does.length !== 1) {
+          at(place, 'says, chooses or presses one thing');
+        }
+        if (turn.payload !== undefined && !does.includes('press')) {
+          at(`${place}.payload`, 'goes with an action pressed');
+        }
+        mapping(turn.payload, `${place}.payload`, () => undefined);
+      });
+      if (converses && item.files !== undefined) {
+        at(
+          `${where}.files`,
+          "go with the message it asks: a conversation's turns take none",
+        );
+      }
       records(item.files, `${where}.files`, (file, at) => {
         required(file, 'name', at);
         required(file, 'text', at);

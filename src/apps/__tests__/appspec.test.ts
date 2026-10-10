@@ -24,6 +24,7 @@ import {
   parseAppspec,
   retentionDays,
 } from '../apps/appspec';
+import { documentShapeProblems } from '../apps/checks';
 
 /** An application without what the catalogue adds to it. */
 const spec = (app: AppSpec): Omit<AppSpec, 'setup'> => {
@@ -226,6 +227,43 @@ describe('writing an Appspec', () => {
     const on = APP_CATALOGUE['quote-calculator'];
     expect(on.enabled).toBe(true);
     expect(dumpAppspec(on)).not.toHaveProperty('unavailable_because');
+  });
+
+  it('reads and writes a test that is a conversation, and refuses one that does not hold (E-01)', () => {
+    const interview = APP_CATALOGUE['customer-interview'];
+    const [declined, , , finished] = interview.tests.cases;
+    expect(declined.ask).toBe('');
+    expect(declined.turns).toEqual([
+      { choose: 'No' },
+      { say: 'Ask me why I stopped after the trial.' },
+    ]);
+    expect(finished.turns?.map(turn => turn.press ?? '')).toEqual([
+      '',
+      '',
+      '',
+      'save',
+      'finish',
+    ]);
+    const written = dumpAppspec(interview) as {
+      tests: { cases: Array<Record<string, unknown>> };
+    };
+    expect(written.tests.cases[0]).not.toHaveProperty('ask');
+    expect(written.tests.cases[3].turns).toEqual(finished.turns);
+    expect(parseAppspec(written).app.tests.cases).toEqual(
+      interview.tests.cases,
+    );
+    expect(documentShapeProblems(written)).toEqual([]);
+    const shaped = (cases: unknown[]) =>
+      documentShapeProblems({ ...written, tests: { cases } });
+    expect(shaped([{ expect: 'x' }])).toEqual([
+      'tests.cases.0: asks one message (ask) or has a conversation (turns).',
+    ]);
+    expect(
+      shaped([{ turns: [{ say: 'Hi', press: 'save' }], expect: 'x' }]),
+    ).toEqual(['tests.cases.0.turns.0: says, chooses or presses one thing.']);
+    expect(
+      shaped([{ turns: [{ say: 'Hi', payload: { a: 1 } }], expect: 'x' }]),
+    ).toEqual(['tests.cases.0.turns.0.payload: goes with an action pressed.']);
   });
 
   it('writes the files a test gives, and none for a test in words alone (E-01)', () => {

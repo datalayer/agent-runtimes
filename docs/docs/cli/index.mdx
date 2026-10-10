@@ -461,6 +461,22 @@ read in this order, the first that fails naming the check:
   asking* fails when the record shows the send done with nobody asked,
   whatever the answer says.
 
+**A test that is a conversation.** When one message cannot exercise what an
+application does — it asks for consent first, keeps an insight when a button
+is pressed — its test is a short conversation (`turns` in place of `ask`):
+what the person says (`say`), the option of a choice they pick (`choose`)
+and the action of its code they press (`press`, with its `payload`), in
+order. Here, each is played in the application's session: what it asks is
+answered by the next turn that says or chooses, a press runs its
+`@app.action` with the payload, the other turns are its messages. The judge
+reads the whole conversation — each turn and what it answered — and its
+record, which says what its code kept (`session.record`: an insight, a
+result). On Datalayer, the Evals engine plays it on one session of the
+application over the session API, as its page does
+(`agent_client.run_cloud_app_conversation`: the session opened under the
+test's name, then a message, a choice in its option's words, or an action by
+its name for each turn, each sent once the one before was answered).
+
 The Studio's *Run its tests* grades the same way on Datalayer: the Evals
 engine asks each test in a conversation of its own, reads that
 conversation's record back from ai-agents — a test's session keeps every

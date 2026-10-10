@@ -360,6 +360,15 @@ streamed on its own request:
 Anything else while it waits is refused with what it waits for: *Report from a
 File is waiting for an answer: Which file? (a file: .csv)*.
 
+A test that is a conversation (`tests.cases[].turns`, STUDIO E-01) is played
+on these routes, as a person on its page would: the session opened under the
+test's name (`session`, the record it is kept under) — with its first turn as
+the `opener` when that turn says something — then, for each turn once the one
+before was answered, a message (`say`; `choose`, the option in its words,
+answering a choice), or an action by its name with its payload (`press`).
+`agent_runtimes.client.agent_client.run_cloud_app_conversation` does it, on
+an agent made on AG-UI, and returns the conversation in words.
+
 ## Stop and resume
 
 **Stop** cancels the turn and leaves the session stopped. A client that goes

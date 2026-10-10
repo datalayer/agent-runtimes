@@ -460,3 +460,24 @@ def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
         "product-documentation.md",
         "returns-policy.md",
     ]
+
+
+def test_a_test_s_conversation_is_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-01: a test that is a conversation — Customer Interview's, which
+    answer its consent and press its actions — is in the generated catalogue,
+    turn by turn, and kept by a runtime; a case of one message has none."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    cases = APP_CATALOGUE["customer-interview"].tests.cases
+    assert [case.ask for case in cases] == ["", "", "", ""]
+    assert [turn.model_dump(exclude_defaults=True) for turn in cases[0].turns] == [
+        {"choose": "No"},
+        {"say": "Ask me why I stopped after the trial."},
+    ]
+    assert cases[3].turns[-1].press == "finish"
+    assert cases[3].in_words().splitlines()[-1] == "The person presses finish"
+    loaded = load_app(dump_app(spec_of("customer-interview")))
+    assert loaded.tests.cases == cases
+    assert all(not case.turns for case in APP_CATALOGUE["support-desk"].tests.cases)

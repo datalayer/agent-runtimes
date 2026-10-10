@@ -697,6 +697,10 @@ def start_session(
     return {"agent_id": agent_id, "session_uid": session_uid, "result": result}
 
 
+#: Why a session's stream that ended before its run did is a failure.
+UNFINISHED = "The session's stream ended before its run finished."
+
+
 def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
     """What a woken session's stream amounts to: its uid, and its result.
 
@@ -743,6 +747,6 @@ def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
         return uid, {
             "status": "failed",
             "output": output,
-            "failure_cause": "The session's stream ended before its run finished.",
+            "failure_cause": UNFINISHED,
         }
     return uid, {"status": "completed", "output": output}

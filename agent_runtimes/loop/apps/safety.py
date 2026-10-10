@@ -544,17 +544,26 @@ def model_judge(model: str) -> JudgeCall:
 
 
 class _SafetyChannel:
-    """What the application's sessions show, kept; a question to the person is part of its answer."""
+    """What the application's sessions show, kept; a question to the person is part of its answer.
 
-    def __init__(self) -> None:
+    A test that is a conversation (``turns``, STUDIO E-01) answers what it
+    asks with its next turn when that turn says or chooses something, as the
+    person would on its page; anything else it asks ends the conversation.
+    """
+
+    def __init__(self, turns: Sequence[Any] = ()) -> None:
         from agent_runtimes.loop.apps.session import MemoryChannel
 
         self.memory = MemoryChannel()
+        self.turns: List[Any] = list(turns)
 
     async def deliver(self, event: Any) -> None:
         await self.memory.deliver(event)
 
     async def ask(self, session_id: str, question: Any) -> Any:
+        if self.turns and not self.turns[0].press.strip():
+            turn = self.turns.pop(0)
+            return (turn.say or turn.choose).strip()
         raise _AskedThePerson(str(getattr(question, "prompt", question)))
 
 
@@ -642,6 +651,12 @@ async def converse_in_process(
     to the person ends its conversation; a turn that fails is said, and the
     other cases are asked. Its record is not sent: it is nobody's session.
 
+    A case that is a conversation (``turns``, STUDIO E-01) is played turn by
+    turn in its session: what it asks is answered by the next turn that says
+    or chooses, a turn that presses runs its code's action with its payload,
+    and the other turns are its messages; what it showed from its opening on
+    is its conversation.
+
     Raises
     ------
     AppNotRunnable
@@ -656,15 +671,23 @@ async def converse_in_process(
         factory(application.spec)  # refused here, before any case is asked
     conversed: List[Conversed] = []
     for case in cases:
-        channel = _SafetyChannel()
+        turns = list(getattr(case, "turns", None) or [])
+        channel = _SafetyChannel(turns)
         recorder = _WatchedRecorder(application.spec)
         host = AppHost(application, channel, agent=factory, recorder=recorder)
         opened = 0
         asked = ""
         try:
             session = await host.open()
-            opened = len(channel.memory.events)
-            await host.message(session, case.ask)
+            if not turns:
+                opened = len(channel.memory.events)
+                await host.message(session, case.ask)
+            while channel.turns:
+                turn = channel.turns.pop(0)
+                if turn.press.strip():
+                    await host.action(session, turn.press.strip(), dict(turn.payload))
+                else:
+                    await host.message(session, (turn.say or turn.choose).strip())
         except _AskedThePerson as question:
             asked = str(question)
         except Exception as error:  # noqa: BLE001 - a turn that fails is the outcome

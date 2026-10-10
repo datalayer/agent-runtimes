@@ -741,6 +741,154 @@ def run_cloud_agent_chat(
     return last_result
 
 
+#: What a turn of a test's conversation does: exactly one of these (STUDIO E-01).
+TURN_DOINGS = ("say", "choose", "press")
+
+
+def _conversation_turn(raw: Any) -> dict[str, Any]:
+    """A turn of a test's conversation as its case carries it, checked: what
+    it says, chooses or presses — exactly one — and a press's payload."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"A turn of a test's conversation is a mapping, not {raw!r}.")
+    does = [key for key in TURN_DOINGS if str(raw.get(key) or "").strip()]
+    if len(does) != 1:
+        raise ValueError(
+            f"A turn of a test's conversation says, chooses or presses one thing: {raw!r}."
+        )
+    payload = raw.get("payload") or {}
+    if not isinstance(payload, dict) or (payload and does[0] != "press"):
+        raise ValueError(f"A turn's payload is a mapping, with a press: {raw!r}.")
+    return {"does": does[0], "what": str(raw[does[0]]).strip(), "payload": payload}
+
+
+def _turn_in_words(turn: dict[str, Any]) -> str:
+    """A turn as the judge reads it in the conversation."""
+    if turn["does"] == "say":
+        return f"The person says: {turn['what']}"
+    if turn["does"] == "choose":
+        return f"The person chooses: {turn['what']}"
+    given = json.dumps(turn["payload"], ensure_ascii=False) if turn["payload"] else ""
+    return f"The person presses {turn['what']}" + (f" with {given}" if given else "")
+
+
+def run_cloud_app_conversation(
+    *,
+    ingress: str,
+    token: str,
+    agent: str,
+    session: str,
+    turns: list[Any],
+    timeout: int = 300,
+) -> dict[str, Any]:
+    """Play a test that is a conversation (STUDIO E-01) on an application's
+    session, as its page has it: the session opened on the session API
+    (``/api/v1/apps/sessions``, named ``session`` — the record it is kept
+    under), then each turn sent once the one before was answered — a message
+    for what the person says, the option's words for a choice they pick (as
+    the chat answers a choice), an action by name with its payload for what
+    they press (``/sessions/{uid}/actions``, the ``loop.action`` the page
+    sends). ``agent`` is the application's agent on the runtime, made on
+    AG-UI, which the session API runs on.
+
+    Answers ``status`` ``completed`` with the whole conversation in words
+    (``output.text``) and each turn with what it answered (``turns``), or
+    ``failed`` with ``failure_cause`` when a request was refused or a turn
+    failed — a question left waiting is an answer, not a failure.
+    """
+    from agent_runtimes.loop.apps.deployments import UNFINISHED, session_result
+
+    played = [_conversation_turn(raw) for raw in turns]
+    if not played:
+        raise ValueError("A test's conversation has at least one turn.")
+    base = build_agent_runtimes_base_url(ingress).rstrip("/") + "/api/v1/apps/sessions"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+        "Authorization": f"Bearer {token}",
+    }
+    lines: list[str] = []
+    said: list[dict[str, Any]] = []
+
+    def failed(kind: str, message: str, detail: str, url: str) -> dict[str, Any]:
+        return {
+            "status": "failed",
+            "output": {"text": "\n".join(lines), "raw_stream_excerpt": detail[:2000]},
+            "turns": said,
+            "failure_cause": {
+                "stage": "runtime_execution",
+                "type": kind,
+                "message": message,
+                "detail_excerpt": detail[:2000] or message,
+                "execution_url": url,
+            },
+        }
+
+    def send(
+        url: str, body: dict[str, Any], words: str, *, framed: bool = True
+    ) -> Optional[dict[str, Any]]:
+        try:
+            response = requests.post(
+                url, json=body, headers=headers, timeout=timeout, stream=True
+            )
+        except requests.exceptions.RequestException as exc:
+            message = f"The application's session could not be reached: {exc}"
+            return failed("runtime_unreachable", message, message, url)
+        with response:
+            if response.status_code >= 300:
+                detail = response.text or ""
+                return failed(
+                    "runtime_http_error",
+                    f"The session refused the turn (HTTP {response.status_code})",
+                    detail,
+                    url,
+                )
+            response.encoding = "utf-8"
+            _, result = session_result(response.iter_lines(decode_unicode=True))
+        answer = str((result.get("output") or {}).get("text") or "").strip()
+        if words:
+            lines.append(words)
+        if answer:
+            lines.append(f"It says: {answer}")
+        said.append({"turn": words, "answer": answer, "status": result["status"]})
+        cause = str(result.get("failure_cause") or "")
+        # An opening with nothing to say runs nothing of an application
+        # without code: no run frames it, and it is not a failure.
+        if result["status"] == "failed" and (framed or cause != UNFINISHED):
+            return failed("turn_failed", cause or "The turn failed.", cause, url)
+        return None
+
+    # The first thing the person says opens the session, as the page's first
+    # message does; a conversation that starts with a choice opens it bare,
+    # its code asking first.
+    first = played[0]
+    opener = first["what"] if first["does"] == "say" else ""
+    if opener:
+        played = played[1:]
+    stopped = send(
+        base,
+        {"agent": agent, "session": session, "opener": opener},
+        _turn_in_words(first) if opener else "",
+        framed=bool(opener),
+    )
+    if stopped is not None:
+        return stopped
+    for turn in played:
+        if turn["does"] == "press":
+            url = f"{base}/{session}/actions"
+            body: dict[str, Any] = {"name": turn["what"], "payload": turn["payload"]}
+        else:
+            url = f"{base}/{session}/messages"
+            body = {"text": turn["what"]}
+        stopped = send(url, body, _turn_in_words(turn))
+        if stopped is not None:
+            return stopped
+    return {
+        "status": "completed",
+        "output": {"text": "\n".join(lines), "raw_stream_excerpt": ""},
+        "turns": said,
+    }
+
+
 class AgentClient(
     _BaseDatalayerClient,
     RuntimesMixin,

@@ -639,7 +639,7 @@ def _case_tests_of(
         {
             "name": case.code,
             "expect": case.expect,
-            "ask": case.ask,
+            "ask": case.in_words(),
             "state": "",
             "check": "",
             "says": "",
