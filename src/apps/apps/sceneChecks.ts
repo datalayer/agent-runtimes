@@ -136,7 +136,6 @@ export const SECTION_WORDS: Record<SceneSection, string> = {
 export const AGENTSPECS_OWN: readonly string[] = [
   'A system reached through a connection of an application kept in your space, rather than one of the catalogue.',
   "A rehearsal's recording, which is a file beside the scenes.",
-  'What a cast may say of a member when the scene names a team of the catalogue: the catalogue the browser reads holds every member resolved (`cast_of`), so what was written by hand cannot be told from what was filled in.',
 ];
 
 const idOf = (ref: string): string => (ref ?? '').split(':')[0];
@@ -579,9 +578,6 @@ export function sceneShapeProblem(spec: SceneSpec): SceneProblem | undefined {
  * the section it is about; empty when nothing does.
  */
 export function sceneCheck(spec: SceneSpec): SceneProblem[] {
-  const problems: SceneProblem[] = [];
-  const say = (section: SceneSection, says: string) =>
-    problems.push({ says, section });
   // 1. The shape of the scene, as it is read (`parse_scene`): the first stops.
   const shape = sceneShapeProblem(spec);
   if (shape) {
@@ -598,8 +594,31 @@ export function sceneCheck(spec: SceneSpec): SceneProblem[] {
         },
       ];
     }
-    // What a cast may say when it names a team is agentspecs' (`AGENTSPECS_OWN`).
-    return sceneOverTeam(spec, castOfTeam(spec, team));
+    // A scene that names a team says how each member is played, and nothing
+    // of what each is: the team says that (`scene_problems`). The editor's text
+    // is written with an inline cast and no team, so this speaks only of a
+    // team a person wrote — never of a catalogue scene read resolved.
+    const ids = new Set(team.agents.map(member => member.id));
+    const castProblems: SceneProblem[] = [];
+    for (const said of spec.cast) {
+      if (!ids.has(said.member)) {
+        castProblems.push({
+          says: `The cast names '${said.member}', which is not a member of the team '${team.id}'.`,
+          section: 'cast',
+        });
+      } else if (
+        Boolean(said.app || said.ref || said.server) ||
+        said.role != null ||
+        said.runsIn != null ||
+        Boolean(said.talksTo?.length)
+      ) {
+        castProblems.push({
+          says: `The cast member '${said.member}' is the team's: it says its persona and its brief, nothing of what it is.`,
+          section: 'cast',
+        });
+      }
+    }
+    return [...castProblems, ...sceneOverTeam(spec, castOfTeam(spec, team))];
   }
   const entry = entryOf(spec);
   if (!spec.cast.some(member => member.member === entry)) {

@@ -211,6 +211,25 @@
       "says": []
     },
     {
+      "name": "a scene of a team that plays",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nteam: sales-and-accounting\ncast:\n  - member: sales\n    persona:\n      name: Sales\n    brief: Ask for the open invoices.\n",
+      "says": []
+    },
+    {
+      "name": "a cast under a team names someone not in it",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nteam: sales-and-accounting\ncast:\n  - member: ghost\n    persona:\n      name: Ghost\n",
+      "says": [
+        "The cast names 'ghost', which is not a member of the team 'sales-and-accounting'."
+      ]
+    },
+    {
+      "name": "a cast under a team says what a member is",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nteam: sales-and-accounting\ncast:\n  - member: sales\n    app: sales\n    persona:\n      name: Sales\n",
+      "says": [
+        "The cast member 'sales' is the team's: it says its persona and its brief, nothing of what it is."
+      ]
+    },
+    {
       "name": "a move asks a system for a tool it does not offer",
       "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: books\ncast:\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n      - who: books\n        asks: odoo-accounting\n        over: mcp\n        tool: odoo_accounting_burn_the_books\n",
       "says": [

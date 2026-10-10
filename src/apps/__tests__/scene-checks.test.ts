@@ -65,7 +65,9 @@ describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () =
     expect(table.recordedWith).toBe('scripts/record-scene-checks.py');
     expect(table.cases.length).toBeGreaterThanOrEqual(34);
     // Two of them play: a scene with nothing wrong, and a system reached through a connection.
-    expect(table.cases.filter(one => one.says.length === 0)).toHaveLength(2);
+    // Three play: a scene with nothing wrong, a system reached through a
+    // connection, and a scene of a team whose cast says personas and briefs.
+    expect(table.cases.filter(one => one.says.length === 0)).toHaveLength(3);
   });
 
   // As a person meets it: the text in, agentspecs' sentences out — its shape
@@ -178,13 +180,17 @@ describe('what stays agentspecs’', () => {
   it('names the checks the browser cannot make, so no second set of them is written', () => {
     // A tool a system does not offer is the browser's since 2026-10-10: the
     // catalogue says what each server offers and for what (\`SERVER_ACTIONS\`).
-    expect(AGENTSPECS_OWN).toHaveLength(3);
+    expect(AGENTSPECS_OWN).toHaveLength(2);
     expect(AGENTSPECS_OWN.join(' ')).not.toMatch(
       /tool a system does not offer/,
     );
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/kept in your space/);
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/recording/);
-    expect(AGENTSPECS_OWN.join(' ')).toMatch(/names a team of the catalogue/);
+    // And a cast under a team since the same day: the editor writes an inline
+    // cast, so a team in its text is one a person wrote.
+    expect(AGENTSPECS_OWN.join(' ')).not.toMatch(
+      /names a team of the catalogue/,
+    );
   });
 });
 

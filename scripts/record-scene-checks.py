@@ -453,6 +453,21 @@ rehearsal:
         - 'Sales: a table'
 """,
     },
+    # --- a cast under a team of the catalogue: personas and briefs only ---
+    # The team says who its members are; a scene that names it says how each
+    # is played, and nothing of what each is (`scene_problems`).
+    {
+        "name": "a scene of a team that plays",
+        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: sales\n    persona:\n      name: Sales\n    brief: Ask for the open invoices.\n",
+    },
+    {
+        "name": "a cast under a team names someone not in it",
+        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: ghost\n    persona:\n      name: Ghost\n",
+    },
+    {
+        "name": "a cast under a team says what a member is",
+        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: sales\n    app: sales\n    persona:\n      name: Sales\n",
+    },
     # --- a tool a system is asked for: offered, offered for this, reached ---
     # What agentspecs reads of the catalogue's servers and connections
     # (`_tool_problem`): on a move of the script, and on a rehearsal's line.
