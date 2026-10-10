@@ -751,6 +751,13 @@ export const LoopAssistantMenu =
 // the palette is read without the rest of the contracts.
 export { LoopCanvasBlock, type CanvasBlockContribution } from './canvasBlocks';
 
+// A part of an agent the Canvas may place (LOOP C-20), beside the blocks.
+export {
+  LoopCanvasPart,
+  type CanvasPartContribution,
+  type CanvasPartKind,
+} from './canvasParts';
+
 // A component an application adds to the catalog it is drawn with (LOOP
 // P-17): the components its developer wrote, for its workspace alone.
 export {
