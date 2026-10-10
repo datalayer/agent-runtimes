@@ -57,6 +57,14 @@ ODOO = """  - member: odoo
       name: Odoo
 """
 
+#: One member reaching one system of the setting, for the tool cases.
+TOOL_SCENE = (
+    HEAD
+    + "entry: {member}\ncast:\n  - member: {member}\n    app: {app}\n    role: contributor\n"
+    + "    runs_in: runtime\n    persona:\n      name: {persona}\n"
+    + "setting:\n  systems:\n    - server: {server}\n      as: Odoo\n"
+)
+
 #: Each case: its name, and the scene as it is written.
 CASES: List[Dict[str, str]] = [
     {
@@ -444,6 +452,36 @@ rehearsal:
         - 'Sales → Accounting'
         - 'Sales: a table'
 """,
+    },
+    # --- a tool a system is asked for: offered, offered for this, reached ---
+    # What agentspecs reads of the catalogue's servers and connections
+    # (`_tool_problem`): on a move of the script, and on a rehearsal's line.
+    {
+        "name": "a move asks a system for a tool it does not offer",
+        "yaml": TOOL_SCENE.format(member="books", app="accounting", persona="Accounting", server="odoo-accounting")
+        + "script:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n"
+        + "      - who: books\n        asks: odoo-accounting\n        over: mcp\n        tool: odoo_accounting_burn_the_books\n",
+    },
+    {
+        "name": "a move asks for a tool to do what it does not",
+        "yaml": TOOL_SCENE.format(member="crop", app="crop-monitoring", persona="Crop", server="earthdata")
+        + "script:\n  - id: look\n    cue:\n      say: What is there\n    expect: It is answered\n    moves:\n"
+        + "      - who: crop\n        asks: earthdata\n        over: mcp\n        tool: download_earth_data_granules\n        does: read\n",
+    },
+    {
+        "name": "a move asks for a tool no connection of the member offers",
+        "yaml": TOOL_SCENE.format(member="inbox", app="inbox-triage", persona="Inbox", server="google-workspace")
+        + "script:\n  - id: mail\n    cue:\n      say: What came in\n    expect: It is answered\n    moves:\n"
+        + "      - who: inbox\n        asks: google-workspace\n        over: mcp\n        tool: list_calendar_events\n",
+    },
+    {
+        "name": "a rehearsal expects a tool a system does not offer",
+        "yaml": TOOL_SCENE.format(member="books", app="accounting", persona="Accounting", server="odoo-accounting")
+        + "script:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n"
+        + "      - who: books\n        answers: table\n"
+        + "rehearsal:\n  beats:\n    - beat: open\n      lines:\n"
+        + "        - 'Accounting → Odoo: odoo_accounting_burn_the_books'\n"
+        + "        - 'Accounting: a table'\n",
     },
     # --- the shape of a scene: what pydantic refuses before any rule is read ---
     # Each mistyped once, as a person typing a scene by hand does. agentspecs

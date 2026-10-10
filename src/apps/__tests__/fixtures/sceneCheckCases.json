@@ -211,6 +211,34 @@
       "says": []
     },
     {
+      "name": "a move asks a system for a tool it does not offer",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: books\ncast:\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n      - who: books\n        asks: odoo-accounting\n        over: mcp\n        tool: odoo_accounting_burn_the_books\n",
+      "says": [
+        "Beat 'open': 'books' asks 'odoo-accounting' for 'odoo_accounting_burn_the_books', which odoo-accounting does not offer."
+      ]
+    },
+    {
+      "name": "a move asks for a tool to do what it does not",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: crop\ncast:\n  - member: crop\n    app: crop-monitoring\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Crop\nsetting:\n  systems:\n    - server: earthdata\n      as: Odoo\nscript:\n  - id: look\n    cue:\n      say: What is there\n    expect: It is answered\n    moves:\n      - who: crop\n        asks: earthdata\n        over: mcp\n        tool: download_earth_data_granules\n        does: read\n",
+      "says": [
+        "Beat 'look': 'crop' asks 'earthdata' for 'download_earth_data_granules' to read, and it writes."
+      ]
+    },
+    {
+      "name": "a move asks for a tool no connection of the member offers",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: inbox\ncast:\n  - member: inbox\n    app: inbox-triage\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Inbox\nsetting:\n  systems:\n    - server: google-workspace\n      as: Odoo\nscript:\n  - id: mail\n    cue:\n      say: What came in\n    expect: It is answered\n    moves:\n      - who: inbox\n        asks: google-workspace\n        over: mcp\n        tool: list_calendar_events\n",
+      "says": [
+        "Beat 'mail': 'inbox' asks 'google-workspace' for 'list_calendar_events', a tool no connection of Inbox offers."
+      ]
+    },
+    {
+      "name": "a rehearsal expects a tool a system does not offer",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: books\ncast:\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n      - who: books\n        answers: table\nrehearsal:\n  beats:\n    - beat: open\n      lines:\n        - 'Accounting → Odoo: odoo_accounting_burn_the_books'\n        - 'Accounting: a table'\n",
+      "says": [
+        "The rehearsal of 'open' expects 'odoo_accounting_burn_the_books', which odoo-accounting does not offer."
+      ]
+    },
+    {
       "name": "a cast that is a word",
       "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast: sales\n",
       "says": ["probe: cast: Input should be a valid list"]

@@ -176,8 +176,12 @@ describe('each refusal says which part of the scene it is about (S-09)', () => {
 
 describe('what stays agentspecs’', () => {
   it('names the checks the browser cannot make, so no second set of them is written', () => {
-    expect(AGENTSPECS_OWN).toHaveLength(4);
-    expect(AGENTSPECS_OWN.join(' ')).toMatch(/tool a system does not offer/);
+    // A tool a system does not offer is the browser's since 2026-10-10: the
+    // catalogue says what each server offers and for what (\`SERVER_ACTIONS\`).
+    expect(AGENTSPECS_OWN).toHaveLength(3);
+    expect(AGENTSPECS_OWN.join(' ')).not.toMatch(
+      /tool a system does not offer/,
+    );
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/kept in your space/);
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/recording/);
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/names a team of the catalogue/);

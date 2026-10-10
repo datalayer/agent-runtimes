@@ -51,6 +51,7 @@
  * @module apps/apps/sceneChecks
  */
 
+import { SERVER_ACTIONS } from '../../specs/actions';
 import { APP_CATALOGUE } from '../../specs/apps';
 import { FRAME_CATALOGUE } from '../../specs/frames';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
@@ -62,6 +63,7 @@ import type {
   SceneSystemSpec,
 } from '../../types/scenes';
 import type { TeamAgentspec, TeamSpec } from '../../types/teams';
+import { classesOf, matchesPattern } from './rules';
 
 /** The part of a scene a refusal is about: the sections of its spec. */
 export type SceneSection =
@@ -132,7 +134,6 @@ export const SECTION_WORDS: Record<SceneSection, string> = {
  * loads the scene. Said here so that no second set of them is written.
  */
 export const AGENTSPECS_OWN: readonly string[] = [
-  'A tool a system does not offer, or offers for something other than what the move asks of it.',
   'A system reached through a connection of an application kept in your space, rather than one of the catalogue.',
   "A rehearsal's recording, which is a file beside the scenes.",
   'What a cast may say of a member when the scene names a team of the catalogue: the catalogue the browser reads holds every member resolved (`cast_of`), so what was written by hand cannot be told from what was filled in.',
@@ -314,7 +315,18 @@ function moveProblems(
         `${where} '${move.who}' asks '${move.asks}' (${idOf(system.server)}), which it reaches through no connection.`,
       ];
     }
-    // A tool the system does not offer is agentspecs' (`AGENTSPECS_OWN`).
+    if (move.tool) {
+      const why = toolProblem(
+        mover,
+        personaNameOf(spec.cast, mover.member),
+        idOf(system.server),
+        move.tool,
+        move.does,
+      );
+      return why
+        ? [`${where} '${move.who}' asks '${move.asks}' for ${why}`]
+        : [];
+    }
     return [];
   }
   if (move.over === 'mcp') {
@@ -365,21 +377,79 @@ export function transcriptLineOf(
 }
 
 /** Every name a rehearsal's line may use, to the id it stands for. */
-function namesOf(spec: SceneSpec): Set<string> {
-  const names = new Set<string>([AUDIENCE]);
+function namesOf(spec: SceneSpec): Map<string, string> {
+  // Every name the transcript may use, to the id it stands for (`_names`).
+  const names = new Map<string, string>([[AUDIENCE, AUDIENCE]]);
   for (const member of spec.cast) {
-    names.add(member.member);
+    names.set(member.member, member.member);
     if (personaName(member)) {
-      names.add(personaName(member));
+      names.set(personaName(member), member.member);
     }
   }
   for (const system of spec.setting.systems) {
-    names.add(idOf(system.server));
-    names.add(system.server);
-    names.add(systemName(system));
-    names.add(systemName(system).toLowerCase());
+    const id = idOf(system.server);
+    names.set(id, id);
+    names.set(system.server, id);
+    names.set(systemName(system), id);
+    names.set(systemName(system).toLowerCase(), id);
   }
   return names;
+}
+
+/** A member's persona name in the cast, as agentspecs reads it (`_persona_name`). */
+function personaNameOf(cast: readonly CastMember[], memberId: string): string {
+  const said = cast.find(member => member.member === memberId);
+  return said ? (said.persona?.name ?? '') : memberId;
+}
+
+/**
+ * Why a tool of a system is not one a member may use, or undefined — in
+ * agentspecs' words (`_tool_problem`): a tool its application's connections
+ * to that server do not reach, a tool the server does not offer, or one it
+ * offers for something other than what the move asks of it. What a server
+ * offers is the catalogue's (`SERVER_ACTIONS`), read with the same pattern
+ * matching and the same classes as a call's rules (`rules.ts`).
+ */
+function toolProblem(
+  member: CastMember,
+  name: string,
+  serverId: string,
+  tool: string,
+  does?: string | null,
+): string | undefined {
+  const app = member.app ? APP_CATALOGUE[idOf(member.app)] : undefined;
+  if (app) {
+    const connections = app.connections.filter(
+      connection => idOf(connection.server) === serverId,
+    );
+    const reached = (only: readonly string[] | undefined) =>
+      !only?.length || only.some(pattern => matchesPattern(tool, pattern));
+    if (
+      connections.length &&
+      !connections.some(connection => reached(connection.only))
+    ) {
+      return `'${tool}', a tool no connection of ${name} offers.`;
+    }
+  }
+  const server = Object.prototype.hasOwnProperty.call(SERVER_ACTIONS, serverId)
+    ? SERVER_ACTIONS[serverId]
+    : undefined;
+  const declared = Object.keys(server?.tools ?? {});
+  if (
+    declared.length &&
+    !declared.some(
+      known => matchesPattern(known, tool) || matchesPattern(tool, known),
+    )
+  ) {
+    return `'${tool}', which ${serverId} does not offer.`;
+  }
+  if (does && server && declared.includes(tool)) {
+    const classes = classesOf(`${serverId}.${tool}`, {});
+    if (classes.length && !classes.includes(does as never)) {
+      return `'${tool}' to ${does}, and it ${classes.join(', ')}s.`;
+    }
+  }
+  return undefined;
 }
 
 /** What to show a person of a team member: its name, what it references, or its id (`display_name`). */
@@ -680,6 +750,9 @@ function sceneOverTeam(
   }
   // The rehearsal.
   const names = namesOf({ ...spec, cast: resolved as CastMember[] });
+  const systemIds = new Set(
+    spec.setting.systems.map(system => idOf(system.server)),
+  );
   const rehearsed = new Set<string>();
   for (const rehearsal of spec.rehearsal.beats) {
     if (!beats.has(rehearsal.beat)) {
@@ -710,6 +783,26 @@ function sceneOverTeam(
           say(
             'rehearsal',
             `The rehearsal of '${rehearsal.beat}' names '${name}', which is not on stage.`,
+          );
+        }
+      }
+      // A tool a member is expected to ask a system for (`_tool_problem`).
+      const whom = names.get(line.whom) ?? '';
+      const asker = (resolved as CastMember[]).find(
+        member => member.member === (names.get(line.who) ?? ''),
+      );
+      if (systemIds.has(whom) && line.detail && asker) {
+        const why = toolProblem(
+          asker,
+          personaNameOf(cast, asker.member),
+          whom,
+          line.detail,
+          null,
+        );
+        if (why) {
+          say(
+            'rehearsal',
+            `The rehearsal of '${rehearsal.beat}' expects ${why}`,
           );
         }
       }
