@@ -44,6 +44,23 @@ describe('loop.step', () => {
     });
   });
 
+  it('draws what a running step wrote so far, in place (LOOP P-31)', () => {
+    let items: DisplayItem[] = [];
+    for (const output of [null, 'SELECT', 'SELECT 1']) {
+      const read = loopStepOf(
+        event({ id: 'gen', name: 'gen_query', kind: 'tool', output }),
+      );
+      if (!read) throw new Error('not a step');
+      items = withLoopStep(items, read);
+    }
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      toolName: 'gen_query',
+      status: 'executing',
+      result: 'SELECT 1',
+    });
+  });
+
   it('draws a step as a row that runs, then ends in place, nested in its parent', () => {
     let items: DisplayItem[] = [];
     const step = (data: Record<string, unknown>) => {

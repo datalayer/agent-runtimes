@@ -805,7 +805,18 @@ class FrameworkAgent:
 
     # --- a turn ------------------------------------------------------------------
 
-    async def run(self, prompt: str, **context: Any) -> Any:
+    @staticmethod
+    def _no_model_settings(model_settings: Any) -> None:
+        """Refuse a model's settings: a framework's model is set in its own code."""
+        if model_settings is not None:
+            raise ValueError(
+                "An agent of another framework sets its model in its own code: "
+                "model_settings is for the application's own agent."
+            )
+
+    async def run(
+        self, prompt: str, *, model_settings: Any = None, **context: Any
+    ) -> Any:
         """Ask its agent, and wait for its whole answer.
 
         Returns
@@ -816,19 +827,23 @@ class FrameworkAgent:
         """
         from agent_runtimes.loop.apps.agent import Answer
 
+        self._no_model_settings(model_settings)
         holder: List[_Run] = []
         pieces = [piece async for piece in self._turn(prompt, context, holder)]
         text = "".join(pieces)
         output = holder[0].result if holder else None
         return Answer(text=text, output=text if output is None else output)
 
-    async def stream(self, prompt: str, **context: Any) -> AsyncIterator[str]:
+    async def stream(
+        self, prompt: str, *, model_settings: Any = None, **context: Any
+    ) -> AsyncIterator[str]:
         """Ask its agent, and yield its answer as it comes.
 
         A LangChain or LangGraph agent's tokens come as its model writes them;
         a LlamaIndex agent's answer when it has ended; a function's as it yields.
         Its answer comes whole when a Gate or a check of its code reads it first.
         """
+        self._no_model_settings(model_settings)
         async for piece in self._turn(prompt, context, []):
             yield piece
 

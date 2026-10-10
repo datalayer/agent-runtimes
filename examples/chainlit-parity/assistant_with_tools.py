@@ -12,8 +12,9 @@ history in the user session.
 Here: each tool is an ``@app.tool``, declared in the Appspec, its parameters
 from its typed arguments, and **decided by the application's rules** on
 every call (both only read); the agent loops, streams and keeps the history
-itself, and each call is a step of the conversation and an entry of the
-record. Nothing of Chainlit's loop is the developer's to write.
+itself, and each call is a ``tool`` step of the conversation — in this
+process as on a runtime (LOOP P-33) — and an entry of the record. Nothing of
+Chainlit's loop is the developer's to write.
 """
 
 import json
@@ -21,7 +22,7 @@ from typing import Literal, Optional
 
 from agent_runtimes.loop.apps import Application
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "example-blank:0.0.1"
 
 app = Application(
     id="assistant-with-tools",

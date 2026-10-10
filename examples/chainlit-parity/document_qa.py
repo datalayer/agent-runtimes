@@ -29,7 +29,7 @@ from agent_runtimes.loop.apps import (
     run_sync,
 )
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "example-blank:0.0.1"
 
 app = Application(
     id="document-qa",

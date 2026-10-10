@@ -19,9 +19,12 @@ from pydantic_ai import Agent
 
 from agent_runtimes.loop.apps import (
     AppHost,
+    Delta,
     FileQuestion,
     MemoryChannel,
+    Shown,
     Step,
+    StepDelta,
     UploadedFile,
     load_application,
     mounting,
@@ -98,7 +101,7 @@ async def test_document_qa_asks_for_the_file_then_answers_from_its_passages() ->
 async def test_text_to_sql_chains_three_steps_and_its_button_takes_action() -> None:
     application, host, channel = hosted(
         "text_to_sql",
-        "```sql\nSELECT * FROM orders WHERE order_id = 1003\n```",
+        ["```sql\nSELECT *", " FROM orders", " WHERE order_id = 1003\n```"],
         "Order 1003 is still processing; its delivery is due on 2026-10-06.",
     )
     session = await host.open()
@@ -110,6 +113,17 @@ async def test_text_to_sql_chains_three_steps_and_its_button_takes_action() -> N
         ("chain", "run"),
     ]
     gen_query, execute_query = steps_of(channel)[:2]
+    # The SQL written into its step as the model writes it, as Chainlit's
+    # stream_token does (LOOP P-31); the step ends with the query alone.
+    streamed = [
+        event.text
+        for event in channel.events
+        if isinstance(event, StepDelta) and event.step_id == gen_query.id
+    ]
+    assert len(streamed) > 1
+    assert "".join(streamed) == (
+        "```sql\nSELECT * FROM orders WHERE order_id = 1003\n```"
+    )
     assert gen_query.output == "SELECT * FROM orders WHERE order_id = 1003"
     assert "| 1003 | 2026-10-01 | 2026-10-06 | processing |" in execute_query.output
     answer = channel.messages[-1]
@@ -152,6 +166,14 @@ async def test_the_assistant_calls_its_tools_through_the_rules() -> None:
     assert channel.messages[-1].text == (
         "6 × 7 is 42, and it is 74 °F, sunny and windy, in San Francisco."
     )
+    # Each call a tool step, as Chainlit's cl.Step(type="tool") — in this
+    # process as on a runtime (LOOP P-33).
+    calls = [(step.name, step.kind, step.input) for step in steps_of(channel)]
+    assert calls == [
+        ("calculator", "tool", {"operation": "multiply", "operand1": 6, "operand2": 7}),
+        ("get_current_weather", "tool", {"location": "San Francisco, CA"}),
+    ]
+    assert json.loads(steps_of(channel)[0].output)["result"] == 42
     called = application.tools
     assert json.loads(called["calculator"]("divide", 1, 0)) == {
         "error": "Division by zero is not allowed"
@@ -291,3 +313,155 @@ def test_the_copilot_sits_in_the_host_page_and_talks_to_it(
     assert told["value"] == {
         "data": "Server: Window message received: Client: hello from the page"
     }
+
+
+# --- the examples of Chainlit's documentation -------------------------------------
+
+
+def heard(answers: List[str]) -> tuple:
+    """A model that answers in turn, streamed or not, and keeps what it was given."""
+    from pydantic_ai.messages import ModelResponse, TextPart
+    from pydantic_ai.models.function import FunctionModel
+
+    given: List[Any] = []
+
+    def turn(messages: List[Any], info: Any) -> str:
+        given.append((messages, info.model_settings))
+        return answers[min(len(given), len(answers)) - 1]
+
+    def model(messages: List[Any], info: Any) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(turn(messages, info))])
+
+    async def stream(messages: List[Any], info: Any) -> Any:
+        said = turn(messages, info)
+        for start in range(0, len(said), 8):
+            yield said[start : start + 8]
+
+    return FunctionModel(model, stream_function=stream), given
+
+
+def prompts_of(given: List[Any]) -> List[str]:
+    """The last thing each call was asked."""
+    return [
+        part.content
+        for messages, _ in given
+        for part in messages[-1].parts
+        if part.part_kind == "user-prompt"
+    ]
+
+
+async def test_sql_from_words_streams_the_query_with_the_settings_of_its_call() -> None:
+    application = load_application(EXAMPLES / "sql_from_words.py")
+    model, given = heard(["SELECT COUNT(*) FROM Streaming WHERE watch_minutes > 50"])
+    channel = MemoryChannel()
+    host = AppHost(application, channel, agent=lambda spec: Agent(model))
+    # Chainlit's starter.
+    [starter] = application.spec.interface.starters
+    assert starter.label == ">50 minutes watched"
+    session = await host.open()
+    await host.message(session, starter.message)
+    pieces = [event.text for event in channel.events if isinstance(event, Delta)]
+    assert pieces[0] == "```sql\n" and len(pieces) > 3
+    assert channel.messages[-1].text == (
+        "```sql\nSELECT COUNT(*) FROM Streaming WHERE watch_minutes > 50\n```"
+    )
+    # The template, filled; and the model called with the call's own settings.
+    [(messages, settings)] = given
+    assert prompts_of(given)[0].startswith("SQL tables (and columns):")
+    assert "A well-written SQL query that Compute the number" in prompts_of(given)[0]
+    assert settings["temperature"] == 0 and settings["max_tokens"] == 500
+    assert settings["stop_sequences"] == ["```"]
+
+
+class SlowFirst(MemoryChannel):
+    """A person who lets the first question wait past its time."""
+
+    async def ask(self, session_id: str, question: Any) -> Any:
+        import asyncio
+
+        if not self.questions:
+            self.questions.append(question)
+            raise asyncio.TimeoutError
+        return await super().ask(session_id, question)
+
+
+async def test_conversational_qa_asks_until_a_file_comes_and_follows_the_conversation() -> (
+    None
+):
+    application = load_application(EXAMPLES / "conversational_qa.py")
+    model, given = heard(
+        [
+            "Refunds are accepted within 30 days (source_0).",
+            "Yes: the 30 days count from delivery (source_0).",
+        ]
+    )
+    channel = SlowFirst()
+    host = AppHost(application, channel, agent=lambda spec: Agent(model))
+    channel.reply(
+        UploadedFile(
+            "policy.txt",
+            "text/plain",
+            b"Refunds are accepted within 30 days of delivery. Shipping is free.",
+        )
+    )
+    session = await host.open()
+    # Asked again once the first question went unanswered.
+    assert [q.prompt for q in channel.questions] == [
+        "Please upload a text file to begin!",
+        "Please upload a text file to begin!",
+    ]
+    assert [m.text for m in channel.messages] == [
+        "Processing `policy.txt` done. You can now ask questions!"
+    ]
+    await host.message(session, "How long do refunds take?")
+    await host.message(session, "Does that count from delivery?")
+    answer = channel.messages[-1]
+    assert answer.text.endswith("\nSources: source_0")
+    # The follow-up was asked with the conversation so far.
+    second, _ = given[-1]
+    said = json.dumps([str(message) for message in second])
+    assert "How long do refunds take?" in said
+    # The sources, beside the conversation, changed in place.
+    [panel] = channel.shown
+    assert (panel.id, panel.where, panel.title) == ("sources", "panel", "Sources")
+    assert panel.components[0]["text"].startswith("Refunds are accepted")
+    assert sum(1 for event in channel.events if isinstance(event, Shown)) == 2
+
+
+@pytest.mark.parametrize("choice", ["✅ Continue", "❌ Cancel"])
+async def test_the_pii_guard_asks_and_passes_on_only_what_is_anonymized(
+    choice: str,
+) -> None:
+    application = load_application(EXAMPLES / "pii_guard.py")
+    model, given = heard(["Noted, I will reach <PERSON_EMAIL> later."])
+    channel = MemoryChannel()
+    host = AppHost(application, channel, agent=lambda spec: Agent(model))
+    session = await host.open()
+    channel.reply(choice)
+    await host.message(
+        session,
+        "My card is 3782-8224-6310-005 and my mail john@example.com, "
+        "phone (212) 688-5500.",
+    )
+    [question] = channel.questions
+    assert (question.prompt, question.options) == (
+        "PII detected",
+        ("✅ Continue", "❌ Cancel"),
+    )
+    if choice == "❌ Cancel":
+        assert given == []
+        assert channel.messages[-1].text == "Cancelled: nothing was sent."
+        return
+    assert prompts_of(given) == [
+        "My card is <CREDIT_CARD> and my mail <EMAIL_ADDRESS>, phone <PHONE_NUMBER>."
+    ]
+
+
+async def test_nothing_personal_is_asked_about() -> None:
+    application = load_application(EXAMPLES / "pii_guard.py")
+    model, given = heard(["Hello!"])
+    channel = MemoryChannel()
+    host = AppHost(application, channel, agent=lambda spec: Agent(model))
+    session = await host.open()
+    await host.message(session, "Hello there")
+    assert channel.questions == [] and prompts_of(given) == ["Hello there"]

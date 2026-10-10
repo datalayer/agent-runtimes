@@ -261,9 +261,11 @@ refused (409), as is anything but `resume` on a stopped session.
   `CUSTOM` event named `loop.step` that says the step whole — `{id, name,
   kind, parent_id, input, output, error, started_at, ended_at}`, `ended_at`
   null while it runs, an input or output JSON does not carry said in words —
-  which the chat draws as a collapsed row, and `session.agent`
+  which the chat draws as a collapsed row. A step that streams its output
+  (`step.stream`) is said again by `loop.step` for each piece, running, its
+  `output` what it wrote so far, and the chat draws it in place. `session.agent`
   is the agent the runtime made for the application — its tools, its rules,
-  its record. A message the code changed (`message.update`) is written again,
+  its record — and each tool it calls is a `tool` step, said the same way. A message the code changed (`message.update`) is written again,
   whole, under its id, which the chat draws in place of what it said; one it
   removed, and the author of one not written by the application, are a
   `CUSTOM` event named `loop.message` — `{id, removed: true}` or

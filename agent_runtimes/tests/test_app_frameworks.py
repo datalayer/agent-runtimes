@@ -127,6 +127,27 @@ def test_a_plain_function_answers_streamed_and_is_a_step() -> None:
     asyncio.run(scenario())
 
 
+def test_a_framework_agent_is_refused_a_models_settings_in_a_sentence() -> None:
+    """``model_settings`` is the application's own agent's (LOOP P-27): a
+    framework's model is set in its own code, and saying it here is refused."""
+    app = Application(id="echo", kind="chat", agent=AGENT)
+
+    @app.agent
+    def answer(text: str) -> str:
+        return text
+
+    async def scenario() -> None:
+        host, _, _ = hosted(app)
+        session = await host.open()
+        with pytest.raises(ValueError, match="sets its model in its own code"):
+            await session.agent.run("hi", model_settings={"temperature": 0})
+        with pytest.raises(ValueError, match="sets its model in its own code"):
+            async for _ in session.agent.stream("hi", model_settings={"top_p": 1}):
+                pass
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("flavor", ["sync", "async", "generator"])
 def test_a_function_sync_or_async_returning_text_or_yielding(flavor: str) -> None:
     app = Application(id="echo", kind="chat", agent=AGENT)

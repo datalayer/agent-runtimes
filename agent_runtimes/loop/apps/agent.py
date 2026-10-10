@@ -28,6 +28,7 @@ from pydantic_ai.messages import (
     TextPartDelta,
 )
 from pydantic_ai.run import AgentRunResultEvent
+from pydantic_ai.settings import ModelSettings
 from reactor import ContributionRegistry
 
 from agent_runtimes.loop.apps.composer import ModeEffect
@@ -381,11 +382,16 @@ class AppAgent:
     choose names its application and deployment on every call, as the
     agent's own model does, so it is metered on them (STUDIO R-09)."""
 
-    def _run_kwargs(self, context: dict[str, Any]) -> dict[str, Any]:
-        """What a run is given: its turn's context and modes, the session's history."""
+    def _run_kwargs(
+        self, context: dict[str, Any], model_settings: Optional[ModelSettings] = None
+    ) -> dict[str, Any]:
+        """What a run is given: its turn's context and modes, the session's
+        history, and the model's settings for this call (LOOP P-27).
+        """
         from agent_runtimes.models.models import resolve_model_for_inference_provider
 
         return {
+            **({"model_settings": model_settings} if model_settings else {}),
             "conversation_id": self.session_id,
             "message_history": self.history or None,
             "instructions": _context(context, self.mode.instructions),
@@ -404,13 +410,23 @@ class AppAgent:
             ),
         }
 
-    async def run(self, prompt: str, **context: Any) -> Answer:
+    async def run(
+        self,
+        prompt: str,
+        *,
+        model_settings: Optional[ModelSettings] = None,
+        **context: Any,
+    ) -> Answer:
         """Ask the agent, and wait for its whole answer.
 
         Parameters
         ----------
         prompt : str
             What the agent is asked.
+        model_settings : ModelSettings, optional
+            How the model answers this call — ``{"temperature": 0,
+            "max_tokens": 500, "stop_sequences": ["```"]}`` — over the
+            agent's own (LOOP P-27).
         **context : Any
             What the agent is told for this turn, by name (``goal="…"``).
 
@@ -419,17 +435,27 @@ class AppAgent:
         Answer
             Its answer.
         """
-        result = await self.agent.run(prompt, **self._run_kwargs(context))
+        result = await self.agent.run(
+            prompt, **self._run_kwargs(context, model_settings)
+        )
         self.history = result.all_messages()
         return Answer(text=str(result.output), output=result.output)
 
-    async def stream(self, prompt: str, **context: Any) -> AsyncIterator[str]:
+    async def stream(
+        self,
+        prompt: str,
+        *,
+        model_settings: Optional[ModelSettings] = None,
+        **context: Any,
+    ) -> AsyncIterator[str]:
         """Ask the agent, and yield its answer as it comes, piece by piece.
 
         Parameters
         ----------
         prompt : str
             What the agent is asked.
+        model_settings : ModelSettings, optional
+            How the model answers this call, over the agent's own (LOOP P-27).
         **context : Any
             What the agent is told for this turn, by name.
 
@@ -439,7 +465,7 @@ class AppAgent:
             The pieces of the answer's text, in order.
         """
         async with self.agent.run_stream_events(
-            prompt, **self._run_kwargs(context)
+            prompt, **self._run_kwargs(context, model_settings)
         ) as events:
             async for event in events:
                 if isinstance(event, PartStartEvent) and isinstance(

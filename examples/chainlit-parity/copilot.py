@@ -25,7 +25,7 @@ from fastapi.responses import HTMLResponse
 from agent_runtimes.loop.apps import Application, Session
 from agent_runtimes.loop.apps.mounting import EMBED_ORIGIN, EMBED_SCRIPT_PATH
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "example-blank:0.0.1"
 
 app = Application.from_spec(
     {

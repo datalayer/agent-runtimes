@@ -46,6 +46,7 @@ from agent_runtimes.loop.apps.session import (
     Session,
     Shown,
     Step,
+    StepDelta,
     UploadedFile,
     WindowMessage,
 )
@@ -88,6 +89,8 @@ class TerminalChannel:
     app_name: str = ""
     """The application's name: a message by anybody else says its author."""
     _streaming: Dict[str, bool] = field(default_factory=dict)
+    _steps_streaming: Set[str] = field(default_factory=set)
+    """The steps whose output is being written, piece by piece (LOOP P-31)."""
     _shown: Set[str] = field(default_factory=set)
     _elements: Dict[str, str] = field(default_factory=dict)
     """The panels and pages open, by id: their titles (LOOP P-18)."""
@@ -156,8 +159,27 @@ class TerminalChannel:
         elif isinstance(event, Removed):
             if event.message_id in self._shown:
                 self.console.print("[dim]✗ a message was removed.[/dim]")
+        elif isinstance(event, StepDelta):
+            # A step's output as it comes, under its line (LOOP P-31), any
+            # credential in a piece withheld (R-19).
+            from agent_runtimes.guardrails.credentials import redact
+
+            if event.step_id not in self._steps_streaming:
+                self._steps_streaming.add(event.step_id)
+                self.console.print("    ", end="")
+            # Each line of it under the step's, indented as its output.
+            self.console.print(
+                redact(event.text).replace("\n", "\n    "),
+                end="",
+                style="dim",
+                markup=False,
+                highlight=False,
+            )
         elif isinstance(event, Step):
             indent = "  " if event.parent_id else ""
+            if event.ended_at is not None and event.id in self._steps_streaming:
+                self._steps_streaming.discard(event.id)
+                self.console.print()
             if event.ended_at is None:
                 self.console.print(f"{indent}[dim]◦ {event.name}…[/dim]")
             elif event.error:

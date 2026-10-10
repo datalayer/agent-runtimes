@@ -13,7 +13,8 @@
  * started_at, ended_at}` — which the AG-UI adapter hands on as an
  * `activity`. A step is drawn as the chat draws a tool call: one row,
  * collapsed, its input and output inside, running until it ends; a nested
- * step says the step it is in.
+ * step says the step it is in. A step that streams its output (LOOP P-31)
+ * is said again as it writes, its output so far, and drawn in place.
  */
 
 import type { DisplayItem, ToolCallMessage } from '../../types/chat';
@@ -78,9 +79,8 @@ export function stepItem(step: LoopStep, inside?: string): ToolCallMessage {
       kind: step.kind,
       ...(step.input !== null ? { input: step.input } : {}),
     },
-    ...(step.ended && !step.error && step.output !== null
-      ? { result: step.output }
-      : {}),
+    // Running, what it wrote so far — a step that streams (LOOP P-31).
+    ...(!step.error && step.output !== null ? { result: step.output } : {}),
     status: !step.ended ? 'executing' : step.error ? 'error' : 'complete',
     ...(step.error ? { error: step.error } : {}),
     summary: inside ? `${kind}, inside ${inside}` : kind,

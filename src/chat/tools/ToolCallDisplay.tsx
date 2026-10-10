@@ -434,49 +434,50 @@ export function ToolCallDisplay({
             </Box>
           </Box>
 
-          {/* Result section (when complete) */}
-          {status === 'complete' && result !== undefined && (
-            <Box>
-              <Text
-                sx={{
-                  display: 'block',
-                  fontSize: 0,
-                  fontWeight: 'semibold',
-                  color: 'success.fg',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  mb: 2,
-                }}
-              >
-                {chatText.result}
-              </Text>
-              <Box
-                backgroundColor="success.subtle"
-                borderRadius={2}
-                border="1px solid"
-                borderColor="success.muted"
-                overflow="auto"
-                maxHeight="300px"
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: '12px',
-                    fontSize: '12px',
-                    fontFamily:
-                      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                    lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
+          {/* Result section (when complete, or as a step streams it, LOOP P-31) */}
+          {(status === 'complete' || status === 'executing') &&
+            result !== undefined && (
+              <Box>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'success.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    mb: 2,
                   }}
                 >
-                  {typeof result === 'string'
-                    ? result
-                    : JSON.stringify(result, null, 2)}
-                </pre>
+                  {chatText.result}
+                </Text>
+                <Box
+                  backgroundColor="success.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="success.muted"
+                  overflow="auto"
+                  maxHeight="300px"
+                >
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: '12px',
+                      fontSize: '12px',
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                      lineHeight: 1.5,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {typeof result === 'string'
+                      ? result
+                      : JSON.stringify(result, null, 2)}
+                  </pre>
+                </Box>
               </Box>
-            </Box>
-          )}
+            )}
 
           {/* Approval section */}
           {approvalRequired && (

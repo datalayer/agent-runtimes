@@ -12,8 +12,9 @@ Here: three ``tool`` steps inside a ``run`` step (``session.step``, nested),
 the application's agent for both model calls, the result shown as the
 catalog's Table, and the button an ``@app.action``. The table is SQLite in
 this process rather than BigQuery — the warehouse is the developer's, in
-Chainlit's example as here. Chainlit streams the SQL into its step as it is
-written; a LOOP step shows its output when it ends.
+Chainlit's example as here. As in Chainlit, the SQL is written into its step
+as the model writes it (``step.stream``, LOOP P-31), and the step ends with
+the query alone.
 """
 
 import re
@@ -22,7 +23,7 @@ from datetime import date
 
 from agent_runtimes.loop.apps import Application, Session
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "example-blank:0.0.1"
 
 app = Application(
     id="text-to-sql",
@@ -76,9 +77,10 @@ def sql_of(text: str) -> str:
 async def main(session: Session, text: str) -> None:
     async with session.step("chain", kind="run", input=text):
         async with session.step("gen_query", kind="tool", input=text) as step:
-            step.output = sql_of(
-                (await session.agent.run(SQL_PROMPT.format(input=text))).text
+            written = await step.stream(
+                session.agent.stream(SQL_PROMPT.format(input=text))
             )
+            step.output = sql_of(written)
         query = step.output
         async with session.step("execute_query", kind="tool", input=query) as step:
             if not re.match(r"(?is)^\s*select\b", query):

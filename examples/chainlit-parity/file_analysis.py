@@ -22,7 +22,7 @@ from typing import List, Optional
 
 from agent_runtimes.loop.apps import Application, Session, UploadedFile
 
-AGENT = "example-a2a-writer:0.0.1"
+AGENT = "example-blank:0.0.1"
 
 app = Application.from_spec(
     {
@@ -32,7 +32,11 @@ app = Application.from_spec(
         "kind": "chat",
         "agent": AGENT,
         "description": "Reads a CSV you send, computes its figures, charts them and says what they show.",
-        "instructions": "You are a data analyst. Explain the figures you are given in a few sentences; never invent one.",
+        "instructions": (
+            "You are a data analyst. Explain the figures you are given in a few "
+            "sentences; never invent one. The chart is drawn beside your answer: "
+            "never write code."
+        ),
         # What may be sent: a CSV of at most 10 MB (LOOP P-21).
         "interface": {"uploads": {"kinds": [{"type": ".csv", "max_mb": 10}]}},
     }
@@ -76,7 +80,9 @@ async def analyse(session: Session, files: List[UploadedFile], text: str) -> Non
         y = "Close" if "Close" in numeric else numeric[0]
         answer = await session.agent.run(
             f"{text or 'What does this file show?'}\n\nThe file {file.name}: {len(rows)} rows, "
-            f"columns {', '.join(columns)}. Computed figures: {figures}."
+            f"columns {', '.join(columns)}. Computed figures: {figures}. "
+            f"The chart of {y} by {x} is drawn beside your answer: say what it "
+            "shows, in words."
         )
         await session.send(
             answer.text,

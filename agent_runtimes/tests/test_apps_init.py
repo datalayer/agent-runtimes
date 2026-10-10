@@ -17,9 +17,11 @@ from typer.testing import CliRunner
 
 from agent_runtimes.commands.apps import PASSES, app, validate_file
 from agent_runtimes.loop.apps import AppHost, MemoryChannel, load_application
+from agent_runtimes.loop.apps.agent import local_agent
 from agent_runtimes.loop.apps.build import build, read_code_marks
 from agent_runtimes.loop.apps.scaffold import (
     BLANK_AGENT,
+    BLANK_PYTHON_AGENT,
     InitRefused,
     examples,
     init,
@@ -52,6 +54,10 @@ def test_a_blank_python_application_builds_its_spec_and_answers_through_its_agen
     assert text == build(written.folder / "app.py").text
     assert [mark.moment for mark in read_code_marks(text)] == ["message"]
     assert _spec(written.folder)["kind"] == "widget"
+    # Its agent is the blank one this process builds (LOOP P-32): an AppHost
+    # runs it here without a runtime.
+    assert _spec(written.folder)["agent"] == BLANK_PYTHON_AGENT
+    local_agent(load_application(written.folder / "app.py").spec)
 
     async def scenario() -> None:
         channel = MemoryChannel()

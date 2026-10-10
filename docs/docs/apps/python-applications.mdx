@@ -941,6 +941,38 @@ A step shows the person what the application is doing while it does it.
 inside another is nested in it. Each is delivered twice: when it starts, and
 when it ends — with its output, or with the error that ended it.
 
+**A step that writes as it goes.** Its output can be shown as it comes,
+rather than when it ends — the SQL as the model writes it:
+
+```python
+async with session.step("gen_query", kind="tool", input=question) as step:
+    written = await step.stream(session.agent.stream(prompt))
+    step.output = sql_of(written)
+```
+
+`await step.stream(pieces)` takes the pieces — an async iterable such as
+`session.agent.stream(...)`, a list, or one string — shows each in the step
+as it comes, adds it to the step's output, and returns what it wrote. Called
+again, it writes on. The step then ends with whatever its output is when it
+ends: here the query alone, without the model's fences. A step whose output
+is already something other than text refuses to stream, in a sentence. The
+chat draws the step's row with what it wrote so far, in place; the terminal
+writes it under the step's line; a `MemoryChannel` receives a `StepDelta`
+(`step_id`, `session_id`, `text`) for each piece, between the step's start
+and its end. A credential in what it writes is withheld from what is shown,
+as a step's output is.
+
+**The agent's tool calls are steps.** Each tool the application's agent
+calls — through `session.agent.run`, `session.agent.stream`, or the agent
+answering a message itself — is a `tool` step named by the tool: started
+when the model makes the call, with its arguments as its input, so a person
+asked to allow it sees which call they are asked about; ended with the
+tool's result, or with why it failed — a call the person refused ends saying
+so. It is nested in the step the code was in when it called the agent. This
+holds in your own process (a terminal, a test, a `MemoryChannel`) as on a
+runtime, where the chat draws them. These steps are not kept again in the
+record: the call is there already, as a `tool_call` entry.
+
 Steps are the application's chain of thought:
 
 - **In the conversation**, each is a row the chat draws as it draws a tool
@@ -1104,6 +1136,12 @@ with its rules, its checks and its record attached:
   for this turn (`goal="…"`).
 - `session.agent.stream(prompt, **context)` — the answer's text, piece by
   piece.
+- Either takes `model_settings=` for that call alone — `{"temperature": 0,
+  "max_tokens": 500, "stop_sequences": ["```"]}`, pydantic-ai's
+  `ModelSettings` — over the agent's own. The model may refuse a pair:
+  Claude takes a `temperature` or a `top_p`, not both, and says so. An agent
+  of another framework (`@app.agent`) refuses `model_settings` in a sentence:
+  its model is set in its own code.
 
 Every run is a turn of the session's conversation: the history is kept from
 turn to turn. A rule that says *ask first* asks the person of this session —
@@ -1118,6 +1156,17 @@ organization's, the catalogue's otherwise. What only a runtime brings — connec
 is refused with `AppNotRunnable` rather than left out, as is an application
 that names no model. A host may pass its own `agent=` factory, as the
 example does.
+
+**The blank agent.** `example-blank` is the catalogue's agent for an
+application written in Python: a model (Claude Sonnet, through Bedrock here
+and ai-inference on Datalayer) and nothing else — no prompt of its own, no
+MCP servers, no skills, no tools. So `local_agent` builds it in your
+process, and what the agent is told is the application's instructions alone:
+`Application(id="echo-desk", agent="example-blank:0.0.1", instructions="You
+are Echo Desk…")` answers as Echo Desk. Its tools are the application's own
+(`@app.tool`). `loop apps init --python` starts a blank `app.py` with it. The
+Studio's blank application keeps `example-simple`, which has a decide tool
+and the events skill — so it runs on a runtime, not in your process.
 
 On a Datalayer runtime the agent's model is called through ai-inference,
 naming the application and deployment it serves — and so is a model the
@@ -1339,7 +1388,7 @@ methods.
 
 ```python
 class Channel(Protocol):
-    async def deliver(self, event: Message | Delta | Step) -> None: ...
+    async def deliver(self, event: Message | Delta | Step | StepDelta | ...) -> None: ...
     async def ask(self, session_id: str, question: Question) -> Any: ...
 ```
 
@@ -1425,42 +1474,54 @@ your own is not cast yet. The example is `examples/scene-in-python/scene.py`.
 ## Chainlit's cookbook, rebuilt
 
 LOOP's Python flavor is meant to do everything Chainlit does, with its own
-API. The check is to rebuild Chainlit's own examples and run them:
-`examples/chainlit-parity/` holds six, each saying in its docstring which
-example it rebuilds and how each of Chainlit's calls maps to LOOP's.
+API. The check is to rebuild Chainlit's own examples — its cookbook's and
+its documentation's — and run them: `examples/chainlit-parity/` holds nine,
+each saying in its docstring which example it rebuilds and how each of
+Chainlit's calls maps to LOOP's.
 
 | Chainlit's example | Rebuilt as | What it uses |
 | --- | --- | --- |
 | `pdf-qa`, a document QA | `document_qa.py` | `session.ask(FileQuestion(...))`, a message sent then updated, `run_sync`, a `retrieval` step, the passages as Evidence |
-| `bigquery`, text to SQL | `text_to_sql.py` | nested `run` and `tool` steps, the result as a Table, a Button and its `@app.action` |
-| `anthropic-functions-streaming`, an assistant with tools | `assistant_with_tools.py` | `@app.tool(does="read")`: declared in the spec, decided by the rules; the agent loops and streams for you |
+| `bigquery`, text to SQL | `text_to_sql.py` | nested `run` and `tool` steps, the SQL streamed into its step (`step.stream`), the result as a Table, a Button and its `@app.action` |
+| `anthropic-functions-streaming`, an assistant with tools | `assistant_with_tools.py` | `@app.tool(does="read")`: declared in the spec, decided by the rules, each call a `tool` step; the agent loops and streams for you |
 | `openai-data-analyst`, a file analysis | `file_analysis.py` | `@app.file` with `uploads`, the figures computed in a step, a Chart |
 | `openai-whisper`, a voice assistant | `voice_assistant.py` | a voice note sent (`audio/*`), transcribed and spoken in steps, an AudioPlayer |
 | `copilot` and `window-message`, a copilot in a page | `copilot.py` | `app.mount` into your own FastAPI, the embed as a bubble in your page, `send_window_message` and `@app.window` |
 
+And the three examples of Chainlit's documentation (its *Examples* pages;
+*Cookbook* and *Community* there are lists of links):
+
+| Chainlit's example | Rebuilt as | What it uses |
+| --- | --- | --- |
+| *Text to SQL* (`examples/openai-sql`) | `sql_from_words.py` | `app.starter`, `model_settings` for the call (temperature 0, 500 tokens, a stop sequence), the query streamed into a message as SQL |
+| *Document QA* (`examples/qa`), conversational | `conversational_qa.py` | `FileQuestion` asked again on `AskTimeout`, a message updated, a `retrieval` step, a follow-up understood from the conversation the agent keeps, the sources in the side panel (`show(..., where="panel")`) |
+| *Security - PII* (`examples/security`) | `pii_guard.py` | personal data found in what the person wrote, *Continue* or *Cancel* asked (`ChoiceQuestion`), the agent given the text anonymized |
+
 `agent_runtimes/tests/test_chainlit_parity.py` runs each through an
-`AppHost` with a scripted model. Each was also run on a real model: the
-document QA, the SQL, the tools and the file analysis in this process, the
-copilot under `uvicorn copilot:api`.
+`AppHost` with a scripted model. All but the voice assistant were also run on a real model: the
+document QA, the SQL, the tools, the file analysis and the three examples of
+the documentation in this process, the copilot under `uvicorn copilot:api`.
+All but the voice assistant run on the blank agent, `example-blank`, built in
+this process. The voice assistant has not run on a real model, nor has the
+copilot been seen in a browser: the embed it loads does not load yet.
 
 **What Chainlit does that LOOP does not, yet:**
 
 - **A live microphone.** Chainlit streams the microphone to the application
   (`on_audio_chunk`); LOOP takes a voice note, an audio file, but no audio
   stream. Voice is set aside for now.
-- **A step that streams.** Chainlit streams tokens into a step as they come
-  (the SQL being written); a LOOP step shows its output when it ends.
-- **A blank agent in this process.** The Studio's blank agent,
-  `example-simple`, has skills and backend tools, so it is refused in this
-  process: the rebuilds name `example-a2a-writer` and give their own
-  instructions. Its own prompt still shows through.
-- **A tool call as a step in this process.** On a runtime the chat draws each
-  tool call. Through an `AppHost` in this process, the channel receives no
-  step for a tool call, so a terminal does not show it.
+
+What the rebuilds found missing and LOOP now has: a step that streams
+(`step.stream`, [Steps](#steps)), a blank agent built in this process
+(`example-blank`, [The agent](#the-agent)), and each tool call of the agent
+as a step in this process too; and, from the documentation's *Text to SQL*,
+the model's settings for one call (`model_settings`).
 
 The rebuilds use local stand-ins for the services Chainlit's examples bring:
-words in common for Pinecone, SQLite for BigQuery, the application's code for
-the code interpreter, OpenAI's speech for ElevenLabs. Chainlit's
+words in common for Pinecone and Chroma, SQLite for BigQuery, the
+application's code for the code interpreter, OpenAI's speech for ElevenLabs,
+a few patterns for Presidio — which finds names and places too, where the
+patterns find e-mails, phone numbers and cards only. Chainlit's
 `oauth_callback` is Datalayer's identity on a hosted application.
 
 ## From the command line
@@ -1631,7 +1692,17 @@ sentences, marked by `build`, said by `validate` of a spec alone; a tool
 called by the agent and decided by the rules, by what it does or by a rule
 naming it; an answer refused and asked again, a tool call stopped, both
 recorded; tests run and decided by their code, from `validate --tests
---local`. `agent_runtimes/tests/test_app_elements.py` covers `show` and
+--local`. `agent_runtimes/tests/test_app_steps_live.py` covers a step that streams —
+its pieces between its start and its end, through a `MemoryChannel`, the
+terminal and the Session API's `loop.step`, text only — each tool call of the
+agent as a `tool` step, nested where it was called, ended with its result or
+with the refusal of the person asked, streamed or not, in this process and
+through a runtime's agent (`agent_maker`); and the blank agent built here with
+the application's instructions alone. The chat's drawing of a step as it
+streams is tested with vitest (`loopStep`). Both were also run on a real
+model (Bedrock) in this process: the SQL written into its step in 17 pieces
+over 0.7 s, and both tool calls of the assistant shown as steps.
+`agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
 `loop.element` events of the Session API, drawn again on a resume.
 `agent_runtimes/tests/test_app_page.py` covers `@app.page`: inputs from

@@ -49,7 +49,7 @@ import logging
 import re
 import traceback
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import (
@@ -90,10 +90,12 @@ from agent_runtimes.loop.apps.session import (
     Session,
     Shown,
     Step,
+    StepDelta,
     TextQuestion,
     UploadedFile,
     WindowMessage,
     form_values,
+    shown_step,
 )
 from agent_runtimes.loop.apps.uploads import (
     media_part,
@@ -560,6 +562,8 @@ class LiveSession:
     )
     _elements: Dict[str, Shown] = field(default_factory=dict, init=False, repr=False)
     """The elements open in a side panel or on a page (LOOP P-18): drawn again on a resume."""
+    _steps: Dict[str, Step] = field(default_factory=dict, init=False, repr=False)
+    """The steps running, by id, with what they streamed so far (LOOP P-31)."""
     _said: Optional[Dict[str, str]] = field(default=None, init=False, repr=False)
     """What its code said in a turn recorded as a run of its own (LOOP R-14), by message id."""
 
@@ -883,10 +887,22 @@ class LiveSession:
                     name=LOOP_MESSAGE, value={"id": event.message_id, "removed": True}
                 )
             )
+        elif isinstance(event, StepDelta):
+            # A step's output as it comes (LOOP P-31): the step said again,
+            # running, its output what it wrote so far — any credential in
+            # it withheld (R-19) — which the chat draws in place.
+            running = self._steps.get(event.step_id)
+            if running is None:
+                raise ValueError(f"Step {event.step_id} is not running.")
+            running = replace(running, output=(running.output or "") + event.text)
+            self._steps[event.step_id] = running
+            self.emit(CustomEvent(name=LOOP_STEP, value=step_of(shown_step(running))))
         elif isinstance(event, Step):
             if event.ended_at is None:
+                self._steps[event.id] = event
                 self.emit(StepStartedEvent(step_name=event.name))
             else:
+                self._steps.pop(event.id, None)
                 self.emit(StepFinishedEvent(step_name=event.name))
             # AG-UI's step is its name: what the chat shows of it — its
             # kind, the step it is nested in, its input, output or error —

@@ -46,6 +46,13 @@ from typing import (
     Union,
 )
 
+from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.messages import (
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+    RetryPromptPart,
+)
+
 from agent_runtimes.loop.apps.agent import AgentFactory, AppAgent, app_capabilities
 from agent_runtimes.loop.apps.components import answer_components, placer
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
@@ -148,6 +155,17 @@ class Step:
     ended_at: Optional[datetime] = None
     error: str = ""
     """Why it failed, when it did."""
+
+
+@dataclass(frozen=True)
+class StepDelta:
+    """A piece of a step's output, written as it comes (LOOP P-31): the SQL
+    as the model writes it. The step, ended, follows with its whole output.
+    """
+
+    step_id: str
+    session_id: str
+    text: str
 
 
 def shown_step(step: Step) -> Step:
@@ -284,9 +302,12 @@ class PageShown:
 
 
 #: What a session delivers to its channel. A step is delivered twice: when it
-#: starts, and when it ends (with `ended_at`); a message again when it changed,
+#: starts, and when it ends (with `ended_at`) — between them, the pieces of an
+#: output it streams (`StepDelta`); a message again when it changed,
 #: an element of a panel or a page likewise; a page's outputs each time it ran.
-Event = Union[Message, Delta, Step, Removed, Shown, Closed, WindowMessage, PageShown]
+Event = Union[
+    Message, Delta, Step, StepDelta, Removed, Shown, Closed, WindowMessage, PageShown
+]
 
 STEP_KINDS: Tuple[str, ...] = ("run", "tool", "model", "retrieval")
 
@@ -591,6 +612,67 @@ def with_own_checks(capabilities: Sequence[Any], own: Sequence[Any]) -> List[Any
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+@dataclass
+class ToolCallSteps(AbstractCapability[Any]):
+    """Each tool call of a session's agent, shown as a ``tool`` step (LOOP P-33).
+
+    What the chat draws for an agent's tool call on a runtime, through any
+    channel: the terminal, a test, the page. A call starts its step when the
+    model makes it — before a rule decides it, so a person asked sees which
+    call they are asked about — and ends it with its result, or why it
+    failed. Nested in the step the code was in when it called the agent. Not
+    kept again in the record: the call is there already, as a ``tool_call``.
+    """
+
+    session: "Session"
+
+    _running: Dict[str, Step] = field(default_factory=dict, init=False, repr=False)
+
+    async def _ended(self, call_id: str, output: Any = None, error: str = "") -> None:
+        """End a call's step with its result, or why it failed."""
+        step = self._running.pop(call_id, None)
+        if step is None:
+            return
+        await self.session.channel.deliver(
+            shown_step(replace(step, output=output, error=error, ended_at=_now()))
+        )
+
+    async def wrap_run_event_stream(
+        self, ctx: Any, *, stream: AsyncIterable[Any]
+    ) -> AsyncIterable[Any]:
+        """Start a step at each call the model makes, end it at its result."""
+        try:
+            async for event in stream:
+                if isinstance(event, FunctionToolCallEvent):
+                    call = event.part
+                    step = Step(
+                        id=_new_id(),
+                        session_id=self.session.id,
+                        name=call.tool_name,
+                        kind="tool",
+                        parent_id=_STEP.get(),
+                        input=call.args_as_dict(),
+                        output=None,
+                        started_at=_now(),
+                    )
+                    self._running[call.tool_call_id] = step
+                    await self.session.channel.deliver(shown_step(step))
+                elif isinstance(event, FunctionToolResultEvent):
+                    result = event.part
+                    if isinstance(result, RetryPromptPart):
+                        await self._ended(
+                            event.tool_call_id, error=result.model_response()
+                        )
+                    else:
+                        await self._ended(event.tool_call_id, output=result.content)
+                yield event
+        except BaseException as error:
+            # A call a rule refused, or a run stopped: its step says why.
+            for call_id in list(self._running):
+                await self._ended(call_id, error=str(error) or type(error).__name__)
+            raise
 
 
 def _new_id() -> str:
@@ -1181,7 +1263,9 @@ class Session:
         """Show the user what the application is doing, while it does it.
 
         ``async with session.step("Searching") as step: step.output = found``.
-        A step opened inside another is nested in it.
+        A step opened inside another is nested in it. Its output may be
+        written as it comes — ``await step.stream(session.agent.stream(prompt))``
+        — rather than shown when it ends (LOOP P-31).
 
         Parameters
         ----------
@@ -1210,7 +1294,12 @@ class Session:
             started_at=_now(),
         )
         await self.channel.deliver(shown_step(started))
-        holder = StepOutput()
+
+        async def streamed(text: str) -> None:
+            """A piece of its output, shown in it as it comes (LOOP P-31)."""
+            await self.channel.deliver(StepDelta(started.id, self.id, text))
+
+        holder = StepOutput(_stream=streamed)
         token = _STEP.set(started.id)
         try:
             yield holder
@@ -1331,25 +1420,30 @@ class Session:
             made = self._agent_maker(self)
             # Its code's tools and checks, after what the runtime made it with.
             made.toolsets = [*made.toolsets, *self._own_toolsets]
-            made.capabilities = with_own_checks(
-                made.capabilities, self._own_capabilities
-            )
+            made.capabilities = [
+                *with_own_checks(made.capabilities, self._own_capabilities),
+                ToolCallSteps(self),
+            ]
             self._agent = made
         if self._agent is None:
             self._agent = AppAgent(
                 app=self.app,
                 agent=self._agent_factory(self.app),
                 session_id=self.id,
-                capabilities=with_own_checks(
-                    app_capabilities(
-                        self.app,
-                        recorder=self._recorder,
-                        agent_id=self.app.agent or None,
-                        ask_rule=self._ask_rule,
-                        ask_check=self._ask_check,
+                capabilities=[
+                    *with_own_checks(
+                        app_capabilities(
+                            self.app,
+                            recorder=self._recorder,
+                            agent_id=self.app.agent or None,
+                            ask_rule=self._ask_rule,
+                            ask_check=self._ask_check,
+                        ),
+                        self._own_capabilities,
                     ),
-                    self._own_capabilities,
-                ),
+                    # Each of its tool calls, a step its user sees (LOOP P-33).
+                    ToolCallSteps(self),
+                ],
                 toolsets=list(self._own_toolsets),
             )
         self._agent.mode = run_effect(self.app, self._profile, self._modes)
@@ -1374,9 +1468,53 @@ class Session:
 
 @dataclass
 class StepOutput:
-    """Where a step's output is set while it runs."""
+    """Where a step's output is set while it runs, or streamed as it comes."""
 
     output: Any = None
+    _stream: Optional[Callable[[str], Any]] = field(
+        default=None, compare=False, repr=False
+    )
+
+    async def stream(
+        self, tokens: Union[str, AsyncIterable[str], Iterable[str]]
+    ) -> str:
+        """Write the step's output as it comes, piece by piece (LOOP P-31).
+
+        ``sql = await step.stream(session.agent.stream(prompt))``: each piece
+        is shown in the step as the model writes it, and added to its output,
+        which the step shows whole when it ends. Called again, it writes on.
+
+        Parameters
+        ----------
+        tokens : str, or iterable or async iterable of str
+            The pieces, in order; a string is one piece.
+
+        Returns
+        -------
+        str
+            What this call wrote, whole.
+
+        Raises
+        ------
+        ValueError
+            For a step whose output is already something other than text, or
+            a step that was not opened by a session.
+        """
+        if self._stream is None:
+            raise ValueError("Only a step a session opened streams its output.")
+        if self.output is not None and not isinstance(self.output, str):
+            raise ValueError(
+                "A step streams text: its output is already "
+                f"{type(self.output).__name__}."
+            )
+        pieces: List[str] = []
+        async for token in _text_of([tokens] if isinstance(tokens, str) else tokens):
+            if not token:
+                continue
+            pieces.append(token)
+            self.output = (self.output or "") + token
+            await self._stream(token)
+        return "".join(pieces)
 
 
 async def call(handler: Any, *args: Any) -> Any:
@@ -1422,8 +1560,10 @@ __all__ = [
     "Session",
     "Shown",
     "Step",
+    "StepDelta",
     "StepOutput",
     "TextQuestion",
+    "ToolCallSteps",
     "UploadedFile",
     "WHERE",
     "call",
