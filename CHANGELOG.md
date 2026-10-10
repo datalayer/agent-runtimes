@@ -7,6 +7,10 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.110
+
+- The examples' catalogue from agentspecs 0.0.76, now required (STUDIO E-01): *Report from a File* reports a cell's text as data, *Support Desk*'s sample documentation speaks to its customers — the four switched-on examples *Ready* on Datalayer.
+
 ## 1.3.109
 
 - **A test can be a short conversation** (STUDIO E-01; agentspecs 0.0.75, now required): `tests.cases[].turns`, each what the person says, the choice they make or the action they press; played on the session API turn by turn (`run_cloud_app_conversation`, and in process for `loop apps validate --local`), the judge reading what the code kept.
