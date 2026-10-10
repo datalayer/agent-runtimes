@@ -326,6 +326,7 @@ def test_the_time_a_beat_may_take_is_read_on_its_seconds(scene: Any) -> None:
     # twice it fails with both numbers.
     beat = scene.rehearsal.beats[0]
     allowed = seconds_of(beat.within)
+    assert allowed is not None
     played = asyncio.run(stage_of(scene, cast()).play(scene.script[0].cue.text))
     played.seconds = allowed * 2
     verdict = verdict_of(beat, played, scene_names(scene))

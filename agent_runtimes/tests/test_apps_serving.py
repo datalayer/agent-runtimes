@@ -134,7 +134,7 @@ def test_a_change_builds_it_again_and_the_page_reads_the_new_one(
     assert hot_reload.changed() is False
     path.write_text(app_py(name="Echo Desk, again", answer="Again"))
     assert hot_reload.changed() is True
-    told = client.portal.call(hot_reload.reload)  # type: ignore[union-attr]
+    told = client.portal.call(hot_reload.reload)
     assert told["kind"] == "reloaded"
     assert told["says"].startswith("Echo Desk, again was built again from app.py in ")
     # The page reads the application as it is now…
@@ -162,13 +162,13 @@ def test_a_change_that_does_not_build_is_refused_and_it_runs_on_as_it_was(
     hot_reload: serving.HotReload = served["hot_reload"]
     path: Path = served["path"]
     path.write_text(app_py() + "\ndef broken(:\n")
-    told = client.portal.call(hot_reload.reload)  # type: ignore[union-attr]
+    told = client.portal.call(hot_reload.reload)
     assert told["kind"] == "refused"
     assert told["says"] == "app.py was not taken: Echo Desk runs as it was."
     assert told["problems"][0].startswith("app.py does not load: SyntaxError: ")
     # Another id is another application.
     path.write_text(app_py().replace('id="echo-desk"', 'id="other-desk"'))
-    told = client.portal.call(hot_reload.reload)  # type: ignore[union-attr]
+    told = client.portal.call(hot_reload.reload)
     assert told["problems"] == [
         "Its id changed from 'echo-desk' to 'other-desk': that is another application — "
         "stop this one and run it."
@@ -194,9 +194,9 @@ async def test_the_page_hears_each_reload_as_an_event(tmp_path: Path) -> None:
     hot_reload = serving.HotReload(path, build_of(path), build_of)
     response = await hot_reload.events()
     stream = response.body_iterator
-    assert await stream.__anext__() == ": listening\n\n"  # type: ignore[union-attr]
+    assert await stream.__anext__() == ": listening\n\n"
     path.write_text(app_py() + "\ndef broken(:\n")
-    heard = asyncio.ensure_future(stream.__anext__())  # type: ignore[union-attr]
+    heard = asyncio.ensure_future(stream.__anext__())
     await asyncio.sleep(0)
     await hot_reload.reload()
     event = await asyncio.wait_for(heard, 5)
@@ -205,7 +205,7 @@ async def test_the_page_hears_each_reload_as_an_event(tmp_path: Path) -> None:
     assert json.loads(data.removeprefix("data: "))["says"] == (
         "app.py was not taken: Echo Desk runs as it was."
     )
-    await stream.aclose()  # type: ignore[union-attr]
+    await stream.aclose()
 
 
 def test_the_embed_is_said_once(tmp_path: Path) -> None:

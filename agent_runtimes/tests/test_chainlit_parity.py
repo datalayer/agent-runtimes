@@ -29,6 +29,7 @@ from agent_runtimes.loop.apps import (
     load_application,
     mounting,
 )
+from agent_runtimes.loop.apps.session import ChoiceQuestion
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     Runtime,
     answer_of,
@@ -444,6 +445,7 @@ async def test_the_pii_guard_asks_and_passes_on_only_what_is_anonymized(
         "phone (212) 688-5500.",
     )
     [question] = channel.questions
+    assert isinstance(question, ChoiceQuestion)
     assert (question.prompt, question.options) == (
         "PII detected",
         ("✅ Continue", "❌ Cancel"),

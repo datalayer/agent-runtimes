@@ -59,7 +59,9 @@ def _respelled(value: Any) -> Any:
     if isinstance(value, list):
         return [_respelled(item) for item in value]
     if isinstance(value, dict):
-        return {STUDIO_KEYS.get(key, key): _respelled(item) for key, item in value.items()}
+        return {
+            STUDIO_KEYS.get(key, key): _respelled(item) for key, item in value.items()
+        }
     return value
 
 
@@ -96,7 +98,7 @@ class SceneStore(Deployments):
             model=model if isinstance(model, dict) else {},
         )
 
-    def create(self, space_id: str, spec: Dict[str, Any]) -> str:
+    def create_scene(self, space_id: str, spec: Dict[str, Any]) -> str:
         """A new scene in a space, as the Studio's *Save scene* makes one; its uid."""
         body = self._answer(
             self.http.post(

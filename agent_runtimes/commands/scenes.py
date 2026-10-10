@@ -679,7 +679,7 @@ def scenes_push(
     store = SceneStore(client.urls.spacer_url, token)
     try:
         if space:
-            uid = store.create(space, document)
+            uid = store.create_scene(space, document)
             said = f"{spec.name} is a new scene of yours: {uid}."
         else:
             done = store.save(scene_uid, document)
