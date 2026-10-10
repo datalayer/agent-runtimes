@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.109
+
+- **A test can be a short conversation** (STUDIO E-01; agentspecs 0.0.75, now required): `tests.cases[].turns`, each what the person says, the choice they make or the action they press; played on the session API turn by turn (`run_cloud_app_conversation`, and in process for `loop apps validate --local`), the judge reading what the code kept.
+- **A response that also calls a tool does not end the turn's record** (E-01): words and a call in one response carried the run on while the record closed at the words, losing the call and the answer after it.
+- The examples' catalogue regenerated: Quote Calculator and Support Desk search before their first words, Report from a File refuses a file that is not a CSV.
+
 ## 1.3.108
 
 1.3.107 was tagged but not published: its type check failed on the PAP example, which needs `@datalayer/personal-agent-protocol` 0.3.3 (now required, with `personal-agent-protocol>=0.3.3`).
