@@ -46,11 +46,14 @@ function sandboxOf(config: Record<string, unknown> = {}): Sandbox {
 
 describe('Local, on the web', () => {
   it('is held, and says why; the other targets are offered', () => {
-    expect(heldTargetReason('local')).toMatch(
+    expect(heldTargetReason('local', '')).toMatch(
       /^Not offered on the web for now/,
     );
     for (const target of SANDBOX_TARGETS.filter(each => each !== 'local')) {
-      expect([target, heldTargetReason(target)]).toEqual([target, undefined]);
+      expect([target, heldTargetReason(target, '')]).toEqual([
+        target,
+        undefined,
+      ]);
     }
   });
 
@@ -78,7 +81,9 @@ describe('Local, on the web', () => {
       join(__dirname, '..', 'plugins', 'agents', 'SandboxSelector.tsx'),
       'utf8',
     );
-    expect(selector).toContain('const held = heldTargetReason(entry);');
+    expect(selector).toContain(
+      "const held = heldTargetReason(entry, service?.serverUrl ?? '');",
+    );
     // `aria-disabled`, not `disabled`: a disabled button takes no pointer,
     // and its reason would never be read.
     expect(selector).toContain('aria-disabled={held ? true : undefined}');
@@ -91,10 +96,25 @@ describe('Local, on the web', () => {
   });
 });
 
+describe('Local, on a server the host names (P-08, P-25)', () => {
+  it('is offered, and is where the page starts: the host serves it', () => {
+    expect(
+      heldTargetReason('local', 'http://127.0.0.1:8000/app'),
+    ).toBeUndefined();
+    expect(
+      sandboxOf({
+        target: 'local',
+        targetFixed: true,
+        serverUrl: 'http://127.0.0.1:8000/app',
+      }).target.peek(),
+    ).toBe('local');
+  });
+});
+
 describe('Local, inside JupyterLab', () => {
   it('is offered as before, and is where the plugin starts', () => {
     host.inside = true;
-    expect(heldTargetReason('local')).toBeUndefined();
+    expect(heldTargetReason('local', '')).toBeUndefined();
     expect(sandboxOf().target.peek()).toBe('local');
   });
 });

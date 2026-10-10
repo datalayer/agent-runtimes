@@ -96,8 +96,16 @@ export const SANDBOX_TARGETS: readonly SandboxTarget[] = [
  * JupyterLab it is offered as before — the same line the code-sandbox picker
  * draws for a Jupyter Server's kernels (`codeSandboxProviders`).
  */
-export function heldTargetReason(target: SandboxTarget): string | undefined {
-  if (target === 'local' && !insideJupyterLab()) {
+export function heldTargetReason(
+  target: SandboxTarget,
+  serverUrl: string,
+): string | undefined {
+  // A host that names its own agent-runtimes server — `app.mount`, `loop apps
+  // run --web` (LOOP P-08, P-25) — is not asking for the reader's machine:
+  // Local is that server, and it is offered. Held, every message of a page
+  // served by its own server went to the visitors' runtime instead
+  // (seen 2026-10-10 on 1.3.96).
+  if (target === 'local' && !serverUrl && !insideJupyterLab()) {
     return 'Not offered on the web for now: a local agent and the Jupyter server it starts run beside JupyterLab, not in a page.';
   }
   return undefined;
@@ -443,7 +451,7 @@ export function createSwitchableSandboxService({
         return;
       }
       // Held here: refused whoever asks, not only by the switch's button.
-      const held = heldTargetReason(next);
+      const held = heldTargetReason(next, serverUrl);
       if (held) {
         throw new Error(held);
       }

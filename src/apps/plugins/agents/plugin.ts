@@ -171,8 +171,10 @@ export type AgentsOutput = {
 };
 
 /** The target asked for, or the page itself when this page holds it. */
-const offeredTarget = (target: SandboxTarget): SandboxTarget =>
-  heldTargetReason(target) ? 'browser' : target;
+const offeredTarget = (
+  target: SandboxTarget,
+  serverUrl: string,
+): SandboxTarget => (heldTargetReason(target, serverUrl) ? 'browser' : target);
 
 export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   name: AGENTS_PLUGIN_NAME,
@@ -212,6 +214,7 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         initialTarget: offeredTarget(
           (showVariants || config.targetFixed ? config.target : 'browser') ??
             'local',
+          config.serverUrl,
         ),
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
