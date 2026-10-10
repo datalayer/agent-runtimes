@@ -15,6 +15,12 @@ made for an application:
 - ``POST …/take-over``: the person takes it: what runs on it is interrupted,
   and its agent's calls to it wait;
 - ``POST …/run``: code the person who took it over runs on it;
+- ``GET …/browser``: the page its browser has open, when browse is on;
+- ``GET …/browser/screenshot``: that page as it shows, a PNG, polled by the
+  computer view;
+- ``POST …/browser/click``, ``…/type``, ``…/key``, ``…/scroll``,
+  ``…/open``: the person who took it over clicks where they clicked on the
+  screenshot, types, presses a key, scrolls, opens an address;
 - ``POST …/hand-back``: back to its agent, whose calls go on.
 
 A Preview's computer is shown to whoever talks to it — the person who
@@ -35,9 +41,17 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from agent_runtimes.loop.apps.browser import (
+    KEYS,
+    Browser,
+    browser_of,
+    browser_running,
+    find_browser,
+)
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.computer import (
     ComputerRefused,
+    ensure_holder,
     hand_back,
     has_computer,
     holder_of,
@@ -57,6 +71,37 @@ class RunRequest(BaseModel):
     """Code the person runs on the computer they took over."""
 
     code: str = Field(..., min_length=1, description="Python, as its sandbox runs it")
+
+
+class ClickRequest(BaseModel):
+    """Where the person clicked, in the screenshot's pixels."""
+
+    x: float = Field(..., ge=0)
+    y: float = Field(..., ge=0)
+
+
+class TypeRequest(BaseModel):
+    """What the person typed, where the page's focus is."""
+
+    text: str = Field(..., min_length=1, max_length=10_000)
+
+
+class KeyRequest(BaseModel):
+    """A key the person pressed."""
+
+    key: str = Field(..., description=f"One of {', '.join(KEYS)}")
+
+
+class ScrollRequest(BaseModel):
+    """How far the person scrolled, in pixels (down is positive)."""
+
+    dy: float = Field(..., ge=-10_000, le=10_000)
+
+
+class OpenRequest(BaseModel):
+    """An address the person opens."""
+
+    url: str = Field(..., min_length=1, max_length=4096)
 
 
 def download_headers(path: str) -> Dict[str, str]:
@@ -166,8 +211,10 @@ async def describe(agent: str, request: Request) -> Dict[str, Any]:
         "agent": agent,
         "app": app.id,
         "parts": parts_on(app),
-        # No sandbox Datalayer runs has a browser yet: none is offered.
-        "browser": False,
+        # Whether a browser is installed where its agent runs, and the page
+        # it has open: its browser starts on its first page.
+        "browser": parts_on(app)["browse"] and _installed(),
+        "page": await _page(agent) if parts_on(app)["browse"] else None,
         "started": has_computer(app) and started(agent),
         "held": holder.describe() if holder else None,
         # Whether the caller is who has it.
@@ -176,6 +223,24 @@ async def describe(agent: str, request: Request) -> Dict[str, Any]:
         # Where its files are served from, when a host is kept for them.
         "servedFrom": served_from(),
     }
+
+
+def _installed() -> bool:
+    try:
+        find_browser()
+    except ComputerRefused:
+        return False
+    return True
+
+
+async def _page(agent: str) -> Any:
+    browser = browser_running(agent)
+    if browser is None:
+        return None
+    try:
+        return (await browser.read()).describe()
+    except Exception:
+        return None
 
 
 @router.get("/files")
@@ -235,3 +300,98 @@ async def give_back(agent: str, request: Request) -> Dict[str, Any]:
     except ComputerRefused as refused:
         raise _refused(refused) from None
     return {"held": None}
+
+
+# --- its browser ----------------------------------------------------------------------
+
+
+def _with_browser(app: AppSpec) -> None:
+    """Refuse an application whose computer does not browse."""
+    if not parts_on(app)["browse"]:
+        raise HTTPException(
+            status_code=409, detail=f"{app.name} does not browse: browse is off."
+        )
+
+
+@router.get("/browser")
+async def browser_page(agent: str, request: Request) -> Dict[str, Any]:
+    """The page its browser has open, or none before its first."""
+    app, _ = await _computer(agent, request)
+    _with_browser(app)
+    return {"page": await _page(agent)}
+
+
+@router.get("/browser/screenshot")
+async def browser_screenshot(agent: str, request: Request) -> Response:
+    """The page its browser has open, as it shows: a PNG."""
+    app, _ = await _computer(agent, request)
+    _with_browser(app)
+    browser = browser_running(agent)
+    if browser is None:
+        raise HTTPException(status_code=404, detail="Its browser has opened no page.")
+    return Response(
+        content=await browser.screenshot(),
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _held_browser(agent: str, request: Request) -> Browser:
+    """Its browser, for the person who took its computer over only."""
+    app, caller = await _computer(agent, request)
+    _with_browser(app)
+    try:
+        ensure_holder(agent, caller.kind, caller.uid)
+        return await browser_of(agent)
+    except ComputerRefused as refused:
+        raise _refused(refused) from None
+
+
+async def _done(step: Any) -> Dict[str, Any]:
+    try:
+        return {"page": (await step).describe()}
+    except ComputerRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/browser/click")
+async def browser_click(
+    agent: str, body: ClickRequest, request: Request
+) -> Dict[str, Any]:
+    """The person clicks on its page where they clicked on its screenshot."""
+    browser = await _held_browser(agent, request)
+    return await _done(browser.click_at(body.x, body.y))
+
+
+@router.post("/browser/type")
+async def browser_type(
+    agent: str, body: TypeRequest, request: Request
+) -> Dict[str, Any]:
+    """The person types where its page's focus is."""
+    browser = await _held_browser(agent, request)
+    return await _done(browser.type_text(body.text))
+
+
+@router.post("/browser/key")
+async def browser_key(agent: str, body: KeyRequest, request: Request) -> Dict[str, Any]:
+    """The person presses a key on its page."""
+    browser = await _held_browser(agent, request)
+    return await _done(browser.press(body.key))
+
+
+@router.post("/browser/scroll")
+async def browser_scroll(
+    agent: str, body: ScrollRequest, request: Request
+) -> Dict[str, Any]:
+    """The person scrolls its page."""
+    browser = await _held_browser(agent, request)
+    return await _done(browser.scroll(body.dy))
+
+
+@router.post("/browser/open")
+async def browser_open(
+    agent: str, body: OpenRequest, request: Request
+) -> Dict[str, Any]:
+    """The person opens an address in its browser."""
+    browser = await _held_browser(agent, request)
+    return await _done(browser.open(body.url))

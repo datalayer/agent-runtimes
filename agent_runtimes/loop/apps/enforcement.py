@@ -78,8 +78,9 @@ from pydantic_ai.tools import ToolDefinition
 
 from agent_runtimes.guardrails.common import GuardrailBlockedError
 from agent_runtimes.loop.apps.computer import (
-    FILE_CLASSES,
+    COMPUTER_CLASSES,
     SHELL_TOOLS,
+    browser_toolset,
     computer_gives,
     computer_toolset,
     part_of,
@@ -367,8 +368,8 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=["read"])
             )
-        if tool_name in FILE_CLASSES:
-            classes = list(FILE_CLASSES[tool_name])
+        if tool_name in COMPUTER_CLASSES:
+            classes = list(COMPUTER_CLASSES[tool_name])
             return Enforced(
                 tool_name, decision_for(self.app, tool_name, classes=classes)
             )
@@ -502,13 +503,14 @@ class AppRulesCapability(AbstractCapability[Any]):
 
     def get_toolset(self) -> Any:
         """
-        The tools of its files, when its permissions turn its files on, and
-        those that compose the outputs it gives besides words.
+        The tools of its files and of its browser, when its permissions turn
+        them on, and those that compose the outputs it gives besides words.
         """
         toolsets = [
             toolset
             for toolset in (
                 computer_toolset(self.app, self.agent_id),
+                browser_toolset(self.app, self.agent_id),
                 outputs_toolset(self.app.interface.outputs),
             )
             if toolset is not None

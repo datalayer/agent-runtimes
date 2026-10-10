@@ -110,6 +110,9 @@ dependencies = [
     "tiktoken>=0.5.0",
     "typer>=0.16.0",
     "urllib3>=2.6.3",
+    # The DevTools protocol of the browser on an application's computer
+    # (LOOP R-23, `loop/apps/browser.py`).
+    "websockets>=13",
 ]
 dynamic = ["version"]
 

@@ -1479,6 +1479,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         except Exception as e:
             logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
+        # Stop the browsers of applications' computers (LOOP R-23).
+        from .loop.apps.browser import close_browsers
+
+        await close_browsers()
+
         logger.info("Shutting down agent-runtimes server...")
 
     app = FastAPI(

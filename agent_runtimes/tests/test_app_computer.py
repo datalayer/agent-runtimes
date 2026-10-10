@@ -93,7 +93,7 @@ async def test_each_part_off_gives_none_of_its_tools() -> None:
         "write_computer_file",
         "search_tools",
     ]
-    # No browser tool exists: browse on gives nothing more.
+    # The tools of its browser are not among those offered here.
     assert await _given(app(browse=True)) == ["search_tools"]
 
 

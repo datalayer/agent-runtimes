@@ -11,8 +11,10 @@ Appspec say what the agent may do there, each off until it is turned on:
 - **files**: read and write its files — `list_computer_files`,
   `read_computer_file`, `write_computer_file`, given here
   (`computer_toolset`);
-- **browse**: use a browser on it — no tool: no sandbox Datalayer runs has a
-  browser yet, so nothing is given whatever it says.
+- **browse**: use the browser on it — `open_page`, `read_page`,
+  `page_screenshot`, which read, and `click_on_page`, `type_on_page`, which
+  act, given here (`browser_toolset`): a headless Chromium in the runtime's
+  container (`browser.py`).
 
 A part that is off gives no tool: the agent is never shown one
 (`AppRulesCapability.prepare_tools`, beside what its connections give).
@@ -20,7 +22,8 @@ A part that is off gives no tool: the agent is never shown one
 A person may **take over** its computer: what runs on it is interrupted, and
 every call its agent makes to a tool of its computer waits until they **hand
 it back** (`wait_until_handed_back`). Meanwhile the person runs code on it
-themselves (`run_as_person`).
+themselves (`run_as_person`), and clicks and types in its browser
+(`ensure_holder`, the routes).
 
 What the person sees of it — its files, read-only, and what was run on it — is
 read here too, from its working directory only: a path that leaves it is
@@ -51,8 +54,19 @@ FILE_CLASSES: Mapping[str, List[str]] = {
 }
 FILE_TOOLS: FrozenSet[str] = frozenset(FILE_CLASSES)
 
-#: Tools of a browser on it: none exists in any sandbox yet.
-BROWSE_TOOLS: FrozenSet[str] = frozenset()
+#: The tools of its browser, and what each does: opening a page and looking
+#: at it reads; a click or typing may submit a form, so it acts.
+BROWSE_CLASSES: Mapping[str, List[str]] = {
+    "open_page": ["read"],
+    "read_page": ["read"],
+    "page_screenshot": ["read"],
+    "click_on_page": ["write"],
+    "type_on_page": ["write"],
+}
+BROWSE_TOOLS: FrozenSet[str] = frozenset(BROWSE_CLASSES)
+
+#: What each tool of its computer that is not code does.
+COMPUTER_CLASSES: Mapping[str, List[str]] = {**FILE_CLASSES, **BROWSE_CLASSES}
 
 #: The tools of each part.
 PART_TOOLS: Mapping[str, FrozenSet[str]] = {
@@ -278,8 +292,8 @@ def read_file(agent_id: str, path: str) -> bytes:
     return bytes(content)
 
 
-def run_as_person(agent_id: str, kind: str, uid: str, code: str) -> Dict[str, Any]:
-    """Code a person who took the computer over runs on it, and what it said.
+def ensure_holder(agent_id: str, kind: str, uid: str) -> None:
+    """Refuse anybody but the person who took the computer over.
 
     Raises
     ------
@@ -289,6 +303,17 @@ def run_as_person(agent_id: str, kind: str, uid: str, code: str) -> Dict[str, An
     held = _HELD.get(agent_id)
     if held is None or (held.kind, held.uid) != (kind, uid):
         raise ComputerRefused(409, "Take the computer over first: its agent has it.")
+
+
+def run_as_person(agent_id: str, kind: str, uid: str, code: str) -> Dict[str, Any]:
+    """Code a person who took the computer over runs on it, and what it said.
+
+    Raises
+    ------
+    ComputerRefused
+        When they have not taken it over.
+    """
+    ensure_holder(agent_id, kind, uid)
     result = sandbox_of(agent_id).run_code(code)
     error = ""
     if not result.execution_ok:
@@ -350,8 +375,64 @@ def computer_toolset(app: AppSpec, agent_id: Optional[str]) -> Any:
     )
 
 
+def browser_toolset(app: AppSpec, agent_id: Optional[str]) -> Any:
+    """The tools of its browser, when browse is on; None otherwise."""
+    if not parts_on(app)["browse"] or not agent_id:
+        return None
+    from pydantic_ai import BinaryContent, ToolReturn
+    from pydantic_ai.toolsets import FunctionToolset
+
+    from agent_runtimes.loop.apps.browser import HEIGHT, WIDTH, PageSeen, browser_of
+
+    def said(page: PageSeen, done: str = "") -> str:
+        head = f"{done}{page.title or 'Untitled'} — {page.url}"
+        return f"{head}\n\n{page.text}" if page.text else head
+
+    async def open_page(url: str) -> str:
+        """Open a web page (an http or https address) in your computer's
+        browser, and read its title and text."""
+        return said(await (await browser_of(agent_id)).open(url), "Opened: ")
+
+    async def read_page() -> str:
+        """Read the page open in your computer's browser: its address, title
+        and text."""
+        return said(await (await browser_of(agent_id)).read())
+
+    async def page_screenshot():  # type: ignore[no-untyped-def]
+        """Take a screenshot of the page open in your computer's browser."""
+        browser = await browser_of(agent_id)
+        page = await browser.read()
+        png = await browser.screenshot()
+        return ToolReturn(
+            return_value=(
+                f"Screenshot of {page.title or 'Untitled'} — {page.url} "
+                f"({WIDTH}×{HEIGHT}, {len(png):,} bytes)."
+            ),
+            content=[BinaryContent(data=png, media_type="image/png")],
+        )
+
+    async def click_on_page(selector: str) -> str:
+        """Click what a CSS selector finds on the page open in your computer's
+        browser (a link, a button), and read the page after."""
+        browser = await browser_of(agent_id)
+        return said(await browser.click(selector), "Clicked; now: ")
+
+    async def type_on_page(selector: str, text: str, submit: bool = False) -> str:
+        """Type text in the field a CSS selector finds on the page open in your
+        computer's browser; `submit` presses Enter after it."""
+        browser = await browser_of(agent_id)
+        return said(await browser.type(selector, text, submit), "Typed; now: ")
+
+    return FunctionToolset(
+        [open_page, read_page, page_screenshot, click_on_page, type_on_page],
+        id="computer-browser",
+    )
+
+
 __all__ = [
+    "BROWSE_CLASSES",
     "BROWSE_TOOLS",
+    "COMPUTER_CLASSES",
     "FILE_CLASSES",
     "FILE_TOOLS",
     "PARTS",
@@ -359,8 +440,10 @@ __all__ = [
     "SHELL_TOOLS",
     "ComputerRefused",
     "Holder",
+    "browser_toolset",
     "computer_gives",
     "computer_toolset",
+    "ensure_holder",
     "forget_holders",
     "hand_back",
     "has_computer",
