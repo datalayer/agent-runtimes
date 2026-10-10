@@ -25,6 +25,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
+    # An application is a Reactor plugin on a PluginPlatform (LOOP P-35):
+    # its contributions, its extension, its commands and routes.
+    "datalayer_reactor>=1.0.5",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
@@ -274,7 +277,6 @@ test = [
     "python-dotenv>=1.1.1",
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
-    "datalayer_reactor>=1.0.4",
     # The build hook's own test imports it (test_agent_pages).
     "hatchling",
     # The word error rate of the voice checks (VOICE.md VO-51).
