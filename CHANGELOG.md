@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.105
+
+- **A visitor's turn refuses a call that waits for a person, and goes on** (STUDIO H-03): deferred, an approval-required tool ended an A2A task whose run takes no `DeferredToolRequests` (Disaster Assessment's *Storm* on the home page); the tool-approval guardrail now denies it in the visitor's sentence (*Without an account nobody is asked …*). Test: deferred inline +1.
+- **An MCP server that is not running is started again** (STUDIO H-03): in the background, at most once a minute and as it was first started, by the turn that finds it stopped — Disaster Assessment's `earthdata` had failed at the runtime's start and every turn after skipped it. Test: retry in background (2).
+- **The Personal Agent Protocol** as a runtime capability (`personal-agent-protocol>=0.3.1`, `@datalayer/personal-agent-protocol` ^0.3.1).
+
 ## 1.3.104
 
 - **An application's code runs in the page** (STUDIO E-11): turned in the page, its agent runs its code through `execute_code` in the browser sandbox (`AppBrowserSandbox`), its sample documents written to `/tmp/inputs/` first and a file given on the page put in the sandbox — so a visitor signed out tries *Quote Calculator* and *Report from a File* with only model calls leaving the page. A host closing the conversation refuses the widget's own Run too.
