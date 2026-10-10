@@ -622,6 +622,55 @@ async def stop_serving_over_a2a(
     return {"success": True, "stopped": stopped}
 
 
+class RenewPrincipalRequest(BaseModel):
+    """What ai-agents sends to renew a kept deployment's principal here."""
+
+    deployment: str = Field(
+        ...,
+        description="The deployment an agent on this runtime serves, by its uid",
+    )
+
+
+@router.post("/principal")
+async def renew_principal(
+    body: RenewPrincipalRequest,
+    request: Request,
+    authorized: Authorized = Depends(a_person),
+) -> Dict[str, Any]:
+    """Renew the principal's token of a deployment kept here (STUDIO A-08).
+
+    What ai-agents asks of the runtime it keeps a deployment on, before the
+    token its agent was made with runs out: asked for again with the key it
+    sends — its owner's, minted for this runtime — whatever is held. A
+    deployment asked only over A2A otherwise acts for an hour, then calls
+    nothing. 404 when no agent here serves it; 502 when ai-agents gave no
+    token (what is held is left as it is).
+    """
+    from agent_runtimes.loop.apps.principal import (
+        PrincipalTokenMissing,
+        holds_principal_token,
+        renew_principal_token,
+    )
+
+    deployment = body.deployment.strip()
+    bearer = bearer_of(request.headers.get("authorization"))
+    if not bearer:
+        raise HTTPException(
+            status_code=401,
+            detail="Renewing a principal is asked with its owner's key.",
+        )
+    if not holds_principal_token(deployment):
+        raise HTTPException(
+            status_code=404,
+            detail=f"No agent on this runtime serves deployment {deployment}.",
+        )
+    try:
+        expires_at = await renew_principal_token(deployment, bearer)
+    except PrincipalTokenMissing as missing:
+        raise HTTPException(status_code=502, detail=str(missing)) from None
+    return {"success": True, "deployment": deployment, "expires_at": expires_at}
+
+
 class BuildRequest(BaseModel):
     """An application's file, to build (LOOP P-10)."""
 

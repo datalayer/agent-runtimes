@@ -346,6 +346,15 @@ streamed answer (`SendStreamingMessage`, SSE) is relayed as it streams.
 Callers keep the same address when the runtime is replaced, when the
 deployment moves to another version, and after a restart.
 
+It keeps answering for as long as it is kept on. Its agent acts as the
+deployment's principal, whose token lives an hour, and a caller over A2A —
+a visitor, a key granted to the route — is no one to renew it with. So
+ai-agents renews it: every half hour it asks the runtime for a new one with
+a key of the owner it mints for the purpose (`POST /api/v1/apps/principal`,
+`{deployment}`). A renewal refused is said on the deployment
+(`kept.principal_refused` in `GET …/deployments/{uid}/kept`) and asked again
+a minute later.
+
 Its owner turns it on from the terminal, after pushing a version and
 deploying it:
 

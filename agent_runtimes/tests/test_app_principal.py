@@ -186,3 +186,59 @@ def test_a_deployments_agent_is_not_made_without_its_principals_token():
         asyncio.run(create_agent(request, _DummyRequest()))
     assert refused.value.status_code == 422
     assert "nobody's name" in str(refused.value.detail)
+
+
+def test_its_keeper_renews_it_whatever_is_held(asked):
+    """A kept deployment asked only over A2A is renewed by ai-agents (STUDIO A-08)."""
+    from agent_runtimes.loop.apps.principal import renew_principal_token
+
+    # Its agent made an hour ago: the token still holds, and is asked again anyway.
+    give_principal_token("dep-1", "old", expires_in=1800, principal_uid="p-1")
+    expires_at = asyncio.run(renew_principal_token("dep-1", "owner-key"))
+    assert principal_token("dep-1") == "narrowed-1"
+    assert expires_at > time.time() + 3500
+    assert asked == [("dep-1", "owner-key")]
+    # Refused: what is held is left as it is.
+    with pytest.raises(PrincipalTokenMissing, match="404"):
+        asyncio.run(renew_principal_token("dep-1", "nobody"))
+    assert principal_token("dep-1") == "narrowed-1"
+
+
+def test_no_agent_here_serves_it_nothing_is_asked(asked):
+    from agent_runtimes.loop.apps.principal import renew_principal_token
+
+    with pytest.raises(PrincipalTokenMissing, match="No agent on this runtime"):
+        asyncio.run(renew_principal_token("dep-1", "owner-key"))
+    assert asked == []
+
+
+def test_the_route_renews_it_with_the_key_it_is_sent(asked):
+    """`POST /api/v1/apps/principal`: the owner's key renews it; no agent here, 404; refused, 502."""
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    from agent_runtimes.loop.apps.callers import LOCAL
+    from agent_runtimes.routes import apps as apps_routes
+
+    def request(bearer: str) -> Request:
+        headers = [(b"authorization", f"Bearer {bearer}".encode())] if bearer else []
+        return Request(
+            {"type": "http", "method": "POST", "path": "/", "headers": headers}
+        )
+
+    authorized = apps_routes.Authorized(LOCAL, None)
+    body = apps_routes.RenewPrincipalRequest(deployment="dep-1")
+    with pytest.raises(HTTPException) as unserved:
+        asyncio.run(apps_routes.renew_principal(body, request("owner-key"), authorized))
+    assert unserved.value.status_code == 404 and asked == []
+    give_principal_token("dep-1", "old", expires_in=0)
+    said = asyncio.run(
+        apps_routes.renew_principal(body, request("owner-key"), authorized)
+    )
+    assert said["deployment"] == "dep-1" and principal_token("dep-1") == "narrowed-1"
+    with pytest.raises(HTTPException) as refused:
+        asyncio.run(apps_routes.renew_principal(body, request("nobody"), authorized))
+    assert refused.value.status_code == 502
+    with pytest.raises(HTTPException) as keyless:
+        asyncio.run(apps_routes.renew_principal(body, request(""), authorized))
+    assert keyless.value.status_code == 401

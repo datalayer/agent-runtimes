@@ -55,12 +55,14 @@ __all__ = [
     "forget_principal_token",
     "gateway_toolsets_of_the_run",
     "give_principal_token",
+    "holds_principal_token",
     "preview_key",
     "preview_token",
     "preview_token_refusal",
     "principal_token",
     "principal_token_refusal",
     "principal_uid_of",
+    "renew_principal_token",
     "use_preview_asker",
 ]
 
@@ -92,6 +94,11 @@ def give_principal_token(
         "expires_at": time.time() + max(0, int(expires_in)),
         "principal_uid": principal_uid,
     }
+
+
+def holds_principal_token(deployment_uid: str) -> bool:
+    """Whether an agent here was made for a deployment: its principal's token held, expired or not."""
+    return deployment_uid in _HELD
 
 
 def forget_principal_token(deployment_uid: str) -> None:
@@ -253,6 +260,57 @@ async def ensure_principal_token(deployment_uid: str, bearer: Optional[str]) -> 
             answer.get("principal_uid") or "?",
         )
     return str(_HELD[deployment_uid]["token"])
+
+
+async def renew_principal_token(deployment_uid: str, bearer: str) -> float:
+    """
+    Ask for a deployment's principal's token now, whatever is held: what keeps
+    a deployment kept always on acting (STUDIO A-08).
+
+    A kept deployment is asked mostly by callers whose token is no reason to
+    ask for its principal's — a visitor's over A2A, a key granted to its
+    route — so the token its agent was made with runs out an hour later and
+    nothing asks again. ai-agents, which keeps it on, renews it before then
+    with a key of its owner IAM mints for the runtime.
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment an agent on this runtime serves.
+    bearer : str
+        The token to ask ai-agents with: its owner's key for the kept runtime.
+
+    Returns
+    -------
+    float
+        When the new token runs out (epoch seconds).
+
+    Raises
+    ------
+    PrincipalTokenMissing
+        When no agent here serves that deployment, or ai-agents gave no token:
+        what is held is left as it is.
+    """
+    if not holds_principal_token(deployment_uid):
+        raise PrincipalTokenMissing(
+            f"No agent on this runtime serves deployment {deployment_uid}: its principal is not asked for here."
+        )
+    answer = await _asker["ask"](deployment_uid, bearer)
+    token = str(answer.get("access_token") or "")
+    if not token:
+        raise PrincipalTokenMissing(
+            f"ai-agents answered deployment {deployment_uid} no token."
+        )
+    give_principal_token(
+        deployment_uid,
+        token,
+        expires_in=int(answer.get("expires_in") or 0),
+        principal_uid=str(answer.get("principal_uid") or ""),
+    )
+    logger.info(
+        "Deployment %s's principal token renewed by its keeper.", deployment_uid
+    )
+    return float(_HELD[deployment_uid]["expires_at"])
 
 
 def api_key_for(deployment_uid: str) -> Callable[[], Awaitable[str]]:
