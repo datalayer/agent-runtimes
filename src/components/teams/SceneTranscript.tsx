@@ -19,6 +19,7 @@ import { Button, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { OtelLiveTracer } from '@datalayer/core/lib/otel/live';
 import { useOtelLiveSpans } from '@datalayer/core/lib/otel/live';
+import { ChatMarkdown } from '../../chat/messages/ChatMarkdown';
 import {
   lineHeading,
   timeText,
@@ -120,19 +121,34 @@ export function SceneTranscript({
               >
                 {timeText(line.at)}
               </Text>
-              <Box minWidth={0} overflowWrap="anywhere">
-                <Text sx={{ fontWeight: 600 }}>{lineHeading(line)}: </Text>
-                <Text
-                  sx={{
-                    fontFamily: line.kind === 'called' ? 'mono' : undefined,
-                    color: line.failed ? 'danger.fg' : undefined,
-                  }}
-                >
-                  {line.text}
-                  {line.open ? '…' : ''}
-                  {line.failed ? ' (failed)' : ''}
-                </Text>
-              </Box>
+              {line.kind === 'called' ? (
+                <Box minWidth={0} overflowWrap="anywhere">
+                  <Text sx={{ fontWeight: 600 }}>{lineHeading(line)}: </Text>
+                  <Text
+                    sx={{
+                      fontFamily: 'mono',
+                      color: line.failed ? 'danger.fg' : undefined,
+                    }}
+                  >
+                    {line.text}
+                    {line.open ? '…' : ''}
+                    {line.failed ? ' (failed)' : ''}
+                  </Text>
+                </Box>
+              ) : (
+                // Words, drawn as the chat draws a message (`ChatMarkdown`):
+                // a table, a list or a code block an answer gives reads as
+                // one, not as its markdown run into one line (2026-10-10).
+                <Box minWidth={0} overflowWrap="anywhere">
+                  <Text sx={{ fontWeight: 600 }}>{lineHeading(line)}: </Text>
+                  <Box sx={{ color: line.failed ? 'danger.fg' : undefined }}>
+                    <ChatMarkdown
+                      text={`${line.text}${line.open ? '…' : ''}${line.failed ? ' (failed)' : ''}`}
+                      density="compact"
+                    />
+                  </Box>
+                </Box>
+              )}
             </Box>
           ))}
         </Box>

@@ -146,6 +146,12 @@ export function pressedAction(message: unknown): boolean {
 const FAILED_STATES = /FAILED|REJECTED|CANCELED/;
 
 /** Records what came back for one request onto its span. */
+/** A text cut at `length` characters, its line breaks kept. */
+function clipped(text: string, length: number): string {
+  const trimmed = text.trim();
+  return trimmed.length > length ? `${trimmed.slice(0, length - 1)}…` : trimmed;
+}
+
 class ResponseRecorder {
   /** The chunks of each artifact being streamed, by its id. */
   private artifacts = new Map<
@@ -327,7 +333,9 @@ class ResponseRecorder {
     this.span.addEvent('a2a.artifact_update', {
       ...chunk.attributes,
       'a2a.artifact.chunks': chunk.events.length,
-      'a2a.message.text': chunk.text ? shortLine(chunk.text, 2000) : undefined,
+      // Its words as they came — a table's rows, a list's lines — cut at
+      // 2000 characters, not run into one line: the transcript draws them.
+      'a2a.message.text': chunk.text ? clipped(chunk.text, 2000) : undefined,
       'a2a.event': jsonAttribute(
         chunk.events.length === 1 ? chunk.events[0] : chunk.events,
       ),

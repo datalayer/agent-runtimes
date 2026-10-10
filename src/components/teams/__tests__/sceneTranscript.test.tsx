@@ -443,6 +443,43 @@ describe('SceneTranscript and SceneView', () => {
     ).toBe(false);
   });
 
+  it('draws an answer’s markdown as the chat does: a table is a table', () => {
+    const lines = transcriptOfRecord(
+      [
+        {
+          uid: 't2',
+          sessionUid: 's1',
+          deploymentUid: 'd1',
+          version: 1,
+          kind: 'turn',
+          summary: 'Open invoices?',
+          payload: {
+            asked: 'Open invoices?',
+            answered:
+              'There are **2 open invoices**:\n\n| Invoice | Due |\n|---|---|\n| INV/1 | €3,993.00 |\n| INV/2 | €2,359.50 |',
+          },
+          createdAt: '2026-10-07T12:00:05Z',
+        },
+      ],
+      MEMBERS[1],
+    );
+    const { container } = render(
+      <ThemeProvider>
+        <SceneView members={MEMBERS} lines={lines} defaultView="transcript">
+          <div>the graph</div>
+        </SceneView>
+      </ThemeProvider>,
+    );
+    const said = container.querySelectorAll('[data-transcript-line="said"]');
+    expect(said).toHaveLength(1);
+    // Not its markdown run into one line (2026-10-10).
+    expect(said[0].querySelector('table')).not.toBeNull();
+    expect(said[0].querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(said[0].textContent).toContain('2 open invoices');
+    expect(said[0].textContent).not.toContain('**');
+    expect(said[0].textContent).not.toContain('|---|');
+  });
+
   it('takes a finished run’s lines instead of the tracer', () => {
     const lines = transcriptOfRecord(
       [
