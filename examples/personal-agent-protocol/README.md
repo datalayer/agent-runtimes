@@ -9,6 +9,7 @@ feature while keeping protocol secrets outside model context.
 | [`agent-identity`](./agent-identity/)                   | Client metadata, same-domain JWKS and signing policy | Credential-free identity summary             |
 | [`session-assertion`](./session-assertion/)             | Pairwise identity and short-lived assertion claims   | Policy only; no subject or `jti`             |
 | [`direct-sign-in-boundary`](./direct-sign-in-boundary/) | State, S256 PKCE and browser handoff                 | Security properties only                     |
+| [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete Session upgrade and partial consent       | Lifecycle evidence; all secrets withheld     |
 | [`dpop-proof`](./dpop-proof/)                           | Method, URL, token, nonce and replay binding         | Verified policy; all proof material withheld |
 | [`session-lifecycle`](./session-lifecycle/)             | Start, nonce retry, and renewal over HTTP            | Lifecycle evidence; credentials withheld     |
 
