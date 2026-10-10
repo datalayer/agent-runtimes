@@ -43,6 +43,7 @@ export { default as PapAgentIdentityExample } from './PapAgentIdentityExample';
 export { default as PapAuthorizationBoundaryExample } from './PapAuthorizationBoundaryExample';
 export { default as PapDpopProofExample } from './PapDpopProofExample';
 export { default as PapSessionLifecycleExample } from './PapSessionLifecycleExample';
+export { default as PapGuidedJourneyExample } from './PapGuidedJourneyExample';
 export { default as ScenesExample } from './ScenesExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';

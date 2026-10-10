@@ -373,6 +373,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Start, retry, and renew a signed-out PAP Session while credentials remain host-owned.',
   ),
   makeEntry(
+    'PapGuidedJourneyExample',
+    () => import('./PapGuidedJourneyExample'),
+    'Follow a visual PAP return journey across discovery, signed-out conversation, Direct Sign-In, and an exact user-authorized result.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',

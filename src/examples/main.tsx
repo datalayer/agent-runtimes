@@ -145,6 +145,7 @@ const ANONYMOUS_EXAMPLES = new Set([
   'PapAuthorizationBoundaryExample',
   'PapDpopProofExample',
   'PapSessionLifecycleExample',
+  'PapGuidedJourneyExample',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
   'AssistantExample',

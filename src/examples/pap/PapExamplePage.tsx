@@ -12,6 +12,7 @@ export interface PapExamplePageProps {
   eyebrow: string;
   description: string;
   children: React.ReactNode;
+  maxWidth?: number | string;
 }
 
 /** Shared visual frame for the protocol examples. */
@@ -20,9 +21,16 @@ export const PapExamplePage: React.FC<PapExamplePageProps> = ({
   eyebrow,
   description,
   children,
+  maxWidth = 960,
 }) => (
   <Box height="100%" overflow="auto" bg="canvas.subtle" p={4}>
-    <Box maxWidth={960} mx="auto" display="flex" flexDirection="column" gap={3}>
+    <Box
+      maxWidth={maxWidth}
+      mx="auto"
+      display="flex"
+      flexDirection="column"
+      gap={3}
+    >
       <Box display="flex" flexDirection="column" gap={2}>
         <Box>
           <Label variant="accent">{eyebrow}</Label>

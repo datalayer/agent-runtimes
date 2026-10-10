@@ -31,3 +31,21 @@ python scripts/validate_pap_examples.py
 Production Datalayer deployments inject metadata and authorization gateways.
 Those gateways own DNS pinning, egress, key custody, one-use state, token
 storage, consent and audit.
+
+## Guided visual journey
+
+The example gallery also includes **PAP Guided Journey**, a separate
+Reactor-contributed interactive story. It keeps the focused JSON examples for
+developers, but presents the complete user experience as five synchronized
+views:
+
+1. company discovery;
+2. signed-out Session and conversation;
+3. Direct Sign-In on the company's page;
+4. the company's offer in the same conversation; and
+5. the exact user-authorized exchange and final result.
+
+Each step pairs a phone-style user view with the company's allowed state and
+an expandable, redacted protocol exchange. The discovery, Session assertion,
+and Direct Sign-In fixtures are validated with the TypeScript PAP SDK in the
+browser; no live credentials or network service are required.
