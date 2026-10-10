@@ -35,6 +35,7 @@ from agent_runtimes.guardrails.declared_secrets import (
     server_env_names,
 )
 from agent_runtimes.types import Agentspec, MCPServer, SkillSpec
+from agent_runtimes.types.types import AppSpec
 
 UNDECLARED = "r19-undeclared-" + uuid.uuid4().hex
 SERVER_SECRET = "r19-server-" + uuid.uuid4().hex
@@ -153,10 +154,30 @@ def test_the_library_s_crop_monitoring_declares_its_servers_and_skills() -> None
 
 
 def test_an_application_s_connections_and_signed_user_are_declared() -> None:
-    app = {
-        "connections": [{"server": "tavily:0.0.1"}],
-        "deployment": {"embedded": {"host": {"signed_user": True}}},
-    }
+    # As the Appspec says it — `host.user: signed` — read through the real model.
+    app = AppSpec.model_validate(
+        {
+            "id": "desk",
+            "name": "Desk",
+            "kind": "chat",
+            "connections": [{"server": "tavily:0.0.1"}],
+            "deployment": {"embedded": {"host": {"user": "signed"}}},
+        }
+    )
+    for given in (app, app.model_dump(by_alias=True)):
+        assert "DATALAYER_APP_USER_SECRET_DEP_1" in (
+            declared_secrets(
+                BARE_AGENT, app_spec=given, app_instance={"deployment_uid": "dep-1"}
+            ).runtime
+        )
+    # A user the page claims declares none.
+    claimed = app.model_copy(deep=True)
+    claimed.deployment.embedded.host.user = "claimed"
+    assert "DATALAYER_APP_USER_SECRET_DEP_1" not in (
+        declared_secrets(
+            BARE_AGENT, app_spec=claimed, app_instance={"deployment_uid": "dep-1"}
+        ).runtime
+    )
     declared = declared_secrets(
         BARE_AGENT, app_spec=app, app_instance={"deployment_uid": "dep-1"}
     )

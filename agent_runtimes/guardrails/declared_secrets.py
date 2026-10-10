@@ -321,7 +321,10 @@ def declared_secrets(
         deployment = _get(app, "deployment") or {}
         embedded = _get(deployment, "embedded") or {}
         host = _get(embedded, "host") or {}
-        signed = _get(host, "signed_user", "signedUser")
+        # The Appspec says it as `host.user: signed` (D-21); a `signed_user`
+        # key no Appspec has was read here, so a kept runtime was never given
+        # its deployment's secret and refused every signed user (2026-10-10).
+        signed = _get(host, "user") == "signed"
         deployment_uid = str((app_instance or {}).get("deployment_uid") or "")
         if signed and deployment_uid:
             from agent_runtimes.loop.apps.host_user import secret_variable
