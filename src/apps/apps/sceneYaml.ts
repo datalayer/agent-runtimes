@@ -292,7 +292,7 @@ export function sceneTextProblems(
   if (!read.spec) {
     return [{ says: read.problem ?? '', section: read.section ?? 'scene' }];
   }
-  return sceneCheck(read.spec, own);
+  return sceneCheck(read.spec, own, { written: true });
 }
 
 /** The member the audience talks to, as the text says it (`entryOf`); empty while it does not read. */

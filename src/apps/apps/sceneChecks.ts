@@ -620,6 +620,18 @@ export function sceneShapeProblem(spec: SceneSpec): SceneProblem | undefined {
 export function sceneCheck(
   spec: SceneSpec,
   own?: SceneOwnApps,
+  {
+    written = false,
+  }: {
+    /**
+     * Whether the spec is what a person wrote, read from its text. A cast
+     * under a team is judged on what was written, and only a text says that:
+     * the catalogue's scenes reach the browser with every member filled in
+     * from its team (`cast_of`), so read from there a valid scene would be
+     * refused for what its team said (seen 2026-10-10).
+     */
+    written?: boolean;
+  } = {},
 ): SceneProblem[] {
   // 1. The shape of the scene, as it is read (`parse_scene`): the first stops.
   const shape = sceneShapeProblem(spec);
@@ -643,7 +655,7 @@ export function sceneCheck(
     // team a person wrote — never of a catalogue scene read resolved.
     const ids = new Set(team.agents.map(member => member.id));
     const castProblems: SceneProblem[] = [];
-    for (const said of spec.cast) {
+    for (const said of written ? spec.cast : []) {
       if (!ids.has(said.member)) {
         castProblems.push({
           says: `The cast names '${said.member}', which is not a member of the team '${team.id}'.`,

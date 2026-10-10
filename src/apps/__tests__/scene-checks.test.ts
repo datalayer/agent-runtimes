@@ -93,7 +93,12 @@ describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () =
     for (const one of table.cases) {
       const read = sceneOfYaml(one.yaml);
       if (read.spec) {
-        expect(sceneProblems(read.spec)).toEqual(one.says);
+        // Read from a text, the spec is what was written.
+        expect(
+          sceneCheck(read.spec, undefined, { written: true }).map(
+            problem => problem.says,
+          ),
+        ).toEqual(one.says);
       }
     }
     expect(sceneTextProblems('cast: [')[0].says).toMatch(
@@ -322,5 +327,18 @@ script:
     expect(
       sceneTextProblems(books.yaml, shadow).map(problem => problem.says),
     ).toEqual(books.says);
+  });
+});
+
+describe('a cast under a team, judged on what was written', () => {
+  it('speaks of a team a person wrote, and never of a catalogue scene read resolved', () => {
+    // Read from text: refused, as agentspecs refuses it.
+    const wrote = named('a cast under a team says what a member is');
+    expect(sceneTextProblems(wrote.yaml).map(problem => problem.says)).toEqual(
+      wrote.says,
+    );
+    // The same spec handed over as a spec, as the catalogue's are: its cast
+    // may be its team's filled in, so nothing is said of it.
+    expect(sceneProblems(specOf(wrote.yaml))).toEqual([]);
   });
 });
