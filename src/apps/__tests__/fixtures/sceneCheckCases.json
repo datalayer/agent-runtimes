@@ -1,0 +1,214 @@
+{
+  "says": "What `loop` refuses of a scene, recorded from agentspecs (plans/STUDIO.md S-10).",
+  "recordedWith": "scripts/record-scene-checks.py",
+  "cases": [
+    {
+      "name": "a scene with nobody on stage",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\n",
+      "says": [
+        "probe: the scene stages nobody: it names a `team`, or writes its `cast`"
+      ]
+    },
+    {
+      "name": "the entry is not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: nobody\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": ["The scene enters at 'nobody', which is not in its cast."]
+    },
+    {
+      "name": "the entry is a system",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: odoo\ncast:\n  - member: odoo\n    server: odoo-accounting\n    persona:\n      name: Odoo\n",
+      "says": [
+        "Its cast makes no team: supervisor 'Odoo' needs a `ref` into the agent catalogue, an `app` from the application catalogue, or a `model` and `instructions` of its own"
+      ]
+    },
+    {
+      "name": "a system asks",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: odoo\n    server: odoo-accounting\n    persona:\n      name: Odoo\n    talks_to:\n      - member: sales\n        over: a2a\n",
+      "says": [
+        "Its cast makes no team: member 'odoo' is a server: it answers over MCP and asks nobody"
+      ]
+    },
+    {
+      "name": "a member talks to itself",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: sales\n        over: a2a\n",
+      "says": ["Its cast makes no team: member 'sales' talks to itself"]
+    },
+    {
+      "name": "a member talks to nobody of the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: ghost\n        over: a2a\n",
+      "says": [
+        "Its cast makes no team: member 'sales' talks to 'ghost', which is not a member of team 'probe'"
+      ]
+    },
+    {
+      "name": "a system asked over a2a",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: odoo\n        over: a2a\n  - member: odoo\n    server: odoo-accounting\n    persona:\n      name: Odoo\n",
+      "says": [
+        "Its cast makes no team: member 'sales' talks to 'odoo' over a2a, which is a server: a server is asked over mcp"
+      ]
+    },
+    {
+      "name": "an agent asked over mcp",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: books\n        over: mcp\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\n",
+      "says": [
+        "Its cast makes no team: member 'sales' talks to 'books' over mcp, which is not a server: an agent or an application is asked over a2a"
+      ]
+    },
+    {
+      "name": "a member named twice",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": ["probe: the cast names 'sales' twice"]
+    },
+    {
+      "name": "two beats with one name",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\n  - id: open\n    cue:\n      say: Show them again\n    expect: The books are read again\n    moves:\n      - who: sales\n        answers: words\n",
+      "says": ["probe: the script has two beats named 'open'"]
+    },
+    {
+      "name": "a member placed outside the box",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nstage:\n  positions:\n    sales:\n      x: 40\n      y: 0.5\n",
+      "says": [
+        "probe: stage.positions.sales.x: Input should be less than or equal to 1"
+      ]
+    },
+    {
+      "name": "a member that is nothing at all",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: ghost\n",
+      "says": [
+        "Its cast makes no team: member 'ghost' needs a `ref` into the agent catalogue, an `app` from the application catalogue, a `server` from the MCP server catalogue, or enough of its own definition (`name`, `goal`) to stand alone"
+      ]
+    },
+    {
+      "name": "the scene wears a member's face",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nemoji: 🧮\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n      face: 🧮\n",
+      "says": [
+        "The scene wears 🧮, a member's face: a scene has a face of its own."
+      ]
+    },
+    {
+      "name": "a system of the setting that is no server",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nsetting:\n  systems:\n    - server: nosuch\n      as: Nope\n",
+      "says": ["There is no MCP server named 'nosuch'."]
+    },
+    {
+      "name": "a system nobody reaches",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\n",
+      "says": [
+        "The system 'Odoo' (odoo-accounting) is on stage, and no member of the cast reaches it."
+      ]
+    },
+    {
+      "name": "a system reached through a connection",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: books\ncast:\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\n",
+      "says": []
+    },
+    {
+      "name": "a Frame the catalogue has not",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nsetting:\n  frames:\n    - nosuch\n",
+      "says": ["There is no Frame named 'nosuch'."]
+    },
+    {
+      "name": "the stage places someone not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nstage:\n  positions:\n    ghost:\n      x: 0.2\n      y: 0.4\n",
+      "says": ["The stage places 'ghost', which is not in the cast."]
+    },
+    {
+      "name": "a balloon opens first for someone not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nstage:\n  opens_first: ghost\n",
+      "says": ["The balloon of 'ghost' opens first, and it is not in the cast."]
+    },
+    {
+      "name": "an address for someone not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\ndeployment:\n  addresses:\n    ghost: GHOST_URL\n",
+      "says": ["An address is read for 'ghost', which is not in the cast."]
+    },
+    {
+      "name": "an address for a member in the browser",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: browser\n    persona:\n      name: Sales\ndeployment:\n  addresses:\n    sales: SALES_URL\n",
+      "says": ["'sales' runs in the browser: it has no address."]
+    },
+    {
+      "name": "visitors may watch and a member has no address",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\naudience:\n  who: visitors\n",
+      "says": [
+        "Visitors may watch, and 'sales' runs on a runtime with no address: deployment.addresses names none for it."
+      ]
+    },
+    {
+      "name": "a beat its entry does not answer",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: books\n        answers: table\n",
+      "says": [
+        "Beat 'open': its cue is answered by nobody — no move is the entry's ('sales')."
+      ]
+    },
+    {
+      "name": "a beat moved by someone not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\n      - who: ghost\n        answers: words\n",
+      "says": ["Beat 'open': 'ghost' moves, and is not in the cast."]
+    },
+    {
+      "name": "a beat moved by a system",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: odoo\n    server: odoo-accounting\n    persona:\n      name: Odoo\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\n      - who: odoo\n        answers: words\n",
+      "says": [
+        "Beat 'open': 'odoo' moves, and a system answers tool by tool: it asks nobody."
+      ]
+    },
+    {
+      "name": "a move that asks someone not in the cast",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: ghost\n        over: a2a\n        what: the books\n",
+      "says": ["Beat 'open': 'sales' asks 'ghost', which is not in the cast."]
+    },
+    {
+      "name": "a move over mcp that asks no system",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: books\n        over: mcp\n        what: the books\n",
+      "says": [
+        "Beat 'open': 'sales' asks 'books' over mcp, which is not a system of the scene."
+      ]
+    },
+    {
+      "name": "a move over a2a that asks a system",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: odoo\n    server: odoo-accounting\n    persona:\n      name: Odoo\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: odoo\n        over: a2a\n        what: the books\n",
+      "says": [
+        "Beat 'open': 'sales' asks 'odoo' over a2a, a system: a system is asked over mcp."
+      ]
+    },
+    {
+      "name": "a move that asks a member it does not talk to",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: books\n        over: a2a\n        what: the books\n",
+      "says": [
+        "Beat 'open': 'sales' asks 'books', which the team does not have it talk to."
+      ]
+    },
+    {
+      "name": "a branch that goes on to no beat",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\n    branch:\n      - decision: there is nothing to read\n        expect: it says so\n        then: nowhere\n",
+      "says": [
+        "Beat 'open': its branch goes on to 'nowhere', which is no beat."
+      ]
+    },
+    {
+      "name": "a rehearsal of a beat that is not in the script",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nrehearsal:\n  beats:\n    - beat: nowhere\n      lines:\n        - 'You → Sales'\n",
+      "says": [
+        "The rehearsal names the beat 'nowhere', which is not in the script."
+      ]
+    },
+    {
+      "name": "a rehearsal that names a beat twice",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\nrehearsal:\n  beats:\n    - beat: open\n      lines:\n        - 'You → Sales'\n    - beat: open\n      lines:\n        - 'Sales: a table'\n",
+      "says": ["The rehearsal names the beat 'open' twice."]
+    },
+    {
+      "name": "a rehearsal that names someone not on stage",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        answers: words\nrehearsal:\n  beats:\n    - beat: open\n      lines:\n        - 'You → Stranger'\n",
+      "says": [
+        "The rehearsal of 'open' names 'Stranger', which is not on stage."
+      ]
+    },
+    {
+      "name": "a scene that plays",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: books\n        over: a2a\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\n      holds: Datalayer's books\nstage:\n  positions:\n    sales:\n      x: 0\n      y: 0\n    books:\n      x: 0.5\n      y: 0\n  opens_first: sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: books\n        over: a2a\n        what: the open invoices\n      - who: sales\n        answers: table\nrehearsal:\n  beats:\n    - beat: open\n      lines:\n        - 'You → Sales'\n        - 'Sales → Accounting'\n        - 'Sales: a table'\n",
+      "says": []
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * What an editor refuses of a scene is what `loop` refuses (plans/STUDIO.md
+ * S-10): every sentence of `sceneChecks` is agentspecs' own, in agentspecs'
+ * order, each one at a time as agentspecs stops where it stops.
+ *
+ * The table is not written by hand. `scripts/record-scene-checks.py` runs
+ * agentspecs itself (`parse_scene`, then `scene_problems`) over one scene per
+ * sentence, and two that play, and writes down what it says; this file holds
+ * the module to it. Two copies of a rule drift unless something compares
+ * them. Each case is a scene as a person writes it, in agentspecs' spelling,
+ * so the table also exercises the reader (`sceneOfYaml`).
+ *
+ * Moved from the landing's Studio with the module on 2026-10-10; what is the
+ * Studio's own — that its words are a Maker's, and that both of its surfaces
+ * read this module — stays tested there.
+ */
+
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
+import {
+  AGENTSPECS_OWN,
+  SECTION_WORDS,
+  STAGE_SECTIONS,
+  entryOf,
+  problemsOfSections,
+  sceneCheck,
+  sceneProblems,
+  sceneShapeProblem,
+  transcriptLineOf,
+} from '../apps/sceneChecks';
+import { sceneOfYaml, sceneTextProblems, sceneYamlOf } from '../apps/sceneYaml';
+
+type Case = { name: string; yaml: string; says: string[] };
+const table = JSON.parse(
+  readFileSync(join(__dirname, 'fixtures', 'sceneCheckCases.json'), 'utf8'),
+) as {
+  recordedWith: string;
+  cases: Case[];
+};
+const named = (name: string): Case => {
+  const one = table.cases.find(each => each.name === name);
+  if (!one) {
+    throw new Error(`no case named ${name}`);
+  }
+  return one;
+};
+
+const specOf = (yaml: string) => {
+  const read = sceneOfYaml(yaml);
+  if (!read.spec) {
+    throw new Error(`the case does not read as a scene: ${read.problem}`);
+  }
+  return read.spec;
+};
+
+describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () => {
+  it('has a case for every sentence agentspecs says, recorded from agentspecs itself', () => {
+    expect(table.recordedWith).toBe('scripts/record-scene-checks.py');
+    expect(table.cases.length).toBeGreaterThanOrEqual(34);
+    // Two of them play: a scene with nothing wrong, and a system reached through a connection.
+    expect(table.cases.filter(one => one.says.length === 0)).toHaveLength(2);
+  });
+
+  for (const one of table.cases) {
+    it(`says the same of ${one.name}`, () => {
+      expect(sceneProblems(specOf(one.yaml))).toEqual(one.says);
+    });
+  }
+
+  it('says nothing twice: every case is one sentence at a time, as agentspecs stops where it stops', () => {
+    for (const one of table.cases) {
+      const says = sceneProblems(specOf(one.yaml));
+      expect(new Set(says).size).toBe(says.length);
+    }
+  });
+
+  it('reads a text’s own refusals as the checks over what the text says', () => {
+    for (const one of table.cases) {
+      expect(sceneTextProblems(one.yaml).map(problem => problem.says)).toEqual(
+        one.says,
+      );
+    }
+    expect(sceneTextProblems('cast: [')[0].says).toMatch(
+      /^The text does not read/,
+    );
+  });
+});
+
+describe('each refusal says which part of the scene it is about (S-09)', () => {
+  it('reads the stage’s own refusals apart: where each player runs, and what the audience may do', () => {
+    const inTheBrowser = named('an address for a member in the browser');
+    const visitors = named('visitors may watch and a member has no address');
+    expect(
+      problemsOfSections(
+        sceneCheck(specOf(inTheBrowser.yaml)),
+        STAGE_SECTIONS,
+      ).map(problem => problem.says),
+    ).toEqual(inTheBrowser.says);
+    expect(
+      problemsOfSections(sceneCheck(specOf(visitors.yaml)), STAGE_SECTIONS).map(
+        problem => problem.says,
+      ),
+    ).toEqual(visitors.says);
+    expect(sceneCheck(specOf(visitors.yaml))[0].section).toBe('audience');
+    expect(sceneCheck(specOf(inTheBrowser.yaml))[0].section).toBe('stage');
+  });
+
+  it('puts a script’s refusal under what happens, and a setting’s under what is on stage', () => {
+    const beat = named('a beat moved by someone not in the cast');
+    const system = named('a system nobody reaches');
+    expect(sceneCheck(specOf(beat.yaml))[0].section).toBe('script');
+    expect(sceneCheck(specOf(system.yaml))[0].section).toBe('setting');
+    expect(
+      problemsOfSections(sceneCheck(specOf(beat.yaml)), STAGE_SECTIONS),
+    ).toEqual([]);
+  });
+
+  it('names every section a person reads, the stage’s among them', () => {
+    expect(Object.keys(SECTION_WORDS).sort()).toEqual([
+      'audience',
+      'cast',
+      'rehearsal',
+      'scene',
+      'script',
+      'setting',
+      'stage',
+    ]);
+    expect(STAGE_SECTIONS).toEqual(['stage', 'audience']);
+    for (const one of table.cases) {
+      for (const problem of sceneCheck(specOf(one.yaml))) {
+        expect(SECTION_WORDS[problem.section]).toBeTruthy();
+      }
+    }
+  });
+});
+
+describe('what stays agentspecs’', () => {
+  it('names the checks the browser cannot make, so no second set of them is written', () => {
+    expect(AGENTSPECS_OWN).toHaveLength(4);
+    expect(AGENTSPECS_OWN.join(' ')).toMatch(/tool a system does not offer/);
+    expect(AGENTSPECS_OWN.join(' ')).toMatch(/kept in your space/);
+    expect(AGENTSPECS_OWN.join(' ')).toMatch(/recording/);
+    expect(AGENTSPECS_OWN.join(' ')).toMatch(/names a team of the catalogue/);
+  });
+});
+
+describe('the pieces of the reading', () => {
+  it('reads the entry agentspecs reads: the one said, else the initiator, else the first of the cast', () => {
+    const spec = specOf(named('a scene that plays').yaml);
+    expect(entryOf(spec)).toBe('sales');
+    expect(entryOf({ ...spec, entry: '' })).toBe('sales');
+    expect(
+      entryOf({
+        ...spec,
+        entry: '',
+        cast: spec.cast.map(member => ({ ...member, role: 'contributor' })),
+      }),
+    ).toBe('sales');
+    expect(entryOf({ ...spec, entry: '', cast: [] })).toBe('');
+  });
+
+  it('reads a rehearsal’s line as the transcript writes it: an ask, a tool, an answer', () => {
+    expect(transcriptLineOf('You → Sales')).toEqual({
+      who: 'You',
+      whom: 'Sales',
+      detail: '',
+    });
+    expect(transcriptLineOf('Accounting → Odoo: odoo_accounting_*')).toEqual({
+      who: 'Accounting',
+      whom: 'Odoo',
+      detail: 'odoo_accounting_*',
+    });
+    expect(transcriptLineOf('Accounting: a table')).toEqual({
+      who: 'Accounting',
+      whom: '',
+      detail: 'a table',
+    });
+    expect(transcriptLineOf('nothing at all')).toBeUndefined();
+  });
+
+  it('refuses a member placed outside the box, as the spec does: fractions, not pixels', () => {
+    const spec = specOf(named('a scene that plays').yaml);
+    expect(sceneShapeProblem(spec)).toBeUndefined();
+    const pixels = {
+      ...spec,
+      stage: { ...spec.stage, positions: { sales: { x: 40, y: 0.5 } } },
+    };
+    expect(sceneShapeProblem(pixels)?.says).toBe(
+      'probe: stage.positions.sales.x: Input should be less than or equal to 1',
+    );
+    expect(sceneShapeProblem(pixels)?.section).toBe('stage');
+    const under = {
+      ...spec,
+      stage: { ...spec.stage, positions: { sales: { x: 0.2, y: -1 } } },
+    };
+    expect(sceneShapeProblem(under)?.says).toBe(
+      'probe: stage.positions.sales.y: Input should be greater than or equal to 0',
+    );
+  });
+
+  it('writes back what it read: a scene that plays reads the same after a round trip', () => {
+    const spec = specOf(named('a scene that plays').yaml);
+    expect(specOf(sceneYamlOf(spec))).toEqual(spec);
+  });
+});
