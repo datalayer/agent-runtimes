@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.106
+
+- **A test gives its application files** (STUDIO E-01; agentspecs 0.0.73, now required): `tests.cases[].files` in the types, the Appspec reader and writer, the checks and the catalogue.
+- **The transcript draws an answer's words as the chat does** (`ChatMarkdown`): a table, a list, bold — not its markdown run into one line; the A2A recorder keeps an answer's line breaks.
+- The Personal Agent Protocol's examples and docs.
+
 ## 1.3.105
 
 - **A visitor's turn refuses a call that waits for a person, and goes on** (STUDIO H-03): deferred, an approval-required tool ended an A2A task whose run takes no `DeferredToolRequests` (Disaster Assessment's *Storm* on the home page); the tool-approval guardrail now denies it in the visitor's sentence (*Without an account nobody is asked …*). Test: deferred inline +1.
