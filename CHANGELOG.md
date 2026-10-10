@@ -4,11 +4,6 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
-## Unreleased
-
-- **The host's functions, decided by the runtime too** (STUDIO D-10) ([Embedding, The page and the application, talking](https://agent-runtimes.datalayer.tech/docs/apps/embedding#the-page-and-the-application-talking)). A call of `host_<name>` is run by the page and handed back to it by pydantic-ai, so the runtime's rules never saw it, and decided every host function *leave it to me* whatever rule named it. Now the rule naming `host_<name>` decides it on the runtime as in the page, and a function its rules leave to the person — or one the Appspec does not name, or `host_context` when it lists nothing the page passes — is not shown to the model at all (`host_tools`, `AppRulesCapability._decide_host`). Tests: `test_app_host_tools` (8).
-- **The suite's bundle from anywhere** (STUDIO D-15): `E2E_EMBED_URL` names where the element's bundle is served (the landing's `/embed/` unless said), and the probe skips the element's mount when `datalayer-app-main.js` comes without `Access-Control-Allow-Origin`.
-
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
@@ -21,6 +16,7 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - **A page served by its own server runs there again** (STUDIO P-08, P-25): *Local* is held on the web only when no server is named, so `loop apps run --web` and `app.mount` pages talk to their own agent-runtimes server, not to the visitors' runtime (a regression of 1.3.96).
 - **`loop scenes push` keeps the spec as the Studio's item spells it** (STUDIO P-30): a `talks_to` kept as written was read in the Studio as no link.
 - **`npm run build` makes `dist-embed/` too**, and `make dist-embed` builds it alone from source; the release and the pull-request build check it rather than build it twice.
+- **The suite's bundle from anywhere** (STUDIO D-15): `E2E_EMBED_URL` names where the element's bundle is served (the landing's `/embed/` unless said), and the probe skips the element's mount when `datalayer-app-main.js` comes without `Access-Control-Allow-Origin`.
 - Requires `agentspecs>=0.0.69`.
 
 ## 1.3.96
