@@ -297,13 +297,41 @@ one, where its connections' tools are filtered (`AppRulesCapability.prepare_tool
 | -------- | ---------------------------------------------------------------------------------------------- |
 | `shell`  | `execute_code` (Codemode) and `run_skill_script`: code run on it                               |
 | `files`  | `list_computer_files`, `read_computer_file`, `write_computer_file`, in its working directory   |
-| `browse` | none: no sandbox Datalayer runs has a browser yet, so turning it on gives nothing               |
+| `browse` | `open_page`, `read_page`, `page_screenshot` (they read); `click_on_page`, `type_on_page` (they act) |
+
+### Its browser
+
+With `browse` on, its agent has a browser: a headless Chromium in the
+runtime's own container, started on its first page and kept until the
+runtime stops or its agent is deleted (`loop/apps/browser.py`, driven over
+the DevTools protocol). Its agent opens an `http` or `https` address and is
+told the page's title and text; it reads the page again, takes a screenshot
+— a 1280×800 PNG shown to its model — and clicks or types where a CSS
+selector says (`submit` presses Enter after the text). Opening and looking
+are reading; a click or typing may submit a form, so it acts, and its rules
+decide it as any action. A visitor's turn only reads: it opens and reads
+pages, and never clicks or types.
+
+It browses the web, never the runtime's own network: an address on a
+private, loopback or link-local network — the runtime's routes, its Jupyter
+sidecar, the cluster's services, the cloud's metadata — is refused in a
+sentence, and so is every request a page makes to one (a redirect, a link, a
+script's fetch). On a laptop, whose pages are its own, the runtime lets them
+through with `AGENT_RUNTIMES_BROWSER_PRIVATE=allow`.
+
+Where the browser is: the first of `chromium`, `chromium-browser`,
+`google-chrome` on the path, or `AGENT_RUNTIMES_BROWSER`. The runtime image
+installs Alpine's `chromium` (agent-runtimes image 0.0.14). Without one,
+the computer says *No browser is installed on its computer*, and its tools
+answer so.
 
 The computer view (`app-computer`) shows, beside its page:
 
 - its parts, each *on* or *off*, and which are off — an application with
   none says it has no computer, and asks the runtime nothing;
-- that no browser runs on it;
+- **Browser**, when browse is on: the page its browser has open, its title
+  and address — a screenshot read again every 1.5 seconds; *Its browser has
+  opened no page yet* before its first;
 - **What ran on it**: each call its agent made to a tool of its shell or of
   its files, the code or the path, and what came back — streamed from the
   conversation's tool calls (`LoopChatTurn`'s `conversation`);
@@ -311,8 +339,12 @@ The computer view (`app-computer`) shows, beside its page:
   file to download; read again as each turn ends;
 - **Take over**: what runs on it is interrupted, and every call its agent
   makes to a tool of its computer waits until the person hands it back;
-  meanwhile the person runs Python on it themselves. **Hand back**: its
-  agent's waiting calls go on.
+  meanwhile the person runs Python on it themselves, and uses its browser:
+  a click on the screenshot is a click on the page at that point, a key
+  pressed with the page selected is typed there (Enter, Tab, Backspace,
+  Escape, the arrows and Page Up and Down are pressed), and fields type
+  text, open an address, scroll. **Hand back**: its agent's waiting calls
+  go on.
 
 It reads the runtime its agent runs on (`agentServerOf`: on Datalayer the
 runtime's `agentBaseUrl` alone; elsewhere it, else `serverUrl`), with the
@@ -326,6 +358,13 @@ the chat's sentences; a widget's page likewise runs nothing and says it.
 | `GET …/computer/file?path=`                            | One of its files, to save (25 MB at most)                                                |
 | `POST …/computer/take-over`                            | Take it over: what runs is interrupted; refused while somebody else has it               |
 | `POST …/computer/run` `{code}`                         | Python run by the person who took it over: `stdout`, `stderr`, `error`                   |
+| `GET …/computer/browser`                               | The page its browser has open (`url`, `title`), or `null` before its first               |
+| `GET …/computer/browser/screenshot`                    | That page as it shows, a PNG (404 before its first page)                                 |
+| `POST …/computer/browser/click` `{x, y}`               | The person who took it over clicks at a point of the screenshot                          |
+| `POST …/computer/browser/type` `{text}`                | … types where the page's focus is                                                        |
+| `POST …/computer/browser/key` `{key}`                  | … presses Enter, Tab, Backspace, Escape, an arrow, Page Up or Page Down                  |
+| `POST …/computer/browser/scroll` `{dy}`                | … scrolls, down for a positive `dy`                                                      |
+| `POST …/computer/browser/open` `{url}`                 | … opens a web address                                                                    |
 | `POST …/computer/hand-back`                            | Back to its agent                                                                        |
 
 A path that leaves its working directory — absolute, or with `..` — is
@@ -337,7 +376,9 @@ ai-agents (`GET /api/ai-agents/v1/apps/deployments/{uid}/computer`, with the
 caller's own token; Spacer's `write` on the application's item makes an
 editor), remembers the answer for a minute, and refuses anybody else in
 ai-agents' sentence (403). An application with no part on has nothing to show
-(409).
+(409), and one whose browse is off no browser (409). The browser's clicks,
+typing and addresses are the person's who took the computer over only (409
+for anybody else).
 
 A host draws the card alone beside the page with `computer` (no rules card,
 no activity): the landing's address of a deployment passes it for its owner,

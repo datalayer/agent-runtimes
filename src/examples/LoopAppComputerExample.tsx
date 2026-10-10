@@ -6,11 +6,12 @@
 /**
  * An application's computer, beside its page (LOOP R-23).
  *
- * An application whose files and shell are on, drawn as the Studio's Preview
+ * An application whose browse, files and shell are on, drawn as the Studio's Preview
  * draws it — `AppRenderer` with its `sidebar` — on the Local target: its
  * agent runs on the local agent-runtimes server, and the computer view beside
- * it shows what ran on its sandbox, its files, and *Take over* and *Hand
- * back*.
+ * it shows the page its browser has open, what ran on its sandbox, its
+ * files, and *Take over* — clicks and typing then go to its page — and
+ * *Hand back*.
  *
  * @module examples/LoopAppComputerExample
  */
@@ -34,15 +35,20 @@ function computerDesk(): AppSpec {
     name: 'Computer Desk',
     emoji: '🖥️',
     description:
-      'Works on its own computer: runs code, reads and writes files.',
+      'Works on its own computer: opens web pages, runs code, reads and writes files.',
     connections: [],
     rules: [],
     instructions:
-      'You have a computer: run Python on it with your tools, and keep what you make in files there.',
+      'You have a computer: open web pages in its browser, run Python on it with your tools, and keep what you make in files there.',
     interface: {
       ...base.interface,
       welcome: 'I work on my own computer. Ask me to compute something.',
       starters: [
+        {
+          label: 'Open a page',
+          message:
+            'Open https://example.com in your browser, tell me its title and take a screenshot.',
+        },
         {
           label: 'Write a file',
           message:
@@ -52,7 +58,7 @@ function computerDesk(): AppSpec {
     },
     permissions: {
       ...base.permissions,
-      computer: { browse: false, files: true, shell: true },
+      computer: { browse: true, files: true, shell: true },
     },
   };
 }

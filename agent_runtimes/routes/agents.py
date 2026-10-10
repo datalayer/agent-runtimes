@@ -3377,6 +3377,10 @@ async def delete_agent(
     keep_agent_recorder(agent_id, None)
     serve_agent_code(agent_id, None)
     keep_running(agent_id, None)
+    # The browser of its computer, when it opened one (LOOP R-23).
+    from agent_runtimes.loop.apps.browser import close_browser
+
+    await close_browser(agent_id)
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.

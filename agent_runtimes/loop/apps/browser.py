@@ -659,6 +659,14 @@ async def browser_of(agent_id: str) -> Browser:
         return browser
 
 
+async def close_browser(agent_id: str) -> None:
+    """Stop an agent's browser (its agent deleted)."""
+    _STARTING.pop(agent_id, None)
+    browser = _BROWSERS.pop(agent_id, None)
+    if browser is not None:
+        await browser.close()
+
+
 async def close_browsers() -> None:
     """Stop every browser (the runtime stopping, a test)."""
     browsers = list(_BROWSERS.values())
@@ -683,6 +691,7 @@ __all__ = [
     "WIDTH",
     "browser_of",
     "browser_running",
+    "close_browser",
     "close_browsers",
     "find_browser",
     "private_allowed",

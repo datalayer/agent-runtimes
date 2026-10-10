@@ -244,6 +244,14 @@ async def test_its_agents_browser_waits_while_a_person_has_it(
     assert await asyncio.wait_for(waiting, 1) == {}
 
 
+@pytest.mark.asyncio
+async def test_its_browser_stops_with_its_agent(fake: FakeBrowser) -> None:
+    assert await browsing.browser_of("desk") is fake
+    assert browsing.browser_running("desk") is fake
+    await browsing.close_browser("desk")
+    assert fake.alive is False and browsing.browser_running("desk") is None
+
+
 # --- what it may reach ----------------------------------------------------------------
 
 
