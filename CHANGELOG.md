@@ -12,6 +12,17 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.97
+
+- **A step that streams, and tool calls as steps** (STUDIO P-31, P-33) ([Python applications](https://agent-runtimes.datalayer.tech/docs/apps/python-applications)). `await step.stream(pieces)` writes a step's output as the model writes it — the terminal under the step's line, the Session API as `loop.step` again for each piece, the chat redrawing the row in place; every tool call of a session's agent is a `tool` step of its own, in this process and on a runtime, started when the model makes it and ended with its result or why it failed, nested in the step the code was in.
+- **A blank agent this process can build** (STUDIO P-32): `example-blank` (agentspecs 0.0.69), a model and nothing else; `loop apps init --python` writes it. Per-call model settings: `session.agent.run/stream(..., model_settings=...)`.
+- **Chainlit's documentation, rebuilt** (STUDIO P-27): text to SQL from words, conversational document QA, a PII guard, in `examples/chainlit-parity`.
+- **A host function decided by its rule on the runtime too** (STUDIO D-10): the runtime decides `host_<name>` by the rule naming it, as the page does, and shows its model none left to the person, no `host_` tool the Appspec does not name, and no `host_context` when the Appspec passes nothing.
+- **A page served by its own server runs there again** (STUDIO P-08, P-25): *Local* is held on the web only when no server is named, so `loop apps run --web` and `app.mount` pages talk to their own agent-runtimes server, not to the visitors' runtime (a regression of 1.3.96).
+- **`loop scenes push` keeps the spec as the Studio's item spells it** (STUDIO P-30): a `talks_to` kept as written was read in the Studio as no link.
+- **`npm run build` makes `dist-embed/` too**, and `make dist-embed` builds it alone from source; the release and the pull-request build check it rather than build it twice.
+- Requires `agentspecs>=0.0.69`.
+
 ## 1.3.96
 
 - **An application served on this machine, with hot reload** (STUDIO P-08) ([CLI](https://agent-runtimes.datalayer.tech/docs/cli)). `loop apps run app.py --web --watch` serves the application in the embed's page at `http://127.0.0.1:8000/app`; a change that builds reloads the page with the new code, one that does not is said in a band at its foot and in the terminal while the last good version keeps running. The embed's loader declares `__webpack_public_path__` before importing its module, without which no application loaded on any page.
