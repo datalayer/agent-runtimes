@@ -2571,6 +2571,13 @@ class AppInterfaceSpec(BaseModel):
     )
 
 
+class AppTestFileSpec(BaseModel):
+    """A text file a test gives with what it asks, as a person gives one on its page."""
+
+    name: str
+    text: str
+
+
 class AppTestCaseSpec(BaseModel):
     """An example of what an application should do, in plain words."""
 
@@ -2582,6 +2589,10 @@ class AppTestCaseSpec(BaseModel):
             "The function of its code that decides the case, by name (LOOP P-06); "
             "`expect` says it in words"
         ),
+    )
+    files: List[AppTestFileSpec] = Field(
+        default_factory=list,
+        description="Text files it is given with what it is asked, in the message after it",
     )
 
 

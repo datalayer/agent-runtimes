@@ -228,6 +228,21 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(on)).not.toHaveProperty('unavailable_because');
   });
 
+  it('writes the files a test gives, and none for a test in words alone (E-01)', () => {
+    const report = APP_CATALOGUE['report-from-a-file'];
+    const [orders, , pdf] = report.tests.cases;
+    expect(orders.files?.map(file => file.name)).toEqual(['orders.csv']);
+    expect(pdf.files).toBeUndefined();
+    const written = dumpAppspec(report) as {
+      tests: { cases: Array<Record<string, unknown>> };
+    };
+    expect(written.tests.cases[0].files).toEqual([
+      { name: 'orders.csv', text: orders.files?.[0].text },
+    ]);
+    expect(written.tests.cases[2]).not.toHaveProperty('files');
+    expect(parseAppspec(written).app.tests.cases).toEqual(report.tests.cases);
+  });
+
   it('writes that its conversations may suggest tests only when they may (V-16)', () => {
     const chat = emptyAppspec('chat');
     expect(chat.record.suggestTests).toBe(false);

@@ -789,6 +789,14 @@ export interface AppInterfaceSpec {
   outputs: string[];
 }
 
+/** A text file a test gives with what it asks, as a person gives one on its page. */
+export interface AppTestFileSpec {
+  /** Its name, without a folder: `orders.csv`. */
+  name: string;
+  /** What it holds. */
+  text: string;
+}
+
 export interface AppTestCaseSpec {
   ask: string;
   expect: string;
@@ -798,6 +806,11 @@ export interface AppTestCaseSpec {
    * the file. Empty, or absent, for a case in words alone.
    */
   code?: string;
+  /**
+   * Text files it is given with what it is asked, each in the message after
+   * it. Absent for a case in words alone.
+   */
+  files?: AppTestFileSpec[];
 }
 
 /**

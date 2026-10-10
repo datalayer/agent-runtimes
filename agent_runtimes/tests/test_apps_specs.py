@@ -435,3 +435,28 @@ def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
     assert APP_CATALOGUE["web-research"].samples.documents == []
     loaded = load_app(dump_app(spec_of("quote-calculator")))
     assert loaded.samples == quote.samples
+
+
+def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-01: a test gives its application text files with what it asks
+    — Report from a File's CSVs — in the generated catalogue, kept by a runtime;
+    a case in words alone has none."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    cases = APP_CATALOGUE["report-from-a-file"].tests.cases
+    assert [[file.name for file in case.files] for case in cases] == [
+        ["orders.csv"],
+        ["empty.csv"],
+        [],
+        ["orders-notes.csv"],
+    ]
+    assert cases[1].files[0].text == "order_id,date,customer,amount,notes\n"
+    loaded = load_app(dump_app(spec_of("report-from-a-file")))
+    assert loaded.tests.cases == cases
+    desk = APP_CATALOGUE["support-desk"]
+    assert [document.file for document in desk.samples.documents] == [
+        "product-documentation.md",
+        "returns-policy.md",
+    ]

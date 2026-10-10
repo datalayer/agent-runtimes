@@ -1321,9 +1321,38 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Code',
           type: 'string',
         },
+        files: {
+          description:
+            'Text files it is given with what it is asked, each in the message after it',
+          items: {
+            $ref: '#/$defs/AppTestFile',
+          },
+          title: 'Files',
+          type: 'array',
+        },
       },
       required: ['ask', 'expect'],
       title: 'AppTestCase',
+      type: 'object',
+    },
+    AppTestFile: {
+      additionalProperties: false,
+      description:
+        'A text file a test gives with what it asks, as a person gives one on its page.',
+      properties: {
+        name: {
+          description: 'Its name, without a folder: `orders.csv`',
+          title: 'Name',
+          type: 'string',
+        },
+        text: {
+          description: 'What it holds',
+          title: 'Text',
+          type: 'string',
+        },
+      },
+      required: ['name', 'text'],
+      title: 'AppTestFile',
       type: 'object',
     },
     AppTests: {

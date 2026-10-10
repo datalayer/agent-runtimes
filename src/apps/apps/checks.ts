@@ -1285,6 +1285,10 @@ export function documentShapeProblems(document: unknown): string[] {
     records(tests.cases, 'tests.cases', (item, where) => {
       required(item, 'ask', where);
       required(item, 'expect', where);
+      records(item.files, `${where}.files`, (file, at) => {
+        required(file, 'name', at);
+        required(file, 'text', at);
+      });
     });
   });
   mapping(d.record, 'record', record => {

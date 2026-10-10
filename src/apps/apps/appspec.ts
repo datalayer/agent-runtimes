@@ -921,6 +921,15 @@ export function parseAppspec(document: unknown): ParsedAppspec {
         expect: text(testCase.expect),
         // Decided by its code (LOOP P-06), when it names the function.
         ...(text(testCase.code) ? { code: text(testCase.code) } : {}),
+        // Given files with what it is asked, when it is.
+        ...(records(testCase.files).length
+          ? {
+              files: records(testCase.files).map(file => ({
+                name: text(file.name),
+                text: text(file.text),
+              })),
+            }
+          : {}),
       })),
       verified: {
         live: texts(verified.live),
@@ -1379,6 +1388,14 @@ export function dumpAppspec(app: AppSpec): Data {
             ask: testCase.ask,
             expect: testCase.expect,
             ...(testCase.code ? { code: testCase.code } : {}),
+            ...(testCase.files?.length
+              ? {
+                  files: testCase.files.map(file => ({
+                    name: file.name,
+                    text: file.text,
+                  })),
+                }
+              : {}),
           })),
         )
         .part(
