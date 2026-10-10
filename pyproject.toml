@@ -28,6 +28,10 @@ dependencies = [
     # An application is a Reactor plugin on a PluginPlatform (LOOP P-35):
     # its contributions, its extension, its commands and routes.
     "datalayer_reactor>=1.0.5",
+    # PAP is a runtime protocol capability, not an example-only dependency.
+    # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
+    # orchestration and a root-published TypeScript package.
+    "personal-agent-protocol>=0.3.1,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",

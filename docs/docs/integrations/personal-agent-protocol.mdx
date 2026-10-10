@@ -1,0 +1,63 @@
+---
+sidebar_position: 2
+title: Personal Agent Protocol
+---
+
+# Personal Agent Protocol
+
+Agent Runtimes depends on Personal Agent Protocol (PAP) in Python and
+TypeScript. The integration divides responsibility explicitly:
+
+- the PAP SDK validates discovery, issuer/domain binding, client metadata,
+  same-domain JWKS, protocol models, and cryptographic flows;
+- Agent Runtimes decides what is safe to place in a tool result, model context,
+  trace, or UI state; and
+- Datalayer host services own DNS-pinned egress, key custody, one-use
+  authorization state, tokens, consent, and audit.
+
+## Python
+
+`PapPersonalAgentCapability` currently exposes two credential-free methods:
+
+```python
+from agent_runtimes.pap import PapPersonalAgentCapability
+
+async with PapPersonalAgentCapability() as pap:
+    company = await pap.discover_company("example.com")
+    identity = await pap.inspect_agent("https://agent.example/agent.json")
+```
+
+`PapCompanySummary` contains the verified organization, domain, protocol
+version, issuer, sign-in choices, interface kinds, and extension versions.
+`PapAgentIdentitySummary` contains the verified client identity, redirect
+count, signing algorithms, and extension versions. Neither contains endpoint
+operational endpoint URLs, response bodies, JWK coordinates, assertions,
+proofs, or tokens. The verified issuer and client ID remain visible because
+they are the public identities being inspected.
+
+## TypeScript
+
+The TypeScript package provides the same boundary and vocabulary:
+
+```typescript
+import { PapPersonalAgentCapability } from '@datalayer/agent-runtimes';
+
+const pap = new PapPersonalAgentCapability();
+const company = await pap.discoverCompany('example.com');
+const identity = await pap.inspectAgent('https://agent.example/agent.json');
+```
+
+Both methods accept injected PAP clients/functions for server policy and
+testing. Production backends should inject a Reactor host whose metadata
+transport enforces connected-address policy and tenant-scoped caching.
+
+## Authorization boundary
+
+Discovery and public identity are safe agent tools. Direct Sign-In, Session
+start/renewal, DPoP generation, Account Token handling, and callbacks are not.
+Those flows run as deterministic capabilities outside the model loop and give
+applications only safe status or opaque references.
+
+The PAP repository's
+[Agent Runtimes examples](https://github.com/datalayer/personal-agent-protocol/tree/main/examples/agent-runtimes)
+provide one small application per feature and make that boundary executable.

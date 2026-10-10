@@ -8,6 +8,7 @@ export * from './client';
 export * from './collaboration';
 export * from './components';
 export * from './mcp';
+export * from './pap';
 export * from './stores';
 export * from './identity';
 export * from './config';
