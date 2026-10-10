@@ -264,6 +264,32 @@ Beside them, `tests/test_app.py` is what the folder's CI runs with `pytest tests
 Next: cd desk && loop apps run app.yaml
 ```
 
+### An application in a browser page, with hot reload
+
+`loop apps run app.py --web` serves the application on this machine in a
+browser page, drawn by the embed — the renderer of its hosted page — at
+`http://127.0.0.1:8000/app`; with `--watch`, a change to a file of its folder
+builds it again and the page reloads by itself, or says, at its foot, why the
+change was not taken while the application runs on as it was.
+
+```bash
+loop apps run app.py --web --watch                       # opens the page
+loop apps run app.py --web --watch --headless --port 8771
+loop apps run app.py --web --embed-dir ../agent-runtimes/dist-embed   # a build of the embed, served from here
+```
+
+| Option | What it does |
+| --- | --- |
+| `--web` | Serve it in a browser page instead of the terminal; its code and its agent run in this process, with your own model keys. |
+| `--watch` | With `--web`: build it again when a `.py`, `.yaml`, `.yml` or `.json` file of its folder changes, and reload the page. |
+| `--host`, `--port` | Where it is served: `127.0.0.1` and `8000` by default. |
+| `--headless` | Do not open the page in a browser. |
+| `--embed-origin <url>` | Where the embed's script is loaded from: `https://datalayer.ai` by default. |
+| `--embed-dir <dir>` | A build of the embed, served from this server at `/embed/`. |
+
+See [In a browser page, with hot
+reload](/apps/python-applications#in-a-browser-page-with-hot-reload).
+
 ### An application served over A2A
 
 `loop apps run <app>.yaml --a2a` serves the application over A2A, at

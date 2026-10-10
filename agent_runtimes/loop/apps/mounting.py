@@ -19,6 +19,11 @@ developer's own FastAPI:
   ``<datalayer-app server="…/assistant">``, its Appspec written in the
   element.
 
+``loop apps run --web`` (LOOP P-08) serves an application the same way on
+this machine, with a `HotReload` (`agent_runtimes.loop.apps.serving`): the
+page reads the application as it is now, and is told to reload when its file
+changed.
+
 Who may call is decided as on any runtime (LOOP R-32): the machine itself;
 else a person's token, or an embed token the developer's server issued for
 the visit (``token``), from an origin the Appspec names
@@ -48,6 +53,7 @@ from fastapi.responses import HTMLResponse
 if TYPE_CHECKING:
     from agent_runtimes.app import ServerConfig
     from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.loop.apps.serving import HotReload
 
 #: Where Datalayer serves the embed's script, by default.
 EMBED_ORIGIN = "https://datalayer.ai"
@@ -120,9 +126,15 @@ def page_of(
     *,
     token: str = "",
     embed_origin: str = EMBED_ORIGIN,
+    reload_events: str = "",
 ) -> str:
     """The page an application mounted at ``server`` is served on: the embed,
     its Appspec written in the element, its agent on ``server``.
+
+    With ``reload_events``, the address of a `HotReload`'s events (LOOP
+    P-08), the page reloads when the application was built again, starts a
+    new conversation each time (``resume="false"``: the one before was the
+    code before), and says over the application why a change was refused.
     """
     spec = application.spec
     # In a <script> element, `</` would end it: written so that it cannot.
@@ -133,6 +145,8 @@ def page_of(
     attributes = [f'server="{html.escape(server, quote=True)}"']
     if token:
         attributes.append(f'token="{html.escape(token, quote=True)}"')
+    if reload_events:
+        attributes.append('resume="false"')
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -148,13 +162,38 @@ def page_of(
   <body>
     <datalayer-app {" ".join(attributes)}>
       <script type="application/json">{document}</script>
-    </datalayer-app>
+    </datalayer-app>{_reload_script(reload_events) if reload_events else ""}
   </body>
 </html>
 """
 
 
+def _reload_script(events: str) -> str:
+    """What reloads the page when its application was built again (LOOP P-08).
+
+    A ``reloaded`` event reloads it; a ``refused`` one lays the reasons over
+    the application, which keeps running as it was, until a change is taken.
+    """
+    address = json.dumps(events)
+    return f"""
+    <div id="loop-reload-refused" role="alert" hidden
+      style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;margin:0;padding:12px 16px;font:14px/1.5 system-ui,sans-serif;background:#fff1f0;color:#82071e;border-top:2px solid #cf222e;white-space:pre-wrap"></div>
+    <script>
+      (function () {{
+        var refused = document.getElementById('loop-reload-refused');
+        var events = new EventSource({address});
+        events.addEventListener('reloaded', function () {{ window.location.reload(); }});
+        events.addEventListener('refused', function (event) {{
+          var said = JSON.parse(event.data);
+          refused.textContent = said.says + '\\n' + said.problems.join('\\n');
+          refused.hidden = false;
+        }});
+      }})();
+    </script>"""
+
+
 def _checked_path(path: str) -> str:
+    """A path of the application's own, or refused in a sentence."""
     if not path.startswith("/") or path == "/" or path.endswith("/"):
         raise ValueError(
             f"An application is mounted under a path of its own, “/assistant” for one, not {path!r}."
@@ -171,6 +210,7 @@ def mount(
     token: Optional[TokenGiver] = None,
     embed_origin: str = EMBED_ORIGIN,
     config: Optional["ServerConfig"] = None,
+    hot_reload: Optional["HotReload"] = None,
 ) -> FastAPI:
     """Mount an application into a FastAPI of one's own (LOOP P-25).
 
@@ -188,9 +228,15 @@ def mount(
         Gives the page the visit's embed token, issued by the developer's
         server (LOOP R-20); none for a page only the machine itself opens.
     embed_origin : str
-        Where the embed's script is served.
+        Where the embed's script is served; empty for the server the page is
+        served by (``loop apps run --web --embed-dir``).
     config : ServerConfig, optional
         The runtime's configuration; its defaults when unsaid.
+    hot_reload : HotReload, optional
+        What builds the application again when its file changed (LOOP
+        P-08): the page reads the application it holds, listens to its
+        events at ``<path>/_loop/reload``, and its watch runs while ``api``
+        does.
 
     Returns
     -------
@@ -211,20 +257,32 @@ def mount(
     runtime = create_app(settings)
     serve_code(application)
 
+    events = f"{path}/_loop/reload" if hot_reload is not None else ""
+
     async def page(request: Request) -> HTMLResponse:
         """The application, embedded, its agent on this runtime."""
         given = ""
         if token is not None:
             said = token(request)
             given = str(await said) if inspect.isawaitable(said) else str(said)
-        server = str(request.base_url).rstrip("/") + path
+        here = str(request.base_url).rstrip("/")
         return HTMLResponse(
-            page_of(application, server, token=given, embed_origin=embed_origin)
+            page_of(
+                hot_reload.application if hot_reload is not None else application,
+                here + path,
+                token=given,
+                embed_origin=embed_origin or here,
+                reload_events=events,
+            )
         )
 
     # The page first, so that the mount does not answer its address.
     for address in (path, f"{path}/"):
         api.add_api_route(address, page, methods=["GET"], include_in_schema=False)
+    if hot_reload is not None:
+        api.add_api_route(
+            events, hot_reload.events, methods=["GET"], include_in_schema=False
+        )
     api.mount(path, runtime)
 
     outer = api.router.lifespan_context
@@ -235,7 +293,11 @@ def mount(
         async with outer(app) as state:
             async with runtime.router.lifespan_context(runtime):
                 await create_agent(runtime, payload, settings.api_prefix)
-                yield state
+                if hot_reload is None:
+                    yield state
+                else:
+                    async with hot_reload.watching(runtime, settings.api_prefix):
+                        yield state
 
     api.router.lifespan_context = lifespan
     return runtime

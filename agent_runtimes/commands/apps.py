@@ -1383,8 +1383,43 @@ def apps_run(
             "grant on this application's A2A route; unsaid, the runtime's own credential."
         ),
     ),
+    web: bool = typer.Option(
+        False,
+        "--web",
+        help=(
+            "Serve it on this machine in a browser page, drawn by the embed — the hosted "
+            "page's renderer — with its code and its agent in this process; with --watch, "
+            "the page reloads when its file changes."
+        ),
+    ),
+    host: str = typer.Option(
+        "127.0.0.1", "--host", help="With --web: the address to serve it on."
+    ),
+    port: int = typer.Option(
+        8000, "--port", help="With --web: the port to serve it on."
+    ),
+    headless: bool = typer.Option(
+        False, "--headless", help="With --web: do not open the page in a browser."
+    ),
+    embed_origin: str = typer.Option(
+        None,
+        "--embed-origin",
+        help="With --web: where the embed's script is loaded from; https://datalayer.ai by default.",
+    ),
+    embed_dir: Path = typer.Option(
+        None,
+        "--embed-dir",
+        exists=True,
+        file_okay=False,
+        help="With --web: a build of the embed (agent-runtimes' dist-embed), served from here.",
+    ),
 ) -> None:
     """Run an application in the terminal — here, or on Datalayer (LOOP L-05, P-08).
+
+    With --web it is served in a browser page on this machine instead, at
+    http://<host>:<port>/app, drawn by the same renderer as the hosted page
+    (the embed); --watch then builds it again when a file of its folder
+    changes and reloads the page.
 
     With --a2a it is served over A2A with fasta2a, at
     /api/v1/a2a/agents/<its id>/, to the members of a team that ask it
@@ -1431,6 +1466,30 @@ def apps_run(
         raise typer.Exit(1)
     document = built.document
     has_code = is_python(path)
+    if web:
+        _serve_web(
+            path,
+            built,
+            watch=watch,
+            host=host,
+            port=port,
+            headless=headless,
+            embed_origin=embed_origin,
+            embed_dir=embed_dir,
+            refused_with=[
+                name
+                for name, given in (
+                    ("--cloud", cloud),
+                    ("--ask", ask),
+                    ("--a2a", a2a),
+                    ("--runtime", runtime),
+                    ("--organization", organization),
+                    ("--keep", keep),
+                )
+                if given
+            ],
+        )
+        return
     if application.team:
         console.print(
             "[red]✗[/red] An application run by a team cannot run in the terminal yet."
@@ -1593,6 +1652,80 @@ def apps_run(
         elif process is not None:
             process.terminate()
             process.join(timeout=5.0)
+
+
+def _serve_web(
+    path: Path,
+    built: Any,
+    *,
+    watch: bool,
+    host: str,
+    port: int,
+    headless: bool,
+    embed_origin: Optional[str],
+    embed_dir: Optional[Path],
+    refused_with: List[str],
+) -> None:
+    """`loop apps run --web`: the application in a browser page on this machine (LOOP P-08)."""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from agent_runtimes.loop.apps.mounting import EMBED_ORIGIN
+    from agent_runtimes.loop.apps.serving import APP_PATH, HotReload, local_server
+
+    if refused_with:
+        console.print(
+            f"[red]✗[/red] --web serves it on this machine, in a page: not with {', '.join(refused_with)}."
+        )
+        raise typer.Exit(1)
+    if built.spec.team:
+        console.print(
+            "[red]✗[/red] An application run by a team cannot be served in a page yet."
+        )
+        raise typer.Exit(1)
+    if embed_dir is not None and embed_origin:
+        console.print(
+            "[red]✗[/red] --embed-dir serves the embed from here: no --embed-origin with it."
+        )
+        raise typer.Exit(1)
+    hot_reload = (
+        HotReload(
+            path,
+            built,
+            _application_of,
+            say=lambda line: console.print(f"[cyan]↻[/cyan] {line}", highlight=False),
+        )
+        if watch
+        else None
+    )
+    try:
+        api = local_server(
+            built,
+            hot_reload=hot_reload,
+            embed_origin=""
+            if embed_dir is not None
+            else (embed_origin or EMBED_ORIGIN),
+            embed_dir=embed_dir,
+        )
+    except ValueError as refused:
+        console.print(f"[red]✗[/red] {refused}", highlight=False)
+        raise typer.Exit(1)
+    address = f"http://{host}:{port}{APP_PATH}"
+    console.print(
+        f"{built.spec.emoji}  {built.spec.name} is served on this machine at {address}"
+        + (
+            f", reloaded when a file of {path.parent.resolve()} changes"
+            if watch
+            else ""
+        )
+        + ". Ctrl-C stops it.",
+        highlight=False,
+    )
+    if not headless:
+        threading.Timer(1.5, lambda: webbrowser.open(address)).start()
+    uvicorn.run(api, host=host, port=port, log_level="warning")
 
 
 def _serve_over_a2a(

@@ -1457,6 +1457,41 @@ its state through the new code (`AppHost.resume`). A file that no longer
 builds is said, and the application as it was goes on. For a spec,
 `--watch` reconfigures the runtime the same way.
 
+### In a browser page, with hot reload
+
+`loop apps run app.py --web` serves the application on this machine in a
+browser page instead of the terminal — drawn by the embed, the same renderer
+as its hosted page, the Studio's Preview and a host's page — at
+`http://127.0.0.1:8000/app` (`--host`, `--port`), and opens it (`--headless`
+does not). It is served as [Mounted into your own
+FastAPI](#mounted-into-your-own-fastapi) serves one: the session API and its
+code under `/app`, its agent made on a runtime in the same process, with your
+own model keys.
+
+```bash
+loop apps run app.py --web --watch
+```
+
+With `--watch`, the files of its folder (`.py`, `.yaml`, `.yml`, `.json`) are
+read twice a second. When one changes, the application is built again:
+
+- **taken** — its next sessions run the new code, its agent is made again
+  with the spec it now builds, and the page reloads by itself, starting a new
+  conversation (the one before ran the code before). The terminal says
+  *Echo Desk was built again from app.py in 0.1 s.*
+- **refused** — the file does not build, or its spec would not validate: the
+  page says why in a band at its foot, and the terminal too (*app.py was not
+  taken: Echo Desk runs as it was.*, then the reasons); the application goes
+  on as it was until a change is taken. Its `id` cannot change while it runs:
+  that is another application, said in a sentence.
+
+The embed's script comes from `https://datalayer.ai/embed/` unless said
+otherwise: `--embed-origin` names another Datalayer origin, and `--embed-dir`
+serves a build of the embed from this server (agent-runtimes' `dist-embed`,
+for whoever works on the renderer). The page is yours alone: `--web` takes no
+`--cloud`, `--ask`, `--a2a`, `--runtime` or `--organization`, and an
+application run by a team is not served in a page yet.
+
 ## What is verified, and what is not
 
 **Verified.** `agent_runtimes/tests/test_loop_app_api.py` runs every call on
