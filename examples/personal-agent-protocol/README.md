@@ -14,6 +14,7 @@ feature while keeping protocol secrets outside model context.
 | [`session-lifecycle`](./session-lifecycle/)               | Start, nonce retry, and renewal over HTTP            | Lifecycle evidence; credentials withheld     |
 | [`browser-session`](./browser-session/)                   | Controlled form POST and one-use browser assertion   | Browser policy; all credentials withheld     |
 | [`dpop-transport`](./dpop-transport/)                     | Nonce retry and redirect-bound fresh proofs          | Transport policy; credentials withheld       |
+| [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs       | Conversation state; credentials withheld     |
 
 The first two examples use Agent Runtimes' Python
 `PapPersonalAgentCapability`. The remaining examples use PAP primitives inside
