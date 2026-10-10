@@ -6,7 +6,7 @@ SHELL=/bin/bash
 .DEFAULT_GOAL := default
 
 .PHONY: \
-	help default clean build test test-js test-py kill \
+	help default clean build dist-embed test test-js test-py kill \
 	publish-npm publish-pypi pydoc typedoc docs \
 	examples examples\:prod examples-local agent agent-node agent-node-local agent-node-dist agent-notebook agent-document dev-notebook dev-document jupyter-server agent-serve \
 	docker-build docker-push docker-release agent-runtime-docker-build agent-runtime-docker-push agent-runtime-docker-release node-agent-artifact-build node-agent-docker-build agent-node-docker-build agent-node-docker-push agent-node-docker-start agent-node-docker-stop agent-node-docker-logs \
@@ -227,6 +227,9 @@ build: ## build
 
 build-lib: ## build-lib
 	npm run build:lib
+
+dist-embed: ## dist-embed – build the embed bundle (dist-embed/) from this tree, replacing any there; nothing is taken from npm
+	node scripts/dist-embed.mjs --force
 
 test: test-js test-py ## run tests
 
