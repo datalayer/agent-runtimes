@@ -341,7 +341,9 @@ def test_push_keeps_it_as_the_studio_keeps_a_scene(scene_py: Path) -> None:
     ).answers("desk", "words")
     loop.stage(inline, runs_in={"desk": "browser", "sales": "runtime"})
     written = scenes.dump_scene(inline.spec)
-    spec = json.loads(spacer.items[store.create_scene("space-1", written)]["model_s"])["spec"]
+    spec = json.loads(spacer.items[store.create_scene("space-1", written)]["model_s"])[
+        "spec"
+    ]
     assert spec["cast"][0]["talksTo"] == written["cast"][0]["talks_to"]
     assert [member["runsIn"] for member in spec["cast"]] == ["browser", "runtime"]
     assert not set(STUDIO_KEYS) & set(json.dumps(spec).replace('"', " ").split())

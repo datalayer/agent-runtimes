@@ -184,7 +184,10 @@ CASES: List[Dict[str, str]] = [
     },
     {
         "name": "a Frame the catalogue has not",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "setting:\n  frames:\n    - nosuch\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "setting:\n  frames:\n    - nosuch\n",
     },
     {
         "name": "the stage places someone not in the cast",
@@ -195,7 +198,10 @@ CASES: List[Dict[str, str]] = [
     },
     {
         "name": "a balloon opens first for someone not in the cast",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "stage:\n  opens_first: ghost\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "stage:\n  opens_first: ghost\n",
     },
     {
         "name": "an address for someone not in the cast",
@@ -458,40 +464,60 @@ rehearsal:
     # is played, and nothing of what each is (`scene_problems`).
     {
         "name": "a scene of a team that plays",
-        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: sales\n    persona:\n      name: Sales\n    brief: Ask for the open invoices.\n",
+        "yaml": HEAD
+        + "team: sales-and-accounting\ncast:\n  - member: sales\n    persona:\n      name: Sales\n    brief: Ask for the open invoices.\n",
     },
     {
         "name": "a cast under a team names someone not in it",
-        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: ghost\n    persona:\n      name: Ghost\n",
+        "yaml": HEAD
+        + "team: sales-and-accounting\ncast:\n  - member: ghost\n    persona:\n      name: Ghost\n",
     },
     {
         "name": "a cast under a team says what a member is",
-        "yaml": HEAD + "team: sales-and-accounting\ncast:\n  - member: sales\n    app: sales\n    persona:\n      name: Sales\n",
+        "yaml": HEAD
+        + "team: sales-and-accounting\ncast:\n  - member: sales\n    app: sales\n    persona:\n      name: Sales\n",
     },
     # --- a tool a system is asked for: offered, offered for this, reached ---
     # What agentspecs reads of the catalogue's servers and connections
     # (`_tool_problem`): on a move of the script, and on a rehearsal's line.
     {
         "name": "a move asks a system for a tool it does not offer",
-        "yaml": TOOL_SCENE.format(member="books", app="accounting", persona="Accounting", server="odoo-accounting")
+        "yaml": TOOL_SCENE.format(
+            member="books",
+            app="accounting",
+            persona="Accounting",
+            server="odoo-accounting",
+        )
         + "script:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n"
         + "      - who: books\n        asks: odoo-accounting\n        over: mcp\n        tool: odoo_accounting_burn_the_books\n",
     },
     {
         "name": "a move asks for a tool to do what it does not",
-        "yaml": TOOL_SCENE.format(member="crop", app="crop-monitoring", persona="Crop", server="earthdata")
+        "yaml": TOOL_SCENE.format(
+            member="crop", app="crop-monitoring", persona="Crop", server="earthdata"
+        )
         + "script:\n  - id: look\n    cue:\n      say: What is there\n    expect: It is answered\n    moves:\n"
         + "      - who: crop\n        asks: earthdata\n        over: mcp\n        tool: download_earth_data_granules\n        does: read\n",
     },
     {
         "name": "a move asks for a tool no connection of the member offers",
-        "yaml": TOOL_SCENE.format(member="inbox", app="inbox-triage", persona="Inbox", server="google-workspace")
+        "yaml": TOOL_SCENE.format(
+            member="inbox",
+            app="inbox-triage",
+            persona="Inbox",
+            server="google-workspace",
+        )
         + "script:\n  - id: mail\n    cue:\n      say: What came in\n    expect: It is answered\n    moves:\n"
         + "      - who: inbox\n        asks: google-workspace\n        over: mcp\n        tool: list_calendar_events\n",
     },
     {
         "name": "a rehearsal expects a tool a system does not offer",
-        "yaml": TOOL_SCENE.format(member="books", app="accounting", persona="Accounting", server="odoo-accounting")
+        "yaml": TOOL_SCENE.format(
+            member="books",
+            app="accounting",
+            persona="Accounting",
+            server="odoo-accounting",
+        )
         + "script:\n  - id: open\n    cue:\n      say: Show the books\n    expect: It is answered\n    moves:\n"
         + "      - who: books\n        answers: table\n"
         + "rehearsal:\n  beats:\n    - beat: open\n      lines:\n"
@@ -508,7 +534,9 @@ rehearsal:
     },
     {
         "name": "a name that is a number",
-        "yaml": HEAD.replace("name: Probe", "name: 123") + "entry: sales\ncast:\n" + SALES,
+        "yaml": HEAD.replace("name: Probe", "name: 123")
+        + "entry: sales\ncast:\n"
+        + SALES,
     },
     {
         "name": "a scene with no name",
@@ -524,11 +552,15 @@ rehearsal:
     },
     {
         "name": "a member running nowhere",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES.replace("runs_in: runtime", "runs_in: nowhere"),
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES.replace("runs_in: runtime", "runs_in: nowhere"),
     },
     {
         "name": "a member's role nobody plays",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES.replace("role: initiator", "role: boss"),
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES.replace("role: initiator", "role: boss"),
     },
     {
         "name": "an audience that is a word",
@@ -536,15 +568,24 @@ rehearsal:
     },
     {
         "name": "an audience nobody can be",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  who: nobody-at-all\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "audience:\n  who: nobody-at-all\n",
     },
     {
         "name": "a ceiling below nothing",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  ceiling_per_ask: -1\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "audience:\n  ceiling_per_ask: -1\n",
     },
     {
         "name": "a ceiling that is no number",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  ceiling_per_ask: lots\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "audience:\n  ceiling_per_ask: lots\n",
     },
     {
         "name": "a rehearsal bound that is no duration",
@@ -556,7 +597,10 @@ rehearsal:
     },
     {
         "name": "places that are a word",
-        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "stage:\n  positions: everywhere\n",
+        "yaml": HEAD
+        + "entry: sales\ncast:\n"
+        + SALES
+        + "stage:\n  positions: everywhere\n",
     },
     {
         "name": "two things wrong at once",
@@ -567,13 +611,27 @@ rehearsal:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agentspecs", type=Path, required=True, help="The agentspecs clone to read the checks from")
-    parser.add_argument("--output", type=Path, required=True, help="The JSON table the browser's checks are held to")
+    parser.add_argument(
+        "--agentspecs",
+        type=Path,
+        required=True,
+        help="The agentspecs clone to read the checks from",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="The JSON table the browser's checks are held to",
+    )
     args = parser.parse_args()
 
     sys.path.insert(0, str(args.agentspecs.resolve()))
     import yaml  # noqa: PLC0415
-    from agentspecs.scenes import SceneError, parse_scene, scene_problems  # noqa: PLC0415
+    from agentspecs.scenes import (  # noqa: PLC0415
+        SceneError,
+        parse_scene,
+        scene_problems,
+    )
 
     recorded: List[Dict[str, Any]] = []
     for case in CASES:
@@ -591,7 +649,9 @@ def main() -> int:
         "recordedWith": "scripts/record-scene-checks.py",
         "cases": recorded,
     }
-    args.output.write_text(json.dumps(table, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(table, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(f"{len(recorded)} cases written to {args.output}")
     return 0
 
