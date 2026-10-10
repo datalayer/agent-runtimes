@@ -48,6 +48,24 @@ class A2AAgentCard:
     version: str = "1.0.0"
     skills: list[dict[str, Any]] | None = None
     provider: dict[str, str] | None = None
+    #: How a caller authenticates, as the card says it (fasta2a's
+    #: `SecurityScheme` and `SecurityRequirement`); checked by the mount's gate.
+    security_schemes: dict[str, Any] | None = None
+    security_requirements: list[dict[str, Any]] | None = None
+    #: The media types it is asked in and answers in, unless a skill says
+    #: otherwise; fasta2a's `application/json` when unsaid. A caller that
+    #: accepts an output mode besides words gets it as an artifact.
+    default_input_modes: list[str] | None = None
+    default_output_modes: list[str] | None = None
+    #: Its face, for the clients that draw one: ``emoji`` and, when it has
+    #: one, ``avatar`` (a drawing's name). Carried by the face extension
+    #: (`FACE_EXTENSION_URI`); its name stays plain text.
+    face: dict[str, str] | None = None
+
+
+#: The extension an agent card carries its face in. Not required: a client
+#: that draws no face ignores it.
+FACE_EXTENSION_URI = "https://datalayer.ai/extensions/face/v1"
 
 
 @dataclass
@@ -162,6 +180,7 @@ def register_a2a_agent(
     card: A2AAgentCard,
     broker: Any | None = None,
     storage: Any | None = None,
+    gate: Any | None = None,
 ) -> None:
     """
     Register an agent with the A2A server.
@@ -179,12 +198,23 @@ def register_a2a_agent(
         broker: Optional custom broker (defaults to one kept in the runtime's
             protocol state store, which runs again the work left unfinished).
         storage: Optional custom storage (defaults to one kept in that store).
+        gate: Optional ASGI wrapper the mount is served through, which may
+            refuse a request before the agent sees it: an application's
+            route admits only the callers it was granted to
+            (`agent_runtimes.loop.apps.a2a`).
+
+    fasta2a answers A2A 1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`)
+    as well as its own method names, as its card says it does.
     """
     if not FASTA2A_AVAILABLE:
         logger.warning("fasta2a not installed, A2A agent registration skipped")
         return
 
     agent_id = card.id
+    if agent_id in _a2a_agents:
+        # Made again under the same id: the new agent replaces the old one,
+        # rather than being mounted after a route that still answers first.
+        unregister_a2a_agent(agent_id)
 
     from ..transports.a2a import A2AWorker, TaskCancellation
 
@@ -197,6 +227,10 @@ def register_a2a_agent(
                     id=s.get("id", s.get("name", "").lower().replace(" ", "-")),
                     name=s.get("name", ""),
                     description=s.get("description"),
+                    tags=list(s.get("tags") or []),
+                    input_modes=list(s.get("input_modes") or ["text/plain"]),
+                    output_modes=list(s.get("output_modes") or ["text/plain"]),
+                    **({"examples": list(s["examples"])} if s.get("examples") else {}),
                 )
                 for s in card.skills
             ]
@@ -223,6 +257,7 @@ def register_a2a_agent(
             agent=agent,
             # What a task spent is counted under the id the agent is served under.
             agent_id=agent_id,
+            output_modes=tuple(card.default_output_modes or ()),
             # So `/a2a/terminate` interrupts a running task, not the next one.
             cancellation=TaskCancellation(
                 register=register_task, unregister=unregister_task, cancel=cancel_task
@@ -264,8 +299,24 @@ def register_a2a_agent(
                         "pause": f"{_api_prefix}/a2a/pause",
                         "steer": f"{_api_prefix}/a2a/steer",
                     },
-                )
+                ),
+                *(
+                    [
+                        AgentExtension(
+                            uri=FACE_EXTENSION_URI,
+                            description="Its face: an emoji, and an avatar when it has one.",
+                            required=False,
+                            params=dict(card.face),
+                        )
+                    ]
+                    if card.face
+                    else []
+                ),
             ],
+            security_schemes=card.security_schemes,
+            security_requirements=card.security_requirements,
+            default_input_modes=card.default_input_modes,
+            default_output_modes=card.default_output_modes,
             lifespan=lifespan,
         )
 
@@ -278,13 +329,15 @@ def register_a2a_agent(
         )
         _a2a_agents[agent_id] = registration
 
+        served = gate(a2a_app) if gate is not None else a2a_app
+
         # Create mount for this agent
-        mount = Mount(f"/{agent_id}", app=a2a_app)
+        mount = Mount(f"/{agent_id}", app=served)
         _a2a_mounts.append(mount)
 
         # If app is available, also add route dynamically to running app
         if _app is not None:
-            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=a2a_app)
+            full_mount = Mount(f"{_api_prefix}/a2a/agents/{agent_id}", app=served)
             _app.routes.append(full_mount)
             logger.info(
                 f"Dynamically mounted A2A route: {_api_prefix}/a2a/agents/{agent_id}/"
@@ -325,9 +378,11 @@ def unregister_a2a_agent(agent_id: str) -> None:
         # Remove mount from running app
         if _app is not None:
             mount_path = f"{_api_prefix}/a2a/agents/{agent_id}"
-            _app.routes = [
+            # `FastAPI.routes` is a read-only property over the router's list:
+            # filter that list in place.
+            _app.router.routes[:] = [
                 r
-                for r in _app.routes
+                for r in _app.router.routes
                 if not (hasattr(r, "path") and r.path == mount_path)
             ]
             logger.info(f"Dynamically removed A2A route: {mount_path}/")

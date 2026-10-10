@@ -349,7 +349,7 @@ def serve_server(
         no_config_mcp_servers: Skip starting config MCP servers from ~/.datalayer/mcp.json
         no_catalog_mcp_servers: Skip starting catalog MCP servers defined in agent spec
         mcp_servers: Comma-separated list of MCP server IDs from the catalog to start
-        codemode: Enable Code Mode (MCP servers become programmatic tools)
+        codemode: Enable Codemode (MCP servers become programmatic tools)
         skills: Comma-separated list of skills to enable (requires codemode)
         jupyter_sandbox: Jupyter server URL with token (e.g., http://localhost:8888?token=xxx)
                         for code execution instead of local eval
@@ -456,7 +456,7 @@ def serve_server(
         os.environ["AGENT_RUNTIMES_MCP_SERVERS"] = ",".join(mcp_servers_list)
         if codemode:
             logger.info(
-                f"MCP servers (Code Mode): {mcp_servers_list} - will be converted to programmatic tools"
+                f"MCP servers (Codemode): {mcp_servers_list} - will be converted to programmatic tools"
             )
         else:
             logger.info(
@@ -466,7 +466,7 @@ def serve_server(
     if codemode:
         os.environ["AGENT_RUNTIMES_CODEMODE"] = "true"
         logger.info(
-            "Code Mode enabled: MCP servers will become programmatic tools via CodemodeToolset"
+            "Codemode enabled: MCP servers will become programmatic tools via CodemodeToolset"
         )
 
         if skills:

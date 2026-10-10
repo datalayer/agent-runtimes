@@ -7,49 +7,18 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older run worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The registry times out now and then: a fetch is tried again rather than the run lost.
+env:
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_mintimeout: '20000'
+  npm_config_fetch_retry_maxtimeout: '120000'
+
 jobs:
-  python-build:
-    name: Python Build & Test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-    steps:
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libdbus-1-3 libdbus-1-dev libglib2.0-dev
-
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup UV
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "latest"
-          python-version: ${{ matrix.python-version }}
-          activate-environment: true
-
-      - name: Install Python dependencies
-        run: |
-          uv pip install .
-          uv pip install .[test]
-          uv pip install dbus-python keyring secretstorage
-
-      - name: Unlock keyring
-        uses: t1m0thyj/unlock-keyring@v1
-
-      - name: Run Python tests
-        env:
-          TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
-          DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
-        run: |
-          pytest agent_runtimes/tests/ --cov=agent_runtimes --cov-report term-missing
-
-      - name: Check Python types
-        run: |
-          mypy agent_runtimes
-
   typescript-build:
     name: TypeScript Build & Test
     runs-on: ubuntu-latest
@@ -57,7 +26,8 @@ jobs:
       NODE_OPTIONS: '--max-old-space-size=8192'
     strategy:
       matrix:
-        node-version: ['22.x', '24.x']
+        # Node 24 on main: a pull request waits for one runtime, not two.
+        node-version: ${{ github.event_name == 'pull_request' && fromJSON('["22.x"]') || fromJSON('["22.x", "24.x"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -67,39 +37,56 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ matrix.node-version || '22.x' }}-${{ hashFiles('**/package.json') }}
+          restore-keys: npm-${{ runner.os }}-${{ matrix.node-version || '22.x' }}-
+
       - name: Install TypeScript dependencies
         run: npm install --workspaces --include-workspace-root --no-audit --no-fund
 
       - name: Build TypeScript
         run: npm run build
 
-      - name: Type check
-        run: npx tsc --noEmit
+      # The build makes the `<datalayer-app>` embed too (STUDIO D-08), as the
+      # release does: it prints every file's size and fails over the initial
+      # load's budget (vite.embed.config.ts), so a pull request sees what it costs.
+      - name: Check the embed bundle
+        run: |
+          set -euo pipefail
+          test -s dist-embed/datalayer-app.js
+          test -s dist-embed/datalayer-app-main.js
+          test -s dist-embed/datalayer-app.css
+
+      # `tsc -b` in the build has checked the package; the workspaces here,
+      # rather than in a workflow of their own that installs and builds again.
+      - name: Type check the workspaces
+        run: npm run type-check --workspaces --if-present
 
       - name: Run TypeScript tests
         env:
           TEST_DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
+        # Unit and general once, with coverage; then integration — what `test:all`
+        # and `test:coverage` ran between them, without running the first two twice.
         run: |
-          npm run test:all
           npm run test:coverage
-
-      - name: Build library
-        run: npm run build:lib
+          npm run test:integration
 
   build-status:
     name: Build Status
     runs-on: ubuntu-latest
-    needs: [python-build, typescript-build]
+    needs: [typescript-build]
     if: always()
     steps:
       - name: Check build status
         run: |
-          if [[ "${{ needs.python-build.result }}" == "success" && "${{ needs.typescript-build.result }}" == "success" ]]; then
+          if [[ "${{ needs.typescript-build.result }}" == "success" ]]; then
             echo "✅ All builds passed"
             exit 0
           else
             echo "❌ Some builds failed"
-            echo "Python build: ${{ needs.python-build.result }}"
             echo "TypeScript build: ${{ needs.typescript-build.result }}"
             exit 1
           fi

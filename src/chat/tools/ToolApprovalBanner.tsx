@@ -14,13 +14,15 @@
  */
 
 import { useState } from 'react';
-import { Box, Button, Text, CounterLabel } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Button, Text, CounterLabel } from '@primer/react';
 import {
   ShieldCheckIcon,
   AlertIcon,
   CheckIcon,
   XIcon,
 } from '@primer/octicons-react';
+import { useChatWords } from '../ChatLanguage';
 
 /**
  * A single pending approval item.
@@ -64,6 +66,7 @@ export function ToolApprovalBanner({
   onDismiss,
   collapsible = true,
 }: ToolApprovalBannerProps) {
+  const chatText = useChatWords();
   const [collapsed, setCollapsed] = useState(false);
 
   if (pendingApprovals.length === 0) {
@@ -73,22 +76,20 @@ export function ToolApprovalBanner({
   if (collapsed) {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          bg: 'attention.subtle',
-          borderBottom: '1px solid',
-          borderColor: 'attention.muted',
-          cursor: 'pointer',
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        bg="attention.subtle"
+        borderBottom="1px solid"
+        borderColor="attention.muted"
+        cursor="pointer"
         onClick={() => setCollapsed(false)}
       >
         <ShieldCheckIcon size={16} />
         <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-          Tool approvals pending
+          {chatText.toolApprovalsPending}
         </Text>
         <CounterLabel>{pendingApprovals.length}</CounterLabel>
       </Box>
@@ -97,30 +98,25 @@ export function ToolApprovalBanner({
 
   return (
     <Box
-      sx={{
-        borderBottom: '1px solid',
-        borderColor: 'attention.muted',
-        bg: 'attention.subtle',
-      }}
+      borderBottom="1px solid"
+      borderColor="attention.muted"
+      bg="attention.subtle"
     >
       {/* Header row */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: 3,
-          py: 2,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        px={3}
+        py={2}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           <AlertIcon size={16} />
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
-            {pendingApprovals.length} tool{' '}
-            {pendingApprovals.length === 1 ? 'approval' : 'approvals'} pending
+            {chatText.approvalsPending(pendingApprovals.length)}
           </Text>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box display="flex" gap={1}>
           {onApproveAll && pendingApprovals.length >= 1 && (
             <Button
               size="small"
@@ -128,7 +124,7 @@ export function ToolApprovalBanner({
               leadingVisual={CheckIcon}
               onClick={onApproveAll}
             >
-              Approve all
+              {chatText.approveAll}
             </Button>
           )}
           {collapsible && (
@@ -137,7 +133,7 @@ export function ToolApprovalBanner({
               variant="invisible"
               onClick={() => setCollapsed(true)}
             >
-              Collapse
+              {chatText.collapse}
             </Button>
           )}
           {onDismiss && (
@@ -146,29 +142,27 @@ export function ToolApprovalBanner({
               variant="invisible"
               leadingVisual={XIcon}
               onClick={onDismiss}
-              aria-label="Dismiss"
+              aria-label={chatText.dismiss}
             />
           )}
         </Box>
       </Box>
 
       {/* Approval list */}
-      <Box sx={{ px: 3, pb: 2 }}>
+      <Box px={3} pb={2}>
         {pendingApprovals.map(approval => (
           <Box
             key={approval.id}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              py: 1,
-              px: 2,
-              mb: 1,
-              bg: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            py={1}
+            px={2}
+            mb={1}
+            bg="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Box>
               <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
@@ -185,7 +179,7 @@ export function ToolApprovalBanner({
               variant="default"
               onClick={() => onReview(approval)}
             >
-              Review
+              {chatText.review}
             </Button>
           </Box>
         ))}

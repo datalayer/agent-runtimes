@@ -56,8 +56,8 @@ import {
 } from './utils/runtimeTargetStore';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { useCoreStore } from '@datalayer/core';
-import { LoopEmbed } from '../loop';
-import { AgentEvalsPlugin } from '../loop/plugins/agent-evals';
+import { LoopEmbed } from '../apps';
+import { AgentEvalsPlugin } from '../apps/plugins/agent-evals';
 import { useExampleAgentRuntimes as useAgentRuntimes } from './hooks/useExampleAgentRuntimes';
 
 const LOOP_PLUGINS_AGENTEVA = [AgentEvalsPlugin];
@@ -465,14 +465,12 @@ const AgentEvalsInner: React.FC<{
   if (executionTarget !== 'local' && !isAgentReady && agentStatus !== 'error') {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        gap={3}
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
@@ -491,14 +489,12 @@ const AgentEvalsInner: React.FC<{
   if (isBootstrapping) {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        gap={3}
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
@@ -512,29 +508,20 @@ const AgentEvalsInner: React.FC<{
   void latestScore;
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" minHeight={0} display="flex" flexDirection="column">
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <BeakerIcon size={16} />
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <Heading as="h3" sx={{ fontSize: 2 }}>
             Evaluation — {runtimeName}
           </Heading>
@@ -556,9 +543,9 @@ const AgentEvalsInner: React.FC<{
         </Label>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -572,24 +559,16 @@ const AgentEvalsInner: React.FC<{
 
         {/* Right: Eval panel */}
         <Box
-          sx={{
-            width: 350,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-          }}
+          width={350}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="auto"
         >
           {/* Run eval */}
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
               <BeakerIcon size={16} />
               <Heading as="h3" sx={{ fontSize: 2 }}>
                 Run Evaluation
@@ -625,7 +604,7 @@ const AgentEvalsInner: React.FC<{
           </Box>
 
           {/* Eval history */}
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+          <Box p={3} flex={1} overflow="auto">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Evaluation History
             </Heading>
@@ -638,21 +617,17 @@ const AgentEvalsInner: React.FC<{
               evalRuns.slice(0, 20).map(run => (
                 <Box
                   key={run.id}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
+                  p={2}
+                  mb={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
                   >
                     <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
                       {run.suiteName}
@@ -672,12 +647,10 @@ const AgentEvalsInner: React.FC<{
                   </Box>
                   <ProgressBar progress={run.score * 100} sx={{ mb: 1 }} />
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: 0,
-                      color: 'fg.muted',
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    fontSize={0}
+                    color="fg.muted"
                   >
                     <Text>
                       <CheckCircleIcon size={12} /> {run.passed} passed

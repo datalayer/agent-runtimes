@@ -32,7 +32,7 @@ export const ACCOUNTING_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['pandas>=2.0.0'],
   tags: ['accounting', 'finance', 'reconciliation', 'close'],
-  icon: 'book',
+  icon: '@primer/octicons-react:book',
   emoji: '🧮',
   enabled: false,
 };
@@ -50,7 +50,7 @@ export const CRAWL_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['requests>=2.31.0', 'beautifulsoup4>=4.12.0'],
   tags: ['web', 'crawl', 'scraping'],
-  icon: 'globe',
+  icon: '@primer/octicons-react:globe',
   emoji: '🌐',
   enabled: true,
 };
@@ -68,7 +68,7 @@ export const EVENTS_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['httpx>=0.27.0'],
   tags: ['events', 'orchestration', 'automation'],
-  icon: 'bell',
+  icon: '@primer/octicons-react:calendar',
   emoji: '📅',
   enabled: false,
 };
@@ -86,7 +86,7 @@ export const GITHUB_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['PyGithub>=2.1.0'],
   tags: ['github', 'git', 'code'],
-  icon: 'mark-github',
+  icon: '@datalayer/icons-react:github-mark',
   emoji: '🐙',
   enabled: false,
 };
@@ -104,7 +104,7 @@ export const JOKES_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: [],
   tags: ['fun', 'humor', 'demo'],
-  icon: 'smiley',
+  icon: '@primer/octicons-react:smiley',
   emoji: '😄',
   enabled: false,
 };
@@ -122,7 +122,7 @@ export const PDF_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['PyPDF2>=3.0.0', 'pdfplumber>=0.10.0'],
   tags: ['pdf', 'documents', 'extraction'],
-  icon: 'file',
+  icon: '@primer/octicons-react:file',
   emoji: '📄',
   enabled: false,
 };
@@ -141,7 +141,7 @@ export const TEXT_SUMMARIZER_SKILL_SPEC_0_0_1: SkillSpec = {
   optionalEnvVars: [],
   dependencies: ['agent-skills>=0.0.1'],
   tags: ['nlp', 'summarization', 'text-processing'],
-  icon: 'note',
+  icon: '@primer/octicons-react:note',
   emoji: '📝',
   enabled: false,
 };

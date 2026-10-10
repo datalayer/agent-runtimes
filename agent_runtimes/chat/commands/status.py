@@ -100,7 +100,9 @@ async def execute(tux: "CliTux") -> Optional[str]:
         tux.console.print("  API: [red]Disconnected[/red]", style=STYLE_MUTED)
 
     # Runtime startup block (matches startup display format)
-    startup_block = _format_startup_info(runtime_host, runtime_port, startup_info)
+    startup_block = _format_startup_info(
+        runtime_host, runtime_port, startup_info, where=getattr(tux, "where", None)
+    )
     if startup_block:
         tux.console.print(Text.from_ansi(startup_block))
         tux.console.print()
@@ -147,7 +149,7 @@ async def execute(tux: "CliTux") -> Optional[str]:
         if sandbox_variant == "jupyter-server":
             summary_parts.append("Jupyter sandbox")
         if codemode_on:
-            summary_parts.append("Code Mode")
+            summary_parts.append("Codemode")
 
         summary_text = f" ({' • '.join(summary_parts)})" if summary_parts else ""
 

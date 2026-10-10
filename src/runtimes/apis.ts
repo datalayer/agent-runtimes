@@ -65,6 +65,24 @@ export interface IRuntimeOptions {
    * Kernel snapshot to restore
    */
   snapshot?: string;
+  /**
+   * The Appspec of the application the runtime is launched for (STUDIO
+   * R-19), as its file holds it. The Operator hands it to the runtime's
+   * companion, which gives the runtime the secrets its connections declare
+   * before its agent is made. An application's launch carries it:
+   * `appUid` without it is refused.
+   */
+  appSpec?: Record<string, unknown>;
+  /**
+   * The saved application the runtime runs for (LOOP R-09): written on its
+   * reservation, so its running time is counted per application.
+   */
+  appUid?: string;
+  /**
+   * The deployment of that application it runs for. A deployment is always
+   * of an application: one named without `appUid` is refused.
+   */
+  deploymentUid?: string;
 }
 
 /**

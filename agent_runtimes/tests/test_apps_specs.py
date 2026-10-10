@@ -36,8 +36,8 @@ from agent_runtimes.specs.actions import (
     ACTION_CLASSES,
     APP_BEHAVIOURS,
     APP_ESCALATIONS,
+    BACKEND_TOOL_ACTIONS,
     SERVER_ACTIONS,
-    TOOL_ACTIONS,
 )
 from agent_runtimes.specs.apps import APP_CATALOGUE, get_app, list_apps
 from agent_runtimes.types import ActionConditionSpec, AppSpec
@@ -102,7 +102,10 @@ class TestTheCatalogue:
             "decision",
             "worker",
         }
-        assert [found.id for found in list_apps("worker")] == ["inbox-triage"]
+        assert [found.id for found in list_apps("worker")] == [
+            "inbox-triage",
+            "pipeline-report",
+        ]
         assert get_app("web-research") is APP_CATALOGUE["web-research"]
         assert get_app("web-research:0.0.1") is APP_CATALOGUE["web-research"]
         assert get_app("nope") is None
@@ -127,10 +130,12 @@ class TestTheCatalogue:
 
 class TestActionClasses:
     def test_every_tool_of_the_catalogue_has_a_class(self) -> None:
-        assert [tool for tool, classes in TOOL_ACTIONS.items() if not classes] == []
+        assert [
+            tool for tool, classes in BACKEND_TOOL_ACTIONS.items() if not classes
+        ] == []
         assert all(
             item in ACTION_CLASSES
-            for classes in TOOL_ACTIONS.values()
+            for classes in BACKEND_TOOL_ACTIONS.values()
             for item in classes
         )
 
@@ -410,3 +415,69 @@ class TestTheGenerator:
         assert _said(text) != _said(text.replace("ask_first", "do_it", 1))
         # And a formatter's change is not one.
         assert _said(text) == _said(text.replace('"', "'").replace(",\n", "\n"))
+
+
+def test_samples_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-06, E-11: an Appspec's samples, published with it by Datalayer
+    — Quote Calculator's price list, a decision's alternatives — are in the
+    generated catalogue, and a runtime given the application keeps them."""
+    from agentspecs.apps import dump_app
+    from agentspecs.apps import get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    quote = APP_CATALOGUE["quote-calculator"]
+    [prices] = quote.samples.documents
+    assert (prices.name, prices.file) == ("Price list", "price-list.csv")
+    supplier = APP_CATALOGUE["supplier-comparison"]
+    first = supplier.samples.alternatives[0]
+    assert (first.name, first.metrics["Price"]) == ("Northfield Components", 18400)
+    assert APP_CATALOGUE["web-research"].samples.documents == []
+    loaded = load_app(dump_app(spec_of("quote-calculator")))
+    assert loaded.samples == quote.samples
+
+
+def test_a_test_s_files_are_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-01: a test gives its application text files with what it asks
+    — Report from a File's CSVs — in the generated catalogue, kept by a runtime;
+    a case in words alone has none."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    cases = APP_CATALOGUE["report-from-a-file"].tests.cases
+    assert [[file.name for file in case.files] for case in cases] == [
+        ["orders.csv"],
+        ["empty.csv"],
+        [],
+        ["orders-notes.csv"],
+    ]
+    assert cases[1].files[0].text == "order_id,date,customer,amount,notes\n"
+    loaded = load_app(dump_app(spec_of("report-from-a-file")))
+    assert loaded.tests.cases == cases
+    desk = APP_CATALOGUE["support-desk"]
+    assert [document.file for document in desk.samples.documents] == [
+        "product-documentation.md",
+        "returns-policy.md",
+    ]
+
+
+def test_a_test_s_conversation_is_in_the_catalogue_and_kept_by_a_runtime() -> None:
+    """STUDIO E-01: a test that is a conversation — Customer Interview's, which
+    answer its consent and press its actions — is in the generated catalogue,
+    turn by turn, and kept by a runtime; a case of one message has none."""
+    from agentspecs.apps import dump_app, get_app as spec_of
+
+    from agent_runtimes.loop.apps.loading import load_app
+
+    cases = APP_CATALOGUE["customer-interview"].tests.cases
+    assert [case.ask for case in cases] == ["", "", "", ""]
+    assert [turn.model_dump(exclude_defaults=True) for turn in cases[0].turns] == [
+        {"choose": "No"},
+        {"say": "Ask me why I stopped after the trial."},
+    ]
+    assert cases[3].turns[-1].press == "finish"
+    assert cases[3].in_words().splitlines()[-1] == "The person presses finish"
+    loaded = load_app(dump_app(spec_of("customer-interview")))
+    assert loaded.tests.cases == cases
+    assert all(not case.turns for case in APP_CATALOGUE["support-desk"].tests.cases)

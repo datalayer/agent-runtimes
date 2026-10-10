@@ -570,6 +570,13 @@ class CodeSandboxManager:
                 self._config.jupyter_token = final_token
             elif jupyter_token is not None:
                 self._config.jupyter_token = jupyter_token
+            # The sandbox's token is used by its tools, never shown to the
+            # model (LOOP R-19); nor are the secrets given to its kernel.
+            from agent_runtimes.guardrails.credentials import hold, hold_env
+
+            hold(self._config.jupyter_token)
+            if env_vars:
+                hold_env(env_vars)
 
             if variant is not None:
                 self._config.variant = variant
@@ -960,6 +967,41 @@ class CodeSandboxManager:
             logger.info(
                 f"Stopped {len(agent_ids)} per-agent sandbox(es) during shutdown"
             )
+
+    def withdraw_env_vars(self, names: list[str] | set[str]) -> list[str]:
+        """Take secrets back from the sandbox: a configure no longer gives them (LOOP R-19).
+
+        Forgotten from what is injected into a sandbox that starts later, and
+        unset in every live kernel — the shared sandbox's and each agent's —
+        by an ``os.environ.pop`` run there: a kernel keeps what it was given
+        until something unsets it. Names only, never a value. Answers the
+        names withdrawn from the configuration.
+        """
+        wanted = sorted({str(name) for name in names if name})
+        if not wanted:
+            return []
+        with self._sandbox_lock:
+            forgotten = [
+                name for name in wanted if name in (self._config.env_vars or {})
+            ]
+            for name in forgotten:
+                self._config.env_vars.pop(name, None)  # type: ignore[union-attr]
+            live = [self._sandbox] if self._sandbox is not None else []
+        with self._agent_sandbox_lock:
+            live += [s for s in self._agent_sandboxes.values() if s is not None]
+        code = f"import os\nfor _name in {wanted!r}:\n    os.environ.pop(_name, None)\n"
+        for sandbox in live:
+            try:
+                result = sandbox.run_code(code)
+                if result.execution_ok:
+                    logger.info(f"Unset {len(wanted)} env var(s) in a kernel: {wanted}")
+                else:
+                    logger.warning(
+                        f"Failed to unset env vars in a kernel: {result.execution_error}"
+                    )
+            except Exception as e:
+                logger.warning(f"Error unsetting env vars in a sandbox: {e}")
+        return forgotten
 
     def _inject_env_vars_into(
         self,

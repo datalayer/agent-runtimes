@@ -1,0 +1,269 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * What the floating assistant's gallery shows (LOOP T-21 to T-27): every
+ * state a character acts (T-22), and stepped aside (T-27), with the balloon
+ * each one says — the agent's latest saying (T-23), an approval to answer,
+ * or that it is paused. Static data only: no agent, no server.
+ *
+ * @module examples/utils/assistantGallery
+ */
+
+import type { AssistantStageProps } from '../../chat/assistant/AssistantStage';
+import {
+  toolLineText,
+  type BalloonToolLine,
+  type ToolLinePhase,
+} from '../../chat/assistant/toolLine';
+import {
+  ASSISTANT_WORDS,
+  latestSaying,
+  type AssistantState,
+  type BalloonApproval,
+} from '../../chat/assistant/state';
+import type { DisplayItem } from '../../types/chat';
+
+/** What the gallery poses a character in: a state, or stepped aside. */
+export type GalleryPose = AssistantState | 'aside';
+
+/** Every state, in the order an assistant lives them, then stepped aside. */
+export const GALLERY_POSES = [
+  'idle',
+  'greeting',
+  'thinking',
+  'working',
+  'waiting',
+  'speaking',
+  'paused',
+  'aside',
+  'goodbye',
+] as const satisfies readonly GalleryPose[];
+
+/** How the gallery names each pose. */
+export const GALLERY_POSE_LABELS: Record<GalleryPose, string> = {
+  idle: 'Idle',
+  greeting: 'Greeting',
+  thinking: 'Thinking',
+  working: 'Working',
+  waiting: 'Waiting',
+  speaking: 'Speaking',
+  paused: 'Paused',
+  aside: 'Stepped aside',
+  goodbye: 'Goodbye',
+};
+
+/** The state the stage acts for a pose: aside, it is idle under what covers it. */
+export function stateOfPose(pose: GalleryPose): AssistantState {
+  return pose === 'aside' ? 'idle' : pose;
+}
+
+/**
+ * What the agent said, as a conversation would hold it: each entry is read
+ * by `latestSaying`, as the floating assistant reads the chat — Markdown made
+ * plain, a long answer cut with *Open the conversation*.
+ */
+export const SAMPLE_CONVERSATIONS: readonly (readonly unknown[])[] = [
+  [
+    { id: 'u1', role: 'user', content: 'Who wrote about late deliveries?' },
+    {
+      id: 'a1',
+      role: 'assistant',
+      content:
+        'Three customers wrote about **late deliveries** this week: Ada, Grace and Alan.',
+    },
+  ],
+  [
+    { id: 'u2', role: 'user', content: 'Is the notebook up to date?' },
+    { id: 't2', role: 'assistant', toolName: 'readCell', content: '' },
+    {
+      id: 'a2',
+      role: 'assistant',
+      content:
+        'Yes — the last cell ran at 9:40 and its [chart](#chart) shows the new week.',
+    },
+  ],
+  [
+    { id: 'u3', role: 'user', content: 'Summarise the quarter.' },
+    {
+      id: 'a3',
+      role: 'assistant',
+      content:
+        'Revenue grew 12% on the quarter, carried by the renewals in March. Churn held at 2.1%, the same as the last two quarters, and the new plan took 140 accounts in its first six weeks. Support tickets fell by a fifth after the onboarding change, and the slowest region, the north, closed half its gap with the others. The full table, with each region and month, is in the notebook.',
+    },
+  ],
+];
+
+/** The saying of sample `index` (wrapping), as the balloon shows it. */
+export function sampleSaying(index: number): { text: string; more: boolean } {
+  const conversation =
+    SAMPLE_CONVERSATIONS[
+      ((index % SAMPLE_CONVERSATIONS.length) + SAMPLE_CONVERSATIONS.length) %
+        SAMPLE_CONVERSATIONS.length
+    ];
+  const saying = latestSaying(conversation);
+  if (!saying) {
+    throw new Error(`The sample conversation ${index} says nothing.`);
+  }
+  return { text: saying.text, more: saying.more };
+}
+
+/**
+ * The conversation so far, after `count` sample exchanges (wrapping), as
+ * the chat holds it — its messages and tool calls — which the `history`
+ * balloon draws with the chat's components.
+ */
+export function sampleHistory(count: number): DisplayItem[] {
+  const items: DisplayItem[] = [];
+  for (let turn = 0; turn < count; turn += 1) {
+    const conversation =
+      SAMPLE_CONVERSATIONS[turn % SAMPLE_CONVERSATIONS.length];
+    for (const entry of conversation) {
+      const item = entry as {
+        id: string;
+        role: 'user' | 'assistant';
+        content: string;
+        toolName?: string;
+      };
+      const id = `${turn}-${item.id}`;
+      items.push(
+        item.toolName
+          ? {
+              id,
+              type: 'tool-call',
+              toolCallId: id,
+              toolName: item.toolName,
+              args: {},
+              status: 'complete',
+            }
+          : {
+              id,
+              role: item.role,
+              content: item.content,
+              createdAt: new Date(0),
+            },
+      );
+    }
+  }
+  return items;
+}
+
+/** The tool the gallery calls (T-23): Odoo's, as Accounting calls it. */
+export const SAMPLE_TOOL = 'list_invoices';
+
+/** The sample tool's line, at a phase: "Using list_invoices…", "Done: …", "… failed". */
+export function sampleToolLine(phase: ToolLinePhase): BalloonToolLine {
+  return { id: 'gallery-tool', tool: SAMPLE_TOOL, name: SAMPLE_TOOL, phase };
+}
+
+/**
+ * A small recorded notebook (nbformat 4), as Accounting gives one: a
+ * heading, the code that totals the open invoices, and its one output.
+ */
+export const SAMPLE_NOTEBOOK = {
+  nbformat: 4,
+  nbformat_minor: 5,
+  metadata: {
+    kernelspec: {
+      name: 'python3',
+      display_name: 'Python 3',
+      language: 'python',
+    },
+    language_info: { name: 'python' },
+  },
+  cells: [
+    {
+      id: 'gallery-markdown',
+      cell_type: 'markdown',
+      metadata: {},
+      source: '## Open invoices\n\nFrom the books, **in EUR**.',
+    },
+    {
+      id: 'gallery-code',
+      cell_type: 'code',
+      metadata: {},
+      execution_count: 1,
+      source: 'due = {"Ada": 1200, "Grace": 860}\nprint(sum(due.values()))',
+      outputs: [{ output_type: 'stream', name: 'stdout', text: '2060\n' }],
+    },
+  ],
+};
+
+/** The sample notebook as a peer gives one: an A2A artifact. */
+export const SAMPLE_NOTEBOOK_ARTIFACT = {
+  mediaType: 'application/x-ipynb+json',
+  name: 'Open invoices',
+  filename: 'open-invoices.ipynb',
+  data: SAMPLE_NOTEBOOK,
+};
+
+/** What the gallery says with the notebook it was given. */
+export const SAMPLE_NOTEBOOK_SAYING =
+  'Here is the notebook Accounting gave: the open invoices.';
+
+/** The approval the gallery waits on (T-23): answered in the balloon. */
+export function sampleApproval(
+  onApprove: () => void,
+  onDeny: () => void,
+): BalloonApproval {
+  return {
+    id: 'gallery-approval',
+    asks: 'send_reply',
+    why: 'Send a reply to a customer: ask me first',
+    others: 1,
+    onApprove,
+    onDeny,
+  };
+}
+
+/**
+ * The balloon for a pose: waiting holds the approval, paused says so, and
+ * any other pose says the sample's words when asked to (`saying`).
+ */
+export function balloonForPose(
+  pose: GalleryPose,
+  {
+    saying,
+    approval,
+    tool,
+    attachment,
+    history,
+    visual,
+  }: {
+    saying?: { text: string; more: boolean };
+    approval: BalloonApproval;
+    /** A tool being called: its line stands in for the words. */
+    tool?: BalloonToolLine;
+    /** What goes with the words in a `current` balloon: a notebook. */
+    attachment?: NonNullable<AssistantStageProps['balloon']>['attachment'];
+    /** The conversation so far, listed in a `history` balloon. */
+    history?: readonly DisplayItem[];
+    /** The large visual the attachment is the compact form of: expandable. */
+    visual?: NonNullable<AssistantStageProps['balloon']>['visual'];
+  },
+): AssistantStageProps['balloon'] {
+  const listed = history && history.length > 0 ? { history } : {};
+  // What goes with the words stays while a tool runs, in either display.
+  const given = attachment ? { attachment, ...(visual ? { visual } : {}) } : {};
+  if (pose === 'waiting') {
+    return { text: ASSISTANT_WORDS.approval, approval, ...listed };
+  }
+  if (pose === 'paused') {
+    return { text: ASSISTANT_WORDS.paused };
+  }
+  if (pose === 'goodbye' || pose === 'aside') {
+    return undefined;
+  }
+  if (tool) {
+    return {
+      text: toolLineText(tool),
+      tool,
+      busy: tool.phase === 'running',
+      ...listed,
+      ...given,
+    };
+  }
+  return saying ? { ...saying, ...listed, ...given } : undefined;
+}

@@ -402,8 +402,8 @@ async function createAgentOnRuntime(
   if (typeof config.enableSkills === 'boolean') {
     payload.enable_skills = config.enableSkills;
   }
-  if (Array.isArray(config.tools)) {
-    payload.tools = config.tools;
+  if (Array.isArray(config.backendTools)) {
+    payload.backend_tools = config.backendTools;
   }
   if (config.inferenceProvider) {
     payload.inferenceProvider = config.inferenceProvider;
@@ -758,6 +758,10 @@ export const agentRuntimeStore = createStore<AgentRuntimeStore>()(
               givenName: runtimeOptions.givenName,
               capabilities: runtimeOptions.capabilities,
               snapshot: runtimeOptions.snapshot,
+              // The application it is launched for, with its Appspec (R-19).
+              appSpec: runtimeOptions.appSpec,
+              appUid: runtimeOptions.appUid,
+              deploymentUid: runtimeOptions.deploymentUid,
             });
             set({ status: 'connecting' });
             const jupyterBaseUrl = runtimeRecord.ingress;

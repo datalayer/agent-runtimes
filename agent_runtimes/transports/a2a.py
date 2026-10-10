@@ -10,16 +10,20 @@ Supports identity context for OAuth token propagation across agent boundaries.
 
 import asyncio
 import logging
+import traceback
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 from ..context.identities import IdentityContextManager
+from ..guardrails.credentials import redact
 from .base import BaseTransport
 
 if TYPE_CHECKING:
     from ..adapters.base import BaseAgent
     from ..context.usage import TurnSpend
+    from ..output.formats import RunOutputs
 
 logger = logging.getLogger(__name__)
 
@@ -149,11 +153,11 @@ class A2ATransport(BaseTransport):
                 }
 
             except Exception as e:
-                logger.error(f"A2A request error: {e}")
+                logger.error(redact(f"A2A request error: {e}"))
                 return {
                     "result": None,
                     "status": "error",
-                    "error": str(e),
+                    "error": redact(str(e)),
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
                     "conversation_id": conversation_id,
@@ -233,10 +237,10 @@ class A2ATransport(BaseTransport):
                     yield a2a_event
 
             except Exception as e:
-                logger.error(f"A2A stream error: {e}")
+                logger.error(redact(f"A2A stream error: {e}"))
                 yield {
                     "type": "error",
-                    "data": str(e),
+                    "data": redact(str(e)),
                     "conversation_id": conversation_id,
                     "sender_agent_id": self.agent.name,
                     "receiver_agent_id": sender_agent_id,
@@ -306,32 +310,54 @@ def activated_extensions_of(params: Any) -> list[str]:
 
 def _tool_call_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("id"),
             "name": data.get("name"),
             "arguments": data.get("arguments") or data.get("args") or {},
         }
-    return {
-        "id": getattr(data, "id", None),
-        "name": getattr(data, "name", None),
-        "arguments": getattr(data, "arguments", None) or {},
-    }
+    else:
+        payload = {
+            "id": getattr(data, "id", None),
+            "name": getattr(data, "name", None),
+            "arguments": getattr(data, "arguments", None) or {},
+        }
+    return _with_output_note(payload, ended=False)
 
 
 def _tool_result_payload(data: Any) -> dict[str, Any]:
     if isinstance(data, dict):
-        return {
+        payload = {
             "id": data.get("tool_call_id") or data.get("id"),
             "name": data.get("name"),
             "result": _short(data.get("result")),
             "error": data.get("error"),
         }
-    return {
-        "id": getattr(data, "tool_call_id", None),
-        "name": getattr(data, "name", None),
-        "result": _short(getattr(data, "result", None)),
-        "error": getattr(data, "error", None),
-    }
+    else:
+        payload = {
+            "id": getattr(data, "tool_call_id", None),
+            "name": getattr(data, "name", None),
+            "result": _short(getattr(data, "result", None)),
+            "error": getattr(data, "error", None),
+        }
+    return _with_output_note(payload, ended=True)
+
+
+def _with_output_note(payload: dict[str, Any], ended: bool) -> dict[str, Any]:
+    """A tool that composes an output says what it does in words: `Writing a notebook…`.
+
+    Its arguments are the output itself, which the caller receives as an
+    artifact: they are not told twice.
+    """
+    from ..output.formats import OUTPUT_TOOL_NOTES
+
+    notes = OUTPUT_TOOL_NOTES.get(str(payload.get("name") or ""))
+    if notes is None:
+        return payload
+    if not ended:
+        payload["arguments"] = {}
+    else:
+        payload["result"] = notes[1]
+    return {**payload, "note": notes[1] if ended else notes[0]}
 
 
 def _short(value: Any, limit: int = 2000) -> str:
@@ -365,6 +391,30 @@ class A2AWorker(_FastA2AWorker):
     #: The id the agent is served under, which its usage and cost are counted
     #: under: what a task spent is on the status that ends it (O2-10).
     agent_id: str | None = None
+    #: The media types its answers come in, as its card declares them: a
+    #: caller that accepts one besides words gets it as an artifact.
+    output_modes: tuple[str, ...] = ()
+
+    @asynccontextmanager
+    async def run(self) -> AsyncIterator[None]:
+        """Run the worker: every task it is given runs at once, beside the others.
+
+        fasta2a's worker awaits each task before it takes the next, so a
+        request sent while another task works waited for it — a minute for a
+        report — before its stream said anything, and one its caller gave up
+        on meanwhile stayed submitted for ever.
+        """
+        import anyio
+
+        async with anyio.create_task_group() as tasks:
+
+            async def loop() -> None:
+                async for operation in self.broker.receive_task_operations():
+                    tasks.start_soon(self._handle_task_operation, operation)
+
+            tasks.start_soon(loop)
+            yield
+            tasks.cancel_scope.cancel()
 
     async def run_task(self, params: "TaskSendParams") -> None:
         task = await self.storage.load_task(params["id"])
@@ -383,14 +433,18 @@ class A2AWorker(_FastA2AWorker):
             # nothing about why. Log it, and put the reason on the failed
             # status; closing here keeps the base's own failed status from
             # following it.
-            logger.exception(
-                "A2A task %s for agent %s failed", task_id, self.agent.name
+            # Said, and logged, with any credential withheld (LOOP R-19).
+            logger.error(
+                "A2A task %s for agent %s failed: %s",
+                task_id,
+                self.agent.name,
+                redact("".join(traceback.format_exception(exc))),
             )
             from ..guardrails.model_budget import ModelBudgetExceeded, refusal_meta
 
             await self.storage.update_task(task_id, state="failed")
             message = _agent_message(
-                context_id, Part(text=f"{type(exc).__name__}: {exc}")
+                context_id, Part(text=redact(f"{type(exc).__name__}: {exc}"))
             )
             # Which limit of the budget the delegation set stopped the run,
             # where the delegation put the budget (O1-07), and what it spent.
@@ -413,10 +467,35 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         turn: "TurnSpend",
     ) -> None:
+        from ..loop.apps.visitors import (
+            enter_visitor_run,
+            leave_visitor_run,
+            visitor_of_a2a,
+        )
+        from ..output.formats import (
+            RunOutputs,
+            accepted_formats,
+            enter_run_outputs,
+            leave_run_outputs,
+        )
+
         cancel = self.cancellation.register(task_id) if self.cancellation else None
+        # A visitor's run, as the application's gate marked it: it only reads,
+        # whatever its rules say (LOOP R-30).
+        visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        # What it may give besides words: what its card declares and the
+        # caller accepts. Its output tools are offered for those only.
+        outputs = RunOutputs(
+            accepted=accepted_formats(
+                self.output_modes, params.get("accepted_output_modes")
+            )
+        )
+        composing = enter_run_outputs(outputs)
         try:
-            await self._stream_run(task_id, context_id, params, cancel, turn)
+            await self._stream_run(task_id, context_id, params, cancel, turn, outputs)
         finally:
+            leave_run_outputs(composing)
+            leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
 
@@ -427,13 +506,18 @@ class A2AWorker(_FastA2AWorker):
         params: "TaskSendParams",
         cancel: "asyncio.Event | None",
         turn: "TurnSpend",
+        outputs: "RunOutputs",
     ) -> None:
+        from ..output.formats import artifacts_of, outputs_instructions, refused_action
+
         await self.storage.update_task(task_id, state="working")
         await self.publish_status(task_id, context_id, "working")
 
         history: A2AContext = list(await self.storage.load_context(context_id) or [])
         incoming = params["message"]
-        prompt = a2a_message_text(incoming)
+        # The request, and what this run may give besides words: the agent
+        # is told of a format only when its caller accepts it.
+        prompt = a2a_message_text(incoming) + outputs_instructions(outputs)
 
         from ..adapters.base import AgentContext
         from ..checkpoints.protocol_state import ProtocolStateCheckpointStore
@@ -514,9 +598,14 @@ class A2AWorker(_FastA2AWorker):
         text = ""
         final_output: str | None = None
         canceled = False
+        # A button of an answer's surface that would do more than read, pressed
+        # by a visitor, is refused in a sentence: no model runs (STUDIO H-03).
+        refused = refused_action(incoming)
         open_steering(task_id)
         try:
-            async for event in self.agent.stream(prompt, context):
+            async for event in (
+                _said(refused) if refused else self.agent.stream(prompt, context)
+            ):
                 if cancel is not None and cancel.is_set():
                     # Leaving the loop closes the adapter's stream, which stops
                     # the run underneath it.
@@ -635,15 +724,19 @@ class A2AWorker(_FastA2AWorker):
         artifact = Artifact(
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
+        # What it composed besides words, each an artifact of its media type.
+        composed = artifacts_of(outputs)
         await self.storage.update_task(
             task_id,
             state="completed",
-            new_artifacts=[artifact],
+            new_artifacts=[artifact, *composed],
             new_messages=[reply],
         )
         # The whole result once more, as the last chunk: a client that does
         # not assemble chunks, or joined late, still gets the answer.
         await self.publish_artifact(task_id, context_id, artifact)
+        for extra in composed:
+            await self.publish_artifact(task_id, context_id, extra)
         # The `completed` status says what the run spent (O2-10), so it is sent
         # and the stream ended here rather than by the base, whose final status
         # carries no message.
@@ -677,6 +770,19 @@ class A2AWorker(_FastA2AWorker):
                 parts=[Part(text=str(result))],
             )
         ]
+
+
+async def _said(text: str) -> AsyncIterator[Any]:
+    """An answer given in words without a model: one text event.
+
+    Yields
+    ------
+    Any
+        The one text event.
+    """
+    from types import SimpleNamespace
+
+    yield SimpleNamespace(type="text", data=text)
 
 
 def _agent_message(context_id: str, part: "Part") -> "Message":

@@ -23,11 +23,11 @@
 import React from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
-import { LoopEmbed } from '../loop';
+import { LoopEmbed } from '../apps';
 
 const DocumentPageAgent: React.FC = () => (
   <ThemedProvider>
-    <Box sx={{ height: '100vh', minHeight: 0 }}>
+    <Box height="100vh" minHeight={0}>
       <LoopEmbed
         target="browser"
         /* The Loop Shell's agent: it drives the document tools — insert a

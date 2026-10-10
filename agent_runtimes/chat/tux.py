@@ -6,6 +6,7 @@
 import asyncio
 import getpass
 import json
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,6 +49,12 @@ STYLE_ACCENT = Style(color="rgb(46,204,113)")  # Green bright 0x2ECC71 - highlig
 STYLE_MUTED = Style(color="rgb(89,89,92)")  # Gray 0x59595C - supporting text
 STYLE_WHITE = Style(color="white")  # Primary text in dark mode
 STYLE_ERROR = Style(color="red")  # Error states
+
+#: The slash commands that read nothing from the agent's runtime: they run
+#: when a cloud runtime does not answer, and every other one is refused then.
+RUNS_WITHOUT_RUNTIME = frozenset(
+    {"help", "exit", "cls", "about", "gif", "rain", "status", "tools-last"}
+)
 STYLE_WARNING = Style(color="yellow")  # Warning states
 
 # Context grid symbols
@@ -128,6 +135,7 @@ class CliTux:
         jupyter_url: Optional[str] = None,
         extra_suggestions: Optional[list[str]] = None,
         startup_message: Optional[str] = None,
+        where: Optional[str] = None,
     ):
         """Initialize the TUX.
 
@@ -139,14 +147,31 @@ class CliTux:
             jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
             extra_suggestions: Additional suggestions provided via --suggestions flag
             startup_message: Optional startup summary line shown right after banner
+            where: Where the agent runs when it is not this machine, in words
+                (a cloud runtime on Datalayer, reached through ``server_url``)
         """
         self.agent_url = agent_url
+        # `server_url` is the one address every slash command reads and acts
+        # on. On Datalayer it is the local relay to the cloud runtime, which
+        # carries the person's token: commands do not know the difference,
+        # and nothing falls back to this machine.
+        self.where = where
         self.server_url = server_url.rstrip("/")
         self.agent_id = agent_id
         self.eggs = eggs
         self.jupyter_url = jupyter_url
         self.extra_suggestions: list[str] = extra_suggestions or []
-        self.console = Console()
+        #: Whether the lines come from ``loop --prompt`` rather than a person:
+        #: a command then asks nothing (the next line is the next prompt).
+        self.scripted = False
+        # Piped or redirected, what is printed is not wrapped at a guessed
+        # width, so an answer stays one greppable line per line it has.
+        self.console = Console(soft_wrap=not sys.stdout.isatty())
+        self._stderr_console = Console(stderr=True, soft_wrap=True)
+        #: Why the last line run did not run, in a sentence, or None. A slash
+        #: command that refuses what it is asked (a model the runtime does
+        #: not serve) has run: it is not an error.
+        self.last_error: Optional[str] = None
         self.stats = SessionStats()
         self.running = False
         self.model_name: str = "unknown"
@@ -196,6 +221,21 @@ class CliTux:
             }
         )
         self.prompt_session: Optional[PromptSession] = None
+
+    @property
+    def status_console(self) -> Console:
+        """Where progress and errors go: the terminal, else standard error.
+
+        Read from a terminal, everything is one conversation on one screen.
+        Piped, standard output carries only the answers and what the slash
+        commands print, and the rest goes to standard error.
+        """
+        return self.console if self.console.is_terminal else self._stderr_console
+
+    def _failed(self, problem: str) -> None:
+        """Say why the line did not run, and keep it as the line's error."""
+        self.last_error = problem
+        self.status_console.print(problem, style=STYLE_ERROR, markup=False)
 
     @property
     def loop_session(self) -> LoopSession:
@@ -255,7 +295,7 @@ class CliTux:
     async def _handle_local_shell(self, command: str) -> None:
         """Execute a local shell command (prefix ``!``) and print output."""
         if not command.strip():
-            self.console.print("Empty shell command.", style=STYLE_WARNING)
+            self._failed("Empty shell command.")
             return
 
         self.console.print(f"$ {command}", style=STYLE_PRIMARY)
@@ -271,11 +311,13 @@ class CliTux:
         status_style = STYLE_ACCENT if result.success else STYLE_ERROR
         self.console.print(f"exit: {result.exit_code}", style=status_style)
         self.console.print()
+        if not result.success:
+            self.last_error = f"The shell command exited with {result.exit_code}."
 
     async def _handle_sandbox_code(self, code: str) -> None:
         """Execute sandbox Python code (prefix ``!!``) and print output."""
         if not code.strip():
-            self.console.print("Empty sandbox code.", style=STYLE_WARNING)
+            self._failed("Empty sandbox code.")
             return
 
         self.console.print("sandbox python:", style=STYLE_PRIMARY)
@@ -296,6 +338,8 @@ class CliTux:
         status_style = STYLE_ACCENT if result.success else STYLE_ERROR
         self.console.print(f"sandbox: {status_text}", style=status_style)
         self.console.print()
+        if not result.success:
+            self.last_error = "The sandbox code failed."
 
     def _get_username(self) -> str:
         """Get the current username."""
@@ -597,6 +641,11 @@ class CliTux:
 
         if cmd_name in self.commands:
             cmd = self.commands[cmd_name]
+            if cmd.handler and self.where and cmd.name not in RUNS_WITHOUT_RUNTIME:
+                problem = await self.runtime_problem()
+                if problem:
+                    self._failed(problem)
+                    return ""
             if cmd.handler:
                 result = await cmd.handler(args)
                 # Commands may return a string to use as the next prompt
@@ -605,12 +654,25 @@ class CliTux:
             return ""  # Command handled, no follow-up
         else:
             # Unknown command - show error with hint
-            self.console.print(f"Unknown command: /{cmd_name}", style=STYLE_ERROR)
-            self.console.print(
+            self._failed(f"Unknown command: /{cmd_name}")
+            self.status_console.print(
                 "/help to see available commands, or start typing / to see suggestions.",
                 style=STYLE_MUTED,
             )
             return ""  # Handled (error shown)
+
+    async def runtime_problem(self) -> Optional[str]:
+        """Why the cloud runtime cannot be read now, in a sentence, or None."""
+        import httpx
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.server_url}/health", timeout=10.0)
+        except httpx.HTTPError as error:
+            return f"The relay to {self.where} is gone ({type(error).__name__}): restart loop."
+        status = response.status_code
+        problem = f"{self.where} does not answer (status {status}): nothing was run, here or there."
+        return None if status == 200 else problem
 
     def _approvals_ws_url(self) -> str:
         """Build the tool-approvals websocket URL for this agent."""
@@ -746,14 +808,20 @@ class CliTux:
 
             client = self._agui_client
 
-            # Show thinking indicator
-            with self.console.status("[bold green]Thinking...", spinner="dots"):
-                # Small delay to let status appear
-                await asyncio.sleep(0.1)
-
-            self.console.print()
+            # Show thinking indicator: on a terminal only, nothing animates
+            # into a pipe.
+            animated = self.console.is_terminal
+            if animated:
+                with self.console.status("[bold green]Thinking...", spinner="dots"):
+                    # Small delay to let status appear
+                    await asyncio.sleep(0.1)
+                self.console.print()
             waiting_stop = asyncio.Event()
-            waiting_task = asyncio.create_task(self._animate_waiting_dot(waiting_stop))
+            waiting_task: Optional[asyncio.Task[None]] = (
+                asyncio.create_task(self._animate_waiting_dot(waiting_stop))
+                if animated
+                else None
+            )
             waiting_cleared = False
 
             async def _clear_waiting_indicator(show_bullet: bool = False) -> None:
@@ -761,10 +829,11 @@ class CliTux:
                 if waiting_cleared:
                     return
                 waiting_stop.set()
-                try:
-                    await waiting_task
-                except Exception:
-                    pass
+                if waiting_task is not None:
+                    try:
+                        await waiting_task
+                    except Exception:
+                        pass
                 waiting_cleared = True
                 if show_bullet:
                     self.console.print("● ", style=STYLE_PRIMARY, end="")
@@ -817,9 +886,12 @@ class CliTux:
                     tool_num = len(self.tool_calls)
                     self.stats.tool_calls += 1
                     # Show tool call indicator inline with number
-                    self.console.print()
-                    self.console.print(
-                        f"  ⚙ [{tool_num}] {tool_name}", style=STYLE_SECONDARY, end=""
+                    self.status_console.print()
+                    self.status_console.print(
+                        f"  ⚙ [{tool_num}] {tool_name}",
+                        style=STYLE_SECONDARY,
+                        end="",
+                        markup=False,
                     )
 
                 elif event.type == EventType.TOOL_CALL_ARGS:
@@ -833,10 +905,13 @@ class CliTux:
                     if current_tool_call:
                         args_summary = current_tool_call.format_args(max_value_len=50)
                         if args_summary:
-                            self.console.print(
-                                f"({args_summary})", style=STYLE_MUTED, end=""
+                            self.status_console.print(
+                                f"({args_summary})",
+                                style=STYLE_MUTED,
+                                end="",
+                                markup=False,
                             )
-                        self.console.print(" ...", style=STYLE_MUTED)
+                        self.status_console.print(" ...", style=STYLE_MUTED)
 
                 elif event.type == EventType.TOOL_CALL_RESULT:
                     # Tool execution result
@@ -854,8 +929,10 @@ class CliTux:
                                 else tc.result
                             )
                             result_preview = result_preview.replace("\n", " ")
-                            self.console.print(
-                                f"    ✓ {result_preview}", style=STYLE_ACCENT
+                            self.status_console.print(
+                                f"    ✓ {result_preview}",
+                                style=STYLE_ACCENT,
+                                markup=False,
                             )
                             break
                     current_tool_call = None
@@ -875,7 +952,8 @@ class CliTux:
                     await _clear_waiting_indicator(show_bullet=False)
                     if current_tool_call:
                         current_tool_call.status = "error"
-                    self.console.print(f"\n[red]Error: {event.error}[/red]")
+                    self.console.print()
+                    self._failed(f"Error: {event.error}")
                     break
 
             await _clear_waiting_indicator(show_bullet=False)
@@ -982,7 +1060,7 @@ class CliTux:
             # Show token usage line
             usage_line = Text()
             usage_line.append("─" * 80, style=STYLE_MUTED)
-            self.console.print(usage_line)
+            self.status_console.print(usage_line)
 
             total = turn_input_tokens + turn_output_tokens
             elapsed = time.monotonic() - turn_start
@@ -991,19 +1069,19 @@ class CliTux:
             else:
                 minutes, secs = divmod(elapsed, 60)
                 time_str = f"{int(minutes)}m {secs:.0f}s"
-            self.console.print(
+            self.status_console.print(
                 f"  {self._format_tokens(total)} tokens used · "
                 f"{TOKENS_UP} {self._format_tokens(turn_input_tokens)} / "
                 f"{TOKENS_DOWN} {self._format_tokens(turn_output_tokens)} · "
                 f"{time_str}",
                 style=STYLE_MUTED,
             )
-            self.console.print()
+            self.status_console.print()
 
         except ConnectionRefusedError:
-            self.console.print("[red]Error: Could not connect to agent server[/red]")
+            self._failed("Error: Could not connect to agent server")
         except Exception as e:
-            self.console.print(f"[red]Error: {e}[/red]")
+            self._failed(f"Error: {e}")
         finally:
             # Ensure the approval watcher is always torn down.
             _appr_task = locals().get("approval_task")
@@ -1029,15 +1107,55 @@ class CliTux:
         if len(self.tool_calls) > 3:
             tools_str += f" (+{len(self.tool_calls) - 3} more)"
 
-        self.console.print(
+        self.status_console.print(
             f"  ⚙ {completed}/{total} tools executed: {tools_str}  ",
             style=STYLE_MUTED,
             end="",
+            markup=False,
         )
-        self.console.print(
+        self.status_console.print(
             "\\[/tools-last for details]",
             style=Style(color="rgb(89,89,92)", italic=True),
         )
+
+    async def run_line(self, line: str) -> bool:
+        """Run one line as typed at the prompt: whether it ran without error.
+
+        ``!!code`` runs in the sandbox, ``!command`` in a local shell,
+        ``/command`` is that slash command (and a prompt it answers is sent),
+        and anything else is a message to the agent, whose answer streams to
+        the console. The interactive prompt and ``loop --prompt`` both run
+        their lines here.
+
+        Parameters
+        ----------
+        line : str
+            The line, as typed.
+
+        Returns
+        -------
+        bool
+            False when the line errored: an unknown command, a runtime that
+            does not answer, or an agent whose answer was an error.
+        """
+        self.last_error = None
+        line = line.strip()
+        if not line:
+            return True
+        if line.startswith("!!"):
+            await self._handle_sandbox_code(line[2:].lstrip())
+        elif line.startswith("!"):
+            await self._handle_local_shell(line[1:].lstrip())
+        elif line.startswith("/"):
+            result = await self.handle_command(line)
+            # If a command returned a prompt string, send it to the agent
+            if result:
+                self.sync.note_local(result)
+                await self.send_message(result)
+        else:
+            self.sync.note_local(line)
+            await self.send_message(line)
+        return self.last_error is None
 
     async def run(self) -> None:
         """Run the main TUX loop."""
@@ -1057,6 +1175,11 @@ class CliTux:
         except Exception:
             pass
 
+        # The models the runtime lists, for /models <id> to complete.
+        from .commands import models as _models_cmd
+
+        await _models_cmd.prefetch(self)
+
         self.show_welcome()
         if self.startup_message:
             # The message carries raw ANSI color codes; parse them so Rich
@@ -1071,27 +1194,7 @@ class CliTux:
                 await self._show_foreign_turns()
                 user_input = await self.show_prompt()
 
-                if not user_input:
-                    continue
-
-                # Local shell execution: !<command>
-                if user_input.startswith("!!"):
-                    await self._handle_sandbox_code(user_input[2:].lstrip())
-                    continue
-                if user_input.startswith("!"):
-                    await self._handle_local_shell(user_input[1:].lstrip())
-                    continue
-
-                # Check for slash commands
-                if user_input.startswith("/"):
-                    result = await self.handle_command(user_input)
-                    # If a command returned a prompt string, send it to the agent
-                    if result:
-                        self.sync.note_local(result)
-                        await self.send_message(result)
-                else:
-                    self.sync.note_local(user_input)
-                    await self.send_message(user_input)
+                await self.run_line(user_input)
 
             except KeyboardInterrupt:
                 self.console.print()
@@ -1112,6 +1215,7 @@ async def run_tux(
     jupyter_url: Optional[str] = None,
     extra_suggestions: Optional[list[str]] = None,
     startup_message: Optional[str] = None,
+    where: Optional[str] = None,
 ) -> None:
     """Run theLoop assistant TUX.
 
@@ -1123,6 +1227,7 @@ async def run_tux(
         jupyter_url: Jupyter server URL (only set when sandbox is jupyter)
         extra_suggestions: Additional suggestions provided via --suggestions flag
         startup_message: Optional startup summary line shown right after banner
+        where: Where the agent runs when it is not this machine, in words
     """
     tux = CliTux(
         agent_url,
@@ -1132,5 +1237,6 @@ async def run_tux(
         jupyter_url=jupyter_url,
         extra_suggestions=extra_suggestions,
         startup_message=startup_message,
+        where=where,
     )
     await tux.run()

@@ -13,11 +13,23 @@ module.exports = {
   favicon: 'img/favicon.ico',
   organizationName: 'datalayer',
   projectName: 'datalayer',
+  // Rspack, SWC and Lightning CSS (@docusaurus/faster), as Reactor's docs do:
+  // the build is several times faster, and webpack stays the fallback —
+  // reverting is deleting these lines.
+  future: {
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+    },
+    faster: true,
+  },
   markdown: {
     format: 'detect',
     mermaid: true,
+    // A link to a page that does not exist fails the build (LOOP G-10).
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
   },
-  onBrokenMarkdownLinks: 'warn',
   plugins: [
     '@docusaurus/theme-live-codeblock',
     'docusaurus-lunr-search',

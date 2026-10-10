@@ -1,0 +1,956 @@
+---
+sidebar_position: 8
+title: A team of applications over A2A
+---
+
+# A team of applications over A2A
+
+Two applications can work as a team. One asks the other while it works,
+over the [A2A protocol](../protocols/index.mdx#a2a-agent-to-agent-protocol).
+The team says who asks whom, in agentspecs' teams catalogue
+([Teams of applications](https://agentspecs.datalayer.tech/agent-teams/applications)):
+
+```yaml
+id: sales-and-accounting
+entry: sales
+supervisor: { name: Sales, app: sales:0.0.1 }
+agents:
+  - id: sales
+    app: sales:0.0.1
+    runs_in: browser
+    talks_to: [{ member: accounting, over: a2a }]
+  - id: accounting
+    app: accounting:0.0.1
+    runs_in: runtime
+```
+
+- **Sales** (`apps/sales.yaml`) is a chat that runs in the person's browser.
+  A person asks it for a financial report. It asks Accounting with one tool,
+  `ask_accounting`, and hands over what Accounting answered. It never invents
+  a figure.
+- **Accounting** (`apps/accounting.yaml`) runs on a runtime. It reads the Odoo
+  books through the `odoo-accounting` toolset of the Datalayer MCP gateway at
+  *Can read*. Its rules read without asking and ask first before anything
+  that would change the books. A connection that only reads reaches no tool
+  that writes.
+
+## Scenes
+
+A *scene* — agents arranged with their roles, their shared context and
+their interactions, as Datalayer's Studio shows them — is a team and
+nothing else (LOOP A-04, agentspecs 0.0.60). What the team model says of a
+scene:
+
+- **One member is allowed; none is not.** An agent working alone with its
+  data is a scene (`month-end-close`, `crop-monitoring`: *one agent, its
+  data*). A team with no member is refused when the catalogue loads.
+- **Each member names its `role`**, and the team its shared `context`:
+  `sharing` (how much of the conversation each member is told: `shared`,
+  `isolated`, `own-turns`) and `frames`, the Frames every member works
+  under, in order (`TeamContextSpec.frames`).
+- **Each interaction names its protocol.** `talks_to … over: a2a` to an
+  agent or an application; `over: mcp` to a member that is an MCP server of
+  the catalogue (`server`, in place of `ref` and `app`: a system of the
+  scene the others reach tool by tool, which asks nobody). A member that
+  talks to one not in the scene, a server asked over A2A, an application
+  asked over MCP and a scene that enters at a server are each refused in a
+  sentence (`TeamLinkSpec.over`, `TeamAgentspec.server`).
+
+The home page's four scenes are in the teams catalogue
+(`src/specs/teams/teams.ts`): `sales-and-accounting` (Sales in the browser
+asks Accounting on a runtime; Odoo under Accounting), `month-end-close`
+(Month-end close alone on a runtime; Odoo), `crop-monitoring` (Crop
+monitoring alone on a runtime; NASA Earthdata) and `disaster-assessment`
+(Event response in the browser asks Disaster assessment and Change
+detection, each on a runtime; Earthdata under each). The MCP servers under
+a member are its application's connections (`teamConnectionsOf`), not
+restated in the team. What each scene needs is said as setup, not as a
+mistake: the five workers behind them are catalogued and not enabled,
+`earthdata` is enabled (its three tools classed: the searches read, the
+download writes), `odoo-accounting` is not.
+
+## The transcript
+
+What happens in a scene, as lines, in the order it happened (LOOP A-06):
+
+```
+12:00:00  You → Sales: Give me the aged receivables as of today, by customer.
+12:00:01  Sales → Accounting: Aged receivables as of today, by customer.
+12:00:02  Accounting → Odoo: odoo_accounting_aged_balance
+12:00:04  Accounting: Three customers owe 12,400 EUR; the oldest is 91 days.
+12:00:05  Sales: Accounting says three customers owe 12,400 EUR; the oldest is 91 days.
+```
+
+One source, read two ways (`components/teams/sceneTranscript`, pure: spans
+or entries in, lines out):
+
+- **Live**, from the OpenTelemetry spans the Agent Inspector reads — the
+  page's one tracer, core's `createOtelLiveTracer`, that `useA2ATeam`,
+  `traceA2AFetch` and the chats record into. `transcriptOfSpans(spans,
+  members)`: an `invoke_agent` span is what the person asked (*You → Sales*,
+  for a turn with no parent) and what the agent answered (*Sales: …*, at its
+  end); an `a2a` request is who asked whom in what words (*Sales →
+  Accounting*, from `a2a.message.text` and `peer.service`) and what came
+  back (*Accounting: …*, from `a2a.answer.text` or the last `a2a.message` /
+  `a2a.artifact_update` event; *could not answer* when it failed); an
+  `execute_tool` span is a call (*Accounting → Odoo: odoo_accounting_aged_balance*,
+  the server being the connection the tool is of, `connectionOfTool` over
+  the member's `connections`; a tool of no connection is called on *the
+  page*, *a skill*, *codemode* or *its runtime* by `datalayer.tool.kind`).
+  A tool call under which an A2A request sits (Sales' `ask_accounting`) is
+  the asking itself and is not a line of its own; the same words said twice
+  (an answer as the request's events, and as the peer's own turn when a
+  runtime's spans are read) are one line. An open span is a line still
+  happening (`open`, drawn with an ellipsis); a failed one says so.
+- **After**, from a finished run's record (`RecordEntry`, as Activity reads
+  it): `transcriptOfRecord(entries, member)` — a `turn` is what the person
+  asked and what the member answered, a `tool_call` what it called in
+  between (the calls are recorded before the turn closes, so the question is
+  placed where the turn began), an `output` stands in for the answer when the
+  record keeps no conversations.
+
+`lineText(line)` is a line in words, `transcriptText(lines)` the whole with
+a time on each — what *Copy as text* copies. The members are named by their
+spans' service (`SceneTranscriptMember`: `id`, `name`, `connections`).
+
+**Drawn.** `SceneTranscript` lists the lines (each its time, who and to
+whom, the words or the tool) with *Copy as text*. `SceneView` holds a
+scene's graph and its transcript behind a *Graph · Transcript* toggle
+(Primer's `SegmentedControl`): the graph stays mounted while the transcript
+shows. It reads the transcript from the tracer the members record into
+(`tracer` and `members`, through `useSceneTranscript`), or takes a finished
+run's lines (`lines`):
+
+```tsx
+import { A2ATeamGraph, SceneView, teamConnectionsOf } from '@datalayer/agent-runtimes/lib/components/teams';
+
+<SceneView
+  tracer={inspector}
+  members={[
+    { id: 'sales', name: 'Sales' },
+    { id: 'accounting', name: 'Accounting', connections: teamConnectionsOf(ACCOUNTING) },
+  ]}
+>
+  <A2ATeamGraph … />
+</SceneView>;
+```
+
+The example shows it: the box above the inspectors is a `SceneView`, its
+graph as before, its transcript read from the same tracer. Tests: a
+scripted scene gives the expected lines (`sceneTranscript.test.tsx`).
+
+## Rehearsal
+
+A scene spec's `rehearsal` (agentspecs `scenes/`, LOOP A-14) says, per
+beat, the shape the transcript must take — in the grammar above, `You →
+Sales`, `Sales → Accounting`, `Accounting → Odoo: odoo_accounting_*`,
+`Accounting: a table`, `Sales: words` — the words the answer must and must
+not hold, and the time the beat may take. `loop scenes rehearse <scene>`
+plays each beat's cue through the scene and judges it:
+
+- **The stage** (`agent_runtimes.loop.scenes.stage`): the entry's application
+  runs in this process as `loop apps run` runs one (`AppHost`, its agent from
+  `local_agent` — or `browser_agent` for a member the scene puts in the
+  browser, as the page plays it: its model and prompt without the
+  connections, skills and backend tools a browser has not — or one a test
+  gives), with a tool per member it talks to, `ask_<member>`, declared as a
+  tool of its own that reads. The ask is an A2A request: to the member in
+  this process (a session of its own) or, with `--cloud`, to the member served
+  over A2A on a cloud runtime of its own — launched for its application, so
+  that the runtime is given the secrets its connections declare (R-19) — as
+  `serve_accounting.py` serves Accounting, or at an address it is already
+  served at (`--address <member>=<url>`, or the variable the scene's
+  `deployment.addresses` names: a deployment's stable address, a runtime kept
+  with `--keep`), asked with a key granted to its route (`--key
+  <member>=<key>`), its tool calls read off the working statuses of the
+  stream as `askA2APeer` reads them. A runtime Datalayer refuses or does not
+  set up in time is the member's sentence; nothing crashes.
+- **One grammar**: what happens is recorded as the spans the Agent Inspector
+  reads (`invoke_agent`, `execute_tool`, `a2a`, each with the attributes
+  above) and read back by `agent_runtimes.loop.scenes.transcript`, the Python
+  twin of `sceneTranscript.ts` — `transcript_of_spans`, `transcript_of_record`,
+  `line_text`, `transcript_text`. Both are held to one fixture,
+  `agent_runtimes/tests/fixtures/scene_transcript.json` (the scripted scene,
+  what is still happening and what failed, a tool of no connection, the
+  same answer said once), read by `sceneTranscriptFixture.test.ts` and
+  `test_scenes_transcript.py`.
+- **The verdict** (`agent_runtimes.loop.scenes.rehearsal`): the expected lines
+  found in the transcript in order (a member by its id or its shown name, a
+  system by its id, server or `as`; a detail as a pattern or words; *a
+  table* read off the answer), `must_say` / `must_not_say` on the entry's
+  answer, `within` on the time; each beat **passed**, **failed** with what
+  differed, or **not run** with why — a member whose setup is incomplete
+  leaves the beats that need it not run with its sentence. A scene with a
+  recording and no live run says its recording stands. Exit codes are `loop
+  apps validate`'s (1 failed, 3 not run); a scene whose every beat passed is
+  *Live*.
+- **What was played is kept**: a rehearsal of every beat on Datalayer of a
+  catalogue scene is written beside the specs as the scene's last
+  (`agentspecs.scenes.write_played`, `<id>/rehearsal.json`: when, where,
+  whether it passed, the verdict's sentence, each beat's verdict, the
+  agent-runtimes that played it). *Live* is read from it — by `loop scenes
+  ls`, by the generated catalogue (`played` on the scene spec, `make specs`)
+  and by the home page — never from a sentence written by hand; a scene whose
+  last rehearsal did not pass says so. A beat alone, a local run or a scene
+  file is not kept. With `--json`, stdout is the verdict and nothing else.
+
+`loop scenes ls` lists the catalogue: each scene's face, members (where each
+runs, whom it asks, what it reaches), beats, setup, and whether it is *Live*,
+with its last rehearsal's day and sentence. The whole is on the [CLI page](/cli#a-scenes-rehearsal); the
+tests are `test_scenes_rehearse.py` (a scripted scene: fake members answering
+fixed lines, to a pass, a fail and a not run; the command's words and exit
+codes).
+
+## The application asked: fasta2a on the runtime
+
+A runtime serves an application over A2A when it is configured with `a2a`:
+
+```bash
+# On Datalayer: a new cloud runtime, or a running one with -r <uid>.
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --keep
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud -r <runtime uid> --a2a --keep
+# Open to visitors without an account too (next sections).
+loop apps run agentspecs/agentspecs/apps/accounting.yaml --cloud --a2a --visitors --keep
+# On a runtime that is already running, such as the examples' server on :8765.
+python examples/sales-accounting-a2a/serve_accounting.py --url http://127.0.0.1:8765
+# Every member on a runtime of every scene, each on a local runtime of its own.
+python examples/sales-accounting-a2a/serve_scenes.py --url http://127.0.0.1:8767
+```
+
+A runtime serves one application over A2A at a time: configuring another
+replaces it. A scene with several members on a runtime needs a runtime per
+member, which is what `serve_scenes.py` does locally (below).
+
+`POST /api/v1/apps/configure` with `"a2a": true` (and `public_url`, the
+address callers reach) makes the runtime's agent the application's agent,
+with its connections and its rules. It also mounts the agent with fasta2a at
+`/api/v1/a2a/agents/<application id>/`, through the runtime's A2A route
+(`register_a2a_agent`): its task store and broker are the runtime's protocol
+state store, and its worker is the runtime's `A2AWorker`. `loop` prints the
+address and the agent card, then waits until Ctrl-C.
+
+The agent card is written from the Appspec: its name, description and
+version, and one skill named for it whose examples are its starters. A
+request is text. An answer is text, and may come in other formats too — see
+[Output formats](#output-formats). fasta2a (2.1 and later) answers A2A
+1.0 JSON-RPC (`SendStreamingMessage`, `TASK_STATE_*`, `ROLE_*`) as its card
+says. The card also says that a bearer key is needed (`securitySchemes`).
+Its face — the Appspec's `emoji`, and its `avatar` when it has one — rides
+an extension of the card, `https://datalayer.ai/extensions/face/v1`, not
+required; its name stays plain text. `connectA2APeer` reads it as
+`peer.face` (`faceOfCard`), and the team draws the peer with it; a client
+that draws no face ignores it.
+
+**Who it answers** (`agent_runtimes.loop.apps.a2a.A2AGate`):
+
+- the machine itself, without a token. This covers a developer's browser and
+  the local server;
+- a key granted to this route: a token exchanged from an IAM task grant whose
+  task begins with `a2a:<runtime uid>:<application id>:`, checked with IAM.
+
+- a visitor without an account, when the owner opened the application to
+  visitors (next section).
+
+Without a token the answer is 401. A person's own token, or a key granted to
+another route, gets 403. The agent card is open to anyone.
+
+**As whom it runs.** A remote caller's run acts with the caller's key and
+never with the runtime's own: the key becomes the run's delegated credential
+(`datalayer.credential`). The run then reaches the gateway with that key
+(`toolsets_for_the_run`). This also applies to a catalogue server that is the
+gateway with some of its toolsets, such as `odoo-accounting`, which keeps its
+`only=` query.
+
+## Open to visitors
+
+A signed-out visitor holds no key of the owner's. An application served over
+A2A can also answer visitors, the way LOOP's visitors' runtime (R-30) answers
+an `at:<slug>` address. Its owner says so when it is configured, as
+`agent-teams demo deploy` does:
+
+```json
+POST /api/v1/apps/configure
+{
+  "app": { "...": "the Appspec" },
+  "a2a": true,
+  "public_url": "https://<the runtime's ingress>",
+  "visitors": true
+}
+```
+
+| Field | What it is |
+| --- | --- |
+| `visitors` | Served over A2A (`a2a` is required too), it also answers visitors. |
+| `visitors_key` | Optional. The owner's key visitors' runs act with: a token from an IAM task grant whose task begins with `a2a:<runtime uid>:<application id>:`, reaching the owner's connections read only (the shape `make_temp_key.py` mints). Unsaid, visitors' runs keep the runtime's own credential. Refused with 422 when it is anything else, or without `visitors`. |
+
+The answer's `a2a` then says `visitors`: the runs a visitor has a day, all
+of them together, and what the runs act with.
+
+From the terminal, `loop apps run <app>.yaml --cloud --a2a --visitors` sends
+`visitors`, and `--visitors-key <token>` sends `visitors_key`. On a runtime
+that is already serving it, `-r <runtime uid>` configures it again on the
+same runtime, at the same address. `--visitors` without `--a2a`, or
+`--visitors-key` without `--visitors`, is refused before anything is
+launched. Without `--visitors`, a visitor's token is answered 403 *…is not
+open to visitors: its owner answers a key granted to its route only.*
+
+**Who a visitor is.** A visitor's token from ai-inference
+(`POST /anonymous/token {"app": "<application id>", "visitor": "<id>"}`),
+which names the visitor and this application by its id. The gate asks
+ai-inference who it is (`GET /anonymous/whoami`), so the runtime needs
+`DATALAYER_AI_INFERENCE_URL`. A token for another application gets 403, a
+spent one 401, and a visitor's token on an application not open to visitors
+gets 403.
+
+**What a visitor's run does.** It never acts with the visitor's token. The
+gate marks the run a visitor's (`datalayer.visitor` in the message's
+metadata, whatever the message said), and the run then only reads, as on the
+visitors' runtime: a tool that does more than read, or that the
+application's rules would ask about, is refused before it runs. It acts with
+`visitors_key` when one was given, else with the runtime's own credential,
+the owner's. Either way the application's connection reads only:
+Accounting's `odoo-accounting` is at *Can read*. Its model calls are the
+runtime's, metered to the owner.
+
+**Limits.** The owner pays for these runs, so the gate counts them. Only a
+request that starts a run is counted; reading a task is not.
+
+| Variable | Default | What it limits |
+| --- | --- | --- |
+| `AGENT_RUNTIMES_A2A_VISITOR_TURNS` | 3 | Runs one visitor starts in a day (UTC). |
+| `AGENT_RUNTIMES_A2A_VISITORS_TURNS_A_DAY` | 100 | Runs all visitors start in a day, together. |
+
+Past either, the answer is 429 with a sentence that says which. The counts
+live in the runtime's process: a restart starts them again. The visitor's
+own model calls (Sales, in the browser) are ai-inference's to limit: its
+anonymous rate and its ceiling for the day.
+
+## At a stable address: a deployment kept always on
+
+`loop apps run --cloud --a2a` serves an application from a runtime, at that
+runtime's address. When the runtime is launched again, the address changes,
+and every caller has to be told the new one. A **deployment** kept always on
+answers over A2A at an address that names its slug, not a runtime:
+
+```text
+https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/<slug>/a2a/
+```
+
+ai-agents keeps the deployment on a runtime of its own (LOOP R-33). Each
+time it launches that runtime, it makes the deployment's agent there and
+then asks the runtime to serve it over A2A, with a card that names the
+stable address (`PUT /api/v1/apps/a2a`, below). What is asked at the stable
+address — the card at `.well-known/agent-card.json`, and the JSON-RPC
+requests — is forwarded to whichever runtime keeps the deployment now. A
+streamed answer (`SendStreamingMessage`, SSE) is relayed as it streams.
+Callers keep the same address when the runtime is replaced, when the
+deployment moves to another version, and after a restart.
+
+It keeps answering for as long as it is kept on. Its agent acts as the
+deployment's principal, whose token lives an hour, and a caller over A2A —
+a visitor, a key granted to the route — is no one to renew it with. So
+ai-agents renews it: every half hour it asks the runtime for a new one with
+a key of the owner it mints for the purpose (`POST /api/v1/apps/principal`,
+`{deployment}`). A renewal refused is said on the deployment
+(`kept.principal_refused` in `GET …/deployments/{uid}/kept`) and asked again
+a minute later.
+
+Its owner turns it on from the terminal, after pushing a version and
+deploying it:
+
+```bash
+loop apps push accounting.yaml --app <application uid>
+loop apps deploy <application uid> --slug demo-accounting \
+  --visibility public --always-on --spend-limit 50 --a2a --visitors
+#  A2A: https://r1.datalayer.run/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a/  (open to visitors)
+```
+
+`--no-a2a` and `--no-visitors` turn each off; `--not-always-on` stops keeping
+it, `--version` picks the version and `--site` the site of its address (see
+[the CLI](/cli#deploy-an-application-at-its-address)). The command sends
+`PATCH /api/ai-agents/v1/apps/deployments/{uid}` with `visibility`,
+`always_on`, `spend_limit` and these two:
+
+| Field | What it is |
+| --- | --- |
+| `a2a` | Served over A2A at its stable address. Only a hosted deployment kept always on (`always_on`, with a spend limit). |
+| `a2a_visitors` | Open there to visitors without an account too, as `--visitors` opens a runtime (above). Only with `a2a`, and only when anyone with the link may open it (`visibility` `link` or `public`). Making it private while visitors are let in is refused. |
+
+A change of either is sent to the runtime already running.
+`GET …/deployments/{uid}/kept` says where it answers:
+`a2a: {on, visitors, url}`.
+
+**Who it answers** is the runtime's gate, as above: a key granted to the
+route, and a visitor's token from ai-inference naming the application when
+it is open to visitors. The stable address adds no access of its own.
+
+**When nothing answers**, the address says why: `404` when it is not served
+over A2A (*… its owner has not turned it on.*) or no deployment has that
+slug; `503` when it is paused, no longer kept always on, or its computer is
+starting or waiting (the keeper's reason, such as its limit for the day);
+`502` when its runtime did not answer.
+
+**On the runtime**, `PUT /api/v1/apps/a2a` `{agent, url, visitors}` serves
+an application's agent that is already made there (by `/api/v1/agents`, from
+the deployment) over A2A. Its card names `url`. `DELETE /api/v1/apps/a2a`
+stops serving it. Both need a person's token or the machine itself. An agent
+that is not on the runtime gets 404, and one that is not an application's
+agent gets 409, and a `url` that is not http(s) 422
+(`test_apps_serve_kept_over_a2a`).
+
+## Output formats
+
+An application says the formats its answers come in, by media type, words
+first: the Appspec's `interface.outputs` (agentspecs 0.0.41). Accounting
+answers in Markdown and in a Jupyter notebook:
+
+```yaml
+interface:
+  outputs:
+    - text/markdown
+    - application/x-ipynb+json
+```
+
+**On the card.** They are its card's `defaultOutputModes` and its skill's
+`outputModes` (fasta2a 2.1.1 takes the card's modes from the application);
+plain text when the Appspec says none. `defaultInputModes` is `text/plain`.
+
+**Asked for.** A caller names the formats it accepts with each request, in
+its configuration: `acceptedOutputModes`. fasta2a hands them to the worker
+as the task's `accepted_output_modes`. The `A2AWorker` opens the run's
+outputs (`agent_runtimes.output.formats`): the formats both the card and the
+caller name, words left out, since words are the answer itself. A caller
+that names nothing is answered in words alone.
+
+**Composed.** What is not words is composed by the agent with a tool of its
+own, offered only in a run that accepts its format. For a notebook it is
+`write_notebook(title, cells)`, each cell `{kind: markdown | code, source}`,
+and the run's prompt then says how to write it: what it is in a markdown
+cell, the figures it read as a pandas `DataFrame` from literals, the analysis
+in code cells (pandas, and a matplotlib chart where one helps), and a
+markdown cell explaining each result. The runtime checks the notebook before
+it keeps it, and a refused one is written again (`ModelRetry`):
+
+- valid nbformat 4, its code cells not run;
+- it runs in the reader's browser offline: code imports only pandas, numpy,
+  matplotlib and Python's standard library, names no URL, calls neither
+  `open` nor `__import__`, and has no magics or shell commands;
+- it holds nothing that looks like a credential, a key or a token;
+- at most 60 cells and 200,000 characters.
+
+`write_notebook` touches nothing outside the run, so an application's rules
+decide it as reading. A visitor's run, which only reads, writes one too.
+
+**Carried.** The notebook is an A2A artifact beside the text: one data part,
+the nbformat document itself, `mediaType: application/x-ipynb+json`, with a
+file name. While the agent writes it, the `working` status of the tool call
+carries a note, `Writing a notebook…`, then `Notebook written`, and not the
+cells, which travel once, in the artifact.
+
+**Received.** In the browser, `askA2APeer(peer, request, { accept })` sends
+`acceptedOutputModes` and resolves to `{ answer, artifacts }`. Each artifact
+is `{ mediaType, name, filename?, data }`, whatever its format, and the
+`answered` event carries them too. `a2aPeerTool({ peer, accept })` describes
+the formats the peer gives that the page accepts, and takes an optional
+`formats` argument, so that the model asks for a notebook when the person
+wants one, or for words alone with `[]`. Left out, the page's `accept`
+applies. The model is told that a notebook came, not its content.
+
+`useA2ATeam({ …, accept: NOTEBOOK_AND_WORDS })` keeps the peer's `artifacts`
+with its last answer, and its latest `notebook` until another one comes.
+`TeamNotebook` draws it, titled, with *Download .ipynb*, on the browser
+sandbox: the loop notebook view's own `EphemeralNotebook` bound to
+`createBrowserSandboxService`, a JupyterLite Pyodide kernel in the page,
+where the reader runs cells, changes them and adds their own. The view,
+JupyterLab and Pyodide are loaded only once a notebook is drawn: a page that
+shows the team loads none of them before.
+
+The notebook goes **right under the team's graph**, before the composer and
+the conversation, in the example and on the landing's home page: the page
+names that area with a ref, `expandTarget` on the entry member, and the
+graph draws the notebook that runs there, through a portal, as it arrives.
+Sales' balloon shows it read-only at the same time (`persona.notebook`,
+drawn by `NotebookPreview`: jupyter-react's notebook with `readonly` on
+`ServiceManagerLess`, no kernel), with *Open it below to run it* and
+*Expand*; a click there scrolls to and focuses the one that runs. Without an
+area, *Expand* opens it in a dialog over the page. The
+members' balloons say their tools too (`persona.tool`): *Asking
+Accounting…*, *Using list_invoices…*.
+
+```tsx
+import { A2ATeamGraph, NOTEBOOK_AND_WORDS, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+
+const team = useA2ATeam({ entry, peerApp, peer, inference, accept: NOTEBOOK_AND_WORDS });
+const notebookArea = useRef<HTMLDivElement>(null);
+// …
+<A2ATeamGraph
+  entry={{ …, persona: team.entryPersona, expandTarget: notebookArea, notebookTitle: "Accounting's notebook" }}
+  …
+/>
+<div ref={notebookArea} />
+```
+
+### Components in answers
+
+The other format is components of the catalog (STUDIO H-02):
+`application/json+a2ui`, A2UI's media type. The scenes' members on a runtime
+name it after Markdown and the notebook (agentspecs 0.0.64):
+
+```yaml
+interface:
+  outputs:
+    - text/markdown
+    - application/x-ipynb+json
+    - application/json+a2ui
+```
+
+**Composed.** In a run that accepts it the agent has `show_components(title,
+sources?, table?, chart?, choice?)`, and its prompt says what fits each:
+
+| Given | Drawn with | What the reader gets |
+| --- | --- | --- |
+| `sources: [{title, url?, passage?}]` | `Evidence` | the records or pages the answer rests on, as cards; a card with a public link opens it |
+| `table: {columns, rows}` | `Table` | rows that compare, under their columns |
+| `chart: {kind, x, y, series?, points}` | `Chart` | a series of numbers, a point per row |
+| `choice: {question, options: [{label, does}]}` | `Text`, a `Row` of `Button` | two to four buttons that answer the application |
+
+The runtime builds the nodes, not the model: each is checked against the
+catalog's JSON Schema (`component_node`), the values sit in the surface's
+data model and the nodes read them by path (`/sources`, `/rows`,
+`/points`), and a surface the catalog would not draw — nothing to show, an
+empty list, a point without its `x` or `y`, a link that is not a web
+address, a choice of one option, a row of more values than columns — is
+not shown, and the call answers why (*Nothing was shown: The table has
+nothing in it…*): the call does not fail, and the agent says in its answer
+what was not shown and why, or shows it again corrected. A table's row may
+be its values in the columns' order. At most three surfaces per answer. Like
+`write_notebook`, `show_components` touches nothing outside the run: the
+rules decide it as reading, and a visitor's run shows them too.
+
+**Carried.** Each surface is an artifact beside the text: one data part,
+`mediaType: application/json+a2ui`, holding `{surfaceId, catalogId, title,
+messages}` — the A2UI v0.9 messages that draw it (`createSurface`,
+`updateComponents`, `updateDataModel`), the surface's id `answer-…`. While
+it is composed the status says *Showing it…*, then *Shown*.
+
+**Drawn.** `useA2ATeam({ …, accept: COMPONENTS_NOTEBOOK_AND_WORDS })` keeps
+every surface the members show in the conversation, in the order they came,
+each once, with the member that gave it (`team.surfaces`,
+`{ id, giver, artifact }`). `AnswerSurfaces` draws them with the A2UI
+surface plugin's `InlineSurface` on Datalayer's catalog, in the page's theme,
+each titled with who showed it; A2UI's renderer is loaded only once a
+surface is drawn.
+
+**A choice answers the application.** A button pressed is the reader's
+answer to the member that showed it: `onPress(surface, pressed)` gets the
+option's words and its action (`pressedOf`), and the page asks that member
+with them — `askA2APeer(peer, pressed.message, { action: pressed.action })`
+puts the action in the message's metadata, `loop.action: {name, payload:
+{does}}`. One choice per surface; what came back is said under it (a
+press that failed is said, and another button can be pressed).
+
+**A press is a turn of the conversation.** In a team, give `onPress` the
+team's `pressAction(surface.giver, pressed)`: the person's line goes into
+the entry's history, addressed to that member (`turns`' `member`, the
+history's `speaker` *You* and `directedTo`), the member is asked directly
+with the action, and its reply lands as an `ask_<peer>` answer does — its
+history, its balloon, its link's flow, the team's report, surfaces and
+notebook — and in the entry's history as that member's answer. The entry's
+model reads both at its next turn. In the transcript the press is the
+person's: give the peer's `traceA2AFetch` `pressedBy: PERSON`, and a request
+carrying `loop.action` is recorded with *You* as its service — *You →
+Accounting: Send the reminders* — while the entry's own requests stay its.
+
+**An approval is honest.** An option whose `does` is more than `read`
+(`write`, `send`, `delete`…) is an approval. The agent is told to show an
+action it would take but does not take itself that way — the action and
+*Not now*. Pressed in a visitor's run, the worker refuses it before any
+model runs, in the sentence a visitor's tool call is refused with
+(`refused_action`, `visitor_refusal`): *Without an account it only reads:
+`Send the reminders` would do more than read, so it asked nobody and did
+nothing.* Anywhere else the press is the person's turn, and the
+application's rules decide: an action it has no tool for is not done, one
+that asks first is asked of a person (Tool Approvals).
+
+```tsx
+import { AnswerSurfaces, COMPONENTS_NOTEBOOK_AND_WORDS, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+
+const team = useA2ATeam({ entry, peers, inference, accept: COMPONENTS_NOTEBOOK_AND_WORDS });
+// …
+<AnswerSurfaces
+  surfaces={team.surfaces}
+  names={{ accounting: 'Accounting' }}
+  onPress={(surface, pressed) => team.pressAction(surface.giver, pressed)}
+/>
+```
+
+## The application asking: `@a2a-js/sdk` in the browser
+
+`runtimes/browser/a2aPeer` uses the A2A SDK's own client (`@a2a-js/sdk` 1.x),
+with no wrapper between them:
+
+```ts
+import { connectA2APeer, a2aPeerTool } from '@datalayer/agent-runtimes/lib/runtimes/browser/a2aPeer'; // not in the barrel
+
+const peer = await connectA2APeer({ url, key }); // reads the agent card
+const tools = { ask_accounting: a2aPeerTool({ peer, onEvent }) };
+```
+
+`connectA2APeer` reads the card and makes a client from it (`ClientFactory`,
+`JsonRpcTransportFactory`). The key goes as a bearer token on every request.
+`a2aPeerTool` is a Vercel AI SDK tool: one request in words in, the peer's
+answer in words out, with the description written from the card's skill.
+`onEvent` is told each step as it happens: `asked`, `working` (with the tool
+the peer calls), then `answered` (with what it gave besides words) or
+`failed`. `accept` names the formats the page accepts
+([Output formats](#output-formats)).
+
+## The team as a graph
+
+`components/teams` draws a team and runs it in a page — a team of two, or a
+team of N (LOOP A-08). It is not in the components barrel, because it brings
+React Flow:
+
+```tsx
+import { A2ATeamGraph, teamConnectionsOf, useA2ATeam } from '@datalayer/agent-runtimes/lib/components/teams';
+
+// What Accounting reaches, from its Appspec: Odoo, through odoo-accounting.
+const ACCOUNTING_CONNECTIONS = teamConnectionsOf(ACCOUNTING);
+
+const team = useA2ATeam({ entry: SALES, peerApp: ACCOUNTING, peer, inference, peerConnections: ACCOUNTING_CONNECTIONS });
+
+<A2ATeamGraph
+  entry={{ id: 'sales', name: 'Sales', character: 'paperclip', where: 'in your browser', persona: team.entryPersona }}
+  peer={{ id: 'accounting', name: 'Accounting', character: 'wizard', where: 'on a runtime', persona: team.peerPersona, connections: ACCOUNTING_CONNECTIONS }}
+  flow={team.flow}
+  calls={team.calls}
+  connected={peer !== null}
+  label={`A2A · ${peer.skill.name}`}
+/>;
+team.send('Which invoices are still open?');
+```
+
+- **`A2ATeamGraph`** is a React Flow graph of the two members and the edge
+  between them, and of each member's connections under it. Each
+  node is the member's character (`AssistantStage`), with its name and where
+  it runs. The edge is still until a message travels on it. It flows from
+  Sales to Accounting while Sales asks, and from Accounting to Sales while
+  Accounting answers. An arrow points at the receiving end, and the edge
+  says *Sales asks Accounting* or *Accounting answers Sales*. With reduced
+  motion the edge does not move, but the arrow and the words stay. The graph
+  is a picture: nothing is dragged, panned or zoomed, and it scales to its
+  box, down to a phone's width. React Flow is MIT; its credit is hidden.
+- **A member's connections** are the MCP servers it reaches. Each is a node
+  half a member's size under it, with the server's mark (`SpecMark`, from
+  the spec's `icon`: `@datalayer/icons-react:odoo`), the system it reaches
+  (*Odoo*) and *via MCP*, linked to the member by an edge of its own. That
+  edge is still until the member calls one of the connection's tools. Then
+  it flows toward the connection for as long as the call runs, with the
+  tool's name on it (*list invoices*), and the node pulses. A quick call is
+  shown for at least `CALL_SHOWN_MS` (0.9 s). With reduced motion the arrow
+  and the words stay and nothing moves.
+- **`teamConnectionsOf(app)`** reads the connections from the Appspec: each
+  `connections[].server`, then the MCP server's spec for its name, mark and
+  tools (the tool names of its `actions`). A tool belongs to a connection
+  when it is one of those names, with or without a host's prefix, or begins
+  with the server's id as the gateway names its toolsets
+  (`odoo_accounting_`).
+- **`useA2ATeam`** runs the entry's loop in the page (the Vercel AI SDK's
+  `ToolLoopAgent`, its model through ai-inference) with its one tool to the
+  peer. It keeps each member's persona (its state and its balloon), the
+  conversation, each member's history (`entryHistory`, `peerHistory`), the
+  last report, the flow, and the calls the peer's connections are answering
+  (`calls`, from `callsAfter`). Given the Agent Inspector's tracer
+  (`inspector`), it records the entry's model turns and its call to the peer
+  there, as OpenTelemetry spans.
+- **`flowAfter`** turns an `A2APeerEvent` into the flow. `asked` and
+  `working` give `asking`. `answered` gives `answering` for
+  `ANSWER_SHOWN_MS` (1.8 s). `failed` gives `still`.
+
+### A team of N
+
+Disaster assessment is three members: Event response in the browser asks
+Disaster assessment and Change detection, each on a runtime, each on
+Earthdata. The same hook and the same graph run it:
+
+```tsx
+const team = useA2ATeam({
+  entry: EVENT_RESPONSE,
+  peers: [
+    { app: DISASTER_ASSESSMENT, peer: assessor, connections: teamConnectionsOf(DISASTER_ASSESSMENT) },
+    { app: CHANGE_DETECTION, peer: detector, connections: teamConnectionsOf(CHANGE_DETECTION) },
+  ],
+  inference,
+});
+
+<A2ATeamGraph
+  entry={{ id: 'event-response', name: 'Event response', character: 'paperclip', where: 'in your browser', persona: team.entryPersona }}
+  peers={team.peers.map(peer => ({ id: peer.id, name: peer.app.name, character: 'wizard', where: 'on a runtime', persona: peer.persona, connections: peer.connections }))}
+  flows={team.flows}
+  calls={team.calls}
+  connected={{ 'disaster-assessment': assessor !== null, 'change-detection': detector !== null }}
+  links={teamLinksOf(DISASTER_ASSESSMENT_TEAM)}
+  positions={DISASTER_ASSESSMENT_SCENE.stage.positions}
+/>;
+```
+
+- **`useA2ATeam`'s `peers`** names the members the entry asks, in order.
+  The entry gets one tool per peer, `ask_<peer id>` (`askToolOf`), and its
+  instructions are followed by a line naming each — *ask Disaster assessment
+  with `ask_disaster_assessment`, Change detection with
+  `ask_change_detection`* (`teamInstructions`; a team of two keeps the
+  entry's instructions as they are). The team is `ready` once every peer is
+  reached. Each peer is kept on `team.peers` — its persona, its history, its
+  report and artifacts, its flow, `setAway` — and `team.flows` says which
+  way each link carries a message, by the peer's id. The calls to each
+  peer's connections are its own: one peer's request does not end
+  another's call. `peerApp`, `peer`, `askTool` and `peerConnections` still
+  name a team of two, and `peerPersona`, `peerHistory`, `flow` are the
+  first peer's. A peer may greet before it is asked (`greeting`: a scene's
+  `opens_first`). What a member says when asked follows what it reaches:
+  *Let me read the books* on Odoo, *Let me look in Earthdata* otherwise
+  (`askedLine`).
+- **An entry on a runtime** (`entryPeer`: Month-end close, Crop monitoring,
+  the scenes of one member) is asked over A2A from the page as the person,
+  with no agent in the browser; its persona follows what it tells, as a
+  peer's does.
+- **`A2ATeamGraph`'s `peers`** draws the entry and N peers, each with its
+  MCP connections under it, its balloon, its menu and its inspector;
+  `flows`, `connected` and `labels` are per peer id. The edges are the
+  team's `talks_to` over A2A (`links`, `teamLinksOf(team)`): a peer that
+  talks to another peer has its edge drawn too, still — the page runs the
+  entry's asks only. Without `positions`, the entry stands on the left and
+  the peers to its right one under another; with a scene's
+  `stage.positions` (fractions of the box), the distinct `x` values are the
+  columns and the distinct `y` values the rows, so Disaster assessment is a
+  triangle: Event response above, the two specialists below it
+  (`placeMembers`). An edge leaves and reaches a member by the side that
+  faces the other (`handlesBetween`), and its arrow points along it. The
+  graph reports one flow for all its edges (`data-a2a-flow`: asking before
+  answering before still) and how many members it draws
+  (`data-a2a-members`).
+
+### How a tool call reaches the graph
+
+Accounting's runtime tells each tool call over A2A, as it happens. Its
+pydantic-ai adapter streams every tool call and every tool call's end, among
+the text. The A2A worker publishes each one as a `working` status whose
+message has one data part: `{tool_call: {id, name, arguments}}` when the
+call starts, then `{tool_result: {id, name, result, error}}` when it ends.
+In the browser, `askA2APeer` reads them into the `working` event's `tool`
+(`{id, name, ended}`), beside its `note`. `callsAfter` keeps a call from its
+start to its end, matched by its id. A new request, an answer or a failure
+ends them all.
+
+Datalayer's home page runs the same team for signed-out visitors: Sales in
+their browser with their trial key, Accounting on a cloud runtime open to
+visitors.
+
+## The Agent Inspector
+
+The Agent Inspector shows what agents do as OpenTelemetry spans, the same
+signals the runtime sends to the OTEL service, recorded in the page as they
+happen and drawn by Datalayer core's OTEL view. A model turn, a tool call
+(MCP, frontend, skill, codemode or runtime tool) and an A2A request are each
+a span; what a peer answers arrives as events on the request's span. It is
+reusable: any page, chat or team can feed it (`components/inspector`).
+
+Each turn is a trace, newest last, with its tool calls and A2A requests
+under it, unfolded. Each row has:
+
+- the time, to the millisecond;
+- the span's name: `invoke_agent Sales`, `execute_tool list_invoices`,
+  `a2a SendStreamingMessage`, `a2a agent card`;
+- the tool's mark (`SpecMark`), *running* while the span is open, *ERROR*
+  when it failed, and the tokens of a turn;
+- a line that says it: a call's arguments, a turn's question and answer, a
+  request's words and its task's state;
+- the agent that did it (the span's service) and the duration.
+
+Click a row for the span's detail: its attributes, with a call's arguments
+and result unfolded as JSON, its events (each A2A status update, artifact or
+message, whole), the trace tree, and the raw span. The toolbar filters by
+source (A2A, MCP, Frontend tool, Skill, Codemode, Runtime tool, Model),
+operation and agent, pauses the rows while recording goes on, clears them,
+and exports the spans as JSON.
+
+### What is recorded
+
+The spans follow the OpenTelemetry GenAI conventions that the runtime's own
+spans follow:
+
+| Span | Attributes |
+| --- | --- |
+| `invoke_agent <agent>`: a turn | `gen_ai.operation.name`, `gen_ai.agent.name`, `gen_ai.request.model`, `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
+| `execute_tool <tool>`: a tool call, under its turn | `gen_ai.tool.name`, `gen_ai.tool.call.id`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `gen_ai.tool.type`; `datalayer.tool.kind` (`mcp`, `frontend`, `skill`, `codemode`, `runtime`) and the tool's marks (`datalayer.mark.icon`, `datalayer.mark.emoji`) |
+| `a2a <method>`: an A2A request, a client span of the asker's | `rpc.system` `jsonrpc`, `rpc.service` `a2a`, `rpc.method`, `rpc.jsonrpc.request_id`, `peer.service` (the agent asked), `a2a.request`, `a2a.message.text`, `a2a.task.id`, `a2a.context.id`, `a2a.task.state`, `http.response.status_code`; its events `a2a.task`, `a2a.status_update`, `a2a.artifact_update`, `a2a.message`, `a2a.error` |
+| `a2a agent card`: the card fetched | `peer.service`, `a2a.agent.name`, `a2a.agent.skills`, `a2a.agent_card` |
+
+An error is the span's status `ERROR` and an `exception` event. Each agent
+is a service: one agent's inspector shows what it did, and the requests sent
+to it (`peer.service`).
+
+### Feeding it
+
+```tsx
+import {
+  AgentInspector,
+  traceA2AFetch,
+  useAgentInspector,
+} from '@datalayer/agent-runtimes/lib/components/inspector';
+
+const { tracer } = useAgentInspector();
+// The A2A traffic: a fetch under the SDK's JSON-RPC transport.
+connectA2APeer({
+  url,
+  fetch: traceA2AFetch(fetch, { tracer, asker: 'Sales', peer: 'Accounting' }),
+});
+// The team: the entry's turns and its call to the peer.
+useA2ATeam({ ...options, inspector: tracer });
+// A chat: its turns and tool calls (ChatBase, ChatFloating, …).
+<ChatFloating inspector={tracer} … />;
+<AgentInspector tracer={tracer} agent="Sales" compact />;
+```
+
+- **`useAgentInspector()`** makes the page's tracer once: core's
+  `createOtelLiveTracer`, kept in memory (2000 spans by default, the oldest
+  ended ones dropped first; `createOtelLiveTracer({ limit })` for another
+  cap). A span started without a parent nests under the innermost span its
+  agent still has open, so the A2A request lands under the tool call that
+  made it.
+- **`traceA2AFetch`** hands each request to the network and reads a copy of
+  the answer, so the SDK sees exactly what the network gave. Each JSON-RPC
+  request is a client span; the response, or each server-sent event, is an
+  event on it, with its task id, context id and state. It never records the
+  bearer key. Each `{tool_call}` / `{tool_result}` pair a peer tells on its
+  `working` statuses becomes an `execute_tool` span of the peer's, under the
+  request (`datalayer.span.origin` `a2a.status`): an MCP call when it is one
+  of the peer's connections (`teamToolClassifier`), otherwise a tool its
+  runtime runs. The chunks of one artifact are one event.
+- **`ChatBase`** records into its `inspector` prop, or into the tracer of the
+  nearest `AgentInspectorProvider`: each turn and each tool call from start
+  to end, its kind by who claims the tool's name (`classifyToolCall`).
+- **`<AgentInspector agent="Sales" />`** shows one agent's own spans. One A2A
+  request shows in both agents' inspectors. `compact` narrows it for a panel;
+  without it, the detail opens beside the list.
+- **`AgentInspectorDialog`** shows it over the page. The assistant's menu
+  opens it with *Inspect the agent…*, and loads it only then.
+
+### The duplicated tool lines
+
+The old exchange list showed `Accounting: Calling odoo_accounting_list_invoices`
+twice, then `Read …` twice. These were not duplicated events. Recorded on
+the wire, each `working` status came once, and each call had its own id. The
+model called the tool twice at once, with different arguments
+(`payment_state=not_paid` and `payment_state=partial`), and the line named
+neither. The inspector shows each call as its own span, with its arguments
+and its duration.
+
+## The example
+
+`AgentA2ATeamExample` puts both applications on screen as Office Assistant
+characters (the floating assistant's `AssistantStage`), in the graph above:
+Sales is the paper clip and Accounting is the wizard. You ask Sales. Sales
+*asks* and the edge flows toward Accounting. Accounting *works* and then
+*answers*, and the edge flows back. Each is in its own state and balloon,
+and then the report appears. Sales accepts a notebook: when Accounting gives
+one — ask for one, *open invoices as a notebook* — it opens under the
+conversation in place of the report, to run in the page.
+
+Under the graph, each member has its own Agent Inspector, side by side, or
+stacked on a narrow screen.
+
+- **Sales' inspector** shows its model turns, its `ask_accounting` call, and
+  under it the A2A requests it sends, with what came back as their events.
+- **Accounting's inspector** shows the A2A requests sent to it, and under
+  them its Odoo MCP calls and `write_notebook`.
+
+Sales' suggestions, the starters of its Appspec, are chips in its balloon
+while it waits for a question. Click one to ask it. Click a member to hide
+its balloon, and again to show it; each member's is its own, and a hidden
+balloon comes back when the member has something new to say. Drag a member
+by its character to move it within the graph's box (its MCP connections move
+with it; the arrow keys move a focused one); the place is kept on the page
+for the session, and *Reset position* in its menu puts it back. Right-click a
+member for its menu: *Inspect the agent…*, *Agent Details…* (its spec,
+model and where it runs; Accounting's A2A card), *Code Sandbox Details…*
+(Sales, while a notebook is open under the graph: the notebook's Pyodide
+kernel and its variables), *Ask Sales* (Sales only: the composer), the
+suggestions, *Balloon: History / Current* (its history lists what it was
+asked, said and did), *Stop the turn*, *About*, and *Send away*.
+
+## The Scenes example
+
+`ScenesExample` (the Apps group) puts the catalogue's scenes in tabs
+(`listSceneSpecs`), each its face and its name. The tab chosen is drawn from
+its scene spec (`sceneStageOf`, LOOP A-15): its `assumes` line under the
+tabs; its graph and its transcript behind *Graph · Transcript*
+(`SceneView`); its members standing where its stage directions put them
+(`positions`), the balloon of `opens_first` open; the script's cues as the
+entry's suggestions, each labelled by the starter of the entry's Appspec
+that says the same words (`sceneCuesOf`); the report, and the notebook a
+member gives, under the graph. Right-click a member for its menu: *Inspect
+the agent…* opens its Agent Inspector, every member on one tracer. A tab
+switch unmounts the scene that ran, which stops its requests.
+
+It plays against the local servers, so a scene is tried before it is
+deployed anywhere. The entry in the browser asks its model through the
+examples' inference, on the signed-in person's token or a visitor's trial
+key. Each member on a runtime is reached at `VITE_A2A_<MEMBER>_URL`
+(`sceneAddressVariable`), or by default on a local runtime
+(`sceneRuntimePorts`): Accounting on :8767, as `npm run examples` has
+served it, and the others on a runtime each from :8768 on, in the
+catalogue's order — Crop monitoring :8768, Disaster assessment :8769,
+Change detection :8770, Month-end close :8771.
+`examples/sales-accounting-a2a/serve_scenes.py` serves them by the same rule
+(`npm run examples` runs it as `server:scenes`): Accounting on the runtime
+already running at `--url`, and each other member on a runtime the script
+starts (`python -m agent_runtimes serve --port N`) and keeps up; `--only`
+names the members to serve, `--no-start` serves on runtimes already at
+their ports. A member whose setup is incomplete — the Odoo or Earthdata
+keys missing on this machine — is not served, and the script prints what it
+needs; the page draws the member all the same and says, in a flash, where
+it was not reached, what its application's `setup` says and how to serve it.
+A scene of one member (Month-end close, Crop monitoring) is asked over A2A
+from the page as the person (`entryPeer`); Disaster assessment runs as a
+team of three.
+
+The landing's home page runs the same team without an inspector on the
+page. The members' menus still offer *Inspect the agent…*. The inspector's
+code loads only then, from the spans kept in memory from the start, capped
+at the last 500.
+
+1. Start the examples: Vite on :3000 and the local agent-runtimes server on
+   :8765 (`npm run examples`).
+2. Serve Accounting:
+   - **Locally**, on :8765, for development:
+     `python examples/sales-accounting-a2a/serve_accounting.py`. From this
+     machine it needs no key. The runtime reaches Odoo with its own
+     `DATALAYER_API_KEY`.
+   - **On Datalayer**: `loop apps run …/accounting.yaml --cloud --a2a --keep`,
+     then mint a key for that runtime's route (next section) and put the A2A
+     address in `.env.local` as `VITE_A2A_ACCOUNTING_URL`.
+3. Open `http://localhost:3000/` and choose *Agent A2A Team* in the A2A group.
+
+The example finds Accounting at `VITE_A2A_ACCOUNTING_URL`, or by default at
+the examples' local server (`http://localhost:8765/api/v1/a2a/agents/accounting`).
+Sales asks its model through the Datalayer inference service, as the
+signed-in person or with a visitor's trial key.
+
+## A temporary key
+
+`examples/sales-accounting-a2a/make_temp_key.py --runtime <uid> --url <A2A url>`
+mints a key with IAM's task grants and writes it to `.env.local` as
+`VITE_A2A_ACCOUNTING_KEY`. That file is ignored by git, and the key is never
+printed. The key reaches:
+
+- that one runtime's Accounting A2A route (its task
+  `a2a:<runtime uid>:accounting:<nonce>`);
+- the Datalayer MCP gateway in the owner's name, read only, through the
+  `odoo_accounting_*` tools whose classes are all `read` (one
+  `datalayer_connection` detail, scope `data:read`);
+- for `--hours` (four by default, at most 24).
+
+It reaches nothing else. The script shows the grant and waits for a yes. It
+needs a platform service key to mint, and `--revoke <grant uid>` ends the
+key early.

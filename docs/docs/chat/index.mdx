@@ -6,7 +6,7 @@ title: Chat
 # Chat
 
 The React chat components in `@datalayer/agent-runtimes` — the conversation,
-the composer, and everything around them. The [Loop Web](/loop) workspace
+the composer, and everything around them. The [Loop Web](/apps) workspace
 assembles these into a full workspace; this page is the components
 themselves, for a host embedding a chat of its own.
 
@@ -45,11 +45,49 @@ the rows around it:
   rather than disappearing when empty — plus `footerExtras`, a trailing-edge
   opening for the host's own controls (the Loop's **+** — start the
   conversation over — arrives that way).
+
+  The model menu lists what the agent runtime answers, and nothing else:
+  for an agent, its agentspec's `model` and `model_additionals`, those its
+  inference can run (`GET /api/v1/configure?agent_id=…`, `models`, each with
+  `isAvailable` and why not). Routed through datalayer-ai-inference, the
+  runtime asks the service which models it serves once, when it starts;
+  `modelsSource` says who decided (`ai-inference`, or `local` when the
+  runtime calls the providers itself or the service did not answer) and
+  `modelsNote` says it in a sentence. A request naming a model the agent
+  does not offer, or the service does not serve, is refused with a 400 and
+  that sentence. Only an in-page agent, with no runtime to ask, offers the
+  catalogue's available chat models instead.
+
+  Under the models, the menu shows a **Decisions** group, read-only: the
+  typed-decision models ai-inference serves, such as Jev on Workers AI
+  (`cloudflare:wrk/typesafe/jev`, named as the agentspecs catalogue names it,
+  *Jev (Cloudflare Workers AI)*). The runtime answers them apart, in
+  `decisionModels` with `decisionsNote` (`decision_models` and
+  `decisions_note` on `/api/v1/configure/models`), never among `models`, so
+  no row of the group can be picked as the agent's model. Each row says what
+  it is for: it answers a decision's typed questions, and agents do not chat
+  with it; when it cannot be used, it says why first, as the models above do
+  (`No ai-inference token` on a runtime waiting for its token). A decision
+  asks it through ai-inference's `/decisions`, which this does not change. A
+  request naming it as the agent's model is refused with a 400: `… answers
+  typed decisions, not a conversation: an agent cannot run on it …`.
 - **The context band**: `ContextPie` and the token counts, shown as soon as
   the agent accounts for itself.
+- **The status dots** beside the send button: the agent's MCP servers and
+  its skills, each a button named by their state (*MCP servers ready*,
+  *Skills active (2/3 enabled)*) whose tooltip lists them. An agent with no
+  MCP server, or no skill, has no dot: a control was never named for having
+  nothing to offer. Their pulse, while servers start or skills load, stands
+  still under reduced motion.
 - **`draggable`** wraps the whole prompt in `FloatingCard`: an absolutely
   positioned, draggable card — the same composer, floating over a canvas
   instead of docked under it.
+
+Every control in the toolbar has an accessible name — the send and stop
+buttons, the menus by what they hold (*Tools — 3 tools*, *Model — Claude
+Sonnet 4.6 · 4 to choose from*), an application's mode switch by its mode and
+the option it is on (*Depth: Quick*) — as a screen reader reads them
+(`chat/prompt/__tests__/toolbarNames`).
 
 ### Prompt regions
 
@@ -64,11 +102,57 @@ slot — see `chat/prompt/stack`:
 A band can reserve height for late-arriving content, draw as a flex row of
 controls or as a self-painting block, and disappear entirely when empty.
 
+## Marks: whose a tool is
+
+A tool call in the chat (`ToolCallDisplay`, and `ToolPart` for message parts)
+leads with the mark of whoever the tool belongs to: its **MCP server** (found
+by the tools the server says it serves), its **skill** (`run_skill_script`,
+`load_skill` and `read_skill_resource` name it in their arguments), its
+**frontend tool set** (by the names in the set's `toolset`) or its **backend
+tool** spec (by `runtime.method`, the name the runtime registers it under).
+The mark is the entry's icon, else its emoji, else nothing (`marksOfToolCall`,
+`SpecMark`, in `chat/marks`).
+
+An icon names its package as the agentspecs catalogues write it,
+`<package>:<name>` — `@datalayer/icons-react:odoo`,
+`@primer/octicons-react:mark-github` — and the name is exported by the package
+as `OdooIcon`, `MarkGithubIcon`. Each package is imported the first time one of
+its icons is drawn, and only then; a blank of the icon's size holds its place
+meanwhile. A malformed reference, or a name the package does not have, throws:
+a test holds every catalogue entry to one its package has.
+
+The composer's menus draw the same marks: the **Tools** menu names the
+runtime's backend tools and, under their own heading, the **Frontend tools** — the ones
+the page runs — each with its mark, and each MCP server's row with the
+server's; the **Skills** menu each skill with its own.
+
 ## The empty state
 
 `ChatEmptyState` introduces the agent — icon, name, description, and its
 spec's suggestions as clickable chips — centred at the top of the canvas,
 where the first message will appear beneath it.
+
+## Display modes
+
+`ChatFloating` shows a chat in five ways, offered by the toggle in its
+header: *Full-height popup*, *Floating popup*, *Floating draggable*,
+*Floating assistant* — a character on the page that speaks in a balloon —
+and *Sidebar panel*, when the page gives it a place to dock. See [The
+floating assistant](./floating-assistant.mdx) for the modes, the character,
+its balloon, and the floating popup that blinks and speaks on hover.
+
+`ChatFloating` can also hold a conversation its host draws — the Loop
+workspace — in place of its chat (`conversation`): the window, the button,
+the panel and the assistant stay, and the host tells it what the
+conversation is doing and what it last said. That is how an embedded
+application floats ([Embedding an application](../apps/embedding.mdx)).
+
+## An application's presence
+
+An application's chat shows its face, its name and its welcome, and one
+line saying what it is doing — *Ready*, *Thinking…*, *Working…*, *Waiting
+for you* — with a quiet ring around the face. See [An application's
+presence](./presence.mdx), and `ChatPresence` and `onPresence` for a host.
 
 ## Where the pieces meet Loop
 
@@ -76,4 +160,4 @@ In the Loop workspace, all of this is assembled by the chat *plugin*: the
 composer's placement (`bottom`, `bottom-chat`, `floating`) is plugin
 configuration, the agent's tools arrive through the `LoopFrontendTool`
 extension point, and the editors beside the conversation are contributions
-the shell hosts. See [Loop Web](/loop).
+the shell hosts. See [Loop Web](/apps).

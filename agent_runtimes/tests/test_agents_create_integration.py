@@ -130,7 +130,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
         goal="Spec goal",
         system_prompt_codemode_addons="Use codemode tools.",
         skills=["python-analyzer"],
-        tools=["fetch_webpage", "run_in_terminal"],
+        backend_tools=["fetch_webpage", "run_in_terminal"],
         description="Spec description",
         model="openai:gpt-4.1",
         sandbox_variant="jupyter-server",
@@ -141,6 +141,7 @@ async def test_create_agent_from_library_spec_applies_full_defaults(
             "enableToolReranker": True,
         },
         mcp_servers=[SimpleNamespace(id="filesystem")],
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(
@@ -209,7 +210,7 @@ async def test_create_agent_from_forwarded_agent_spec_payload(
             "description": "Forwarded description",
             "model": forwarded_model,
             "systemPrompt": "Forwarded prompt",
-            "tools": ["fetch_webpage"],
+            "backendTools": ["fetch_webpage"],
             "protocol": "vercel-ai",
             "mcpServers": [{"id": "github", "origin": "catalog"}],
         },
@@ -263,7 +264,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             system_prompt="Strict prompt",
             system_prompt_codemode_addons=None,
             skills=[],
-            tools=["fetch_webpage"],
+            backend_tools=["fetch_webpage"],
             sandbox_variant="eval",
             protocol="vercel-ai",
             codemode=None,
@@ -272,6 +273,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
             frontend_tools=[],
             trigger=None,
             advanced=None,
+            suggestions=[],
         ),
     )
 
@@ -280,7 +282,7 @@ async def test_create_agent_retries_without_usage_limits_when_unsupported(
         agent_spec_id="demo/spec",
         model="bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt="Strict prompt",
-        tools=["fetch_webpage"],
+        backend_tools=["fetch_webpage"],
         transport="vercel-ai",
     )
 
@@ -344,6 +346,38 @@ async def test_sandbox_without_codemode_keeps_execute_code_enabled(
 
 
 @pytest.mark.asyncio
+async def test_an_agent_whose_sandbox_is_the_browser_is_refused_on_a_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+    creation_spy: dict[str, object],
+) -> None:
+    """The `browser` sandbox is Pyodide in the page: an agent that names it is
+    refused in a sentence (422), not failed (500, *Unknown sandbox variant:
+    browser*, drilled 2026-10-08 with `jupyter-notebook-reviewer`)."""
+    from fastapi import HTTPException
+
+    # The catalogue's own: its spec names the browser's sandbox.
+    request = CreateAgentRequest(
+        name="Reviewer", agent_spec_id="jupyter-notebook-reviewer"
+    )
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(request, _DummyRequest())
+    assert refused.value.status_code == 422
+    assert refused.value.detail == (
+        "jupyter-notebook-reviewer runs its code in the browser: it is not "
+        "started on a runtime. Give it a sandbox a runtime has (eval, "
+        "jupyter-server), or run it in the page."
+    )
+    # Said for a request that names it as well.
+    with pytest.raises(HTTPException) as named:
+        await create_agent(
+            CreateAgentRequest(name="In Page", sandbox_variant="browser"),
+            _DummyRequest(),
+        )
+    assert named.value.status_code == 422
+    assert named.value.detail.startswith("in-page runs its code in the browser")
+
+
+@pytest.mark.asyncio
 async def test_create_agent_disable_tool_approvals_request_override(
     monkeypatch: pytest.MonkeyPatch,
     creation_spy: dict[str, object],
@@ -356,7 +390,7 @@ async def test_create_agent_disable_tool_approvals_request_override(
 
     request = CreateAgentRequest(
         name="No Approval Agent",
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         disableToolApprovals=True,
     )
 
@@ -378,7 +412,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         goal=None,
         system_prompt_codemode_addons=None,
         skills=[],
-        tools=["runtime-sensitive-echo"],
+        backend_tools=["runtime-sensitive-echo"],
         description="Spec description",
         model=None,
         sandbox_variant=None,
@@ -386,6 +420,7 @@ async def test_create_agent_disable_tool_approvals_from_library_spec(
         codemode=None,
         mcp_servers=[],
         disable_tool_approvals=True,
+        suggestions=[],
     )
     monkeypatch.setattr(agents_route, "get_library_agent_spec", lambda _id: spec)
     monkeypatch.setattr(
@@ -422,7 +457,7 @@ async def test_create_agent_disable_tool_approvals_runtime_default(
         env_ctx.setenv("AGENT_RUNTIMES_DISABLE_TOOL_APPROVALS", "true")
         request = CreateAgentRequest(
             name="Env No Approval Agent",
-            tools=["runtime-sensitive-echo"],
+            backend_tools=["runtime-sensitive-echo"],
         )
         response = await create_agent(request, _DummyRequest())
 

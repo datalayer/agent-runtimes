@@ -297,20 +297,17 @@ export function ChatSidebar({
       <Box
         ref={sidebarRef}
         className={className}
-        sx={{
-          position: 'fixed',
-          top: 12,
-          ...(position === 'right'
-            ? { right: 'env(safe-area-inset-right)' }
-            : { left: 'env(safe-area-inset-left)' }),
-          zIndex: 1001,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2,
-        }}
+        position="fixed"
+        top={12}
+        zIndex={1001}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        gap={2}
+        right={position === 'right' ? 'env(safe-area-inset-right)' : undefined}
+        left={position === 'right' ? undefined : 'env(safe-area-inset-left)'}
       >
-        <Box sx={{ position: 'relative' }}>
+        <Box position="relative">
           <IconButton
             icon={
               position === 'right' ? SidebarExpandIcon : SidebarCollapseIcon
@@ -332,23 +329,21 @@ export function ChatSidebar({
 
           {messages.length > 0 && (
             <Box
-              sx={{
-                position: 'absolute',
-                top: -6,
-                right: -6,
-                minWidth: 16,
-                height: 16,
-                px: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bg: 'accent.emphasis',
-                color: 'fg.onEmphasis',
-                borderRadius: '50%',
-                fontSize: '10px',
-                fontWeight: 'bold',
-                boxShadow: 'shadow.small',
-              }}
+              position="absolute"
+              top={-6}
+              right={-6}
+              minWidth={16}
+              height={16}
+              px={1}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bg="accent.emphasis"
+              color="fg.onEmphasis"
+              borderRadius="50%"
+              fontSize="10px"
+              fontWeight="bold"
+              boxShadow="shadow.small"
             >
               {messages.length > 99 ? '99+' : messages.length}
             </Box>
@@ -386,16 +381,14 @@ export function ChatSidebar({
       {/* Mobile overlay backdrop */}
       {isMobile && isOpen && (
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bg: 'neutral.muted',
-            opacity: 0.5,
-            zIndex: 999,
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="neutral.muted"
+          opacity={0.5}
+          zIndex={999}
           onClick={handleToggle}
         />
       )}
@@ -422,19 +415,19 @@ export function ChatSidebar({
                   : 'calc(100dvh - 8px)',
               }
         }
+        position="relative"
+        display="flex"
+        flexDirection="column"
+        alignSelf="stretch"
+        minHeight={0}
+        flex={isMobile ? '1 1 auto' : '0 0 auto'}
+        bg="canvas.default"
+        borderLeft={!isMobile && position === 'right' ? '1px solid' : 'none'}
+        borderRight={!isMobile && position === 'left' ? '1px solid' : 'none'}
+        borderColor="border.default"
+        overflow="hidden"
         sx={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignSelf: 'stretch',
-          minHeight: 0,
           marginBlock: isMobile ? 0 : '4px',
-          flex: isMobile ? '1 1 auto' : '0 0 auto',
-          bg: 'canvas.default',
-          borderLeft: !isMobile && position === 'right' ? '1px solid' : 'none',
-          borderRight: !isMobile && position === 'left' ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          overflow: 'hidden',
           ...mobileStyles,
         }}
       >

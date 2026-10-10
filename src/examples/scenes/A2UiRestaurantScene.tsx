@@ -95,26 +95,22 @@ function RestaurantSearch({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 4,
-        p: 4,
-        maxWidth: 640,
-        mx: 'auto',
-      }}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      gap={4}
+      p={4}
+      maxWidth={640}
+      mx="auto"
     >
       <Box
-        sx={{
-          width: '100%',
-          height: 200,
-          borderRadius: 2,
-          background: `linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        width="100%"
+        height={200}
+        borderRadius={2}
+        background={`linear-gradient(135deg, ${gradient.from} 0%, ${gradient.to} 100%)`}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
       >
         <Text sx={{ fontSize: '4rem' }}>🍽️</Text>
       </Box>
@@ -130,7 +126,7 @@ function RestaurantSearch({
       </Text>
 
       <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box display="flex" gap={2}>
           <TextInput
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
@@ -262,20 +258,16 @@ const A2UiRestaurantScene: React.FC = () => {
     <>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            height: '100%',
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          height="100%"
+          overflow="auto"
+          display="flex"
+          flexDirection="column"
         >
           <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              backgroundColor: 'canvas.default',
-            }}
+            p={3}
+            borderBottom="1px solid"
+            borderColor="border.default"
+            backgroundColor="canvas.default"
           >
             <Text as="h1" sx={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
               🤖 A2UI Restaurant Example
@@ -286,21 +278,19 @@ const A2UiRestaurantScene: React.FC = () => {
             </Text>
           </Box>
 
-          <Box sx={{ flex: 1, p: 3 }}>
+          <Box flex={1} p={3}>
             {!hasData && !isLoading && !error && (
               <RestaurantSearch onSearch={handleSearch} isLoading={isLoading} />
             )}
 
             {isLoading && (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: 280,
-                  gap: 3,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                height={280}
+                gap={3}
               >
                 <Spinner size="large" />
                 <Text sx={{ color: 'fg.muted' }}>
@@ -311,13 +301,11 @@ const A2UiRestaurantScene: React.FC = () => {
 
             {error && !isLoading && (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 3,
-                  p: 4,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap={3}
+                p={4}
               >
                 <Text sx={{ color: 'danger.fg' }}>⚠️ {error}</Text>
                 <Button onClick={handleRetry} disabled={!lastQuery}>
@@ -346,12 +334,10 @@ const A2UiRestaurantScene: React.FC = () => {
                 {surfaces.map(surface => (
                   <Box
                     key={surface.id}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                      borderRadius: 1,
-                      p: 3,
-                    }}
+                    border="1px solid"
+                    borderColor="border.default"
+                    borderRadius={1}
+                    p={3}
                   >
                     <A2uiSurfaceComposed surface={surface} />
                   </Box>
@@ -361,13 +347,11 @@ const A2UiRestaurantScene: React.FC = () => {
           </Box>
 
           <Box
-            sx={{
-              p: 2,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              backgroundColor: 'canvas.default',
-              textAlign: 'center',
-            }}
+            p={2}
+            borderTop="1px solid"
+            borderColor="border.default"
+            backgroundColor="canvas.default"
+            textAlign="center"
           >
             <Text sx={{ fontSize: '0.75rem', color: 'fg.muted' }}>
               Backend: {a2uiRestaurantEndpoint}

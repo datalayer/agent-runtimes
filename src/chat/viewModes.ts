@@ -34,8 +34,18 @@ export const CHAT_VIEW_MODES: readonly ChatViewModeOption[] = [
   { mode: 'floating', label: 'Full-height popup' },
   { mode: 'floating-small', label: 'Floating popup' },
   { mode: 'floating-draggable', label: 'Floating draggable' },
+  // A character on the page that speaks in a balloon (LOOP T-21).
+  { mode: 'assistant', label: 'Floating assistant' },
   { mode: 'sidebar', label: 'Sidebar panel' },
 ];
+
+/**
+ * Why the assistant is greyed out, for its tooltip: it is drawn by the
+ * floating chat (`ChatFloating`); a layout that places the chat itself, as
+ * the page layout does, has no character to show (LOOP T-21).
+ */
+export const ASSISTANT_NEEDS_A_FLOATING_CHAT =
+  'The assistant is drawn by the floating chat, not by this layout';
 
 /** Why the sidebar option is greyed out, for its tooltip. */
 export const SIDEBAR_NEEDS_MOUNT_POINT =
@@ -48,7 +58,8 @@ export function isFloatingChatViewMode(
   return (
     mode === 'floating' ||
     mode === 'floating-small' ||
-    mode === 'floating-draggable'
+    mode === 'floating-draggable' ||
+    mode === 'assistant'
   );
 }
 

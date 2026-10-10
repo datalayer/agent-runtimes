@@ -55,20 +55,9 @@ const AgUiAgenticExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -93,14 +82,7 @@ const AgUiAgenticExample: React.FC = () => {
           </Text>
 
           {isLoading && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                marginBottom: 3,
-              }}
-            >
+            <Box display="flex" alignItems="center" gap={2} marginBottom={3}>
               <Spinner size="small" />
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                 Starting managed agent runtime...
@@ -110,14 +92,12 @@ const AgUiAgenticExample: React.FC = () => {
 
           {error && (
             <Box
-              sx={{
-                padding: 3,
-                marginBottom: 3,
-                backgroundColor: 'danger.subtle',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'danger.muted',
-              }}
+              padding={3}
+              marginBottom={3}
+              backgroundColor="danger.subtle"
+              borderRadius={2}
+              border="1px solid"
+              borderColor="danger.muted"
             >
               <Text sx={{ color: 'danger.fg', fontSize: 1 }}>
                 Failed to initialize managed agent runtime: {error}
@@ -126,13 +106,11 @@ const AgUiAgenticExample: React.FC = () => {
           )}
 
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -140,8 +118,8 @@ const AgUiAgenticExample: React.FC = () => {
             >
               Runtime Mode
             </Text>
-            <Box as="ul" sx={{ paddingLeft: 3 }}>
-              <Box as="li" sx={{ marginBottom: 1 }}>
+            <Box as="ul" paddingLeft={3}>
+              <Box as="li" marginBottom={1}>
                 <Text sx={{ fontFamily: 'mono', fontSize: 1 }}>
                   managed runtime + managed agent
                 </Text>
@@ -164,14 +142,12 @@ const AgUiAgenticExample: React.FC = () => {
           </Box>
 
           <Box
-            sx={{
-              marginTop: 4,
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            marginTop={4}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"

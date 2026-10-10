@@ -111,20 +111,9 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -149,14 +138,12 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
 
           {/* Features section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
           >
             <Text
               as="h2"
@@ -164,28 +151,28 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
             >
               Key Features
             </Text>
-            <Box as="ul" sx={{ paddingLeft: 3 }}>
-              <Box as="li" sx={{ marginBottom: 2 }}>
+            <Box as="ul" paddingLeft={3}>
+              <Box as="li" marginBottom={2}>
                 <Text sx={{ fontWeight: 'semibold' }}>Props-based Handler</Text>
                 <Text sx={{ fontSize: 1, color: 'fg.muted', display: 'block' }}>
                   Implement your own <code>onSendMessage</code> function to
                   connect to any AI backend
                 </Text>
               </Box>
-              <Box as="li" sx={{ marginBottom: 2 }}>
+              <Box as="li" marginBottom={2}>
                 <Text sx={{ fontWeight: 'semibold' }}>Streaming Support</Text>
                 <Text sx={{ fontSize: 1, color: 'fg.muted', display: 'block' }}>
                   Use the <code>onChunk</code> callback for real-time streaming
                   responses
                 </Text>
               </Box>
-              <Box as="li" sx={{ marginBottom: 2 }}>
+              <Box as="li" marginBottom={2}>
                 <Text sx={{ fontWeight: 'semibold' }}>Full Customization</Text>
                 <Text sx={{ fontSize: 1, color: 'fg.muted', display: 'block' }}>
                   Brand colors, icons, position, keyboard shortcuts, and more
                 </Text>
               </Box>
-              <Box as="li" sx={{ marginBottom: 2 }}>
+              <Box as="li" marginBottom={2}>
                 <Text sx={{ fontWeight: 'semibold' }}>No Backend Required</Text>
                 <Text sx={{ fontSize: 1, color: 'fg.muted', display: 'block' }}>
                   Unlike AG-UI examples, this works without a server (demo mode)
@@ -196,14 +183,12 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
 
           {/* Code example */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
           >
             <Text
               as="h2"
@@ -213,14 +198,12 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
             </Text>
             <Box
               as="pre"
-              sx={{
-                backgroundColor: 'neutral.emphasisPlus',
-                color: 'fg.onEmphasis',
-                padding: 3,
-                borderRadius: 2,
-                overflow: 'auto',
-                fontSize: 0,
-              }}
+              backgroundColor="neutral.emphasisPlus"
+              color="fg.onEmphasis"
+              padding={3}
+              borderRadius={2}
+              overflow="auto"
+              fontSize={0}
             >
               <code>{`<ChatStandalone
   title="My Assistant"
@@ -242,13 +225,11 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
 
           {/* When to use section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'attention.subtle',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'attention.muted',
-            }}
+            padding={4}
+            backgroundColor="attention.subtle"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="attention.muted"
           >
             <Text
               as="h2"
@@ -259,7 +240,7 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
             <Text as="p" sx={{ fontSize: 1, marginBottom: 2 }}>
               Use <strong>ChatStandalone</strong> when:
             </Text>
-            <Box as="ul" sx={{ paddingLeft: 3, fontSize: 1 }}>
+            <Box as="ul" paddingLeft={3} fontSize={1}>
               <li>You have a custom AI backend that does not use AG-UI/ACP</li>
               <li>You want full control over the message handling logic</li>
               <li>You need to integrate with a specific API (OpenAI, etc.)</li>
@@ -268,7 +249,7 @@ const AgentRuntimePopupStandaloneExample: React.FC = () => {
             <Text as="p" sx={{ fontSize: 1, marginTop: 2 }}>
               Use <strong>ChatFloating</strong> instead when:
             </Text>
-            <Box as="ul" sx={{ paddingLeft: 3, fontSize: 1 }}>
+            <Box as="ul" paddingLeft={3} fontSize={1}>
               <li>You have an AG-UI compatible backend</li>
               <li>You need built-in tool rendering support</li>
               <li>You want automatic protocol handling</li>

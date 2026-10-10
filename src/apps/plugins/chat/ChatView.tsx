@@ -1,0 +1,2771 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The chat view: a conversation, a prompt, and whatever editors plugins add.
+ *
+ * The prompt lives here rather than in the shell. It is the chat's input — a
+ * workspace with no chat plugin should have no input box — and putting it in
+ * the base meant every workspace carried one whether or not anything answered
+ * it. Slash commands still work, because dispatch stayed with the workspace:
+ * `workspace.submit` sees every command every plugin contributed, which no
+ * single plugin can.
+ *
+ * The editors beside the conversation are contributed, not built in. A notebook
+ * and a document are what the conversation is *about*, so they belong next to
+ * the reply rather than one tab away — and this view holds the point they
+ * arrive through without knowing what either of them is.
+ *
+ * @module apps/plugins/chat/ChatView
+ */
+
+import type { JSX } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { IconButton, SegmentedControl, Text, Truncate } from '@primer/react';
+import { Box, loopShapeVars, useColorPalette } from '@datalayer/primer-addons';
+import { ScreenFullIcon, ScreenNormalIcon } from '@primer/octicons-react';
+import { computed, signal } from '@datalayer/reactor';
+import type { ChatLayoutContribution } from '../../core';
+
+/* A signal to read when the layout publishes no live stance: the hook needs one. */
+const NO_STANCE = signal<ChatLayoutContribution['prompt'] | undefined>(
+  undefined,
+);
+import {
+  useContributions,
+  useSignalValue,
+  useGate,
+  useReactorPlatform,
+  ReactorLazy,
+  ReactorSlot,
+  useSlotComponents,
+} from '@datalayer/reactor/react';
+import { ChatBase } from '../../../chat/base/ChatBase';
+import { useChatAvailability } from '../../../chat/base/ChatAvailability';
+import {
+  offeredModels as offeredModelsFor,
+  readServerCatalogue,
+  readServerDecisions,
+  type Decisions,
+} from '../../../chat/base/modelChoice';
+import { SUGGESTION_CHIP_WIDTH } from '../../../chat/display/EmptyState';
+import { AnonymousKeyExpired } from '@datalayer/core/lib/components/anonymous/AnonymousKeyExpired';
+import { useAnonymousSessionStore } from '../../../runtimes/browser/anonymousToken';
+import { browserProtocolConfig } from '../../../runtimes/browser';
+import { useBrowserInference } from '../../../hooks/useBrowserInference';
+import {
+  agentInstructions,
+  inPageAgentRefusal,
+  resolveAgentspec,
+} from '../../apps/agent';
+import type { ProtocolConfig } from '../../../types/protocol';
+import {
+  targetRunsAgentInPage,
+  type SandboxTarget,
+} from '../agents/switchable';
+import { agentIcon } from '../agents/agentIcons';
+import { specSubagents } from '../agents/specSubagents';
+import { subagentsFor } from '../agents/team';
+import { useOptionalTeamSelection } from '../agents/useTeamSelection';
+
+/**
+ * Stands in for a workspace with no team.
+ *
+ * `useSignalValue` needs a signal on every render, and a hook cannot be
+ * skipped for the ordinary single-agent case.
+ */
+const EMPTY_SELECTION = signal('');
+/* A signal to read when no example contributed chat extras, so the hook
+   below always has one — a hook cannot be called conditionally. */
+const EMPTY_CHAT_EXTRAS = signal<LoopChatExtrasValue>({});
+import { useWorkspaceFullScreen } from '../../shell/useWorkspaceFullScreen';
+import { CHAT_PLUGIN_NAME, type ChatPluginConfig } from './index';
+import {
+  INPUT_PROMPT_PLUGIN_NAME,
+  type InputPromptPluginConfig,
+} from '../input-prompt';
+import {
+  type FooterAgent,
+  type InputPromptProps,
+} from '../../../chat/prompt/InputPrompt';
+import {
+  agentRuntimeStore,
+  useAgentRuntimeContextSnapshot,
+} from '../../../stores';
+import { useIAMStore } from '../../../state';
+import { useVisitorToken } from '../../apps/visitorToken';
+import {
+  AGENTS_PLUGIN_NAME,
+  type AgentsConfig,
+  type AgentsOutput,
+} from '../agents/plugin';
+import type { SandboxService } from '../agents/service';
+import {
+  BROWSER_CODE_TOOL,
+  dataUrlBase64,
+  givenFilesSentence,
+  sandboxFileName,
+  writeFilesCode,
+  type SandboxFile,
+} from '../../apps/browserSandbox';
+import { useConfig } from '../../../hooks/useConfig';
+import { useSkills, useSkillActions } from '../../../hooks/useSkills';
+import type {
+  AgentSuggestion,
+  ContextSnapshotData,
+  ModelConfig,
+} from '../../../types';
+import { AI_MODEL_CATALOGUE, isChatModel } from '../../../specs/models';
+import {
+  LoopAgentBlueprint,
+  LoopAgentGate,
+  LoopChatComposer,
+  LoopChatExtras,
+  LoopChatHeader,
+  LoopChatLayout,
+  LoopChatSuggestion,
+  LoopChatSurface,
+  LoopChatTurn,
+  LoopCommand,
+  LoopFrontendTool,
+  LoopRunProps,
+  LoopSlots,
+  agentServerOf,
+  noRuntimeSaid,
+  canOpenView,
+  runForwardedProps,
+  onPromptFocusRequest,
+  onSurfaceRequest,
+  useLoopPromptStore,
+  type ChatSurfaceContribution,
+  type LoopChatExtrasValue,
+  type LoopViewProps,
+} from '../../core';
+import { messageText, turnWritersOf, type TurnFeed } from './turnState';
+import {
+  isInactiveSurfaceContribution,
+  orderToolContributions,
+  toolsForChatView,
+} from './chatViewTools';
+import { useAgentCommandTools } from '../../../tools/adapters/commands';
+import {
+  NONE_EDITOR,
+  seedEditorChoice,
+  setEditorOptions,
+} from '../shell/editorChoice';
+import type { ChatMessage } from '../../../types/messages';
+import { generateMessageId } from '../../../types/messages';
+import { openThread, THREAD_WORDS } from '../../apps/threads';
+import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
+import {
+  FaceDrawing,
+  PresenceFace,
+  PresenceLine,
+} from '../../../chat/presence/Presence';
+import {
+  presenceState,
+  presenceToolOf,
+  type PresenceTool,
+} from '../../../chat/presence/presenceStatus';
+import {
+  latestSaying,
+  newestIsAnswer,
+  type AssistantSaying,
+} from '../../../chat/assistant/state';
+import { useChatWords } from '../../../chat/ChatLanguage';
+
+type ChatControls = {
+  send: (message: string, forwardedProps?: Record<string, unknown>) => void;
+  stop: () => void;
+  newChat: () => void;
+  /** The conversation the next message goes to (AG-UI's thread). */
+  thread: () => string;
+};
+
+/** No editor: the conversation on its own. */
+const NO_SURFACE = '';
+
+/**
+ * How fast the full-screen control breathes once it starts asking.
+ *
+ * Slow enough to read as breathing rather than blinking — a fast pulse on a
+ * small control reads as an error state, and this one is an invitation.
+ */
+const FULLSCREEN_HINT_PERIOD_MS = 1400;
+
+/**
+ * An application's face in the empty state: the page's size of the three a
+ * face is drawn at (LOOP T-19, `--loop-face-large`, 72px).
+ */
+const FACE_LARGE = parseInt(loopShapeVars['--loop-face-large'], 10);
+
+export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
+  const chatText = useChatWords();
+  /* The active theme's own colours. Read from the store rather than a
+     provider, so a workspace mounted without the addons theme still gets the
+     default palette instead of throwing. */
+  const palette = useColorPalette();
+  const controlsRef = useRef<ChatControls | null>(null);
+  const { setViewControls } = workspace;
+  const [transient, setTransient] = useState<ReactNode>(null);
+  // Read from the reactor rather than taken as a prop: the placeholder and the
+  // default editor are the chat plugin's own configuration, so a host sets them
+  // where it sets anything else about this plugin.
+  const reactor = useReactorPlatform();
+  const config = reactor.getConfig<ChatPluginConfig>(CHAT_PLUGIN_NAME);
+  const placeholder = config?.placeholder || chatText.placeholder;
+  const defaultSurface = config?.defaultSurface ?? 'notebook';
+  /*
+   * The input-prompt plugin's own configuration, read from here rather than
+   * from that plugin's component.
+   *
+   * `firstPromptHook` has to fire for *every* way a message reaches
+   * `handleSend` below — typed and sent through the composer, a suggestion
+   * chip clicked, or a host's own `suggestLoopPrompt(text, {submit: true})`
+   * arriving through the prompt store — and this view is the only thing all
+   * three of those already go through. The composer that renders is
+   * swappable (a host may contribute a different one to `LoopChatComposer`
+   * entirely) and does not see the other two paths at all, so watching for
+   * the first send from inside it would miss most of what "first prompt"
+   * needs to mean.
+   */
+  const inputPromptConfig = reactor.getConfig<InputPromptPluginConfig>(
+    INPUT_PROMPT_PLUGIN_NAME,
+  );
+
+  /*
+   * The default editor is the opening selection, not something switched on
+   * later.
+   *
+   * It used to be applied by an effect that waited for the surface to become
+   * openable, which meant the picker read `None` until a sandbox existed —
+   * a workspace configured for the notebook opened saying it was configured
+   * for nothing. What the host configured is true from the first render; what
+   * the surface can do about it yet is the surface's business.
+   */
+  /*
+   * Nothing open yet, whatever the host asked for.
+   *
+   * Opening the default on the first render puts an editor on screen before
+   * its surface exists — plugins arrive as they activate — and before the
+   * sandbox it needs is running. What the reader saw then was not the notebook
+   * but the notebook's "needs a running sandbox" placeholder, which is a worse
+   * answer than an empty chat that fills in a moment later.
+   *
+   * The effect below opens it the moment it can actually be opened.
+   */
+  const [surfaceId, setSurfaceId] = useState<string>(NO_SURFACE);
+
+  /**
+   * Whether the reader has chosen a surface themselves.
+   *
+   * Once they have, the default is spent. Without this it re-applies every
+   * time a new surface lands — so closing the notebook would reopen it as soon
+   * as any other plugin activated, which reads as the close button not working.
+   */
+  const surfaceChosen = useRef(false);
+
+  const surfaces = useContributions(LoopChatSurface);
+  /* The composer and the title bar arrive as plugins: this view assembles
+     their props, whoever contributed renders them. First contribution wins —
+     these are single-occupant surfaces, not lists. */
+  const composerEntries = useContributions(LoopChatComposer);
+  const headerEntries = useContributions(LoopChatHeader);
+  /* Live per-example chat extras — an error banner, the codemode toggle, the
+     footer's MCP/codemode status. Carried as a signal so the example can
+     update it without the plugin being rebuilt; first contribution wins. */
+  /* How the parts are arranged. No contribution: the split below. A layout
+     plugin — the page layout — takes the same wired parts and arranges them
+     its own way; first contribution wins. */
+  const layoutEntries = useContributions(LoopChatLayout);
+  const layout = layoutEntries[0]?.value;
+  // The composer's stance: live when the layout publishes one (the page
+  // layout, moving the composer as the display mode changes), its starting
+  // stance otherwise.
+  const liveStance = useSignalValue(layout?.promptStance ?? NO_STANCE);
+  const promptStance = liveStance ?? layout?.prompt;
+  /* The current turn, kept for whoever shows the conversation without the
+     transcript. The chat plugin contributed the feed at build; this view is
+     its writer — begin on send, the reply as it arrives, end when it stops. */
+  const turnEntries = useContributions(LoopChatTurn);
+  const turnFeed = turnWritersOf(turnEntries[0]?.value);
+  /* Reached through a ref from the send and loading handlers, which are
+     memoised with empty deps and must not go stale on it. */
+  const turnFeedRef = useRef<TurnFeed | undefined>(turnFeed);
+  turnFeedRef.current = turnFeed;
+  /* Who is working, for the activity line — read through a ref by a
+     handler memoised with empty deps. Set once the spec is resolved below. */
+  const agentNameRef = useRef<string>('');
+  const extrasEntries = useContributions(LoopChatExtras);
+  /*
+   * Every contribution, merged, a later one winning a key both set.
+   *
+   * Only the first used to be read, which made the extras the property of
+   * whichever plugin registered first: the loop's own surface plugin
+   * contributes a tool-result renderer, and a host example contributing a
+   * banner beside it would have silenced one or the other.
+   */
+  const mergedExtras = useMemo(
+    () =>
+      computed<LoopChatExtrasValue>(() =>
+        extrasEntries.reduce<LoopChatExtrasValue>(
+          (merged, entry) => ({ ...merged, ...entry.value.extras.value }),
+          {},
+        ),
+      ),
+    [extrasEntries],
+  );
+  const chatExtras = useSignalValue(
+    extrasEntries.length > 0 ? mergedExtras : EMPTY_CHAT_EXTRAS,
+  );
+  /* Which editors have ever been mounted; they are never unmounted after —
+     see the render below. A ref, not state: adding to it during render is
+     idempotent and must not schedule another one. */
+  const everMounted = useRef<Set<string>>(new Set());
+  // Asked, not assumed: the chat cannot know whether anything is listening,
+  // and whichever plugin does answers the gate. Re-asked on every render with
+  // the live workspace, so switching the sandbox switches the prompt.
+  const usable = useGate(LoopAgentGate, workspace);
+  /* The sandbox's answer. It is not the only thing that can close the chat —
+     an anonymous visitor's trial key runs out too — so the two are combined
+     further down, once the key is known. */
+  const gateBlocked = !usable.allowed;
+  const gateReason = gateBlocked
+    ? (usable.reason ?? 'Chat is unavailable for this sandbox')
+    : undefined;
+
+  // Stable: ChatBase calls these in effects, and a new identity every render
+  // would make it re-publish on every render.
+  /*
+   * Whether the agent is working, held here rather than read back from the
+   * shell.
+   *
+   * It used to live only in `workspace.viewControls`, written by two
+   * callbacks that each replaced the whole object — and `onSendReady` fires
+   * again during a send, because ChatBase rebuilds its `handleSend` when the
+   * send starts. So the sequence was: loading true, then a fresh
+   * `{ stop }` with no `busy` at all. The prompt went live again one tick
+   * after the agent started, which is exactly when it must not be.
+   *
+   * Local state, and the shell is told from one place below.
+   */
+  const [busy, setBusy] = useState(false);
+  const [sendReady, setSendReady] = useState(false);
+  const [presenceTool, setPresenceTool] = useState<PresenceTool>({
+    open: false,
+    pendingApproval: false,
+  });
+  const presenceNow = presenceState(
+    busy,
+    presenceTool,
+    config?.presence?.paused === true,
+  );
+  const onPresence = config?.presence?.onPresence;
+  // A host drawing the face in a frame of its own is told as it changes, and
+  // so is whoever reads the turn: the floating assistant acts it out (T-22).
+  useEffect(() => {
+    onPresence?.(presenceNow);
+    turnFeedRef.current?.setPresence(presenceNow);
+  }, [onPresence, presenceNow]);
+  // What it last said, for a host that says it outside the conversation —
+  // the embed's floating chrome (LOOP R-01): its balloon and its blink.
+  // Through a ref: the handler below is made once.
+  const onSayingRef = useRef(config?.presence?.onSaying);
+  onSayingRef.current = config?.presence?.onSaying;
+  const saidRef = useRef<{ saying?: AssistantSaying; answering: boolean }>({
+    answering: false,
+  });
+
+  const handleSendReady = useCallback((controls: ChatControls | null) => {
+    controlsRef.current = controls;
+    setSendReady(!!controls);
+  }, []);
+
+  /*
+   * What the agent is doing, for the turn feed.
+   *
+   * The newest tool call that has not returned is the activity: "Analyst is
+   * adding a cell…". Named by what the tool does in the page rather than by
+   * the tool — a reader watching the notebook is told what to look for.
+   * Cleared when nothing is running.
+   */
+  const handleDisplayItemsChange = useCallback(
+    (items: Array<ChatMessage | ToolCallMessage>) => {
+      // The newest tool call, for an application's line of status (T-08).
+      const { open, pendingApproval } = presenceToolOf(items);
+      setPresenceTool(previous =>
+        previous.open === open && previous.pendingApproval === pendingApproval
+          ? previous
+          : { open, pendingApproval },
+      );
+      const said = {
+        saying: latestSaying(items),
+        answering: newestIsAnswer(items),
+      };
+      const before = saidRef.current;
+      if (
+        before.saying?.id !== said.saying?.id ||
+        before.saying?.text !== said.saying?.text ||
+        before.answering !== said.answering
+      ) {
+        saidRef.current = said;
+        onSayingRef.current?.(said);
+      }
+      const feed = turnFeedRef.current;
+      if (!feed) {
+        return;
+      }
+      // The whole conversation, for a page that shows it (a Chat block).
+      feed.items(items);
+      const SETTLED = new Set([
+        'complete',
+        'completed',
+        'done',
+        'error',
+        'failed',
+        'cancelled',
+        'canceled',
+        'rejected',
+        'denied',
+        'stopped',
+      ]);
+      const VERBS: Record<string, string> = {
+        insertcell: 'adding a cell',
+        updatecell: 'editing a cell',
+        runcell: 'running a cell',
+        deletecells: 'removing cells',
+        readallcells: 'reading the notebook',
+        readcell: 'reading a cell',
+        executecode: 'running code',
+        insertblock: 'adding a block',
+        updateblock: 'editing a block',
+        runblock: 'running a block',
+        readdocument: 'reading the document',
+      };
+      let running: ToolCallMessage | undefined;
+      for (let index = items.length - 1; index >= 0; index -= 1) {
+        const item = items[index] as ToolCallMessage;
+        if (typeof item.toolName === 'string' && item.toolCallId) {
+          if (!SETTLED.has(String(item.status).toLowerCase())) {
+            running = item;
+          }
+          break;
+        }
+      }
+      if (!running) {
+        feed.activity(undefined);
+        return;
+      }
+      const key = running.toolName
+        .toLowerCase()
+        .replace(/^datalayer_/, '')
+        .replace(/_lexical$/, '')
+        .replace(/[^a-z]/g, '');
+      const verb = VERBS[key] ?? `using ${running.toolName}`;
+      feed.activity(`${agentNameRef.current || 'The agent'} is ${verb}…`);
+    },
+    [],
+  );
+
+  /* Read through a ref by the snapshot handler, memoised with empty deps. */
+  const chatExtrasRef = useRef(chatExtras);
+  chatExtrasRef.current = chatExtras;
+
+  // The window, for the prompt band, the turn feed, and a host counting it.
+  const handleContextSnapshot = useCallback(
+    (snapshot: ContextSnapshotData | undefined) => {
+      setChatUsage(snapshot);
+      turnFeedRef.current?.usage(snapshot);
+      chatExtrasRef.current.onUsage?.(snapshot);
+    },
+    [],
+  );
+
+  const handleLoadingChange = useCallback((next: boolean) => {
+    setBusy(next);
+    if (!next) {
+      turnFeedRef.current?.end('done');
+    }
+  }, []);
+
+  /*
+   * The reply as it arrives, for the turn feed.
+   *
+   * `onMessagesChange` reports the conversation on every change of it,
+   * streaming included; the last assistant message is the one the current
+   * turn is about. Text only — a tool call is shown where it acted, in the
+   * editor, and the panel is for what the agent *said*.
+   */
+  const handleMessagesChange = useCallback((messages: ChatMessage[]) => {
+    const feed = turnFeedRef.current;
+    if (!feed) {
+      return;
+    }
+    /*
+     * The whole reply since the person last spoke, not the latest segment.
+     *
+     * An agent that calls a tool speaks in more than one message per turn —
+     * "I'll start…", the tool, "Good, the frame shows…" — and a reader
+     * watching the panel wants all of it, in order. Text only: the tool's
+     * work shows where it acted, in the editor.
+     */
+    let lastUser = -1;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].role === 'user') {
+        lastUser = index;
+        break;
+      }
+    }
+    const reply = messages
+      .slice(lastUser + 1)
+      .filter(message => message.role === 'assistant')
+      .map(messageText)
+      .filter(text => text.trim().length > 0)
+      .join('\n\n');
+    feed.assistant(reply);
+  }, []);
+
+  const heldForAdapter = useRef<
+    Array<[string, Record<string, unknown> | undefined]>
+  >([]);
+  /** Whether the agent is turned in this page: read by `sendNow`, set below. */
+  const inPageRef = useRef(false);
+  /**
+   * The page's sandbox, when the agent turned in the page runs its code
+   * there (`execute_code`, STUDIO E-11): what a file given on the page is
+   * put in. Read by `sendNow`, set below.
+   */
+  const pageSandboxRef = useRef<SandboxService | undefined>(undefined);
+  /**
+   * Why its host closed the conversation (`ChatAvailabilityProvider`), or
+   * nothing: a page's own send is refused with it as the composer is — a
+   * stopped deployment, a visitor's turns all taken. Set below.
+   */
+  const hostClosedRef = useRef<string | undefined>(undefined);
+  /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
+  const runProps = useContributions(LoopRunProps);
+  const runPropsRef = useRef(runProps);
+  runPropsRef.current = runProps;
+  /*
+   * Every message that goes to the agent goes through here: the composer's
+   * (through the workspace's dispatch and the prompt channel), a host's, and
+   * one sent from the application's page (`viewControls.send`) — so each
+   * begins its turn, and a page reading the turn sees it asked and answered.
+   *
+   * What the page did besides the message goes with it as AG-UI's
+   * `forwardedProps` (`loop`, LOOP R-04): the application's session takes a
+   * file there. An agent turned in this page has no session: one that runs
+   * its code in the page's sandbox has the files put there, and the message
+   * names them (STUDIO E-11); to any other no file is handed — said, rather
+   * than dropped. What the workspace's plugins send with every run
+   * (`LoopRunProps`: the modes the person is in, LOOP P-19) goes under it —
+   * and an agent turned in this page applies the modes itself (`modeEffect`,
+   * `BrowserAgentAdapter`).
+   */
+  const sendNow = useCallback(
+    (message: string, given?: Record<string, unknown>): string | void => {
+      if (hostClosedRef.current) {
+        return hostClosedRef.current;
+      }
+      const forwardedProps = runForwardedProps(
+        runPropsRef.current.map(entry => entry.value),
+        given,
+      );
+      // The page's files, or those attached in the composer (LOOP P-21).
+      const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
+      if (inPageRef.current && loop?.files && loop.files.length > 0) {
+        const sandbox = pageSandboxRef.current;
+        if (!sandbox) {
+          return 'A file is given to an application running on a runtime: run it on Datalayer or on your machine to give it one.';
+        }
+        let files: SandboxFile[];
+        try {
+          files = (
+            loop.files as Array<{ name?: unknown; data_url?: unknown }>
+          ).map(file => ({
+            file: sandboxFileName(String(file.name ?? '')),
+            base64: dataUrlBase64(String(file.data_url ?? '')),
+          }));
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+        // Put in the sandbox first, then sent: the message names where.
+        void sandbox.execute(writeFilesCode(files)).then(written => {
+          if (!written.success) {
+            setTransient(
+              `The files could not be put in the sandbox: ${written.error ?? 'it failed'}.`,
+            );
+            return;
+          }
+          // Sent as any message is, its files now in the sandbox.
+          sendNow(
+            `${message}\n\n${givenFilesSentence(files.map(file => file.file))}`,
+            {
+              ...forwardedProps,
+              loop: Object.fromEntries(
+                Object.entries(loop).filter(([key]) => key !== 'files'),
+              ),
+            },
+          );
+        });
+        return;
+      }
+      // A new turn: whatever the panel showed is gone, this message is it.
+      turnFeedRef.current?.begin(message, controlsRef.current?.thread());
+      const send = controlsRef.current?.send;
+      if (!send) {
+        heldForAdapter.current.push([message, forwardedProps]);
+        return;
+      }
+      send(message, forwardedProps);
+    },
+    [],
+  );
+
+  // One writer, so neither fact can erase the other.
+  useEffect(() => {
+    setViewControls(
+      sendReady
+        ? {
+            busy,
+            stop: controlsRef.current?.stop,
+            newChat: controlsRef.current?.newChat,
+            send: sendNow,
+          }
+        : null,
+    );
+  }, [busy, sendReady, setViewControls, sendNow]);
+
+  // Stop reporting when the view goes away, or the shell would keep a stop
+  // button for something that is no longer there.
+  useEffect(() => () => setViewControls(null), [setViewControls]);
+
+  /*
+   * Said before the adapter could take it.
+   *
+   * The composer is live while the chat is still starting — the shell shows
+   * it as soon as the view mounts — and a message sent in that moment used
+   * to be dropped, on the grounds that sending it late and out of context
+   * would be worse. It was worse: the message stood in the conversation with
+   * no reply and no reason, and the only way to find out was to send it
+   * again. Held instead, and sent the moment the adapter is ready, which is
+   * the next second or two rather than minutes.
+   */
+  useEffect(
+    () => workspace.prompts.subscribe(sendNow),
+    [workspace.prompts, sendNow],
+  );
+
+  // The adapter arrived: whatever was said while it was starting goes now.
+  useEffect(() => {
+    if (!sendReady || heldForAdapter.current.length === 0) {
+      return;
+    }
+    const held = heldForAdapter.current.splice(
+      0,
+      heldForAdapter.current.length,
+    );
+    for (const [message, forwardedProps] of held) {
+      controlsRef.current?.send(message, forwardedProps);
+    }
+  }, [sendReady]);
+
+  /*
+   * Fired once, on the first real send, for the life of this mounted chat —
+   * a ref rather than a signal, because nothing here needs to re-render when
+   * it flips; the host's hook is the only thing that reacts.
+   */
+  const firstPromptFired = useRef(false);
+  const handleSend = useCallback(
+    async (message: string) => {
+      /*
+       * Every way a message reaches this view runs through here — typed and
+       * sent through the composer, a suggestion chip clicked, or a host's own
+       * `suggestLoopPrompt(text, {submit: true})` arriving through the prompt
+       * store (see the `suggestion.submit` effect below) — so this is the one
+       * place "the first prompt" means the same thing regardless of which one
+       * a person or a host used.
+       */
+      if (!firstPromptFired.current) {
+        firstPromptFired.current = true;
+        inputPromptConfig?.firstPromptHook?.();
+      }
+      setTransient(null);
+      // The turn begins where the message goes out (`sendNow`): a command
+      // the workspace runs is not one.
+      const outcome = await workspace.submit(message);
+      if (!outcome.handled) {
+        /*
+         * Nothing took it, so the words stay where they were typed.
+         *
+         * The reason appears under the prompt; emptying the box as well would
+         * make a failed send look like a successful one and cost the person
+         * the sentence they wrote.
+         */
+        setTransient(outcome.reason ?? null);
+        return;
+      }
+      /*
+       * Sent, so the composer is empty again.
+       *
+       * `InputPromptBase` clears itself only when it owns its own text. This
+       * view hands it a controlled value — a page embedding the workspace can
+       * offer a prompt, which needs somewhere outside the editor to put it —
+       * and a controlled value is the owner's to clear. It was not being
+       * cleared at all: the sentence stayed in the box after the agent had
+       * answered it, so the next thing typed was appended to the last thing
+       * asked, and the placeholder that suggests what to ask never came back.
+       */
+      setDraft('');
+      if (outcome.result?.content) {
+        setTransient(outcome.result.content as ReactNode);
+      }
+    },
+    [workspace, inputPromptConfig?.firstPromptHook],
+  );
+
+  const active = useMemo(
+    () => surfaces.find(entry => entry.value.surfaceId === surfaceId)?.value,
+    [surfaces, surfaceId],
+  );
+
+  /**
+   * The reader picking a surface, including picking none.
+   *
+   * It records the choice as well as making it: from here on the host's
+   * default is spent, so a surface closed stays closed.
+   */
+  const chooseSurface = useCallback((next: string) => {
+    surfaceChosen.current = true;
+    setSurfaceId(next);
+  }, []);
+
+  /*
+   * A command asking for a surface — `/notebook`, `/document`, or their
+   * shortcuts. Treated exactly like a reader picking one from the strip, so
+   * the choice sticks the same way and the host's default is spent.
+   */
+  useEffect(() => onSurfaceRequest(chooseSurface), [chooseSurface]);
+
+  /*
+   * The editor choice store — what the shell's selector, the `/editor`
+   * command and the reactor shell's cycle read — learns two things only the
+   * chat knows: which editors exist, and which one is on screen. Nobody fed
+   * it the options before, so "cycle the editors" cycled an empty list and
+   * always landed on none; and a surface opened by a tool or a plugin, past
+   * the store, left it pointing at the wrong one. Seeded, not chosen: the
+   * chat already shows it, there is nothing to announce.
+   */
+  useEffect(() => {
+    setEditorOptions(surfaces.map(entry => entry.value.surfaceId));
+  }, [surfaces]);
+  useEffect(() => {
+    seedEditorChoice(
+      surfaceId && surfaceId !== NO_SURFACE ? surfaceId : NONE_EDITOR,
+    );
+  }, [surfaceId]);
+
+  /** The surface the host asked to open, once its plugin has contributed it. */
+  const wanted = useMemo(
+    () =>
+      defaultSurface === NO_SURFACE || defaultSurface === 'none'
+        ? undefined
+        : surfaces.find(entry => entry.value.surfaceId === defaultSurface),
+    [surfaces, defaultSurface],
+  );
+
+  /*
+   * Open the default the moment it can be opened.
+   *
+   * Both conditions are the point. A surface arrives when its plugin
+   * activates, so it may not exist on the first render; and these two need a
+   * running sandbox, which takes as long as a Pyodide kernel takes to start.
+   * Waiting for both is what turns "configured for the notebook" into a
+   * notebook rather than a placeholder.
+   */
+  useEffect(() => {
+    if (surfaceChosen.current || !wanted) {
+      return;
+    }
+    if (canOpenView(wanted.value, workspace)) {
+      setSurfaceId(defaultSurface);
+    }
+  }, [wanted, workspace, defaultSurface]);
+
+  /*
+   * An editor that stops being openable — its sandbox went away — should not
+   * stay on screen claiming otherwise.
+   *
+   * Closed, but remembered. This used to set the surface to none and stop
+   * there, which spent the reader's choice on an interruption: a sandbox
+   * blinking during a target switch closed the notebook, `surfaceChosen`
+   * meant the default could not reopen it, and the control settled on None
+   * for a workspace nobody had asked to empty. What was on screen and what
+   * the control said agreed with each other and with neither the reader nor
+   * the configuration.
+   */
+  /* State, not a ref: the layout below keeps this surface's column while it
+     is away, and a ref changing re-renders nothing. */
+  const [suspendedId, setSuspendedId] = useState<string | null>(null);
+
+  /*
+   * Full screen: the whole view, on the whole screen.
+   *
+   * Everything the workspace is showing goes — the editor as well as the
+   * conversation. An earlier version hid the editor, on the theory that a long
+   * transcript wants the room; but somebody working on a notebook who asks for
+   * more room is asking for more room *for the work*, and taking the notebook
+   * away to give it is answering a question they did not ask.
+   *
+   * Done with the Fullscreen API rather than by drawing a big box, because a
+   * component cannot know what it is inside of. `position: fixed` escapes only
+   * as far as the nearest ancestor with a transform, and a page that animates
+   * its sections in — the landing does — leaves one behind permanently: the
+   * "full screen" chat then filled the card it was already in. The API
+   * promotes the element to the browser's top layer, where no ancestor can
+   * hold it, and unlike a portal it does not move in the DOM — so every
+   * inherited theme variable the editors read still resolves.
+   *
+   * The CSS overlay is kept as the fallback for where the API is refused: an
+   * iframe without `allow="fullscreen"`, mostly. Confined to a card is a worse
+   * answer than full screen and a better one than nothing.
+   */
+  const viewRef = useRef<HTMLDivElement>(null);
+  // A host's own fixed header, drawn outside this workspace entirely —
+  // reserved at the top of the overlay below, and forcing full screen onto
+  // the overlay door for good; see `ChatPluginConfig.fullScreenTopOffset`.
+  const fullScreenTopOffset = config?.fullScreenTopOffset ?? 0;
+  /* Shared with the workspace header's icon — same machinery, two doors in.
+     See `useWorkspaceFullScreen` for why it is the browser's API rather than
+     a big box, and for the CSS fallback the styling below paints. */
+  const {
+    fullScreen,
+    usingApi: usingFullscreenApi,
+    toggle: toggleFullScreen,
+    topOffsetPx: fullScreenTopOffsetPx,
+  } = useWorkspaceFullScreen(viewRef, {
+    forceOverlay: Boolean(fullScreenTopOffset),
+    topOffset: fullScreenTopOffset,
+  });
+
+  /*
+   * The full-screen control, pointed at from the first run onwards.
+   *
+   * This view is usually a panel inside somebody else's page — a few hundred
+   * pixels of a landing page or an example. The moment it becomes worth more
+   * room is the moment it starts answering, and that is also the moment a
+   * reader's attention is on the transcript rather than on a small grey icon
+   * in a corner. So from the first answer the icon takes the theme's own
+   * colour and breathes.
+   *
+   * It does not stop on a timer. A reader who is deep in the first answer has
+   * not yet had the thought "this is too small", and a hint that has already
+   * expired by the time they have it is a hint that was never given. What ends
+   * it is the reader: taking the offer, or reaching the thing it was offering.
+   *
+   * `hinted` is a ref because it must not itself cause a render, and because
+   * it has to survive `busy` going true again for the second message — this
+   * starts once, on the first run, not on every turn.
+   */
+  const [hintFullScreen, setHintFullScreen] = useState(false);
+  const hinted = useRef(false);
+  useEffect(() => {
+    if (!busy || hinted.current || fullScreen) {
+      return;
+    }
+    hinted.current = true;
+    setHintFullScreen(true);
+  }, [busy, fullScreen]);
+
+  // Arriving is the end of it, however they got there — the button, a
+  // keyboard shortcut, the host promoting the workspace. There is nothing
+  // left to point at, and it never comes back.
+  useEffect(() => {
+    if (fullScreen) {
+      setHintFullScreen(false);
+    }
+  }, [fullScreen]);
+
+  useEffect(() => {
+    if (active && !canOpenView(active, workspace)) {
+      setSuspendedId(active.surfaceId);
+      setSurfaceId(NO_SURFACE);
+    }
+  }, [active, workspace]);
+
+  /**
+   * The surface that is closed but coming back.
+   *
+   * Held so the layout can keep its column: what is missing is the editor,
+   * not the half of the workspace it lives in.
+   */
+  const waiting = useMemo(() => {
+    if (suspendedId) {
+      return surfaces.find(item => item.value.surfaceId === suspendedId)?.value;
+    }
+    /*
+     * The host's default, before it has managed to open.
+     *
+     * It needs a sandbox, and a sandbox takes as long as a kernel takes to
+     * start — so for the first seconds of every workspace there is a
+     * configured notebook that is not open yet. Counting it as "waiting" is
+     * what lets the control say Notebook from the outset and the column hold
+     * its half of the split, instead of both saying None and then changing
+     * their minds.
+     *
+     * Only until somebody chooses for themselves. After that the default is
+     * spent, and a reader who picked None must not be shown Notebook.
+     */
+    if (!surfaceChosen.current && surfaceId === NO_SURFACE) {
+      return wanted?.value;
+    }
+    return undefined;
+  }, [surfaces, suspendedId, surfaceId, wanted]);
+
+  // And opened again when it can be. The reader asked for it once; an
+  // interruption is not them changing their mind.
+  useEffect(() => {
+    if (!suspendedId || surfaceId !== NO_SURFACE) {
+      return;
+    }
+    const entry = surfaces.find(item => item.value.surfaceId === suspendedId);
+    if (entry && canOpenView(entry.value, workspace)) {
+      setSuspendedId(null);
+      setSurfaceId(suspendedId);
+    }
+  }, [surfaces, surfaceId, suspendedId, workspace]);
+
+  // The AG-UI mount is per agent, and `default` is the agent a server runs when
+  // it was not told otherwise, so a workspace opened without one still talks to
+  // something.
+  const agentId = workspace.agentId?.trim() || 'default';
+
+  /*
+   * Which protocol, decided by where the sandbox is.
+   *
+   * On the browser target there is no server to mount an agent on, so the loop
+   * turns in this page with the Vercel AI SDK and the chat calls it rather
+   * than addressing it. Everywhere else the agent lives on the runtime and the
+   * chat speaks AG-UI to it, exactly as before.
+   *
+   * The spec's own `harness` does not decide this. It says where the agent
+   * normally runs, and a page cannot turn a pydantic-ai loop whatever it asks
+   * for — so the location wins, which is the same rule the examples follow.
+   */
+  const inPage = targetRunsAgentInPage(
+    (workspace.sandbox.target as SandboxTarget) ?? 'local',
+  );
+  inPageRef.current = inPage;
+
+  /*
+   * Who is being addressed, when this workspace runs a team.
+   *
+   * The team's own answer, not the workspace's: `workspace.agentId` is the
+   * session's agent, and a team has several behind one front door. Picking a
+   * member changes which spec the next prompt is answered by, and nothing
+   * else — the sandbox, the notebook and the transcript stay where they are.
+   */
+  const team = useOptionalTeamSelection();
+  const selectedMemberId = useSignalValue(team?.selected ?? EMPTY_SELECTION);
+  const member = team?.members.find(entry => entry.id === selectedMemberId);
+
+  /*
+   * Looked up through `getAgentspecs`, not by subscripting the record.
+   *
+   * Agent ids reach this component versioned as often as not —
+   * `jupyter-data-analyst:0.0.1` — and the record is keyed on the bare id, so
+   * a raw subscript on a versioned id silently misses. What follows from a
+   * miss is not an error but a quiet wrong answer: no model, no openers, no
+   * name. `getAgentspecs` strips the version and retries, which is the whole
+   * reason the specs package exports it.
+   */
+  /*
+   * The spec, found two ways.
+   *
+   * By the agent's id first — a team member's spec id, or a host that names
+   * the spec as the agent, as the Loop Shell does. Failing that, by the
+   * blueprint a capacity plugin contributed: an agent it created on a server
+   * carries an instance name (`subagents-example-agent-…`), not a spec id, and
+   * the same agent turned in this page had no prompt, no subagents and no
+   * icon for want of this lookup — it used the document tools and called
+   * nobody.
+   */
+  const blueprint = useContributions(LoopAgentBlueprint)[0]?.value;
+  const blueprintSpecId = blueprint?.specId;
+  /*
+   * An agent of the catalogue or a Cog's, as a runtime resolves it: an
+   * application on a Cog looked up among the agentspecs alone was turned in
+   * the page with no instructions at all (LOOP H-01).
+   */
+  const spec =
+    resolveAgentspec(member?.specId ?? agentId) ??
+    (blueprintSpecId ? resolveAgentspec(blueprintSpecId) : undefined);
+  /*
+   * The blueprint's words and model — an application's — on top of its
+   * spec's, for the agent it contributes; never for a team's member.
+   */
+  const blueprintTurn = member ? undefined : blueprint;
+  // Turned in the page, an agent that resolves to nothing is refused rather
+  // than run bare.
+  const inPageRefusal =
+    inPage && !member ? inPageAgentRefusal(blueprintSpecId, spec) : undefined;
+  /*
+   * The team's name for a member first, then the spec's own.
+   *
+   * A spec is named for the catalogue — "Jupyter Data Analyst" — and a team
+   * names the same agent for the person working with it — "Analyst", which is
+   * what the picker in the header says. The header, the empty state and the
+   * openers' heading say the same word as the picker, or a person reads two
+   * names for one agent on one screen.
+   */
+  agentNameRef.current = member?.name ?? spec?.name ?? agentId;
+
+  /*
+   * The openers: a capacity plugin's first, then the team's with the
+   * addressed member's own beneath, then — with no team — the agent's own.
+   *
+   * A contribution to `LoopChatSuggestion` is a deliberate statement about
+   * what this workspace is worth asking, so it replaces the spec's generic
+   * list rather than joining it.
+   *
+   * With a team, its openers are always shown: they are what the *team* can
+   * be asked, whoever is addressed, and a person who has just opened the
+   * workspace should see the whole before the part. Under them, in a block
+   * with its name on it, come the addressed member's own openers — picking
+   * the Reviewer used to change nothing on screen, and the reverse (the
+   * member's only) hid the team. An opener the team already lists is not
+   * repeated.
+   */
+  const suggestionEntries = useContributions(LoopChatSuggestion);
+  const hiddenOpeners = chatExtras.hiddenOpeners;
+  const hideOpeners = chatExtras.hideOpeners;
+  const liveOpeners = chatExtras.openers;
+  const suggestions = useMemo((): (AgentSuggestion & { group?: string })[] => {
+    if (hideOpeners) {
+      return [];
+    }
+    // What the host took off this page, by the chip's words — the same key
+    // the two-group merge below uses to tell openers apart.
+    const hidden = new Set(hiddenOpeners ?? []);
+    const offered = <T extends { text: string }>(items: T[]): T[] =>
+      hidden.size === 0 ? items : items.filter(item => !hidden.has(item.text));
+    // What a plugin offers live (an application's profile's starters,
+    // LOOP P-20) wins over what was contributed when the reactor was built.
+    if (liveOpeners) {
+      return offered(liveOpeners);
+    }
+    const contributed = suggestionEntries.flatMap(
+      entry => entry.value.suggestions,
+    );
+    if (contributed.length > 0) {
+      return offered(contributed);
+    }
+    const own = offered(spec?.suggestions ?? []);
+    const teams = offered(team?.team.suggestions ?? []);
+    if (teams.length === 0) {
+      return own;
+    }
+    // Two groups, named for the two levels the empty state draws: the
+    // team's openers under the team's name, the member's own under its.
+    const listed = new Set(teams.map(item => item.text));
+    const teamName = team?.team.name ?? 'Team';
+    const memberName = member?.name ?? spec?.name ?? agentId;
+    return [
+      ...teams.map(item => ({ ...item, group: teamName })),
+      ...own
+        .filter(item => !listed.has(item.text))
+        .map(item => ({ ...item, group: memberName })),
+    ];
+  }, [
+    suggestionEntries,
+    team,
+    spec,
+    member,
+    agentId,
+    hiddenOpeners,
+    hideOpeners,
+    liveOpeners,
+  ]);
+
+  /*
+   * The same openers in the shape the chat's empty state asks for.
+   *
+   * `Suggestion` is a title and a message — what a chip shows and what it
+   * sends. A spec's opener with a `summary` shows that and sends its text;
+   * one without shows the whole request; a contributed opener may split the
+   * two its own way.
+   */
+  const chatSuggestions = useMemo(
+    () =>
+      suggestions.map(item => ({
+        title: item.summary ?? item.text,
+        message: (item as { message?: string }).message ?? item.text,
+        group: item.group,
+      })),
+    [suggestions],
+  );
+
+  /* The icon its spec asked for, at the size the empty state draws. */
+  const BrandIcon = agentIcon(spec?.icon);
+  const presence = config?.presence;
+  /* And the team's, for the level above it. */
+  const TeamIcon = agentIcon(team?.team.icon);
+
+  /*
+   * How an in-page agent reaches the notebook.
+   *
+   * On every other target the agent runs on a server with a sandbox of its
+   * own, and "run this cell" happens there — in the same kernel the notebook
+   * is bound to, which is why it appears to work by magic. In the browser
+   * there is no server and no second kernel: the only way to touch the
+   * notebook is a frontend tool, executed here.
+   *
+   * Without these the browser agent could hold a conversation and do nothing,
+   * which is exactly how it behaved — it answered, and the cell never ran.
+   *
+   * From the chat's own extension point rather than a hard-wired notebook
+   * import: the notebook plugin contributes its cell tools, the document its
+   * lexical ones, and a chat mounted without either simply has fewer tools.
+   * Each factory runs against the live workspace, so tools addressed by
+   * `surfaceId` can never point at a different notebook than the one on
+   * screen.
+   */
+  const toolContributions = useContributions(LoopFrontendTool);
+  const notebookTools = useMemo(() => {
+    /*
+     * One tool per name, first contribution wins — so the order is decided
+     * here rather than by which lazy import landed first. The notebook and
+     * the document each ship a kernel tool — `executeCodeInNotebook` runs in the
+     * sandbox and streams onto the conversation, the document's runs on the
+     * document's own kernel and returns silently. The editor on screen owns
+     * the shared names; with none on screen the notebook does, since its
+     * outputs are what the conversation shows. The document's block tools
+     * (runBlock, insertBlock…) keep their own names and are untouched.
+     */
+    const merged: ReturnType<
+      (typeof toolContributions)[number]['value']['tools']
+    > = [];
+    const owners = new Map<string, string>();
+    // Tools a contribution vouched for in the chat view; see `chatView`.
+    const keep = new Set<string>();
+    // See `isInactiveSurfaceContribution`: with an editor on screen, only
+    // its own `${surfaceId}-tools` contribution survives this filter.
+    const surfaceIds = new Set(surfaces.map(entry => entry.value.surfaceId));
+    for (const entry of orderToolContributions(
+      toolContributions,
+      active?.surfaceId,
+    )) {
+      if (
+        isInactiveSurfaceContribution(
+          entry.value.id,
+          surfaceIds,
+          active?.surfaceId,
+        )
+      ) {
+        continue;
+      }
+      let tools: typeof merged;
+      try {
+        tools = entry.value.tools(workspace);
+      } catch (error) {
+        // One broken contributor must not cost the agent every tool.
+        console.warn(
+          `[loop] frontend tools from '${entry.plugin}' failed:`,
+          error,
+        );
+        continue;
+      }
+      for (const tool of tools) {
+        const owner = owners.get(tool.name);
+        if (owner) {
+          console.warn(
+            `[loop] frontend tool '${tool.name}' from '${entry.plugin}' is shadowed by the one from '${owner}'.`,
+          );
+          continue;
+        }
+        owners.set(tool.name, entry.plugin);
+        merged.push(tool);
+        if (entry.value.chatView) {
+          keep.add(tool.name);
+        }
+      }
+    }
+    // A host example's own frontend tools, folded in last (first name wins),
+    // so a bespoke client tool like A2UI's run_jupyter_output_demo joins the
+    // agent's toolset without a plugin of its own. Vouched for in the chat
+    // view as well: the filter below keeps the tools that leave the editors
+    // alone, and a host's tool touches no editor — the Jupyter Output
+    // example's chat had lost its one tool to that filter and answered
+    // "use the demo button" instead of running the demonstration.
+    for (const tool of chatExtras.frontendTools ?? []) {
+      if (owners.has(tool.name)) {
+        continue;
+      }
+      owners.set(tool.name, 'chat-extras');
+      merged.push(tool);
+      keep.add(tool.name);
+    }
+    /*
+     * The view decides the toolset. With an editor on screen the agent has
+     * that editor's own tools (`belongsToInactiveSurface` above, plus
+     * whatever isn't tied to a surface at all); with none — the chat view —
+     * it keeps only what leaves the editors alone: the `executeCodeIn…`
+     * tools, whose outputs stream onto the conversation as surfaces, and
+     * the read tools. The editors stay mounted out of sight either way, so
+     * what it can still call, works.
+     */
+    return active ? merged : toolsForChatView(merged, keep);
+    // The workspace object is rebuilt when its facts change; surfaceId is
+    // the one the factories address by.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    toolContributions,
+    workspace.surfaceId,
+    workspace.agentId,
+    chatExtras.frontendTools,
+    active?.surfaceId,
+    surfaces,
+  ]);
+
+  /*
+   * The commands the mounted plugins declared for an agent — the reactor's
+   * `AgentTools` point — executed on this workspace's own reactor. Folded in
+   * after the contributions, which keep their names, so a plugin with a
+   * richer in-page implementation of the same tool (the decks plugin's) is
+   * what the agent gets, and the bundle's command is the fallback. The agent
+   * spec names none of these: they follow the plugin.
+   */
+  const commandTools = useAgentCommandTools();
+  const agentTools = useMemo(() => {
+    if (commandTools.length === 0) {
+      return notebookTools;
+    }
+    const taken = new Set(notebookTools.map(tool => tool.name));
+    return [
+      ...notebookTools,
+      ...commandTools.filter(tool => !taken.has(tool.name)),
+    ];
+  }, [notebookTools, commandTools]);
+  // The page's sandbox, while the agent turned here runs its code in it.
+  pageSandboxRef.current =
+    inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)
+      ? reactor.getOutput<AgentsOutput>(AGENTS_PLUGIN_NAME)?.sandbox
+      : undefined;
+
+  /*
+   * Where this workspace's agent actually lives.
+   *
+   * A Datalayer runtime brings its own agent-runtimes server: the agent is
+   * created on the pod from an agentspec, not on the server the workspace was
+   * opened against. Addressing the latter would be talking to a machine that
+   * has never heard of it. The same value for every other target, where the
+   * two are the same server.
+   *
+   * Nothing while a Datalayer runtime is not assigned (the pool had none, or
+   * it is still being given): the chat is off and says so below, rather than
+   * sending to the host's server — on a hosted page, the page's own origin.
+   */
+  const agentServerUrl = agentServerOf(workspace.sandbox, workspace.serverUrl);
+
+  /*
+   * Who a single request may be addressed to.
+   *
+   * The same set the harness gets as tools, and deliberately so: a menu that
+   * offered a name the model could not reach would be a menu that produces
+   * silent no-ops. Derived here rather than in the plugin because it changes
+   * with the selected member.
+   */
+  /*
+   * The commands the composer lists while `/` is typed: those contributed for
+   * it, an application's (LOOP P-19). Picking one writes `/<name> `, and the
+   * workspace runs it when the message is sent.
+   */
+  const commands = useContributions(LoopCommand);
+  const composerCommands = useMemo(
+    () =>
+      commands
+        .filter(entry => entry.value.composer)
+        .map(entry => ({
+          name: entry.value.name,
+          description: entry.value.description,
+        })),
+    [commands],
+  );
+  const mentionable = useMemo(() => {
+    if (!team || !member) {
+      // No team: the spec's own subagents, which the in-page loop can reach
+      // and a server-side one already could.
+      return specSubagents(spec).map(subagent => ({
+        name: subagent.name,
+        description: subagent.description,
+        icon: agentIcon(subagent.icon),
+      }));
+    }
+    /*
+     * The team, plus whatever specialists the selected member brings.
+     *
+     * It used to be `subagentsFor(member)` alone, which made the list read as
+     * arbitrary: a team of two offered one name, and the name was whichever
+     * member you were *not* talking to. Everyone the team contains is listed,
+     * because "who is on this team" is the question a person types `@` to
+     * ask; the one already being addressed is shown greyed rather than
+     * dropped, so the list is stable as the selection moves.
+     */
+    const roster = team.members.map(entry => ({
+      name: entry.name,
+      description: entry.description,
+      emoji: entry.emoji,
+      icon: agentIcon(entry.icon),
+      disabled: entry.id === member.id,
+      disabledReason:
+        entry.id === member.id
+          ? `You are already talking to ${entry.name}`
+          : undefined,
+    }));
+    const specialists = subagentsFor(team.team, member.id)
+      .filter(subagent => !team.members.some(m => m.name === subagent.name))
+      .map(subagent => ({
+        name: subagent.name,
+        description: subagent.description,
+        icon: agentIcon(subagent.icon),
+      }));
+    return [...roster, ...specialists];
+  }, [team, member, spec]);
+  /*
+   * Where the model is reached, and on whose key.
+   *
+   * Told whether an in-page agent is going to ask at all: a workspace on a
+   * server-backed agent authenticates itself, and minting a visitor's one
+   * trial key for it would start a clock against a conversation that never
+   * spends it.
+   */
+  const { inference, anonymous } = useBrowserInference(inPage);
+  /* Read from the store rather than passed in: the sign-in form inside the
+     expiry panel writes here, so the same render that gains a member gains
+     the wording that goes with one. */
+  const signedInUser = useIAMStore(state => state.user);
+  /* The trial is over, and this chat is the thing that stops working. Only
+     for an in-page agent: everywhere else the runtime holds its own
+     credentials and never saw the visitor's key. */
+  const keyExpired = inPage && anonymous.status === 'expired';
+  /*
+   * Whose key ran out, which decides what the chat is allowed to call it.
+   *
+   * The anonymous store only ever holds the trial key, so reaching this
+   * through `anonymous.status` means the reader never signed in. A member
+   * whose own session expires arrives by a different route and must not be
+   * told a temporary key ran out — they never had one, and would go looking
+   * for something that was never theirs.
+   */
+  const expiredKeyIsTemporary = !signedInUser;
+  /*
+   * What its host said of whether there is anything to talk to
+   * (`ChatAvailabilityProvider`): an application whose model is not offered
+   * or not served (LOOP R-27) is switched off with the reason, by the
+   * Studio's Preview and the hosted page, rather than left unanswered.
+   */
+  const ambient = useChatAvailability();
+  hostClosedRef.current = ambient.disabled
+    ? ambient.disableReason || 'This conversation is closed here.'
+    : undefined;
+  /*
+   * No agent to talk to: a Datalayer runtime not assigned (STUDIO P-24,
+   * round 9). Said in a sentence — why, when its launch was refused — and
+   * nothing is sent; the header does not say *Ready*.
+   */
+  const noRuntime =
+    agentServerUrl === undefined
+      ? noRuntimeSaid(workspace.sandbox, chatText)
+      : undefined;
+  const chatDisabled =
+    gateBlocked ||
+    keyExpired ||
+    Boolean(inPageRefusal) ||
+    Boolean(noRuntime) ||
+    ambient.disabled;
+  const disabledReason = keyExpired
+    ? expiredKeyIsTemporary
+      ? chatText.demoKeyExpired
+      : chatText.keyExpired
+    : (inPageRefusal ??
+      noRuntime ??
+      gateReason ??
+      (ambient.disabled ? ambient.disableReason : undefined));
+
+  /*
+   * The prompt's text, held here rather than inside `InputPrompt`.
+   *
+   * A page embedding the workspace can offer a request — "try asking it
+   * this" — and the only honest place to put such an offer is the box the
+   * visitor would have typed it into, where they can read it, change their
+   * mind, or send it. That needs a controlled prompt, which needs the text to
+   * live somewhere both the suggestion and the composer can reach.
+   */
+  const [draft, setDraft] = useState('');
+
+  /*
+   * The model this conversation is on.
+   *
+   * Three answers, and the order matters more than it looks. The reader's own
+   * pick wins, then the *agent's spec*, then whatever the host mounted the
+   * workspace with.
+   *
+   * The spec used to come last, behind `workspace.model` — which is a
+   * workspace-wide default, set once for whichever agent happens to be
+   * addressed. So launching an agent whose spec names one model showed a
+   * different one ticked in the menu, and the footer disagreed with the thing
+   * actually answering. An agent's spec is the definition of that agent; a
+   * host default is a fallback for when there is no definition, and a fallback
+   * that overrides the definition is not a fallback.
+   *
+   * Held here rather than in the workspace because the choice belongs to the
+   * conversation: it is what the next message is sent with, and it resets when
+   * the member being addressed changes.
+   */
+  const [pickedModel, setPickedModel] = useState<string>();
+  const activeModel =
+    pickedModel ?? blueprintTurn?.model ?? spec?.model ?? workspace.model ?? '';
+  /*
+   * The team, in the shape the footer asks for.
+   *
+   * The footer knows nothing about teamspecs, and should not: it renders a
+   * list of names and reports which one was chosen. Everything that makes a
+   * member a member stays on this side of the boundary.
+   */
+  /* What is left of the context window, as the runtime last reported it. The
+     footer shows nothing at all until there is a real number, so a workspace
+     whose agent has not answered yet simply has no bar. */
+  /*
+   * The window, and only for the agent being addressed now.
+   *
+   * The store keeps one snapshot rather than one per agent, so switching
+   * member left the previous one's numbers on screen under the new one's
+   * name. Ignored until the store hands back a different object, which is the
+   * only evidence available that the new agent has reported.
+   */
+  const storedUsage = useAgentRuntimeContextSnapshot();
+  const usageAtSwitch = useRef(storedUsage);
+  const addressedAgent = useRef(selectedMemberId);
+  const storedUsageRef = useRef(storedUsage);
+  storedUsageRef.current = storedUsage;
+
+  useEffect(() => {
+    if (addressedAgent.current === selectedMemberId) {
+      return;
+    }
+    addressedAgent.current = selectedMemberId;
+    usageAtSwitch.current = storedUsageRef.current;
+    // And the model goes back to whatever the new agent's spec asks for. A
+    // pick made for one member is not a statement about the next.
+    setPickedModel(undefined);
+  }, [selectedMemberId]);
+
+  const fromStore =
+    storedUsage && storedUsage !== usageAtSwitch.current ? storedUsage : null;
+
+  /*
+   * What the chat itself accounts for, when nothing else does.
+   *
+   * A server-side runtime pushes a snapshot over the socket and that is what
+   * `fromStore` holds. An in-page agent has no server to push one, and its
+   * only account of the window is the totals its harness reports — which
+   * `ChatBase` assembles and hands out. Without this the browser agent's
+   * footer had no numbers at all, and the space kept for them showed as a
+   * white stripe under the prompt.
+   */
+  const [chatUsage, setChatUsage] = useState<ContextSnapshotData>();
+  const contextUsage = fromStore ?? chatUsage ?? null;
+  // Read to decide whether the strip exists at all, not to render it.
+  const inpromptMenu = useSlotComponents(LoopSlots.inpromptMenu);
+  // Buttons for the prompt's footer bar, beside the session menus. Asked
+  // whether anyone contributed before anything is drawn, for the same reason
+  // as the in-prompt menu: an empty slot is still an element.
+  const promptActions = useSlotComponents(LoopSlots.promptAction);
+  // Same question for the chat's own title bar, which plugins may add to.
+  const chatHeaderItems = useSlotComponents(LoopSlots.chatHeader);
+
+  const footerAgents = useMemo<FooterAgent[]>(
+    () =>
+      team?.members.map(entry => ({
+        id: entry.id,
+        name: entry.name,
+        description: entry.description,
+        icon: agentIcon(entry.icon),
+      })) ?? [],
+    [team],
+  );
+  const suggestion = useLoopPromptStore(state => state.pending);
+  /*
+   * `/prompt`, or its keystroke, asking for the caret.
+   *
+   * A command runs outside the component tree, so the ask arrives on the
+   * focus channel; each one bumps a nonce that joins the suggestion's in
+   * `focusTrigger` below. The chat answers wherever its composer is —
+   * docked, in-column, or floating.
+   */
+  const [focusAsked, setFocusAsked] = useState(0);
+  useEffect(
+    () => onPromptFocusRequest(() => setFocusAsked(nonce => nonce + 1)),
+    [],
+  );
+
+  useEffect(() => {
+    if (!suggestion) {
+      return;
+    }
+    setDraft(suggestion.text);
+    // Taken, so a second click on the same button offers it again rather than
+    // finding the store already holding it.
+    useLoopPromptStore.getState().consume();
+    if (suggestion.submit) {
+      void handleSend(suggestion.text);
+    }
+    // `handleSend` is stable for the life of a connection; re-running this on
+    // a new identity would resend the last suggestion.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestion]);
+
+  /*
+   * An application's session checks who is calling (LOOP R-32, R-04): its
+   * chat says so with the person's token. The embed hands its own.
+   */
+  /*
+   * Whether its host runs an application here, said by the host — not by
+   * whether the application's plugin is up: while its runtime does not hold
+   * it, its page plugin stands down (F-15), and its chat is then never sent
+   * to the runtime's bare agent route — on the visitors' runtime one that is
+   * not published (STUDIO D-15). It speaks to the application's session API,
+   * whose refusal says why.
+   */
+  const runsApp = Boolean(
+    blueprintTurn?.createPayload?.app_spec ||
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerCreatePayload
+      ?.app_spec,
+  );
+  const memberToken = useIAMStore(state => state.token);
+  /*
+   * Without an account (LOOP R-30) the application runs on the visitors'
+   * runtime, which answers a visitor's token for it and nobody signed in.
+   */
+  const visitors =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerVisitors;
+  const visitor = useVisitorToken(visitors);
+  // An embedded application's own token, for a visitor the platform does
+  // not know (LOOP R-20): it runs a session of its deployment, and no more.
+  const embedToken =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
+  const iamToken = visitors ? visitor.token : embedToken || memberToken;
+  /*
+   * A thread opened from the person's history (LOOP P-24): its conversation
+   * read from the runtime once it answers — held there, else resumed from
+   * its record — then drawn and gone on with on the same thread. One that
+   * cannot be opened is said, and a new one starts.
+   */
+  const givenThread = config?.thread;
+  const [openedThread, setOpenedThread] = useState<{
+    given: string;
+    thread: ResumedThread;
+    said?: string;
+  } | null>(null);
+  const opening = Boolean(
+    givenThread?.fromRuntime && openedThread?.given !== givenThread.id,
+  );
+  useEffect(() => {
+    if (!givenThread?.fromRuntime || !runsApp || !agentServerUrl) {
+      return;
+    }
+    let current = true;
+    void (async () => {
+      let failure = '';
+      for (let attempt = 0; attempt < 4 && current; attempt += 1) {
+        try {
+          const messages = await openThread({
+            agentBaseUrl: agentServerUrl,
+            agentId,
+            uid: givenThread.id,
+            token: iamToken,
+          });
+          if (current) {
+            setOpenedThread({
+              given: givenThread.id,
+              thread: { ...givenThread, fromRuntime: false, messages },
+            });
+          }
+          return;
+        } catch (error) {
+          failure = error instanceof Error ? error.message : String(error);
+          // The runtime may still be making the application's agent.
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+      if (current) {
+        setOpenedThread({
+          given: givenThread.id,
+          thread: {
+            id: generateMessageId(),
+            messages: [],
+            onStarted: givenThread.onStarted,
+          },
+          said: THREAD_WORDS.notOpened(failure),
+        });
+      }
+    })();
+    return () => {
+      current = false;
+    };
+    // By the thread's id: its object is the host's.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    givenThread?.id,
+    givenThread?.fromRuntime,
+    runsApp,
+    agentServerUrl,
+    agentId,
+    iamToken,
+  ]);
+  const chatThread = givenThread?.fromRuntime
+    ? openedThread?.given === givenThread.id
+      ? openedThread.thread
+      : undefined
+    : givenThread;
+  /*
+   * None without a server (`noRuntime`): the chat is off and connects to
+   * nothing — no address is made up for it.
+   */
+  const protocol = useMemo<ProtocolConfig | undefined>(
+    () =>
+      inPage
+        ? browserProtocolConfig({
+            agentId: member?.specId ?? agentId,
+            instructions: agentInstructions(spec, blueprintTurn?.instructions),
+            model: activeModel || undefined,
+            inference,
+            // Who this member may hand work to, and what they are told. Both
+            // come from the teamspec: the supervisor routes to the others, a
+            // member reaches only its own specialists, and `context.sharing`
+            // decides whether the child sees this conversation.
+            // The agent runs them itself, so they go to the harness rather
+            // than to the chat — handing them to both would run each tool
+            // twice.
+            frontendTools: agentTools,
+            // A team's members and specialists when there is a team; the
+            // spec's own subagents otherwise — a researcher and a writer are
+            // as much the agent's as its prompt is.
+            subagents:
+              team && member
+                ? subagentsFor(team.team, member.id)
+                : specSubagents(spec),
+            sharing: team?.sharing,
+            // What a delegated run does lands in the same store the
+            // server's monitoring stream fills, so the side panel and the
+            // composer's pulse draw an in-page delegation like any other.
+            onSubagentEvent: event =>
+              agentRuntimeStore.getState().appendSubagentEvent(event),
+            // An application's modes (LOOP P-19): the options sent with a
+            // run tell it their instructions, on the model one names, as
+            // its session API does on a runtime.
+            modeEffect: blueprintTurn?.modeEffect,
+          })
+        : agentServerUrl !== undefined
+          ? {
+              type: 'ag-ui',
+              // An application's agent is spoken to through its session API
+              // (LOOP R-04): each thread a session, recorded under its uid,
+              // run in the name the application runs in, and taking what the
+              // page did besides the message — the same AG-UI events back.
+              endpoint: runsApp
+                ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
+                : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
+              ...(runsApp && iamToken ? { authToken: iamToken } : {}),
+              agentId,
+              // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
+              // strip one trailing `config`/`configure` segment to find the API
+              // base, so the longer form doubles it.
+              configEndpoint: `${agentServerUrl}/api/v1/configure`,
+              enableConfigQuery: true,
+            }
+          : undefined,
+    [
+      agentId,
+      inPage,
+      inference,
+      member,
+      agentTools,
+      team,
+      spec,
+      blueprintTurn,
+      activeModel,
+      agentServerUrl,
+      runsApp,
+      iamToken,
+    ],
+  );
+
+  /*
+   * The model catalogue, and the builtin tools and skills the agent reports.
+   *
+   * Read here rather than left to `ChatBase`, because this view draws its own
+   * prompt: the toolbar under it can only offer what this component hands it.
+   *
+   * `useSkills` reads the runtime's codemode status out of the store, so it
+   * needs no endpoint and works for an in-page agent too. `useConfig` does
+   * need one, and a browser agent has none — hence the menus below being
+   * gated on the data rather than switched on unconditionally.
+   */
+  const configQuery = useConfig(
+    !inPage,
+    protocol?.type === 'ag-ui' ? protocol.configEndpoint : undefined,
+    undefined,
+    agentId,
+  );
+  const skillsQuery = useSkills(true);
+  const skillActions = useSkillActions(agentId);
+  // `undefined` until the runtime answers: its answer is then the list.
+  const [catalogModels, setCatalogModels] = useState<ModelConfig[] | undefined>(
+    undefined,
+  );
+  // The typed-decision models the runtime lists apart: shown, never picked.
+  const [decisions, setDecisions] = useState<Decisions | undefined>(undefined);
+
+  useEffect(() => {
+    /*
+     * Only where there is a server to ask.
+     *
+     * An in-page agent has none, and `agentServerUrl` then holds whatever the
+     * host defaulted to — on a public page that was a developer's localhost,
+     * so every visitor's console carried a connection-refused error for a
+     * catalogue that was never going to arrive. The agentspecs catalogue below
+     * is the answer for this case and needs no request at all.
+     */
+    if (inPage || agentServerUrl === undefined) {
+      return undefined;
+    }
+    let cancelled = false;
+    // The agent's own models (its model and model_additionals), each saying
+    // whether its inference serves it.
+    void fetch(
+      `${agentServerUrl}/api/v1/configure/models?agent_id=${encodeURIComponent(agentId)}`,
+    )
+      .then(response => (response.ok ? response.json() : null))
+      .then(payload => {
+        if (!cancelled) {
+          // In the chat's shape: the route says `available`, the menu and
+          // the opening pick read `isAvailable`, and an unmapped row passes
+          // for usable. See `readServerCatalogue`.
+          // A runtime that did not answer offers nothing: the agentspecs
+          // catalogue is not its answer.
+          setCatalogModels(payload ? readServerCatalogue(payload) : []);
+          setDecisions(payload ? readServerDecisions(payload) : undefined);
+        }
+      })
+      // No catalogue is not an error worth a banner: the menu simply has
+      // nothing to offer, and the agent answers on whatever it was given.
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogModels([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentServerUrl, agentId, inPage]);
+
+  /*
+   * What to offer when the server has no catalogue of its own.
+   *
+   * `/configure/models` answers for a server-backed agent and is
+   * authoritative. An in-page agent has no server to ask, and a model menu
+   * with nothing in it is a control that opens onto an empty list — so the
+   * agentspecs catalogue stands in, filtered to the models marked available.
+   */
+  const offeredModels = useMemo<ModelConfig[]>(
+    () =>
+      offeredModelsFor(catalogModels, () =>
+        Object.values(AI_MODEL_CATALOGUE)
+          // A typed-decision model answers typed questions, not a chat.
+          .filter(model => model.available && isChatModel(model))
+          .map(model => ({
+            id: model.id,
+            name: model.name,
+            provider: model.provider,
+          })),
+      ),
+    [catalogModels],
+  );
+
+  /*
+   * The tools the agent can call, from both sides.
+   *
+   * The server's builtins, and the notebook tools this workspace hands the
+   * harness — which are the only ones an in-page agent has, and the reason
+   * "run this cell" works at all. Listing a tool and running it are different
+   * jobs, so a tool the chat does not execute still belongs in the menu.
+   */
+  const offeredTools = useMemo(() => {
+    const fromServer = configQuery.data?.builtinTools ?? [];
+    const seen = new Set(fromServer.map(tool => tool.name));
+    // The runtime's, and the frontend tools this page runs: named apart.
+    return {
+      runtime: fromServer,
+      frontend: agentTools
+        .filter(tool => !seen.has(tool.name))
+        .map(tool => ({ id: tool.name, name: tool.name })),
+    };
+  }, [configQuery.data?.builtinTools, agentTools]);
+
+  /* Which skills are on, as the runtime last reported them. Derived rather
+     than held: the source of truth is the agent, and a local copy would drift
+     the moment a skill was enabled from anywhere else. */
+  const enabledSkills = useMemo(
+    () =>
+      new Set<string>(
+        (skillsQuery.data?.skills ?? [])
+          // `enabled` and `loaded` both mean the agent has it; `available`
+          // means it could. There is no `disabled` — a skill that is off is
+          // simply one that is merely available.
+          .filter(
+            skill => skill.status === 'enabled' || skill.status === 'loaded',
+          )
+          .map(skill => skill.id),
+      ),
+    [skillsQuery.data],
+  );
+
+  /*
+   * Taken here first, then told to the server.
+   *
+   * Locally, because an in-page agent has no server to tell and its model is
+   * whatever this view hands the harness — without recording the choice, the
+   * menu ticked a row for a moment and the next message went to the old model.
+   * And on the server for the agents that live there, where the chip in its
+   * header makes the same call: whichever control a person used, the other has
+   * to agree.
+   */
+  const selectModel = useCallback(
+    async (model: string) => {
+      setPickedModel(model);
+      if (inPage || agentServerUrl === undefined) {
+        return;
+      }
+      await fetch(`${agentServerUrl}/api/v1/configure/inference/provider`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model }),
+      }).catch(() => undefined);
+    },
+    [agentServerUrl, inPage],
+  );
+
+  /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
+     spans the workspace. */
+  const besideChat = config?.promptPlacement === 'bottom-chat';
+  /* `floating` renders the same composer in a draggable card over the
+     workspace — the prompt below simply gains `draggable`, and the card takes
+     itself out of the layout. */
+  const floatingPrompt = config?.promptPlacement === 'floating';
+  /* `top` puts the composer above the editors as a horizontal bar, with the
+     openers as chips under it — for a host whose editor is the point. */
+  const topPrompt = config?.promptPlacement === 'top';
+  /* No prompt at all, for a workspace where something else owns the typing —
+     by configuration, or live through the extras channel when the host
+     changes its mind while the workspace is running. */
+  const promptHidden =
+    config?.hidePrompt === true || chatExtras.hidePrompt === true;
+
+  /*
+   * The composer, assembled here and rendered by whoever contributed to the
+   * `LoopChatComposer` point — the input-prompt plugin, normally.
+   *
+   * The wiring is this view's knowledge: the controlled draft (so an outside
+   * suggestion has somewhere to land, with `focusTrigger` putting the caret
+   * back), the lexical variant (the `@` menu needs it), the menus' data with
+   * every control drawn even when its list is empty (a menu that opens onto
+   * "0" is a statement; a missing control is not), the `promptAction` and
+   * `inpromptMenu` slots (asked whether anyone contributed first — an empty
+   * `ReactorSlot` is still an element and would pad out a band of nothing).
+   * The surface is the plugin's: no contribution, no composer, which is the
+   * honest outcome for a workspace mounted without one.
+   */
+  const composerProps: InputPromptProps = {
+    onSend: () => void handleSend(draft),
+    input: draft,
+    setInput: setDraft,
+    focusTrigger:
+      suggestion || focusAsked
+        ? (suggestion?.nonce ?? 0) + focusAsked
+        : undefined,
+    // In a draggable card over the workspace when the host asked for the
+    // floating placement; the dragging is the prompt's own feature.
+    placement:
+      floatingPrompt ||
+      promptStance === 'floating' ||
+      promptStance === 'floating-top' ||
+      promptStance === 'floating-bottom'
+        ? 'floating'
+        : 'docked',
+    // Where a floating card starts: the page layout wants it over the top
+    // of the sheet, like a document's title bar; everyone else, bottom.
+    floatingAnchor: promptStance === 'floating-top' ? 'top' : 'bottom',
+    // The agent is working: `isLoading` disables the editor and turns the
+    // send button into a stop — the person keeps a way out.
+    isLoading: busy,
+    onStop: () => workspace.viewControls.stop?.(),
+    // The reason where the typing would go, read before the person types.
+    placeholder: disabledReason ?? placeholder,
+    typingSuggestions: suggestions.map(item => item.text),
+    // The same openers behind the composer's suggestions control.
+    suggestions: chatSuggestions,
+    disableInputPrompt: chatDisabled,
+    connectionConfirmed: !chatDisabled,
+    // Tighter on top: every pixel of the composer is a pixel of the editor
+    // under it pushed down, and the bar reads as a command line at this size.
+    // Both of the page layout's placements are that bar — one floating over
+    // the page, one docked above it — so both take the tighter padding.
+    padding:
+      topPrompt ||
+      promptStance === 'floating-top' ||
+      promptStance === 'floating-bottom' ||
+      promptStance === 'docked-top'
+        ? 2
+        : 3,
+    promptVariant: 'lexical',
+    // True unless the host asked otherwise: the workspace is there to be typed
+    // into. A page that embeds the loop as one section among many turns it off,
+    // because focusing an input on mount scrolls the browser to it.
+    autoFocus: config?.autoFocusPrompt ?? true,
+    mentionableAgents: mentionable,
+    promptCommands: composerCommands,
+    headerContent:
+      inpromptMenu.length > 0 ? (
+        <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
+      ) : undefined,
+    footerExtras:
+      promptActions.length > 0 ? (
+        <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+      ) : undefined,
+    /*
+      An application's conversation keeps none of the session's controls
+      under its composer — the agents, the model, the tools and their servers,
+      the skills (LOOP T-17, T-18): a person using an application is not
+      choosing them, and its builder chose them in its spec. An agent's chat
+      keeps them.
+    */
+    showAgentsMenu: !presence,
+    showInlineAgentsMenu: false,
+    agents: footerAgents,
+    selectedAgentId: selectedMemberId,
+    onSelectAgent: id => team?.select(id),
+    // On unless the host said otherwise: a public page turns the counters
+    // off, because they answer questions a visitor is not asking.
+    showTokenUsage: chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true,
+    showContextRing: true,
+    agentUsage: contextUsage ?? undefined,
+    showModelSelector: !presence,
+    models: offeredModels,
+    decisions,
+    selectedModel: activeModel,
+    onModelSelect: model => void selectModel(model),
+    showToolsMenu: !presence,
+    availableTools: offeredTools.runtime,
+    availableFrontendTools: offeredTools.frontend,
+    mcpServers: configQuery.data?.mcpServers ?? [],
+    // Live from the host example, when one feeds it: the footer's MCP status
+    // indicator. (Codemode surfaces through the toggle below, not a blob.)
+    mcpStatusData: chatExtras.mcpStatusData ?? undefined,
+    showSkillsMenu: !presence,
+    skills: skillsQuery.data?.skills ?? [],
+    skillsLoading: skillsQuery.isLoading,
+    enabledSkills,
+    onToggleSkill: skillId =>
+      enabledSkills.has(skillId)
+        ? skillActions.disableSkill(skillId)
+        : skillActions.enableSkill(skillId),
+    onToggleAllSkills: (skillIds, enable) =>
+      skillIds.forEach(skillId =>
+        enable
+          ? skillActions.enableSkill(skillId)
+          : skillActions.disableSkill(skillId),
+      ),
+    codemodeEnabled: chatExtras.codemodeEnabled ?? false,
+    onToggleCodemode: chatExtras.onToggleCodemode,
+    isA2AProtocol: false,
+    hasConfigData: !!configQuery.data,
+    hasSkillsData: !!skillsQuery.data,
+  };
+  const ComposerComponent = composerEntries[0]?.value.Component;
+  const HeaderComponent = headerEntries[0]?.value.Component;
+  const prompt = ComposerComponent ? (
+    <ComposerComponent workspace={workspace} composer={composerProps} />
+  ) : null;
+
+  /*
+   * The parts, named, so a layout can arrange them.
+   *
+   * Each is wired here — the surfaces' hidden mounts, the transcript's
+   * stream, the composer's draft — and only *placed* below: by the split
+   * this view has always drawn, or by whatever `LoopChatLayout` contributed.
+   */
+  const pickerEl =
+    surfaces.length > 0 && config?.showSurfaceSelector !== false ? (
+      <SurfacePicker
+        surfaces={surfaces.map(entry => entry.value)}
+        /*
+            What is on screen, not what was asked for.
+            
+            It read `surfaceId` — the request — while the column beside it
+            renders `active`, the surface that request actually resolved to.
+            The two are the same once everything has settled and differ
+            exactly while it has not: a surface still arriving, or one closed
+            because its sandbox went away. So the control could say None over
+            a notebook, which is the one thing a control must never do.
+            
+            Reporting the rendered surface makes them agree by construction.
+          */
+        active={active?.surfaceId ?? waiting?.surfaceId ?? NO_SURFACE}
+        onChange={chooseSurface}
+        workspace={workspace}
+      />
+    ) : null;
+  const editorsEl = (
+    <>
+      {/*
+        Every editor that can run is mounted; choosing one only reveals it.
+
+        The agent's tools live in the editors — the notebook registers the
+        cell tools, the document its lexical ones — so an editor that is
+        not mounted is an editor the agent cannot touch. On the Loop Shell,
+        which opens with no editor shown, that meant an agent with a
+        notebook in its toolset and no notebook to use it on.
+
+        A surface that is not on screen is therefore hidden, not gone:
+        parked absolute over the row with `visibility: hidden`, which keeps
+        real dimensions for the Lumino layout to measure, rather than
+        `display: none`, which would zero them. Once mounted it stays
+        mounted — `everMounted` — so a sandbox hiccup cannot throw away the
+        work the agent has already put into it.
+
+        This also keeps the column stable: a surface that cannot open while
+        its sandbox is replaced keeps its place, and the reader's chat does
+        not widen and narrow around the interruption.
+      */}
+      {surfaces.map(entry => {
+        const surface = entry.value;
+        const shown = active?.surfaceId === surface.surfaceId;
+        const mount =
+          shown ||
+          everMounted.current.has(surface.surfaceId) ||
+          canOpenView(surface, workspace);
+        if (!mount) {
+          return null;
+        }
+        everMounted.current.add(surface.surfaceId);
+        return (
+          <Box
+            key={surface.surfaceId}
+            sx={
+              shown
+                ? { flex: '1 1 0', minWidth: 0, minHeight: 0 }
+                : {
+                    position: 'absolute',
+                    inset: 0,
+                    visibility: 'hidden',
+                    pointerEvents: 'none',
+                    zIndex: -1,
+                  }
+            }
+          >
+            <ReactorLazy
+              load={surface.load}
+              props={{ surfaceId: surface.surfaceId, workspace }}
+              fallback={<Centered>Loading {surface.title}…</Centered>}
+              errorFallback={error => (
+                <Centered>
+                  {surface.title} failed to load: {error.message}
+                </Centered>
+              )}
+            />
+          </Box>
+        );
+      })}
+      {!active && waiting ? (
+        <Box flex="1 1 0" minWidth={0} minHeight={0}>
+          <Centered>Starting {waiting.title}…</Centered>
+        </Box>
+      ) : null}
+    </>
+  );
+  const transcriptEl = (
+    <>
+      {/* The chat sits to the right of whatever is being worked on: the
+            editor is the subject, and the conversation is about it. The rule
+            goes on this side for the same reason, and only when there is
+            something to its left to be separated from. */}
+      <Box
+        /*
+              Beside an editor, with the prompt on top, the conversation is
+              the narrower column: the editor is what a `top` host put the
+              prompt over, and the transcript reads fine at a third of the
+              width. Every other placement splits the row evenly.
+            */
+        flex={topPrompt && active ? '0 0 34%' : '1 1 0'}
+        maxWidth={topPrompt && active ? 460 : undefined}
+        minWidth={0}
+        minHeight={0}
+        display="flex"
+        flexDirection="column"
+        borderLeft={active ? '1px solid' : undefined}
+        borderColor="border.default"
+        // So the expired-key panel below can cover exactly this column and
+        // nothing else: the notebook beside it still works.
+        position="relative"
+      >
+        {/* The host example's own banner, when it feeds one through the
+              live chat-extras channel: its diagnostics, above the transcript. */}
+        {chatExtras.errorBanner ? (
+          <Box
+            flexShrink={0}
+            px={3}
+            py={2}
+            fontSize={1}
+            borderBottom="1px solid"
+            bg={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.subtle'
+                : 'danger.subtle'
+            }
+            color={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.fg'
+                : 'danger.fg'
+            }
+            borderColor={
+              chatExtras.errorBanner.variant === 'warning'
+                ? 'attention.muted'
+                : 'danger.muted'
+            }
+          >
+            {chatExtras.errorBanner.message}
+          </Box>
+        ) : null}
+        {openedThread?.said && openedThread.given === givenThread?.id ? (
+          <Text
+            as="p"
+            role="status"
+            sx={{ m: 0, px: 3, py: 2, fontSize: 1, color: 'fg.muted' }}
+          >
+            {openedThread.said}
+          </Text>
+        ) : null}
+        <Box flex="1 1 auto" minHeight={0} display="flex">
+          {opening ? (
+            <Text
+              as="p"
+              role="status"
+              sx={{ m: 0, p: 3, fontSize: 1, color: 'fg.muted' }}
+            >
+              {THREAD_WORDS.opening}
+            </Text>
+          ) : (
+            <ChatBase
+              // The theme it wears, when the host names one (an application's).
+              themeVariant={config?.themeVariant}
+              themeOverrides={config?.themeOverrides}
+              colorMode={config?.colorMode}
+              // The session an embed goes on with after a reload (LOOP D-13),
+              // or one opened from the person's history (P-24).
+              key={chatThread?.id}
+              thread={chatThread}
+              // The header says why, beside the title, for the same reason the
+              // placeholder does: a dead control with no explanation is worse
+              // than an absent one.
+              disabled={chatDisabled}
+              disableReason={disabledReason}
+              protocol={protocol}
+              /*
+                The page's own tools — a host page's functions (LOOP D-10), an
+                example's client tool — run by this chat when the agent is on a
+                server: sent with each run and executed here when it calls
+                one. An in-page agent is handed them in its protocol instead
+                (above); given to both, each would run twice. Without this an
+                embedded application's run carried no tool at all (seen
+                2026-10-10: `toolsForRequest: []`).
+              */
+              frontendTools={inPage ? undefined : chatExtras.frontendTools}
+              /*
+                The model this view is on, as the chat's opening pick.
+
+                `ChatBase` keeps the model it sends with, and opened on the
+                first row of whatever catalogue it had before the server
+                answered — Alibaba — while the footer, drawn from
+                `activeModel`, said Claude. Told the same model, both agree
+                from the first message.
+            */
+              initialModel={activeModel || undefined}
+              /*
+                Who is answering, in the words its spec uses.
+
+                `ChatBase` falls back to "Start a conversation with the AI
+                agent", which is true of every chat ever built and says
+                nothing about this one. The empty state is the first thing a
+                person sees and the only place the agent introduces itself.
+              */
+              title={presence?.name ?? member?.name ?? spec?.name ?? agentId}
+              description={presence?.welcome ?? spec?.description}
+              /*
+                Two sizes, because it is drawn in two places.
+
+                The header wants a mark beside a line of text; the empty state
+                wants the thing a person's eye lands on first. One `brandIcon`
+                served both, so a 48px icon meant for the empty state sat in
+                the header at three times the height of the words next to it.
+              */
+              // Big enough to read as the agent's mark rather than as
+              // punctuation before its name, and still short enough not to
+              // set the header's height.
+              brandIcon={
+                presence?.face ? (
+                  <PresenceFace
+                    face={presence.face}
+                    size={20}
+                    state={presenceNow}
+                  />
+                ) : (
+                  <BrandIcon size={20} />
+                )
+              }
+              // An application says what it is doing, in plain words, beside
+              // its name (T-08); an agent's chat keeps its header as it is.
+              headerContent={
+                // Not *Ready* with no runtime: the header says why instead.
+                presence && !noRuntime ? (
+                  <PresenceLine state={presenceNow} />
+                ) : undefined
+              }
+              emptyState={{
+                // An application's own face, at the page's size of the three
+                // (LOOP T-08, T-19): the thing a person's eye lands on first.
+                icon: presence?.face ? (
+                  <span
+                    aria-hidden
+                    style={{ fontSize: FACE_LARGE, lineHeight: 1 }}
+                  >
+                    <FaceDrawing face={presence.face} size={FACE_LARGE} />
+                  </span>
+                ) : (
+                  <BrandIcon size={48} />
+                ),
+                // `ChatEmptyState` reads its heading from here and nowhere
+                // else — the `title` above reaches the header only — so
+                // without this the agent introduced itself as "Start a
+                // conversation".
+                title: presence?.name ?? member?.name ?? spec?.name ?? agentId,
+                /*
+                Two levels when there is a team: the team first — its name,
+                what it is for, what it can be asked — and under it the
+                member being addressed, with its own description and its
+                own openers. The groups match the ones the openers carry.
+              */
+                ...(team && member
+                  ? {
+                      sections: [
+                        {
+                          group: team.team.name,
+                          icon: <TeamIcon size={48} />,
+                          title: team.team.name,
+                          subtitle: team.team.description,
+                        },
+                        {
+                          group: member.name,
+                          icon: <BrandIcon size={32} />,
+                          title: member.name,
+                          subtitle: spec?.description,
+                        },
+                      ],
+                    }
+                  : null),
+              }}
+              /*
+                And what it can be asked. From the team rather than the
+                member: the supervisor answers first, and somebody who has
+                just opened the workspace does not yet know there are two
+                agents behind it.
+              */
+              // With the prompt on top the openers are already chips under
+              // it; the empty state repeating them was the same three buttons
+              // twice on one screen.
+              suggestions={
+                topPrompt || layout || config?.suggestionLabels === false
+                  ? []
+                  : chatSuggestions
+              }
+              /*
+                The title bar arrives as a plugin: the chat-header plugin
+                contributes the component, this view hands it the assembled
+                props through `renderHeader`. No contribution — or a host
+                that set `hideHeader` — means no bar.
+              */
+              showHeader={!config?.hideHeader && !!HeaderComponent}
+              // The `+` and the bin in the title bar, when the host asked for
+              // them; the header draws whatever `ChatBase` assembles here.
+              headerButtons={{
+                showNewChat: config?.headerButtons?.newChat ?? false,
+                showClear: config?.headerButtons?.clear ?? false,
+              }}
+              renderHeader={
+                HeaderComponent
+                  ? headerProps => (
+                      <HeaderComponent
+                        workspace={workspace}
+                        header={headerProps}
+                      />
+                    )
+                  : undefined
+              }
+              /*
+                The (i), which opens the agent's details over the transcript.
+                
+                Worth having here in particular: this workspace can be moved
+                between four runtimes and several agents, and the details pane
+                is the only place that says which one is actually answering
+                and where it is running.
+              */
+              showInformation
+              /*
+                Full screen: this view, on the whole screen, editor and all.
+                See `toggleFullScreen` for why it is the browser's API rather
+                than a big box.
+              */
+              headerActions={
+                <Box display="inline-flex" alignItems="center" gap={2}>
+                  {/* The host's own additions first, then the plugins', then
+                      the chat's — so what belongs to the page reads as part of
+                      the page and the chat's controls stay together at the
+                      trailing edge, where a reader looks for them.
+
+                      The slot is asked whether anyone filled it before it is
+                      drawn: an empty `ReactorSlot` is still an element, and
+                      three of them would space a header out around nothing. */}
+                  {workspace.chatHeaderActions}
+                  {chatHeaderItems.length > 0 ? (
+                    <ReactorSlot
+                      slot={LoopSlots.chatHeader}
+                      props={{ workspace }}
+                    />
+                  ) : null}
+                  <IconButton
+                    icon={fullScreen ? ScreenNormalIcon : ScreenFullIcon}
+                    aria-label={
+                      fullScreen ? 'Exit full screen' : 'Enter full screen'
+                    }
+                    variant="invisible"
+                    size="small"
+                    onClick={() => {
+                      // Whether or not it takes, the hint has been answered:
+                      // they found the control, which is all it was for.
+                      setHintFullScreen(false);
+                      toggleFullScreen();
+                    }}
+                    sx={
+                      hintFullScreen
+                        ? {
+                            /*
+                              Colour and opacity, never geometry.
+
+                              The colour is the theme's own `primary` — the
+                              same brand the page around this workspace is
+                              already using — because a grey icon in a row of
+                              grey icons cannot be picked out however hard it
+                              fades. Colour is what makes it findable; the
+                              fade is what makes it look like it is asking.
+
+                              It never fades to nothing: a control that
+                              vanishes and returns reads as a rendering fault,
+                              not an invitation. And nothing here moves or
+                              resizes, so the header does not reflow and the
+                              controls beside it stay where a reader last saw
+                              them.
+                            */
+                            '@keyframes dla-fullscreen-hint': {
+                              '0%, 100%': { opacity: 1 },
+                              '50%': { opacity: 0.4 },
+                            },
+                            /* `&&` doubles the specificity, because Primer
+                               ships Button as a CSS module and
+                               `prc-Button-*` outranks a single generated
+                               class — without it the keyframes register and
+                               the button sits there at `animation: none`.
+                               The colour needs the same treatment: an
+                               invisible IconButton sets `color` itself.
+
+                               And no `:focus` or `:hover` clause to stop it:
+                               anything that matches the button while it is
+                               being pointed at would cancel the pointing —
+                               which is exactly how the first version of this
+                               silently did nothing. It ends when the reader
+                               takes the offer, or arrives without it. */
+                            '&&': {
+                              /*
+                                The brand on the box, not on the glyph.
+
+                                Painting the icon `palette.primary` was the
+                                obvious reading and it is measurably
+                                backwards: in the theme this workspace ships
+                                on, `primary` is #FFC107, which sits at 1.55
+                                contrast against the header — where the
+                                icon's ordinary olive sits at 5.07. Recolouring
+                                the stroke made the control roughly three
+                                times harder to see, and at the bottom of the
+                                fade it was 1.2 and simply gone.
+
+                                A ring and a wash carry the same colour on a
+                                far larger area, and they do it without asking
+                                the glyph to be legible in a brand colour that
+                                changes with every theme — this palette has
+                                six, from a dark teal to this amber, and a
+                                rule that works for one fails for another. The
+                                glyph keeps the colour it can be read in.
+                              */
+                              bg: `color-mix(in srgb, ${palette.primary} 16%, transparent)`,
+                              boxShadow: `inset 0 0 0 1.5px ${palette.primary}`,
+                              animation: `dla-fullscreen-hint ${FULLSCREEN_HINT_PERIOD_MS}ms ease-in-out infinite`,
+                            },
+                            // A reader who asked the machine to hold still
+                            // keeps the colour and loses the knocking: the
+                            // control is still the findable one, it just
+                            // holds still.
+                            '@media (prefers-reduced-motion: reduce)': {
+                              '&&': { animation: 'none' },
+                            },
+                          }
+                        : undefined
+                    }
+                  />
+                </Box>
+              }
+              // This view owns the prompt, below, so the chat does not draw a
+              // second one: two input boxes on one screen is one too many.
+              showInput={false}
+              onSendReady={handleSendReady}
+              /*
+                The notebook tools' results, drawn into the transcript — the
+                chat's own machinery, switched on only while no editor is on
+                screen: the hidden notebook is where the agent works, and the
+                transcript is then the one place the reader can see what a
+                tool did. With an editor open the change is visible where it
+                happened, and the default tool row is enough.
+              */
+              notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
+              // A host example's own tool-result renderer, when it feeds one
+              // through the extras channel — the A2UI examples draw their
+              // surface here. Wins over the notebook surfaces in ChatBase.
+              renderToolResult={chatExtras.renderToolResult}
+              showTurnFooter={
+                chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
+              }
+              onContextSnapshot={handleContextSnapshot}
+              onLoadingChange={handleLoadingChange}
+              onItemsChange={handleMessagesChange}
+              onDisplayItemsChange={handleDisplayItemsChange}
+              enableStreaming
+            />
+          )}
+        </Box>
+        {besideChat && !promptHidden ? prompt : null}
+      </Box>
+    </>
+  );
+  // Off when the host asked for the menu alone: the composer's suggestions
+  // control carries the same openers (`suggestions` above).
+  const chipsEl =
+    config?.suggestionLabels !== false && chatSuggestions.length > 0 ? (
+      <Box
+        aria-label={chatText.suggestedPrompts}
+        display="flex"
+        flexWrap="wrap"
+        gap={2}
+        px={2}
+        pb="6px"
+      >
+        {chatSuggestions.map(item => (
+          <Box
+            key={item.title}
+            as="button"
+            type="button"
+            // The whole request, where the chip shows only its summary.
+            title={item.message}
+            disabled={busy || chatDisabled}
+            onClick={() => void handleSend(item.message)}
+            appearance="none"
+            font="inherit"
+            fontSize={0}
+            fontWeight="semibold"
+            // Room for descenders: the truncated span clips what falls
+            // below its line, and at a line-height of one that is the
+            // tail of every "y".
+            lineHeight={1.25}
+            px="10px"
+            py="5px"
+            width={SUGGESTION_CHIP_WIDTH}
+            flex={`0 0 ${SUGGESTION_CHIP_WIDTH}px`}
+            borderRadius="999px"
+            border="1px solid"
+            bg="canvas.subtle"
+            whiteSpace="nowrap"
+            sx={{
+              borderColor: 'border.default',
+              color: 'fg.default',
+              cursor: 'pointer',
+              '&:hover:not(:disabled)': {
+                borderColor: 'accent.fg',
+                color: 'accent.fg',
+              },
+              '&:disabled': { opacity: 0.5, cursor: 'default' },
+            }}
+          >
+            {/* Fixed, with the whole request in the title: see the width. */}
+            <Truncate title={item.title} maxWidth="100%" sx={{ minWidth: 0 }}>
+              {item.title}
+            </Truncate>
+          </Box>
+        ))}
+      </Box>
+    ) : null;
+  const transientEl = transient ? (
+    <Box
+      flex="0 0 auto"
+      px={3}
+      py={2}
+      borderTop="1px solid"
+      borderColor="border.default"
+      bg="canvas.subtle"
+      fontSize={1}
+      maxHeight="40%"
+      overflowY="auto"
+    >
+      {transient}
+    </Box>
+  ) : null;
+
+  return (
+    <Box
+      ref={viewRef}
+      sx={{
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        // The positioned root the expiry panel below covers.
+        position: 'relative',
+        /*
+          A background of its own once it is full screen, in both modes.
+
+          The element is promoted out of whatever was painting behind it — the
+          browser's top layer, or the page — and a workspace that inherited its
+          canvas from an ancestor would arrive transparent over black.
+        */
+        ...(fullScreen ? { bg: 'canvas.default' } : null),
+        // The fallback, for a host where the API was refused, or where
+        // `fullScreenTopOffset` asked for the overlay outright. Covers as
+        // much as the nearest transformed ancestor allows; see the note
+        // above. `top` leaves room for a host's own fixed header rather than
+        // `inset: 0`'s full viewport — 0 (no offset given) is the same rect
+        // either way.
+        ...(fullScreen && !usingFullscreenApi.current
+          ? {
+              position: 'fixed',
+              top: fullScreenTopOffsetPx,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              // Over the `height: '100%'` above, which would otherwise win
+              // over `top`/`bottom` and push the bottom off the window.
+              height: 'auto',
+              zIndex: 1000,
+            }
+          : null),
+      }}
+    >
+      {layout ? (
+        <layout.Component
+          workspace={workspace}
+          editors={editorsEl}
+          hasEditor={!!active}
+          transcript={transcriptEl}
+          prompt={promptHidden ? null : prompt}
+          chips={promptHidden ? null : chipsEl}
+          picker={pickerEl}
+          transient={transientEl}
+        />
+      ) : (
+        <>
+          {/*
+            The prompt on top, when the host asked for it: the same composer
+            the bottom placement renders, first in the column so it spans the
+            workspace above the editors, with the openers as chips under it.
+          */}
+          {topPrompt && !promptHidden ? (
+            <Box
+              flex="0 0 auto"
+              borderBottom="1px solid"
+              borderColor="border.default"
+            >
+              {prompt}
+              {chipsEl}
+            </Box>
+          ) : null}
+          {pickerEl}
+          <Box
+            flex="1 1 auto"
+            minHeight={0}
+            display="flex"
+            // The hidden editors position themselves against this row.
+            position="relative"
+          >
+            {editorsEl}
+            {transcriptEl}
+          </Box>
+          {transientEl}
+          {besideChat || promptHidden || topPrompt ? null : prompt}
+        </>
+      )}
+      {/*
+        Over the whole workspace, not over the conversation alone.
+
+        The panel used to sit inside the transcript, which was where the
+        reader was looking when the chat was the page. It is not any more:
+        on the page layout the transcript is a side panel that starts
+        closed, so a visitor whose key ran out saw an agent that had simply
+        stopped answering, with the reason hidden behind a toggle. Covering
+        the workspace — chat, editors, prompt, picker — is what makes the
+        end of the trial impossible to miss.
+
+        Absolutely positioned, so everything stays mounted underneath: a
+        visitor who signs in here gets their notebook and their transcript
+        back exactly as they left them, rather than a fresh workspace that
+        has forgotten the question they just asked.
+      */}
+      {keyExpired ? (
+        <Box
+          position="absolute"
+          inset={0}
+          zIndex={5}
+          bg="canvas.default"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
+        >
+          <AnonymousKeyExpired
+            agentName={member?.name ?? spec?.name}
+            // On the browser target the kernel is in this page and owes the
+            // inference service nothing, so the notebook is genuinely
+            // unaffected and the panel may say so.
+            sandboxStillRuns={inPage}
+            temporary={expiredKeyIsTemporary}
+            // The trial key is spent once somebody signs in, and a session
+            // left `expired` would keep this panel over a working chat.
+            onSignedIn={() => useAnonymousSessionStore.getState().clear()}
+          />
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+/**
+ * Which editor sits beside the conversation.
+ *
+ * Rendered only when a plugin contributed one — a chat on its own has nothing
+ * to pick between, and a control with a single option is noise.
+ */
+function SurfacePicker({
+  surfaces,
+  active,
+  onChange,
+  workspace,
+}: {
+  surfaces: ChatSurfaceContribution[];
+  active: string;
+  onChange: (surfaceId: string) => void;
+  workspace: LoopViewProps['workspace'];
+}): JSX.Element {
+  const ordered = [...surfaces].sort(
+    (left, right) => (left.order ?? 100) - (right.order ?? 100),
+  );
+
+  return (
+    <Box
+      flex="0 0 auto"
+      display="flex"
+      alignItems="center"
+      gap={2}
+      px={3}
+      py={2}
+      borderBottom="1px solid"
+      borderColor="border.default"
+    >
+      <Text sx={{ fontSize: 0, color: 'fg.muted' }}>Beside the chat</Text>
+      <SegmentedControl aria-label="Editor beside the chat" size="small">
+        <SegmentedControl.Button
+          selected={active === NO_SURFACE}
+          onClick={() => onChange(NO_SURFACE)}
+        >
+          {/* "Chat", not "None": the conversation is the view that remains. */}
+          Chat
+        </SegmentedControl.Button>
+        {ordered.map(surface => {
+          const openable = canOpenView(surface, workspace);
+          const reason = openable
+            ? undefined
+            : (surface.unavailableReason?.(workspace) ??
+              'Not available right now');
+          return (
+            <SegmentedControl.Button
+              key={surface.surfaceId}
+              selected={active === surface.surfaceId}
+              // `aria-disabled` rather than `disabled`: a disabled button is
+              // not focusable, so a keyboard or screen-reader user would never
+              // hear *why* the editor is unavailable. It stays focusable, the
+              // title explains, and the handler declines.
+              aria-disabled={!openable}
+              // The native attribute rather than Primer's `Tooltip`: that
+              // component requires its child to *be* the interactive element,
+              // and `SegmentedControl.Button` renders a list item around its
+              // button — wrapping it throws before the workspace can paint.
+              title={reason ?? surface.title}
+              // Primer types this as its own icon shape; a contribution may
+              // bring any component, which is the point of the extension point.
+              leadingIcon={surface.icon as never}
+              onClick={() => {
+                if (openable) {
+                  onChange(surface.surfaceId);
+                }
+              }}
+            >
+              {surface.title}
+            </SegmentedControl.Button>
+          );
+        })}
+      </SegmentedControl>
+    </Box>
+  );
+}
+
+function Centered({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <Box
+      height="100%"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      color="fg.muted"
+      fontSize={1}
+      px={3}
+      textAlign="center"
+    >
+      {children}
+    </Box>
+  );
+}

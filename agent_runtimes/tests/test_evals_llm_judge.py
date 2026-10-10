@@ -72,6 +72,55 @@ def test_a_passing_verdict_scores_and_explains():
     )
 
 
+def test_a_judge_handed_a_record_reads_it_beside_the_answer():
+    """STUDIO V-08: a test of an application is graded on what it did."""
+    judge = _judge(
+        {
+            "score": 0,
+            "passed": False,
+            "explanation": "It sent unasked.",
+            "failure_mode": "wrong_answer",
+        }
+    )
+    graded = run_case_evaluators(
+        output="I asked before sending.",
+        expected="It asks before sending.",
+        evaluators=[
+            {
+                "name": "llm_judge",
+                "arguments": {
+                    "_judge": judge,
+                    "_record": ["It called send_gmail_message"],
+                },
+            }
+        ],
+    )
+    assert graded["passed"] is False
+    [prompt] = judge.prompts
+    assert (
+        evaluators.RECORD_PREAMBLE in prompt
+        and "- It called send_gmail_message" in prompt
+    )
+    assert evaluators.RECORD_RULE in prompt
+    # A record read that holds nothing says so; no record is the answer alone.
+    empty = _judge({"score": 1, "passed": True, "explanation": "", "failure_mode": ""})
+    run_case_evaluators(
+        output="Hi",
+        expected="Hi",
+        evaluators=[
+            {"name": "llm_judge", "arguments": {"_judge": empty, "_record": []}}
+        ],
+    )
+    assert evaluators.RECORD_NOTHING in empty.prompts[0]
+    alone = _judge({"score": 1, "passed": True, "explanation": "", "failure_mode": ""})
+    run_case_evaluators(
+        output="Hi",
+        expected="Hi",
+        evaluators=[{"name": "llm_judge", "arguments": {"_judge": alone}}],
+    )
+    assert evaluators.RECORD_PREAMBLE not in alone.prompts[0]
+
+
 def test_a_failing_verdict_names_how_it_failed():
     judge = _judge(
         {

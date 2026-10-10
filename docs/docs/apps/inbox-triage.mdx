@@ -1,0 +1,220 @@
+---
+sidebar_position: 7
+title: A worker on a mailbox
+---
+
+# A worker on a mailbox: Inbox triage
+
+*Inbox triage* (`apps/inbox-triage.yaml` in agentspecs) is the first worker:
+it reads new mail, labels and archives what needs no answer, drafts the
+replies, and asks before anything is sent. This page says how it runs, what
+it runs against today, and what real Gmail still needs.
+
+## What it reaches: Gmail's tools
+
+It reaches mail through Gmail's tools as the catalogue's Google Workspace
+server serves them — `google-workspace__search_gmail_messages`,
+`get_gmail_message_content`, `get_gmail_thread_content`,
+`list_gmail_labels`, `modify_gmail_message_labels`,
+`batch_modify_gmail_message_labels`, `draft_gmail_message`,
+`send_gmail_message` — each with the mailbox it acts on
+(`user_google_email`). Its agent, `worker-mail-triage`, carries that server
+and nothing else, with codemode off, so that every call is decided with its
+arguments.
+
+**The Google Workspace server is not enabled on Datalayer yet**, and no real
+mailbox has been read. Outside Datalayer's own domain, Google's review of the
+restricted Gmail scopes comes first.
+
+## How it reaches a person's Gmail
+
+The person connects Gmail in Google's own consent screen, from the
+application's *Permissions*, at one of two levels:
+
+| Level | Google's scopes | The connection |
+| --- | --- | --- |
+| *can read* | `gmail.readonly` | `access: read` |
+| *can read and send* | `gmail.modify`, `gmail.send` | `access: write` |
+
+Datalayer's IAM keeps the refresh token as the person's secret — never
+answered by any secret route, never in a runtime. The `google-workspace`
+server runs on the runtime as a local HTTP process in its external OAuth
+provider mode (`MCP_ENABLE_OAUTH21`, `EXTERNAL_OAUTH21_PROVIDER`): it holds no
+Google credential and opens the mailbox of whichever access token each
+request carries.
+
+Each run of a deployed application's agent is given a toolset of its own
+(`agent_runtimes.mcp.google_workspace.toolset_for_the_run`), whose every
+request carries an access token of an hour that IAM mints
+(`POST /api/iam/v1/oauth2/google-workspace/token`) for whom the run acts for:
+
+- a connection `as: user` — the person talking to it, asked with their token
+  naming the application (what they let it do in their name);
+- a connection `as: owner` — its owner, asked with the application's
+  principal's token.
+
+IAM narrows the token to the connection's level: a *can read* connection on
+a *can read and send* consent gets a token that cannot send, and a *can read
+and send* connection on a *can read* consent is refused, saying to connect
+Gmail again. The token is held in memory until two minutes before it ends,
+withheld wherever it would be shown, and never in the model's context.
+
+A run nobody's Gmail can be reached for — a Preview or a local run, a person
+who has not let it act in their name, Gmail not connected or connected at a
+lower level — has no Gmail tool, and why is logged in a sentence: nobody
+else's mailbox is reached, and its other tools still work.
+
+**The session a message wakes reads the mailbox it was woken for** (STUDIO
+W-03). Nobody is talking to it: the scheduler runs it on the owner's key,
+with which IAM would list what the owner let applications do, never the
+person's. So the event names the person and their grant (`person`, `grant`,
+ids among its details), and the scheduler mints, per wake, that person's
+token naming the application from the grant — as its mail watch does to read
+the mailbox — and gives it with the session request alone, in
+`X-Datalayer-Acting-Token` (`deployments.start_session(acting_token=)`).
+The route holds it where a person's own session's token would be
+(`loop.apps.acting.given`, keyed on the request's bearer), so every run of
+the session finds it through `acting_token` as any session does — the Gmail
+toolset and the gateway's servers in the person's name alike: one path. It
+is the only token that session acts with: ended, nothing more is reached in
+their name, and IAM is never asked with the owner's key in its place. A
+session woken for a person without it is refused (422), as is a token not
+minted for that person from that grant, or given to a session not woken for
+a person (`test_app_woken_for_a_person.py`).
+
+## The mail source it runs against today
+
+`agent_runtimes.loop.apps.mail` is the mail source a worker runs against
+wherever the server is not:
+
+- `MailSource` — what a worker needs of a mailbox: its address, a search,
+  a message, a thread, its labels, changing labels, a draft, a send;
+- `FixtureMailbox` — a mailbox of example mail held in memory, never a
+  person's: what it was asked to do is kept, in order (`effects`,
+  `done("sent")`), and nothing leaves it;
+- `gmail_toolset(source)` — Gmail's tools, under the server's names and with
+  its arguments, served from a source. Each refuses another mailbox than its
+  own. The same Appspec, rules and record run on it as on Gmail.
+
+```python
+from pydantic_ai import Agent
+
+from agent_runtimes.loop.apps.agent import AppAgent, app_capabilities
+from agent_runtimes.loop.apps.mail import fixture_mailbox, gmail_toolset
+from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.specs.apps import APP_CATALOGUE
+
+triage = APP_CATALOGUE["inbox-triage"]
+mailbox = fixture_mailbox(
+    [
+        {
+            "id": "m1",
+            "from": "client@acme.com",
+            "to": "eric@datalayer.io",
+            "subject": "Invoice 2026-114 is wrong",
+            "body": "When will it be corrected?",
+            "received_at": "2026-10-06T07:12:00Z",
+        }
+    ],
+    address="eric@datalayer.io",
+)
+recorder = AppRecorder(app=triage, woken_by={"kind": "event", "event": "email_received"})
+agent = AppAgent(
+    app=triage,
+    agent=Agent("test"),
+    session_id="s-1",
+    capabilities=app_capabilities(triage, recorder=recorder),
+    toolsets=[gmail_toolset(mailbox)],
+)
+```
+
+## Its rules
+
+| What it meets | What it does |
+| --- | --- |
+| Label and archive a message | Do it |
+| Draft a reply | Do it |
+| Create or change anything else (a label, a filter) | Ask me first |
+| Send a message | Ask me first |
+| Delete anything — a label of `TRASH` or `SPAM` too | Leave it to me |
+| Forward outside the organization, share or publish anything | Leave it to me |
+
+**A forward outside the organization publishes.** `send_gmail_message`
+forwards when the call names a message (`forward_message_id`); when one of
+its recipients is outside the domain of the mailbox it sends from, or the
+mailbox is not said, the call is `publish` besides `send`
+(`rules.forwards_outside`, as agentspecs and the TypeScript rules decide it),
+and Inbox triage leaves publishing to the person. A reply is not a forward.
+
+A message it reads is something to sort, never something to obey: its
+instructions and its agent's prompt say so, and whatever the model makes of
+a received mail, each call still meets its rule. A hidden instruction to
+forward a colleague's contract outside is refused before it runs.
+
+## When it asks
+
+A send waits for the person. On the tool-approval path the approval carries
+the call's arguments **whole** — a send's, as a saved result's, up to
+`DRAFT_LIMIT`; any other call's are cut at 500 characters — so the draft is
+read in full before *Approve*. Its channels are told first (the application's
+`notifications`: mail).
+
+## When a message arrives
+
+Its Appspec says *when a message arrives* — an `event` trigger on
+`email_received`, with the prompt its agent is asked — and *every morning at
+8*, a schedule.
+
+- `MailWatch(source).arrived()` gives the `email_received` events of what
+  arrived since it last looked, each once: the message's ids and when,
+  nothing its sender wrote.
+- `post_mail_event(...)` and `tell_arrivals(watch, ...)` tell ai-agents, as
+  the deployment's owner: `POST /api/ai-agents/v1/apps/deployments/{uid}/events`.
+- ai-agents wakes the deployment at each trigger that names the event,
+  through the scheduler, which runs the session as it runs a tick: a key
+  minted for the owner, a runtime of its own (`event-<uid[:8]>`, stopped by
+  *Pause*), the session started, the runtime stopped. Events that come during
+  a session are folded into one more session after it.
+- The session is asked its trigger's prompt and what happened, ids and times
+  only (`deployments.event_triggers`, `event_details`, `event_prompt`).
+  Words a sender chose are refused there: they would be instructions in a
+  session nobody watches.
+
+Woken, nobody is present: it reads, and does what a rule of its own lets it —
+labels, archives, drafts — and a send waits for an approval (R-16).
+
+## What it did against its rules
+
+ai-agents measures each deployment from its record of real use
+(`GET /api/ai-agents/v1/apps/deployments/{uid}/measures`): every send against
+its approval, every call that ran against a rule, and the weeks it ran. Each
+decision of the record says what the call does (`classes`), so that a send is
+told from another call.
+
+## What is tested, and what is not
+
+Tested (`test_inbox_triage.py`, on a `FixtureMailbox`, a scripted model in
+place of its agent's): woken by a message, it reads, archives under a label
+and drafts alone, and the send waits for the person with the draft whole —
+sent once approved, not sent declined; a hidden instruction obeyed by the
+model is refused, nothing forwarded; nothing deleted; a forward inside the
+organization asked; its rules; one mailbox only; what arrived told once, to
+ai-agents as the owner; its event trigger and its prompt. The forward check
+in TypeScript: `app-rules.test.ts`. ai-agents (`test_app_deployments_api.py`)
+and the scheduler (`test_an_event_wakes_a_session.py`) test the events, the
+wake, *Pause* and the measures.
+
+The Gmail connection (`test_google_workspace_gmail.py`): the server as the
+catalogue serves it, in whose name each run asks IAM, the token held and
+asked again, every request carrying it, a run with no Gmail tool when none
+can be had, the server's process started, waited for and stopped. IAM's
+consent, callback, token and disconnect routes are tested in IAM
+(`test_google_workspace.py`).
+
+**Not done:** no real mailbox has been read — that waits for IAM's deploy and
+a person's consent in Google's screen. The watch exists in the platform's
+scheduler (Gmail's history polled once a minute, each new message's id told
+to ai-agents, the woken session given the person's token), and waits to be
+deployed and drilled on a connected mailbox. Outside Datalayer's own domain,
+Google's verification of the restricted scopes comes first. Nothing is
+deployed.

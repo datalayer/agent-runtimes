@@ -19,6 +19,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bAg Ui\b/g, 'AG-UI'],
   [/\bA2 Ui\b/g, 'A2UI'],
   [/\bA2 A\b/g, 'A2A'],
+  [/\bPap\b/g, 'PAP'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
@@ -47,9 +48,11 @@ function inferTags(id: string): string[] {
   if (id.startsWith('AgUi')) tags.add('ag-ui');
   if (id.startsWith('A2Ui')) tags.add('a2ui');
   if (id.startsWith('AgentA2A')) tags.add('a2a');
+  if (id.startsWith('Pap')) tags.add('pap');
   if (id.includes('Notebook')) tags.add('notebook');
   if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
+  if (id.startsWith('Assistant')) tags.add('assistant');
   if (id.includes('Sandbox')) tags.add('sandbox');
   if (id.includes('Monitoring') || id.includes('Otel'))
     tags.add('observability');
@@ -113,7 +116,7 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
   makeEntry(
     'A2UiAgentExample',
     () => import('./A2UiAgentExample'),
-    'A2UI Agent with built-in chat component and Python A2UI extension surface.',
+    'A2UI Agent with built-in chat component and Python A2UI UI plugin surface.',
   ),
   makeEntry(
     'AgUiAgenticExample',
@@ -171,6 +174,21 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Simple cell example.',
   ),
   makeEntry(
+    'AssistantExample',
+    () => import('./AssistantExample'),
+    'The floating assistant: the chat as a character on the page.',
+  ),
+  makeEntry(
+    'VoiceChatExample',
+    () => import('./VoiceChatExample'),
+    'A voice chat with the floating assistant: push-to-talk heard in the page, answers read aloud by the speech service, the mouth moving with the sound.',
+  ),
+  makeEntry(
+    'AssistantGalleryExample',
+    () => import('./AssistantGalleryExample'),
+    'Every representation of the floating assistant: each character in each state, its balloon, light and dark, still or moving, one at a time or as a grid.',
+  ),
+  makeEntry(
     'ChatCustomExample',
     () => import('./ChatCustomExample'),
     'Custom chat experience composition example.',
@@ -218,6 +236,12 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'agent', 'sandbox', 'codemode'],
   ),
   makeEntry(
+    'AgentDecideExample',
+    () => import('./AgentDecideExample'),
+    'Decide: typed decisions asked of Jev — yes or no, a choice, a score — from the chat, where the agent calls decide, and from the floating assistant’s Ask a decision.',
+    ['example', 'agent', 'loop', 'app', 'decisions', 'jev', 'assistant'],
+  ),
+  makeEntry(
     'AgentEvalsExample',
     () => import('./AgentEvalsExample'),
     'Evaluation workflows for agent outputs.',
@@ -248,6 +272,18 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'workspace', 'sandbox', 'owns-sandbox-control'],
   ),
   makeEntry(
+    'LoopAppComputerExample',
+    () => import('./LoopAppComputerExample'),
+    'An application beside its computer: what its agent ran on its sandbox, its files, and Take over and Hand back (LOOP R-23).',
+    ['example', 'loop', 'app', 'computer', 'sandbox', 'owns-sandbox-control'],
+  ),
+  makeEntry(
+    'ScenesExample',
+    () => import('./ScenesExample'),
+    'The scenes of the catalogue in tabs — Sales & Accounting, Month-end Close, Crop Monitoring, Disaster Assessment — each its graph and transcript, its cues as suggestions, played against the local servers (LOOP A-15).',
+    ['example', 'loop', 'scenes', 'a2a', 'agentspecs', 'team'],
+  ),
+  makeEntry(
     'LoopShellExample',
     () => import('./LoopShellExample'),
     'The Loop shell at its most naked: a blank canvas, a floating draggable prompt, and an editor selector in the corner — none, notebook or document.',
@@ -256,10 +292,10 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     ['example', 'loop', 'shell', 'prompt', 'editors', 'owns-sandbox-control'],
   ),
   makeEntry(
-    'AgentLoopExample',
-    () => import('./AgentLoopExample'),
-    'Define and launch an agent execution loop (observe/think/act/evaluate) over a live notebook, driven by generic loop specs.',
-    ['example', 'agent', 'loop', 'notebook', 'agentspecs'],
+    'LoopStrategyExample',
+    () => import('./LoopStrategyExample'),
+    'Define and launch an agent reasoning strategy (a control loop: observe/think/act/evaluate) over a live notebook, driven by generic strategy specs.',
+    ['example', 'agent', 'strategy', 'notebook', 'agentspecs'],
   ),
   makeEntry(
     'AgentToolApprovalsExample',
@@ -305,6 +341,41 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentA2AExample',
     () => import('./AgentA2AExample'),
     'Delegation to separate agents over the A2A protocol, launched locally or on Datalayer runtimes.',
+  ),
+  makeEntry(
+    'AgentA2ATeamExample',
+    () => import('./AgentA2ATeamExample'),
+    'Two applications as a team over A2A: Sales in the browser (@a2a-js/sdk) asks Accounting on a runtime (fasta2a, Odoo read only), each an Office Assistant character.',
+  ),
+  makeEntry(
+    'PapCompanyDiscoveryExample',
+    () => import('./PapCompanyDiscoveryExample'),
+    'Validate a PAP company document and reduce it to the public capabilities safe for an agent or UI.',
+  ),
+  makeEntry(
+    'PapAgentIdentityExample',
+    () => import('./PapAgentIdentityExample'),
+    'Verify personal-agent client metadata and signing policy without exposing JWK coordinates.',
+  ),
+  makeEntry(
+    'PapAuthorizationBoundaryExample',
+    () => import('./PapAuthorizationBoundaryExample'),
+    'Generate real Session and Direct Sign-In security material while showing only safe policy status.',
+  ),
+  makeEntry(
+    'PapDpopProofExample',
+    () => import('./PapDpopProofExample'),
+    'Create fresh request-bound DPoP proofs while withholding proof, token, nonce, identifiers, and key material.',
+  ),
+  makeEntry(
+    'PapSessionLifecycleExample',
+    () => import('./PapSessionLifecycleExample'),
+    'Start, retry, and renew a signed-out PAP Session while credentials remain host-owned.',
+  ),
+  makeEntry(
+    'PapGuidedJourneyExample',
+    () => import('./PapGuidedJourneyExample'),
+    'Follow a visual PAP return journey across discovery, signed-out conversation, Direct Sign-In, and an exact user-authorized result.',
   ),
   makeEntry(
     'AgentNotificationsExample',

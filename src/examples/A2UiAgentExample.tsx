@@ -41,11 +41,11 @@ import {
   createA2uiSurfacePlugin,
   validateA2uiSubmission,
   type A2uiFieldRule,
-} from '../loop/plugins/a2ui-surface';
+} from '../apps/plugins/a2ui-surface';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../loop';
-import { AgentA2uiPlugin } from '../loop/plugins/agent-a2ui';
+import { LoopEmbed } from '../apps';
+import { AgentA2uiPlugin } from '../apps/plugins/agent-a2ui';
 
 setupPrimerPortals();
 
@@ -197,51 +197,43 @@ const A2UiAgentExample: React.FC = () => {
     <ThemedProvider>
       <A2uiMarkdownProvider>
         <Box
-          sx={{
-            minHeight: '100vh',
-            height: ['auto', 'auto', '100dvh'],
-            boxSizing: 'border-box',
-            overflow: ['visible', 'visible', 'hidden'],
-            display: 'grid',
-            gridTemplateColumns: [
-              '1fr',
-              '1fr',
-              'minmax(360px, 1fr) minmax(360px, 460px)',
-            ],
-            gap: 3,
-            p: 3,
-            bg: 'canvas.default',
-          }}
+          minHeight="100vh"
+          height={['auto', 'auto', '100dvh']}
+          boxSizing="border-box"
+          overflow={['visible', 'visible', 'hidden']}
+          display="grid"
+          gridTemplateColumns={[
+            '1fr',
+            '1fr',
+            'minmax(360px, 1fr) minmax(360px, 460px)',
+          ]}
+          gap={3}
+          p={3}
+          bg="canvas.default"
         >
           {/* Main canvas: interactive A2UI surface + submissions */}
           <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              minHeight: 0,
-              overflowY: ['visible', 'visible', 'auto'],
-            }}
+            display="flex"
+            flexDirection="column"
+            gap={3}
+            minHeight={0}
+            overflowY={['visible', 'visible', 'auto']}
           >
             <Box
-              sx={{
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                overflow: 'hidden',
-              }}
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              overflow="hidden"
             >
               <Box
-                sx={{
-                  px: 3,
-                  py: 2,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  bg: 'canvas.default',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                px={3}
+                py={2}
+                borderBottom="1px solid"
+                borderColor="border.default"
+                bg="canvas.default"
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
               >
                 <Box>
                   <Text as="h1" sx={{ fontSize: 2, fontWeight: 'bold' }}>
@@ -275,15 +267,13 @@ const A2UiAgentExample: React.FC = () => {
               >
                 {surfaces.length === 0 ? (
                   <Box
-                    sx={{
-                      textAlign: 'center',
-                      py: 6,
-                      px: 3,
-                      color: 'fg.muted',
-                      border: '2px dashed',
-                      borderColor: 'border.muted',
-                      borderRadius: 2,
-                    }}
+                    textAlign="center"
+                    py={6}
+                    px={3}
+                    color="fg.muted"
+                    border="2px dashed"
+                    borderColor="border.muted"
+                    borderRadius={2}
                   >
                     <Text sx={{ fontSize: 4, display: 'block', mb: 2 }}>
                       🎛️
@@ -305,16 +295,14 @@ const A2UiAgentExample: React.FC = () => {
                     {validationError && (
                       <Box
                         role="alert"
-                        sx={{
-                          px: 3,
-                          py: 2,
-                          borderRadius: 2,
-                          bg: 'danger.subtle',
-                          border: '1px solid',
-                          borderColor: 'danger.muted',
-                          color: 'danger.fg',
-                          fontSize: 1,
-                        }}
+                        px={3}
+                        py={2}
+                        borderRadius={2}
+                        bg="danger.subtle"
+                        border="1px solid"
+                        borderColor="danger.muted"
+                        color="danger.fg"
+                        fontSize={1}
                       >
                         {validationError.message}
                       </Box>
@@ -322,13 +310,11 @@ const A2UiAgentExample: React.FC = () => {
                     {surfaces.map(surface => (
                       <Box
                         key={surface.id}
-                        sx={{
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                          borderRadius: 2,
-                          p: 3,
-                          bg: 'canvas.default',
-                        }}
+                        border="1px solid"
+                        borderColor="border.default"
+                        borderRadius={2}
+                        p={3}
+                        bg="canvas.default"
                       >
                         <A2uiSurfaceComposed surface={surface} />
                       </Box>
@@ -340,24 +326,20 @@ const A2UiAgentExample: React.FC = () => {
 
             {submissions.length > 0 && (
               <Box
-                sx={{
-                  border: '1px solid',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                }}
+                border="1px solid"
+                borderColor="border.default"
+                borderRadius={2}
+                overflow="hidden"
               >
                 <Box
-                  sx={{
-                    px: 3,
-                    py: 2,
-                    borderBottom: '1px solid',
-                    borderColor: 'border.default',
-                    bg: 'success.subtle',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
+                  px={3}
+                  py={2}
+                  borderBottom="1px solid"
+                  borderColor="border.default"
+                  bg="success.subtle"
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
                 >
                   <Text sx={{ fontWeight: 'bold' }}>Submitted values</Text>
                   <Button
@@ -368,29 +350,20 @@ const A2UiAgentExample: React.FC = () => {
                     Clear
                   </Button>
                 </Box>
-                <Box
-                  sx={{
-                    p: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                  }}
-                >
+                <Box p={3} display="flex" flexDirection="column" gap={2}>
                   {submissions.map(record => (
                     <Box
                       as="pre"
                       key={record.id}
-                      sx={{
-                        m: 0,
-                        p: 2,
-                        borderRadius: 2,
-                        bg: 'canvas.default',
-                        border: '1px solid',
-                        borderColor: 'border.default',
-                        fontSize: 0,
-                        overflow: 'auto',
-                        whiteSpace: 'pre-wrap',
-                      }}
+                      m={0}
+                      p={2}
+                      borderRadius={2}
+                      bg="canvas.default"
+                      border="1px solid"
+                      borderColor="border.default"
+                      fontSize={0}
+                      overflow="auto"
+                      whiteSpace="pre-wrap"
                     >
                       {JSON.stringify(record.values, null, 2)}
                     </Box>
@@ -402,37 +375,33 @@ const A2UiAgentExample: React.FC = () => {
 
           {/* Chat: drives the A2UI generation */}
           <Box
-            sx={{
-              position: ['static', 'static', 'sticky'],
-              top: [0, 0, 3],
-              alignSelf: ['auto', 'auto', 'start'],
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: ['auto', 'auto', 'calc(100vh - 48px)'],
-              minHeight: [420, 520, 0],
-              overflow: 'hidden',
-              bg: 'canvas.default',
-            }}
+            position={['static', 'static', 'sticky']}
+            top={[0, 0, 3]}
+            alignSelf={['auto', 'auto', 'start']}
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={2}
+            display="flex"
+            flexDirection="column"
+            height={['auto', 'auto', 'calc(100vh - 48px)']}
+            minHeight={[420, 520, 0]}
+            overflow="hidden"
+            bg="canvas.default"
           >
             {isCreatingChat ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  gap: 3,
-                }}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                height="100%"
+                gap={3}
               >
                 <Spinner size="large" />
                 <Text sx={{ color: 'fg.muted' }}>Creating A2UI agent...</Text>
               </Box>
             ) : chatError || !agentId ? (
-              <Box sx={{ p: 3 }}>
+              <Box p={3}>
                 <Text sx={{ color: 'danger.fg' }}>
                   Failed to initialize chat:{' '}
                   {chatError || 'No agent id returned'}

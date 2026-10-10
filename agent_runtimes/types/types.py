@@ -3,10 +3,18 @@
 
 """Pydantic models for chat functionality and agent specifications."""
 
+import json
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 
 class EnvvarSpec(BaseModel):
@@ -105,7 +113,7 @@ class SkillSpec(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -113,7 +121,7 @@ class SkillSpec(BaseModel):
     )
 
 
-class ToolRuntimeSpec(BaseModel):
+class BackendToolRuntimeSpec(BaseModel):
     """Runtime binding for resolving a tool implementation."""
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
@@ -132,7 +140,7 @@ class ToolRuntimeSpec(BaseModel):
     )
 
 
-class ToolSpec(BaseModel):
+class BackendToolSpec(BaseModel):
     """
     Specification for a runtime tool.
     """
@@ -153,13 +161,13 @@ class ToolSpec(BaseModel):
         default=None,
         description="Approval timeout duration (e.g. 0h5m0s, 2d6h, 1mo2d3h4m5s)",
     )
-    runtime: ToolRuntimeSpec = Field(
+    runtime: BackendToolRuntimeSpec = Field(
         ...,
         description="Runtime binding metadata",
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -193,7 +201,7 @@ class FrontendToolSpec(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -241,6 +249,44 @@ class ModelPricing(BaseModel):
     )
 
 
+class ComponentBindingsSpec(BaseModel):
+    """What a component can be bound to: what it shows, what it sends."""
+
+    shows: List[str] = Field(default_factory=list, description="The data it shows")
+    sends: List[str] = Field(default_factory=list, description="What it sends back")
+
+
+class ComponentSpec(BaseModel):
+    """A visual component a UI plugin renders (LOOP C-13), named as a surface
+    names it, with its version. Every one carries its properties as a JSON
+    Schema of the catalog's own — a standard one's named as its protocol names
+    them — from which its properties form is drawn (C-14) and its Python call
+    typed (C-15).
+    """
+
+    id: str = Field(..., description="The name a surface gives it (e.g. 'Table')")
+    name: str = Field(..., description="Display name")
+    description: str = Field(..., description="What it is for, in a sentence")
+    category: str = Field(
+        ..., description="text, input, action, data, conversation, media, layout"
+    )
+    emoji: str = Field(..., description="Its face on the palette")
+    version: str = Field(..., description="Its version in the catalog")
+    standard: bool = Field(
+        ..., description="Named and drawn as its protocol says (A2UI's basic catalog)"
+    )
+    properties: Dict[str, Any] = Field(
+        ..., description="Its properties as a JSON Schema: what a builder sets"
+    )
+    bindings: Optional[ComponentBindingsSpec] = Field(
+        default=None, description="What it can be bound to"
+    )
+    events: List[str] = Field(default_factory=list, description="What it reports")
+    example: Optional[Dict[str, Any]] = Field(
+        default=None, description="A valid configuration of it"
+    )
+
+
 class UIPluginSpec(BaseModel):
     """How an agent's answer becomes an interface: a protocol the host
     renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one.
@@ -258,6 +304,12 @@ class UIPluginSpec(BaseModel):
     docs_url: str = Field(default="", description="The protocol's own documentation")
     enabled: bool = Field(
         default=True, description="Whether an agent spec may name it today"
+    )
+    catalog: str = Field(
+        default="", description="The catalog its components are written in"
+    )
+    components: List[ComponentSpec] = Field(
+        default_factory=list, description="The visual components it renders (LOOP C-13)"
     )
 
 
@@ -326,7 +378,7 @@ class FrameSpec(BaseModel):
     architecture: str = Field(default="")
     prompts: List[FramePromptSpec] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
-    tools: List[str] = Field(default_factory=list)
+    backend_tools: List[str] = Field(default_factory=list)
     mcp_servers: List[str] = Field(default_factory=list)
     guards: List[FrameGuardSpec] = Field(default_factory=list)
 
@@ -426,8 +478,8 @@ class AIModel(BaseModel):
         default_factory=list,
         description=(
             "What the model can be trusted with: 'chat', 'tools', 'codemode', "
-            "'vision', 'thinking', 'judgments' (a typed-judgment model), "
-            "'judge' (a chat model that may be asked those questions). "
+            "'vision', 'thinking', 'decisions' (a typed-decision model), "
+            "'decider' (a chat model that may be asked those questions). "
             "Empty means unstated rather than incapable. "
             "A small local model that lists no 'tools' is warned about at "
             "selection instead of failing mysteriously mid-run."
@@ -762,8 +814,8 @@ class Memories(str, Enum):
     pass
 
 
-class LoopHuman(BaseModel):
-    """How the human participates in (or around) an agent execution loop."""
+class StrategyHuman(BaseModel):
+    """How the human participates in (or around) an agent reasoning strategy."""
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
@@ -773,7 +825,7 @@ class LoopHuman(BaseModel):
     )
     approval_required: bool = Field(
         default=False,
-        description="Whether the loop pauses for human approval before sensitive actions",
+        description="Whether the strategy pauses for human approval before sensitive actions",
     )
     approval_for: List[str] = Field(
         default_factory=list,
@@ -784,19 +836,21 @@ class LoopHuman(BaseModel):
     )
 
 
-class LoopTermination(BaseModel):
-    """When and how an agent execution loop stops iterating."""
+class StrategyTermination(BaseModel):
+    """When and how an agent reasoning strategy stops iterating."""
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     max_iterations: int = Field(
-        default=10, ge=1, description="Maximum iterations before the loop is stopped"
+        default=10,
+        ge=1,
+        description="Maximum iterations before the strategy is stopped",
     )
     success_criteria: List[str] = Field(
         default_factory=list, description="Conditions that mark the goal as reached"
     )
     failure_criteria: List[str] = Field(
-        default_factory=list, description="Conditions that mark the loop as failed"
+        default_factory=list, description="Conditions that mark the strategy as failed"
     )
     on_blocked: str = Field(
         default="ask-human",
@@ -804,8 +858,8 @@ class LoopTermination(BaseModel):
     )
 
 
-class LoopSpec(BaseModel):
-    """Specification for an agent execution loop.
+class StrategySpec(BaseModel):
+    """Specification for an agent reasoning strategy (a control loop).
 
     A framework-agnostic description of how an agent progresses from one
     decision to the next: the control cycle (observe/think/act/evaluate), the
@@ -815,16 +869,16 @@ class LoopSpec(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
-    id: str = Field(..., description="Unique loop identifier")
-    version: str = Field(default="0.0.1", description="Loop spec version")
-    name: str = Field(..., description="Display name for the loop")
-    description: str = Field(default="", description="Loop description")
+    id: str = Field(..., description="Unique strategy identifier")
+    version: str = Field(default="0.0.1", description="Strategy spec version")
+    name: str = Field(..., description="Display name for the strategy")
+    description: str = Field(default="", description="Strategy description")
     objective: str = Field(
-        default="", description="Default goal/objective the loop works toward"
+        default="", description="Default goal/objective the strategy works toward"
     )
     strategy: str = Field(
         default="observe-think-act-evaluate",
-        description="Loop strategy family (observe-think-act-evaluate, plan-execute-critic, ooda, react)",
+        description="Strategy family (observe-think-act-evaluate, plan-execute-critic, ooda, react)",
     )
     phases: List[str] = Field(
         default_factory=lambda: ["observe", "think", "act", "evaluate"],
@@ -833,27 +887,27 @@ class LoopSpec(BaseModel):
     constraints: List[str] = Field(
         default_factory=list, description="Boundaries the agent must respect"
     )
-    termination: Optional[LoopTermination] = Field(
+    termination: Optional[StrategyTermination] = Field(
         default=None, description="Termination policy"
     )
-    human: Optional[LoopHuman] = Field(
+    human: Optional[StrategyHuman] = Field(
         default=None, description="Human-in-the-loop participation settings"
     )
     state_backends: List[str] = Field(
         default_factory=list,
-        description="Where loop state lives between iterations",
+        description="Where strategy state lives between iterations",
     )
     tags: List[str] = Field(default_factory=list, description="Categorization tags")
     icon: str = Field(default="sync", description="Icon identifier")
     emoji: str = Field(default="\U0001f504", description="Emoji representation")
 
 
-class Loops(str, Enum):
-    """Enumeration of available agent execution loops.
+class Strategies(str, Enum):
+    """Enumeration of available agent reasoning strategies.
 
     Note: Enum members are generated by ``make specs``.
     This base class is kept here as the canonical type; the generated
-    ``agent_runtimes.specs.loops`` module re-populates members at import time.
+    ``agent_runtimes.specs.strategies`` module re-populates members at import time.
     """
 
     pass
@@ -1172,7 +1226,7 @@ class MCPServer(BaseModel):
     )
     icon: Optional[str] = Field(
         default=None,
-        description="Octicon name for UI display",
+        description="The icon, <package>:<name> (agentspecs.marks)",
     )
     emoji: Optional[str] = Field(
         default=None,
@@ -1200,6 +1254,15 @@ class MCPServer(BaseModel):
         default_factory=list,
         description="Environment variables required for this server to work",
         alias="requiredEnvVars",
+    )
+    sandbox_env_vars: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Environment variables the code its tools write reads in the code "
+            "sandbox (a download's script): given to the sandbox when the "
+            "account has them, never to the server, never required (LOOP R-19)"
+        ),
+        alias="sandboxEnvVars",
     )
     is_available: bool = Field(
         default=False,
@@ -1230,7 +1293,38 @@ class FrontendConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 
     models: List[AIModelRuntime] = Field(
-        default_factory=list, description="Available AI models"
+        default_factory=list,
+        description=(
+            "The models on offer — for an agent, its model and its "
+            "model_additionals — each saying whether it can be used"
+        ),
+    )
+    models_source: Literal["ai-inference", "local"] = Field(
+        default="local",
+        description=(
+            "Who decided which models can be used: ai-inference's own list, "
+            "or this runtime's configuration when it did not route through "
+            "ai-inference or ai-inference did not answer"
+        ),
+        alias="modelsSource",
+    )
+    models_note: Optional[str] = Field(
+        default=None,
+        description="That decision in a sentence",
+        alias="modelsNote",
+    )
+    decision_models: List[AIModelRuntime] = Field(
+        default_factory=list,
+        description=(
+            "The typed-decision models ai-inference serves (Jev), apart from "
+            "the models on offer: a decision asks them, no agent runs on them"
+        ),
+        alias="decisionModels",
+    )
+    decisions_note: Optional[str] = Field(
+        default=None,
+        description="What a typed-decision model is for, in a sentence",
+        alias="decisionsNote",
     )
     default_model: Optional[str] = Field(
         default=None,
@@ -1535,6 +1629,15 @@ class Agentspec(BaseModel):
         default=None,
         description="AI model identifier to use for this agent (e.g., 'bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0')",
     )
+    model_additionals: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Other models of the catalogue this agent may be switched to, "
+            "beside its `model`. The runtime offers those of them its "
+            "inference serves."
+        ),
+        alias="modelAdditionals",
+    )
     inference_provider: Literal["local", "datalayer"] = Field(
         default="local",
         description=(
@@ -1544,6 +1647,31 @@ class Agentspec(BaseModel):
         ),
         alias="inferenceProvider",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _says_backend_tools(cls, data: Any) -> Any:
+        """Refuse `tools`: the field is `backend_tools` (agentspecs >= 0.0.36)."""
+        if isinstance(data, dict) and "tools" in data:
+            raise ValueError(
+                "an agent spec says `backend_tools`, not `tools`: the tools that run "
+                "on the runtime, as `frontend_tools` are those that run on the page"
+            )
+        return data
+
+    @field_validator("model_additionals")
+    @classmethod
+    def _model_additionals_in_catalogue(cls, value: List[str]) -> List[str]:
+        """An additional model the catalogue does not know is refused."""
+        from agent_runtimes.specs.models import get_model
+
+        unknown = [model_id for model_id in value if get_model(model_id) is None]
+        if unknown:
+            raise ValueError(
+                f"model_additionals names models the catalogue does not know: "
+                f"{', '.join(unknown)}."
+            )
+        return value
 
     @field_validator("inference_provider", mode="before")
     @classmethod
@@ -1562,9 +1690,10 @@ class Agentspec(BaseModel):
         default_factory=list,
         description="Skill IDs available to this agent",
     )
-    tools: List[str] = Field(
+    backend_tools: List[str] = Field(
         default_factory=list,
-        description="Tool IDs available to this agent",
+        description="Backend tool IDs (agentspecs/backend-tools) available to this agent",
+        alias="backendTools",
     )
     disable_tool_approvals: bool = Field(
         default=False,
@@ -1682,11 +1811,8 @@ class Agentspec(BaseModel):
     )
     ui_plugin: Optional[str] = Field(
         default=None,
-        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`. "
-        "Called a UI extension before agentspecs 0.0.11: `uiExtension` and `ui_extension` are still read.",
-        validation_alias=AliasChoices(
-            "uiPlugin", "ui_plugin", "uiExtension", "ui_extension"
-        ),
+        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`.",
+        validation_alias=AliasChoices("uiPlugin", "ui_plugin"),
         serialization_alias="uiPlugin",
     )
     trigger: Optional[Dict[str, Any]] = Field(
@@ -2040,6 +2166,13 @@ class ServerActionsSpec(BaseModel):
         default_factory=dict,
         description="What an argument makes a tool do besides, by tool",
     )
+    signs: Dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "The argument carrying what a tool sends, signed with the "
+            "application's byline (LOOP I-10), by tool"
+        ),
+    )
 
 
 class AppConnectionSpec(BaseModel):
@@ -2100,18 +2233,117 @@ class AppStarterSpec(BaseModel):
 
     label: str
     message: str
+    category: str = Field(
+        default="", description="The heading it is offered under (LOOP P-20)"
+    )
 
 
-class AppSettingSpec(BaseModel):
-    """Something the user may set for their session."""
+class AppCommandSpec(BaseModel):
+    """A slash command the user picks in the composer (LOOP P-19)."""
+
+    name: str = Field(..., description="What follows the slash")
+    description: str
+    prompt: str = Field(
+        ..., description="What picking it sends: `{input}` the words typed after it"
+    )
+
+
+class AppModeOptionSpec(BaseModel):
+    """One position of a mode switch (LOOP P-19)."""
 
     id: str
-    type: str = Field(..., description="`select`, `text`, `toggle`, `slider`, `number`")
     label: str
-    options: List[str] = Field(default_factory=list)
-    default: Optional[Union[str, bool, float]] = None
-    min: Optional[float] = None
-    max: Optional[float] = None
+    description: str = ""
+    instructions: str = Field(
+        default="", description="What the agent is told in every run in this mode"
+    )
+    model: Optional[str] = Field(
+        default=None, description="The model a run in this mode runs on"
+    )
+
+
+class AppModeSpec(BaseModel):
+    """A mode switch in the composer (LOOP P-19)."""
+
+    id: str
+    label: str
+    options: List[AppModeOptionSpec]
+    default: Optional[str] = Field(
+        default=None, description="The option it starts on; the first when unsaid"
+    )
+
+
+class AppProfileSpec(BaseModel):
+    """One of several assistants in one application (LOOP P-20)."""
+
+    id: str
+    label: str
+    description: str = ""
+    instructions: str = Field(
+        default="", description="What the agent is told in every run with this profile"
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="The model it runs on; a mode's model wins over it",
+    )
+    starters: List[AppStarterSpec] = Field(
+        default_factory=list,
+        description="Its first messages, in place of the application's",
+    )
+
+
+class AppStarterTranslationSpec(BaseModel):
+    """A starter in another language (LOOP P-26)."""
+
+    label: str = ""
+    message: str = ""
+
+
+class AppFieldTranslationSpec(BaseModel):
+    """A field of the settings in another language (LOOP P-26)."""
+
+    title: str = ""
+    description: str = ""
+    options: Dict[str, str] = Field(
+        default_factory=dict, description="What each value reads as, by the value"
+    )
+
+
+class AppOptionTranslationSpec(BaseModel):
+    """An option of a mode in another language (LOOP P-26)."""
+
+    label: str = ""
+    description: str = ""
+
+
+class AppModeTranslationSpec(BaseModel):
+    """A mode in another language (LOOP P-26)."""
+
+    label: str = ""
+    options: Dict[str, AppOptionTranslationSpec] = Field(default_factory=dict)
+
+
+class AppProfileTranslationSpec(BaseModel):
+    """A profile in another language (LOOP P-26)."""
+
+    label: str = ""
+    description: str = ""
+
+
+class AppTranslationSpec(BaseModel):
+    """What a person reads of an application in another language (LOOP P-26)."""
+
+    name: str = ""
+    description: str = ""
+    welcome: str = ""
+    starters: Dict[str, AppStarterTranslationSpec] = Field(
+        default_factory=dict, description="By the starter's label"
+    )
+    categories: Dict[str, str] = Field(default_factory=dict)
+    settings: Dict[str, AppFieldTranslationSpec] = Field(default_factory=dict)
+    commands: Dict[str, str] = Field(default_factory=dict)
+    modes: Dict[str, AppModeTranslationSpec] = Field(default_factory=dict)
+    profiles: Dict[str, AppProfileTranslationSpec] = Field(default_factory=dict)
 
 
 class AppSurfaceSpec(BaseModel):
@@ -2123,6 +2355,140 @@ class AppSurfaceSpec(BaseModel):
     composed_at: str = Field(default="")
 
 
+class AppVoiceSpec(BaseModel):
+    """An application's voice (VOICE.md VO-41): off unless said.
+
+    What is said becomes a message and what is heard is the answer the
+    conversation shows; `voice` is an id of the voice catalogue
+    (`agent_runtimes.specs.voices`), `language` BCP 47.
+    """
+
+    enabled: bool = False
+    input: str = Field(
+        default="push_to_talk", description="`off`, `push_to_talk` or `hands_free`"
+    )
+    output: str = Field(
+        default="on_request", description="`off`, `on_request` or `always`"
+    )
+    voice: str = Field(default="", description="A voice of the voice catalogue")
+    language: str = Field(default="", description="BCP 47; the person's when unsaid")
+    where: str = Field(default="auto", description="`auto`, `device` or `server`")
+
+    @property
+    def speaks(self) -> bool:
+        """Whether its answers may be heard."""
+        return self.enabled and self.output != "off"
+
+
+class AppUploadKindSpec(BaseModel):
+    """A kind of file a person may send, and how large (LOOP P-21)."""
+
+    type: str = Field(
+        ...,
+        description="A media type, a family of them (`image/*`) or an extension (`.csv`)",
+    )
+    max_mb: float = Field(
+        default=10, description="The largest file of this kind, in MB"
+    )
+
+
+class AppUploadsSpec(BaseModel):
+    """What a person may send in the composer without being asked (LOOP P-21)."""
+
+    kinds: List[AppUploadKindSpec] = Field(default_factory=list)
+    max_files: int = Field(
+        default=5, description="The most files sent with one message"
+    )
+
+
+class AppCustomComponentSpec(BaseModel):
+    """A component its developer wrote (LOOP P-17), of one application only.
+
+    Reviewed as the catalog's own — its properties a JSON Schema, what it
+    shows and sends bindings — and drawn in a sandboxed frame of no origin
+    from the built ES module at ``source``.
+    """
+
+    name: str = Field(..., description="Its name on a surface (`Gauge`)")
+    description: str = Field(..., description="What it is for, in a sentence")
+    props: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="Its properties: the JSON Schema of an object",
+    )
+    shows: List[str] = Field(
+        default_factory=list, description="What it shows: bindings"
+    )
+    sends: List[str] = Field(
+        default_factory=list, description="What it sends back: bindings"
+    )
+    source: str = Field(
+        ...,
+        description=(
+            "Its built ES module: an address, or a file of the application's "
+            "folder served from its package (LOOP P-29)"
+        ),
+    )
+    integrity: str = Field(
+        default="", description="Its Subresource Integrity hash (`sha384-…`)"
+    )
+    height: int = Field(default=240, description="Its height on the page, in pixels")
+    example: Optional[Dict[str, Any]] = Field(
+        default=None, description="A configuration its schema accepts"
+    )
+
+    def catalog_entry(self, version: str) -> ComponentSpec:
+        """It as the catalog lists a component (LOOP C-13)."""
+        return ComponentSpec(
+            id=self.name,
+            name=self.name,
+            description=self.description,
+            category="custom",
+            emoji="\N{JIGSAW PUZZLE PIECE}",
+            version=version,
+            standard=False,
+            properties=self.props,
+            bindings=ComponentBindingsSpec(shows=self.shows, sends=self.sends),
+            events=["send"] if self.sends else [],
+            example=self.example,
+        )
+
+
+class AppPageOutputSpec(BaseModel):
+    """One thing a widget's page shows for its inputs (LOOP P-05)."""
+
+    name: str = Field(..., description="Where the page shows it: `/outputs/<name>`")
+    title: str = Field(default="", description="What a person reads above it")
+    component: str = Field(
+        default="Text",
+        description=(
+            "`Text`, `Image`, `Table` or `Chart`, or a component of the "
+            "application's own (LOOP P-17)"
+        ),
+    )
+    props: Dict[str, Any] = Field(
+        default_factory=dict, description="The component's other properties"
+    )
+
+
+class AppPageSpec(BaseModel):
+    """A widget's page written in its code (LOOP P-05): `@app.page`."""
+
+    function: str = Field(..., description="The function of its code that runs it")
+    inputs: Dict[str, Any] = Field(
+        ..., description="The JSON Schema of a form: its inputs, by name"
+    )
+    inputs_ui: Optional[Dict[str, Any]] = Field(
+        default=None, description="How its inputs are drawn: a uiSchema by field name"
+    )
+    outputs: List[AppPageOutputSpec] = Field(
+        default_factory=list, description="What it shows, each at `/outputs/<name>`"
+    )
+    live: bool = Field(
+        default=True,
+        description="Whether it runs again as an input changes; else on Run",
+    )
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -2130,19 +2496,158 @@ class AppInterfaceSpec(BaseModel):
     accent: str = Field(default="green", description="The application's one colour")
     welcome: str = Field(default="")
     starters: List[AppStarterSpec] = Field(default_factory=list)
-    settings: List[AppSettingSpec] = Field(default_factory=list)
+    commands: List[AppCommandSpec] = Field(
+        default_factory=list, description="Slash commands picked in the composer"
+    )
+    modes: List[AppModeSpec] = Field(
+        default_factory=list, description="Mode switches in the composer"
+    )
+    profiles: List[AppProfileSpec] = Field(
+        default_factory=list,
+        description="Several assistants in one application, picked before the conversation (LOOP P-20)",
+    )
+    settings: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "What the user may set: the JSON Schema of a form, an object of "
+            "named fields (LOOP C-16); none when unsaid"
+        ),
+    )
+    settings_ui: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="How the settings' fields are drawn: a uiSchema by field name (LOOP P-20)",
+    )
+    language: str = Field(
+        default="en",
+        description="The language its own words are in, BCP 47 (LOOP P-26)",
+    )
+    translations: Dict[str, AppTranslationSpec] = Field(
+        default_factory=dict,
+        description="Its words in other languages, by BCP 47 tag (LOOP P-26)",
+    )
+    uploads: Optional[AppUploadsSpec] = Field(
+        default=None,
+        description=(
+            "What a person may send in the composer without being asked, by "
+            "kind and size (LOOP P-21); none when unsaid: no file with a message"
+        ),
+    )
     components: List[str] = Field(
         default_factory=list,
         description="The components of the catalog the surface may use",
     )
+    custom_components: List[AppCustomComponentSpec] = Field(
+        default_factory=list,
+        description="Components its developer wrote (LOOP P-17), of it alone",
+    )
     surface: Optional[AppSurfaceSpec] = None
+    page: Optional[AppPageSpec] = Field(
+        default=None,
+        description=(
+            "A widget's page written in its code (LOOP P-05): its inputs a form, "
+            "its outputs values, run again as an input changes"
+        ),
+    )
+    assistant: Optional[str] = Field(
+        default=None,
+        description=(
+            "The character its floating assistant shows, by the id a plugin "
+            "contributes it under (`paperclip`, `wizard`, `cat`, `eyes` are "
+            "Datalayer's); the paper clip when unsaid"
+        ),
+    )
+    balloon: Optional[Literal["history", "current"]] = Field(
+        default=None,
+        description=(
+            "How its floating assistant's balloon shows the conversation: "
+            "`history` (every message, the composer last) or `current` (only "
+            "what it says or does now); the page's own when unsaid"
+        ),
+    )
+    voice: AppVoiceSpec = Field(
+        default_factory=AppVoiceSpec,
+        description="Its voice: whether it listens and speaks, with which voice (VO-41)",
+    )
+    outputs: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The formats its answers come in, by media type, words first "
+            "(`text/markdown`, then `application/x-ipynb+json` for a Jupyter "
+            "notebook): over A2A, its agent card's output modes; plain text "
+            "alone when empty"
+        ),
+    )
+
+
+class AppTestFileSpec(BaseModel):
+    """A text file a test gives with what it asks, as a person gives one on its page."""
+
+    name: str
+    text: str
+
+
+class AppTestTurnSpec(BaseModel):
+    """One turn of a test's conversation: what the person says, the option of
+    a choice they pick, or an action of its code they press, with its payload."""
+
+    say: str = ""
+    choose: str = ""
+    press: str = ""
+    payload: Dict[str, Any] = Field(default_factory=dict)
+
+    def in_words(self) -> str:
+        """The turn as a person reads it in a test's conversation."""
+        if self.say.strip():
+            return f"The person says: {self.say.strip()}"
+        if self.choose.strip():
+            return f"The person chooses: {self.choose.strip()}"
+        given = json.dumps(self.payload, ensure_ascii=False) if self.payload else ""
+        return f"The person presses {self.press}" + (f" with {given}" if given else "")
 
 
 class AppTestCaseSpec(BaseModel):
-    """An example of what an application should do, in plain words."""
+    """An example of what an application should do, in plain words: one
+    message (``ask``), or a short conversation (``turns``) judged whole."""
 
-    ask: str
+    ask: str = Field(
+        default="", description="What it is asked, in one message; none with turns"
+    )
+    turns: List[AppTestTurnSpec] = Field(
+        default_factory=list,
+        description=(
+            "The conversation it is had in, turn by turn, in place of one message"
+        ),
+    )
     expect: str
+    code: str = Field(
+        default="",
+        description=(
+            "The function of its code that decides the case, by name (LOOP P-06); "
+            "`expect` says it in words"
+        ),
+    )
+    files: List[AppTestFileSpec] = Field(
+        default_factory=list,
+        description="Text files it is given with what it is asked, in the message after it",
+    )
+
+    def in_words(self) -> str:
+        """What the test asks, as a person reads it: its message, or its turns."""
+        if not self.turns:
+            return self.ask
+        return "\n".join(turn.in_words() for turn in self.turns)
+
+
+class AppVerifiedSpec(BaseModel):
+    """What was verified, and how, each in a sentence (LOOP E-14)."""
+
+    live: List[str] = Field(default_factory=list, description="What was tried live")
+    recorded: List[str] = Field(
+        default_factory=list, description="What runs on recorded data"
+    )
+    unverified: List[str] = Field(
+        default_factory=list, description="What is not verified yet"
+    )
 
 
 class AppTestsSpec(BaseModel):
@@ -2153,6 +2658,7 @@ class AppTestsSpec(BaseModel):
     )
     evalset: str = Field(default="")
     cases: List[AppTestCaseSpec] = Field(default_factory=list)
+    verified: AppVerifiedSpec = Field(default_factory=AppVerifiedSpec)
 
 
 class AppRecordSpec(BaseModel):
@@ -2161,14 +2667,43 @@ class AppRecordSpec(BaseModel):
     keep_for: str = Field(default="1_years")
     retention_days: int = Field(default=365, description="The retention, as days")
     include: List[str] = Field(default_factory=list)
+    suggest_tests: bool = Field(
+        default=False,
+        description="Whether its conversations may be used to suggest tests (LOOP V-16)",
+    )
+
+
+class AppCodeCheckSpec(BaseModel):
+    """A check written in an application's code (LOOP P-06): `@app.check`."""
+
+    name: str = Field(..., description="The function of its code that checks")
+    on: str = Field(..., description="`answer` or `tool_call`: where it runs")
+    description: str = Field(..., description="What it checks, in a sentence")
 
 
 class AppChecksSpec(BaseModel):
-    """Optional checks from the catalogue."""
+    """Optional checks from the catalogue, and its code's own."""
 
     guards: List[str] = Field(default_factory=list)
     gates: List[str] = Field(default_factory=list)
     track: str = Field(default="")
+    code: List[AppCodeCheckSpec] = Field(
+        default_factory=list, description="Checks written in its code (LOOP P-06)"
+    )
+
+
+class AppToolSpec(BaseModel):
+    """A tool of an application's own, written in its code (LOOP P-06): `@app.tool`."""
+
+    name: str = Field(..., description="What the agent calls, and a rule names")
+    description: str = Field(..., description="What it does, for the agent")
+    parameters: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="The JSON Schema of its arguments",
+    )
+    does: List[str] = Field(
+        ..., description="What it does, by class of action: what the rules decide"
+    )
 
 
 class AppHostedSpec(BaseModel):
@@ -2178,11 +2713,50 @@ class AppHostedSpec(BaseModel):
     slug: str = Field(default="")
 
 
+class AppHostFunctionSpec(BaseModel):
+    """A function of the host page the application's agent may call (LOOP D-10)."""
+
+    name: str = Field(..., description="Called as the tool `host_<name>`")
+    description: str = Field(..., description="What it does, for the agent")
+    parameters: Dict[str, Any] = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        description="Its arguments, as a JSON Schema object",
+    )
+
+
+class AppHostBridgeSpec(BaseModel):
+    """What the host page and an embedded application say to each other (LOOP D-10, D-21)."""
+
+    context: List[str] = Field(
+        default_factory=list,
+        description="The host's values it reads with `host_context`: `user`, `page`, its own",
+    )
+    functions: List[AppHostFunctionSpec] = Field(default_factory=list)
+    user: str = Field(
+        default="claimed",
+        description=(
+            "Who its user is: `claimed`, what the page says; `signed`, only a token the "
+            "host's server signed with the deployment's secret (LOOP D-21)"
+        ),
+    )
+
+    @property
+    def signed_user(self) -> bool:
+        """Whether a session is opened only for a user the host's server signed (D-21)."""
+        return self.user == "signed"
+
+
 class AppEmbeddedSpec(BaseModel):
     """An application inside another product's page."""
 
-    mode: str = Field(default="inline", description="`inline`, `bubble` or `panel`")
+    mode: str = Field(
+        default="inline", description="`inline`, `bubble`, `panel` or `assistant`"
+    )
     origins: List[str] = Field(default_factory=list)
+    host: Optional[AppHostBridgeSpec] = Field(
+        default=None,
+        description="What the host page passes it, the functions it offers, and who its user is",
+    )
 
 
 class AppDeploymentSpec(BaseModel):
@@ -2204,7 +2778,7 @@ class AppTriggerSpec(BaseModel):
 
 
 class AppCriterionSpec(BaseModel):
-    """What an alternative is judged on."""
+    """What an alternative is weighed on."""
 
     name: str
     kind: str = Field(default="metric")
@@ -2230,7 +2804,30 @@ class AppDecisionSpec(BaseModel):
     criteria: List[AppCriterionSpec] = Field(default_factory=list)
     min_confidence: float = Field(default=0)
     scenarios: List[AppScenarioSpec] = Field(default_factory=list)
-    judgment_model: str = Field(default="")
+    decision_model: str = Field(default="")
+
+
+class AppSampleDocumentSpec(BaseModel):
+    """A document of its `contents`, as Datalayer publishes it with the application."""
+
+    name: str
+    file: str
+    text: str
+
+
+class AppSampleAlternativeSpec(BaseModel):
+    """An alternative a decision is tried on, and what is known about it."""
+
+    name: str
+    evidence: str
+    metrics: Dict[str, float] = Field(default_factory=dict)
+
+
+class AppSamplesSpec(BaseModel):
+    """What it is tried on before it is anybody's (STUDIO E-06, E-11): read only."""
+
+    documents: List[AppSampleDocumentSpec] = Field(default_factory=list)
+    alternatives: List[AppSampleAlternativeSpec] = Field(default_factory=list)
 
 
 class AppSpec(BaseModel):
@@ -2258,7 +2855,11 @@ class AppSpec(BaseModel):
     instructions: str = Field(default="")
     model: str = Field(default="")
     skills: List[str] = Field(default_factory=list)
-    tools: List[str] = Field(default_factory=list)
+    backend_tools: List[str] = Field(default_factory=list)
+    tools: List[AppToolSpec] = Field(
+        default_factory=list,
+        description="Tools of its own, written in its code (LOOP P-06)",
+    )
     context: List[str] = Field(
         default_factory=list, description="The Frames it works under"
     )
@@ -2278,17 +2879,43 @@ class AppSpec(BaseModel):
     memory: str = Field(default="")
     notifications: List[str] = Field(default_factory=list)
     decision: Optional[AppDecisionSpec] = None
+    samples: AppSamplesSpec = Field(
+        default_factory=AppSamplesSpec,
+        description="What it is tried on before it is anybody's, published with it",
+    )
     setup: List[str] = Field(
         default_factory=list,
         description="What it names that is not enabled today, in sentences",
     )
     enabled: bool = Field(default=True, description="Whether it is offered today")
+    unavailable_because: str = Field(
+        default="",
+        description=(
+            "Why it is not offered today, in a sentence its page shows: "
+            "said when `enabled` is false, and only then"
+        ),
+    )
     tags: List[str] = Field(default_factory=list)
     icon: Optional[str] = Field(default=None, description="Icon identifier")
     emoji: str = Field(
         default="\U0001f440",
         description="Its face: one emoji, shown wherever the application appears",
     )
+    avatar: str = Field(
+        default="",
+        description="Its avatar, by name, from the drawings people choose theirs from; its emoji when unsaid",
+    )
+    banner: str = Field(
+        default="",
+        description="Its banner, by name, from the set people choose theirs from; the one its id seeds when unsaid",
+    )
+
+    def tool(self, name: str) -> Optional[AppToolSpec]:
+        """Find its own tool of that name (LOOP P-06), or None."""
+        for tool in self.tools:
+            if tool.name == name:
+                return tool
+        return None
 
 
 class TeamSubagentspec(BaseModel):
@@ -2312,6 +2939,16 @@ class TeamSubagentspec(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TeamLinkSpec(BaseModel):
+    """One member asking another directly, over a protocol (agentspecs `TeamLink`)."""
+
+    member: str = Field(..., description="The member asked, by its id in the team")
+    over: Literal["a2a", "mcp"] = Field(
+        default="a2a",
+        description="The protocol: `a2a` to an agent or an application, `mcp` to a server member",
+    )
+
+
 class TeamAgentspec(BaseModel):
     """Specification for an agent within a team."""
 
@@ -2324,6 +2961,29 @@ class TeamAgentspec(BaseModel):
             "names one inherits its model, tools, prompt and subagents; the "
             "fields below then say what is different about it in this team."
         ),
+    )
+    app: str = Field(
+        default="",
+        description=(
+            "Application catalogue reference, in place of `ref`: the member is "
+            "that application, with its agent, connections, rules and interface"
+        ),
+    )
+    server: str = Field(
+        default="",
+        description=(
+            "MCP server catalogue reference, in place of `ref` and `app`: the "
+            "member is that server, a system of the scene the others reach over "
+            "MCP (LOOP A-04)"
+        ),
+    )
+    runs_in: Optional[Literal["browser", "runtime"]] = Field(
+        default=None,
+        description="Where its loop turns: in the person's browser, or on a runtime",
+    )
+    talks_to: List["TeamLinkSpec"] = Field(
+        default_factory=list,
+        description="The members it asks directly while it works, and over what",
     )
     role: str = Field(
         default="contributor",
@@ -2418,6 +3078,13 @@ class TeamContextSpec(BaseModel):
             "thread, but only its own turns are sent)"
         ),
     )
+    frames: list[str] = Field(
+        default_factory=list,
+        description=(
+            "The Frames every member works under, in order, `id` or `id:version` "
+            "(LOOP A-04): the team's shared context"
+        ),
+    )
 
     model_config = {"populate_by_name": True}
 
@@ -2434,6 +3101,10 @@ class TeamSupervisorSpec(BaseModel):
     ref: str = Field(
         default="",
         description="Agent catalogue reference, `id` or `id:version`",
+    )
+    app: str = Field(
+        default="",
+        description="Application catalogue reference, in a team of applications",
     )
     model: str = Field(
         default="", description="Model id, overriding the referenced agent's"
@@ -2616,6 +3287,10 @@ class TeamSpec(BaseModel):
         description="Instructions for routing tasks between agents",
         alias="routingInstructions",
     )
+    entry: str = Field(
+        default="",
+        description="The member a person talks to, by its id: the team's front door",
+    )
     suggestions: list[TeamSuggestionSpec] = Field(
         default_factory=list,
         description=(
@@ -2658,3 +3333,281 @@ class TeamSpec(BaseModel):
     )
 
     model_config = {"populate_by_name": True}
+
+
+# ============================================================================
+# Scenes (agentspecs `scenes`, `schema: loop.scene/v1`, LOOP A-11)
+# ============================================================================
+
+
+class ScenePersonaSpec(BaseModel):
+    """How a member appears to the audience, in a scene."""
+
+    name: str = Field(default="", description="The name the audience sees")
+    face: str = Field(default="", description="One emoji, its face on stage")
+    line: str = Field(default="", description="One line of *who I am here*")
+
+
+class SceneCastMemberSpec(BaseModel):
+    """A member of the cast: a member of the team, with its persona and its brief."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    member: str = Field(..., description="Its id in the team")
+    app: str = Field(default="", description="The application it is, `id:version`")
+    ref: str = Field(
+        default="", description="The agent it is, when it is not an application"
+    )
+    server: str = Field(
+        default="", description="The MCP server it is, a system of the scene"
+    )
+    role: Optional[str] = Field(
+        default=None, description="What it is for, structurally"
+    )
+    runs_in: Optional[Literal["browser", "runtime"]] = Field(
+        default=None, description="Where its loop turns", alias="runsIn"
+    )
+    talks_to: List[TeamLinkSpec] = Field(
+        default_factory=list, description="Whom it asks, and over what", alias="talksTo"
+    )
+    persona: ScenePersonaSpec = Field(default_factory=ScenePersonaSpec)
+    brief: str = Field(default="", description="What it is for in this scene")
+
+
+class SceneSystemSpec(BaseModel):
+    """A system on stage: an MCP server the cast reaches."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    server: str = Field(..., description="The server, `id` or `id:version`")
+    shown_as: str = Field(
+        default="", alias="as", description="The name the audience reads"
+    )
+    holds: str = Field(default="", description="What it holds in this scene")
+
+
+class SceneSettingSpec(BaseModel):
+    """The stage: what is on it, and what the audience is told."""
+
+    systems: List[SceneSystemSpec] = Field(default_factory=list)
+    frames: List[str] = Field(
+        default_factory=list, description="The Frames it plays under"
+    )
+    contents: List[str] = Field(default_factory=list, description="The data in play")
+    period: str = Field(default="", description="When the scene plays, in words")
+    language: str = Field(default="", description="The language it plays in")
+    assumes: str = Field(
+        default="", description="What the audience is told before it starts"
+    )
+
+
+class SceneCueSpec(BaseModel):
+    """What starts a beat: one of the three is said."""
+
+    say: str = Field(default="", description="An opener the audience may say")
+    schedule: str = Field(default="")
+    event: str = Field(default="")
+
+
+class SceneMoveSpec(BaseModel):
+    """One member asking another over a protocol, or answering the audience."""
+
+    who: str = Field(..., description="The member moving")
+    asks: str = Field(
+        default="", description="Whom; empty when it answers the audience"
+    )
+    over: Optional[Literal["a2a", "mcp"]] = Field(default=None)
+    what: str = Field(default="", description="What it asks for, or answers, in words")
+    tool: str = Field(default="", description="Over mcp: the tool, by name or pattern")
+    does: Optional[str] = Field(
+        default=None, description="The kind of tool: read, write, …"
+    )
+    answers: Optional[
+        Literal[
+            "words",
+            "table",
+            "chart",
+            "notebook",
+            "map",
+            "file",
+            "image",
+            "sources",
+            "choice",
+            "approval",
+        ]
+    ] = Field(default=None, description="What kind of answer comes back")
+
+
+class SceneBranchSpec(BaseModel):
+    """What a beat does instead when a decision holds."""
+
+    decision: str = Field(...)
+    expect: str = Field(default="")
+    moves: List[SceneMoveSpec] = Field(default_factory=list)
+    then: str = Field(default="", description="The beat that follows, by id")
+
+
+class SceneBeatSpec(BaseModel):
+    """One beat of the script."""
+
+    id: str = Field(...)
+    cue: SceneCueSpec = Field(...)
+    narration: str = Field(default="", description="One line for the audience")
+    moves: List[SceneMoveSpec] = Field(default_factory=list)
+    expect: str = Field(..., description="What should happen, in words")
+    shows: List[str] = Field(default_factory=list, description="What the page shows")
+    pace: Optional[Literal["quick", "steady", "slow"]] = Field(default=None)
+    branch: List[SceneBranchSpec] = Field(default_factory=list)
+
+
+class ScenePositionSpec(BaseModel):
+    """Where a member stands: fractions of the box."""
+
+    x: float = Field(...)
+    y: float = Field(...)
+
+
+class SceneTranscriptSpec(BaseModel):
+    """What the transcript shows."""
+
+    tools: bool = Field(default=True)
+    narration: bool = Field(default=True)
+    withhold: List[str] = Field(default_factory=list, description="Words withheld")
+
+
+class SceneStageSpec(BaseModel):
+    """Directions for the page."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    positions: Dict[str, ScenePositionSpec] = Field(default_factory=dict)
+    opens_first: str = Field(
+        default="", alias="opensFirst", description="Whose balloon opens first"
+    )
+    transcript: SceneTranscriptSpec = Field(default_factory=SceneTranscriptSpec)
+    inspectors: List[str] = Field(default_factory=list)
+    rests_after: str = Field(
+        default="",
+        alias="restsAfter",
+        description="How long the scene plays before it rests",
+    )
+    pace: Literal["quick", "steady", "slow"] = Field(default="steady")
+
+
+class SceneAudienceSpec(BaseModel):
+    """Who may watch and ask, and what an ask may cost."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    who: Literal["visitors", "signed-in", "nobody"] = Field(default="signed-in")
+    ceiling_per_ask: float = Field(
+        default=0, alias="ceilingPerAsk", description="In USD"
+    )
+    asks_a_day: int = Field(default=0, alias="asksADay")
+
+
+class SceneRehearsalBeatSpec(BaseModel):
+    """What a beat's transcript must look like."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    beat: str = Field(...)
+    lines: List[str] = Field(default_factory=list, description="The shape, in order")
+    must_say: List[str] = Field(default_factory=list, alias="mustSay")
+    must_not_say: List[str] = Field(default_factory=list, alias="mustNotSay")
+    within: str = Field(default="")
+
+
+class SceneRecordingSpec(BaseModel):
+    """A transcript recorded once, played when the scene cannot play live (LOOP H-08)."""
+
+    path: str = Field(...)
+    taken: str = Field(default="")
+    note: str = Field(default="")
+
+
+class SceneRehearsalSpec(BaseModel):
+    """The scene's tests: a passing rehearsal is the gallery's *Live*."""
+
+    beats: List[SceneRehearsalBeatSpec] = Field(default_factory=list)
+    within: str = Field(default="")
+    recording: Optional[SceneRecordingSpec] = Field(default=None)
+    verified: AppVerifiedSpec = Field(default_factory=AppVerifiedSpec)
+
+
+class ScenePlayedBeatSpec(BaseModel):
+    """One beat of a rehearsal that was played: its verdict, in the Validate tab's words."""
+
+    beat: str = Field(...)
+    state: str = Field(..., description="`passed`, `failed` or `not_run`")
+    says: str = Field(default="", description="What differed, or why it was not run")
+    seconds: float = Field(default=0.0)
+
+
+class ScenePlayedSpec(BaseModel):
+    """What came of the last rehearsal `loop scenes rehearse --cloud` played (LOOP A-14).
+
+    Kept beside the specs in ``<id>/rehearsal.json``, written by the command
+    and never by hand. A scene is *Live* when it ``passed``; one that did not
+    says so with ``says``.
+    """
+
+    at: str = Field(..., description="When it was played, ISO 8601")
+    where: str = Field(default="on Datalayer")
+    passed: bool = Field(...)
+    says: str = Field(..., description="The verdict in one sentence")
+    beats: List[ScenePlayedBeatSpec] = Field(default_factory=list)
+    runtime: str = Field(default="", description="The agent-runtimes that played it")
+
+
+class SceneDeploymentSpec(BaseModel):
+    """Where the scene plays."""
+
+    account: str = Field(default="")
+    page: str = Field(default="", description="The page it plays on")
+    addresses: Dict[str, str] = Field(
+        default_factory=dict,
+        description="For each member on a runtime, the variable its address is read from",
+    )
+
+
+class SceneSpec(BaseModel):
+    """A scene (`agentspecs/scenes`): a team, staged.
+
+    The team says who is on stage; the scene says what happens there. In the
+    generated catalogue the cast is resolved — every member of the team, its
+    persona filled from its application — the `entry` said, and what the
+    scene names that is not enabled carried as `setup`.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_: str = Field(
+        default="loop.scene/v1", alias="schema", description="The version of the spec"
+    )
+    id: str = Field(..., description="Unique scene identifier")
+    version: str = Field(default="0.0.1")
+    name: str = Field(..., description="The tab's name")
+    description: str = Field(default="")
+    tags: List[str] = Field(default_factory=list)
+    icon: str = Field(default="people")
+    emoji: str = Field(
+        default="👀", description="Its face: one emoji, drawn before its name"
+    )
+    team: str = Field(default="", description="The team it stages, `id:version`")
+    entry: str = Field(default="", description="The member the audience talks to")
+    cast: List[SceneCastMemberSpec] = Field(default_factory=list)
+    setting: SceneSettingSpec = Field(default_factory=SceneSettingSpec)
+    script: List[SceneBeatSpec] = Field(default_factory=list)
+    stage: SceneStageSpec = Field(default_factory=SceneStageSpec)
+    audience: SceneAudienceSpec = Field(default_factory=SceneAudienceSpec)
+    rehearsal: SceneRehearsalSpec = Field(default_factory=SceneRehearsalSpec)
+    deployment: SceneDeploymentSpec = Field(default_factory=SceneDeploymentSpec)
+    setup: List[str] = Field(
+        default_factory=list,
+        description="What it names that is not enabled, in sentences",
+    )
+    played: Optional[ScenePlayedSpec] = Field(
+        default=None,
+        description="The last rehearsal played on Datalayer, what *Live* is read from",
+    )

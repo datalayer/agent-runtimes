@@ -28,13 +28,14 @@ from typing import Any, AsyncGenerator
 
 from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.routing import Mount
 
+from ._version import __version__
 from .mcp import (
     ensure_config_mcp_toolsets_event,
     get_mcp_lifecycle_manager,
@@ -55,6 +56,7 @@ from .routes import (
     agent_node_router,
     agents_router,
     agui_router,
+    app_plugins_router,
     apps_router,
     checkpoints_router,
     configure_router,
@@ -81,6 +83,7 @@ from .routes import (
     vercel_ai_router,
 )
 from .routes.agents import set_api_prefix
+from .routes.computer import router as computer_router
 from .specs.agents import get_agent_spec
 
 # Load environment variables from .env file
@@ -489,7 +492,7 @@ async def _create_and_register_cli_agent(
     if skills_prompt_section:
         system_prompt = system_prompt + "\n\n" + skills_prompt_section
 
-    tool_ids = list(agent_spec.tools or [])
+    tool_ids = list(agent_spec.backend_tools or [])
     capabilities = build_capabilities_from_agent_spec(
         agent_spec, agent_id=agent_id, model=model
     )
@@ -550,6 +553,13 @@ async def _create_and_register_cli_agent(
             agent_id,
         )
 
+    # Credentials are never shown to the model (LOOP R-19): last, so it
+    # wraps every tool call innermost and reads every request last.
+    from .guardrails.credentials import credentials_withheld
+
+    agent_kwargs["capabilities"] = credentials_withheld(
+        list(agent_kwargs.get("capabilities") or [])
+    )
     try:
         resolved_model = resolve_model_for_inference_provider(
             model,
@@ -836,6 +846,9 @@ async def _create_and_register_cli_agent(
 
     _agentspecs[agent_id] = {
         "id": getattr(agent_spec, "id", agent_id),
+        # The library spec it was created from: its model_additionals are
+        # the models it may be switched to (offered_model_ids).
+        "agent_spec_id": agent_spec.id,
         "version": getattr(agent_spec, "version", "0.0.1"),
         "name": agent_spec.name,
         "description": agent_spec.description,
@@ -853,12 +866,14 @@ async def _create_and_register_cli_agent(
         "enable_codemode": enable_codemode,
         "enable_skills": len(skills) > 0,
         "skills": list(skills) if skills else [],
-        "tools": list(agent_spec.tools) if agent_spec.tools else [],
+        "backend_tools": list(agent_spec.backend_tools)
+        if agent_spec.backend_tools
+        else [],
         "frontend_tools": list(getattr(agent_spec, "frontend_tools", []) or []),
         "icon": getattr(agent_spec, "icon", None),
         "emoji": getattr(agent_spec, "emoji", None),
         "color": getattr(agent_spec, "color", None),
-        "suggestions": list(getattr(agent_spec, "suggestions", []) or []),
+        "suggestions": [item.model_dump() for item in agent_spec.suggestions],
         "welcome_message": getattr(agent_spec, "welcome_message", None),
         "welcome_notebook": getattr(agent_spec, "welcome_notebook", None),
         "welcome_document": getattr(agent_spec, "welcome_document", None),
@@ -890,8 +905,13 @@ async def _create_and_register_cli_agent(
             # Dynamically mount AG-UI route
             agui_app = get_agui_app(agent_id)
             if agui_app and app:
+                from .routes.agui import AGUIDispatch, is_agui_mounted
+
                 mount_path = f"{api_prefix}/ag-ui/{agent_id}"
-                app.mount(mount_path, agui_app, name=f"agui-{agent_id}")
+                if not is_agui_mounted(app.routes, mount_path):
+                    app.mount(
+                        mount_path, AGUIDispatch(agent_id), name=f"agui-{agent_id}"
+                    )
                 logger.info(f"Dynamically mounted AG-UI route: {mount_path}")
         except Exception as e:
             logger.warning(f"Could not register with AG-UI: {e}")
@@ -1013,7 +1033,8 @@ class ServerConfig(BaseModel):
 
     title: str = "Agent Runtimes Server"
     description: str = "FastAPI server for agent-runtimes with ACP protocol support"
-    version: str = "0.1.0"
+    #: What ``/api/v1/runtime/status`` says it runs: the package's version.
+    version: str = __version__
 
     # CORS settings
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
@@ -1087,6 +1108,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         is_reload_parent = _is_reload_parent_process()
         logger.info(f"Reload parent check: {is_reload_parent}")
+
+        # ---- The models ai-inference serves, asked once ----
+        # Before any agent is created: a model it does not serve is refused,
+        # and the config the chat and the CLI read offers only those it does.
+        if not is_reload_parent:
+            from .models.offered import load_inference_models
+
+            await load_inference_models()
 
         # Check if config MCP servers should be skipped (--no-config-mcp-servers CLI flag)
         no_config_mcp_servers = (
@@ -1323,9 +1352,14 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         # To manually register the demo agent, run: python -m agent_runtimes.examples.demo.demo_agent
 
         # Add AG-UI mounts after agents are registered
+        from .routes.agui import is_agui_mounted
+
         for mount in get_agui_mounts():
             # Mount under /api/v1/ag-ui/{agent_id}
-            full_mount = Mount(f"{config.api_prefix}/ag-ui{mount.path}", app=mount.app)
+            full_path = f"{config.api_prefix}/ag-ui{mount.path}"
+            if is_agui_mounted(app.routes, full_path):
+                continue
+            full_mount = Mount(full_path, app=mount.app)
             app.routes.append(full_mount)
             logger.info(f"Mounted AG-UI route: {config.api_prefix}/ag-ui{mount.path}")
 
@@ -1356,7 +1390,20 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         else:
             logger.info("Agent Node mode disabled (use --node to enable)")
 
+        # The visitors' runtime (LOOP R-30): the examples it keeps warm, their
+        # agents made through its own API once it listens.
+        from .loop.apps.visitors import loopback_url, visitors_runtime, warm
+
+        _visitors_task = (
+            asyncio.create_task(warm(loopback_url()), name="loop-visitors-warm")
+            if visitors_runtime()
+            else None
+        )
+
         yield
+
+        if _visitors_task is not None and not _visitors_task.done():
+            _visitors_task.cancel()
 
         if _node_enabled:
             _agent_node_stop_event.set()
@@ -1432,6 +1479,11 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         except Exception as e:
             logger.warning(f"Error stopping sandboxes during shutdown: {e}")
 
+        # Stop the browsers of applications' computers (LOOP R-23).
+        from .loop.apps.browser import close_browsers
+
+        await close_browsers()
+
         logger.info("Shutting down agent-runtimes server...")
 
     app = FastAPI(
@@ -1456,6 +1508,26 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         expose_headers=["*"],  # Expose all headers to the client
     )
 
+    # The visitors' runtime answers anybody but itself only on the
+    # application routes and the chat's reads of its models (LOOP R-30).
+    from .loop.apps.visitors import path_answered, visitors_runtime
+
+    if visitors_runtime():
+        from fastapi.responses import JSONResponse
+
+        from .loop.apps.callers import is_loopback
+
+        @app.middleware("http")
+        async def _visitors_reach(request: Request, call_next: Any) -> Any:
+            if path_answered(request.method, request.url.path) or is_loopback(
+                request.client.host if request.client else None
+            ):
+                return await call_next(request)
+            return JSONResponse(
+                {"detail": "This route of the visitors' runtime is its own."},
+                status_code=404,
+            )
+
     # Include routers
     app.include_router(health_router)
     app.include_router(identity_router)  # No prefix - uses /api/v1/identity internally
@@ -1475,7 +1547,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     # the router existed and nothing mounted it.
     app.include_router(history_router, prefix=config.api_prefix)
     app.include_router(loop_router, prefix=config.api_prefix)
+    # Which of an application's plugins this runtime holds, followed by the
+    # page's plugin of the same name (LOOP F-15).
+    app.include_router(app_plugins_router, prefix=config.api_prefix)
     app.include_router(apps_router, prefix=config.api_prefix)
+    # An application's computer, shown where the person is (LOOP R-23).
+    app.include_router(computer_router, prefix=config.api_prefix)
     app.include_router(mcp_router, prefix=config.api_prefix)
     app.include_router(mcp_auth_router, prefix=config.api_prefix)
     app.include_router(mcp_proxy_router, prefix=config.api_prefix)

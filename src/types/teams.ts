@@ -54,6 +54,11 @@ export interface TeamContextSpec {
    * what the team *is*.
    */
   sharing: TeamContextSharing;
+  /**
+   * The Frames every member works under, in order, `id` or `id:version`
+   * (LOOP A-04): the team's shared context, as a Cog names its own.
+   */
+  frames?: string[];
 }
 
 /** How far members may hand work to each other, and to subagents. */
@@ -64,6 +69,14 @@ export interface TeamDelegationSpec {
   allowPeerDelegation: boolean;
   /** Whether members also get the general-purpose subagent. */
   includeGeneralPurpose: boolean;
+}
+
+/** One member asking another directly, over a protocol (agentspecs `TeamLink`). */
+export interface TeamLinkSpec {
+  /** The member asked, by its id in the team. */
+  member: string;
+  /** The protocol: `a2a` to an agent or an application, `mcp` to a server member. */
+  over: 'a2a' | 'mcp';
 }
 
 export interface TeamAgentspec {
@@ -78,6 +91,21 @@ export interface TeamAgentspec {
    * the fields below then say what is different about it in this team.
    */
   ref?: string;
+  /**
+   * Application catalogue reference, in place of `ref`: the member is that
+   * application, with its agent, connections, rules and interface.
+   */
+  app?: string;
+  /**
+   * MCP server catalogue reference, in place of `ref` and `app`: the member
+   * is that server, a system of the scene the others reach over MCP
+   * (LOOP A-04). It asks nobody.
+   */
+  server?: string;
+  /** Where its loop turns: in the person's `browser`, or on a `runtime`. */
+  runsIn?: 'browser' | 'runtime';
+  /** The members it asks directly while it works, and over what. */
+  talksTo?: TeamLinkSpec[];
   /** Structural role: coordinator, initiator, contributor, reviewer, finalizer. */
   role?: string;
   /**
@@ -111,6 +139,8 @@ export interface TeamSupervisorSpec {
   name: string;
   /** Agent catalogue reference, `id` or `id:version`. */
   ref?: string;
+  /** Application catalogue reference, in a team of applications. */
+  app?: string;
   /** Model id, overriding the referenced agent's. */
   model?: string;
   /** What the supervisor is accountable for across the whole run. */
@@ -219,6 +249,8 @@ export interface TeamSpec {
   supervisor: TeamSupervisorSpec;
   /** Instructions for routing tasks between agents */
   routingInstructions?: string;
+  /** The member a person talks to, by its id: the team's front door. */
+  entry?: string;
   /**
    * Openers shown in an empty chat.
    *

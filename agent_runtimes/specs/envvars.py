@@ -28,6 +28,28 @@ ALPHAVANTAGE_API_KEY_SPEC_0_0_1 = EnvvarSpec(
     emoji="🔑",
 )
 
+EARTHDATA_PASSWORD_SPEC_0_0_1 = EnvvarSpec(
+    id="EARTHDATA_PASSWORD",
+    version="0.0.1",
+    name="Earthdata Login Password",
+    description="The password of a NASA Earthdata Login. Read in the code sandbox by the script that the download tool of the Earthdata MCP server writes, to download granules; searching needs none.",
+    registrationUrl="https://urs.earthdata.nasa.gov/users/new",
+    tags=["authentication", "password", "earthdata", "sandbox"],
+    icon="key",
+    emoji="🔑",
+)
+
+EARTHDATA_USERNAME_SPEC_0_0_1 = EnvvarSpec(
+    id="EARTHDATA_USERNAME",
+    version="0.0.1",
+    name="Earthdata Login Username",
+    description="The username of a NASA Earthdata Login. Read in the code sandbox by the script that the download tool of the Earthdata MCP server writes, to download granules; searching needs none.",
+    registrationUrl="https://urs.earthdata.nasa.gov/users/new",
+    tags=["authentication", "username", "earthdata", "sandbox"],
+    icon="key",
+    emoji="🔑",
+)
+
 GITHUB_TOKEN_SPEC_0_0_1 = EnvvarSpec(
     id="GITHUB_TOKEN",
     version="0.0.1",
@@ -140,6 +162,8 @@ TAVILY_API_KEY_SPEC_0_0_1 = EnvvarSpec(
 
 ENVVAR_CATALOG: Dict[str, EnvvarSpec] = {
     "ALPHAVANTAGE_API_KEY": ALPHAVANTAGE_API_KEY_SPEC_0_0_1,
+    "EARTHDATA_PASSWORD": EARTHDATA_PASSWORD_SPEC_0_0_1,
+    "EARTHDATA_USERNAME": EARTHDATA_USERNAME_SPEC_0_0_1,
     "GITHUB_TOKEN": GITHUB_TOKEN_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_ID": GOOGLE_OAUTH_CLIENT_ID_SPEC_0_0_1,
     "GOOGLE_OAUTH_CLIENT_SECRET": GOOGLE_OAUTH_CLIENT_SECRET_SPEC_0_0_1,

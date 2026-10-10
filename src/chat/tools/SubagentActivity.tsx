@@ -129,37 +129,27 @@ export function SubagentActivity({
       : 'accent.fg';
 
   return (
-    <Box
-      sx={{
-        mt: 1,
-        ml: 2,
-        borderLeft: '2px solid',
-        borderColor: 'border.muted',
-        pl: 2,
-      }}
-    >
+    <Box mt={1} ml={2} borderLeft="2px solid" borderColor="border.muted" pl={2}>
       <Box
         as="button"
         onClick={() => setExpanded(prev => !prev)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          width: '100%',
-          border: 'none',
-          background: 'transparent',
-          cursor: 'pointer',
-          p: 0,
-          color: 'fg.muted',
-          textAlign: 'left',
-        }}
+        display="flex"
+        alignItems="center"
+        gap={1}
+        width="100%"
+        border="none"
+        background="transparent"
+        cursor="pointer"
+        p={0}
+        color="fg.muted"
+        textAlign="left"
       >
         {expanded ? (
           <ChevronDownIcon size={12} />
         ) : (
           <ChevronRightIcon size={12} />
         )}
-        <Box sx={{ color: statusColor, display: 'flex' }}>
+        <Box color={statusColor} display="flex">
           <StatusIcon size={14} />
         </Box>
         <Text sx={{ fontSize: 0, fontWeight: 'bold', color: 'fg.default' }}>
@@ -171,7 +161,7 @@ export function SubagentActivity({
       </Box>
 
       {expanded && (
-        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box mt={1} display="flex" flexDirection="column" gap={1}>
           {segments.map((segment, index) => (
             <SubagentSegmentView key={index} segment={segment} />
           ))}
@@ -204,8 +194,8 @@ function SubagentSegmentView({
     case 'thinking':
       if (!segment.text) return null;
       return (
-        <Box sx={{ display: 'flex', gap: 1, color: 'fg.muted' }}>
-          <Box sx={{ mt: '2px', flexShrink: 0 }}>
+        <Box display="flex" gap={1} color="fg.muted">
+          <Box mt="2px" flexShrink={0}>
             <LightBulbIcon size={12} />
           </Box>
           <Text
@@ -222,11 +212,11 @@ function SubagentSegmentView({
       );
     case 'tool_call':
       return (
-        <Box sx={{ display: 'flex', gap: 1, color: 'fg.muted' }}>
-          <Box sx={{ mt: '2px', flexShrink: 0 }}>
+        <Box display="flex" gap={1} color="fg.muted">
+          <Box mt="2px" flexShrink={0}>
             <ToolsIcon size={12} />
           </Box>
-          <Box sx={{ minWidth: 0 }}>
+          <Box minWidth={0}>
             <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
               {segment.toolName ?? 'tool'}
             </Text>
@@ -252,8 +242,8 @@ function SubagentSegmentView({
     case 'tool_result':
       if (!segment.result) return null;
       return (
-        <Box sx={{ display: 'flex', gap: 1, color: 'fg.muted' }}>
-          <Box sx={{ mt: '2px', flexShrink: 0, color: 'success.fg' }}>
+        <Box display="flex" gap={1} color="fg.muted">
+          <Box mt="2px" flexShrink={0} color="success.fg">
             <CheckCircleIcon size={12} />
           </Box>
           <Text
@@ -272,8 +262,8 @@ function SubagentSegmentView({
       );
     case 'error':
       return (
-        <Box sx={{ display: 'flex', gap: 1, color: 'danger.fg' }}>
-          <Box sx={{ mt: '2px', flexShrink: 0 }}>
+        <Box display="flex" gap={1} color="danger.fg">
+          <Box mt="2px" flexShrink={0}>
             <AlertIcon size={12} />
           </Box>
           <Text sx={{ fontSize: 0 }}>{segment.error ?? 'Subagent failed'}</Text>

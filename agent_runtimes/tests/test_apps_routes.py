@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from reactor import ContributionRegistry
+from reactor import PluginPlatform
 
 from agent_runtimes.loop.apps import plugins
 from agent_runtimes.loop.apps.loading import (
@@ -68,16 +68,27 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Any:
         created.append(request)
         return {"id": request.name}
 
-    async def delete_agent(name: str) -> None:
+    async def delete_agent(
+        name: str, stop_runtime: bool = False, runtime_id: Any = None
+    ) -> None:
         return None
 
     monkeypatch.setattr(agents, "create_agent", create_agent)
     monkeypatch.setattr(agents, "delete_agent", delete_agent)
     monkeypatch.setattr(agents, "_emit_agent_assigned_event", lambda **kwargs: None)
     monkeypatch.setitem(agents._agentspecs, "default", None)
+    # What cog-crawler and its connection declare, set where it runs (R-19):
+    # a spec whose secret is not there is refused before its agent is made.
+    for name in (
+        "TAVILY_API_KEY",
+        "GITHUB_TOKEN",
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+    ):
+        monkeypatch.setenv(name, "declared-for-this-test")
     routes._RUNNING.clear()
-    monkeypatch.setattr(plugins, "REGISTRY", ContributionRegistry())
-    with TestClient(create_app()) as test_client:
+    monkeypatch.setattr(plugins, "PLATFORM", PluginPlatform())
+    with TestClient(create_app(), client=("127.0.0.1", 50000)) as test_client:
         test_client.created = created
         yield test_client
     routes._RUNNING.clear()
@@ -113,6 +124,9 @@ def test_configure_runs_the_applications_agent_with_what_it_says(client: Any) ->
     assert request.agent_spec_id == "cog-crawler"
     assert request.model == "bedrock:us.anthropic.claude-sonnet-4-6"
     assert request.app_spec == WEB_RESEARCH
+    # Spoken to over AG-UI by its page and the terminal, whatever the runtime
+    # started its default agent on.
+    assert request.transport == "ag-ui"
     current = client.get("/api/v1/apps/current").json()
     assert (current["id"], current["kind"]) == ("web-research", "chat")
 
@@ -171,4 +185,259 @@ def test_the_runtime_lists_applications_from_reactor_and_runs_its_own(
         app["id"]: app["name"] for app in client.get("/api/v1/apps").json()["apps"]
     }
     assert names["web-research"] == "Web research, edited"
-    assert plugins.REGISTRY.get(plugins.APP_POINT, plugins=["loop-app-web-research"])
+    assert plugins.PLATFORM.has_plugin("loop-app-web-research")
+
+
+def test_feedback_on_a_conversation_is_kept_in_the_record(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP V-18: a thumb and a comment, through the recorder of the session."""
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
+    assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    recorder = AppRecorder(app=load_app(keeps), app_uid="app-7", send=send)
+    recorder.start("thread-7")
+    answer = client.post(
+        "/api/v1/apps/feedback",
+        json={
+            "session": "thread-7",
+            "liked": True,
+            "comment": "Clear.",
+            "message": "answer-2",
+        },
+    )
+    assert answer.status_code == 200, answer.text
+    # No code of its own heard it: a spec's application.
+    assert answer.json() == {
+        "kept": True,
+        "summary": "Liked it: Clear.",
+        "heard": False,
+    }
+    assert sent[0]["app_uid"] == "app-7"
+    assert sent[0]["entries"][0]["payload"] == {
+        "liked": True,
+        "comment": "Clear.",
+        "by": "local",
+        "message": "answer-2",
+    }
+    # A conversation it did not record, here, is not one to answer for.
+    unknown = client.post(
+        "/api/v1/apps/feedback", json={"session": "nowhere", "liked": False}
+    )
+    assert unknown.status_code == 404
+    assert "No conversation nowhere" in unknown.json()["detail"]
+
+
+def test_feedback_is_heard_by_its_code(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """LOOP P-24: once kept, a Python application's `@app.feedback` hears it."""
+    from agent_runtimes.loop.apps import (
+        AppHost,
+        Application,
+        Feedback,
+        Session,
+        sessions,
+    )
+    from agent_runtimes.loop.apps.callers import Caller
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    keeps = {**WEB_RESEARCH, "record": {"include": ["outputs", "feedback"]}}
+    assert client.post("/api/v1/apps/configure", json={"app": keeps}).status_code == 200
+    application = Application(id="web-research", agent="example-simple")
+    heard: list = []
+
+    @application.feedback
+    async def said(session: Session, feedback: Feedback) -> None:
+        heard.append((session.id, feedback))
+        if not feedback.liked:
+            session.tags = [*session.tags, "to-review"]
+
+    sent: list = []
+
+    async def send(body: dict) -> None:
+        sent.append(body)
+
+    app = load_app(keeps)
+    recorder = AppRecorder(app=app, app_uid="app-7", send=send)
+    live = sessions.LiveSession(
+        uid="thread-9",
+        agent_id="default",
+        app=app,
+        instance={},
+        opened_by=Caller(kind="local", uid=""),
+        acts_as={"kind": "person", "uid": ""},
+        recorder=recorder,
+    )
+    sessions._SESSIONS[live.uid] = live
+    live.host = AppHost(application, live, recorder=recorder)
+    try:
+        recorder.start("thread-9")
+        import asyncio
+
+        live.session = asyncio.run(live.host.open(id=live.uid))
+        answer = client.post(
+            "/api/v1/apps/feedback",
+            json={
+                "session": "thread-9",
+                "liked": False,
+                "comment": "Too long.",
+                "message": "answer-1",
+            },
+        )
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["heard"] is True
+        assert heard == [
+            (
+                "thread-9",
+                Feedback(
+                    liked=False, comment="Too long.", message="answer-1", by="local"
+                ),
+            )
+        ]
+        # What its code did with it is kept with the conversation.
+        assert live.session.tags == ("to-review",)
+        threads = [
+            entry
+            for body in sent
+            for entry in body["entries"]
+            if entry["kind"] == "thread"
+        ]
+        assert threads[-1]["payload"]["tags"] == ["to-review"]
+    finally:
+        sessions.forget_sessions()
+
+
+def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> None:
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    assert (
+        client.post("/api/v1/apps/configure", json={"app": WEB_RESEARCH}).status_code
+        == 200
+    )
+
+    async def send(body: dict) -> None:
+        raise AssertionError("nothing is sent")
+
+    recorder = AppRecorder(app=load_app(WEB_RESEARCH), send=send)
+    recorder.start("thread-8")
+    refused = client.post(
+        "/api/v1/apps/feedback", json={"session": "thread-8", "liked": True}
+    )
+    assert refused.status_code == 409
+    assert "keeps no feedback" in refused.json()["detail"]
+
+
+TABLE_OFF = (
+    "The UI plugin “A2UI” is not enabled, and its page uses its block Table: "
+    "it is off the Canvas until it is."
+)
+
+
+def test_configure_says_a_block_of_a_plugin_its_organization_turned_off(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+
+    asked: list[tuple[str, dict]] = []
+
+    def get(url: str, headers: dict, timeout: float) -> httpx.Response:
+        asked.append((url, headers))
+        return httpx.Response(200, json={"success": True, "plugins_off": ["a2ui"]})
+
+    monkeypatch.setattr(httpx, "get", get)
+    with_table = {**WEB_RESEARCH, "interface": {"components": ["Table"]}}
+    response = client.post(
+        "/api/v1/apps/configure",
+        json={"app": with_table, "organization_uid": "01ORG", "user_token": "t"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert TABLE_OFF in body["setup"]
+    assert body["plugins_off_says"] == "Organization 01ORG has turned off: a2ui."
+    [(url, headers)] = asked
+    assert url.endswith("/api/iam/v1/organizations/01ORG/plugins-off")
+    assert headers == {"Authorization": "Bearer t"}
+
+
+def test_configure_with_no_organization_takes_none_off_and_says_so(client: Any) -> None:
+    with_table = {**WEB_RESEARCH, "interface": {"components": ["Table"]}}
+    body = client.post("/api/v1/apps/configure", json={"app": with_table}).json()
+    assert TABLE_OFF not in body["setup"]
+    assert body["plugins_off_says"].startswith("No organization was named")
+
+
+APP_PY = """from agent_runtimes.loop.apps import Application, Session
+
+app = Application(id="hello", kind="chat", agent="example-simple:0.0.1", name="Hello")
+
+
+@app.start
+async def opening(session: Session) -> None:
+    await session.say("Hello.")
+"""
+
+
+def test_build_runs_the_file_apart_and_answers_its_spec(client: Any) -> None:
+    """LOOP P-10: the Studio's Run — the file built by a process of its own."""
+    built = client.post("/api/v1/apps/build", json={"file": "app.py", "text": APP_PY})
+    assert built.status_code == 200, built.text
+    spec = built.json()["spec"]
+    assert spec.startswith("# Built from app.py by `loop apps build`")
+    assert "# loop:code start: opening (app.py:6)" in spec
+    assert "\nid: hello\n" in spec
+    broken = client.post(
+        "/api/v1/apps/build", json={"file": "app.py", "text": "import nowhere_at_all\n"}
+    )
+    assert broken.status_code == 422
+    [problem] = broken.json()["detail"]["problems"]
+    assert problem.startswith("app.py does not load: ModuleNotFoundError")
+    folder = client.post(
+        "/api/v1/apps/build", json={"file": "../app.py", "text": APP_PY}
+    )
+    assert folder.status_code == 422
+    assert "is not the name of a Python file" in folder.json()["detail"]["problems"][0]
+
+
+def test_a_file_that_never_ends_is_stopped_not_the_server() -> None:
+    from agent_runtimes.loop.apps.build import build_apart
+
+    with pytest.raises(AppNotRunnable) as refused:
+        build_apart("app.py", "while True:\n    pass\n", timeout=2)
+    assert refused.value.problems == [
+        "app.py did not build within 2 seconds: it was stopped."
+    ]
+
+
+def test_eject_answers_an_app_py_that_builds_the_same_spec(client: Any) -> None:
+    """LOOP P-13: the Studio's Eject — nothing kept on the runtime."""
+    import yaml
+
+    spec = yaml.safe_dump(WEB_RESEARCH, sort_keys=False, allow_unicode=True)
+    ejected = client.post("/api/v1/apps/eject", json={"spec": spec})
+    assert ejected.status_code == 200, ejected.text
+    body = ejected.json()
+    assert body["code"]["file"] == "app.py"
+    assert "Written by `loop apps eject`" in body["code"]["text"]
+    assert body["spec"].startswith("# Built from app.py by `loop apps build`")
+    assert yaml.safe_load(body["spec"]) == WEB_RESEARCH
+    refused = client.post("/api/v1/apps/eject", json={"spec": "- a list\n"})
+    assert refused.status_code == 422
+    assert "is not an application's spec" in refused.json()["detail"]["problems"][0]
+
+
+def test_build_and_eject_are_a_persons() -> None:
+    from agent_runtimes.app import create_app
+
+    with TestClient(create_app(), client=("203.0.113.9", 50000)) as stranger:
+        for path, body in (
+            ("/api/v1/apps/build", {"text": APP_PY}),
+            ("/api/v1/apps/eject", {"spec": "id: x\n"}),
+        ):
+            assert stranger.post(path, json=body).status_code == 401

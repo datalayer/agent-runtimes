@@ -4,10 +4,10 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { Box } from '@datalayer/primer-addons';
 import {
   ActionList,
   ActionMenu,
-  Box,
   Button,
   Dialog,
   FormControl,
@@ -251,13 +251,11 @@ export const ScheduleMenu = ({
         </ActionMenu.Anchor>
         <ActionMenu.Overlay width="medium" sx={{ minWidth: 300 }}>
           <Box
-            sx={{
-              px: 3,
-              pt: 3,
-              pb: 2,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
+            px={3}
+            pt={3}
+            pb={2}
+            borderBottom="1px solid"
+            borderColor="border.default"
           >
             <Text as="p" sx={{ fontWeight: 600 }}>
               Schedule
@@ -278,9 +276,7 @@ export const ScheduleMenu = ({
               </ActionList.Item>
             ))}
           </ActionList>
-          <Box
-            sx={{ p: 3, borderTop: '1px solid', borderColor: 'border.default' }}
-          >
+          <Box p={3} borderTop="1px solid" borderColor="border.default">
             <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mb: 2 }}>
               Cron Expression
             </Text>
@@ -296,7 +292,7 @@ export const ScheduleMenu = ({
               block
               disabled={!isEnabled}
             />
-            <Box sx={{ mt: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Box mt={2} display="flex" gap={2} flexWrap="wrap">
               <Button
                 size="small"
                 onClick={applyCustomCron}
@@ -334,7 +330,7 @@ export const ScheduleMenu = ({
           }}
           width="medium"
         >
-          <Box sx={{ display: 'grid', gap: 3 }}>
+          <Box display="grid" gap={3}>
             <Text>
               This action will disable the schedule and remove planned runs.
               Type{' '}
@@ -354,7 +350,7 @@ export const ScheduleMenu = ({
                 autoFocus
               />
             </FormControl>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Box display="flex" justifyContent="flex-end" gap={2}>
               <Button
                 variant="default"
                 onClick={() => {

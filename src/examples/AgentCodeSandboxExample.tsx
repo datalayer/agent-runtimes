@@ -46,8 +46,8 @@ import {
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentCodeSandboxPlugin } from '../loop/plugins/agent-code-sandbox';
+import { LoopEmbed } from '../apps';
+import { AgentCodeSandboxPlugin } from '../apps/plugins/agent-code-sandbox';
 import type { SandboxWsStatus } from '../types/sandbox';
 import { SANDBOX_STATUS_COLORS, SANDBOX_STATUS_LABELS } from '../types/sandbox';
 import type { SandboxAggregateStatus } from '../types/sandbox';
@@ -268,37 +268,26 @@ const AgentCodeSandboxInner: React.FC = () => {
       data-sandbox-sidebar
       data-sandbox-aggregate={aggregate}
       data-sandbox-variant={liveVariant ?? undefined}
-      sx={{
-        width: 360,
-        minWidth: 300,
-        borderLeft: '1px solid',
-        borderColor: 'border.default',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        bg: 'canvas.default',
-      }}
+      width={360}
+      minWidth={300}
+      borderLeft="1px solid"
+      borderColor="border.default"
+      display="flex"
+      flexDirection="column"
+      minHeight={0}
+      bg="canvas.default"
     >
       {/* ── Header ── */}
       <Box
-        sx={{
-          p: 2,
-          bg: 'canvas.default',
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={2}
+        bg="canvas.default"
+        borderBottom="1px solid"
+        borderColor="border.default"
       >
         <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
           Sandbox Details
         </Heading>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            flexWrap: 'wrap',
-          }}
-        >
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Label
             variant={
               wsState === 'connected'
@@ -312,14 +301,12 @@ const AgentCodeSandboxInner: React.FC = () => {
           </Label>
           <Box
             as="span"
-            sx={{
-              display: 'inline-block',
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              bg: statusColor,
-              flexShrink: 0,
-            }}
+            display="inline-block"
+            width={10}
+            height={10}
+            borderRadius="50%"
+            bg={statusColor}
+            flexShrink={0}
           />
           <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{statusLabel}</Text>
         </Box>
@@ -344,27 +331,25 @@ const AgentCodeSandboxInner: React.FC = () => {
       {/* ── Status detail card ── */}
       {sandboxStatus && (
         <Box
-          sx={{
-            mx: 2,
-            mt: 2,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-            fontSize: 0,
-            fontFamily: 'mono',
-          }}
+          mx={2}
+          mt={2}
+          p={2}
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          bg="canvas.default"
+          fontSize={0}
+          fontFamily="mono"
         >
-          <Box sx={{ mb: 1 }}>
+          <Box mb={1}>
             <Text sx={{ fontWeight: 600 }}>variant: </Text>
             <Text>{sandboxStatus.variant}</Text>
           </Box>
-          <Box sx={{ mb: 1 }}>
+          <Box mb={1}>
             <Text sx={{ fontWeight: 600 }}>sandbox_running: </Text>
             <Text>{String(sandboxStatus.sandbox_running)}</Text>
           </Box>
-          <Box sx={{ mb: 1 }}>
+          <Box mb={1}>
             <Text sx={{ fontWeight: 600 }}>is_executing: </Text>
             <Label
               variant={sandboxStatus.is_executing ? 'accent' : 'secondary'}
@@ -373,7 +358,7 @@ const AgentCodeSandboxInner: React.FC = () => {
             </Label>
           </Box>
           {sandboxStatus.jupyter_url && (
-            <Box sx={{ mb: 1 }}>
+            <Box mb={1}>
               <Text sx={{ fontWeight: 600 }}>jupyter_url: </Text>
               <Text sx={{ wordBreak: 'break-all' }}>
                 {sandboxStatus.jupyter_url}
@@ -389,7 +374,7 @@ const AgentCodeSandboxInner: React.FC = () => {
       )}
 
       {/* ── Interrupt button ── */}
-      <Box sx={{ mx: 2, mt: 2 }}>
+      <Box mx={2} mt={2}>
         <Button
           size="small"
           variant="danger"
@@ -405,30 +390,26 @@ const AgentCodeSandboxInner: React.FC = () => {
 
       {/* ── WebSocket log ── */}
       <Box
-        sx={{
-          mx: 2,
-          mt: 2,
-          mb: 2,
-          flex: 1,
-          border: '1px solid',
-          borderColor: 'border.default',
-          borderRadius: 2,
-          bg: 'canvas.default',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-        }}
+        mx={2}
+        mt={2}
+        mb={2}
+        flex={1}
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius={2}
+        bg="canvas.default"
+        display="flex"
+        flexDirection="column"
+        minHeight={0}
       >
         <Box
-          sx={{
-            px: 2,
-            py: 1,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
+          px={2}
+          py={1}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
         >
           <Text sx={{ fontWeight: 600, fontSize: 0 }}>
             WebSocket Log ({wsLog.length})
@@ -445,13 +426,11 @@ const AgentCodeSandboxInner: React.FC = () => {
         </Box>
         <Box
           data-sandbox-ws-log
-          sx={{
-            overflow: 'auto',
-            flex: 1,
-            fontFamily: 'mono',
-            fontSize: '11px',
-            lineHeight: '18px',
-          }}
+          overflow="auto"
+          flex={1}
+          fontFamily="mono"
+          fontSize="11px"
+          lineHeight="18px"
         >
           {wsLog.length === 0 ? (
             <Text
@@ -463,19 +442,15 @@ const AgentCodeSandboxInner: React.FC = () => {
             wsLog.map(entry => (
               <Box
                 key={entry.id}
-                sx={{
-                  px: 2,
-                  py: '2px',
-                  color:
-                    entry.direction === 'sent' ? 'accent.fg' : 'fg.default',
-                  bg:
-                    entry.direction === 'sent'
-                      ? 'neutral.muted'
-                      : 'transparent',
-                  borderBottom: '1px solid',
-                  borderColor: 'border.subtle',
-                  wordBreak: 'break-all',
-                }}
+                px={2}
+                py="2px"
+                color={entry.direction === 'sent' ? 'accent.fg' : 'fg.default'}
+                bg={
+                  entry.direction === 'sent' ? 'neutral.muted' : 'transparent'
+                }
+                borderBottom="1px solid"
+                borderColor="border.subtle"
+                wordBreak="break-all"
               >
                 <Text
                   sx={{
@@ -504,25 +479,21 @@ const AgentCodeSandboxInner: React.FC = () => {
 
   return (
     <Box
-      sx={{
-        height: '100%',
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        bg: 'canvas.default',
-      }}
+      height="100%"
+      minHeight={0}
+      display="flex"
+      flexDirection="column"
+      bg="canvas.default"
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <CodespacesIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -532,23 +503,19 @@ const AgentCodeSandboxInner: React.FC = () => {
         <Label variant="accent">{VARIANTS.length} sandbox variants</Label>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ position: 'relative', height: '100%' }}>
-            <Box
-              sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-            >
+      <Box flex={1} minHeight={0} display="flex">
+        <Box flex={1} minWidth={0}>
+          <Box position="relative" height="100%">
+            <Box display="flex" flexDirection="column" height="100%">
               <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  px: 3,
-                  py: 2,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                  flexShrink: 0,
-                }}
+                display="flex"
+                alignItems="center"
+                gap={2}
+                px={3}
+                py={2}
+                borderBottom="1px solid"
+                borderColor="border.default"
+                flexShrink={0}
               >
                 <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                   Sandbox variant
@@ -586,7 +553,7 @@ const AgentCodeSandboxInner: React.FC = () => {
               {/* The Loop creates the agent on the Local target from the
                   capacity plugin's blueprint; the variants stay visible so
                   the agent is not pinned to the page. */}
-              <Box sx={{ flex: 1, minHeight: 0 }}>
+              <Box flex={1} minHeight={0}>
                 <LoopEmbed
                   serverUrl={agentBaseUrl}
                   target="local"
@@ -601,14 +568,12 @@ const AgentCodeSandboxInner: React.FC = () => {
 
             {isTransitionLocked && (
               <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  bg: 'canvas.default',
-                  opacity: 0.35,
-                  zIndex: 2,
-                  cursor: 'wait',
-                }}
+                position="absolute"
+                inset={0}
+                bg="canvas.default"
+                opacity={0.35}
+                zIndex={2}
+                cursor="wait"
               />
             )}
           </Box>

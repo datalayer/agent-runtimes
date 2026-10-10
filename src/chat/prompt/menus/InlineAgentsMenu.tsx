@@ -62,7 +62,7 @@ export function InlineAgentsMenu({
       <ActionMenu.Overlay side="outside-bottom" align="start" width="large">
         {/* Bounded, and the descriptions wrap inside it: `ActionList.Description`
             lays one out on a single line and lets the overlay grow to hold it. */}
-        <Box sx={{ width: 440, maxWidth: 'calc(100vw - 16px)' }}>
+        <Box width={440} maxWidth="calc(100vw - 16px)">
           <ActionList
             selectionVariant="single"
             role="listbox"

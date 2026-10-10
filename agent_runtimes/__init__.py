@@ -53,6 +53,11 @@ if TYPE_CHECKING:  # pragma: no cover - for type checkers only
         setup_otel,
         uninstrument_agent_runtimes,
     )
+    from agent_runtimes.pap import (
+        PapAgentIdentitySummary,
+        PapCompanySummary,
+        PapPersonalAgentCapability,
+    )
     from agent_runtimes.routes.acp import router as acp_router
     from agent_runtimes.routes.health import router as health_router
     from agent_runtimes.transports.acp import ACPSession, ACPTransport
@@ -88,6 +93,9 @@ _EXPORTS: Dict[str, str] = {
     "get_tracer": "agent_runtimes.otel",
     "get_meter": "agent_runtimes.otel",
     "create_otel_middleware": "agent_runtimes.otel",
+    "PapAgentIdentitySummary": "agent_runtimes.pap",
+    "PapCompanySummary": "agent_runtimes.pap",
+    "PapPersonalAgentCapability": "agent_runtimes.pap",
 }
 
 #: The name the router is exported under, where the module calls it `router`.
@@ -145,6 +153,9 @@ def _jupyter_server_extension_points() -> List[Dict[str, Any]]:
 __all__ = [
     # Version
     "__version__",
+    "PapAgentIdentitySummary",
+    "PapCompanySummary",
+    "PapPersonalAgentCapability",
     "create_app",
     "create_event",
     "list_events",

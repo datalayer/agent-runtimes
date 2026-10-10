@@ -258,14 +258,12 @@ export function AgentRuntimeChat({
   if (launchingError) {
     return (
       <Box
-        sx={{
-          p: 3,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'danger.emphasis',
-          bg: 'danger.subtle',
-          color: 'danger.fg',
-        }}
+        p={3}
+        borderRadius={2}
+        border="1px solid"
+        borderColor="danger.emphasis"
+        bg="danger.subtle"
+        color="danger.fg"
       >
         <Text sx={{ fontWeight: 600 }}>Failed to launch the agent</Text>
         <Text sx={{ display: 'block', mt: 1, fontSize: 1 }}>

@@ -84,6 +84,7 @@ from agent_runtimes.commands.pools import app as pools_app
 from agent_runtimes.commands.ray import app as ray_app
 from agent_runtimes.commands.sandbox_snapshots import app as snapshots_app
 from agent_runtimes.commands.sandboxes import app as sandboxes_app
+from agent_runtimes.commands.scenes import app as scenes_app
 from agent_runtimes.commands.schedules import app as schedules_app
 from agent_runtimes.commands.serve import (
     LogLevel,
@@ -107,6 +108,7 @@ app = typer.Typer(
         "allow_extra_args": True,
         "ignore_unknown_options": True,
     },
+    pretty_exceptions_show_locals=False,
 )
 
 
@@ -315,6 +317,60 @@ def main_callback(
         "-s",
         help="Extra suggestions (comma-separated) when defaulting to chat mode.",
     ),
+    local: bool = typer.Option(
+        False,
+        "--local",
+        help="Run the agent on this machine, without asking where (chat mode).",
+    ),
+    cloud: bool = typer.Option(
+        False,
+        "--cloud",
+        help=(
+            "Run the agent on Datalayer, in a cloud runtime billed by the minute, "
+            "without asking where (chat mode): an environment is picked, not an "
+            "agentspec; the agent is example-simple unless -a names another. "
+            "Needs `datalayer login` or DATALAYER_API_KEY."
+        ),
+    ),
+    runtime: str | None = typer.Option(
+        None,
+        "--runtime",
+        "-r",
+        help=(
+            "Attach to an agent runtime already running on Datalayer, by its name "
+            "(implies --cloud; nothing is launched)."
+        ),
+    ),
+    environment: str | None = typer.Option(
+        None,
+        "--environment",
+        "-e",
+        help=(
+            "The Datalayer environment of a new cloud runtime, without asking "
+            "(default: the first that can launch an agent, ai-agents-env)."
+        ),
+    ),
+    minutes: int | None = typer.Option(
+        None,
+        "--minutes",
+        "-m",
+        help="How long to reserve a new cloud runtime for, in minutes (default 30).",
+    ),
+    keep: bool = typer.Option(
+        False,
+        "--keep",
+        help="Leave the cloud runtime running when the session ends.",
+    ),
+    prompts: list[str] | None = typer.Option(
+        None,
+        "--prompt",
+        "-q",
+        help=(
+            "Run without interaction (chat mode): launch the agent, run this line "
+            "as if typed (a /slash command, else a message whose answer is "
+            "printed), then stop. Repeatable, run in order in one session."
+        ),
+    ),
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
@@ -416,6 +472,21 @@ def main_callback(
             chat_args.append("--no-codemode")
         if suggestions:
             chat_args.extend(["--suggestions", suggestions])
+        # Where the agent runs (LOOP L-01, L-02, L-06).
+        if local:
+            chat_args.append("--local")
+        if cloud:
+            chat_args.append("--cloud")
+        if runtime:
+            chat_args.extend(["--runtime", runtime])
+        if environment:
+            chat_args.extend(["--environment", environment])
+        if minutes is not None:
+            chat_args.extend(["--minutes", str(minutes)])
+        if keep:
+            chat_args.append("--keep")
+        for prompt in prompts or []:
+            chat_args.extend(["--prompt", prompt])
         # Forward any additional CLI args to chat so `loop --<chat-option>`
         # behaves like `loop chat --<chat-option>`.
         chat_args.extend(ctx.args)
@@ -453,6 +524,7 @@ app.add_typer(snapshots_app)
 app.add_typer(ray_app)
 app.add_typer(schedules_app)
 app.add_typer(apps_app)
+app.add_typer(scenes_app)
 app.command("events-list")(events_list)
 app.command("event-ls")(events_ls)
 app.command("events-ls")(events_ls)
@@ -574,7 +646,7 @@ def serve(
             "--codemode",
             "-c",
             envvar="AGENT_RUNTIMES_CODEMODE",
-            help="Enable Code Mode: MCP servers become programmatic tools via CodemodeToolset",
+            help="Enable Codemode: MCP servers become programmatic tools via CodemodeToolset",
         ),
     ] = False,
     skills: Annotated[
@@ -706,10 +778,10 @@ def serve(
         # Start with specific MCP servers from the catalog
         agent-runtimes serve --mcp-servers tavily,github
 
-        # Start with Code Mode (MCP servers become programmatic tools)
+        # Start with Codemode (MCP servers become programmatic tools)
         agent-runtimes serve --codemode --mcp-servers tavily,github
 
-        # Start with Code Mode and skills
+        # Start with Codemode and skills
         agent-runtimes serve --codemode --mcp-servers tavily --skills web_search,github_lookup
 
         # Start with a Jupyter sandbox for code execution (connects to existing Jupyter server)

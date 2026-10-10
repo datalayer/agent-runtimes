@@ -15,6 +15,7 @@ import { Text, Button } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ChevronDownIcon } from '@primer/octicons-react';
 import { Streamdown } from 'streamdown';
+import { REHYPE_PLUGINS_WITHOUT_HTML } from '../messages/markdownWithoutHtml';
 
 import { streamdownMarkdownStyles } from '../styles/streamdownStyles';
 
@@ -48,7 +49,7 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
   }, [isStreaming, isExpanded]);
 
   return (
-    <Box sx={{ marginBottom: 3 }}>
+    <Box marginBottom={3}>
       <Button
         variant="invisible"
         size="small"
@@ -74,30 +75,28 @@ export function ReasoningPart({ text, isStreaming }: ReasoningPartProps) {
         </Text>
         <Box
           as="span"
-          sx={{
-            display: 'inline-flex',
-            marginLeft: 'auto',
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s',
-          }}
+          display="inline-flex"
+          marginLeft="auto"
+          transform={isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'}
+          transition="transform 0.2s"
         >
           <ChevronDownIcon />
         </Box>
       </Button>
       {isExpanded && (
         <Box
-          sx={{
-            marginTop: 2,
-            padding: 3,
-            backgroundColor: 'canvas.inset',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            color: 'fg.muted',
-            ...streamdownMarkdownStyles,
-          }}
+          marginTop={2}
+          padding={3}
+          backgroundColor="canvas.inset"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
+          color="fg.muted"
+          sx={streamdownMarkdownStyles}
         >
-          <Streamdown>{text}</Streamdown>
+          <Streamdown rehypePlugins={REHYPE_PLUGINS_WITHOUT_HTML}>
+            {text}
+          </Streamdown>
         </Box>
       )}
     </Box>

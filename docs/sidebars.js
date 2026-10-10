@@ -19,11 +19,30 @@ const sidebars = {
   tutorialSidebar: [
     { type: 'doc', id: 'index', label: 'Agent Runtimes' },
     { type: 'doc', id: 'features/index', label: 'Features' },
-    { type: 'doc', id: 'chat/index', label: 'Chat' },
+    {
+      type: 'category',
+      label: 'Chat',
+      link: { type: 'doc', id: 'chat/index' },
+      items: ['chat/floating-assistant', 'chat/presence', 'chat/voice'],
+    },
     { type: 'doc', id: 'programmatic-tools/index', label: 'Programmatic Tools' },
     { type: 'doc', id: 'subagents/index', label: 'Subagents' },
     { type: 'doc', id: 'loop-repl/index', label: 'Loop REPL' },
-    { type: 'doc', id: 'loop/index', label: 'Loop Web' },
+    {
+      type: 'category',
+      label: 'Loop Web',
+      link: { type: 'doc', id: 'apps/index' },
+      items: [
+        'apps/app-renderer',
+        'apps/python-applications',
+        'apps/python-tutorial',
+        'apps/session-api',
+        'apps/embedding',
+        'apps/memory',
+        'apps/documents',
+        'apps/inbox-triage',
+      ],
+    },
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },
     { type: 'doc', id: 'protocols/index', label: 'Protocols' },
@@ -32,7 +51,12 @@ const sidebars = {
     { type: 'doc', id: 'hooks/index', label: 'Hooks' },
     { type: 'doc', id: 'agent-nodes/index', label: 'Nodes' },
     { type: 'doc', id: 'endpoints/index', label: 'Endpoints' },
-    { type: 'doc', id: 'agentspecs/index', label: 'Agentspecs' },
+    {
+      type: 'category',
+      label: 'Agentspecs',
+      link: { type: 'doc', id: 'agentspecs/index' },
+      items: ['agentspecs/ui-plugins'],
+    },
   ],
 };
 

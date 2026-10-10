@@ -13,9 +13,9 @@ import React, {
   useState,
 } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Box } from '@datalayer/primer-addons';
 import {
   Button,
-  Box,
   Heading,
   SegmentedControl,
   Spinner,
@@ -25,8 +25,8 @@ import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { createAgentInferencePlugin } from '../loop/plugins/agent-inference';
+import { LoopEmbed } from '../apps';
+import { createAgentInferencePlugin } from '../apps/plugins/agent-inference';
 import { useAIAgentsWebSocket } from '../hooks';
 
 const AGENTSPEC_ID = 'example-inference';
@@ -63,18 +63,16 @@ const ProviderBadge: React.FC<{ provider: InferenceProviderKind }> = ({
   provider,
 }) => (
   <Box
-    sx={{
-      px: 2,
-      py: '2px',
-      borderRadius: 999,
-      border: '1px solid',
-      borderColor: 'border.default',
-      fontSize: 0,
-      color: 'fg.muted',
-      bg: 'canvas.default',
-      textTransform: 'uppercase',
-      letterSpacing: '0.03em',
-    }}
+    px={2}
+    py="2px"
+    borderRadius={999}
+    border="1px solid"
+    borderColor="border.default"
+    fontSize={0}
+    color="fg.muted"
+    bg="canvas.default"
+    textTransform="uppercase"
+    letterSpacing="0.03em"
   >
     {provider}
   </Box>
@@ -275,38 +273,32 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
   return (
     <ThemedProvider>
       <Box
-        sx={{
-          height: '100%',
-          minHeight: 0,
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: ['1fr', '1fr', 'minmax(680px, 1fr) 420px'],
-          gridTemplateRows: 'minmax(0, 1fr)',
-          overflow: 'hidden',
-          bg: 'canvas.default',
-        }}
+        height="100%"
+        minHeight={0}
+        width="100%"
+        display="grid"
+        gridTemplateColumns={['1fr', '1fr', 'minmax(680px, 1fr) 420px']}
+        gridTemplateRows="minmax(0, 1fr)"
+        overflow="hidden"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            height: '100%',
-            borderRight: ['none', 'none', '1px solid'],
-            borderColor: 'border.default',
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-            minHeight: 0,
-            overflow: 'hidden',
-          }}
+          height="100%"
+          borderRight={['none', 'none', '1px solid']}
+          borderColor="border.default"
+          p={3}
+          display="flex"
+          flexDirection="column"
+          gap={3}
+          minHeight={0}
+          overflow="hidden"
         >
           <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 2,
-            }}
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            gap={2}
           >
             <Box>
               <Heading as="h2" sx={{ fontSize: 4, mb: 1 }}>
@@ -335,14 +327,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
             </SegmentedControl.Button>
           </SegmentedControl>
 
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             {isLaunching ? <Spinner size="small" /> : null}
             <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
               Runtime URL: {baseUrl}
@@ -357,32 +342,28 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
 
           {error ? (
             <Box
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'danger.emphasis',
-                bg: 'danger.subtle',
-                color: 'danger.fg',
-                fontSize: 1,
-              }}
+              p={2}
+              borderRadius={2}
+              border="1px solid"
+              borderColor="danger.emphasis"
+              bg="danger.subtle"
+              color="danger.fg"
+              fontSize={1}
             >
               {error}
             </Box>
           ) : null}
 
           <Box
-            sx={{
-              flexGrow: 1,
-              flexShrink: 1,
-              flexBasis: 0,
-              minHeight: 0,
-              border: '1px solid',
-              borderColor: 'border.default',
-              borderRadius: 2,
-              overflow: 'hidden',
-              bg: 'canvas.default',
-            }}
+            flexGrow={1}
+            flexShrink={1}
+            flexBasis={0}
+            minHeight={0}
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius={2}
+            overflow="hidden"
+            bg="canvas.default"
           >
             {agentId && !isLaunching ? (
               <LoopEmbed
@@ -397,14 +378,12 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
               />
             ) : (
               <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 2,
-                  color: 'fg.muted',
-                }}
+                height="100%"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                gap={2}
+                color="fg.muted"
               >
                 <Spinner size="small" />
                 <Text sx={{ fontSize: 1 }}>Launching provider runtime…</Text>
@@ -414,15 +393,13 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
         </Box>
 
         <Box
-          sx={{
-            p: 3,
-            display: ['none', 'none', 'flex'],
-            flexDirection: 'column',
-            gap: 2,
-            minHeight: 0,
-            overflow: 'hidden',
-            bg: 'canvas.default',
-          }}
+          p={3}
+          display={['none', 'none', 'flex']}
+          flexDirection="column"
+          gap={2}
+          minHeight={0}
+          overflow="hidden"
+          bg="canvas.default"
         >
           <Heading as="h3" sx={{ fontSize: 2 }}>
             Provider Event Stream
@@ -433,23 +410,19 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
           </Text>
 
           <Box
-            sx={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-            }}
+            flex={1}
+            minHeight={0}
+            overflowY="auto"
+            display="flex"
+            flexDirection="column"
+            gap={2}
           >
             {providerEvents.length === 0 ? (
               <Box
-                sx={{
-                  border: '1px dashed',
-                  borderColor: 'border.default',
-                  borderRadius: 2,
-                  p: 3,
-                }}
+                border="1px dashed"
+                borderColor="border.default"
+                borderRadius={2}
+                p={3}
               >
                 <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
                   No provider events yet.
@@ -459,13 +432,11 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
               orderedProviderEvents.map(event => (
                 <Box
                   key={event.id}
-                  sx={{
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    p: 2,
-                    bg: 'canvas.default',
-                  }}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
+                  p={2}
+                  bg="canvas.default"
                 >
                   <Text
                     sx={{
@@ -498,7 +469,7 @@ const AgentInferenceProviderExampleInner: React.FC = () => {
                   >
                     {new Date(event.createdAt).toLocaleTimeString()}
                   </Text>
-                  <Box sx={{ mt: 2 }}>
+                  <Box mt={2}>
                     <Button
                       size="small"
                       variant="invisible"

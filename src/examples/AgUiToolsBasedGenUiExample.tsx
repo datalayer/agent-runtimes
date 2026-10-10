@@ -67,34 +67,36 @@ const PlanStepItem: React.FC<{
     <Box
       as={isInteractive ? 'button' : 'div'}
       onClick={isInteractive ? onClick : undefined}
-      sx={{
-        display: 'flex',
-        gap: 2,
-        padding: 3,
-        borderRadius: 2,
-        backgroundColor:
-          step.status === 'in_progress'
-            ? 'attention.subtle'
-            : step.status === 'completed'
-              ? 'success.subtle'
-              : isEnabled
-                ? 'canvas.default'
-                : 'canvas.default',
-        border: '1px solid',
-        borderColor:
-          step.status === 'in_progress'
-            ? 'attention.muted'
-            : step.status === 'completed'
-              ? 'success.muted'
-              : isEnabled
-                ? 'border.default'
-                : 'border.muted',
-        cursor: isInteractive ? 'pointer' : 'default',
-        opacity: isEnabled ? 1 : 0.6,
-        transition: 'all 0.2s ease',
-        textAlign: 'left',
-        width: '100%',
-        '&:hover': isInteractive
+      display="flex"
+      gap={2}
+      padding={3}
+      borderRadius={2}
+      backgroundColor={
+        step.status === 'in_progress'
+          ? 'attention.subtle'
+          : step.status === 'completed'
+            ? 'success.subtle'
+            : isEnabled
+              ? 'canvas.default'
+              : 'canvas.default'
+      }
+      border="1px solid"
+      borderColor={
+        step.status === 'in_progress'
+          ? 'attention.muted'
+          : step.status === 'completed'
+            ? 'success.muted'
+            : isEnabled
+              ? 'border.default'
+              : 'border.muted'
+      }
+      cursor={isInteractive ? 'pointer' : 'default'}
+      opacity={isEnabled ? 1 : 0.6}
+      transition="all 0.2s ease"
+      textAlign="left"
+      width="100%"
+      hover={
+        isInteractive
           ? {
               backgroundColor:
                 step.status === 'completed'
@@ -102,35 +104,31 @@ const PlanStepItem: React.FC<{
                   : 'canvas.default',
               borderColor: 'accent.muted',
             }
-          : {},
-      }}
+          : {}
+      }
     >
       {/* Status/Checkbox indicator */}
       <Box
-        sx={{
-          color: statusColor[step.status],
-          flexShrink: 0,
-          marginTop: '2px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 20,
-          height: 20,
-        }}
+        color={statusColor[step.status]}
+        flexShrink={0}
+        marginTop="2px"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        width={20}
+        height={20}
       >
         {isInteractive ? (
           <Box
-            sx={{
-              width: 18,
-              height: 18,
-              borderRadius: 1,
-              border: '2px solid',
-              borderColor: isEnabled ? 'accent.fg' : 'border.muted',
-              backgroundColor: isEnabled ? 'accent.fg' : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            width={18}
+            height={18}
+            borderRadius={1}
+            border="2px solid"
+            borderColor={isEnabled ? 'accent.fg' : 'border.muted'}
+            backgroundColor={isEnabled ? 'accent.fg' : 'transparent'}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
           >
             {isEnabled && <CheckIcon size={12} fill="white" />}
           </Box>
@@ -140,7 +138,7 @@ const PlanStepItem: React.FC<{
       </Box>
 
       {/* Step content */}
-      <Box sx={{ flex: 1 }}>
+      <Box flex={1}>
         <Text
           sx={{
             fontWeight: 'medium',
@@ -156,11 +154,9 @@ const PlanStepItem: React.FC<{
       {/* Status badge */}
       {step.status !== 'pending' && (
         <Box
-          sx={{
-            fontSize: 0,
-            color: step.status === 'completed' ? 'success.fg' : 'attention.fg',
-            textTransform: 'capitalize',
-          }}
+          fontSize={0}
+          color={step.status === 'completed' ? 'success.fg' : 'attention.fg'}
+          textTransform="capitalize"
         >
           {step.status === 'in_progress' ? 'In Progress' : step.status}
         </Box>
@@ -191,14 +187,12 @@ const PlanDisplay: React.FC<{
   if (!plan) {
     return (
       <Box
-        sx={{
-          textAlign: 'center',
-          padding: 5,
-          color: 'fg.muted',
-          border: '2px dashed',
-          borderColor: 'border.muted',
-          borderRadius: 2,
-        }}
+        textAlign="center"
+        padding={5}
+        color="fg.muted"
+        border="2px dashed"
+        borderColor="border.muted"
+        borderRadius={2}
       >
         <Text sx={{ fontSize: 2, display: 'block', marginBottom: 2 }}>
           📋 No plan created yet
@@ -230,14 +224,12 @@ const PlanDisplay: React.FC<{
   return (
     <Box>
       {/* Header with progress */}
-      <Box sx={{ marginBottom: 4 }}>
+      <Box marginBottom={4}>
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 2,
-          }}
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          marginBottom={2}
         >
           <Text
             sx={{ fontSize: 1, fontWeight: 'semibold', color: 'fg.default' }}
@@ -254,14 +246,7 @@ const PlanDisplay: React.FC<{
       </Box>
 
       {/* Step items */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          marginBottom: 4,
-        }}
-      >
+      <Box display="flex" flexDirection="column" gap={2} marginBottom={4}>
         {plan.steps.map((step, index) => (
           <PlanStepItem
             key={index}
@@ -276,14 +261,12 @@ const PlanDisplay: React.FC<{
       {/* Action buttons */}
       {isInteractive && !decision && (
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 3,
-            paddingTop: 3,
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-          }}
+          display="flex"
+          justifyContent="center"
+          gap={3}
+          paddingTop={3}
+          borderTop="1px solid"
+          borderColor="border.default"
         >
           <Button variant="danger" onClick={onReject} size="large">
             <XIcon size={16} />
@@ -299,17 +282,17 @@ const PlanDisplay: React.FC<{
       {/* Decision feedback */}
       {decision && (
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            padding: 3,
-            backgroundColor:
-              decision === 'confirmed' ? 'success.subtle' : 'danger.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor:
-              decision === 'confirmed' ? 'success.muted' : 'danger.muted',
-          }}
+          display="flex"
+          justifyContent="center"
+          padding={3}
+          backgroundColor={
+            decision === 'confirmed' ? 'success.subtle' : 'danger.subtle'
+          }
+          borderRadius={2}
+          border="1px solid"
+          borderColor={
+            decision === 'confirmed' ? 'success.muted' : 'danger.muted'
+          }
         >
           <Text
             sx={{
@@ -408,20 +391,9 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
 
   return (
     <ThemedProvider>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'canvas.default',
-          padding: 4,
-        }}
-      >
+      <Box minHeight="100vh" backgroundColor="canvas.default" padding={4}>
         {/* Page content */}
-        <Box
-          sx={{
-            maxWidth: '800px',
-            margin: '0 auto',
-          }}
-        >
+        <Box maxWidth="800px" margin="0 auto">
           <Text
             as="h1"
             sx={{
@@ -446,15 +418,13 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
 
           {/* Plan display panel */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-              marginBottom: 4,
-              minHeight: '300px',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
+            marginBottom={4}
+            minHeight="300px"
           >
             <Text
               as="h2"
@@ -474,13 +444,11 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
 
           {/* About section */}
           <Box
-            sx={{
-              padding: 4,
-              backgroundColor: 'canvas.default',
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'border.default',
-            }}
+            padding={4}
+            backgroundColor="canvas.default"
+            borderRadius={2}
+            border="1px solid"
+            borderColor="border.default"
           >
             <Text
               as="h2"
@@ -495,18 +463,16 @@ const AgUiToolsBasedGenUiExample: React.FC = () => {
               <code>update_plan_step</code> emits STATE_DELTA events with JSON
               Patch operations for efficient incremental updates.
             </Text>
-            <Box sx={{ marginTop: 3 }}>
+            <Box marginTop={3}>
               <Text sx={{ fontSize: 1, fontWeight: 'medium' }}>
                 AG-UI Events Used:
               </Text>
               <Box
                 as="ul"
-                sx={{
-                  paddingLeft: 3,
-                  marginTop: 1,
-                  fontSize: 1,
-                  color: 'fg.muted',
-                }}
+                paddingLeft={3}
+                marginTop={1}
+                fontSize={1}
+                color="fg.muted"
               >
                 <li>STATE_SNAPSHOT - Full state replacement</li>
                 <li>STATE_DELTA - Incremental JSON Patch updates (RFC 6902)</li>

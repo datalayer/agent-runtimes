@@ -54,7 +54,10 @@ __all__ = [
 _BUILTIN_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Session", ("help", "status", "clear", "cls", "exit", "suggestions")),
     ("Context", ("context", "context_export")),
-    ("Agents", ("agents", "models", "tools", "tools_last", "codemode_toggle")),
+    (
+        "Agents",
+        ("agents", "models", "decisions", "tools", "tools_last", "codemode_toggle"),
+    ),
     ("Capabilities", ("mcp_servers", "skills", "code_sandbox")),
     (
         "Open",
@@ -109,6 +112,7 @@ def build_registry(
         context,
         context_export,
         datalayer,
+        decisions,
         exit,
         help,
         mcp_servers,
@@ -132,6 +136,7 @@ def build_registry(
         tools,
         mcp_servers,
         models,
+        decisions,
         skills,
         code_sandbox,
         codemode_toggle,

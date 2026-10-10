@@ -12,7 +12,8 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, IconButton, Tooltip, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { IconButton, Tooltip, Text } from '@primer/react';
 import { CommentDiscussionIcon, XIcon } from '@primer/octicons-react';
 
 /**
@@ -71,19 +72,10 @@ export function FloatingBrandButton({
   const posStyle = positionStyles[position];
 
   const floatingButton = (
-    <Box
-      className={className}
-      sx={{
-        position: 'fixed',
-        zIndex: 1000,
-        ...posStyle,
-      }}
-    >
+    <Box className={className} position="fixed" zIndex={1000} sx={posStyle}>
       <Box
-        sx={{
-          position: 'relative',
-          display: 'inline-flex',
-        }}
+        position="relative"
+        display="inline-flex"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -117,22 +109,20 @@ export function FloatingBrandButton({
         {/* Unread badge */}
         {unreadCount > 0 && !isOpen && (
           <Box
-            sx={{
-              position: 'absolute',
-              top: -4,
-              right: -4,
-              minWidth: 20,
-              height: 20,
-              px: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bg: 'danger.emphasis',
-              color: 'fg.onEmphasis',
-              borderRadius: '50%',
-              fontSize: 0,
-              fontWeight: 'bold',
-            }}
+            position="absolute"
+            top={-4}
+            right={-4}
+            minWidth={20}
+            height={20}
+            px={1}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            bg="danger.emphasis"
+            color="fg.onEmphasis"
+            borderRadius="50%"
+            fontSize={0}
+            fontWeight="bold"
           >
             <Text sx={{ fontSize: 0 }}>
               {unreadCount > 99 ? '99+' : unreadCount}
@@ -143,16 +133,16 @@ export function FloatingBrandButton({
         {/* Pulse animation when has unread */}
         {unreadCount > 0 && !isOpen && (
           <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            borderRadius="50%"
+            border="2px solid"
+            borderColor="accent.emphasis"
+            animation="pulse 2s infinite"
             sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              borderRadius: '50%',
-              border: '2px solid',
-              borderColor: 'accent.emphasis',
-              animation: 'pulse 2s infinite',
               '@keyframes pulse': {
                 '0%': {
                   transform: 'scale(1)',

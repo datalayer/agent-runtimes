@@ -17,6 +17,18 @@ from agent_runtimes.types import OutputSpec
 # Output Definitions
 # ============================================================================
 
+COMPONENTS_OUTPUT_SPEC_0_0_1 = OutputSpec(
+    id="components",
+    version="0.0.1",
+    name="Components",
+    description="Deliver results as components of the catalog drawn under the answer: the sources as cards that open, a comparison as a table, a series as a chart, a choice as buttons that answer the application. Over A2A, one A2UI surface per artifact (`application/json+a2ui`, A2UI's media type).",
+    icon="browser",
+    enabled=False,
+    supports_template=False,
+    supports_storage=False,
+    mime_types=["application/json+a2ui"],
+)
+
 CSV_OUTPUT_SPEC_0_0_1 = OutputSpec(
     id="csv",
     version="0.0.1",
@@ -134,6 +146,7 @@ WEBHOOK_OUTPUT_SPEC_0_0_1 = OutputSpec(
 # ============================================================================
 
 OUTPUT_CATALOG: Dict[str, OutputSpec] = {
+    "components": COMPONENTS_OUTPUT_SPEC_0_0_1,
     "csv": CSV_OUTPUT_SPEC_0_0_1,
     "dashboard": DASHBOARD_OUTPUT_SPEC_0_0_1,
     "database": DATABASE_OUTPUT_SPEC_0_0_1,

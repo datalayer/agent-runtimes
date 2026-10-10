@@ -116,9 +116,9 @@ export interface SkillSpec {
   dependencies?: string[];
   /** Tags for categorization */
   tags: string[];
-  /** Icon identifier */
+  /** The icon, `<package>:<name>` — `@datalayer/icons-react:odoo` (agentspecs.marks; see `SpecMark`) */
   icon?: string;
-  /** Emoji identifier */
+  /** Drawn where there is no icon */
   emoji?: string;
   /** Whether the skill is enabled */
   enabled: boolean;

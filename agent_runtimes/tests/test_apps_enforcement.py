@@ -12,7 +12,10 @@ left to them — whatever form the call takes: a tool by its runtime name,
 from typing import Any
 
 import pytest
-from pydantic_ai.messages import ToolCallPart
+from pydantic_ai import Agent
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.tools import ToolDefinition
 
 from agent_runtimes.loop.apps.enforcement import (
     NO_SHELL,
@@ -20,7 +23,8 @@ from agent_runtimes.loop.apps.enforcement import (
     AppRulesCapability,
     Enforced,
 )
-from agent_runtimes.loop.apps.rules import Decision
+from agent_runtimes.loop.apps.rules import Decision, classes_of, gives
+from agent_runtimes.specs.actions import SERVER_ACTIONS
 from agent_runtimes.specs.apps import APP_CATALOGUE
 from agent_runtimes.types import AppSpec
 
@@ -241,10 +245,114 @@ async def test_what_the_session_says_of_a_tool_cannot_grant_a_connection() -> No
 
 
 @pytest.mark.asyncio
-async def test_do_it_if_asked_asks_until_grants_are_recorded() -> None:
+async def test_do_it_if_asked_asks_without_an_approval_given_in_advance() -> None:
     granted = app(
         rules=[{"action": "Send", "applies_to": ["send"], "behaviour": "if_asked"}]
     )
     harness = Harness(granted)
     await harness.call("google-workspace__send_gmail_message", {})
     assert harness.asked and harness.asked[0][1].behaviour == "if_asked"
+
+
+# --- what a connection gives (LOOP U-15) -----------------------------------------
+
+
+def _defs(*names: str) -> list[ToolDefinition]:
+    return [
+        ToolDefinition(name=name, parameters_json_schema={"type": "object"})
+        for name in names
+    ]
+
+
+def test_a_read_connection_gives_no_tool_that_writes_anywhere_in_the_catalogue() -> (
+    None
+):
+    # Every tool of every classed server, at both levels: read gives only
+    # what only reads; read and write gives everything the connection reaches.
+    for server, actions in SERVER_ACTIONS.items():
+        reading = app(connections=[{"server": server, "access": "read"}])
+        writing = app(connections=[{"server": server, "access": "write"}])
+        for name in actions.tools:
+            ref = f"{server}.{name}"
+            classes = classes_of(ref)
+            assert gives(reading, ref) == (
+                bool(classes) and set(classes) == {"read"}
+            ), ref
+            assert gives(writing, ref), ref
+
+
+def test_a_tool_nobody_classed_is_not_given_by_a_read_connection() -> None:
+    # Unknown is taken to write: a read connection to a server nobody
+    # classed gives nothing, one that reads and writes gives it to decide.
+    assert not gives(
+        app(connections=[{"server": "github", "access": "read"}]), "github.create_issue"
+    )
+    assert gives(
+        app(connections=[{"server": "github", "access": "write"}]),
+        "github.create_issue",
+    )
+
+
+def test_nothing_is_given_without_a_connection_nor_outside_only() -> None:
+    assert not gives(TRIAGE, "tavily.tavily_search")
+    assert not gives(TRIAGE, "google-workspace.search_drive_files")
+    assert gives(TRIAGE, "google-workspace.send_gmail_message")
+    with pytest.raises(ValueError, match="not a tool of a server"):
+        gives(TRIAGE, "runtime-echo")
+
+
+@pytest.mark.asyncio
+async def test_the_agent_is_given_only_what_its_connections_give() -> None:
+    reading = app(connections=[{"server": "google-workspace", "access": "read"}])
+    capability = AppRulesCapability(
+        app=reading, known_mcp_tools=lambda: {"tavily_search"}
+    )
+    offered = _defs(
+        "google-workspace__search_gmail_messages",
+        "google-workspace__send_gmail_message",
+        "google-workspace__get_gmail_attachment_content",
+        "google-workspace__a_tool_nobody_classed",
+        "tavily_search",
+        "execute_code",
+        "call_tool",
+        "search_tools",
+        "runtime_echo",
+    )
+    given = await capability.prepare_tools(None, offered)
+    # Its shell is off: no tool that runs code is given (LOOP R-23).
+    assert [tool.name for tool in given] == [
+        "google-workspace__search_gmail_messages",
+        "call_tool",
+        "search_tools",
+        "runtime_echo",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_a_model_is_never_shown_a_tool_its_connection_does_not_give() -> None:
+    seen: list[str] = []
+
+    def model(messages: list, info: AgentInfo) -> ModelResponse:
+        seen.extend(tool.name for tool in info.function_tools)
+        return ModelResponse(parts=[TextPart("done")])
+
+    agent = Agent(
+        FunctionModel(model),
+        capabilities=[
+            AppRulesCapability(
+                app=app(connections=[{"server": "tavily", "access": "read"}]),
+                known_mcp_tools=lambda: set(),
+            )
+        ],
+    )
+
+    @agent.tool_plain(name="tavily__tavily_search")
+    def search() -> str:
+        return "found"
+
+    @agent.tool_plain(name="slack__slack_post_message")
+    def send() -> str:
+        return "sent"
+
+    await agent.run("hello")
+    assert seen == ["tavily__tavily_search"]

@@ -71,7 +71,7 @@ export function AgentsMenu({
             has to be said at all: it lays a description out on one line and
             lets the overlay grow, so the width is set here or by the longest
             description there happens to be. */}
-        <Box sx={{ width: 440, maxWidth: 'calc(100vw - 16px)' }}>
+        <Box width={440} maxWidth="calc(100vw - 16px)">
           <ActionList
             selectionVariant="single"
             role="listbox"

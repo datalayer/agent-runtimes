@@ -35,7 +35,7 @@ Agent identity is more complex than traditional application identity because:
             ▼                    ▼                       ▼
      ┌──────────────┐     ┌──────────────┐       ┌──────────────┐
      │   GitHub     │     │   Gmail      │       │  Skills &    │
-     │   API        │     │   API        │       │  Code Mode   │
+     │   API        │     │   API        │       │  Codemode   │
      └──────────────┘     └──────────────┘       └──────────────┘
 ```
 
@@ -959,7 +959,7 @@ Agent Runtimes supports two types of programmatic tool execution:
 | Execution Type | Description | Use Case |
 |----------------|-------------|----------|
 | **Skills** | Standalone Python scripts executed via `SandboxExecutor` | Predefined, reusable automation scripts |
-| **Code Mode** | Dynamic Python code executed via `CodeModeExecutor` | Ad-hoc code that composes MCP tools |
+| **Codemode** | Dynamic Python code executed via `CodeModeExecutor` | Ad-hoc code that composes MCP tools |
 
 Both execution environments automatically receive OAuth tokens as environment variables when identities are connected.
 
@@ -1017,7 +1017,7 @@ Backend (Python):
                                  sandbox with env      sandbox with env
                                            │                     │
                               ┌────────────▼────────┐ ┌──────────▼──────────┐
-                              │ Skill Script        │ │ Code Mode Script    │
+                              │ Skill Script        │ │ Codemode Script    │
                               │ (GITHUB_TOKEN env)  │ │ (GITHUB_TOKEN env)  │
                               └─────────────────────┘ └─────────────────────┘
 ```
@@ -1084,7 +1084,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### Code Mode Example
+### Codemode Example
 
 Code executed via the `execute_code` tool also receives identity tokens:
 
@@ -1179,7 +1179,7 @@ sandbox.start()
 executor = SandboxExecutor(sandbox)
 ```
 
-#### Code Mode Executor
+#### Codemode Executor
 
 ```python
 from agent_codemode.composition.executor import CodeModeExecutor
@@ -1209,7 +1209,7 @@ The `CodeModeExecutor` calls `get_identity_env()` at the start of each `execute(
 - **Context variables are request-scoped** - they're cleared after the request completes
 - **Execution isolation**:
   - Skills: Each execution gets a fresh subprocess with only the needed tokens
-  - Code Mode: Tokens are injected into the sandbox's environment for each `execute()` call
+  - Codemode: Tokens are injected into the sandbox's environment for each `execute()` call
 - **No persistent storage** - tokens are not written to disk during execution
 :::
 

@@ -15,6 +15,7 @@ from fastapi import (
     HTTPException,
     Path,
     Query,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -29,6 +30,7 @@ from agent_runtimes.mcp import (
     get_mcp_manager,
 )
 from agent_runtimes.node_mode import is_node_enabled, set_node_enabled
+from agent_runtimes.tools.decisions import DecisionQuestion, decide
 from agent_runtimes.types import AgentSuggestion, FrontendConfig
 
 logger = logging.getLogger(__name__)
@@ -174,6 +176,27 @@ def get_inference_provider_override() -> InferenceProvider | None:
     return _inference_provider_override["provider"]
 
 
+def configured_inference_provider_override() -> InferenceProvider | None:
+    """The provider this runtime routes every agent through, whatever its spec says.
+
+    Set at runtime (``PUT /configure/inference/provider``), else by
+    ``AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE`` — which the platform sets
+    to ``datalayer`` on a Datalayer runtime, so its agents call their models
+    through ai-inference although their agentspecs say ``local``.
+    """
+    override = get_inference_provider_override()
+    if override in {"local", "datalayer"}:
+        return override
+    configured = (
+        (os.environ.get("AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE") or "")
+        .strip()
+        .lower()
+    )
+    if configured in {"local", "datalayer"}:
+        return cast(InferenceProvider, configured)
+    return None
+
+
 def get_effective_inference_provider() -> InferenceProvider:
     """Resolve effective inference provider from override/env/defaults."""
     override = get_inference_provider_override()
@@ -190,76 +213,6 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
     if base.endswith("/api/ai-inference"):
         return f"{base}/v1"
     return f"{base}/api/ai-inference/v1"
-
-
-def _fallback_bedrock_models() -> list[str]:
-    """Resolve Bedrock model IDs from agentspecs, env overrides, and defaults."""
-    models = _bedrock_models_from_agentspecs()
-    if not models:
-        raw = (os.getenv("DATALAYER_BEDROCK_MODELS") or "").strip()
-        models = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
-    default_model = (
-        os.getenv("DATALAYER_BEDROCK_MODEL")
-        or os.getenv("DATALAYER_BEDROCK_MODEL_ID")
-        or "bedrock/us.anthropic.claude-3-5-sonnet-20240620-v1:0"
-    )
-    if default_model and default_model not in models:
-        models.insert(0, default_model)
-    return models
-
-
-def _bedrock_models_from_agentspecs() -> list[str]:
-    """Load Bedrock model IDs from the agentspecs library (best-effort)."""
-
-    def _normalize(model_id: str) -> str:
-        """Convert legacy bedrock: model IDs to bedrock/ format."""
-        if model_id.startswith("bedrock:"):
-            return "bedrock/" + model_id.split(":", 1)[1]
-        return model_id
-
-    try:
-        from agentspecs.models import list_models
-
-        return [
-            _normalize(spec.id)
-            for spec in list_models()
-            if getattr(spec, "provider", None) == "bedrock"
-            and getattr(spec, "available", False)
-        ]
-    except Exception:  # noqa: BLE001
-        pass
-
-    try:
-        import importlib
-        import importlib.util
-        import pathlib
-
-        yaml_module = importlib.import_module("yaml")
-
-        spec = importlib.util.find_spec("agentspecs")
-        if spec is None or not spec.submodule_search_locations:
-            return []
-        models_dir = pathlib.Path(spec.submodule_search_locations[0]) / "models"
-        if not models_dir.is_dir():
-            return []
-        ids: list[str] = []
-        for yaml_file in sorted(models_dir.glob("*.yaml")):
-            data: dict[str, Any] = {}
-            try:
-                with open(yaml_file) as fh:
-                    data = yaml_module.safe_load(fh) or {}
-            except Exception:  # noqa: BLE001
-                data = {}
-            if (
-                data.get("provider") != "bedrock"
-                or not data.get("available", False)
-                or not isinstance(data.get("id"), str)
-            ):
-                continue
-            ids.append(_normalize(data["id"]))
-        return ids
-    except Exception:  # noqa: BLE001
-        return []
 
 
 class InferenceProviderRequest(BaseModel):
@@ -334,56 +287,131 @@ async def set_inference_provider(body: InferenceProviderRequest) -> dict[str, An
     }
 
 
-@router.get("/inference/models")
-async def list_inference_models() -> dict[str, Any]:
-    """List available models for the current inference provider."""
-    provider = get_effective_inference_provider()
-    if provider != "datalayer":
-        return {
-            "provider": provider,
-            "models": [],
-        }
+class InferenceTokenRequest(BaseModel):
+    """The token a runtime calls ai-inference with, as the companion gives it."""
 
-    try:
-        import httpx
+    token: str
 
-        base_url = _normalize_ai_inference_base_url(
-            os.getenv("DATALAYER_AI_INFERENCE_URL")
+
+@router.put("/inference/token")
+async def give_inference_token_endpoint(
+    request: Request, body: InferenceTokenRequest
+) -> dict[str, Any]:
+    """Give this runtime the token it calls ai-inference with, and ask ai-inference again.
+
+    The companion calls it as the runtime is assigned to its user, with that
+    user's token narrowed by IAM to ai-inference. Only the pod itself may: the
+    token decides whose account every model call is metered on. Which models
+    ai-inference serves is asked again with it, so the models offered are
+    those it serves rather than the sentence a pooled runtime started with.
+    """
+    from agent_runtimes.loop.apps.callers import is_loopback
+    from agent_runtimes.models.offered import (
+        give_inference_token,
+        load_inference_models,
+        models_source,
+    )
+
+    if not is_loopback(request.client.host if request.client else None):
+        raise HTTPException(
+            status_code=403,
+            detail="Only the runtime's own pod gives it its ai-inference token.",
         )
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{base_url}/models")
-        if response.status_code == 200:
-            payload = response.json()
-            if isinstance(payload, dict):
-                fallback_models = _fallback_bedrock_models()
-                payload["provider"] = payload.get("provider") or "datalayer"
-                models = payload.get("models")
-                if not isinstance(models, list) or not any(models):
-                    payload["models"] = fallback_models
-                payload["default_model"] = payload.get("default_model") or (
-                    payload["models"][0] if payload.get("models") else None
-                )
-                return payload
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to fetch ai-inference models: %s", exc)
-
+    if not body.token.strip():
+        raise HTTPException(status_code=422, detail="The token is empty.")
+    expires_at = give_inference_token(body.token)
+    provider = get_effective_inference_provider()
+    served = list((await load_inference_models(refresh=True)).served or [])
+    source, note = models_source(provider)
     return {
-        "provider": "datalayer",
-        "models": _fallback_bedrock_models(),
+        "provider": provider,
+        "expiresAt": expires_at,
+        "models": served,
+        "source": source,
+        "note": note,
     }
 
 
+@router.get("/inference/models")
+async def list_inference_models() -> dict[str, Any]:
+    """The models this runtime's inference serves, as the runtime knows them.
+
+    Through datalayer-ai-inference, its answer to the one request the runtime
+    makes at startup, in catalogue ids; ``note`` says it in a sentence, and
+    why the list is empty when it is (no ai-inference configured, or it did
+    not answer). Calling the providers directly, nothing is listed here: the
+    runtime's own keys decide (``/configure/models``).
+    """
+    from agent_runtimes.models.offered import load_inference_models, models_source
+
+    provider = get_effective_inference_provider()
+    served: list[str] = []
+    if provider == "datalayer":
+        served = list((await load_inference_models()).served or [])
+    source, note = models_source(provider)
+    return {"provider": provider, "models": served, "source": source, "note": note}
+
+
+class DecisionsRequest(BaseModel):
+    """Typed questions about a text, as ``/decisions`` asks them."""
+
+    state: str
+    questions: list[DecisionQuestion]
+
+
+@router.post("/inference/decisions")
+async def ask_decisions(body: DecisionsRequest) -> dict[str, Any]:
+    """Ask Jev typed questions about a text, as the ``decide`` tool does.
+
+    Through this runtime's ai-inference, with the token its models are called
+    with: on Datalayer the user's, narrowed to ai-inference. ``loop``'s
+    ``/decisions`` asks here.
+
+    Parameters
+    ----------
+    body : DecisionsRequest
+        The text (``state``) and the questions, each named and typed.
+
+    Returns
+    -------
+    dict[str, Any]
+        ``model`` and ``answers`` by question name; or ``refusal``, the
+        sentence saying why nothing was decided.
+    """
+    answer = await decide(body.state, body.questions)
+    if isinstance(answer, str):
+        return {"refusal": answer}
+    return answer
+
+
 @router.get("/models")
-async def list_catalog_models() -> dict[str, Any]:
+async def list_catalog_models(
+    agent_id: str | None = Query(
+        None,
+        description="An agent of this runtime: only its model and model_additionals",
+    ),
+) -> dict[str, Any]:
     """The model catalog, with readiness and — for local models — reachability.
 
     The list comes from agentspecs: that is what decides which models are
-    *offerable*. Discovery only reports what is **reachable right now**, because
+    *offerable* — for an agent, its ``model`` and ``model_additionals``.
+    Whether a hosted one can be used is ai-inference's answer when the
+    runtime routes through it and it answered (``source`` and ``note`` say
+    which). Discovery only reports what is **reachable right now**, because
     a local model is available when something is listening on a port, not when
     an API key happens to be set.
 
     A model installed locally with no spec is reported separately, as an
     invitation to add a spec — never as a silent option.
+
+    When ai-inference decides (``source`` ``ai-inference``), only the models
+    it serves are listed: no local model, runtime or uncatalogued install,
+    and none of the agent's models it does not serve (a switch to one is
+    refused in a sentence).
+
+    The typed-decision models ai-inference lists (Jev) come apart, in
+    ``decision_models`` with ``decisions_note``: a decision asks them through
+    ``/decisions``, and no agent may be switched to one.
     """
     from agent_runtimes.models.local import (
         LOCAL_PROVIDERS,
@@ -391,26 +419,62 @@ async def list_catalog_models() -> dict[str, Any]:
         discover_installed_models,
         split_model_id,
     )
-    from agent_runtimes.models.models import credentials_ready
-    from agent_runtimes.specs.models import list_chat_models
+    from agent_runtimes.models.offered import (
+        DECISIONS_NOTE,
+        agent_inference_provider,
+        availability,
+        decision_rows,
+        listed,
+        load_inference_models,
+        models_source,
+        offered_model_ids,
+    )
+    from agent_runtimes.specs.models import get_model, is_chat_model, list_chat_models
 
-    installed = discover_installed_models()
+    await load_inference_models()
+    provider = agent_inference_provider(agent_id)
+    source, note = models_source(provider)
+    agent_models = offered_model_ids(agent_id)
+    if agent_id and agent_models is None:
+        raise HTTPException(
+            status_code=404, detail=f"No agent '{agent_id}' runs on this runtime."
+        )
+
+    # Local runtimes are not this runtime's when ai-inference decides.
+    on_ai_inference = source == "ai-inference"
+    installed = {} if on_ai_inference else discover_installed_models()
 
     models: list[dict[str, Any]] = []
     catalogued_local: set[tuple[str, str]] = set()
 
-    # A chat picker's models: a typed-judgment model (Jev) is not one.
-    for model in list_chat_models():
-        missing = [
-            name
-            for name in model.required_env_vars
-            if not os.getenv(name.split(":")[0])
+    # A chat picker's models: a typed-decision model (Jev) is not one.
+    offered = (
+        [
+            spec
+            for spec in (get_model(m) for m in agent_models)
+            if spec is not None and is_chat_model(spec)
         ]
+        if agent_models is not None
+        else list_chat_models()
+    )
+    offered = [model for model in offered if listed(model.id, provider)]
+    for model in offered:
+        # Through ai-inference the provider's keys are ai-inference's: this
+        # process needs none of them.
+        missing = (
+            []
+            if provider == "datalayer"
+            else [
+                name
+                for name in model.required_env_vars
+                if not os.getenv(name.split(":")[0])
+            ]
+        )
         # The spec's variables are not the whole answer: a model whose
         # credentials live in datalayer-ai-inference lists none, and needs its
-        # provider's own key when this process calls the provider directly.
-        # `credentials_ready` knows which of the two we are doing.
-        ready = not missing and credentials_ready(model)
+        # provider's own key when this process calls the provider directly;
+        # and when ai-inference said what it serves, that decides.
+        usable, unusable_reason = availability(model.id, provider)
         entry: dict[str, Any] = {
             "id": model.id,
             "name": model.name,
@@ -443,16 +507,12 @@ async def list_catalog_models() -> dict[str, Any]:
         else:
             entry["reachable"] = None
             entry["warning"] = None
-            # Two questions wear the same word here. The registry's `available`
-            # is entitlement — may this deployment call the model at all — and
-            # this key is readiness, whether the credentials are in place. Only
-            # readiness was being computed, and every Bedrock model shares one
-            # set of AWS credentials, so the whole family read as available and
-            # Bedrock answered `AccessDeniedException` when one was picked.
-            entitled = getattr(model, "available", True)
-            entry["available"] = bool(ready and entitled)
-            if not entitled:
-                entry["reason"] = "Not enabled for this deployment"
+            # Entitlement (the registry's `available`), readiness (the
+            # credentials) and, through ai-inference, whether it serves the
+            # model: `availability` asks all three, and says which failed.
+            entry["available"] = usable
+            if not usable:
+                entry["reason"] = unusable_reason
 
         models.append(entry)
 
@@ -463,18 +523,26 @@ async def list_catalog_models() -> dict[str, Any]:
         if (provider_name, name) not in catalogued_local
     ]
 
-    runtimes = {
-        name: {
-            "label": spec.label,
-            "base_url": spec.base_url(),
-            "reachable": name in installed,
-            "installed": list(installed.get(name, ())),
+    runtimes = (
+        {}
+        if on_ai_inference
+        else {
+            name: {
+                "label": spec.label,
+                "base_url": spec.base_url(),
+                "reachable": name in installed,
+                "installed": list(installed.get(name, ())),
+            }
+            for name, spec in LOCAL_PROVIDERS.items()
         }
-        for name, spec in LOCAL_PROVIDERS.items()
-    }
+    )
 
     return {
         "models": models,
+        "source": source,
+        "note": note,
+        "decision_models": decision_rows(provider),
+        "decisions_note": DECISIONS_NOTE,
         "local_runtimes": runtimes,
         "uncatalogued_local": uncatalogued,
     }
@@ -600,11 +668,23 @@ async def get_configuration(
             mcp_servers = mcp_manager.get_servers()
             logger.debug(f"Got {len(mcp_servers)} servers from mcp_manager (fallback)")
 
+        # The models on offer: an agent's own (its model and model_additionals),
+        # read against what ai-inference said it serves.
+        from agent_runtimes.models.offered import (
+            agent_inference_provider,
+            load_inference_models,
+            offered_model_ids,
+        )
+
+        await load_inference_models()
+
         # Build frontend config
         config = await get_frontend_config(
             tools=available_tools,
             mcp_servers=mcp_servers,
             disable_tool_approvals=get_tool_approvals_disabled(),
+            model_ids=offered_model_ids(agent_id),
+            inference_provider=agent_inference_provider(agent_id),
         )
 
         # If the caller provides an agent, prefer the model configured by that
@@ -622,21 +702,11 @@ async def get_configuration(
                 if isinstance(spec_welcome, str) and spec_welcome.strip():
                     config.welcome_message = spec_welcome.strip()
 
-                raw_suggestions = spec.get("suggestions")
-                if isinstance(raw_suggestions, list):
-                    # A spec's suggestion is a bare string or, since openers
-                    # carry marks, an `AgentSuggestion` record.
-                    config.suggestions = [
-                        AgentSuggestion(text=item.strip())
-                        if isinstance(item, str)
-                        else AgentSuggestion.model_validate(item)
-                        for item in raw_suggestions
-                        if (isinstance(item, str) and item.strip())
-                        or (
-                            isinstance(item, dict)
-                            and str(item.get("text") or "").strip()
-                        )
-                    ]
+                # The agentspec's suggestions, kept with its creation spec
+                # as `AgentSuggestion` records.
+                config.suggestions = [
+                    AgentSuggestion.model_validate(item) for item in spec["suggestions"]
+                ]
 
             # What has been sent to this agent so far, for the composer's arrow
             # keys: part of the initial state, so a reloaded page walks back
@@ -879,7 +949,7 @@ async def get_agent_spec_endpoint(
     Raises:
         HTTPException: If agent spec not found.
     """
-    from .agents import get_stored_agent_spec
+    from .agents import get_stored_agent_spec, set_up_refused
 
     spec = get_stored_agent_spec(agent_id)
     if spec is None:
@@ -891,9 +961,13 @@ async def get_agent_spec_endpoint(
     # Enrich with current sandbox status
     sandbox_status = _get_sandbox_status()
 
+    refused = set_up_refused(agent_id)
     return {
         **spec,
         "sandbox": sandbox_status.model_dump() if sandbox_status else None,
+        # Why its configure was refused — a secret its specs declare and it was
+        # not given (R-19) — so a launch waiting for it says so, and stops.
+        **({"set_up_refused": refused} if refused else {}),
     }
 
 

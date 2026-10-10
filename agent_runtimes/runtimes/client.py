@@ -44,6 +44,25 @@ logger = logging.getLogger(__name__)
 SUPPORTED_OPERATIONS: frozenset[str] = frozenset(LIFECYCLE_OPERATIONS) - {"execute"}
 
 
+#: The environment variable holding the platform's magic key. Set, every
+#: runtime this client creates is sent it, and the platform starts the runtime
+#: unmetered: it consumes no credits and never expires.
+MAGIC_API_KEY_ENV = "DATALAYER_MAGIC_API_KEY"
+#: The ``POST /runtimes`` field the magic key travels in.
+MAGIC_API_KEY_FIELD = "magic_api_key"
+
+
+def magic_api_key() -> Optional[str]:
+    """The platform's magic key from the environment, or None when it is not set."""
+    value = os.environ.get(MAGIC_API_KEY_ENV, "").strip()
+    return value or None
+
+
+def unmetered_launch() -> bool:
+    """Whether the runtimes this process creates are unmetered: the magic key is set."""
+    return magic_api_key() is not None
+
+
 def _is_transient_runtime_create_error(message: str) -> bool:
     """Return True when the error looks transient and safe to retry."""
     lower = message.lower()
@@ -147,6 +166,9 @@ class RuntimesClient:
         content_attachment_uids: Optional[list[str]] = None,
         parent_reservation_uid: Optional[str] = None,
         environment_version: Optional[Union[int, str]] = None,
+        app_uid: Optional[str] = None,
+        deployment_uid: Optional[str] = None,
+        app_spec: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """Create a runtime — ``POST /runtimes``.
 
@@ -178,12 +200,36 @@ class RuntimesClient:
             The execution tree the runtime is metered against
             (ORCHESTRATOR.md, O1-07): IAM grants its reservation no more than
             the tree has left, and refuses it once the tree has nothing.
+        app_uid : Optional[str]
+            The LOOP application the runtime runs for (plans/LOOP.md, R-09).
+        deployment_uid : Optional[str]
+            The deployment of that application it runs for — a scheduled
+            tick's or an event's session. The Operator writes both on the
+            runtime's reservation, so its running time is counted per
+            application and per deployment; they never change who pays. A
+            deployment is always of an application: one named without
+            ``app_uid`` is refused (`ValueError`).
+        app_spec : Optional[dict[str, Any]]
+            The Appspec of the application the runtime is launched for (LOOP
+            R-19). The Operator passes it to the runtime's companion, which
+            gives the runtime the secrets its connections declare before its
+            agent is made. An application's launch carries it: ``app_uid``
+            without it is refused (`ValueError`).
 
         Returns
         -------
         dict[str, Any]
             Response containing runtime creation details.
         """
+        if deployment_uid and not app_uid:
+            raise ValueError(
+                f"Deployment {deployment_uid} is named without its application: give app_uid."
+            )
+        if app_uid and not app_spec:
+            raise ValueError(
+                f"Application {app_uid} is launched without its Appspec: give app_spec, "
+                "so its runtime is given the secrets its connections declare."
+            )
         # The launch contract is `environment: {name, version}`, and the
         # version is additive: absent, this is byte for byte the request every
         # platform environment has always been launched with (PLAN_ENV.md,
@@ -264,6 +310,13 @@ class RuntimesClient:
             if resolved_billing_entity_handle:
                 body["billing_entity_handle"] = resolved_billing_entity_handle
 
+            if app_uid:
+                body["app_uid"] = app_uid
+            if deployment_uid:
+                body["deployment_uid"] = deployment_uid
+            if app_spec:
+                body["app_spec"] = dict(app_spec)
+
             if runtime_name:
                 body["runtime_name"] = runtime_name
             if content_attachment_uids:
@@ -276,6 +329,11 @@ class RuntimesClient:
                 sorted(body.keys()),
             )
             logger.debug("Runtime create payload: %s", body)
+            # After the payload is logged, so the key never is.
+            magic = magic_api_key()
+            if magic is not None:
+                body[MAGIC_API_KEY_FIELD] = magic
+                logger.debug("Runtime create is unmetered: the magic key is sent.")
 
             response: _Response | None = None
             max_attempts = 4

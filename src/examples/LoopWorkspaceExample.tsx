@@ -31,21 +31,22 @@
 
 import type { JSX } from 'react';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { Box } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useReactor, useSignalValue } from '@datalayer/reactor/react';
-import { buildLoopReactor, LoopWorkspace } from '../loop/shell';
-import { loopPlugins } from '../loop/presets';
-import { WindowFrame } from '../loop/plugins/window-frame';
+import { buildLoopReactor, LoopWorkspace } from '../apps/shell';
+import { loopPlugins } from '../apps/presets';
+import { WindowFrame } from '../apps/plugins/window-frame';
+import { GraphViewPlugin } from '../apps/plugins/graph';
 import {
   IDLE_SANDBOX_SNAPSHOT_SIGNAL,
   IDLE_SANDBOX_TARGET_SIGNAL,
-} from '../loop/core';
+} from '../apps/core';
 import {
   AGENTS_PLUGIN_NAME,
   type AgentsOutput,
   type SandboxTarget,
-} from '../loop/plugins/agents';
+} from '../apps/plugins/agents';
 import { internalQueryClient } from '../utils';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { ThemedProvider } from './utils/themedProvider';
@@ -197,8 +198,8 @@ export function LoopWorkspaceExample({
   // Built once: rebuilding would restart every plugin on each render.
   const reactor = useMemo(
     () =>
-      buildLoopReactor(
-        loopPlugins({
+      buildLoopReactor([
+        ...loopPlugins({
           serverUrl,
           target: initialTarget,
           defaultEditor,
@@ -211,14 +212,15 @@ export function LoopWorkspaceExample({
           // The demonstration's switches. Each is left out rather than
           // mounted-and-hidden: the sidebar is drawn only when something
           // contributes to it, so leaving these out is what removes the column.
-          graph: showGraph,
           commandPalette: showCommandPalette,
           // Opens the title bar's two slots; the frame itself is composed below,
           // because a plugin cannot wrap the shell.
           windowFrame: showWindowFrame,
           pluginsPanel: showPluginsManager,
         }),
-      ),
+        // The graph is the host's to add: the preset leaves it out.
+        ...(showGraph ? [GraphViewPlugin] : []),
+      ]),
     [
       serverUrl,
       initialTarget,
@@ -329,12 +331,10 @@ export function LoopWorkspaceExample({
          * The room around it is what makes the frame read as a window sitting
          * on a page rather than as a border drawn at the edges of the screen.
          */
-        <Box
-          sx={{ height: '100%', minHeight: 0, p: 3, boxSizing: 'border-box' }}
-        >
+        <Box height="100%" minHeight={0} p={3} boxSizing="border-box">
           <WindowFrame
             title={
-              <Box as="span" sx={{ fontSize: 1, fontWeight: 'semibold' }}>
+              <Box as="span" fontSize={1} fontWeight="semibold">
                 Loop
               </Box>
             }
@@ -343,7 +343,9 @@ export function LoopWorkspaceExample({
           </WindowFrame>
         </Box>
       ) : (
-        <Box sx={{ height: '100%', minHeight: 0 }}>{shell}</Box>
+        <Box height="100%" minHeight={0}>
+          {shell}
+        </Box>
       )}
     </QueryClientProvider>
   );

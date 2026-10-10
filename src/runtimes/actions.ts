@@ -78,6 +78,24 @@ export async function createRuntime(
     );
   }
   /*
+   * An application's launch carries its Appspec (STUDIO R-19), as
+   * `RuntimesClient.create` does in Python: the Operator hands it to the
+   * companion, which gives the runtime the secrets its connections declare
+   * before its agent is made. Refused here, before any request, as the
+   * Operator would refuse it (422).
+   */
+  if (options.deploymentUid && !options.appUid) {
+    throw new Error(
+      `Deployment ${options.deploymentUid} is named without its application: give appUid.`,
+    );
+  }
+  if (options.appUid && !options.appSpec) {
+    throw new Error(
+      `Application ${options.appUid} is launched without its Appspec: give appSpec, ` +
+        'so its runtime is given the secrets its connections declare.',
+    );
+  }
+  /*
    * `environment: {name, version}` — and the version is ADDITIVE.
    *
    * Without one this is, byte for byte, the request every runtime has been
@@ -104,6 +122,15 @@ export async function createRuntime(
   }
   if (options.snapshot) {
     body['from'] = options.snapshot;
+  }
+  if (options.appUid) {
+    body['app_uid'] = options.appUid;
+  }
+  if (options.deploymentUid) {
+    body['deployment_uid'] = options.deploymentUid;
+  }
+  if (options.appSpec) {
+    body['app_spec'] = options.appSpec;
   }
   const data = await requestDatalayerAPI<{
     success: boolean;

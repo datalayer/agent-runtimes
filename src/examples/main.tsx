@@ -66,6 +66,7 @@ import {
   getExampleEntries,
   type ExampleEntry,
 } from './example-selector';
+import { EXAMPLE_GROUP_ORDER, getExampleGroup } from './exampleGroups';
 import {
   RUNTIME_TARGETS,
   runtimeTargetCapabilities,
@@ -105,19 +106,6 @@ const DEFAULT_LOCAL_JUPYTER_SERVER_TOKEN =
   '60c1661cc408f978c309d04157af55c9588ff9557c9380e4fb50785750703da6';
 const DEFAULT_CLOUD_RUNTIME_ENVIRONMENT = 'ai-agents-env';
 
-const EXAMPLE_GROUP_ORDER = [
-  'Loop',
-  'A2UI',
-  'A2A',
-  'AG-UI',
-  'Capabilities',
-  'Chat',
-  'Document',
-  'Notebook',
-  'Cell',
-  'CopilotKit',
-] as const;
-
 /**
  * The examples that open without an account.
  *
@@ -127,6 +115,18 @@ const EXAMPLE_GROUP_ORDER = [
  */
 const ANONYMOUS_EXAMPLES = new Set([
   'LoopWorkspaceExample',
+  // An application beside its computer, on the local agent-runtimes server:
+  // nothing allocated on Datalayer, and the machine itself needs no token.
+  'LoopAppComputerExample',
+  // The Sales and Accounting team: Sales in the page on a visitor's trial
+  // key, Accounting on the local server, which answers the machine itself.
+  'AgentA2ATeamExample',
+  // The scenes of the catalogue: each entry in the page on a visitor's trial
+  // key, the members on a runtime on local servers that answer the machine.
+  'ScenesExample',
+  // Decide, on the local agent-runtimes server as above: Jev is asked
+  // through the server's ai-inference, with the server's own key.
+  'AgentDecideExample',
   // Runs on the browser sandbox: nothing to allocate, nothing to sign into.
   'LoopShellExample',
   // Temporarily anonymous so the Jupyter output surface can be driven and
@@ -137,33 +137,24 @@ const ANONYMOUS_EXAMPLES = new Set([
   'DocumentPageAgent',
   // The decks plugin in a Loop; the agent and the decks both live in the page.
   'DecksAgent',
+  // PAP protocol examples are deterministic browser views. They validate
+  // fixtures and generate local Web Crypto material without allocating a
+  // runtime or authenticating to Datalayer.
+  'PapCompanyDiscoveryExample',
+  'PapAgentIdentityExample',
+  'PapAuthorizationBoundaryExample',
+  'PapDpopProofExample',
+  'PapSessionLifecycleExample',
+  'PapGuidedJourneyExample',
+  // The floating assistant: the character, its balloon and its motions need
+  // no runtime; a conversation does, and says so when there is none.
+  'AssistantExample',
+  // Every character in every state, from static data: no agent at all.
+  'AssistantGalleryExample',
+  // Voice: heard in the page, the agent on the local server, the speech
+  // service named in the address.
+  'VoiceChatExample',
 ]);
-
-const getExampleGroup = (id: string): string => {
-  if (
-    id === 'AgentspecsExample' ||
-    id === 'AgentLoopExample' ||
-    id === 'LoopWorkspaceExample' ||
-    id === 'LoopShellExample' ||
-    id === 'DecksAgent'
-  ) {
-    return 'Loop';
-  }
-  if (id.startsWith('A2Ui')) return 'A2UI';
-  // Agents reached over the A2A protocol: their own category, after A2UI.
-  if (id.startsWith('AgentA2A')) return 'A2A';
-  if (id.startsWith('AgUi')) return 'AG-UI';
-  if (id.startsWith('CopilotKit')) return 'CopilotKit';
-  // Each remaining Agent* example demonstrates one capability of the
-  // runtime: checkpoints, hooks, memory, guardrails…
-  if (id.startsWith('Agent')) return 'Capabilities';
-  if (id.startsWith('Chat')) return 'Chat';
-  // The document examples: the ones on the Lexical editor, and the page
-  // with a document on it.
-  if (id.startsWith('Lexical') || id.startsWith('Document')) return 'Document';
-  if (id.startsWith('Notebook')) return 'Notebook';
-  return 'Cell';
-};
 
 const wait = (ms: number) =>
   new Promise<void>(resolve => {
@@ -650,15 +641,13 @@ const AgentRuntimesIAMCallback: React.FC = () => {
   return (
     <JupyterReactTheme>
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          p: 3,
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="100vh"
+        p={3}
       >
-        <Box sx={{ textAlign: 'center' }}>
+        <Box textAlign="center">
           {status === 'processing' ? <Spinner size="large" /> : null}
           <Text
             as="p"
@@ -1466,14 +1455,16 @@ const ExampleAppThemed: React.FC<{
     }
     for (const [groupName, examples] of groups) {
       examples.sort((left, right) => {
-        if (groupName === 'Loop') {
-          // The shells first, most naked first; then the loop that drives a
+        if (groupName === 'Apps') {
+          // The shells first, most naked first; then the strategy that drives a
           // notebook; then the library of specs behind them all.
           const LOOP_ORDER = [
             'LoopShellExample',
             'LoopWorkspaceExample',
-            'AgentLoopExample',
+            'LoopStrategyExample',
+            'LoopAppComputerExample',
             'AgentspecsExample',
+            'ScenesExample',
           ];
           const loopOrder = (id: string) => {
             const index = LOOP_ORDER.indexOf(id);
@@ -1576,35 +1567,31 @@ const ExampleAppThemed: React.FC<{
       themeStyles={cfg.themeStyles}
     >
       <Box
-        sx={{
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
-          bg: 'canvas.default',
-          color: 'fg.default',
-        }}
+        width="100vw"
+        height="100vh"
+        overflow="hidden"
+        bg="canvas.default"
+        color="fg.default"
       >
         {/* ── Header bar ─────────────────────────────────── */}
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            px: 3,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 3,
-            height: '60px',
-            bg: 'canvas.default',
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          zIndex={100}
+          px={3}
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={3}
+          height="60px"
+          bg="canvas.default"
+          borderBottom="1px solid"
+          borderColor="border.default"
         >
           {/* Left: home button + example selector */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box display="flex" alignItems="center" gap={2}>
             <Box
               as="button"
               onClick={() => {
@@ -1616,19 +1603,17 @@ const ExampleAppThemed: React.FC<{
               }}
               title="Home"
               aria-label="Go to examples home"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '32px',
-                height: '32px',
-                border: '1px solid',
-                borderColor: 'border.default',
-                borderRadius: 2,
-                bg: 'canvas.default',
-                color: 'fg.default',
-                cursor: isChangingExample ? 'not-allowed' : 'pointer',
-              }}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              width="32px"
+              height="32px"
+              border="1px solid"
+              borderColor="border.default"
+              borderRadius={2}
+              bg="canvas.default"
+              color="fg.default"
+              cursor={isChangingExample ? 'not-allowed' : 'pointer'}
               disabled={isChangingExample}
             >
               <HomeIcon size={16} />
@@ -1652,11 +1637,9 @@ const ExampleAppThemed: React.FC<{
                   }}
                 >
                   <Box
-                    sx={{
-                      p: 2,
-                      borderBottom: '1px solid',
-                      borderColor: 'border.default',
-                    }}
+                    p={2}
+                    borderBottom="1px solid"
+                    borderColor="border.default"
                   >
                     <TextInput
                       autoFocus
@@ -1711,10 +1694,8 @@ const ExampleAppThemed: React.FC<{
             {!shouldShowAuthScreen && !exampleOwnsSandboxControl && (
               <Box
                 aria-label="Where the example runs"
-                sx={{
-                  minWidth: '320px',
-                  opacity: isHome || isChangingExample ? 0.6 : 1,
-                }}
+                minWidth="320px"
+                opacity={isHome || isChangingExample ? 0.6 : 1}
               >
                 <SegmentedControl
                   aria-label="Where the example runs"
@@ -1764,16 +1745,16 @@ const ExampleAppThemed: React.FC<{
               <AgentSummary summary={agentSummary} />
             )}
             {isChangingExample && (
-              <Box as="span" sx={{ color: 'fg.muted', fontSize: 0 }}>
+              <Box as="span" color="fg.muted" fontSize={0}>
                 Loading…
               </Box>
             )}
           </Box>
 
           {/* Right: theme picker + color mode + logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box display="flex" alignItems="center" gap={3}>
             <AppearanceControlsWithStore useStore={useExampleThemeStore} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box display="flex" alignItems="center" gap={2}>
               {token ? (
                 <>
                   <UserBadge
@@ -1812,7 +1793,8 @@ const ExampleAppThemed: React.FC<{
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open Datalayer website"
-              sx={{ display: 'inline-flex', alignItems: 'center' }}
+              display="inline-flex"
+              alignItems="center"
             >
               <DatalayerLogoText
                 size={24}
@@ -1830,13 +1812,7 @@ const ExampleAppThemed: React.FC<{
         </Box>
 
         {/* ── Content area ───────────────────────────────── */}
-        <Box
-          sx={{
-            marginTop: '60px',
-            height: 'calc(100vh - 60px)',
-            overflow: 'hidden',
-          }}
-        >
+        <Box marginTop="60px" height="calc(100vh - 60px)" overflow="hidden">
           {shouldShowAuthScreen ? (
             /*
               Signing in, beside what can be seen without it.
@@ -1848,26 +1824,22 @@ const ExampleAppThemed: React.FC<{
               the rest, or try this one now.
             */
             <Box
-              sx={{
-                width: '100%',
-                height: '100%',
-                bg: 'canvas.backdrop',
-                p: 3,
-                overflow: 'auto',
-              }}
+              width="100%"
+              height="100%"
+              bg="canvas.backdrop"
+              p={3}
+              overflow="auto"
             >
               <Box
-                sx={{
-                  display: 'grid',
-                  // Stacked on a narrow window, sign-in first: it is what the
-                  // reader came here for, and a column of cards above the form
-                  // would bury it.
-                  gridTemplateColumns: ['1fr', '1fr', '440px minmax(0, 1fr)'],
-                  gap: 4,
-                  maxWidth: 1400,
-                  mx: 'auto',
-                  alignItems: 'start',
-                }}
+                display="grid"
+                // Stacked on a narrow window, sign-in first: it is what the
+                // reader came here for, and a column of cards above the form
+                // would bury it.
+                gridTemplateColumns={['1fr', '1fr', '440px minmax(0, 1fr)']}
+                gap={4}
+                maxWidth={1400}
+                mx="auto"
+                alignItems="start"
               >
                 <SignInSimple
                   onSignIn={handleHeaderSignIn}
@@ -1886,13 +1858,11 @@ const ExampleAppThemed: React.FC<{
                     rather than reimplemented so an example added here looks
                     the same on both sides of the sign-in. */}
                 <Box
-                  sx={{
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    bg: 'canvas.default',
-                  }}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
+                  overflow="hidden"
+                  bg="canvas.default"
                 >
                   <HomeExample
                     examples={anonymousExampleEntries}
@@ -1903,7 +1873,7 @@ const ExampleAppThemed: React.FC<{
               </Box>
             </Box>
           ) : isChangingExample ? (
-            <Box sx={{ p: 5, textAlign: 'center', color: 'fg.muted' }}>
+            <Box p={5} textAlign="center" color="fg.muted">
               <h3>Loading {selectedExample}…</h3>
               <p>Please wait while the example loads.</p>
             </Box>

@@ -66,6 +66,8 @@ agent-runtimes chat "What is Python?"
 agent-runtimes chat -a crawler "Search for AI trends"
 ```
 
+To run several lines in one session, slash commands such as `/models` among them, and exit with a code a script can check, use `--prompt`: see [Run without interaction](../cli/index.mdx#run-without-interaction).
+
 ### Connect to a Remote Server
 
 Use the `connect` subcommand to attach to an existing server:
@@ -103,7 +105,7 @@ agent-runtimes chat agents --server https://agents.datalayer.ai
 | `/exit` | `Esc Q` | Exit the interactive session |
 
 The registry in `agent_runtimes/chat/commands/` carries more than the table —
-`/models`, `/suggestions`, `/about`, and an **Open** group (`/browser`,
+`/models` (also from a script, with [`--prompt`](../cli/index.mdx#run-without-interaction)), `/suggestions`, `/about`, and an **Open** group (`/browser`,
 `/jupyter`, `/datalayer`, `/surface`, plus notebook and document variants)
 whose members appear when their target is configured. `/help` lists exactly
 what your session has.
@@ -127,6 +129,7 @@ agent-runtimes chat --eggs
 | `--debug` | `-d` | off | Verbose logging |
 | `--no-codemode` | | off | Disable codemode |
 | `--eggs` | | off | Enable Easter egg slash commands |
+| `--prompt` | `-q` | | Run this line without interaction, then stop; repeatable, see [Run without interaction](../cli/index.mdx#run-without-interaction) |
 | `--version` | `-v` | | Show version info |
 
 ### Programmatic Usage

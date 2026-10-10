@@ -503,10 +503,8 @@ export function ChatPopupStandalone({
           }}
         >
           <Box
-            sx={{
-              position: 'relative',
-              display: 'inline-flex',
-            }}
+            position="relative"
+            display="inline-flex"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
@@ -543,22 +541,20 @@ export function ChatPopupStandalone({
             {/* Unread badge */}
             {messages.length > 0 && (
               <Box
-                sx={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -4,
-                  minWidth: 20,
-                  height: 20,
-                  px: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bg: 'danger.emphasis',
-                  color: 'fg.onEmphasis',
-                  borderRadius: '50%',
-                  fontSize: 0,
-                  fontWeight: 'bold',
-                }}
+                position="absolute"
+                top={-4}
+                right={-4}
+                minWidth={20}
+                height={20}
+                px={1}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                bg="danger.emphasis"
+                color="fg.onEmphasis"
+                borderRadius="50%"
+                fontSize={0}
+                fontWeight="bold"
               >
                 <Text sx={{ fontSize: 0 }}>
                   {messages.length > 99 ? '99+' : messages.length}
@@ -569,16 +565,16 @@ export function ChatPopupStandalone({
             {/* Pulse animation when has messages */}
             {messages.length > 0 && (
               <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                borderRadius="50%"
+                border="2px solid"
+                borderColor={brandColor || 'accent.emphasis'}
+                animation="pulse 2s infinite"
                 sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: brandColor || 'accent.emphasis',
-                  animation: 'pulse 2s infinite',
                   '@keyframes pulse': {
                     '0%': {
                       transform: 'scale(1)',
@@ -599,16 +595,14 @@ export function ChatPopupStandalone({
       {/* Mobile overlay backdrop */}
       {isMobile && isOpen && (
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bg: 'neutral.muted',
-            opacity: 0.5,
-            zIndex: 999,
-          }}
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="neutral.muted"
+          opacity={0.5}
+          zIndex={999}
           onClick={handleToggle}
         />
       )}
@@ -683,14 +677,12 @@ export function ChatPopupStandalone({
 
           {/* Custom input area with streaming support */}
           <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              p: 3,
-              borderTop: '1px solid',
-              borderColor: 'border.default',
-              bg: 'canvas.default',
-            }}
+            display="flex"
+            gap={2}
+            p={3}
+            borderTop="1px solid"
+            borderColor="border.default"
+            bg="canvas.default"
           >
             <Textarea
               ref={textareaRef}
@@ -725,12 +717,10 @@ export function ChatPopupStandalone({
           {/* Powered by tag */}
           {showPoweredBy && (
             <Box
-              sx={{
-                p: 2,
-                borderTop: '1px solid',
-                borderColor: 'border.default',
-                bg: 'canvas.subtle',
-              }}
+              p={2}
+              borderTop="1px solid"
+              borderColor="border.default"
+              bg="canvas.subtle"
             >
               <PoweredByTag
                 show={true}

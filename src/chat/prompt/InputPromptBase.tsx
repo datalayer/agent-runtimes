@@ -30,6 +30,7 @@ import type { PromptStack } from './stack';
 import { InputPromptText } from './InputPromptText';
 import { InputPromptLexical } from './InputPromptLexical';
 import type { MentionableAgent } from './plugins/AgentMentionPlugin';
+import type { PromptCommand } from './plugins/CommandPlugin';
 import { usePromptHistory, type HistoryDirection } from './promptHistory';
 
 /** Input variant type. */
@@ -91,6 +92,8 @@ export interface InputPromptBaseProps {
    * suggestion a person cannot see is worse than none.
    */
   mentionableAgents?: MentionableAgent[];
+  /** Commands listed while `/` is typed, before the prompt's own (LOOP P-19). Lexical only. */
+  promptCommands?: PromptCommand[];
   /**
    * What was sent to this agent before this composer mounted, oldest first.
    *
@@ -141,6 +144,7 @@ export function InputPromptBase({
   disabled = false,
   readOnly = false,
   mentionableAgents,
+  promptCommands,
   promptHistory,
   sx,
   value: controlledValue,
@@ -336,21 +340,17 @@ export function InputPromptBase({
   return (
     <Box sx={sx}>
       <Box
-        sx={{
-          p: padding,
-          ...(showBorderTop && {
-            borderTop: '1px solid',
-            borderColor: 'border.default',
-          }),
-          ...(showBackground && {
-            bg: 'canvas.subtle',
-          }),
-        }}
+        p={padding}
+        borderTop={showBorderTop ? '1px solid' : undefined}
+        borderColor={showBorderTop ? 'border.default' : undefined}
+        bg={showBackground ? 'canvas.subtle' : undefined}
       >
         <Box
           // Named so the turn-end refocus can ask whether the caret is already
           // somewhere inside this prompt before it reaches for it.
           ref={containerRef}
+          // What the floating assistant never sits over (LOOP T-27).
+          data-chat-composer=""
           onFocusCapture={() => {
             if (selfFocused.current) {
               selfFocused.current = false;
@@ -370,13 +370,14 @@ export function InputPromptBase({
               setFocused(false);
             }
           }}
+          border="1px solid"
+          // The theme's card (LOOP T-03, T-06): today's 6px elsewhere.
+          borderRadius="var(--theme-radius-card, 6px)"
+          bg="canvas.default"
+          overflow="hidden"
+          transition="border-color 0.2s ease"
           sx={{
-            border: '1px solid',
             borderColor: 'border.default',
-            borderRadius: 2,
-            bg: 'canvas.default',
-            overflow: 'hidden',
-            transition: 'border-color 0.2s ease',
             '&:focus-within': {
               borderColor: 'accent.fg',
               boxShadow: (t: Record<string, unknown>) =>
@@ -400,6 +401,7 @@ export function InputPromptBase({
               autoFocus={autoFocus}
               focusSignal={lexicalFocusSignal}
               mentionableAgents={mentionableAgents}
+              promptCommands={promptCommands}
             />
           ) : (
             <InputPromptText

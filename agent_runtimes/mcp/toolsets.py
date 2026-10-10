@@ -146,7 +146,7 @@ def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
 
     Returns:
         List of dicts with toolset info (type, id, command/url)
-        Note: Sensitive information like cookies/tokens in args are redacted.
+        Note: a credential in its args is withheld whole (LOOP R-19).
     """
     manager = get_mcp_lifecycle_manager()
     info = []
@@ -160,15 +160,17 @@ def get_config_mcp_toolsets_info() -> list[dict[str, Any]]:
         if hasattr(server, "command"):
             server_info["command"] = server.command
         if hasattr(server, "args"):
-            # Redact potentially sensitive args (anything that looks like a token/cookie)
-            args = []
-            for arg in server.args:
-                if isinstance(arg, str) and len(arg) > 50:
-                    # Long strings are likely tokens/cookies - redact them
-                    args.append(f"{arg[:10]}...{arg[-4:]}")
-                else:
-                    args.append(arg)
-            server_info["args"] = args
+            # A credential is withheld whole, never a part of it (LOOP R-19):
+            # a secret the runtime holds, what looks like one, and any long
+            # string, likely a token or a cookie.
+            from agent_runtimes.guardrails.credentials import WITHHELD, redact
+
+            server_info["args"] = [
+                (WITHHELD if len(arg) > 50 else redact(arg))
+                if isinstance(arg, str)
+                else arg
+                for arg in server.args
+            ]
         if hasattr(server, "url"):
             server_info["url"] = server.url
         info.append(server_info)

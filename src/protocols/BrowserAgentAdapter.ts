@@ -33,6 +33,7 @@ import type { ProtocolAdapterConfig } from '../types/protocol';
 import type { ChatMessage } from '../types/messages';
 import { createAssistantMessage, generateMessageId } from '../types/messages';
 import type { FrontendToolDefinition } from '../types/tools';
+import type { AppModeEffect } from '../types/agentspecs';
 import type { AgentStreamSubagentPayload } from '../types/stream';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
 import type { TeamContextSharing } from '../types/teams';
@@ -80,6 +81,16 @@ export interface BrowserAgentAdapterConfig
   sharing?: TeamContextSharing;
   /** Told what a delegated run does, as it does it — see `subagentTools`. */
   onSubagentEvent?: (event: AgentStreamSubagentPayload) => void;
+  /**
+   * What the modes a run is sent in (`forwardedProps.loop.modes`, LOOP P-19)
+   * tell it, and the model it runs on: an application's, by agentspecs'
+   * rules. Unsaid for an agent with no modes, which refuses a run sent in
+   * some.
+   */
+  modeEffect?: (
+    chosen: Record<string, string>,
+    profile?: string,
+  ) => AppModeEffect;
 }
 
 /** The text of a chat message, whatever shape it arrived in. */
@@ -208,6 +219,41 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
   }
 
   /**
+   * What the modes a run is sent in, and the profile its conversation is
+   * with, tell it, and the model it runs on (LOOP P-19, P-20) — the
+   * runtime's session API applies the same, for that run only.
+   *
+   * Refused, in a sentence, rather than run without them: modes or a profile
+   * sent to an agent that has none, modes or a profile that are not the
+   * application's, and a model chosen for an agent whose model is the host's
+   * own.
+   */
+  private runModes(
+    forwardedProps?: Record<string, unknown>,
+  ): AppModeEffect | undefined {
+    const loop = forwardedProps?.loop as
+      { modes?: Record<string, string>; profile?: string } | undefined;
+    const chosen = loop?.modes ?? {};
+    const profile = loop?.profile || undefined;
+    if (Object.keys(chosen).length === 0 && !profile) {
+      return undefined;
+    }
+    const { modeEffect, languageModel } = this.browserConfig;
+    if (!modeEffect) {
+      throw new Error(
+        'This agent has no modes or profiles: what was chosen in the composer cannot be applied to it.',
+      );
+    }
+    const effect = modeEffect(chosen, profile);
+    if (effect.model && languageModel) {
+      throw new Error(
+        `The mode or profile chosen runs on ${effect.model}, and this agent's model is its host's own: it cannot run on another.`,
+      );
+    }
+    return effect;
+  }
+
+  /**
    * Run one turn of the loop and report it as it happens.
    *
    * The SDK's `fullStream` is already the event stream this interface wants —
@@ -216,7 +262,11 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
    */
   async sendMessage(
     message: ChatMessage,
-    options?: { messages?: ChatMessage[]; model?: string },
+    options?: {
+      messages?: ChatMessage[];
+      model?: string;
+      forwardedProps?: Record<string, unknown>;
+    },
   ): Promise<void> {
     this.abortController?.abort();
     const abortController = new AbortController();
@@ -270,9 +320,18 @@ export class BrowserAgentAdapter extends BaseProtocolAdapter {
     };
 
     try {
+      // The modes the person is in, for this run only: their instructions
+      // after the agent's, and the model one names over the chat's.
+      const modes = this.runModes(options?.forwardedProps);
+      const { instructions } = this.browserConfig;
+      const system = modes?.instructions
+        ? [instructions?.trim(), modes.instructions]
+            .filter(Boolean)
+            .join('\n\n')
+        : instructions;
       const result = streamText({
-        model: this.resolveModel(options?.model),
-        system: this.browserConfig.instructions,
+        model: this.resolveModel(modes?.model || options?.model),
+        system,
         messages: history,
         tools: this.tools,
         stopWhen: stepCountIs(

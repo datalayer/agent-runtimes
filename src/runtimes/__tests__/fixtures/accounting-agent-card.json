@@ -1,0 +1,76 @@
+{
+  "name": "Accounting",
+  "description": "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
+  "version": "0.0.1",
+  "supportedInterfaces": [
+    {
+      "protocolBinding": "JSONRPC",
+      "url": "http://runtime.test/api/v1/a2a/agents/accounting/",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "skills": [
+    {
+      "id": "accounting",
+      "name": "Accounting",
+      "description": "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
+      "tags": ["example", "accounting", "finance", "odoo", "a2a", "team"],
+      "inputModes": ["text/plain"],
+      "outputModes": [
+        "text/markdown",
+        "application/x-ipynb+json",
+        "application/json+a2ui"
+      ],
+      "examples": [
+        "List the customer invoices that are still open, with the total due.",
+        "Give the aged receivables as of today, by customer.",
+        "Give the trial balance for last month."
+      ]
+    }
+  ],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": [
+    "text/markdown",
+    "application/x-ipynb+json",
+    "application/json+a2ui"
+  ],
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "extensions": [
+      {
+        "uri": "https://datalayer.ai/extensions/orchestration/v1",
+        "description": "Pause at a checkpoint and resume from it; steer a task while it works.",
+        "required": false,
+        "params": {
+          "pause": "/api/v1/a2a/pause",
+          "steer": "/api/v1/a2a/steer"
+        }
+      },
+      {
+        "uri": "https://datalayer.ai/extensions/face/v1",
+        "description": "Its face: an emoji, and an avatar when it has one.",
+        "required": false,
+        "params": {
+          "emoji": "🧾"
+        }
+      }
+    ]
+  },
+  "securitySchemes": {
+    "datalayer": {
+      "httpAuthSecurityScheme": {
+        "scheme": "Bearer",
+        "bearerFormat": "JWT",
+        "description": "A Datalayer key granted to this route: a token exchanged from a task grant whose task is this application's route on this runtime. The machine itself needs none."
+      }
+    }
+  },
+  "securityRequirements": [
+    {
+      "schemes": {
+        "datalayer": []
+      }
+    }
+  ]
+}

@@ -50,9 +50,9 @@ import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 
 const queryClient = new QueryClient();
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { AgentMonitoringPlugin } from '../loop/plugins/agent-monitoring';
-import { createChatExtrasPlugin } from '../loop/plugins/chat-extras';
+import { LoopEmbed } from '../apps';
+import { AgentMonitoringPlugin } from '../apps/plugins/agent-monitoring';
+import { createChatExtrasPlugin } from '../apps/plugins/chat-extras';
 import type { McpToolsetsStatusResponse } from '../types/mcp';
 
 const AGENT_NAME = 'monitoring-example-agent';
@@ -358,24 +358,16 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
   }
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <GraphIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -397,16 +389,16 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         </Label>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         <Box
+          borderRight="1px solid"
+          borderColor="border.default"
+          flexDirection="column"
+          overflow="auto"
           sx={{
             width: 320,
             minWidth: 280,
-            borderRight: '1px solid',
-            borderColor: 'border.default',
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
             '@media (max-width: 1680px)': {
               width: 300,
               minWidth: 260,
@@ -416,13 +408,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             },
           }}
         >
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Token Usage
             </Heading>
@@ -442,13 +428,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             />
           </Box>
 
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Cost
             </Heading>
@@ -463,13 +443,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             />
           </Box>
 
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               LLM Cost Monitoring
             </Heading>
@@ -501,7 +475,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           </Box>
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -514,14 +488,14 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
         </Box>
 
         <Box
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="auto"
           sx={{
             width: 360,
             minWidth: 320,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
             '@media (max-width: 1680px)': {
               width: 340,
               minWidth: 300,
@@ -532,13 +506,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             },
           }}
         >
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Turn and Session Usage
             </Heading>
@@ -568,13 +536,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
           </Box>
 
           {liveGraphTelemetry && (
-            <Box
-              sx={{
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
-            >
+            <Box p={3} borderBottom="1px solid" borderColor="border.default">
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
                 Graph Execution (live)
               </Heading>
@@ -589,13 +551,7 @@ const AgentMonitoringInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           )}
 
-          <Box
-            sx={{
-              p: 3,
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-            }}
-          >
+          <Box p={3} borderBottom="1px solid" borderColor="border.default">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               Turn Execution Graph (OTEL traces)
             </Heading>

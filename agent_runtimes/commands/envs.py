@@ -71,7 +71,10 @@ _ClickException: type[Exception] = typer.BadParameter.__mro__[2]
 
 # Create a Typer app for environment commands
 app = typer.Typer(
-    name="envs", help="Environment management commands", invoke_without_command=True
+    name="envs",
+    help="Environment management commands",
+    invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

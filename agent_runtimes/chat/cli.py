@@ -111,10 +111,7 @@ class Transport(str, Enum):
 
 
 from .banner import (
-    BANNER,
-    # Legacy colors
     BOLD,
-    DIM,
     GRAY,
     GREEN_DARK,
     GREEN_LIGHT,
@@ -236,6 +233,7 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=False,
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 
@@ -480,7 +478,9 @@ def _fetch_startup_info(host: str, port: int) -> dict | None:
     return None
 
 
-def _format_startup_info(host: str, port: int, info: dict | None) -> str:
+def _format_startup_info(
+    host: str, port: int, info: dict | None, where: Optional[str] = None
+) -> str:
     """Format startup info for CLI display.
 
     Args:
@@ -497,7 +497,11 @@ def _format_startup_info(host: str, port: int, info: dict | None) -> str:
         # Keep values vertically aligned regardless of label length.
         lines.append(f"  {GREEN_MEDIUM}{label:<13}{RESET} {value}")
 
-    add_row("Agent Runtime", f"http://{host}:{port}")
+    if where:
+        # On Datalayer: the runtime, and the relay on this machine reaching it.
+        add_row("Agent Runtime", f"{where}  {GRAY}(via http://{host}:{port}){RESET}")
+    else:
+        add_row("Agent Runtime", f"http://{host}:{port}")
 
     if info:
         agent_info = info.get("agent", {})
@@ -811,6 +815,303 @@ def _pick_agentspec_interactive() -> str:
             raise typer.Exit(0)
 
 
+def _choose_where_at_start(*, local: bool, cloud: bool) -> str:
+    """Here or on Datalayer, asked before the agentspec (LOOP L-01).
+
+    Datalayer is offered only to somebody signed in; nobody else is asked,
+    and is told in one line how to be offered it.
+    """
+    from agent_runtimes.loop.launch import choose_where, interactive, signed_in
+
+    offered = local or cloud or signed_in()
+    if not offered and interactive():
+        print(
+            f"{GRAY}Running on this machine. Sign in (`datalayer login`) to be offered Datalayer's cloud runtimes too.{RESET}"
+        )
+    return choose_where(local=local, cloud=cloud, cloud_offered=offered)
+
+
+def _launch_on_datalayer(
+    agent_id: Optional[str],
+    *,
+    environment: Optional[str],
+    minutes: Optional[int],
+    runtime: Optional[str] = None,
+) -> Any:
+    """A cloud runtime for the agent, or None to run it on this machine instead.
+
+    What Datalayer offers is read through the SDK and shown first — the
+    credits left and the agent runtimes already running — then a running
+    one is attached to (``runtime``, or chosen) or a new one is launched in
+    an environment picked from the SDK's list, only those that can launch an
+    agent selectable. No agentspec list: the runtime's agent is ``agent_id``
+    (``-a``), else the one loop starts with, said in one line. Every refusal
+    is one sentence and the exit.
+    """
+    from rich.console import Console
+
+    from agent_runtimes.loop.launch import (
+        CloudRefused,
+        NotSignedIn,
+        interactive,
+        launch_cloud,
+        make_client,
+        offer_lines,
+        read_offer,
+    )
+
+    console = Console()
+    try:
+        client, _ = make_client()
+        offer = read_offer(client)
+        console.print()
+        for line in offer_lines(offer):
+            console.print(f"[dim]{line}[/dim]")
+        console.print()
+        launch = launch_cloud(
+            agent_id,
+            environment=environment,
+            minutes=minutes,
+            runtime=runtime,
+            offer=offer,
+            status=lambda message: console.print(f"[cyan]{message}[/cyan]"),
+            note=lambda message: console.print(f"[dim]{message}[/dim]"),
+        )
+    except NotSignedIn:
+        console.print(
+            "[yellow]Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY.[/yellow]"
+        )
+        if interactive():
+            import questionary
+
+            if questionary.confirm(
+                "Run it on this machine instead?", default=True
+            ).ask():
+                return None
+        raise typer.Exit(1)
+    except CloudRefused as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    if launch.attached:
+        console.print(
+            f"[green]●[/green] Back on runtime [bold]{launch.runtime_name}[/bold] on Datalayer — "
+            f"{launch.environment}, {launch.minutes} min left "
+            "[dim](billed until it is stopped or its reservation ends)[/dim]"
+        )
+    else:
+        console.print(
+            f"[green]●[/green] Runtime [bold]{launch.runtime_name}[/bold] on Datalayer — "
+            f"{launch.environment}, reserved {launch.minutes} min "
+            f"[dim](at most {launch.credits:.2f} credits)[/dim]"
+        )
+    return launch
+
+
+def _say(message: str) -> None:
+    """Say a status line on standard error, which ``--prompt`` keeps answers off."""
+    print(message, file=sys.stderr, flush=True)
+
+
+def _interrupted(signum: int, frame: Any) -> None:
+    """Turn a termination into an interrupt, so that cleanup runs."""
+    raise KeyboardInterrupt
+
+
+async def _run_lines(tux: Any, lines: List[str]) -> int:
+    """Run each line in the session, in order: the exit code.
+
+    Parameters
+    ----------
+    tux : CliTux
+        The session the lines run in.
+    lines : list of str
+        What ``--prompt`` gave, each run as if typed at the prompt.
+
+    Returns
+    -------
+    int
+        0 when every line ran, 1 at the first that errored (the rest are
+        not run).
+    """
+    tux.running = True
+    tux.scripted = True
+    try:
+        for number, line in enumerate(lines, 1):
+            _say(f"[{number}/{len(lines)}] {line}")
+            if not await tux.run_line(line):
+                _say(f"Stopped at step {number} of {len(lines)}: {tux.last_error}")
+                return 1
+            if not tux.running:  # /exit
+                break
+        return 0
+    finally:
+        if tux._agui_client is not None:
+            await tux._agui_client.disconnect()
+            tux._agui_client = None
+
+
+def run_prompts(
+    prompts: List[str],
+    *,
+    agent_id: Optional[str],
+    local: bool = False,
+    cloud: bool = False,
+    runtime: Optional[str] = None,
+    environment: Optional[str] = None,
+    minutes: Optional[int] = None,
+    keep: bool = False,
+    port: int = 0,
+    codemode: bool = True,
+    debug: bool = False,
+    eggs: bool = False,
+) -> int:
+    """``loop --prompt``: launch the agent, run each line in one session, stop it.
+
+    The session starts as interactive ``loop`` starts it — on this machine,
+    or on Datalayer through `launch_cloud` — but asks nothing: every choice
+    comes from the options or their defaults, and a choice that would need
+    asking is refused in a sentence. Each prompt then runs through
+    `CliTux.run_line`, as if typed: ``/command`` is that slash command,
+    anything else a message whose answer is printed. The cloud runtime is
+    stopped at the end unless ``keep``, on an error or an interrupt too, and
+    a local server always is.
+
+    Parameters
+    ----------
+    prompts : list of str
+        The lines to run, in order.
+    agent_id : str or None
+        The agentspec (``-a``). Needed on this machine; on Datalayer it
+        defaults to the agent ``loop`` starts with.
+    local, cloud : bool
+        Where the agent runs (``--local``, ``--cloud``); on this machine
+        unless said.
+    runtime : str or None
+        A running Datalayer runtime to attach to (``--runtime``).
+    environment : str or None
+        The environment of a new cloud runtime (``--environment``).
+    minutes : int or None
+        How long to reserve a new cloud runtime for (``--minutes``).
+    keep : bool
+        Leave the cloud runtime running at the end (``--keep``).
+    port : int
+        The local server's port, 0 for any free one.
+    codemode : bool
+        Whether the local agent runs with codemode.
+    debug : bool
+        Whether the local server logs.
+    eggs : bool
+        Whether the Easter egg commands are registered.
+
+    Returns
+    -------
+    int
+        0 when every line ran; 1 when the launch was refused, the runtime did
+        not start or answer, or a line errored; 2 when the options leave a
+        choice that would need asking; 130 when interrupted.
+    """
+    from agent_runtimes.loop.launch import (
+        CLOUD,
+        CLOUD_AGENT_NAME,
+        CloudRefused,
+        NotSignedIn,
+        choose_where,
+        finish_cloud,
+        launch_cloud,
+    )
+
+    global _subprocess_ref
+
+    # This module's handlers kill the process outright; here an interrupt
+    # must reach the cleanup below, which stops what is billed.
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, _interrupted)
+    cloud_launch = None
+    try:
+        if runtime and local:
+            _say("--runtime attaches on Datalayer: drop --local.")
+            return 2
+        try:
+            where = choose_where(
+                local=local, cloud=cloud or bool(runtime), can_ask=False
+            )
+        except ValueError as error:
+            _say(str(error))
+            return 2
+        if where == CLOUD:
+            try:
+                cloud_launch = launch_cloud(
+                    agent_id,
+                    environment=environment,
+                    minutes=minutes,
+                    runtime=runtime,
+                    can_ask=False,
+                    status=_say,
+                    note=_say,
+                )
+            except NotSignedIn:
+                _say(
+                    "Not signed in to Datalayer: run `datalayer login`, or set DATALAYER_API_KEY."
+                )
+                return 1
+            except (CloudRefused, RuntimeError, ValueError) as refused:
+                _say(str(refused))
+                return 1
+            _say(
+                f"Runtime {cloud_launch.runtime_name} on Datalayer ({cloud_launch.environment}, "
+                f"{cloud_launch.minutes} min) runs {cloud_launch.agent_spec_id or CLOUD_AGENT_NAME}."
+            )
+            server_url = cloud_launch.server_url
+            agent_name = CLOUD_AGENT_NAME
+        else:
+            if not agent_id:
+                _say(
+                    "Name the agent to run on this machine with -a <agentspec>: "
+                    "--prompt asks nothing."
+                )
+                return 2
+            _say(f"Starting {agent_id} on this machine…")
+            process, actual_port = _start_agent_runtime_server(
+                agent_id,
+                port=port,
+                transport=Transport.ag_ui,
+                codemode=codemode,
+                debug=debug,
+            )
+            _subprocess_ref = process
+            if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
+                _say(f"The agent runtime for {agent_id} did not start on this machine.")
+                return 1
+            server_url = f"http://127.0.0.1:{actual_port}"
+            agent_name = DEFAULT_RUNTIME_AGENT_NAME
+
+        from .tux import CliTux
+
+        tux = CliTux(
+            agent_url=f"{server_url}/api/v1/ag-ui/{agent_name}/",
+            server_url=server_url,
+            agent_id=agent_name,
+            eggs=eggs,
+            jupyter_url=cloud_launch.jupyter_url if cloud_launch else None,
+            where=cloud_launch.label if cloud_launch else None,
+        )
+        return asyncio.run(_run_lines(tux, prompts))
+    except KeyboardInterrupt:
+        _say("Interrupted.")
+        return 130
+    finally:
+        # A second interrupt does not cut the cleanup short.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            if cloud_launch is not None:
+                finish_cloud(cloud_launch, keep=keep, can_ask=False, say=_say)
+            _cleanup_subprocess()
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+
+
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
@@ -858,8 +1159,57 @@ def main_callback(
         help="Extra suggestions to add (comma-separated), e.g. 'Search for X,Summarize Y'",
     ),
     eggs: bool = typer.Option(False, "--eggs", help="Enable Easter egg commands"),
+    local: bool = typer.Option(
+        False, "--local", help="Run the agent on this machine, without asking where."
+    ),
+    cloud: bool = typer.Option(
+        False,
+        "--cloud",
+        help="Run the agent on Datalayer, in a cloud runtime, without asking where.",
+    ),
+    environment: Optional[str] = typer.Option(
+        None,
+        "--environment",
+        "-e",
+        help=(
+            "The Datalayer environment of a new cloud runtime, without asking "
+            "(with --cloud; default: the first that can launch an agent)."
+        ),
+    ),
+    minutes: Optional[int] = typer.Option(
+        None,
+        "--minutes",
+        "-m",
+        help="How long to reserve the cloud runtime for, in minutes (with --cloud).",
+    ),
+    keep: bool = typer.Option(
+        False,
+        "--keep",
+        help="Leave the cloud runtime running when the session ends (with --cloud).",
+    ),
+    runtime: Optional[str] = typer.Option(
+        None,
+        "--runtime",
+        "-r",
+        help=(
+            "Attach to an agent runtime already running on Datalayer, by its name "
+            "(implies --cloud; nothing is launched). With --agentspec-id, its agent "
+            "is made that agentspec's."
+        ),
+    ),
     show_version: bool = typer.Option(
         False, "--version", "-v", help="Show version information"
+    ),
+    prompts: Optional[List[str]] = typer.Option(
+        None,
+        "--prompt",
+        "-q",
+        help=(
+            "Run without interaction: launch the agent, run this line as if typed "
+            "(a /slash command, else a message whose answer is printed), then stop. "
+            "Repeat it for several lines, run in order in one session. Nothing is "
+            "asked; exits non-zero when a line errors."
+        ),
     ),
 ) -> None:
     """Agent Runtimes Chat assistant.
@@ -879,6 +1229,16 @@ def main_callback(
         loop "What is Python?"      # Single query mode
 
         loop -a crawler "Search for AI trends"  # Single query with specific agent
+
+        loop --cloud -a crawler     # On Datalayer: a cloud runtime, billed by the minute
+
+        loop --runtime <name>       # Back to an agent runtime running on Datalayer
+
+        loop --cloud -a example-simple --prompt "/models" --prompt "Hello"
+
+    Where the agent runs is asked first — on this machine, or on Datalayer
+    when signed in — unless --local, --cloud or --runtime says so. Without a
+    terminal it runs here.
     """
     # If a subcommand was invoked, don't run the default behavior
     if ctx.invoked_subcommand is not None:
@@ -889,6 +1249,28 @@ def main_callback(
     if show_version:
         _show_version()
         raise typer.Exit(0)
+
+    if prompts:
+        if query:
+            raise typer.BadParameter(
+                "Give the lines with --prompt only, not as arguments as well."
+            )
+        raise typer.Exit(
+            run_prompts(
+                prompts,
+                agent_id=agentspec_id,
+                local=local,
+                cloud=cloud,
+                runtime=runtime,
+                environment=environment,
+                minutes=minutes,
+                keep=keep,
+                port=port,
+                codemode=not codemode_disabled,
+                debug=debug,
+                eggs=eggs,
+            )
+        )
 
     global _subprocess_ref
 
@@ -903,6 +1285,10 @@ def main_callback(
     extra_suggestions = (
         [s.strip() for s in suggestions.split(",") if s.strip()] if suggestions else []
     )
+
+    if runtime and local:
+        raise typer.BadParameter("--runtime attaches on Datalayer: drop --local.")
+    cloud = cloud or bool(runtime)
 
     # Resolve agent spec: use provided ID or pick interactively
     agent_id = agentspec_id
@@ -919,7 +1305,30 @@ def main_callback(
             extra_suggestions=extra_suggestions,
         )
         preview_tux.show_welcome()
+
+    # Where it runs (LOOP L-01), asked first: what the flags say, else what
+    # the person answers — on this machine, or on Datalayer. Here the
+    # agentspec is picked from the list this machine's keys allow; on
+    # Datalayer the environment is picked instead, and no agentspec list is
+    # shown.
+    from agent_runtimes.loop.launch import CLOUD, CLOUD_AGENT_NAME
+
+    where = _choose_where_at_start(local=local, cloud=cloud)
+    cloud_launch = None
+    if where == CLOUD:
+        cloud_launch = _launch_on_datalayer(
+            agent_id, environment=environment, minutes=minutes, runtime=runtime
+        )
+        if cloud_launch is None:
+            where = "local"
+        else:
+            # A runtime gone back to may not say its agentspec: its agent is `default`.
+            agent_id = cloud_launch.agent_spec_id or agent_id or CLOUD_AGENT_NAME
+    if cloud_launch is None and agent_id is None:
         agent_id = _pick_agentspec_interactive()
+    runtime_agent_name = (
+        CLOUD_AGENT_NAME if cloud_launch else DEFAULT_RUNTIME_AGENT_NAME
+    )
 
     try:
         if query:
@@ -929,8 +1338,20 @@ def main_callback(
                 _show_version()
                 raise typer.Exit(0)
 
+            # Non-interactive mode, on Datalayer: the query through the relay,
+            # then the runtime stopped unless it is kept.
+            if cloud_launch is not None:
+                from agent_runtimes.loop.launch import finish_cloud
+
+                try:
+                    output = asyncio.run(
+                        _run_single_query_ag_ui(cloud_launch.agent_url, query_str)
+                    )
+                    print(output)
+                finally:
+                    finish_cloud(cloud_launch, keep=keep, can_ask=False)
             # Non-interactive mode: start agent-runtimes server and run query
-            if agent_id:
+            elif agent_id:
                 print(f"{GRAY}Starting agent-runtimes server with {agent_id}...{RESET}")
                 process, actual_port = _start_agent_runtime_server(
                     agent_id,
@@ -986,68 +1407,79 @@ def main_callback(
                 )
                 preview_tux.show_welcome()
 
-                # Show starting message with spinner
-                console = Console()
-                with Live(
-                    Spinner(
-                        "dots",
-                        text="[bold cyan]Starting agent runtime...[/bold cyan]",
-                        style="cyan",
-                    ),
-                    console=console,
-                    transient=True,
-                    refresh_per_second=10,
-                ) as live:
-                    process, actual_port = _start_agent_runtime_server(
-                        agent_id,
-                        port=port,
-                        transport=Transport.ag_ui,
-                        codemode=not codemode_disabled,
-                        debug=debug,
-                    )
-                    _subprocess_ref = process  # Register for cleanup
-
-                    # Update status while waiting with more visible styling
-                    live.update(
+                if cloud_launch is not None:
+                    # The relay is this machine's address for the cloud runtime.
+                    actual_port = cloud_launch.port
+                else:
+                    # Show starting message with spinner
+                    console = Console()
+                    with Live(
                         Spinner(
                             "dots",
-                            text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]",
+                            text="[bold cyan]Starting agent runtime...[/bold cyan]",
                             style="cyan",
+                        ),
+                        console=console,
+                        transient=True,
+                        refresh_per_second=10,
+                    ) as live:
+                        process, actual_port = _start_agent_runtime_server(
+                            agent_id,
+                            port=port,
+                            transport=Transport.ag_ui,
+                            codemode=not codemode_disabled,
+                            debug=debug,
                         )
-                    )
+                        _subprocess_ref = process  # Register for cleanup
 
-                    # Show available model IDs on one line while the runtime starts.
-                    _available_model_ids, _, _ = _available_model_ids_by_env()
-                    _available_models_line = (
-                        ", ".join(sorted(_available_model_ids))
-                        if _available_model_ids
-                        else "none"
-                    )
-                    console.print(
-                        f"[dim]Available model IDs: {_available_models_line}[/dim]"
-                    )
-
-                    # Wait for server to be ready
-                    if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
-                        live.stop()
-                        print(
-                            f"{GREEN_DARK}[ERROR]{RESET} Server failed to start",
-                            file=sys.stderr,
+                        # Update status while waiting with more visible styling
+                        live.update(
+                            Spinner(
+                                "dots",
+                                text=f"[bold cyan]Waiting for agent runtime '{agent_id}' on port {actual_port}...[/bold cyan]",
+                                style="cyan",
+                            )
                         )
-                        _cleanup_subprocess()
-                        raise typer.Exit(1)
 
-                    live.update(
-                        Spinner(
-                            "dots",
-                            text="[bold green]Agent runtime ready![/bold green]",
-                            style="green",
+                        # Show available model IDs on one line while the runtime starts.
+                        _available_model_ids, _, _ = _available_model_ids_by_env()
+                        _available_models_line = (
+                            ", ".join(sorted(_available_model_ids))
+                            if _available_model_ids
+                            else "none"
                         )
-                    )
+                        console.print(
+                            f"[dim]Available model IDs: {_available_models_line}[/dim]"
+                        )
+
+                        # Wait for server to be ready
+                        if not _wait_for_server("127.0.0.1", actual_port, timeout=60.0):
+                            live.stop()
+                            print(
+                                f"{GREEN_DARK}[ERROR]{RESET} Server failed to start",
+                                file=sys.stderr,
+                            )
+                            _cleanup_subprocess()
+                            raise typer.Exit(1)
+
+                        live.update(
+                            Spinner(
+                                "dots",
+                                text="[bold green]Agent runtime ready![/bold green]",
+                                style="green",
+                            )
+                        )
 
                 # Display startup info
                 startup_info = _fetch_startup_info("127.0.0.1", actual_port)
-                print(_format_startup_info("127.0.0.1", actual_port, startup_info))
+                print(
+                    _format_startup_info(
+                        "127.0.0.1",
+                        actual_port,
+                        startup_info,
+                        where=cloud_launch.label if cloud_launch else None,
+                    )
+                )
                 print()
 
                 # Confirmation message based on the selected agent spec.
@@ -1112,7 +1544,7 @@ def main_callback(
                 if str(_sandbox_variant or "").lower() == "jupyter-server":
                     _summary_parts.append("Jupyter sandbox")
                 if _codemode_on and not codemode_disabled:
-                    _summary_parts.append("Code Mode")
+                    _summary_parts.append("Codemode")
                 _summary_line = (
                     f" {GRAY}({' • '.join(_summary_parts)}){RESET}"
                     if _summary_parts
@@ -1125,9 +1557,14 @@ def main_callback(
                     f"{_summary_line}"
                 )
 
-                # Extract Jupyter URL for the /jupyter slash command
+                # The Jupyter server for /jupyter, /notebook and /document,
+                # as the browser reaches it.
                 jupyter_url = None
-                if startup_info:
+                if cloud_launch is not None:
+                    # The runtime's ingress and its own token: what the runtime
+                    # reports for its sandbox is the pod's local address.
+                    jupyter_url = cloud_launch.jupyter_url
+                elif startup_info:
                     sandbox_info = startup_info.get("sandbox", {})
                     jupyter_url = sandbox_info.get("jupyter_url")
                     if not jupyter_url:
@@ -1141,7 +1578,9 @@ def main_callback(
                         if jupyter_token:
                             jupyter_url = f"{jupyter_url}?token={jupyter_token}"
 
-                url = f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{DEFAULT_RUNTIME_AGENT_NAME}/"
+                url = (
+                    f"http://127.0.0.1:{actual_port}/api/v1/ag-ui/{runtime_agent_name}/"
+                )
                 server_url = f"http://127.0.0.1:{actual_port}"
 
                 try:
@@ -1152,15 +1591,21 @@ def main_callback(
                         run_tux(
                             url,
                             server_url,
-                            agent_id=DEFAULT_RUNTIME_AGENT_NAME,
+                            agent_id=runtime_agent_name,
                             eggs=eggs,
                             jupyter_url=jupyter_url,
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
+                            where=cloud_launch.label if cloud_launch else None,
                         )
                     )
                 finally:
-                    _cleanup_subprocess_with_spinner("Terminating agent...")
+                    if cloud_launch is not None:
+                        from agent_runtimes.loop.launch import finish_cloud
+
+                        finish_cloud(cloud_launch, keep=keep)
+                    else:
+                        _cleanup_subprocess_with_spinner("Terminating agent...")
             else:
                 # Fall back to local agent
                 agent.to_cli_sync(prog_name="agent-runtimes chat")
@@ -1282,14 +1727,29 @@ def connect(
 ) -> None:
     """Connect to a remote agent server.
 
+    A Datalayer runtime's address (``…/agent-runtimes/<pool>/<uid>/…``, as
+    ``loop`` prints it for a kept runtime) goes back to that runtime as
+    ``loop --runtime <uid>`` does: through a relay with your Datalayer token,
+    with every slash command.
+
     Examples:
 
         loop connect http://localhost:8000/api/v1/ag-ui/my-agent/
 
         loop connect ws://localhost:8000/api/v1/acp/ws/my-agent -t acp
 
-        loop connect https://agent.datalayer.ai/api/v1/ag-ui/chat/
+        loop connect https://r1.datalayer.run/agent-runtimes/ai-agents-pool/<uid>/api/v1/ag-ui/default/
     """
+    from agent_runtimes.loop.launch import runtime_of_url
+
+    on_datalayer = runtime_of_url(url)
+    if on_datalayer is not None:
+        if transport != Transport.ag_ui:
+            raise typer.BadParameter(
+                "A Datalayer runtime is reached over AG-UI: drop --transport."
+            )
+        app(args=["--runtime", on_datalayer])
+        return
     try:
         from agent_runtimes.transports.clients import ACPClient, AGUIClient
     except ImportError:

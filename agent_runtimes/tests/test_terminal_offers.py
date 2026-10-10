@@ -33,20 +33,20 @@ class TestModelsOffered:
     def test_a_model_switched_off_in_the_catalogue_is_not_offered(self) -> None:
         offered_ids, lines, total = _available_model_ids_by_env()
         # The terminal is a chat: it offers the chat models the catalogue has
-        # available, and leaves the typed-judgment models (Jev) out.
+        # available, and leaves the typed-decision models (Jev) out.
         enabled = {
             model.id
             for model in list_models()
             if model.available and is_chat_model(model)
         }
         disabled = {model.id for model in list_models() if not model.available}
-        judgment = {model.id for model in list_models() if not is_chat_model(model)}
+        decision = {model.id for model in list_models() if not is_chat_model(model)}
 
         assert total == len(enabled)
         assert offered_ids <= enabled
         # The line the terminal prints names none of the switched-off ones.
         printed = " ".join(lines)
-        for model_id in disabled | judgment:
+        for model_id in disabled | decision:
             assert model_id not in offered_ids
             assert model_id not in printed
 
@@ -117,13 +117,13 @@ class TestVersionShown:
 
 class TestGoodbye:
     def test_it_keeps_looping_with_the_eyes(self) -> None:
-        assert LOOP_WORDMARK_VERB == "L\U0001f440ping"
+        assert LOOP_WORDMARK_VERB == "L\U0001f440PING"
         assert LOOP_WORDMARK_VERB in GOODBYE_MESSAGE
         assert "\u27f3" not in GOODBYE_MESSAGE
         assert "looping" not in GOODBYE_MESSAGE
         # The bars sit with the name at the end, not in front of the line.
         assert GOODBYE_MESSAGE.startswith("Keep ")
-        assert "\u2630 Datalayer!" in GOODBYE_MESSAGE
+        assert GOODBYE_MESSAGE.endswith("\u2630 Datalayer")
 
 
 class TestUsageDirection:

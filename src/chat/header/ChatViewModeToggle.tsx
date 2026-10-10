@@ -24,17 +24,23 @@ import {
   CommentDiscussionIcon,
   DeviceMobileIcon,
   GrabberIcon,
+  PaperclipIcon,
   SidebarExpandIcon,
   type Icon,
 } from '@primer/octicons-react';
 import type { ChatViewMode } from '../../types/chat';
-import { CHAT_VIEW_MODES, SIDEBAR_NEEDS_MOUNT_POINT } from '../viewModes';
+import {
+  ASSISTANT_NEEDS_A_FLOATING_CHAT,
+  CHAT_VIEW_MODES,
+  SIDEBAR_NEEDS_MOUNT_POINT,
+} from '../viewModes';
 
 /** The drawing of each mode. */
 export const VIEW_MODE_ICONS: Record<ChatViewMode, Icon> = {
   floating: CommentDiscussionIcon,
   'floating-small': DeviceMobileIcon,
   'floating-draggable': GrabberIcon,
+  assistant: PaperclipIcon,
   sidebar: SidebarExpandIcon,
 };
 
@@ -60,14 +66,12 @@ export function ChatViewModeToggle({
       role="group"
       aria-label="Display mode"
       data-chat-view-mode-toggle=""
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        bg: 'neutral.muted',
-        borderRadius: '6px',
-        p: '2px',
-        gap: '1px',
-      }}
+      display="inline-flex"
+      alignItems="center"
+      bg="neutral.muted"
+      borderRadius="6px"
+      p="2px"
+      gap="1px"
     >
       {CHAT_VIEW_MODES.map(({ mode, label }) => {
         const ModeIcon = VIEW_MODE_ICONS[mode];
@@ -81,7 +85,9 @@ export function ChatViewModeToggle({
             text={
               disabled && mode === 'sidebar'
                 ? `${label} — ${SIDEBAR_NEEDS_MOUNT_POINT}`
-                : label
+                : disabled && mode === 'assistant'
+                  ? `${label} — ${ASSISTANT_NEEDS_A_FLOATING_CHAT}`
+                  : label
             }
             direction={tooltipDirection}
           >
@@ -96,27 +102,27 @@ export function ChatViewModeToggle({
                   onChange(mode);
                 }
               }}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 26,
-                height: 24,
-                borderRadius: '4px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.45 : 1,
-                bg: selected ? 'canvas.default' : 'transparent',
-                boxShadow: selected ? 'shadow.small' : 'none',
-                color: selected ? 'fg.default' : 'fg.muted',
-                transition: 'all 0.15s ease',
-                '&:hover': disabled
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              width={26}
+              height={24}
+              borderRadius="4px"
+              border="none"
+              cursor={disabled ? 'not-allowed' : 'pointer'}
+              opacity={disabled ? 0.45 : 1}
+              bg={selected ? 'canvas.default' : 'transparent'}
+              boxShadow={selected ? 'shadow.small' : 'none'}
+              color={selected ? 'fg.default' : 'fg.muted'}
+              transition="all 0.15s ease"
+              hover={
+                disabled
                   ? {}
                   : {
                       color: 'fg.default',
                       bg: selected ? 'canvas.default' : 'neutral.subtle',
-                    },
-              }}
+                    }
+              }
             >
               <ModeIcon size={14} />
             </Box>

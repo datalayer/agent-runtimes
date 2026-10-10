@@ -4,7 +4,8 @@
  */
 
 /**
- * What the agent may call: builtin tools, MCP servers, and codemode.
+ * What the agent may call: the runtime's tools, the frontend tools (the ones
+ * the page runs), MCP servers, and codemode — each drawn with its mark.
  *
  * @module chat/prompt/menus/ToolsMenu
  */
@@ -21,6 +22,23 @@ import { Box } from '@datalayer/primer-addons';
 import { ToolsIcon } from '@primer/octicons-react';
 
 import type { BuiltinTool, MCPServerConfig } from '../../../types';
+import {
+  SpecMark,
+  hasMark,
+  marksOfFrontendTool,
+  marksOfMcpServer,
+  marksOfRuntimeTool,
+  type Marks,
+} from '../../marks';
+
+/** A tool's mark, as the leading visual of its row. */
+function LeadingMark({ marks }: { marks: Marks }) {
+  return hasMark(marks) ? (
+    <ActionList.LeadingVisual>
+      <SpecMark icon={marks.icon} emoji={marks.emoji} size={16} />
+    </ActionList.LeadingVisual>
+  ) : null;
+}
 
 export function ToolsMenu({
   codemodeEnabled,
@@ -33,6 +51,7 @@ export function ToolsMenu({
   approvedMcpTools,
   onToggleMcpToolApproval,
   availableTools,
+  availableFrontendTools = [],
 }: {
   codemodeEnabled: boolean;
   onToggleCodemode?: (enabled: boolean) => void | Promise<void>;
@@ -48,6 +67,8 @@ export function ToolsMenu({
   approvedMcpTools: Map<string, Set<string>>;
   onToggleMcpToolApproval: (serverId: string, toolName: string) => void;
   availableTools: BuiltinTool[];
+  /** The frontend tools: the ones the page runs for the agent. */
+  availableFrontendTools?: BuiltinTool[];
 }) {
   const hasUsableMcpServers = mcpServers.some(server => server.isAvailable);
 
@@ -61,6 +82,9 @@ export function ToolsMenu({
    */
   const summary = [
     `${availableTools.length} tool${availableTools.length === 1 ? '' : 's'}`,
+    availableFrontendTools.length > 0
+      ? `${availableFrontendTools.length} frontend tool${availableFrontendTools.length === 1 ? '' : 's'}`
+      : null,
     enabledMcpToolCount > 0 ? `${enabledMcpToolCount} MCP enabled` : null,
     hasUsableMcpServers ? null : 'no MCP server available',
   ]
@@ -79,29 +103,29 @@ export function ToolsMenu({
             leadingVisual={ToolsIcon}
           >
             <Text sx={{ fontSize: 0 }}>
-              {availableTools.length + enabledMcpToolCount}
+              {availableTools.length +
+                availableFrontendTools.length +
+                enabledMcpToolCount}
             </Text>
           </Button>
         </Tooltip>
       </ActionMenu.Anchor>
       <ActionMenu.Overlay side="outside-top" align="start" width="large">
-        <Box sx={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <Box maxHeight="60vh" overflowY="auto">
           <ActionList>
             {/* Codemode toggle — always visible at the top */}
             <ActionList.Group title="Codemode">
               <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 3,
-                  py: 2,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.muted',
-                  gap: 2,
-                }}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                px={3}
+                py={2}
+                borderBottom="1px solid"
+                borderColor="border.muted"
+                gap={2}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box flex={1} minWidth={0}>
                   <Text
                     id="toggle-codemode"
                     sx={{ fontWeight: 'semibold', display: 'block' }}
@@ -141,6 +165,22 @@ export function ToolsMenu({
               <ActionList.Group title="Tools">
                 {availableTools.map(tool => (
                   <ActionList.Item key={tool.id} disabled>
+                    <LeadingMark marks={marksOfRuntimeTool(tool.name)} />
+                    {tool.name}
+                  </ActionList.Item>
+                ))}
+              </ActionList.Group>
+            ) : null}
+
+            {/*
+              The frontend tools: the ones the page runs, named apart from the
+              runtime's, each with the mark of its frontend tool set.
+            */}
+            {availableFrontendTools.length > 0 ? (
+              <ActionList.Group title="Frontend tools">
+                {availableFrontendTools.map(tool => (
+                  <ActionList.Item key={tool.id} disabled>
+                    <LeadingMark marks={marksOfFrontendTool(tool.name)} />
                     {tool.name}
                   </ActionList.Item>
                 ))}
@@ -156,6 +196,7 @@ export function ToolsMenu({
                 const allEnabled =
                   enabledCount === allToolNames.length &&
                   allToolNames.length > 0;
+                const serverMarks = marksOfMcpServer(server);
                 return (
                   <ActionList.Group
                     key={server.id}
@@ -164,26 +205,33 @@ export function ToolsMenu({
                     {/* Server-level toggle */}
                     {server.isAvailable && server.tools.length > 0 && (
                       <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          px: 3,
-                          py: 2,
-                          borderBottom: '1px solid',
-                          borderColor: 'border.muted',
-                        }}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        px={3}
+                        py={2}
+                        borderBottom="1px solid"
+                        borderColor="border.muted"
                       >
-                        <Text
-                          id={`toggle-all-${server.id}`}
-                          sx={{
-                            fontSize: 0,
-                            fontWeight: 'semibold',
-                            color: 'fg.muted',
-                          }}
-                        >
-                          Enable all ({enabledCount}/{allToolNames.length})
-                        </Text>
+                        <Box display="flex" alignItems="center" gap={2}>
+                          {hasMark(serverMarks) && (
+                            <SpecMark
+                              icon={serverMarks.icon}
+                              emoji={serverMarks.emoji}
+                              size={16}
+                            />
+                          )}
+                          <Text
+                            id={`toggle-all-${server.id}`}
+                            sx={{
+                              fontSize: 0,
+                              fontWeight: 'semibold',
+                              color: 'fg.muted',
+                            }}
+                          >
+                            Enable all ({enabledCount}/{allToolNames.length})
+                          </Text>
+                        </Box>
                         <ToggleSwitch
                           size="small"
                           checked={allEnabled}
@@ -209,18 +257,14 @@ export function ToolsMenu({
                         return (
                           <Box
                             key={`${server.id}-${tool.name}`}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              px: 3,
-                              py: 2,
-                              '&:hover': {
-                                backgroundColor: 'canvas.subtle',
-                              },
-                            }}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            px={3}
+                            py={2}
+                            hover={{ backgroundColor: 'canvas.subtle' }}
                           >
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box flex={1} minWidth={0}>
                               <Text
                                 id={`toggle-tool-${server.id}-${tool.name}`}
                                 sx={{ fontWeight: 'semibold' }}
@@ -242,20 +286,12 @@ export function ToolsMenu({
                                 </Text>
                               )}
                             </Box>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 3,
-                              }}
-                            >
+                            <Box display="flex" alignItems="center" gap={3}>
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                }}
+                                display="flex"
+                                flexDirection="column"
+                                alignItems="center"
+                                gap="2px"
                               >
                                 <Text
                                   sx={{ fontSize: '10px', color: 'fg.muted' }}
@@ -272,12 +308,10 @@ export function ToolsMenu({
                                 />
                               </Box>
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                }}
+                                display="flex"
+                                flexDirection="column"
+                                alignItems="center"
+                                gap="2px"
                               >
                                 <Text
                                   sx={{ fontSize: '10px', color: 'fg.muted' }}

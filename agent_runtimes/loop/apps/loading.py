@@ -12,7 +12,7 @@ the session work on.
 
 from __future__ import annotations
 
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Sequence
 
 from agent_runtimes.types import AppSpec
 
@@ -25,15 +25,29 @@ class AppNotRunnable(ValueError):
         super().__init__(" ".join(problems))
 
 
-def load_app(document: Mapping[str, Any]) -> AppSpec:
-    """An application from its document, validated, or `AppNotRunnable`."""
+def load_app(document: Mapping[str, Any], plugins_off: Sequence[str] = ()) -> AppSpec:
+    """An application from its document, validated, or `AppNotRunnable`.
+
+    Its setup notes say what it names that is not enabled today, a block of
+    its page from a UI plugin in ``plugins_off`` — the catalogue ids its
+    organization has turned off (LOOP C-12) — among it.
+
+    A context of its organization's own (``org-…``, LOOP U-32) is checked
+    where its organization's contexts are read, when its agent is made
+    (`frames.frames_instructions`), not here: the document does not say its
+    organization.
+    """
     from agentspecs import apps as spec
+    from agentspecs.frames import is_organization_frame
+
+    from agent_runtimes.loop.apps.plugins_off import plugins_off_setup_notes
 
     try:
         validated = spec.parse_app(dict(document))
     except spec.AppError as error:
         raise AppNotRunnable([str(error)]) from None
-    problems = spec.app_problems(validated)
+    own = [frame_id_of(ref) for ref in validated.context if is_organization_frame(ref)]
+    problems = spec.app_problems(validated, own)
     if problems:
         raise AppNotRunnable(problems)
     data = spec.dump_app(validated)
@@ -44,8 +58,17 @@ def load_app(document: Mapping[str, Any]) -> AppSpec:
     interface.setdefault("layout", validated.layout.value)
     record = data.setdefault("record", {})
     record["retention_days"] = validated.record.retention_days
-    data["setup"] = spec.app_setup(validated)
+    data["setup"] = [
+        *spec.app_setup(validated),
+        *plugins_off_setup_notes(validated.interface, plugins_off),
+    ]
     return AppSpec.model_validate(data)
+
+
+def frame_id_of(ref: str) -> str:
+    """A context's id, without its version."""
+    base, _, version = ref.rpartition(":")
+    return base if base and "." in version else ref
 
 
 def agent_id_of(app: AppSpec) -> str:

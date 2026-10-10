@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Heading, Text, Link as PrimerLink } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Button, Heading, Text, Link as PrimerLink } from '@primer/react';
 import { useNavigate, useLocation, useParams, useHistory } from '../hooks';
 
 /**
@@ -143,8 +144,8 @@ export const NativeNavigationExample: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', p: 4 }}>
-      <Box sx={{ mb: 4, p: 3, bg: 'canvas.subtle', borderRadius: 2 }}>
+    <Box minHeight="100vh" p={4}>
+      <Box mb={4} p={3} bg="canvas.subtle" borderRadius={2}>
         <Heading as="h1" sx={{ mb: 2 }}>
           Native Browser Navigation Example
         </Heading>
@@ -161,20 +162,18 @@ export const NativeNavigationExample: React.FC = () => {
 
       {renderContent()}
 
-      <Box sx={{ mt: 4 }}>
+      <Box mt={4}>
         <Heading as="h2" sx={{ mb: 3 }}>
           Navigation Information
         </Heading>
 
         <Box
-          sx={{
-            mb: 4,
-            p: 3,
-            borderWidth: 1,
-            borderStyle: 'solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-          }}
+          mb={4}
+          p={3}
+          borderWidth={1}
+          borderStyle="solid"
+          borderColor="border.default"
+          borderRadius={2}
         >
           <Text as="p" sx={{ mb: 2 }}>
             <strong>Navigation Type Detected:</strong>{' '}
@@ -211,11 +210,11 @@ export const NativeNavigationExample: React.FC = () => {
           </Text>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <Heading as="h3" sx={{ mb: 2 }}>
             Test Programmatic Navigation
           </Heading>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box display="flex" gap={2} flexWrap="wrap">
             <Button onClick={handleProgrammaticNavigation}>
               Navigate to /page3
             </Button>
@@ -231,11 +230,11 @@ export const NativeNavigationExample: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <Heading as="h3" sx={{ mb: 2 }}>
             Test History API
           </Heading>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box display="flex" gap={2} flexWrap="wrap">
             <Button onClick={handleBackNavigation} variant="default">
               History Back
             </Button>
@@ -245,11 +244,11 @@ export const NativeNavigationExample: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <Heading as="h3" sx={{ mb: 2 }}>
             Test Link Navigation
           </Heading>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Box display="flex" gap={3} flexWrap="wrap">
             <PrimerLink
               href="/"
               onClick={e => handleLinkClick(e, '/')}
@@ -288,7 +287,7 @@ export const NativeNavigationExample: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ mt: 4, p: 3, bg: 'attention.subtle', borderRadius: 2 }}>
+        <Box mt={4} p={3} bg="attention.subtle" borderRadius={2}>
           <Heading as="h3" sx={{ mb: 2 }}>
             How This Works
           </Heading>
@@ -296,7 +295,7 @@ export const NativeNavigationExample: React.FC = () => {
             This example does NOT include React Router. The navigation hooks
             automatically detect this and:
           </Text>
-          <Box as="ul" sx={{ pl: 4 }}>
+          <Box as="ul" pl={4}>
             <Text as="li">
               Use <code>window.history.pushState()</code> for navigation
             </Text>

@@ -18,9 +18,11 @@ AG-UI is a lightweight protocol focused on UI integration with:
 """
 
 import asyncio
+import contextvars
 import json
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, AsyncIterator, Iterator
 
 if TYPE_CHECKING:
     from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
@@ -44,6 +46,23 @@ from ..otel.prompt_turn_metrics import (
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)
+
+#: What a run is told besides its agent's instructions, set by the runtime
+#: itself, never by the request: the modes an application's session is in
+#: (LOOP P-19), for the run it forwards to its agent.
+_run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "run_instructions", default=None
+)
+
+
+@contextmanager
+def run_instructions(instructions: str | None) -> Iterator[None]:
+    """Tell the runs started inside this block ``instructions`` besides their agent's."""
+    token = _run_instructions.set(instructions or None)
+    try:
+        yield
+    finally:
+        _run_instructions.reset(token)
 
 
 class AGUITransport(BaseTransport):
@@ -312,6 +331,22 @@ class AGUITransport(BaseTransport):
                         f"Could not extract model/identities from AG-UI request body: {e}"
                     )
 
+                # A model the request names is called as the agent's own is:
+                # through its provider — ai-inference on a Datalayer runtime,
+                # naming the application it serves — never handed to
+                # pydantic-ai as a bare string it would call directly (a
+                # hosted page's agent called Bedrock with no region, P-24).
+                run_model: Any = model
+                if isinstance(model, str) and model:
+                    from ..models.models import RequestModelRefused, model_of_request
+
+                    try:
+                        run_model = model_of_request(transport_self._agent_id, model)
+                    except RequestModelRefused as refused:
+                        from starlette.responses import JSONResponse
+
+                        return JSONResponse({"detail": str(refused)}, status_code=400)
+
                 # Apply per-turn enablement to backend guardrail state.
                 try:
                     from agent_runtimes.streams.loop import (
@@ -514,6 +549,18 @@ class AGUITransport(BaseTransport):
 
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = transport_self._get_runtime_toolsets()
+                # An application's run reaches the Datalayer MCP gateway as
+                # the application, never with the process's key: a session's
+                # run of a deployment as its principal (LOOP I-03), of a
+                # Preview with the token the session gives the run, narrowed
+                # to its granted Spaces (R-25) — which the gateway holds.
+                from ..loop.apps.principal import gateway_toolsets_of_the_run
+
+                runtime_toolsets = await gateway_toolsets_of_the_run(
+                    agent_id,
+                    runtime_toolsets,
+                    extract_jwt_token(request.headers.get("authorization"), None),
+                )
 
                 # Log detailed toolset information
                 if runtime_toolsets:
@@ -552,12 +599,14 @@ class AGUITransport(BaseTransport):
                     logger.info("[AG-UI] Passing 0 toolsets to agent run (empty list)")
 
                 try:
+                    told = _run_instructions.get()
                     response = await AGUIAdapter.dispatch_request(
                         request,
                         agent=pydantic_agent,
-                        model=model,
+                        model=run_model,
                         toolsets=runtime_toolsets,
                         on_complete=on_complete,
+                        **({"instructions": told} if told else {}),
                         **agui_kwargs,
                     )
 

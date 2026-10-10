@@ -481,16 +481,14 @@ export function ContextPanel({
           Context Usage
         </Heading>
         <Box
-          sx={{
-            p: 3,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
+          p={3}
+          bg="canvas.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
+          display="flex"
+          alignItems="center"
+          gap={2}
         >
           <Spinner size="small" />
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
@@ -516,13 +514,11 @@ export function ContextPanel({
           Context Usage
         </Heading>
         <Box
-          sx={{
-            p: 3,
-            bg: 'attention.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'attention.muted',
-          }}
+          p={3}
+          bg="attention.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="attention.muted"
         >
           <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
             Waiting for context data from WebSocket stream...
@@ -548,12 +544,10 @@ export function ContextPanel({
   return (
     <Box>
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 2,
-        }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
       >
         <Heading
           as="h4"
@@ -565,7 +559,7 @@ export function ContextPanel({
         >
           Context Usage
         </Heading>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box display="flex" alignItems="center" gap={2}>
           {sentMessageCount > 0 && (
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
               {sentMessageCount}{' '}
@@ -584,16 +578,14 @@ export function ContextPanel({
       </Box>
 
       <Box
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
       >
         {/* Context usage */}
-        <Box sx={{ mb: 3 }}>
+        <Box mb={3}>
           <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
             Total usage: {formatTokens(totalTokens)}
           </Text>
@@ -601,25 +593,16 @@ export function ContextPanel({
 
         {/* Session & Turn stats row */}
         {(sessionUsage || turnUsage) && (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 3,
-              mb: 3,
-              flexWrap: 'wrap',
-            }}
-          >
+          <Box display="flex" gap={3} mb={3} flexWrap="wrap">
             {sessionUsage && (
               <Box
-                sx={{
-                  flex: 1,
-                  minWidth: 120,
-                  p: 2,
-                  bg: 'canvas.default',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.muted',
-                }}
+                flex={1}
+                minWidth={120}
+                p={2}
+                bg="canvas.default"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.muted"
               >
                 <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
                   Session ({sessionUsage.turns} turns)
@@ -637,15 +620,13 @@ export function ContextPanel({
             )}
             {turnUsage && (
               <Box
-                sx={{
-                  flex: 1,
-                  minWidth: 120,
-                  p: 2,
-                  bg: 'canvas.default',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.muted',
-                }}
+                flex={1}
+                minWidth={120}
+                p={2}
+                bg="canvas.default"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.muted"
               >
                 <Text sx={{ fontSize: 0, color: 'fg.muted', display: 'block' }}>
                   Last Turn ({turnUsage.requests} reqs)
@@ -664,12 +645,10 @@ export function ContextPanel({
 
         {/* View mode selector */}
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 2,
-          }}
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
         >
           <SegmentedControl
             aria-label="View mode"
@@ -712,7 +691,7 @@ export function ContextPanel({
         {viewMode === 'overview' && (
           <Box>
             {/* Category breakdown */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
               {hasDistributionData &&
                 distribution.children.map(category => {
                   const CategoryIcon = getCategoryIcon(category.name);
@@ -722,13 +701,11 @@ export function ContextPanel({
                   return (
                     <Box
                       key={category.name}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                      }}
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
                     >
-                      <Box sx={{ color: 'fg.muted', width: 20 }}>
+                      <Box color="fg.muted" width={20}>
                         <CategoryIcon size={16} />
                       </Box>
                       <Text sx={{ fontSize: 1, flex: 1 }}>{category.name}</Text>
@@ -737,7 +714,7 @@ export function ContextPanel({
                       >
                         {formatTokens(category.value)}
                       </Text>
-                      <Box sx={{ width: 80 }}>
+                      <Box width={80}>
                         <ProgressBar
                           progress={categoryPercent}
                           sx={{ height: 4 }}
@@ -764,19 +741,17 @@ export function ContextPanel({
             {/* Detailed breakdown */}
             {showDetails && hasDistributionData && (
               <Box
-                sx={{
-                  mt: 3,
-                  p: 2,
-                  bg: 'canvas.default',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'border.muted',
-                  fontSize: 0,
-                }}
+                mt={3}
+                p={2}
+                bg="canvas.default"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="border.muted"
+                fontSize={0}
               >
                 {/* System prompts */}
                 {snapshotData.systemPromptTokens > 0 && (
-                  <Box sx={{ mb: 2 }}>
+                  <Box mb={2}>
                     <Text sx={{ fontWeight: 'semibold' }}>
                       System Prompts:{' '}
                       {formatTokens(snapshotData.systemPromptTokens)} tokens
@@ -804,12 +779,12 @@ export function ContextPanel({
 
                 {/* Tool definitions */}
                 {snapshotData.toolTokens > 0 && (
-                  <Box sx={{ mb: 2 }}>
+                  <Box mb={2}>
                     <Text sx={{ fontWeight: 'semibold' }}>
                       Tools: {formatTokens(snapshotData.toolTokens)} tokens (
                       {snapshotData.tools.length} tools)
                     </Text>
-                    <Box sx={{ ml: 2, mt: 1 }}>
+                    <Box ml={2} mt={1}>
                       {snapshotData.tools.slice(0, 4).map((tool, idx) => (
                         <Text
                           key={idx}
@@ -830,7 +805,7 @@ export function ContextPanel({
                 {/* Message breakdown */}
                 {(snapshotData.userMessageTokens > 0 ||
                   snapshotData.assistantMessageTokens > 0) && (
-                  <Box sx={{ mb: 2 }}>
+                  <Box mb={2}>
                     <Text sx={{ fontWeight: 'semibold' }}>
                       Messages:{' '}
                       {formatTokens(
@@ -839,7 +814,7 @@ export function ContextPanel({
                       )}{' '}
                       tokens
                     </Text>
-                    <Box sx={{ ml: 2, mt: 1 }}>
+                    <Box ml={2} mt={1}>
                       <Text sx={{ display: 'block', color: 'fg.muted' }}>
                         • User: {formatTokens(snapshotData.userMessageTokens)}
                       </Text>
@@ -878,27 +853,18 @@ export function ContextPanel({
             />
             {/* Per-request details */}
             {showDetails && snapshotData.perRequestUsage.length > 0 && (
-              <Box
-                sx={{
-                  mt: 2,
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  fontSize: 0,
-                }}
-              >
+              <Box mt={2} maxHeight="150px" overflowY="auto" fontSize={0}>
                 {snapshotData.perRequestUsage
                   .slice(-10)
                   .reverse()
                   .map((req, idx) => (
                     <Box
                       key={req.requestNum}
-                      sx={{
-                        display: 'flex',
-                        gap: 2,
-                        py: 1,
-                        borderBottom: idx < 9 ? '1px solid' : 'none',
-                        borderColor: 'border.muted',
-                      }}
+                      display="flex"
+                      gap={2}
+                      py={1}
+                      borderBottom={idx < 9 ? '1px solid' : 'none'}
+                      borderColor="border.muted"
                     >
                       <Text sx={{ fontWeight: 'semibold', minWidth: 30 }}>
                         #{req.requestNum}
@@ -922,7 +888,7 @@ export function ContextPanel({
         )}
 
         {viewMode === 'history' && !historyChartOption && (
-          <Box sx={{ py: 3 }}>
+          <Box py={3}>
             <Text sx={{ color: 'fg.muted', fontSize: 1 }}>No history</Text>
           </Box>
         )}

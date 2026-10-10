@@ -11,9 +11,32 @@ import { ISessionContext } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 import { checkIcon } from '@jupyterlab/ui-components';
 import { JSONExt } from '@lumino/coreutils';
-import { KernelExecutor } from '@datalayer/jupyter-react';
+import {
+  kernelConnectionExecutor,
+  listKernelVariables,
+  type KernelVariable,
+} from '@datalayer/jupyter-react';
 import { RuntimeSnippetsFacade } from '../../jupyter';
 import type { IRuntimeDesc } from '../../models';
+
+/**
+ * The variables that can be carried to another sandbox, by name and type:
+ * values, not the modules, functions and classes code defines again.
+ */
+export function transferableVariables(variables: readonly KernelVariable[]): {
+  [name: string]: string;
+} {
+  return Object.fromEntries(
+    variables
+      .filter(
+        variable =>
+          variable.kind !== 'module' &&
+          variable.kind !== 'function' &&
+          variable.kind !== 'class',
+      )
+      .map(variable => [variable.name, variable.type]),
+  );
+}
 
 /** What {@link useCodeSandboxVariablesTransfer} answers. */
 export interface ICodeSandboxVariablesTransfer {
@@ -76,20 +99,15 @@ export function useCodeSandboxVariablesTransfer(
       setVariables({});
       return;
     }
-    const snippets = new RuntimeSnippetsFacade(spec.language);
-    const outputs = await new KernelExecutor({ connection }).execute(
-      snippets.listVariables(),
+    // jupyter-react's snippet, run silently: the variables, typed.
+    const listedVariables = transferableVariables(
+      await listKernelVariables(kernelConnectionExecutor(connection), {
+        language: spec.language,
+      }),
     );
-    const content = outputs.get(0).data['text/plain'] as string;
-    if (!content) {
-      setVariables({});
-      return;
-    }
-    // The payload comes quoted, as the representation of a string.
-    const listedVariables = JSON.parse(content.slice(1, content.length - 1));
     setVariables(listedVariables);
     // Everything is carried over unless the user says otherwise.
-    setSelectedState(Object.keys(listedVariables ?? {}));
+    setSelectedState(Object.keys(listedVariables));
   }, [listed, sessionContext]);
   const setSelected = useCallback(
     (names: string[]): void => {
@@ -257,7 +275,7 @@ export function CodeSandboxVariables(
     },
   ];
   return (
-    <Box className={className} sx={{ paddingTop: '10px' }}>
+    <Box className={className} paddingTop="10px">
       <FormControl layout="horizontal">
         <FormControl.Label>{trans.__('Transfer variables')}</FormControl.Label>
         <ToggleSwitch
@@ -287,7 +305,7 @@ export function CodeSandboxVariables(
                 cellPadding="condensed"
               />
             ) : (
-              <Box sx={{ gridArea: 'table' }}>
+              <Box gridArea="table">
                 <Blankslate border>
                   <Blankslate.Heading>
                     {trans.__('No eligible variables.')}

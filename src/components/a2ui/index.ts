@@ -6,3 +6,7 @@
 export * from './A2uiMarkdownProvider';
 export * from './A2uiSurfaceComposed';
 export * from './styles';
+export * from './visibleWhen';
+export * from './visibility';
+export * from './datalayer';
+export * from './custom';

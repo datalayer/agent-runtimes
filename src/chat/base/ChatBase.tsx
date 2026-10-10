@@ -24,7 +24,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Box, Text, Spinner, IconButton } from '@primer/react';
+import { Text, Spinner, IconButton } from '@primer/react';
+import { ReactorLazy } from '@datalayer/reactor/react';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -32,6 +33,7 @@ import type { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import type { INotebookContent } from '@jupyterlab/nbformat';
 import { notebookStore, JupyterReactTheme } from '@datalayer/jupyter-react';
 import {
+  Box,
   setupPrimerPortals,
   useThemeStore,
   getColorPalette,
@@ -62,7 +64,7 @@ import type {
   EphemeralSurfaceMode,
   ModelConfig,
 } from '../../types/chat';
-import { AgentDetails } from '../../agents/AgentDetails';
+import type { AgentDetails } from '../../agents/AgentDetails';
 import type { BuiltinTool } from '../../types/models';
 import {
   AI_MODEL_CATALOGUE,
@@ -108,14 +110,21 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
+import { DeviceHearing } from '../../voice/hearing';
+import { VoiceInput } from '../../voice/VoiceInput';
+import type { SpokenMetadata, Transcript } from '../../voice/types';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
   ToolApprovalDialog,
   type PendingApproval,
 } from '../tools';
-import { EphemeralNotebook } from '../notebook/EphemeralNotebook';
-import { initialModelId, isOffered, usableModels } from './modelChoice';
+import type { EphemeralNotebook } from '../notebook/EphemeralNotebook';
+import {
+  initialModelId,
+  isOffered,
+  offeredModels as offeredModelsFor,
+} from './modelChoice';
 // EphemeralDocument statically imports `@datalayer/jupyter-lexical` (which
 // initialises Lumino-backed nodes on load). Lazy-load it so notebook-only chats
 // never pull lexical into the bundle or trigger its module side effects.
@@ -124,8 +133,36 @@ const EphemeralDocument = React.lazy(() =>
     default: m.EphemeralDocument,
   })),
 );
+// The agent's details (its context charts draw with ECharts) and the
+// companion notebook (JupyterLab's notebook) are opened by a click, not drawn
+// with the conversation: each is its own chunk, fetched when first shown, so
+// a chat — and an embedded application (STUDIO D-08) — loads without them.
+// A chunk that cannot load says so where the view would be.
+const loadAgentDetails = () =>
+  import('../../agents/AgentDetails').then(m => ({ default: m.AgentDetails }));
+const loadEphemeralNotebook = () =>
+  import('../notebook/EphemeralNotebook').then(m => ({
+    default: m.EphemeralNotebook,
+  }));
+const lazyViewRefused = (what: string) => (error: Error) => (
+  <Text as="p" sx={{ p: 3, color: 'danger.fg' }}>
+    {`The ${what} could not be loaded: ${error.message}`}
+  </Text>
+);
+const agentDetailsRefused = lazyViewRefused('agent details');
+const ephemeralNotebookRefused = lazyViewRefused('notebook');
 import { useNotebookTools } from '../../tools/adapters/agent-runtimes/notebookHooks';
 import type { AgentStreamToolApprovalPayload } from '../../types/stream';
+import { useAgentInspectorTracer } from '../../components/inspector/agentSpans';
+import {
+  chatSpanRecorder,
+  type ChatSpanRecorder,
+} from '../../components/inspector/chatSpans';
+import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
+import { loopStepOf, withLoopStep } from './loopStep';
+import { applyLoopElement, loopElementChange } from './loopElement';
+import { loopWindowMessage, tellLoopWindow } from './loopWindow';
+import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
 // This prevents layout-driven unmount/remount cycles from re-sending prompts.
@@ -168,15 +205,13 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
       aria-label={
         mode === 'notebook' ? 'Preparing notebook…' : 'Preparing document…'
       }
-      sx={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3,
-        p: 4,
-      }}
+      flex={1}
+      minHeight={0}
+      overflow="hidden"
+      display="flex"
+      flexDirection="column"
+      gap={3}
+      p={4}
     >
       {mode === 'notebook' ? (
         <>
@@ -184,16 +219,14 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
           {[0, 1, 2].map(i => (
             <Box
               key={i}
-              sx={{
-                p: 3,
-                border: '1px solid',
-                borderColor: 'border.muted',
-                borderRadius: 2,
-                bg: 'canvas.subtle',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
+              p={3}
+              border="1px solid"
+              borderColor="border.muted"
+              borderRadius={2}
+              bg="canvas.subtle"
+              display="flex"
+              flexDirection="column"
+              gap={2}
             >
               <SkeletonText lines={1} />
               <SkeletonText lines={i === 0 ? 2 : 3} />
@@ -202,14 +235,12 @@ function CompanionSurfaceSkeleton({ mode }: { mode: 'notebook' | 'document' }) {
         </>
       ) : (
         <Box
-          sx={{
-            maxWidth: 860,
-            width: '100%',
-            mx: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-          }}
+          maxWidth={860}
+          width="100%"
+          mx="auto"
+          display="flex"
+          flexDirection="column"
+          gap={3}
         >
           <SkeletonText lines={1} />
           <SkeletonText lines={4} />
@@ -261,9 +292,11 @@ function ThemedChatBoundary({
   children,
   themeVariant,
   colorMode,
+  themeOverrides,
 }: React.PropsWithChildren<{
   themeVariant?: string;
   colorMode?: 'light' | 'dark' | 'auto';
+  themeOverrides?: ChatBaseProps['themeOverrides'];
 }>) {
   const storeColorMode = useThemeStore(s => s.colorMode);
   const storeThemeVariant = useThemeStore(s => s.theme);
@@ -273,10 +306,13 @@ function ThemedChatBoundary({
   const themeConfig = getThemeConfig(resolvedThemeVariant as any);
   const resolvedMode =
     resolvedColorMode === 'auto' ? systemMode : resolvedColorMode;
-  const modeStyles =
-    resolvedMode === 'dark'
+  const modeStyles = {
+    ...(resolvedMode === 'dark'
       ? themeConfig.themeStyles.dark
-      : themeConfig.themeStyles.light;
+      : themeConfig.themeStyles.light),
+    // What the host lays over the theme: an application's accent (T-05).
+    ...themeOverrides?.[resolvedMode],
+  };
   const themeBackground =
     (modeStyles as Record<string, string>).backgroundColor ?? '';
   return (
@@ -691,6 +727,9 @@ function parseApprovedMcpToolsByServer(
 // ChatBase (outer wrapper — ensures QueryClient is available)
 // ---------------------------------------------------------------------------
 
+/** When the welcome is said: it has no time of its own. */
+const WELCOME_AT = new Date(0);
+
 /**
  * ChatBase component — Universal chat panel supporting store, protocol, and custom modes.
  */
@@ -702,6 +741,7 @@ export function ChatBase(props: ChatBaseProps) {
     disableInternalJupyterTheme = false,
     themeVariant,
     colorMode,
+    themeOverrides,
   } = props;
 
   // Resolve protocol: string Protocol overrides type in agentRuntimeConfig or
@@ -740,7 +780,11 @@ export function ChatBase(props: ChatBaseProps) {
   const wrappedContent = disableInternalJupyterTheme ? (
     content
   ) : (
-    <ThemedChatBoundary themeVariant={themeVariant} colorMode={colorMode}>
+    <ThemedChatBoundary
+      themeVariant={themeVariant}
+      colorMode={colorMode}
+      themeOverrides={themeOverrides}
+    >
       {content}
     </ThemedChatBoundary>
   );
@@ -775,6 +819,7 @@ function ChatBaseInner({
   disableInputPrompt = false,
   promptVariant,
   mentionableAgents: mentionableAgentsProp,
+  promptCommands,
   showAgentsMenu = true,
   agents: agentsProp,
   selectedAgentId,
@@ -826,6 +871,11 @@ function ChatBaseInner({
   showTurnFooter = true,
   notebookToolSurfacesId,
   footerContent,
+  welcome,
+  trailingContent,
+  voice,
+  voiceSpeaking = false,
+  onStopSpeaking,
   showInformation = false,
   onInformationClick,
   headerContent,
@@ -867,11 +917,13 @@ function ChatBaseInner({
   // Tool invocation hooks
   onToolCallStart,
   onToolCallComplete,
+  inspector: inspectorGiven,
   // Identity/Authorization props
   onAuthorizationRequired: _onAuthorizationRequired,
   connectedIdentities,
   // Conversation persistence
   runtimeId,
+  thread,
   historyEndpoint,
   historyAuthToken: _historyAuthToken,
   // Pending prompt
@@ -885,6 +937,7 @@ function ChatBaseInner({
   onApproveApproval: onApproveApprovalProp,
   onRejectApproval: onRejectApprovalProp,
 }: ChatBaseProps) {
+  const chatText = useChatWords();
   useEffect(() => {
     setupPrimerPortals();
   }, []);
@@ -1901,7 +1954,10 @@ function ChatBaseInner({
    * — that is the whole point of it — so the menu was empty for the one kind
    * of agent whose tools the browser already knows in full.
    */
-  const builtinTools = useMemo<BuiltinTool[]>(() => {
+  const builtinTools = useMemo<{
+    runtime: BuiltinTool[];
+    frontend: BuiltinTool[];
+  }>(() => {
     /*
      * Both lists, not one or the other.
      *
@@ -1942,7 +1998,12 @@ function ChatBaseInner({
         return true;
       })
       .map(tool => ({ id: tool.name, name: tool.name }));
-    return [...fromConfig, ...fromPage];
+    /*
+     * Kept apart: the runtime's tools, and the frontend tools — the ones this
+     * page runs. The menu names them under two headings, so a person can tell
+     * what the agent does on the server from what it does here.
+     */
+    return { runtime: fromConfig, frontend: fromPage };
   }, [configQuery.data?.builtinTools, frontendTools, protocol?.options]);
 
   /*
@@ -1991,37 +2052,47 @@ function ChatBaseInner({
       : undefined;
   const offeredModels = useMemo<ModelConfig[]>(() => {
     // Only what can actually be called — see `modelChoice` for the rule.
-    const fromConfig = availableModels || configQuery.data?.models;
-    if (fromConfig?.length) {
-      return usableModels(fromConfig);
-    }
-    /*
-     * The catalogue, filtered to what is worth offering.
-     *
-     * A server tells the chat which models it can reach and that answer wins.
-     * Without one — an in-page agent, or a server that has not answered yet —
-     * this used to offer the single model the protocol was built with, which
-     * is a menu with nothing to choose.
-     *
-     * `available` is the filter, not the whole catalogue: twenty-six models,
-     * most of them superseded, is a list nobody reads. The specs say which
-     * four are current.
-     */
-    const catalogued = Object.values(AI_MODEL_CATALOGUE)
-      // A typed-judgment model answers typed questions, not a chat.
-      .filter(model => model.available && isChatModel(model))
-      .map(model => ({
-        id: model.id,
-        name: model.name,
-        provider: model.provider,
-      }));
-    if (catalogued.length > 0) {
-      return usableModels(catalogued);
-    }
-    return browserModel
-      ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
-      : [];
-  }, [availableModels, configQuery.data?.models, browserModel]);
+    // The runtime's answer, when it gave one, is the whole list.
+    // A runtime that was asked and did not answer offers nothing: the
+    // agentspecs catalogue below is not its answer.
+    const fromConfig =
+      availableModels ||
+      configQuery.data?.models ||
+      (configQuery.isError ? [] : undefined);
+    return offeredModelsFor(fromConfig, () => {
+      /*
+       * The catalogue, filtered to what is worth offering.
+       *
+       * A server tells the chat which models it can reach and that answer wins.
+       * Without one — an in-page agent, or a server that has not answered yet —
+       * this used to offer the single model the protocol was built with, which
+       * is a menu with nothing to choose.
+       *
+       * `available` is the filter, not the whole catalogue: twenty-six models,
+       * most of them superseded, is a list nobody reads. The specs say which
+       * four are current.
+       */
+      const catalogued = Object.values(AI_MODEL_CATALOGUE)
+        // A typed-decision model answers typed questions, not a chat.
+        .filter(model => model.available && isChatModel(model))
+        .map(model => ({
+          id: model.id,
+          name: model.name,
+          provider: model.provider,
+        }));
+      if (catalogued.length > 0) {
+        return catalogued;
+      }
+      return browserModel
+        ? [{ id: browserModel, name: browserModel, provider: 'inference' }]
+        : [];
+    });
+  }, [
+    availableModels,
+    configQuery.data?.models,
+    configQuery.isError,
+    browserModel,
+  ]);
 
   /*
    * Who `@` may address.
@@ -2183,7 +2254,22 @@ function ChatBaseInner({
   const suppressAssistantTextForToolOnlyRef = useRef(false);
   const hideMessagesAfterToolUIRef = useRef(hideMessagesAfterToolUI);
   hideMessagesAfterToolUIRef.current = hideMessagesAfterToolUI;
-  const threadIdRef = useRef<string>(generateMessageId());
+  const threadIdRef = useRef<string>(thread?.id || generateMessageId());
+  /*
+   * The thread a host gave, kept as it was given at mount (LOOP D-13), and
+   * told when a message is first sent on a thread: the host keeps it.
+   */
+  const threadGivenRef = useRef(thread);
+  const threadStartedRef = useRef<string | null>(
+    thread?.messages.length ? thread.id : null,
+  );
+  const noteThreadStarted = useCallback(() => {
+    const id = threadIdRef.current;
+    if (threadStartedRef.current !== id) {
+      threadStartedRef.current = id;
+      threadGivenRef.current?.onStarted?.(id);
+    }
+  }, []);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -2202,6 +2288,32 @@ function ChatBaseInner({
   onToolCallStartRef.current = onToolCallStart;
   const onToolCallCompleteRef = useRef(onToolCallComplete);
   onToolCallCompleteRef.current = onToolCallComplete;
+  // The Agent Inspector: the turns and tool calls, as spans, as they happen.
+  const inspectorFromContext = useAgentInspectorTracer();
+  const inspectorTracer = inspectorGiven ?? inspectorFromContext;
+  const inspectorActorRef = useRef('Agent');
+  inspectorActorRef.current =
+    (typeof title === 'string' && title) || activeAgentId || 'Agent';
+  const recorderRef = useRef<{
+    tracer: unknown;
+    recorder: ChatSpanRecorder;
+  } | null>(null);
+  if (inspectorTracer && recorderRef.current?.tracer !== inspectorTracer) {
+    recorderRef.current = {
+      tracer: inspectorTracer,
+      recorder: chatSpanRecorder(
+        inspectorTracer,
+        () => inspectorActorRef.current,
+        {
+          frontendTools: () =>
+            (frontendToolsRef.current ?? []).map(tool => tool.name),
+        },
+      ),
+    };
+  } else if (!inspectorTracer) {
+    recorderRef.current = null;
+  }
+  const inspectAnswerRef = useRef('');
   const handleRespondRef = useRef<
     ((toolCallId: string, result: unknown) => Promise<void>) | null
   >(null);
@@ -2862,6 +2974,8 @@ function ChatBaseInner({
   // Set when the next load must come from a fresh snapshot, not the one in
   // the store: what the store holds is the transcript before the change.
   const freshSnapshotRef = useRef(false);
+  // The given thread drawn, by its id: once.
+  const threadSeededRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (historyScopeId !== prevHistoryScopeRef.current) {
@@ -2875,6 +2989,25 @@ function ChatBaseInner({
     }
 
     if (!historyScopeId) return;
+
+    /*
+     * A thread the host gave (LOOP D-13): its session's conversation, drawn
+     * once, and never replaced by the runtime's snapshot, which is its
+     * agent's — every session's — not this one's.
+     */
+    const given = threadGivenRef.current;
+    if (given) {
+      if (threadSeededRef.current !== given.id) {
+        threadSeededRef.current = given.id;
+        useConversationStore
+          .getState()
+          .setMessages(historyScopeId, given.messages);
+        setDisplayItems(convertHistoryToDisplayItems(given.messages));
+        useConversationStore.getState().markFetched(historyScopeId);
+        setHistoryLoaded(true);
+      }
+      return;
+    }
 
     if (historyVersion !== historyVersionRef.current) {
       historyVersionRef.current = historyVersion;
@@ -2893,9 +3026,13 @@ function ChatBaseInner({
     const currentlyFetching = store.isFetching(historyScopeId);
     const storedMessages = store.getMessages(historyScopeId);
 
-    // 1) Fast local hydration for view switches in the same browser session.
+    // 1) Fast local hydration for view switches in the same browser session:
+    // only into an empty conversation. The saved copy holds messages, not
+    // tool calls, and this effect runs again on every change of the socket's
+    // state — put over a live conversation, it erased its tool cards, a
+    // pending approval among them, at the socket's first retry.
     if (storedMessages.length > 0) {
-      setDisplayItems(storedMessages);
+      setDisplayItems(prev => (prev.length > 0 ? prev : storedMessages));
       setHistoryLoaded(true);
     }
 
@@ -3224,20 +3361,30 @@ function ChatBaseInner({
             const isNewMessage =
               !currentId || (incomingId && incomingId !== currentId);
 
-            if (currentAssistantMessageRef.current && !isNewMessage) {
+            if (currentId && !isNewMessage) {
+              /*
+               * The message to write to is the one current now, as the event
+               * arrives — not whichever the ref names when React gets round
+               * to running the updater. A whole answer in one network chunk
+               * queues every delta's updater in the same task, and the turn's
+               * end clears the ref before any of them runs: read lazily, all
+               * but the first found nothing to update, and the conversation
+               * and the balloon showed only the answer's first word.
+               */
+              const rawContent = event.message.content;
+              const sanitizedContent =
+                typeof rawContent === 'string'
+                  ? sanitizeAssistantContent(rawContent)
+                  : (rawContent ?? '');
+              if (typeof sanitizedContent === 'string' && sanitizedContent) {
+                inspectAnswerRef.current = sanitizedContent;
+              }
               setDisplayItems(prev => {
                 const newItems = [...prev];
                 const idx = newItems.findIndex(
-                  item =>
-                    !isToolCallMessage(item) &&
-                    item.id === currentAssistantMessageRef.current?.id,
+                  item => !isToolCallMessage(item) && item.id === currentId,
                 );
                 if (idx >= 0 && !isToolCallMessage(newItems[idx])) {
-                  const rawContent = event.message?.content;
-                  const sanitizedContent =
-                    typeof rawContent === 'string'
-                      ? sanitizeAssistantContent(rawContent)
-                      : (rawContent ?? '');
                   newItems[idx] = {
                     ...(newItems[idx] as ChatMessage),
                     content: sanitizedContent,
@@ -3245,17 +3392,10 @@ function ChatBaseInner({
                 }
                 return newItems;
               });
-              if (useStoreMode && currentAssistantMessageRef.current) {
-                const rawContent = event.message?.content;
-                const sanitizedContent =
-                  typeof rawContent === 'string'
-                    ? sanitizeAssistantContent(rawContent)
-                    : (rawContent ?? '');
-                useChatStore
-                  .getState()
-                  .updateMessage(currentAssistantMessageRef.current.id, {
-                    content: sanitizedContent,
-                  });
+              if (useStoreMode) {
+                useChatStore.getState().updateMessage(currentId, {
+                  content: sanitizedContent,
+                });
               }
             } else {
               const content = event.message.content;
@@ -3357,6 +3497,11 @@ function ChatBaseInner({
               onToolCallStartRef.current?.({
                 toolName,
                 toolCallId,
+                args,
+              });
+              recorderRef.current?.recorder.toolStarted({
+                id: toolCallId,
+                name: toolName,
                 args,
               });
 
@@ -3466,6 +3611,14 @@ function ChatBaseInner({
                   ),
                 );
 
+                recorderRef.current?.recorder.toolEnded(toolCallId, {
+                  result: event.toolResult.result,
+                  error:
+                    event.toolResult.error ??
+                    (updatedToolCall.status === 'error'
+                      ? (executionError ?? 'failed')
+                      : undefined),
+                });
                 // Fire post-hook for tool results
                 onToolCallCompleteRef.current?.({
                   toolName: existingToolCall.toolName,
@@ -3523,6 +3676,44 @@ function ChatBaseInner({
           }
           break;
 
+        case 'activity': {
+          // A step of an application's code, drawn as it runs (LOOP P-16).
+          const step = loopStepOf(event.activity);
+          if (step) {
+            setDisplayItems(prev => withLoopStep(prev, step));
+            break;
+          }
+          // What its code tells the page it sits in, outside the
+          // conversation (LOOP P-25): handed to whoever listens.
+          const windowMessage = loopWindowMessage(event.activity);
+          if (windowMessage) {
+            tellLoopWindow(windowMessage.data);
+            break;
+          }
+          // An element its code opened in a side panel or on a page of its
+          // own, changed or closed (LOOP P-18): kept for whoever draws them.
+          const element = loopElementChange(event.activity);
+          if (element) {
+            applyLoopElement(element);
+            break;
+          }
+          // An application's code changed a message it sent: its author
+          // said, or the message taken away (LOOP P-15).
+          const change = loopMessageChange(event.activity);
+          if (!change) break;
+          setDisplayItems(prev => withLoopMessage(prev, change));
+          if (useStoreMode) {
+            if ('removed' in change) {
+              useChatStore.getState().deleteMessage(change.id);
+            } else {
+              useChatStore.getState().updateMessage(change.id, {
+                speaker: speakerOf(change.author),
+              });
+            }
+          }
+          break;
+        }
+
         case 'done':
           /*
            * What the turn cost, when nobody else is counting.
@@ -3534,6 +3725,11 @@ function ChatBaseInner({
            * The bar and its ring simply never appeared for a browser agent.
            */
           {
+            recorderRef.current?.recorder.turnEnded({
+              text: inspectAnswerRef.current || undefined,
+              usage: event.usage,
+            });
+            inspectAnswerRef.current = '';
             const turnInput = event.usage?.promptTokens ?? 0;
             const turnOutput = event.usage?.completionTokens ?? 0;
             // The parts sum to the total when the harness did not send one:
@@ -3606,6 +3802,9 @@ function ChatBaseInner({
 
         case 'error':
           console.error('[ChatBase] Protocol error:', event.error);
+          recorderRef.current?.recorder.turnEnded({
+            error: event.error?.message ?? 'error',
+          });
           if (
             event.error?.message &&
             /exceeded maximum retries/i.test(event.error.message) &&
@@ -3698,6 +3897,7 @@ function ChatBaseInner({
           result,
           status: 'complete',
         };
+        recorderRef.current?.recorder.toolEnded(toolCallId, { result });
         toolCallsRef.current.set(toolCallId, completedToolCall);
         setDisplayItems(prev =>
           prev.map(item =>
@@ -3713,6 +3913,9 @@ function ChatBaseInner({
           status: 'error',
           error: (err as Error).message,
         };
+        recorderRef.current?.recorder.toolEnded(toolCallId, {
+          error: (err as Error).message,
+        });
         toolCallsRef.current.set(toolCallId, errorToolCall);
         setDisplayItems(prev =>
           prev.map(item =>
@@ -3750,16 +3953,49 @@ function ChatBaseInner({
   // ========================================================================
   // handleSend
   // ========================================================================
+  // Voice (VOICE.md V1): what was said and put in the composer, until sent.
+  const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
+  const hearing = useMemo(
+    () =>
+      voice && voice.input !== 'off'
+        ? new DeviceHearing(voice.modelsUrl, voice.engines)
+        : undefined,
+    [voice?.input, voice?.modelsUrl, voice?.engines],
+  );
   const handleSend = useCallback(
-    async (messageOverride?: string) => {
+    async (
+      messageOverride?: string,
+      // AG-UI's: what goes with the run besides the conversation — an
+      // application's page says there what it did (LOOP R-04).
+      forwardedPropsGiven?: Record<string, unknown>,
+      // How the message was heard, when it was said (VOICE.md VO-27).
+      spokenGiven?: SpokenMetadata,
+    ) => {
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
       stoppedRef.current = false;
+      inspectAnswerRef.current = '';
+      recorderRef.current?.recorder.turnStarted(
+        messageContent,
+        selectedModel || undefined,
+      );
       suppressAssistantTextForToolOnlyRef.current =
         isToolCallOnlyPrompt(messageContent);
+      // Said, then sent: by the microphone at once, or from the composer it
+      // was put in — the words may have been edited, it was still said.
+      const spoken =
+        spokenGiven ??
+        (messageOverride === undefined ? spokenRef.current : undefined);
+      spokenRef.current = undefined;
+      const forwardedProps = spoken
+        ? { ...(forwardedPropsGiven ?? {}), voice: spoken }
+        : forwardedPropsGiven;
 
-      const userMessage = createUserMessage(messageContent);
+      const userMessage = createUserMessage(
+        messageContent,
+        spoken ? { ...spoken } : undefined,
+      );
       const currentMessages = displayItems.filter(
         (item): item is ChatMessage => !isToolCallMessage(item),
       );
@@ -3826,7 +4062,7 @@ function ChatBaseInner({
                 }
               },
               onError: (error: Error) => {
-                const errorContent = `Error: ${error.message}`;
+                const errorContent = chatText.error(error.message);
                 setDisplayItems(prev =>
                   prev.map(item =>
                     item.id === assistantMessageId
@@ -3870,6 +4106,8 @@ function ChatBaseInner({
           const enabledMcpToolNames = getEnabledMcpToolNames();
           const enabledSkillIds = getEnabledSkillIds();
 
+          // The thread is opened by this run: its host keeps it (D-13).
+          noteThreadStarted();
           await adapterRef.current.sendMessage(userMessage, {
             threadId: threadIdRef.current,
             messages: allMessages,
@@ -3878,13 +4116,14 @@ function ChatBaseInner({
             builtinTools: enabledMcpToolNames,
             skills: enabledSkillIds,
             identities: connectedIdentitiesRef.current,
+            ...(forwardedProps ? { forwardedProps } : {}),
           } as Parameters<typeof adapterRef.current.sendMessage>[1]);
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('[ChatBase] Send error:', err);
           const errorMessage = createAssistantMessage(
-            `Error: ${(err as Error).message}`,
+            chatText.error((err as Error).message),
           );
           setDisplayItems(prev => [...prev, errorMessage]);
           setError(err as Error);
@@ -3917,6 +4156,8 @@ function ChatBaseInner({
       enableStreaming,
       getEnabledMcpToolNames,
       getEnabledSkillIds,
+      noteThreadStarted,
+      chatText,
     ],
   );
 
@@ -4072,13 +4313,14 @@ function ChatBaseInner({
       return undefined;
     }
     onSendReady({
-      send: (message: string) => {
-        void handleSend(message);
+      send: (message: string, forwardedProps?: Record<string, unknown>) => {
+        void handleSend(message, forwardedProps);
       },
       stop: handleStop,
       // The same reset the header's + performs, for a host whose controls
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
+      thread: () => threadIdRef.current,
     });
     return () => {
       onSendReady(null);
@@ -4446,18 +4688,16 @@ function ChatBaseInner({
     return (
       <Box
         className={className}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          p: 4,
-          borderRadius,
-          bg: backgroundColor || 'canvas.default',
-          border,
-          boxShadow,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        p={4}
+        borderRadius={borderRadius}
+        bg={backgroundColor || 'canvas.default'}
+        border={border}
+        boxShadow={boxShadow}
       >
         {loadingState || (
           <>
@@ -4525,15 +4765,31 @@ function ChatBaseInner({
             .filter(item => item.message)
         : undefined;
 
+  /*
+   * The welcome, as the first message: drawn as the agent's own words are,
+   * never sent nor kept. With it, the history is never empty, so the empty
+   * state gives way to it.
+   */
+  const welcomedItems: DisplayItem[] = welcome
+    ? [
+        {
+          id: '__welcome__',
+          role: 'assistant',
+          content: welcome,
+          createdAt: WELCOME_AT,
+        } as DisplayItem,
+        ...displayItems,
+      ]
+    : displayItems;
+
   const messagesContent = children ? (
     children
   ) : (
     <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        /*
+      display="flex"
+      flexDirection="column"
+      minHeight={0}
+      /*
           A reading column, not a full-bleed sheet.
 
           The transcript keeps a book-page width and centres itself; on a
@@ -4541,14 +4797,13 @@ function ChatBaseInner({
           rows inside carry their own horizontal padding, which becomes the
           margin once the cap does bind.
         */
-        width: '100%',
-        maxWidth: 920,
-        mx: 'auto',
-        bg: 'canvas.default',
-      }}
+      width="100%"
+      maxWidth={920}
+      mx="auto"
+      bg="canvas.default"
     >
       <ChatMessageList
-        displayItems={displayItems}
+        displayItems={welcomedItems}
         isLoading={isLoading}
         isStreaming={isStreaming}
         showLoadingIndicator={showLoadingIndicator}
@@ -4562,6 +4817,7 @@ function ChatBaseInner({
         showTurnFooters={showTurnFooter}
         agentUsage={agentUsage}
         onRemoveItems={handleRemoveItems}
+        mcpServers={filteredMcpServers}
         emptyContent={
           launching ? null : (
             <ChatEmptyState
@@ -4576,11 +4832,39 @@ function ChatBaseInner({
           )
         }
       />
+      {trailingContent}
     </Box>
   );
 
+  // The microphone, in the composer's footer (VO-10).
+  const voiceControl =
+    hearing && voice ? (
+      <VoiceInput
+        hearing={hearing}
+        language={voice.language}
+        consentKey={voice.consentKey ?? 'chat'}
+        disabled={disabled || launching}
+        speaking={voiceSpeaking}
+        onStopSpeaking={onStopSpeaking}
+        onListen={onStopSpeaking}
+        onTranscript={(transcript: Transcript) => {
+          if (voice.sendWhatISay) {
+            void handleSend(transcript.text, undefined, transcript.metadata);
+            return;
+          }
+          spokenRef.current = transcript.metadata;
+          setInput(
+            input.trim()
+              ? `${input.trim()} ${transcript.text}`
+              : transcript.text,
+          );
+        }}
+      />
+    ) : undefined;
+
   const inputToolbar = showInput ? (
     <InputPrompt
+      footerExtras={voiceControl}
       input={input}
       setInput={setInput}
       isLoading={isLoading}
@@ -4608,6 +4892,7 @@ function ChatBaseInner({
       }
       promptVariant={promptVariant}
       mentionableAgents={mentionableAgents}
+      promptCommands={promptCommands}
       // The runtime's memory of what was sent to this agent, for the arrow
       // keys — part of the same initial state as the models and tools.
       promptHistory={configQuery.data?.promptHistory}
@@ -4630,9 +4915,20 @@ function ChatBaseInner({
       // agent has no config endpoint waits for ever otherwise.
       configLoading={configQuery.isLoading}
       models={offeredModels}
+      // Listed apart and read-only: a typed-decision model is never the
+      // agent's model.
+      decisions={
+        configQuery.data
+          ? {
+              models: configQuery.data.decisionModels,
+              note: configQuery.data.decisionsNote,
+            }
+          : undefined
+      }
       selectedModel={selectedModel}
       onModelSelect={setSelectedModel}
-      availableTools={builtinTools}
+      availableTools={builtinTools.runtime}
+      availableFrontendTools={builtinTools.frontend}
       mcpServers={filteredMcpServers}
       enabledMcpTools={enabledMcpTools}
       enabledMcpToolCount={getEnabledMcpToolNames().length}
@@ -4721,14 +5017,13 @@ function ChatBaseInner({
   return (
     <Box
       className={className}
-      sx={{
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        maxHeight: '100%',
-        minHeight: 0,
-        /*
+      position="relative"
+      display="flex"
+      flexDirection="column"
+      height="100%"
+      maxHeight="100%"
+      minHeight={0}
+      /*
           As wide as the host, always.
 
           The root set its height and said nothing about width, so mounted in
@@ -4739,15 +5034,14 @@ function ChatBaseInner({
           bubble drift while the agent answered. A chat fills the column it
           is given; the column decides the width, not the transcript.
         */
-        flex: '1 1 auto',
-        width: '100%',
-        minWidth: 0,
-        bg: backgroundColor || 'canvas.default',
-        borderRadius,
-        border,
-        boxShadow,
-        overflow: 'hidden',
-      }}
+      flex="1 1 auto"
+      width="100%"
+      minWidth={0}
+      bg={backgroundColor || 'canvas.default'}
+      borderRadius={borderRadius}
+      border={border}
+      boxShadow={boxShadow}
+      overflow="hidden"
     >
       {/* Header — shown at the top only when no companion surface is visible.
           When a surface (notebook/document) is visible the header is rendered
@@ -4777,22 +5071,24 @@ function ChatBaseInner({
           the same way and has always looked right for exactly this reason.
         */
         <Box
-          sx={{
-            flex: '1 1 auto',
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
+          flex="1 1 auto"
+          minHeight={0}
+          display="flex"
+          flexDirection="column"
         >
-          <AgentDetails
-            name={title || 'AI Agent'}
-            icon={brandIcon}
-            protocol={protocol?.type ?? 'unknown'}
-            url={protocol?.endpoint || ''}
-            messageCount={displayItems.length}
-            agentId={activeAgentId}
-            apiBase={protocol?.configEndpoint}
-            onBack={() => setShowDetails(false)}
+          <ReactorLazy<React.ComponentProps<typeof AgentDetails>>
+            load={loadAgentDetails}
+            errorFallback={agentDetailsRefused}
+            props={{
+              name: title || 'AI Agent',
+              icon: brandIcon,
+              protocol: protocol?.type ?? 'unknown',
+              url: protocol?.endpoint || '',
+              messageCount: displayItems.length,
+              agentId: activeAgentId,
+              apiBase: protocol?.configEndpoint,
+              onBack: () => setShowDetails(false),
+            }}
           />
         </Box>
       )}
@@ -4811,15 +5107,13 @@ function ChatBaseInner({
       {/* Error banner */}
       {showErrors && error && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: padding,
-            bg: 'danger.subtle',
-            borderBottom: '1px solid',
-            borderColor: 'danger.muted',
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          p={padding}
+          bg="danger.subtle"
+          borderBottom="1px solid"
+          borderColor="danger.muted"
         >
           <AlertIcon size={16} />
           <Text sx={{ color: 'danger.fg', fontSize: 1 }}>{error.message}</Text>
@@ -4829,49 +5123,52 @@ function ChatBaseInner({
       {/* Messages area */}
       {surfaceVisible ? (
         <Box
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
+          flex={1}
+          minHeight={0}
+          display="flex"
+          overflow="hidden"
+          position="relative"
         >
           {/* Left: in-memory companion surface (notebook or document). */}
           <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              ...(surfaceChatFloating
+            flex={1}
+            minWidth={0}
+            minHeight={0}
+            display="flex"
+            flexDirection="column"
+            overflow="hidden"
+            sx={
+              surfaceChatFloating
                 ? null
                 : surfaceCollapsed
                   ? null
                   : {
                       borderRight: '1px solid',
                       borderColor: 'border.default',
-                    }),
-            }}
+                    }
+            }
           >
             {launching || overlay ? (
               <CompanionSurfaceSkeleton
                 mode={notebookVisible ? 'notebook' : 'document'}
               />
             ) : notebookVisible ? (
-              <EphemeralNotebook
-                notebookId={ephemeralNotebookId}
-                runtimeName={runtimeId || activeAgentId}
-                runtimeOverride={ephemeralRuntimeOverride}
-                themeVariant={themeVariant}
-                colorMode={colorMode}
-                nbformat={persistedEphemeralNbformat ?? undefined}
-                onNbformatChange={handleEphemeralNotebookChange}
-                toolbarComponent={ephemeralNotebookToolbar}
-                toolbarExtraItems={notebookToolbarItems}
-                collaborationProvider={ephemeralNotebookCollaborationProvider}
+              <ReactorLazy<React.ComponentProps<typeof EphemeralNotebook>>
+                load={loadEphemeralNotebook}
+                errorFallback={ephemeralNotebookRefused}
+                fallback={<CompanionSurfaceSkeleton mode="notebook" />}
+                props={{
+                  notebookId: ephemeralNotebookId,
+                  runtimeName: runtimeId || activeAgentId,
+                  runtimeOverride: ephemeralRuntimeOverride,
+                  themeVariant,
+                  colorMode,
+                  nbformat: persistedEphemeralNbformat ?? undefined,
+                  onNbformatChange: handleEphemeralNotebookChange,
+                  toolbarComponent: ephemeralNotebookToolbar,
+                  toolbarExtraItems: notebookToolbarItems,
+                  collaborationProvider: ephemeralNotebookCollaborationProvider,
+                }}
               />
             ) : (
               <React.Suspense fallback={null}>
@@ -4935,12 +5232,10 @@ function ChatBaseInner({
               {chatHeaderElement}
               <Box
                 ref={messagesContainerRef}
-                sx={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflow: 'auto',
-                  bg: 'canvas.default',
-                }}
+                flex={1}
+                minHeight={0}
+                overflow="auto"
+                bg="canvas.default"
               >
                 {messagesContent}
               </Box>
@@ -4952,14 +5247,7 @@ function ChatBaseInner({
           {surfaceCollapsed &&
             onExpandFromCollapsed &&
             (chatViewMode === 'sidebar' ? (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 6,
-                }}
-              >
+              <Box position="absolute" top={8} right={8} zIndex={6}>
                 <IconButton
                   icon={SidebarExpandIcon}
                   aria-label="Open chat"
@@ -4981,13 +5269,12 @@ function ChatBaseInner({
         <>
           <Box
             ref={messagesContainerRef}
-            sx={{
-              flex: 1,
-              flexGrow: 1,
-              minHeight: 0,
-              overflow: 'auto',
-              bg: 'canvas.default',
-            }}
+            data-chat-history=""
+            flex={1}
+            flexGrow={1}
+            minHeight={0}
+            overflow="auto"
+            bg="canvas.default"
           >
             {messagesContent}
           </Box>
@@ -5009,30 +5296,26 @@ function ChatBaseInner({
           selectors are force-disabled while an overlay is set. */}
       {overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-            overflow: 'auto',
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={20}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
+          overflow="auto"
         >
           {/* Translucent dim layer (kept separate so the card stays opaque). */}
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.4,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.4}
+            backdropFilter="blur(1px)"
           />
           {/* Foreground gate content (opaque, above the dim layer). */}
-          <Box sx={{ position: 'relative', zIndex: 1, maxWidth: '100%' }}>
+          <Box position="relative" zIndex={1} maxWidth="100%">
             {overlay}
           </Box>
         </Box>
@@ -5045,35 +5328,29 @@ function ChatBaseInner({
           own inline skeletons underneath. */}
       {launching && !overlay && (
         <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 3,
-          }}
+          position="absolute"
+          inset={0}
+          zIndex={15}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          p={3}
         >
           <Box
             aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              bg: 'canvas.default',
-              opacity: 0.35,
-              backdropFilter: 'blur(1px)',
-            }}
+            position="absolute"
+            inset={0}
+            bg="canvas.default"
+            opacity={0.35}
+            backdropFilter="blur(1px)"
           />
           <Box
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 3,
-            }}
+            position="relative"
+            zIndex={1}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={3}
           >
             <Spinner size="large" />
             <Text sx={{ color: 'fg.muted' }}>

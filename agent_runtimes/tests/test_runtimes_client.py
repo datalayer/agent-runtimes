@@ -87,6 +87,38 @@ class TestARuntimeOfAnExecutionTree:
         assert "parent_reservation_uid" not in self._posted()
 
 
+class TestAnApplicationIsLaunchedWithItsAppspec:
+    """Its connections' secrets are given before its agent is made (LOOP R-19)."""
+
+    APP = {"schema": "loop.app/v1", "id": "web-research", "connections": []}
+
+    def _posted(self, **kwargs: Any) -> dict[str, Any]:
+        transport = _Transport(_Response(payload={"success": True, "runtime": {}}))
+        RuntimesClient(transport).create(
+            environment_name="ai-agents-env", credits_limit=6.0, **kwargs
+        )
+        [posted] = [call for call in transport.calls if call.get("method") == "POST"]
+        return posted["json"]
+
+    def test_it_carries_the_appspec(self) -> None:
+        posted = self._posted(
+            app_uid="app-1", deployment_uid="dep-1", app_spec=self.APP
+        )
+        assert posted["app_spec"] == self.APP
+        assert (posted["app_uid"], posted["deployment_uid"]) == ("app-1", "dep-1")
+
+    def test_an_application_without_it_is_refused_before_anything_is_sent(self) -> None:
+        transport = _Transport(_Response(payload={"success": True, "runtime": {}}))
+        with pytest.raises(ValueError, match="without its Appspec"):
+            RuntimesClient(transport).create(
+                environment_name="ai-agents-env", credits_limit=6.0, app_uid="app-1"
+            )
+        assert transport.calls == []
+
+    def test_a_runtime_for_no_application_carries_none(self) -> None:
+        assert "app_spec" not in self._posted()
+
+
 class TestTheVerbsReachTheRightUrls:
     """The paths come from the vocabulary, so this pins them where callers see them."""
 

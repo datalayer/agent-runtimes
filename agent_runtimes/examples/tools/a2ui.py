@@ -13,7 +13,7 @@ canvas) using the ``@a2ui/react`` renderer, giving the agent the ability to
 generate real, interactive user interfaces — forms, cards and lists — from a
 natural-language request.
 
-The tool is referenced from a ToolSpec ``runtime`` block via ``package`` +
+The tool is referenced from a BackendToolSpec ``runtime`` block via ``package`` +
 ``method`` and registered on a ``pydantic_ai.Agent`` through
 ``register_agent_tools`` (which wires it with ``tool_plain``).
 """
@@ -26,8 +26,8 @@ from functools import lru_cache
 from typing import Any, Literal, Optional
 
 from a2ui.basic_catalog.provider import BasicCatalog
+from a2ui.inference_formats.direct_json import DirectJsonFormat
 from a2ui.schema.constants import VERSION_0_9
-from a2ui.schema.manager import A2uiSchemaManager
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -114,11 +114,11 @@ class A2uiSummaryItem(BaseModel):
 
 @lru_cache(maxsize=1)
 def _catalog() -> Any:
-    manager = A2uiSchemaManager(
+    direct_json = DirectJsonFormat(
         version=VERSION_0_9,
         catalogs=[BasicCatalog.get_config(version=VERSION_0_9)],
     )
-    return manager.get_selected_catalog()
+    return direct_json.get_selected_catalog()
 
 
 def _validate(messages: list[dict[str, Any]]) -> list[str]:
@@ -131,7 +131,11 @@ def _validate(messages: list[dict[str, Any]]) -> list[str]:
         return warnings
     for index, message in enumerate(messages):
         try:
-            catalog.validator.validate(message)
+            errors = catalog.validate_components(message)
+            if errors:
+                raise ValueError(
+                    "; ".join(f"{error.path}: {error.message}" for error in errors)
+                )
         except Exception as exc:
             command = next((k for k in message if k != "version"), "unknown")
             warning = f"message {index} ({command}) failed validation: {exc}"

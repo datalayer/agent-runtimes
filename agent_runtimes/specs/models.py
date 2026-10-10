@@ -11,7 +11,7 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 import os
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from agent_runtimes.types import AIModel, ModelPricing
 
@@ -173,6 +173,7 @@ ANTHROPIC_CLAUDE_3_5_HAIKU_20241022_0_0_1 = AIModel(
     available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
     tokens_limit=8192,
+    pricing=ModelPricing(input_usd_per_million=0.8, output_usd_per_million=4.0),
 )
 
 ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
@@ -186,6 +187,7 @@ ANTHROPIC_CLAUDE_OPUS_4_20250514_0_0_1 = AIModel(
     available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
     tokens_limit=32000,
+    pricing=ModelPricing(input_usd_per_million=15.0, output_usd_per_million=75.0),
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
@@ -199,6 +201,7 @@ ANTHROPIC_CLAUDE_SONNET_4_5_20250514_0_0_1 = AIModel(
     available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
     tokens_limit=64000,
+    pricing=ModelPricing(input_usd_per_million=3.0, output_usd_per_million=15.0),
 )
 
 ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
@@ -212,6 +215,7 @@ ANTHROPIC_CLAUDE_SONNET_4_20250514_0_0_1 = AIModel(
     available=False,
     required_env_vars=["ANTHROPIC_API_KEY"],
     tokens_limit=64000,
+    pricing=ModelPricing(input_usd_per_million=3.0, output_usd_per_million=15.0),
 )
 
 AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
@@ -225,6 +229,7 @@ AZURE_OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.4, output_usd_per_million=1.6),
 )
 
 AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -238,6 +243,7 @@ AZURE_OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.1, output_usd_per_million=0.4),
 )
 
 AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -251,6 +257,7 @@ AZURE_OPENAI_GPT_4_1_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=2.0, output_usd_per_million=8.0),
 )
 
 AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -264,6 +271,7 @@ AZURE_OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=0.15, output_usd_per_million=0.6),
 )
 
 AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -277,6 +285,7 @@ AZURE_OPENAI_GPT_4O_0_0_1 = AIModel(
     available=False,
     required_env_vars=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=2.5, output_usd_per_million=10.0),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
@@ -294,6 +303,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_FABLE_5_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
+    pricing=ModelPricing(input_usd_per_million=11.0, output_usd_per_million=55.0),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
@@ -311,6 +321,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_6_V1_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=32000,
+    pricing=ModelPricing(input_usd_per_million=5.5, output_usd_per_million=27.5),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
@@ -328,6 +339,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_8_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=32000,
+    pricing=ModelPricing(input_usd_per_million=5.5, output_usd_per_million=27.5),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
@@ -345,6 +357,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_4_20250514_V1_0_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=32000,
+    pricing=ModelPricing(input_usd_per_million=15.0, output_usd_per_million=75.0),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
@@ -362,6 +375,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_OPUS_5_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=32000,
+    pricing=ModelPricing(input_usd_per_million=5.5, output_usd_per_million=27.5),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
@@ -379,6 +393,7 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_5_20250929_V1_0_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
+    pricing=ModelPricing(input_usd_per_million=3.3, output_usd_per_million=16.5),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
@@ -396,8 +411,9 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_6_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
-    capabilities=["chat", "tools", "judge"],
+    capabilities=["chat", "tools", "decider"],
     context_window=200000,
+    pricing=ModelPricing(input_usd_per_million=3.3, output_usd_per_million=16.5),
 )
 
 BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
@@ -415,20 +431,21 @@ BEDROCK_US_ANTHROPIC_CLAUDE_SONNET_4_20250514_V1_0_0_0_1 = AIModel(
         "AWS_DEFAULT_REGION",
     ],
     tokens_limit=64000,
+    pricing=ModelPricing(input_usd_per_million=3.0, output_usd_per_million=15.0),
 )
 
 CLOUDFLARE_GTW_TYPESAFE_JEV_0_0_1 = AIModel(
     id="cloudflare:gtw/typesafe/jev",
     version="0.0.1",
     name="Jev (Cloudflare AI Gateway)",
-    description="Typesafe's typed-judgment model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
+    description="Typesafe's typed-decision model through the account's AI Gateway - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; the gateway keeps the logs and bills from its credits",
     provider="cloudflare",
     provider_url="https://docs.typesafe.ai/models",
     default=False,
     available=True,
     required_env_vars=[],
     tokens_limit=None,
-    capabilities=["judgments"],
+    capabilities=["decisions"],
     billing="credits",
     route="ai-gateway",
     context_window=32000,
@@ -453,6 +470,7 @@ CLOUDFLARE_WRK_GOOGLE_GEMMA_4_26B_A4B_IT_0_0_1 = AIModel(
     route="workers-ai",
     context_window=256000,
     aliases=["cloudflare:google/gemma-4-26b-a4b-it"],
+    pricing=ModelPricing(input_usd_per_million=0.1, output_usd_per_million=0.3),
 )
 
 CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
@@ -471,6 +489,7 @@ CLOUDFLARE_WRK_ZAI_ORG_GLM_5_2_0_0_1 = AIModel(
     route="workers-ai",
     context_window=262144,
     aliases=["cloudflare:zai-org/glm-5.2"],
+    pricing=ModelPricing(input_usd_per_million=1.4, output_usd_per_million=4.4),
 )
 
 CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
@@ -484,11 +503,12 @@ CLOUDFLARE_WRK_OPENAI_GPT_OSS_120B_0_0_1 = AIModel(
     available=False,
     required_env_vars=[],
     tokens_limit=32768,
-    capabilities=["chat", "tools", "codemode", "judge"],
+    capabilities=["chat", "tools", "codemode", "decider"],
     billing="standard",
     route="workers-ai",
     context_window=128000,
     aliases=["cloudflare:openai/gpt-oss-120b"],
+    pricing=ModelPricing(input_usd_per_million=0.35, output_usd_per_million=0.75),
 )
 
 CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
@@ -507,6 +527,7 @@ CLOUDFLARE_WRK_MOONSHOTAI_KIMI_K2_6_0_0_1 = AIModel(
     route="workers-ai",
     context_window=262144,
     aliases=["cloudflare:moonshotai/kimi-k2.6"],
+    pricing=ModelPricing(input_usd_per_million=0.95, output_usd_per_million=4.0),
 )
 
 CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
@@ -525,6 +546,7 @@ CLOUDFLARE_WRK_META_LLAMA_3_3_70B_INSTRUCT_FP8_FAST_0_0_1 = AIModel(
     route="workers-ai",
     context_window=24000,
     aliases=["cloudflare:meta/llama-3.3-70b-instruct-fp8-fast"],
+    pricing=ModelPricing(input_usd_per_million=0.293, output_usd_per_million=2.253),
 )
 
 CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
@@ -543,20 +565,21 @@ CLOUDFLARE_WRK_QWEN_QWEN3_8_27B_0_0_1 = AIModel(
     route="workers-ai",
     context_window=262144,
     aliases=["cloudflare:qwen/qwen3.8-27b"],
+    pricing=ModelPricing(input_usd_per_million=0.45, output_usd_per_million=3.2),
 )
 
 CLOUDFLARE_WRK_TYPESAFE_JEV_0_0_1 = AIModel(
     id="cloudflare:wrk/typesafe/jev",
     version="0.0.1",
     name="Jev (Cloudflare Workers AI)",
-    description="Typesafe's typed-judgment model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
+    description="Typesafe's typed-decision model at Workers AI's own endpoint - noul, choice and score questions answered as calibrated probabilities; 32k context; zero data retention; billed from the account's credits, no gateway in the way",
     provider="cloudflare",
     provider_url="https://docs.typesafe.ai/models",
     default=False,
     available=True,
     required_env_vars=[],
     tokens_limit=None,
-    capabilities=["judgments"],
+    capabilities=["decisions"],
     billing="credits",
     route="workers-ai",
     context_window=32000,
@@ -621,6 +644,7 @@ OPENAI_GPT_4_1_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.4, output_usd_per_million=1.6),
 )
 
 OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
@@ -634,6 +658,7 @@ OPENAI_GPT_4_1_NANO_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=0.1, output_usd_per_million=0.4),
 )
 
 OPENAI_GPT_4_1_0_0_1 = AIModel(
@@ -647,6 +672,7 @@ OPENAI_GPT_4_1_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=32768,
+    pricing=ModelPricing(input_usd_per_million=2.0, output_usd_per_million=8.0),
 )
 
 OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
@@ -660,6 +686,7 @@ OPENAI_GPT_4O_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=0.15, output_usd_per_million=0.6),
 )
 
 OPENAI_GPT_4O_0_0_1 = AIModel(
@@ -673,6 +700,7 @@ OPENAI_GPT_4O_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=16384,
+    pricing=ModelPricing(input_usd_per_million=2.5, output_usd_per_million=10.0),
 )
 
 OPENAI_O3_MINI_0_0_1 = AIModel(
@@ -686,6 +714,7 @@ OPENAI_O3_MINI_0_0_1 = AIModel(
     available=False,
     required_env_vars=["OPENAI_API_KEY"],
     tokens_limit=100000,
+    pricing=ModelPricing(input_usd_per_million=1.1, output_usd_per_million=4.4),
 )
 
 # ============================================================================
@@ -808,11 +837,11 @@ def list_models() -> list[AIModel]:
 
 
 def is_chat_model(model: AIModel) -> bool:
-    """A model a chat can run on: not a typed-judgment model (Jev), which
+    """A model a chat can run on: not a typed-decision model (Jev), which
     answers typed questions about a state and nothing else. A spec that
     states no capability is read as a chat model.
     """
-    return "judgments" not in model.capabilities
+    return "decisions" not in model.capabilities
 
 
 def list_chat_models() -> list[AIModel]:

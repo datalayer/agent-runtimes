@@ -24,7 +24,19 @@ export type DragPosition = { left: number; top: number } | null;
 /** How much of the box must stay inside the viewport. */
 const MARGIN = 24;
 
-export function useViewportDrag(boxRef: React.RefObject<HTMLElement | null>) {
+export interface ViewportDragOptions {
+  /**
+   * Keep the whole box inside the viewport, not only a margin of it: the
+   * floating assistant's character, whose balloon and conversation open
+   * from where it stands (LOOP T-23).
+   */
+  whole?: boolean;
+}
+
+export function useViewportDrag(
+  boxRef: React.RefObject<HTMLElement | null>,
+  { whole = false }: ViewportDragOptions = {},
+) {
   const [position, setPosition] = useState<DragPosition>(null);
   /* Where the pointer took hold, so the box moves by the pointer's delta
      rather than snapping its corner to the cursor. */
@@ -50,12 +62,15 @@ export function useViewportDrag(boxRef: React.RefObject<HTMLElement | null>) {
           return;
         }
         const left = Math.min(
-          Math.max(moved.clientX - grip.current.dx, MARGIN - rect.width),
-          window.innerWidth - MARGIN,
+          Math.max(
+            moved.clientX - grip.current.dx,
+            whole ? 0 : MARGIN - rect.width,
+          ),
+          window.innerWidth - (whole ? rect.width : MARGIN),
         );
         const top = Math.min(
           Math.max(moved.clientY - grip.current.dy, 0),
-          window.innerHeight - MARGIN,
+          window.innerHeight - (whole ? rect.height : MARGIN),
         );
         setPosition({ left, top });
       };
@@ -70,7 +85,7 @@ export function useViewportDrag(boxRef: React.RefObject<HTMLElement | null>) {
       handle.addEventListener('pointercancel', up);
       event.preventDefault();
     },
-    [boxRef],
+    [boxRef, whole],
   );
 
   /** Back to wherever the box starts: called when the mode changes. */

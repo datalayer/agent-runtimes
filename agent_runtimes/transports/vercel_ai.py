@@ -60,7 +60,14 @@ def _resolve_effective_inference_provider(
     agent_id: str | None = None,
 ) -> tuple[str, str]:
     """Best-effort resolve of effective inference provider and its source."""
-    # Prefer the per-agent creation spec when available.
+    # The runtime's override first: a Datalayer runtime routes every agent
+    # through ai-inference, whatever its spec says.
+    from ..routes.configure import configured_inference_provider_override
+
+    configured = configured_inference_provider_override()
+    if configured is not None:
+        return configured, "runtime-override"
+    # Then the per-agent creation spec when available.
     if agent_id:
         try:
             from ..routes.agents import _agentspecs
@@ -1036,6 +1043,12 @@ class VercelAITransport(BaseTransport):
             # Extract SDK version when present (newer AI SDK clients).
             sdk_version = body.get("sdkVersion") or body.get("sdk_version")
 
+            # A message the person said: its transcript is the message, its
+            # UI message's metadata says how it was heard (VOICE.md VO-27).
+            from ..voice import hear, spoken_of_vercel_body
+
+            hear(spoken_of_vercel_body(body))
+
             # Extract frontend tools from request body
             frontend_tools_from_request = body.get("tools")
             if frontend_tools_from_request:
@@ -1057,15 +1070,55 @@ class VercelAITransport(BaseTransport):
         effective_inference_provider, inference_provider_source = (
             _resolve_effective_inference_provider(self._agent_id)
         )
+        # A deployment's agent acts as its application's principal: its token
+        # is asked for again, with this request's, when it runs out, and
+        # without one nothing runs (LOOP I-03).
+        from ..loop.apps.principal import (
+            PrincipalTokenMissing,
+            deployment_of,
+            ensure_principal_token,
+        )
+        from ..models.models import app_instance_of as _app_instance_of
+
+        serving_deployment = deployment_of(_app_instance_of(self._agent_id))
+        if serving_deployment:
+            asking = request.headers.get("authorization", "")
+            try:
+                await ensure_principal_token(
+                    serving_deployment,
+                    asking[7:].strip()
+                    if asking.lower().startswith("bearer ")
+                    else None,
+                )
+            except PrincipalTokenMissing as missing:
+                from starlette.responses import JSONResponse
+
+                return JSONResponse({"detail": str(missing)}, status_code=403)
+        if isinstance(model, str) and model:
+            # A model the agent does not offer, or ai-inference does not
+            # serve, is refused before anything runs.
+            from ..models.offered import model_refusal
+
+            refusal = model_refusal(self._agent_id, model, effective_inference_provider)
+            if refusal:
+                from starlette.responses import JSONResponse
+
+                return JSONResponse({"detail": refusal}, status_code=400)
         if effective_inference_provider == "datalayer" and isinstance(model, str):
             # Request body model strings must be wrapped so calls are proxied
             # through datalayer-ai-inference instead of direct/local routing.
             try:
-                from ..models.models import resolve_model_for_inference_provider
+                from ..models.models import (
+                    app_instance_of,
+                    resolve_model_for_inference_provider,
+                )
 
                 model = resolve_model_for_inference_provider(
                     model,
                     "datalayer",
+                    # Attributed to the application the agent serves, as
+                    # its own model is (LOOP R-09).
+                    app_instance=app_instance_of(self._agent_id),
                 )
             except Exception as exc:
                 logger.warning(
@@ -1349,6 +1402,18 @@ class VercelAITransport(BaseTransport):
             async with IdentityContextManager(identities_from_request):
                 # Get runtime toolsets from the adapter (includes MCP servers)
                 runtime_toolsets = self._get_runtime_toolsets()
+                # The Datalayer MCP gateway is reached as the application,
+                # never with the process's key: a deployment as its principal
+                # (LOOP I-03), its servers in each user's name with the token of
+                # the person talking to it (I-04), a Preview with its run's
+                # token, narrowed to its granted Spaces (R-25).
+                from ..loop.apps.principal import gateway_toolsets_of_the_run
+
+                runtime_toolsets = await gateway_toolsets_of_the_run(
+                    self._agent_id,
+                    runtime_toolsets,
+                    extract_jwt_token(request.headers.get("authorization"), None),
+                )
 
                 # Filter MCP toolsets to only expose tools the user has enabled.
                 # We check if each tool's name is in the known MCP tool inventory;

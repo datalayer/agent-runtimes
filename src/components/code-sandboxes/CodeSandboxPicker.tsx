@@ -346,26 +346,24 @@ export function CodeSandboxPicker(
         <Box key={group}>
           <Box
             as="h4"
-            sx={{
-              /*
-               * The type of a form label, not of a heading.
-               *
-               * "Assign an existing Code Sandbox" and "Assign a
-               * new Code Sandbox" name the two ways of answering
-               * one question, and the second is the label of the
-               * dropdown; set in the larger, heavier type of an
-               * `h4`, the first read as a section above it rather
-               * than as its pair. The values are the ones Primer
-               * gives `FormControl.Label` — taken as the variables
-               * it resolves rather than through the Primer scale,
-               * whose `semibold` the JupyterLab theme redefines.
-               */
-              margin: 0,
-              marginBottom: 2,
-              color: 'fg.default',
-              fontSize: 'var(--text-body-size-medium, 0.875rem)',
-              fontWeight: 'var(--base-text-weight-semibold, 600)',
-            }}
+            /*
+             * The type of a form label, not of a heading.
+             *
+             * "Assign an existing Code Sandbox" and "Assign a
+             * new Code Sandbox" name the two ways of answering
+             * one question, and the second is the label of the
+             * dropdown; set in the larger, heavier type of an
+             * `h4`, the first read as a section above it rather
+             * than as its pair. The values are the ones Primer
+             * gives `FormControl.Label` — taken as the variables
+             * it resolves rather than through the Primer scale,
+             * whose `semibold` the JupyterLab theme redefines.
+             */
+            margin={0}
+            marginBottom={2}
+            color="fg.default"
+            fontSize="var(--text-body-size-medium, 0.875rem)"
+            fontWeight="var(--base-text-weight-semibold, 600)"
           >
             {group}
           </Box>
@@ -386,7 +384,7 @@ export function CodeSandboxPicker(
                     checked={isSameCodeSandbox(k, runtimeDesc)}
                   />
                   <FormControl.Label>
-                    <Box display="flex" sx={{ alignItems: 'baseline' }}>
+                    <Box display="flex" alignItems="baseline">
                       <Box>{k.displayName}</Box>
                       {/*
                                   The identifier of the kernel beside the name:

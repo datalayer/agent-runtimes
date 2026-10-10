@@ -401,7 +401,7 @@ curl -X POST http://localhost:8000/api/v1/agents/my-agent/mcp-servers/stop
 
 ### Code Sandbox Configuration
 
-The Code Sandbox Manager controls how code is executed when using Code Mode or Skills. It supports two variants:
+The Code Sandbox Manager controls how code is executed when using Codemode or Skills. It supports two variants:
 
 - **`eval`**: Uses Python `exec()` for simple code execution (default)
 - **`jupyter`**: Connects to an external Jupyter server for persistent kernel state
@@ -1302,7 +1302,7 @@ curl -X POST "http://localhost:8765/api/v1/ag-ui/pydantic-ai/" \
 ### Example: Using TypeScript
 
 ```typescript
-import { AGUIAdapter } from '@datalayer/agent-runtimes';
+import { AGUIAdapter } from '@datalayer/agent-runtimes/lib/protocols';
 
 const adapter = new AGUIAdapter({
   baseUrl: 'http://localhost:8765/api/v1/ag-ui/pydantic-ai/',

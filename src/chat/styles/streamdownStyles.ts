@@ -255,8 +255,10 @@ export const streamdownMarkdownStyles: SxStyles = {
     marginRight: 0,
     color: 'fg.muted',
   },
+  // A link reads as its theme says (LOOP T-06): in the accent, or plain —
+  // the colour of the words around it — and underlined in every theme.
   '& a': {
-    color: 'accent.fg',
+    color: 'var(--theme-message-link, var(--fgColor-accent, #0969da))',
     textDecoration: 'underline',
   },
   '& table': {

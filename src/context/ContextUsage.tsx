@@ -12,7 +12,8 @@ import {
   ToolsIcon,
   ClockIcon,
 } from '@primer/octicons-react';
-import { Box, Heading, Text, ProgressBar, Spinner } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Heading, Text, ProgressBar, Spinner } from '@primer/react';
 import { useQuery } from '@tanstack/react-query';
 
 /**
@@ -134,16 +135,14 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
           Cumulative Context Usage
         </Heading>
         <Box
-          sx={{
-            p: 3,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
+          p={3}
+          bg="canvas.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
+          display="flex"
+          alignItems="center"
+          gap={2}
         >
           <Spinner size="small" />
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
@@ -169,13 +168,11 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
           Cumulative Context Usage
         </Heading>
         <Box
-          sx={{
-            p: 3,
-            bg: 'canvas.subtle',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-          }}
+          p={3}
+          bg="canvas.subtle"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
         >
           <Text sx={{ fontSize: 1, color: 'fg.muted' }}>
             Failed to load context details
@@ -202,23 +199,15 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
         Cumulative Context Usage
       </Heading>
       <Box
-        sx={{
-          p: 3,
-          bg: 'canvas.subtle',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'border.default',
-        }}
+        p={3}
+        bg="canvas.subtle"
+        borderRadius={2}
+        border="1px solid"
+        borderColor="border.default"
       >
         {/* Overall progress */}
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
+        <Box mb={3}>
+          <Box display="flex" justifyContent="space-between" mb={1}>
             <Text sx={{ fontSize: 1, fontWeight: 'semibold' }}>
               {formatTokens(contextData.usedTokens)} /{' '}
               {formatTokens(contextData.totalTokens)} tokens
@@ -237,7 +226,7 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
         </Box>
 
         {/* Category breakdown */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box display="flex" flexDirection="column" gap={2}>
           {contextData.children.map(category => {
             const CategoryIcon = getCategoryIcon(category.name);
             const categoryPercent =
@@ -246,20 +235,18 @@ export function ContextUsage({ agentId, baseUrl }: ContextUsageProps) {
             return (
               <Box
                 key={category.name}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
+                display="flex"
+                alignItems="center"
+                gap={2}
               >
-                <Box sx={{ color: 'fg.muted', width: 20 }}>
+                <Box color="fg.muted" width={20}>
                   <CategoryIcon size={16} />
                 </Box>
                 <Text sx={{ fontSize: 1, flex: 1 }}>{category.name}</Text>
                 <Text sx={{ fontSize: 0, color: 'fg.muted', minWidth: 60 }}>
                   {formatTokens(category.value)}
                 </Text>
-                <Box sx={{ width: 80 }}>
+                <Box width={80}>
                   <ProgressBar progress={categoryPercent} sx={{ height: 4 }} />
                 </Box>
               </Box>

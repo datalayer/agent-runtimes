@@ -29,10 +29,12 @@ def package_root(specs_dir: Path) -> Path:
 def import_from_clone(specs_dir: Path, module: str) -> ModuleType:
     """Import `agentspecs.<module>` from the clone `specs_dir` belongs to."""
     root = package_root(specs_dir)
-    if not (root / "agentspecs" / module).exists():
+    package = root / "agentspecs"
+    if not (package / module).exists() and not (package / f"{module}.py").exists():
         raise SystemExit(
-            f"Error: {root / 'agentspecs' / module} not found — Frames and Cogs "
-            "need agentspecs >= 0.0.12"
+            f"Error: agentspecs.{module} not found in {package} — the clone is "
+            "older than the generators (Frames and Cogs need agentspecs >= 0.0.12, "
+            "the marks of the catalogues >= 0.0.31)"
         )
     for name in [
         name

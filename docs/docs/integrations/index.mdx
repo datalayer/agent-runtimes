@@ -9,6 +9,11 @@ Agent Runtimes provides a flexible agent architecture built on top of [Pydantic 
 
 For the full Agentspecs reference and platform documentation, see [datalayer.ai/docs](https://datalayer.ai/docs).
 
+Agent Runtimes also provides a model-safe integration with
+[Personal Agent Protocol](./personal-agent-protocol): Python and TypeScript
+consume the same PAP SDK profile and expose verified public summaries while
+authorization and Session secrets stay in host services.
+
 ## Why Pydantic AI?
 
 We chose Pydantic AI as our foundation because it provides:
@@ -161,7 +166,6 @@ result = await agent.run("Write a poem...", model="openai:gpt-4o")
 :::note Community-Driven
 We're open to expanding support for other agent frameworks based on community feedback:
 
-- **Google ADK** — Google's Agent Development Kit
 - **LangChain** — Popular Python agent framework
 - **CrewAI** — Multi-agent orchestration
 - **AutoGen** — Microsoft's agent framework

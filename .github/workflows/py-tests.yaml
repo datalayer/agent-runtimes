@@ -24,13 +24,19 @@ on:
 
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older run worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tests:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      # In parallel; on a pull request the oldest and the newest Python, on
+      # main all four.
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.10", "3.13"]') || fromJSON('["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
 
       - name: Install deps
@@ -51,10 +57,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
 
+      # Editable: a build of the package needs the frontend built first
+      # (hatch_build.py refuses one without its pages), which these tests do not.
       - name: Install dev tools
         run: |
-          uv pip install .
-          uv pip install .[test]
+          uv pip install -e .[test]
           uv pip install dbus-python keyring secretstorage
 
       - name: Unlock keyring
@@ -66,3 +73,6 @@ jobs:
           DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
         run: |
           pytest agent_runtimes/tests/ --cov=agent_runtimes --cov-report term-missing
+
+      - name: Validate Personal Agent Protocol examples
+        run: python scripts/validate_pap_examples.py

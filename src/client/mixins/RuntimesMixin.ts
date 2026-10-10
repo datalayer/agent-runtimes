@@ -15,6 +15,7 @@ import type { CreateRuntimeRequest } from '../../models/RuntimeDTO';
 import type { CreateCodeSandboxSnapshotRequest } from '../../models/CodeSandboxSnapshotDTO';
 import type {
   RuntimeMemory,
+  RuntimeMemoryShare,
   ListRuntimeMemoriesOptions,
 } from '../../api/runtimes/runtimes';
 import type { Constructor } from '@datalayer/core/lib/client/utils/mixins';
@@ -265,6 +266,96 @@ export function RuntimesMixin<TBase extends Constructor>(Base: TBase) {
         runtimesUrl,
       );
       return response.memory;
+    }
+
+    /**
+     * Forget one of the caller's own memories; answers how many were forgotten.
+     */
+    async forgetRuntimeMemory(memoryId: string): Promise<number> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.forgetRuntimeMemory(
+        token,
+        memoryId,
+        runtimesUrl,
+      );
+      return response.forgotten;
+    }
+
+    /**
+     * Correct one of the caller's own memories in place (LOOP R-34): its
+     * words become `text`, kept with who corrected it and when.
+     */
+    async correctRuntimeMemory(
+      memoryId: string,
+      text: string,
+    ): Promise<RuntimeMemory> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.correctRuntimeMemory(
+        token,
+        memoryId,
+        text,
+        runtimesUrl,
+      );
+      return response.memory;
+    }
+
+    /**
+     * Forget everything an agent or application (`app:<uid>`) remembers of
+     * the caller, no more than the `count` confirmed.
+     */
+    async forgetRuntimeMemories(
+      agentId: string,
+      count: number,
+    ): Promise<number> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      const response = await runtimes.forgetRuntimeMemories(
+        token,
+        agentId,
+        count,
+        runtimesUrl,
+      );
+      return response.forgotten;
+    }
+
+    /**
+     * The caller's allowances to share what an application remembers of
+     * them with another (LOOP R-35), by `source` or by `reader`.
+     */
+    async listRuntimeMemoryShares(filter: {
+      source?: string;
+      reader?: string;
+    }): Promise<RuntimeMemoryShare[]> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      return runtimes.listRuntimeMemoryShares(token, filter, runtimesUrl);
+    }
+
+    /** Allow `reader` to use what `source` remembers of the caller. */
+    async allowRuntimeMemoryShare(
+      source: string,
+      reader: string,
+    ): Promise<RuntimeMemoryShare> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      return runtimes.allowRuntimeMemoryShare(
+        token,
+        source,
+        reader,
+        runtimesUrl,
+      );
+    }
+
+    /** Stop sharing what `source` remembers of the caller with `reader`. */
+    async stopRuntimeMemoryShare(
+      source: string,
+      reader: string,
+    ): Promise<void> {
+      const token = (this as any).getToken();
+      const runtimesUrl = (this as any).getRuntimesUrl();
+      await runtimes.stopRuntimeMemoryShare(token, source, reader, runtimesUrl);
     }
 
     /**

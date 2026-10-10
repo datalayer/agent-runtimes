@@ -41,46 +41,42 @@ export function FormSubmissionMessage({
 
   return (
     <Box
-      sx={{
-        width: '100%',
-        minWidth: 280,
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        backgroundColor: 'canvas.default',
-        color: 'fg.default',
-      }}
+      width="100%"
+      minWidth={280}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius="12px"
+      overflow="hidden"
+      backgroundColor="canvas.default"
+      color="fg.default"
     >
       <Box
         as="button"
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded(value => !value)}
-        sx={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          padding: 2,
-          backgroundColor: 'canvas.subtle',
-          border: 'none',
-          borderBottom: expanded ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          cursor: 'pointer',
-          textAlign: 'left',
-          color: 'fg.default',
-          '&:hover': { backgroundColor: 'neutral.muted' },
-        }}
+        width="100%"
+        display="flex"
+        alignItems="center"
+        gap={2}
+        padding={2}
+        backgroundColor="canvas.subtle"
+        border="none"
+        borderBottom={expanded ? '1px solid' : 'none'}
+        borderColor="border.default"
+        cursor="pointer"
+        textAlign="left"
+        color="fg.default"
+        hover={{ backgroundColor: 'neutral.muted' }}
       >
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
+        <Box color="fg.muted" flexShrink={0}>
           {expanded ? (
             <ChevronDownIcon size={16} />
           ) : (
             <ChevronRightIcon size={16} />
           )}
         </Box>
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
+        <Box color="fg.muted" flexShrink={0}>
           <ChecklistIcon size={16} />
         </Box>
         <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
@@ -91,7 +87,7 @@ export function FormSubmissionMessage({
         </Text>
       </Box>
       {expanded ? (
-        <Box as="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+        <Box as="table" width="100%" borderCollapse="collapse">
           <Box as="tbody">
             {entries.map(([id, value]) => (
               <Box
@@ -106,22 +102,17 @@ export function FormSubmissionMessage({
               >
                 <Box
                   as="td"
-                  sx={{
-                    px: 3,
-                    py: 1,
-                    fontSize: 0,
-                    color: 'fg.muted',
-                    whiteSpace: 'nowrap',
-                    verticalAlign: 'top',
-                    width: '40%',
-                  }}
+                  px={3}
+                  py={1}
+                  fontSize={0}
+                  color="fg.muted"
+                  whiteSpace="nowrap"
+                  verticalAlign="top"
+                  width="40%"
                 >
                   {labelOfFieldId(id)}
                 </Box>
-                <Box
-                  as="td"
-                  sx={{ px: 3, py: 1, fontSize: 1, wordBreak: 'break-word' }}
-                >
+                <Box as="td" px={3} py={1} fontSize={1} wordBreak="break-word">
                   {displayValue(value)}
                 </Box>
               </Box>

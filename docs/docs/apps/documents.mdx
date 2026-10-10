@@ -1,0 +1,65 @@
+---
+sidebar_position: 6
+title: What an application knows
+---
+
+# What an application knows
+
+An application answers from documents when its Appspec names them, by their
+path in its owner's Home Folder:
+
+```yaml
+contents:
+  - eric/support/product-guide.md
+  - eric/support/returns-policy.pdf
+```
+
+The Maker gives them on the Build tab of the application's page, in **What it
+knows** — picked from the Home Folder, or dropped on the page and uploaded
+there — and the card lists each with what was read and when. Removing one there
+removes it from `contents` and forgets every passage it gave.
+
+## Read once, on Contents
+
+The documents stay where they are. Contents reads each one when it is given,
+into **passages** — a few paragraphs each, never across a heading — and keeps
+them beside its objects, searched with Solr's own text search (English
+stemming, BM25): nothing leaves the platform, and no embedding is computed.
+Each passage says where it is: *page 3* of a PDF, *lines 12–30* of a text, the
+heading it sits under in Markdown (*Returns › Time limit, lines 40–52*).
+
+Text, Markdown, reST, CSV, JSON, YAML, code, HTML and PDF are read. Anything
+else, a scanned PDF (pictures of pages, no text) or a document over 20 MB is
+listed as not read, with why, and gives nothing.
+
+## The tool its agent is given
+
+An application that names documents gives its agent one tool,
+`search_documents`: a question in, the six passages that answer it best out,
+each numbered with its document and where in it. The agent answers from them
+and cites the passage, for example *(returns-policy.pdf, page 3)*; when none
+holds the answer, the tool says so, and the agent says it does not know. An
+application that names none is given no tool.
+
+The tool searches only the documents the version that runs names, and only
+those given to that application:
+
+| Where it runs | It searches as | What it finds |
+|---|---|---|
+| A deployment (its address, its schedule) | Its own principal | What its owner gave that application |
+| The Studio's Preview | The person trying it | What they gave it |
+| A file run with `loop apps run` | — | Nothing was read for it: the tool says so |
+
+It only reads (`read`, the action classes of F-10), so a rule that lets it
+read does not ask before searching. The code is
+`agent_runtimes/loop/apps/documents.py`; Contents' side is
+`/api/contents/v1/apps/{app_uid}/documents` and `/passages`.
+
+## Not built yet
+
+- Documents given by one builder are not searched in another builder's
+  Preview: they are kept per person and application.
+- A document changed in the Home Folder is not read again by itself: **Read
+  again** on its card does it.
+- Passages are found by their words, not by their meaning: a question that
+  shares no word with the answer finds nothing.

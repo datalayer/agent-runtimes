@@ -49,8 +49,8 @@ import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { AgentTriggersPlugin } from '../loop/plugins/agent-triggers';
+import { LoopEmbed } from '../apps';
+import { AgentTriggersPlugin } from '../apps/plugins/agent-triggers';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { waitForAgent } from './utils/waitForAgent';
 import { useConnectedIdentities } from '../identity';
@@ -1064,14 +1064,12 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
   if (runtimeStatus === 'launching') {
     return (
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: 3,
-        }}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100%"
+        gap={3}
       >
         <Spinner size="large" />
         <Text sx={{ color: 'fg.muted' }}>
@@ -1099,25 +1097,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         minWidth: 0,
       }}
     >
-      <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+      <Box height="100%" display="flex" flexDirection="column">
         {/* Toolbar */}
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flexShrink: 0,
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flexShrink={0}
         >
           <ClockIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -1184,16 +1174,16 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
         />
 
         {approvalError && (
-          <Box sx={{ px: 3, py: 1 }}>
+          <Box px={3} py={1}>
             <Text sx={{ color: 'danger.fg', fontSize: 0 }}>
               {approvalError}
             </Text>
           </Box>
         )}
 
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        <Box flex={1} minHeight={0} display="flex">
           {/* Left: Chat */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box flex={1} minWidth={0}>
             {isReady ? (
               <LoopEmbed
                 serverUrl={agentBaseUrl}
@@ -1206,13 +1196,11 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
               />
             ) : (
               <Box
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: 4,
-                }}
+                height="100%"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                p={4}
               >
                 <Text sx={{ color: 'fg.muted' }}>
                   Runtime is not started yet. Use Start Runtime or launch a
@@ -1224,23 +1212,19 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
           {/* Right: Trigger panel */}
           <Box
-            sx={{
-              width: 380,
-              borderLeft: '1px solid',
-              borderColor: 'border.default',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'auto',
-            }}
+            width={380}
+            borderLeft="1px solid"
+            borderColor="border.default"
+            display="flex"
+            flexDirection="column"
+            overflow="auto"
           >
             {/* Trigger type tabs */}
             <Box
-              sx={{
-                display: 'flex',
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-                flexShrink: 0,
-              }}
+              display="flex"
+              borderBottom="1px solid"
+              borderColor="border.default"
+              flexShrink={0}
             >
               {(
                 [
@@ -1284,16 +1268,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* ── Once tab ──────────────────────────────────────────────── */}
             {activeTab === 'once' && (
-              <Box
-                sx={{
-                  p: 3,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
-              >
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-                >
+              <Box p={3} borderBottom="1px solid" borderColor="border.default">
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <ZapIcon size={16} />
                   <Heading as="h3" sx={{ fontSize: 2 }}>
                     Once Trigger
@@ -1307,16 +1283,14 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                 </Text>
 
                 <Box
-                  sx={{
-                    bg: 'canvas.default',
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                    p: 2,
-                    mb: 2,
-                    display: 'grid',
-                    gap: 1,
-                  }}
+                  bg="canvas.default"
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
+                  p={2}
+                  mb={2}
+                  display="grid"
+                  gap={1}
                 >
                   <Text sx={{ fontSize: 0 }}>
                     <strong>Agent ID:</strong> {agentId}
@@ -1409,12 +1383,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       if (!outputEvent && !hasStreamFallback) {
                         return (
                           <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 2,
-                              mb: 2,
-                            }}
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                            mb={2}
                           >
                             <Spinner size="small" />
                             <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
@@ -1446,35 +1418,34 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                       return (
                         <Box
-                          sx={{
-                            mb: 2,
-                            border: '1px solid',
-                            borderColor:
-                              exitStatus === 'error'
-                                ? 'danger.muted'
-                                : 'success.muted',
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                          }}
+                          mb={2}
+                          border="1px solid"
+                          borderColor={
+                            exitStatus === 'error'
+                              ? 'danger.muted'
+                              : 'success.muted'
+                          }
+                          borderRadius={2}
+                          overflow="hidden"
                         >
                           {/* Header bar */}
                           <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                              px: 2,
-                              py: 1,
-                              bg:
-                                exitStatus === 'error'
-                                  ? 'danger.subtle'
-                                  : 'success.subtle',
-                              borderBottom: '1px solid',
-                              borderColor:
-                                exitStatus === 'error'
-                                  ? 'danger.muted'
-                                  : 'success.muted',
-                            }}
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            px={2}
+                            py={1}
+                            bg={
+                              exitStatus === 'error'
+                                ? 'danger.subtle'
+                                : 'success.subtle'
+                            }
+                            borderBottom="1px solid"
+                            borderColor={
+                              exitStatus === 'error'
+                                ? 'danger.muted'
+                                : 'success.muted'
+                            }
                           >
                             <Label
                               variant={
@@ -1514,12 +1485,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           </Box>
                           {/* Output body */}
                           <Box
-                            sx={{
-                              p: 2,
-                              bg: 'canvas.default',
-                              maxHeight: 300,
-                              overflow: 'auto',
-                            }}
+                            p={2}
+                            bg="canvas.default"
+                            maxHeight={300}
+                            overflow="auto"
                           >
                             <Text
                               sx={{
@@ -1566,14 +1535,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                       </Flash>
                     ) : sidebarMessages.filter(msg => msg.role !== 'user')
                         .length === 0 ? (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          mb: 2,
-                        }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2} mb={2}>
                         <Spinner
                           size="small"
                           sx={{
@@ -1588,14 +1550,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         </Text>
                       </Box>
                     ) : (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                          mb: 2,
-                        }}
-                      >
+                      <Box display="flex" flexDirection="column" gap={2} mb={2}>
                         {sidebarMessages
                           .slice()
                           .filter(msg => msg.role !== 'user')
@@ -1617,21 +1572,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                             return (
                               <Box
                                 key={`once-msg-${msg.id}`}
-                                sx={{
-                                  p: 2,
-                                  bg: 'canvas.default',
-                                  borderRadius: 2,
-                                  border: '1px solid',
-                                  borderColor: 'border.default',
-                                }}
+                                p={2}
+                                bg="canvas.default"
+                                borderRadius={2}
+                                border="1px solid"
+                                borderColor="border.default"
                               >
                                 <Box
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    mb: 1,
-                                  }}
+                                  display="flex"
+                                  alignItems="center"
+                                  gap={1}
+                                  mb={1}
                                 >
                                   <Label
                                     size="small"
@@ -1687,24 +1638,15 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 2 }}>
                       Pending Tool Approvals
                     </Heading>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        mb: 2,
-                      }}
-                    >
+                    <Box display="flex" flexDirection="column" gap={2} mb={2}>
                       {approvals.map(a => (
                         <Box
                           key={a.id}
-                          sx={{
-                            p: 2,
-                            border: '1px solid',
-                            borderColor: 'attention.muted',
-                            borderRadius: 2,
-                            bg: 'attention.subtle',
-                          }}
+                          p={2}
+                          border="1px solid"
+                          borderColor="attention.muted"
+                          borderRadius={2}
+                          bg="attention.subtle"
                         >
                           <Text
                             sx={{
@@ -1729,7 +1671,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                               {JSON.stringify(a.tool_args)}
                             </Text>
                           )}
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Box display="flex" gap={1}>
                             <Button
                               size="small"
                               variant="primary"
@@ -1803,12 +1745,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           if (!latestAssistantOutput) {
                             return (
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 2,
-                                  mb: 2,
-                                }}
+                                display="flex"
+                                alignItems="center"
+                                gap={2}
+                                mb={2}
                               >
                                 <Spinner
                                   size="small"
@@ -1833,25 +1773,21 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                           return (
                             <Box
-                              sx={{
-                                mb: 2,
-                                border: '1px solid',
-                                borderColor: 'success.muted',
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                              }}
+                              mb={2}
+                              border="1px solid"
+                              borderColor="success.muted"
+                              borderRadius={2}
+                              overflow="hidden"
                             >
                               <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                  px: 2,
-                                  py: 1,
-                                  bg: 'success.subtle',
-                                  borderBottom: '1px solid',
-                                  borderColor: 'success.muted',
-                                }}
+                                display="flex"
+                                alignItems="center"
+                                gap={1}
+                                px={2}
+                                py={1}
+                                bg="success.subtle"
+                                borderBottom="1px solid"
+                                borderColor="success.muted"
                               >
                                 <Label variant="success" size="small">
                                   completed
@@ -1882,12 +1818,10 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                 </Button>
                               </Box>
                               <Box
-                                sx={{
-                                  p: 2,
-                                  bg: 'canvas.default',
-                                  maxHeight: 300,
-                                  overflow: 'auto',
-                                }}
+                                p={2}
+                                bg="canvas.default"
+                                maxHeight={300}
+                                overflow="auto"
                               >
                                 <Text
                                   sx={{
@@ -1910,14 +1844,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
                     {approvalSidebarMessages.filter(msg => msg.role !== 'user')
                       .length === 0 ? (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          mb: 2,
-                        }}
-                      >
+                      <Box display="flex" alignItems="center" gap={2} mb={2}>
                         <Spinner
                           size="small"
                           sx={{
@@ -1932,14 +1859,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                         </Text>
                       </Box>
                     ) : (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                          mb: 2,
-                        }}
-                      >
+                      <Box display="flex" flexDirection="column" gap={2} mb={2}>
                         {approvalSidebarMessages
                           .slice()
                           .filter(msg => msg.role !== 'user')
@@ -1961,21 +1881,17 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                             return (
                               <Box
                                 key={`approval-msg-${msg.id}`}
-                                sx={{
-                                  p: 2,
-                                  bg: 'canvas.default',
-                                  borderRadius: 2,
-                                  border: '1px solid',
-                                  borderColor: 'border.default',
-                                }}
+                                p={2}
+                                bg="canvas.default"
+                                borderRadius={2}
+                                border="1px solid"
+                                borderColor="border.default"
                               >
                                 <Box
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    mb: 1,
-                                  }}
+                                  display="flex"
+                                  alignItems="center"
+                                  gap={1}
+                                  mb={1}
                                 >
                                   <Label
                                     size="small"
@@ -2025,21 +1941,19 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   </>
                 )}
 
-                <Box sx={{ mt: 2, display: 'grid', gap: 2 }}>
+                <Box mt={2} display="grid" gap={2}>
                   <Box>
                     <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
                       Stream once (local curl)
                     </Text>
                     <Box
-                      sx={{
-                        mt: 1,
-                        bg: 'canvas.default',
-                        borderRadius: 2,
-                        p: 2,
-                        fontFamily: 'mono',
-                        fontSize: 0,
-                        wordBreak: 'break-all',
-                      }}
+                      mt={1}
+                      bg="canvas.default"
+                      borderRadius={2}
+                      p={2}
+                      fontFamily="mono"
+                      fontSize={0}
+                      wordBreak="break-all"
                     >
                       {triggerRunCurl}
                     </Box>
@@ -2059,16 +1973,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* ── Cron tab ─────────────────────────────────────────────── */}
             {activeTab === 'cron' && (
-              <Box
-                sx={{
-                  p: 3,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
-              >
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-                >
+              <Box p={3} borderBottom="1px solid" borderColor="border.default">
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <ClockIcon size={16} />
                   <Heading as="h3" sx={{ fontSize: 2 }}>
                     Cron Schedule
@@ -2088,7 +1994,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   </Text>
                 )}
 
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Box display="flex" gap={2} mb={2}>
                   <TextInput
                     value={editCron}
                     onChange={e => setEditCron(e.target.value)}
@@ -2115,16 +2021,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* ── Webhook tab ──────────────────────────────────────────── */}
             {activeTab === 'webhook' && (
-              <Box
-                sx={{
-                  p: 3,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
-              >
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-                >
+              <Box p={3} borderBottom="1px solid" borderColor="border.default">
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <GlobeIcon size={16} />
                   <Heading as="h3" sx={{ fontSize: 2 }}>
                     Webhook Trigger
@@ -2147,40 +2045,36 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     </Label>
 
                     <Box
-                      sx={{
-                        bg: 'canvas.default',
-                        p: 2,
-                        borderRadius: 2,
-                        mb: 2,
-                        fontFamily: 'mono',
-                        fontSize: 0,
-                        wordBreak: 'break-all',
-                      }}
+                      bg="canvas.default"
+                      p={2}
+                      borderRadius={2}
+                      mb={2}
+                      fontFamily="mono"
+                      fontSize={0}
+                      wordBreak="break-all"
                     >
                       {webhookUrl}
                     </Box>
 
                     {webhookSecret && (
-                      <Box sx={{ mb: 2 }}>
+                      <Box mb={2}>
                         <Text sx={{ fontSize: 0, fontWeight: 'bold' }}>
                           Secret:
                         </Text>
                         <Box
-                          sx={{
-                            bg: 'canvas.default',
-                            p: 2,
-                            borderRadius: 2,
-                            mt: 1,
-                            fontFamily: 'mono',
-                            fontSize: 0,
-                          }}
+                          bg="canvas.default"
+                          p={2}
+                          borderRadius={2}
+                          mt={1}
+                          fontFamily="mono"
+                          fontSize={0}
                         >
                           {webhookSecret}
                         </Box>
                       </Box>
                     )}
 
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box display="flex" gap={2}>
                       <Button
                         size="small"
                         leadingVisual={CopyIcon}
@@ -2216,16 +2110,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* ── Event tab ────────────────────────────────────────────── */}
             {activeTab === 'event' && (
-              <Box
-                sx={{
-                  p: 3,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
-              >
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-                >
+              <Box p={3} borderBottom="1px solid" borderColor="border.default">
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <ZapIcon size={16} />
                   <Heading as="h3" sx={{ fontSize: 2 }}>
                     Event Trigger
@@ -2295,16 +2181,8 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* ── Manual tab ───────────────────────────────────────────── */}
             {activeTab === 'manual' && (
-              <Box
-                sx={{
-                  p: 3,
-                  borderBottom: '1px solid',
-                  borderColor: 'border.default',
-                }}
-              >
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-                >
+              <Box p={3} borderBottom="1px solid" borderColor="border.default">
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
                   <PlayIcon size={16} />
                   <Heading as="h3" sx={{ fontSize: 2 }}>
                     Manual Trigger
@@ -2340,7 +2218,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
             )}
 
             {/* Trigger history */}
-            <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+            <Box p={3} flex={1} overflow="auto">
               <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
                 Trigger History
               </Heading>
@@ -2400,7 +2278,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                   No agent events yet.
                 </Text>
               ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box display="flex" flexDirection="column" gap={2}>
                   {[...agentEvents]
                     .sort(
                       (a, b) =>
@@ -2410,22 +2288,13 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                     .map((evt: AgentEvent) => (
                       <Box
                         key={evt.id}
-                        sx={{
-                          p: 2,
-                          bg: evt.read ? 'canvas.default' : 'neutral.muted',
-                          borderRadius: 2,
-                          border: '1px solid',
-                          borderColor: 'border.default',
-                        }}
+                        p={2}
+                        bg={evt.read ? 'canvas.default' : 'neutral.muted'}
+                        borderRadius={2}
+                        border="1px solid"
+                        borderColor="border.default"
                       >
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            mb: 1,
-                          }}
-                        >
+                        <Box display="flex" alignItems="center" gap={1} mb={1}>
                           <Label
                             variant={
                               evt.kind === 'agent-started'
@@ -2492,7 +2361,7 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                           (() => {
                             const p = evt.payload as Record<string, any>;
                             return (
-                              <Box sx={{ fontSize: 0, color: 'fg.muted' }}>
+                              <Box fontSize={0} color="fg.muted">
                                 {evt.kind === 'agent-output' && p.outputs && (
                                   <Tooltip
                                     text={String(p.outputs)}
@@ -2509,13 +2378,11 @@ const AgentTriggerInner: React.FC<{ onLogout: () => void }> = ({
                                       }}
                                     >
                                       <Box
-                                        sx={{
-                                          mb: 1,
-                                          display: 'flex',
-                                          alignItems: 'baseline',
-                                          gap: 1,
-                                          minWidth: 0,
-                                        }}
+                                        mb={1}
+                                        display="flex"
+                                        alignItems="baseline"
+                                        gap={1}
+                                        minWidth={0}
                                       >
                                         <Text
                                           as="span"

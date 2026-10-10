@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from marks import check_marks
 from versioning import ensure_spec_version, version_suffix
 
 
@@ -120,18 +121,26 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 "    tools=[],",
             ]
         )
+        # A server its command runs as a local HTTP process: where it is
+        # reached (STUDIO W-02, `google-workspace`).
+        if spec.get("url"):
+            lines.append(f'    url="{spec["url"]}",')
 
         # Add env field if present
         if env_formatted:
             lines.append(f"    env={env_formatted},")
 
-        lines.extend(
-            [
-                f"    required_env_vars={envvars_formatted},",
-                ")",
-                "",
-            ]
-        )
+        lines.append(f"    required_env_vars={envvars_formatted},")
+        # What the code its tools write reads in the code sandbox: given there
+        # when the account has them, never required (LOOP R-19).
+        sandbox_envvars = spec.get("sandbox_envvars", [])
+        if sandbox_envvars:
+            lines.append(
+                "    sandbox_env_vars=["
+                + ", ".join(f'"{v}"' for v in sandbox_envvars)
+                + "],"
+            )
+        lines.extend([")", ""])
 
     # Generate catalog dictionary
     lines.extend(
@@ -275,7 +284,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: '{description}',",
                 f"  icon: {icon},",
                 f"  emoji: {emoji},",
-                "  url: '',",
+                f"  url: '{spec.get('url', '')}',",
                 f"  command: '{spec['command']}',",
                 f"  args: {args_formatted},",
                 f"  transport: '{spec.get('transport', 'stdio')}',",
@@ -434,6 +443,7 @@ def main():
     # Load specifications
     print(f"Loading MCP server specs from {args.specs_dir}...")
     specs = load_mcp_specs(args.specs_dir)
+    check_marks(specs, args.specs_dir)
     print(f"Loaded {len(specs)} MCP server specifications")
 
     # Generate Python code

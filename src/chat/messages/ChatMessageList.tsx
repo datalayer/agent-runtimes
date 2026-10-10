@@ -10,6 +10,7 @@
  * @module chat/messages/MessageList
  */
 
+import { MicrophoneIcon } from '@datalayer/icons-react';
 import {
   Fragment,
   type ReactNode,
@@ -32,14 +33,12 @@ import {
   XCircleFillIcon,
 } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import { Streamdown } from 'streamdown';
-import {
-  streamdownMarkdownStyles,
-  streamdownCodeBlockStyles,
-} from '../styles/streamdownStyles';
+import { streamdownCodeBlockStyles } from '../styles/streamdownStyles';
+import { ChatMarkdown, type ChatDensity } from './ChatMarkdown';
 import { ToolCallDisplay } from '../tools/ToolCallDisplay';
+import { marksOfToolCall, skillIdOfCall, type MarkedMcpServer } from '../marks';
+import { TypingDots } from '../indicators/TypingDots';
 import { TurnFooter } from './TurnFooter';
-import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { parseFormSubmission } from './formSubmission';
 import { FormSubmissionMessage } from './FormSubmissionMessage';
 
@@ -140,6 +139,18 @@ export interface ChatMessageListProps {
    * `note`, which has no footer of its own.
    */
   renderMessageFooter?: (message: ChatMessage) => ReactNode;
+  /**
+   * The MCP servers the agent has, with the tools each serves: a tool call is
+   * drawn with the marks of the server it belongs to. Skills, frontend tools
+   * and runtime tools are found in the catalogues.
+   */
+  mcpServers?: readonly MarkedMcpServer[];
+  /**
+   * How dense it draws: the chat's own (`comfortable`), or the floating
+   * assistant's balloon (`compact`: no avatars, smaller bubbles and tool
+   * rows, no turn footers). The same components either way.
+   */
+  density?: ChatDensity;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,31 +196,6 @@ function toneColorsOf(tone: string | undefined): {
     muted: `${tone}.muted`,
     fg: `${tone}.fg`,
   };
-}
-
-/** Three pulsing dots: a speaker is still writing and has not settled yet. */
-function TypingDots({ size = 8 }: { size?: number }): React.ReactElement {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      {[0, 0.2, 0.4].map((delay, index) => (
-        <Box
-          key={index}
-          sx={{
-            width: size,
-            height: size,
-            borderRadius: '50%',
-            bg: 'fg.muted',
-            animation: 'typingPulse 1.4s ease-in-out infinite',
-            animationDelay: `${delay}s`,
-            '@keyframes typingPulse': {
-              '0%, 60%, 100%': { transform: 'scale(0.6)', opacity: 0.4 },
-              '30%': { transform: 'scale(1)', opacity: 1 },
-            },
-          }}
-        />
-      ))}
-    </Box>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -450,33 +436,29 @@ export function SubagentChatPanel({
     <Box
       data-subagent-panel={subagentName}
       data-subagent-transport={overA2A ? 'a2a' : 'in-process'}
-      sx={{
-        mt: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        height,
-        width: '100%',
-        border: '1px solid',
-        borderColor: `${tone}.emphasis`,
-        borderRadius: 2,
-        overflow: 'hidden',
-        bg: 'canvas.default',
-      }}
+      mt={2}
+      display="flex"
+      flexDirection="column"
+      height={height}
+      width="100%"
+      border="1px solid"
+      borderColor={`${tone}.emphasis`}
+      borderRadius={2}
+      overflow="hidden"
+      bg="canvas.default"
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          px: 2,
-          py: 1,
-          borderBottom: '1px solid',
-          borderColor: `${tone}.muted`,
-          bg: `${tone}.subtle`,
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={1}
+        px={2}
+        py={1}
+        borderBottom="1px solid"
+        borderColor={`${tone}.muted`}
+        bg={`${tone}.subtle`}
+        flexShrink={0}
       >
-        <Box sx={{ display: 'flex', color: `${tone}.fg` }}>
+        <Box display="flex" color={`${tone}.fg`}>
           {overA2A ? <BroadcastIcon size={14} /> : <DependabotIcon size={14} />}
         </Box>
         <Text sx={{ fontSize: 0, color: `${tone}.fg` }}>
@@ -510,7 +492,7 @@ export function SubagentChatPanel({
         <A2AAgentDialog details={remote} onClose={() => setCardOpen(false)} />
       ) : null}
 
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <Box flex={1} minHeight={0} overflowY="auto">
         <ChatMessageList
           displayItems={displayItems}
           isLoading={!isDone}
@@ -523,13 +505,11 @@ export function SubagentChatPanel({
           messagesEndRef={messagesEndRef as RefObject<HTMLDivElement>}
           emptyContent={
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: 'fg.muted',
-                p: 2,
-              }}
+              display="flex"
+              alignItems="center"
+              gap={1}
+              color="fg.muted"
+              p={2}
             >
               <Spinner size="small" />
               <Text sx={{ fontSize: 0 }}>Starting…</Text>
@@ -549,10 +529,14 @@ export function SubagentChatPanel({
 function DefaultToolCallRenderer({
   item,
   onRespond,
+  mcpServers,
+  density,
 }: {
   item: ToolCallMessage;
   approvalConfig?: ToolApprovalConfig;
   onRespond: RespondCallback;
+  mcpServers?: readonly MarkedMcpServer[];
+  density?: ChatDensity;
 }) {
   const resultObject =
     item.result && typeof item.result === 'object'
@@ -590,19 +574,17 @@ function DefaultToolCallRenderer({
   // Capture the skill id carried in the tool-call arguments so we can match
   // the inline approval button against that synthetic approval entry.
   const skillApprovalKey = useMemo(() => {
-    const SKILL_TOOLS = new Set([
-      'run_skill_script',
-      'load_skill',
-      'read_skill_resource',
-    ]);
-    if (!SKILL_TOOLS.has(item.toolName)) return null;
-    const a = (item.args ?? {}) as Record<string, unknown>;
-    const raw = a.skill_name ?? a.skill ?? a.name;
-    if (typeof raw !== 'string' || raw.length === 0) return null;
-    // Strip optional ``<name>:<version>`` suffix to the base skill id.
-    const base = raw.split(':', 1)[0] || raw;
-    return `skill:${base}`.toLowerCase();
+    // The base skill id, without an optional ``<name>:<version>`` suffix.
+    const skillId = skillIdOfCall(item.toolName, item.args);
+    return skillId ? `skill:${skillId}`.toLowerCase() : null;
   }, [item.toolName, item.args]);
+
+  // Whose tool it is — its MCP server, skill, frontend tool set or runtime
+  // tool — for the mark drawn before its name.
+  const marks = useMemo(
+    () => marksOfToolCall(item.toolName, item.args, mcpServers),
+    [item.toolName, item.args, mcpServers],
+  );
 
   // Read pending approvals from the Zustand store (fed by the agent-runtime WS).
   const approvals = useAgentRuntimeStore(s => s.approvals);
@@ -730,6 +712,9 @@ function DefaultToolCallRenderer({
             : undefined
         }
         approvalLoading={false}
+        marks={marks}
+        summary={item.summary}
+        density={density}
       />
       {isSubagentDelegation && (
         <SubagentChatPanel
@@ -762,7 +747,15 @@ export function ChatMessageList({
   agentUsage,
   onRemoveItems,
   renderMessageFooter,
+  mcpServers,
+  density = 'comfortable',
 }: ChatMessageListProps) {
+  const compact = density === 'compact';
+  if (compact) {
+    // The balloon's: no avatars, no turn footers.
+    avatarConfig = { ...avatarConfig, showAvatars: false };
+    showTurnFooters = false;
+  }
   if (displayItems.length === 0) {
     return <>{emptyContent}</>;
   }
@@ -891,6 +884,8 @@ export function ChatMessageList({
           item={item}
           approvalConfig={approvalConfig}
           onRespond={createRespondCallback(item.toolCallId)}
+          mcpServers={mcpServers}
+          density={density}
         />
       );
 
@@ -913,11 +908,11 @@ export function ChatMessageList({
       return (
         <Box
           key={item.id}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            /*
+          data-chat-tool-row={item.toolName}
+          display="flex"
+          flexDirection="column"
+          alignItems="flex-start"
+          /*
                   The full column. `maxWidth: '95%'` with content-driven
                   width left every tool card as wide as its longest line, so
                   a transcript of executions was a ragged stack of
@@ -926,10 +921,9 @@ export function ChatMessageList({
                   `width: '100%'` — the cell and output surfaces do — gets
                   the whole measure.
                 */
-            width: '100%',
-            px: padding,
-            py: 1,
-          }}
+          width="100%"
+          px={padding}
+          py={compact ? '2px' : 1}
         >
           {toolUI}
         </Box>
@@ -962,23 +956,24 @@ export function ChatMessageList({
       return (
         <Box
           key={message.id}
-          sx={{ display: 'flex', justifyContent: 'center', px: padding, py: 1 }}
+          display="flex"
+          justifyContent="center"
+          px={padding}
+          py={1}
         >
           <Box
-            sx={{
-              display: 'inline-flex',
-              gap: 2,
-              alignItems: 'center',
-              px: 3,
-              py: 1,
-              borderRadius: 999,
-              bg: 'canvas.subtle',
-              border: '1px solid',
-              borderColor: 'border.muted',
-              color: noteColor,
-              fontSize: 0,
-              maxWidth: '90%',
-            }}
+            display="inline-flex"
+            gap={2}
+            alignItems="center"
+            px={3}
+            py={1}
+            borderRadius={999}
+            bg="canvas.subtle"
+            border="1px solid"
+            borderColor="border.muted"
+            color={noteColor}
+            fontSize={0}
+            maxWidth="90%"
           >
             <NoteIcon size={14} />
             {speaker ? (
@@ -1046,21 +1041,19 @@ export function ChatMessageList({
     return (
       <Box
         key={message.id}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: isUser ? 'flex-end' : 'flex-start',
-          px: padding,
-          py: 1,
-        }}
+        data-chat-message={message.role}
+        display="flex"
+        flexDirection="column"
+        alignItems={isUser ? 'flex-end' : 'flex-start'}
+        px={padding}
+        py={compact ? '2px' : 1}
       >
         <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            flexDirection: isUser ? 'row-reverse' : 'row',
-            alignItems: 'flex-start',
-            /*
+          display="flex"
+          gap={2}
+          flexDirection={isUser ? 'row-reverse' : 'row'}
+          alignItems="flex-start"
+          /*
                   Full width, always.
 
                   This row used to shrink to its content under the column's
@@ -1073,33 +1066,34 @@ export function ChatMessageList({
                   `row` pins the agent's to the left, and 85% means 85% of
                   the column whatever is being generated below.
                 */
-            width: '100%',
-          }}
+          width="100%"
         >
           {/* Avatar */}
           {avatarConfig.showAvatars && (
             <Box
-              sx={{
-                width: avatarConfig.avatarSize,
-                height: avatarConfig.avatarSize,
-                borderRadius: '50%',
-                bg: speaker
+              width={avatarConfig.avatarSize}
+              height={avatarConfig.avatarSize}
+              borderRadius="50%"
+              bg={
+                speaker
                   ? toneColorsOf(speaker.tone).emphasis
                   : isUser
                     ? avatarConfig.userAvatarBg
-                    : avatarConfig.assistantAvatarBg,
-                color: speaker
+                    : avatarConfig.assistantAvatarBg
+              }
+              color={
+                speaker
                   ? 'fg.onEmphasis'
                   : isUser
                     ? 'fg.default'
-                    : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                fontSize: speaker ? 0 : undefined,
-                fontWeight: speaker ? 'bold' : undefined,
-              }}
+                    : 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
+              }
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              flexShrink={0}
+              fontSize={speaker ? 0 : undefined}
+              fontWeight={speaker ? 'bold' : undefined}
             >
               {speaker
                 ? speaker.initials || '?'
@@ -1109,18 +1103,16 @@ export function ChatMessageList({
             </Box>
           )}
 
-          <Box sx={{ maxWidth: '85%', minWidth: 0 }}>
+          <Box maxWidth={compact ? '92%' : '85%'} minWidth={0}>
             {/* Speaker header — who said it, and who it was said to */}
             {speaker ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  gap: 2,
-                  alignItems: 'baseline',
-                  flexWrap: 'wrap',
-                  flexDirection: isUser ? 'row-reverse' : 'row',
-                  mb: 1,
-                }}
+                display="flex"
+                gap={2}
+                alignItems="baseline"
+                flexWrap="wrap"
+                flexDirection={isUser ? 'row-reverse' : 'row'}
+                mb={1}
               >
                 <Text
                   sx={{
@@ -1169,31 +1161,46 @@ export function ChatMessageList({
 
             {/* Message bubble */}
             <Box
-              sx={{
-                p: 2,
-                overflowX: 'auto',
-                borderRadius: 2,
-                backgroundColor: isUser
+              p={compact ? 1 : 2}
+              px={compact ? 2 : 2}
+              overflowX="auto"
+              // The theme's bubble (LOOP T-03, T-06): today's 6px elsewhere.
+              borderRadius="bubble"
+              // A message arriving, at the theme's pace (LOOP T-10): no
+              // motion in a theme that sets none, nor when motion is reduced.
+              animation="chatMessageArrive var(--theme-motion-message) var(--theme-motion-easing) both"
+              reducedMotion={{ animation: 'none' }}
+              backgroundColor={
+                isUser
                   ? 'accent.emphasis'
                   : speaker
                     ? toneColorsOf(speaker.tone).subtle
-                    : 'canvas.subtle',
-                border: !isUser && speaker ? '1px solid' : undefined,
-                borderColor:
-                  !isUser && speaker
-                    ? toneColorsOf(speaker.tone).muted
-                    : undefined,
-                // Use primary-button text token for better contrast when
-                // accent.emphasis is bright (e.g. Matrix dark theme).
-                color: isUser
+                    : 'canvas.subtle'
+              }
+              border={!isUser && speaker ? '1px solid' : undefined}
+              borderColor={
+                !isUser && speaker
+                  ? toneColorsOf(speaker.tone).muted
+                  : undefined
+              }
+              // Use primary-button text token for better contrast when
+              // accent.emphasis is bright (e.g. Matrix dark theme).
+              color={
+                isUser
                   ? 'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))'
-                  : 'fg.default',
+                  : 'fg.default'
+              }
+              sx={{
+                '@keyframes chatMessageArrive': {
+                  from: { opacity: 0, transform: 'translateY(4px)' },
+                  to: { opacity: 1, transform: 'none' },
+                },
                 ...streamdownCodeBlockStyles,
               }}
             >
               {/* Tool chips — the turn's own tool calls, named rather than carded */}
               {message.toolChips?.length ? (
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
                   {message.toolChips.map((label, chipIndex) => (
                     <Label
                       key={`${label}-${chipIndex}`}
@@ -1202,11 +1209,9 @@ export function ChatMessageList({
                     >
                       <Box
                         as="span"
-                        sx={{
-                          display: 'inline-flex',
-                          gap: 1,
-                          alignItems: 'center',
-                        }}
+                        display="inline-flex"
+                        gap={1}
+                        alignItems="center"
                       >
                         <ToolsIcon size={10} /> {label}
                       </Box>
@@ -1225,11 +1230,26 @@ export function ChatMessageList({
                   ) : (
                     <Text
                       sx={{
-                        fontSize: 1,
+                        fontSize: compact ? 0 : 1,
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                       }}
                     >
+                      {/* Said aloud: a small microphone, and its name (VOICE.md VO-27). */}
+                      {message.metadata?.input === 'voice' ? (
+                        <Box
+                          as="span"
+                          data-spoken=""
+                          title="Said aloud"
+                          aria-label="Said aloud:"
+                          display="inline-flex"
+                          verticalAlign="text-bottom"
+                          mr={1}
+                          opacity={0.85}
+                        >
+                          <MicrophoneIcon size={14} aria-hidden="true" />
+                        </Box>
+                      ) : null}
                       {text}
                     </Text>
                   );
@@ -1237,25 +1257,20 @@ export function ChatMessageList({
               ) : message.live && !getMessageText(message) ? (
                 <TypingDots size={6} />
               ) : (
-                <Box sx={streamdownMarkdownStyles}>
-                  <Streamdown>
-                    {normalizeAssistantMarkdown(
-                      getMessageText(message) || (isStreaming ? '...' : ''),
-                    )}
-                  </Streamdown>
-                </Box>
+                <ChatMarkdown
+                  density={density}
+                  text={getMessageText(message) || (isStreaming ? '...' : '')}
+                />
               )}
             </Box>
             {renderMessageFooter ? (
               <Box
-                sx={{
-                  display: 'flex',
-                  gap: 2,
-                  alignItems: 'center',
-                  mt: 1,
-                  flexWrap: 'wrap',
-                  flexDirection: isUser ? 'row-reverse' : 'row',
-                }}
+                display="flex"
+                gap={2}
+                alignItems="center"
+                mt={1}
+                flexWrap="wrap"
+                flexDirection={isUser ? 'row-reverse' : 'row'}
               >
                 {renderMessageFooter(message)}
               </Box>
@@ -1285,49 +1300,37 @@ export function ChatMessageList({
       {/* Typing indicator cursor — shows when waiting for response */}
       {showLoadingIndicator && (isLoading || isStreaming) && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            px: padding,
-            py: 1,
-          }}
+          data-chat-typing=""
+          display="flex"
+          alignItems="flex-start"
+          px={padding}
+          py={1}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 2,
-              alignItems: 'flex-start',
-            }}
-          >
+          <Box display="flex" gap={2} alignItems="flex-start">
             {/* Avatar */}
             {avatarConfig.showAvatars && (
               <Box
-                sx={{
-                  width: avatarConfig.avatarSize,
-                  height: avatarConfig.avatarSize,
-                  borderRadius: '50%',
-                  bg: avatarConfig.assistantAvatarBg,
-                  color:
-                    'var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
+                width={avatarConfig.avatarSize}
+                height={avatarConfig.avatarSize}
+                borderRadius="50%"
+                bg={avatarConfig.assistantAvatarBg}
+                color="var(--button-primary-fgColor-rest, var(--fgColor-onEmphasis))"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexShrink={0}
               >
                 {avatarConfig.assistantAvatar}
               </Box>
             )}
             {/* Pulsing cursor dots */}
             <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                p: 2,
-                borderRadius: 2,
-                bg: 'canvas.subtle',
-                minHeight: '32px',
-              }}
+              display="flex"
+              alignItems="center"
+              p={compact ? 1 : 2}
+              borderRadius="var(--theme-radius-bubble, 6px)"
+              bg="canvas.subtle"
+              minHeight={compact ? '20px' : '32px'}
             >
               <TypingDots />
             </Box>

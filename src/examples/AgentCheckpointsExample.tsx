@@ -63,9 +63,9 @@ import { Box } from '@datalayer/primer-addons';
 import { AuthRequiredView, ErrorView } from './components';
 import { ThemedProvider } from './utils/themedProvider';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
-import { LoopEmbed } from '../loop';
-import { AgentCheckpointsPlugin } from '../loop/plugins/agent-checkpoints';
-import { CheckpointsSidebarPlugin } from '../loop/plugins/checkpoints-sidebar';
+import { LoopEmbed } from '../apps';
+import { AgentCheckpointsPlugin } from '../apps/plugins/agent-checkpoints';
+import { CheckpointsSidebarPlugin } from '../apps/plugins/checkpoints-sidebar';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
 import { useRuntimeTargetStore } from './utils/runtimeTargetStore';
@@ -156,17 +156,9 @@ const SpecRow: React.FC<{
   label: string;
   value: string;
 }> = ({ icon: Icon, label, value }) => (
-  <Box
-    sx={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 2,
-      fontSize: 0,
-      mb: 1,
-    }}
-  >
+  <Box display="flex" alignItems="flex-start" gap={2} fontSize={0} mb={1}>
     {Icon && (
-      <Box sx={{ color: 'fg.muted', flexShrink: 0, mt: '2px' }}>
+      <Box color="fg.muted" flexShrink={0} mt="2px">
         <Icon size={12} />
       </Box>
     )}
@@ -429,25 +421,17 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
   // ── Running / Paused ─────────────────────────────────────────────────────
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <Button
           size="small"
@@ -540,33 +524,27 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
       )}
 
       {/* Main content: Sidebar + Chat */}
-      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <Box display="flex" flex={1} minHeight={0}>
         {/* ── Sidebar ──────────────────────────────────────────────────── */}
         {sidebarOpen && (
           <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: SIDEBAR_WIDTH,
-              flexShrink: 0,
-              borderRight: '1px solid',
-              borderColor: 'border.default',
-              overflowY: 'auto',
-              bg: 'canvas.default',
-            }}
+            display="flex"
+            flexDirection="column"
+            width={SIDEBAR_WIDTH}
+            flexShrink={0}
+            borderRight="1px solid"
+            borderColor="border.default"
+            overflowY="auto"
+            bg="canvas.default"
           >
             {/* Spec Attributes */}
             <Box
-              sx={{
-                order: 3,
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              order={3}
+              p={3}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}
-              >
+              <Box display="flex" alignItems="center" gap={2} mb={2}>
                 <Text sx={{ fontSize: '20px' }}>{AGENTSPEC.emoji}</Text>
                 <Heading as="h4" sx={{ fontSize: 2, m: 0 }}>
                   {AGENTSPEC.name}
@@ -606,12 +584,10 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               />
 
               <Box
-                sx={{
-                  mt: 2,
-                  pt: 2,
-                  borderTop: '1px solid',
-                  borderColor: 'border.default',
-                }}
+                mt={2}
+                pt={2}
+                borderTop="1px solid"
+                borderColor="border.default"
               >
                 <Text
                   sx={{
@@ -652,16 +628,12 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* Running Agents */}
             <Box
-              sx={{
-                order: 2,
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              order={2}
+              p={3}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <PeopleIcon size={14} />
                 <Text sx={{ fontWeight: 'semibold', fontSize: 1 }}>
                   Running Agents ({activeAgents.length})
@@ -677,23 +649,14 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 activeAgents.map((a: RunningAgent) => (
                   <Box
                     key={a.id}
-                    sx={{
-                      p: 2,
-                      mb: 1,
-                      bg: 'canvas.default',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                    }}
+                    p={2}
+                    mb={1}
+                    bg="canvas.default"
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="border.default"
                   >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                      }}
-                    >
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
                       <Label
                         variant={
                           STATUS_COLORS[
@@ -727,19 +690,17 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                       </Text>
                     )}
                     <Box
-                      sx={{
-                        display: 'flex',
-                        gap: 1,
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                      }}
+                      display="flex"
+                      gap={1}
+                      flexWrap="wrap"
+                      alignItems="center"
                     >
                       {a.protocol && (
                         <Label sx={{ fontSize: '10px' }} variant="accent">
                           {a.protocol}
                         </Label>
                       )}
-                      <Box sx={{ flex: 1 }} />
+                      <Box flex={1} />
                       <Button
                         size="small"
                         variant="danger"
@@ -758,16 +719,12 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
 
             {/* Checkpoints List */}
             <Box
-              sx={{
-                order: 1,
-                p: 3,
-                borderBottom: '1px solid',
-                borderColor: 'border.default',
-              }}
+              order={1}
+              p={3}
+              borderBottom="1px solid"
+              borderColor="border.default"
             >
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
-              >
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <HistoryIcon size={14} />
                 <Text sx={{ fontWeight: 'semibold', fontSize: 1, flex: 1 }}>
                   Checkpoints (
@@ -785,23 +742,14 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
               {pausedAgentsWithoutCheckpoint.map((a: RunningAgent) => (
                 <Box
                   key={`paused-${a.id}`}
-                  sx={{
-                    p: 2,
-                    mb: 1,
-                    bg: 'canvas.default',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'attention.muted',
-                  }}
+                  p={2}
+                  mb={1}
+                  bg="canvas.default"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="attention.muted"
                 >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
+                  <Box display="flex" alignItems="center" gap={1} mb={1}>
                     <SquareIcon size={12} />
                     <Text sx={{ fontWeight: 'semibold', fontSize: 0, flex: 1 }}>
                       {a.name ?? a.id}
@@ -822,13 +770,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                       {a.description}
                     </Text>
                   )}
-                  <Box
-                    sx={{
-                      mt: 2,
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                    }}
-                  >
+                  <Box mt={2} display="flex" justifyContent="flex-end">
                     <Button
                       size="small"
                       variant="primary"
@@ -855,23 +797,14 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                 checkpoints.map((ckpt: CheckpointRecord) => (
                   <Box
                     key={ckpt.id}
-                    sx={{
-                      p: 2,
-                      mb: 1,
-                      bg: 'canvas.default',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'border.default',
-                    }}
+                    p={2}
+                    mb={1}
+                    bg="canvas.default"
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="border.default"
                   >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                      }}
-                    >
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
                       {ckpt.status === 'failed' ? (
                         <AlertIcon size={12} fill="var(--fgColor-danger)" />
                       ) : (
@@ -935,13 +868,7 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
                         {ckpt.agent_spec_id}
                       </Label>
                     )}
-                    <Box
-                      sx={{
-                        mt: 2,
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                      }}
-                    >
+                    <Box mt={2} display="flex" justifyContent="flex-end">
                       <Button
                         size="small"
                         variant="primary"
@@ -966,17 +893,15 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
         )}
 
         {/* ── Chat area ───────────────────────────────────────────────── */}
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box flex={1} minHeight={0}>
           {showLaunchingView ? (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                gap: 3,
-              }}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              height="100%"
+              gap={3}
             >
               <Spinner size="large" />
               <Text sx={{ color: 'fg.muted' }}>
@@ -987,15 +912,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             </Box>
           ) : showNoAgentRunningView ? (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                gap: 3,
-                px: 3,
-              }}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              height="100%"
+              gap={3}
+              px={3}
             >
               <AgentIcon size={48} />
               <Heading as="h2" sx={{ fontSize: 3 }}>
@@ -1034,15 +957,13 @@ const AgentCheckpointsInner: React.FC<{ onLogout: () => void }> = ({
             />
           ) : (
             <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: 'fg.muted',
-                gap: 3,
-              }}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              height="100%"
+              color="fg.muted"
+              gap={3}
             >
               {runtimeStatus === 'paused' ? (
                 <Text sx={{ fontSize: 2 }}>
@@ -1142,24 +1063,20 @@ const ConversationCheckpointsExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          bg: 'canvas.default',
-        }}
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flexShrink: 0,
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flexShrink={0}
         >
           <VersionsIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -1172,7 +1089,7 @@ const ConversationCheckpointsExample: React.FC = () => {
             plugin's blueprint; the variants stay visible so the agent is not
             pinned to the page. The sidebar is a Loop plugin and renders in
             the workspace's own sidebar column. */}
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box flex={1} minHeight={0}>
           <LoopEmbed
             serverUrl={resolveExampleAgentRuntimesUrl('local')}
             target="local"

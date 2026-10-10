@@ -9,7 +9,7 @@
 import type { Agentspec } from './agentspecs';
 import type { AgentConnection } from './connection';
 
-export type AgentLibrary = 'pydantic-ai' | 'langchain' | 'google-adk';
+export type AgentLibrary = 'pydantic-ai' | 'langchain';
 
 /**
  * Unified agent status covering runtime lifecycle and UI lifecycle.

@@ -23,8 +23,13 @@ The decision, in order:
    with no rule, reading is done and anything that acts waits for a person —
    and the most restricted wins.
 
+Before any call, the first two steps decide what the agent is *given*
+(`gives`, LOOP U-15): a connection's level maps to its tools by their
+classes, so a read connection carries no tool that writes, and a tool nobody
+classed is taken to write.
+
 The same decision is written in `agentspecs.apps.behaviour_for`, and in
-TypeScript in `src/loop/apps/rules.ts`. `APP_BEHAVIOURS`, generated from
+TypeScript in `src/apps/apps/rules.ts`. `APP_BEHAVIOURS`, generated from
 agentspecs, is what all three have to agree on.
 """
 
@@ -32,9 +37,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from email.utils import getaddresses
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from agent_runtimes.specs.actions import SERVER_ACTIONS, TOOL_ACTIONS
+from agent_runtimes.specs.actions import BACKEND_TOOL_ACTIONS, SERVER_ACTIONS
 from agent_runtimes.types import ActionConditionSpec, AppConnectionSpec, AppSpec
 
 DO_IT = "do_it"
@@ -157,20 +163,108 @@ def _entry(server: str, name: str) -> Tuple[List[str], List[ActionConditionSpec]
     return list(actions.default), []
 
 
+@dataclass(frozen=True)
+class Forwarding:
+    """Where a call of a tool that forwards mail says what it forwards, from where, and to whom."""
+
+    message: str
+    """The argument naming the message forwarded; a call without it does not forward."""
+
+    mailbox: str
+    """The argument holding the address of the mailbox it sends from."""
+
+    recipients: Tuple[str, ...]
+    """The arguments holding its recipients."""
+
+
+#: The tools that forward a message, by (server, tool) — as `agentspecs.actions.FORWARDING`.
+FORWARDING: Dict[Tuple[str, str], Forwarding] = {
+    ("google-workspace", "send_gmail_message"): Forwarding(
+        message="forward_message_id",
+        mailbox="user_google_email",
+        recipients=("to", "cc", "bcc"),
+    ),
+}
+
+
+def addresses(value: Any) -> List[str]:
+    """The mail addresses an argument holds — one, several separated by commas, or a list — in lower case."""
+    items = value if isinstance(value, (list, tuple)) else [value]
+    words = [str(item) for item in items if isinstance(item, str) and item.strip()]
+    return [
+        address.strip().lower() for _, address in getaddresses(words) if "@" in address
+    ]
+
+
+def domain_of(address: str) -> str:
+    """The domain of a mail address, in lower case."""
+    return address.rpartition("@")[2].strip().lower()
+
+
+def forwards_outside(server: str, tool_name: str, arguments: Mapping[str, Any]) -> bool:
+    """Whether a call forwards a message to somebody outside the organization (LOOP W-04).
+
+    The organization is the domain of the mailbox the call sends from. Fails
+    closed: a forward that does not say its mailbox is outside. A reply is
+    not a forward.
+    """
+    forwarding = FORWARDING.get((server, tool_name))
+    if forwarding is None or not str(arguments.get(forwarding.message) or "").strip():
+        return False
+    home = addresses(arguments.get(forwarding.mailbox))
+    if not home:
+        return True
+    recipients = [
+        address
+        for name in forwarding.recipients
+        for address in addresses(arguments.get(name))
+    ]
+    return any(domain_of(address) != domain_of(home[0]) for address in recipients)
+
+
 def classes_of(ref: str, arguments: Optional[Mapping[str, Any]] = None) -> List[str]:
     """The classes of a tool, by reference; empty when nobody classed it.
 
     With the `arguments` of a call, the classes of that call. Without them,
-    everything the tool can do: nobody said what it is asked.
+    everything the tool can do: nobody said what it is asked. A forward
+    outside the organization is told from the call (`forwards_outside`): it
+    publishes besides sending.
     """
     server, name = split_ref(ref)
     if server is None:
-        return list(TOOL_ACTIONS.get(name, []))
+        return list(BACKEND_TOOL_ACTIONS.get(name, []))
     classes, conditions = _entry(server, name)
     for condition in conditions:
         if arguments is None or condition_holds(condition, arguments):
             classes.extend(item for item in condition.classes if item not in classes)
+    if (
+        arguments is not None
+        and classes
+        and "publish" not in classes
+        and forwards_outside(server, name, arguments)
+    ):
+        classes.append("publish")
     return classes
+
+
+def signs_of(ref: str) -> str:
+    """The argument of a server's tool that carries what it sends, which is
+    signed with the application's byline (LOOP I-10); ``""`` when its spec
+    names none — a tool of the catalogue, or one that reads.
+
+    Answered by the entry that answers for the tool's classes: its name, else
+    the first pattern it matches, as `agentspecs.actions.server_tool_signs`.
+    """
+    server, name = split_ref(ref)
+    actions = SERVER_ACTIONS.get(server) if server is not None else None
+    if actions is None:
+        return ""
+    if name in actions.tools:
+        return actions.signs.get(name, "")
+    for pattern in actions.tools:
+        if is_pattern(pattern) and matches(name, pattern):
+            return actions.signs.get(pattern, "")
+    return ""
 
 
 def is_read_only(classes: Sequence[str]) -> bool:
@@ -196,6 +290,42 @@ def _reaches(connection: AppConnectionSpec, tool_name: str) -> bool:
     return not connection.only or any(
         matches(tool_name, pattern) for pattern in connection.only
     )
+
+
+def gives(app: AppSpec, tool: str) -> bool:
+    """Whether the application is given a tool of a server: its connection's level.
+
+    A connection gives the tools of its server it reaches (`only`); one that
+    only reads gives only the tools that only read — what a tool does is its
+    action class, and a tool nobody classed is taken to write, so a read
+    connection does not give it. A tool of a server the application is not
+    connected to is not given.
+
+    Parameters
+    ----------
+    app : AppSpec
+        The application.
+    tool : str
+        The tool, as `server.tool`.
+
+    Returns
+    -------
+    bool
+        True when the agent is given the tool.
+
+    Raises
+    ------
+    ValueError
+        When `tool` names no server: a catalogue tool is given by the spec's
+        `tools`, not by a connection.
+    """
+    server, name = split_ref(tool)
+    if server is None:
+        raise ValueError(f"`{tool}` is not a tool of a server (`server.tool`).")
+    connection = _connection(app, server)
+    if connection is None or not _reaches(connection, name):
+        return False
+    return connection.access != READ or is_read_only(classes_of(f"{server}.{name}"))
 
 
 def _normal(target: str) -> str:
@@ -290,16 +420,20 @@ def decision_for(
 ) -> Decision:
     """What an application does when its agent calls a tool, and why.
 
-    `tool` is `server.tool` for a tool of an MCP server, or the id of a tool
-    of the catalogue. Its classes are the catalogue's, unless given — a tool
-    met at run time that the catalogue does not know is given none, and is
-    left to the person.
+    `tool` is `server.tool` for a tool of an MCP server, the id of a tool of
+    the catalogue, or the name of one of the application's own tools (LOOP
+    P-06). Its classes are the catalogue's — or, for its own, what it says it
+    `does` — unless given; a tool met at run time that the catalogue does not
+    know is given none, and is left to the person.
 
     Pass the `arguments` of the call: the decision is then for that call.
     Without them it is for the worst the tool can do.
     """
     server, name = split_ref(tool)
     wanted = f"{server}.{name}" if server is not None else name
+    own_tool = app.tool(name) if server is None and classes is None else None
+    if own_tool is not None:
+        classes = list(own_tool.does)
     if classes is not None:
         own, besides, possible = list(classes), [], list(classes)
     else:

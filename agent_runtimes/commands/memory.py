@@ -23,6 +23,7 @@ app = typer.Typer(
     name="memory",
     help="Persisted agent memory management commands (platform_admin only).",
     invoke_without_command=True,
+    pretty_exceptions_show_locals=False,
 )
 
 console = Console()

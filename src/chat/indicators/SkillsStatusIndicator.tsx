@@ -7,7 +7,7 @@
  * SkillsStatusIndicator — Round status dot representing skill state.
  *
  * Aggregate logic:
- * - no skills configured -> none (gray)
+ * - no skills configured -> none (not drawn)
  * - skills loading       -> loading (amber, pulsing)
  * - some enabled         -> active (green)
  * - none enabled         -> inactive (gray)
@@ -66,7 +66,6 @@ function buildTooltip(
   skillsCount: number,
   enabledCount: number,
 ): string {
-  if (aggregate === 'none') return 'No Skills defined';
   if (aggregate === 'loading') {
     return `Skills loading (${enabledCount}/${skillsCount} enabled)`;
   }
@@ -93,6 +92,12 @@ export function SkillsStatusIndicator({
     [aggregate, skillsCount, enabledCount],
   );
 
+  // Nothing drawn when the agent has no skill (LOOP H-21): a control that
+  // only says so was read out as *No Skills defined* in every composer.
+  if (aggregate === 'none') {
+    return null;
+  }
+
   return (
     <Tooltip text={tooltipText} direction="n">
       <button
@@ -113,17 +118,18 @@ export function SkillsStatusIndicator({
       >
         <Box
           as="span"
-          sx={{
-            display: 'inline-block',
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            bg: SKILLS_STATUS_COLORS[aggregate],
-            flexShrink: 0,
-            ...(aggregate === 'loading' && {
-              animation: 'skills-pulse 1.5s ease-in-out infinite',
-            }),
-          }}
+          display="inline-block"
+          width={12}
+          height={12}
+          borderRadius="50%"
+          bg={SKILLS_STATUS_COLORS[aggregate]}
+          flexShrink={0}
+          animation={
+            aggregate === 'loading'
+              ? 'skills-pulse 1.5s ease-in-out infinite'
+              : undefined
+          }
+          reducedMotion={{ animation: 'none' }}
         />
       </button>
     </Tooltip>

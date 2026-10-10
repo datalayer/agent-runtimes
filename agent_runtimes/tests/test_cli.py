@@ -5,8 +5,10 @@
 
 import json
 import os
+from typing import Iterator
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from agent_runtimes.__main__ import app
@@ -18,6 +20,23 @@ runner = CliRunner(
 )
 
 VALID_AGENT_ID = "example-simple"
+
+
+@pytest.fixture(autouse=True)
+def _environ_restored() -> Iterator[None]:
+    """Give back the environment ``serve`` sets (``AGENT_RUNTIMES_*``).
+
+    Left behind, a later test's ``create_app()`` would register their agent.
+
+    Yields
+    ------
+    None
+        Control to the test.
+    """
+    saved = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
 
 
 class TestCLIHelp:
@@ -411,7 +430,7 @@ class TestShortOptions:
 
 
 class TestCodeModeOptions:
-    """Tests for Code Mode CLI options."""
+    """Tests for Codemode CLI options."""
 
     def test_codemode_flag_sets_env_var(self) -> None:
         """Test that --codemode sets the environment variable."""

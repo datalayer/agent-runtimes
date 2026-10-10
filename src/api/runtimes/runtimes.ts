@@ -366,6 +366,10 @@ export interface RuntimeMemory {
   scope?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  /** Who corrected it, when it was corrected in place (LOOP R-34). */
+  corrected_by?: string | null;
+  /** When it was corrected (ISO). */
+  corrected_at?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -475,6 +479,202 @@ export const getRuntimeMemory = async (
     message: response?.message,
     memory: response?.memory as RuntimeMemory,
   };
+};
+
+/**
+ * What forgetting answers: how many memories were forgotten.
+ */
+export interface ForgetRuntimeMemoriesResponse {
+  success: boolean;
+  forgotten: number;
+}
+
+/**
+ * Forget one of the caller's own persisted memories (LOOP R-18).
+ *
+ * Somebody else's is not found (404), whoever asks: forgetting is the
+ * person's own.
+ */
+export const forgetRuntimeMemory = async (
+  token: string,
+  memoryId: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<ForgetRuntimeMemoriesResponse> => {
+  validateToken(token);
+  validateRequiredString(memoryId, 'Memory id');
+
+  const response = await requestDatalayerAPI<
+    Partial<ForgetRuntimeMemoriesResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories/${encodeURIComponent(memoryId)}`,
+    method: 'DELETE',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    forgotten: Number(response?.forgotten ?? 0),
+  };
+};
+
+/**
+ * What a correction answers: the memory as it is now kept.
+ */
+export interface CorrectRuntimeMemoryResponse {
+  success: boolean;
+  memory: RuntimeMemory;
+}
+
+/**
+ * Correct one of the caller's own persisted memories in place (LOOP R-34):
+ * its words become `text`, kept with who corrected it and when.
+ *
+ * Somebody else's is not found (404), whoever asks; empty words, more than
+ * the service keeps, or the words it already has are refused (422).
+ */
+export const correctRuntimeMemory = async (
+  token: string,
+  memoryId: string,
+  text: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<CorrectRuntimeMemoryResponse> => {
+  validateToken(token);
+  validateRequiredString(memoryId, 'Memory id');
+  validateRequiredString(text, 'What it should remember');
+
+  const response = await requestDatalayerAPI<
+    Partial<CorrectRuntimeMemoryResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories/${encodeURIComponent(memoryId)}`,
+    method: 'PATCH',
+    body: { memory: text },
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    memory: response?.memory as RuntimeMemory,
+  };
+};
+
+/**
+ * Forget everything one agent — an application, by its key `app:<uid>` —
+ * remembers of the caller, no more than `count`: the number the person was
+ * shown and confirmed. When it remembers more now, nothing is forgotten and
+ * the service refuses (409) in a sentence (LOOP R-18).
+ */
+export const forgetRuntimeMemories = async (
+  token: string,
+  agentId: string,
+  count: number,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<ForgetRuntimeMemoriesResponse> => {
+  validateToken(token);
+  validateRequiredString(agentId, 'Agent id');
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(`Forgetting needs the count confirmed, not ${count}.`);
+  }
+
+  const query = new URLSearchParams({
+    agent_id: agentId.trim(),
+    count: String(count),
+  });
+  const response = await requestDatalayerAPI<
+    Partial<ForgetRuntimeMemoriesResponse>
+  >({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memories?${query.toString()}`,
+    method: 'DELETE',
+    token,
+  });
+
+  return {
+    success: Boolean(response?.success),
+    forgotten: Number(response?.forgotten ?? 0),
+  };
+};
+
+/**
+ * One allowance of a person (LOOP R-35): `reader` uses what `source`
+ * remembers of them, both applications by their key `app:<uid>`.
+ */
+export interface RuntimeMemoryShare {
+  source: string;
+  reader: string;
+  /** When it was allowed (ISO). */
+  allowed_at: string | null;
+}
+
+/**
+ * The caller's allowances: who reads what one application remembers of them
+ * (`source`), or what one application reads besides its own (`reader`).
+ */
+export const listRuntimeMemoryShares = async (
+  token: string,
+  filter: { source?: string; reader?: string },
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<RuntimeMemoryShare[]> => {
+  validateToken(token);
+  const query = new URLSearchParams();
+  if (filter.source) {
+    query.set('source', filter.source.trim());
+  }
+  if (filter.reader) {
+    query.set('reader', filter.reader.trim());
+  }
+  const response = await requestDatalayerAPI<{ shares?: RuntimeMemoryShare[] }>(
+    {
+      url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares?${query.toString()}`,
+      method: 'GET',
+      token,
+    },
+  );
+  return Array.isArray(response?.shares) ? response.shares : [];
+};
+
+/**
+ * Allow `reader` to use what `source` remembers of the caller (LOOP R-35).
+ * Allowed again, it is kept as it was.
+ */
+export const allowRuntimeMemoryShare = async (
+  token: string,
+  source: string,
+  reader: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<RuntimeMemoryShare> => {
+  validateToken(token);
+  validateRequiredString(source, 'The application remembering');
+  validateRequiredString(reader, 'The application reading');
+  const response = await requestDatalayerAPI<{ share?: RuntimeMemoryShare }>({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares`,
+    method: 'PUT',
+    body: { source: source.trim(), reader: reader.trim() },
+    token,
+  });
+  return response?.share as RuntimeMemoryShare;
+};
+
+/**
+ * Stop sharing what `source` remembers of the caller with `reader`
+ * (LOOP R-35); the service refuses (404) what was never allowed.
+ */
+export const stopRuntimeMemoryShare = async (
+  token: string,
+  source: string,
+  reader: string,
+  baseUrl: string = DEFAULT_SERVICE_URLS.RUNTIMES,
+): Promise<void> => {
+  validateToken(token);
+  validateRequiredString(source, 'The application remembering');
+  validateRequiredString(reader, 'The application reading');
+  const query = new URLSearchParams({
+    source: source.trim(),
+    reader: reader.trim(),
+  });
+  await requestDatalayerAPI({
+    url: `${baseUrl}${API_BASE_PATHS.RUNTIMES}/memory-shares?${query.toString()}`,
+    method: 'DELETE',
+    token,
+  });
 };
 
 /**

@@ -8,7 +8,7 @@ Generate Python and TypeScript code from YAML UI-plugin specifications.
 A UI plugin is how an agent's answer becomes an interface rather than text —
 a protocol the host knows how to render (A2UI, MCP Apps, MCP UI). One YAML per
 plugin under ``agentspecs/ui-plugins``; an agent spec's ``ui_plugin`` names
-one. They were called UI extensions before agentspecs 0.0.11.
+one. A plugin hosts the visual components it renders (LOOP C-13).
 
 Usage:
     python generate_ui_plugins.py \\
@@ -18,6 +18,8 @@ Usage:
 """
 
 import argparse
+import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -53,6 +55,146 @@ def _ts(value: str) -> str:
     return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
+def _py_component(component: dict[str, Any]) -> str:
+    """A component as the Python that builds it."""
+    bindings = component.get("bindings")
+    return (
+        "ComponentSpec("
+        f"id={_py(component['id'])}, name={json.dumps(component['name'], ensure_ascii=False)}, "
+        f"description={json.dumps(component['description'].strip(), ensure_ascii=False)}, "
+        f"category={_py(component['category'])}, emoji={json.dumps(component['emoji'], ensure_ascii=False)}, "
+        f"version={_py(str(component['version']))}, standard={bool(component['standard'])}, "
+        f"properties={component.get('properties')!r}, "
+        + (
+            f"bindings=ComponentBindingsSpec(shows={bindings['shows']!r}, sends={bindings['sends']!r}), "
+            if bindings
+            else "bindings=None, "
+        )
+        + f"events={component.get('events') or []!r}, example={component.get('example')!r})"
+    )
+
+
+def call_name(component_id: str) -> str:
+    """The Python call of a component: ``Table`` → ``table``, ``TextField`` → ``text_field``."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", component_id).lower()
+
+
+def _py_type(prop: dict[str, Any]) -> str:
+    """The Python type of a property of a component's JSON Schema."""
+    if "enum" in prop:
+        return "Literal[" + ", ".join(json.dumps(value) for value in prop["enum"]) + "]"
+    kind = prop.get("type")
+    if kind == "array":
+        return f"List[{_py_type(prop.get('items') or {})}]"
+    return {
+        "string": "str",
+        "integer": "int",
+        "number": "float",
+        "boolean": "bool",
+        "object": "Dict[str, Any]",
+    }.get(str(kind), "Any")
+
+
+def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
+    """The catalog's components as typed calls (LOOP C-15), one method each."""
+    lines = [
+        "",
+        "",
+        "# " + "=" * 76,
+        "# The components as typed calls (LOOP C-15)",
+        "# " + "=" * 76,
+        "",
+        '#: A property bound to what the application publishes or takes: ``{"path": "/runs"}``.',
+        "Bound = Mapping[str, str]",
+        "",
+        "",
+        "class SurfaceComponents:",
+        '    """Every component of the catalog as a typed call: ``app.ui.table("runs", columns=[...])``.',
+        "",
+        "    Each places the node the Canvas and the YAML write, through",
+        "    `Application.component`, which checks it against the same JSON Schema; an",
+        "    IDE completes its properties, and a type checker refuses a wrong value",
+        "    before the application runs. A property may be bound instead",
+        '    (``{"path": ...}``); a property left as ``None`` is not written.',
+        '    """',
+        "",
+        "    def __init__(self, place: Callable[..., Dict[str, Any]]) -> None:",
+        "        self._place = place",
+    ]
+    for spec in specs:
+        if not spec.get("enabled", True):
+            continue
+        for component in spec.get("components") or []:
+            schema = component.get("properties") or {}
+            required = set(schema.get("required") or [])
+            fields = dict(schema.get("properties") or {})
+            bindings = component.get("bindings") or {}
+            extra = [
+                name
+                for name in dict.fromkeys(
+                    [*(bindings.get("shows") or []), *(bindings.get("sends") or [])]
+                )
+                if name not in fields
+            ]
+            params = ["        self,", "        id: str,", "        *,"]
+            ordered = [n for n in fields if n in required] + [
+                n for n in fields if n not in required
+            ]
+            for name in ordered:
+                kind = f"Union[{_py_type(fields[name])}, Bound]"
+                params.append(
+                    f"        {name}: {kind},"
+                    if name in required
+                    else f"        {name}: Optional[{kind}] = None,"
+                )
+            for name in extra:
+                params.append(f"        {name}: Optional[Bound] = None,")
+            if component.get("events") and "action" not in fields:
+                params.append("        action: Optional[Dict[str, Any]] = None,")
+            params.append("        visible_when: Optional[Bound] = None,")
+            params.append("        weight: Optional[float] = None,")
+            doc = [
+                f'        """{component["name"]}, version {component["version"]}: {component["description"].strip()}',
+                "",
+                "        Parameters",
+                "        ----------",
+                "        id : str",
+                "            Its id on the surface, unique; ``root`` is where the surface starts.",
+            ]
+            for name in ordered:
+                field = fields[name]
+                doc += [
+                    f"        {name} : {_py_type(field)} or Bound",
+                    f"            {field.get('title', name)}: {field.get('description', '')}",
+                ]
+            for name in extra:
+                said = (
+                    "What it shows"
+                    if name in (bindings.get("shows") or [])
+                    else "Where what a person does is written"
+                )
+                doc += [f"        {name} : Bound", f"            {said}."]
+            doc += ['        """']
+            names = [*ordered, *extra]
+            if component.get("events") and "action" not in fields:
+                names.append("action")
+            names += ["visible_when", "weight"]
+            lines += [
+                "",
+                f"    def {call_name(component['id'])}(",
+                *params,
+                "    ) -> Dict[str, Any]:",
+                *[d.replace("\\", "\\\\") for d in doc],
+                "        given = {",
+                *[f"            {json.dumps(name)}: {name}," for name in names],
+                "        }",
+                "        return self._place(",
+                f"            id, {_py(component['id'])}, **{{name: value for name, value in given.items() if value is not None}}",
+                "        )",
+            ]
+    return lines
+
+
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
     """Generate Python code from UI-plugin specifications."""
     lines = [
@@ -67,10 +209,9 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         '"""',
         "",
-        "from typing import Dict",
+        "from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union",
         "",
-        "from agent_runtimes.types import UIPluginSpec",
-        "",
+        "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec",
         "",
         "# " + "=" * 76,
         "# UI Plugin Definitions",
@@ -88,6 +229,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    description={_py(str(spec.get('description', '')).strip())},",
                 f"    docs_url={_py(str(spec.get('docs_url', '')))},",
                 f"    enabled={bool(spec.get('enabled', True))},",
+                f"    catalog={_py(str(spec.get('catalog', '')))},",
+                "    components=[",
+                *[f"        {_py_component(c)}," for c in spec.get("components") or []],
+                "    ],",
                 ")",
                 "",
             ]
@@ -119,6 +264,26 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "def list_ui_plugins() -> list[UIPluginSpec]:",
             "    return list(UI_PLUGIN_CATALOGUE.values())",
             "",
+            "",
+            "#: The visual components the enabled UI plugins render, by the name a",
+            "#: surface gives them (LOOP C-13).",
+            "COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {",
+            "    component.id: component",
+            "    for plugin in UI_PLUGIN_CATALOGUE.values()",
+            "    if plugin.enabled",
+            "    for component in plugin.components",
+            "}",
+            "",
+            "",
+            "def get_component(name: str) -> ComponentSpec | None:",
+            '    """The component a layout names, or None."""',
+            "    return COMPONENT_CATALOGUE.get(name)",
+            "",
+            "",
+            "def list_components() -> list[ComponentSpec]:",
+            "    return list(COMPONENT_CATALOGUE.values())",
+            *_py_calls(specs),
+            "",
         ]
     )
     return "\n".join(lines)
@@ -141,7 +306,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { UIPluginSpec } from '../types/agentspecs';",
+        "import type { ComponentSpec, UIPluginSpec } from '../types/agentspecs';",
         "",
     ]
     for spec in specs:
@@ -155,6 +320,8 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  description: {_ts(str(spec.get('description', '')).strip())},",
                 f"  docsUrl: {_ts(str(spec.get('docs_url', '')))},",
                 f"  enabled: {'true' if spec.get('enabled', True) else 'false'},",
+                f"  catalog: {_ts(str(spec.get('catalog', '')))},",
+                f"  components: {json.dumps([{**c, 'events': c.get('events', [])} for c in spec.get('components') or []], indent=2, ensure_ascii=False)},",
                 "};",
                 "",
             ]
@@ -175,6 +342,22 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "",
             "export function listUIPlugins(): UIPluginSpec[] {",
             "  return Object.values(UI_PLUGIN_CATALOGUE);",
+            "}",
+            "",
+            "/** The visual components the enabled UI plugins render, by the name a surface gives them (LOOP C-13). */",
+            "export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> = Object.fromEntries(",
+            "  Object.values(UI_PLUGIN_CATALOGUE)",
+            "    .filter(plugin => plugin.enabled)",
+            "    .flatMap(plugin => plugin.components.map(component => [component.id, component])),",
+            ");",
+            "",
+            "/** The component a layout names, or undefined. */",
+            "export function getComponent(name: string): ComponentSpec | undefined {",
+            "  return COMPONENT_CATALOGUE[name];",
+            "}",
+            "",
+            "export function listComponents(): ComponentSpec[] {",
+            "  return Object.values(COMPONENT_CATALOGUE);",
             "}",
             "",
         ]

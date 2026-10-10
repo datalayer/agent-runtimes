@@ -1,0 +1,389 @@
+{
+  "$comment": "The transcript's grammar (LOOP A-06): the spans the Agent Inspector reads, and the lines they give. Read by src/components/teams/__tests__/sceneTranscriptFixture.test.ts (transcriptOfSpans, the reference) and agent_runtimes/tests/test_scenes_transcript.py (its Python twin), so both agree on every line.",
+  "members": [
+    {
+      "id": "sales",
+      "name": "Sales"
+    },
+    {
+      "id": "accounting",
+      "name": "Accounting",
+      "connections": [
+        {
+          "id": "odoo-accounting",
+          "name": "Odoo Accounting",
+          "label": "Odoo",
+          "tools": [
+            "odoo_accounting_aged_balance",
+            "odoo_accounting_list_invoices"
+          ],
+          "prefix": "odoo_accounting_"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "name": "the scripted scene gives its lines, in order",
+      "spans": [
+        {
+          "trace_id": "t1",
+          "span_id": "s1",
+          "span_name": "invoke_agent Sales",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:05.000Z",
+          "duration_ms": 5000,
+          "attributes": {
+            "gen_ai.operation.name": "invoke_agent",
+            "gen_ai.agent.name": "Sales",
+            "gen_ai.request.model": "anthropic:claude",
+            "gen_ai.input.messages": "[{\"role\": \"user\", \"parts\": [{\"type\": \"text\", \"content\": \"Give me the aged receivables as of today, by customer.\"}]}]",
+            "gen_ai.output.messages": "[{\"role\": \"assistant\", \"parts\": [{\"type\": \"text\", \"content\": \"Accounting says three customers owe 12,400 EUR; the oldest is 91 days.\"}]}]"
+          },
+          "status_code": "OK"
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "s2",
+          "span_name": "execute_tool ask_accounting",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:01.000Z",
+          "end_time": "2026-10-07T12:00:04.500Z",
+          "duration_ms": 3500,
+          "attributes": {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.agent.name": "Sales",
+            "gen_ai.tool.name": "ask_accounting",
+            "gen_ai.tool.call.id": "call-1",
+            "datalayer.tool.kind": "frontend"
+          },
+          "parent_span_id": "s1",
+          "status_code": "OK"
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "s3",
+          "span_name": "a2a SendStreamingMessage",
+          "service_name": "Sales",
+          "kind": "CLIENT",
+          "start_time": "2026-10-07T12:00:01.000Z",
+          "end_time": "2026-10-07T12:00:04.500Z",
+          "duration_ms": 3500,
+          "attributes": {
+            "rpc.service": "a2a",
+            "peer.service": "Accounting",
+            "a2a.message.text": "Aged receivables as of today, by customer.",
+            "a2a.answer.text": "Three customers owe 12,400 EUR; the oldest is 91 days."
+          },
+          "parent_span_id": "s2",
+          "status_code": "OK",
+          "events": [
+            {
+              "name": "a2a.artifact_update",
+              "timestamp": "2026-10-07T12:00:04.500Z",
+              "attributes": {
+                "a2a.message.text": "Three customers owe 12,400 EUR; the oldest is 91 days."
+              }
+            }
+          ]
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "s4",
+          "span_name": "execute_tool odoo_accounting_aged_balance",
+          "service_name": "Accounting",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:02.000Z",
+          "end_time": "2026-10-07T12:00:04.000Z",
+          "duration_ms": 2000,
+          "attributes": {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.agent.name": "Accounting",
+            "gen_ai.tool.name": "odoo_accounting_aged_balance",
+            "gen_ai.tool.call.id": "call-2",
+            "datalayer.tool.kind": "mcp"
+          },
+          "parent_span_id": "s3",
+          "status_code": "OK"
+        }
+      ],
+      "lines": [
+        "You → Sales: Give me the aged receivables as of today, by customer.",
+        "Sales → Accounting: Aged receivables as of today, by customer.",
+        "Accounting → Odoo: odoo_accounting_aged_balance",
+        "Accounting: Three customers owe 12,400 EUR; the oldest is 91 days.",
+        "Sales: Accounting says three customers owe 12,400 EUR; the oldest is 91 days."
+      ],
+      "kinds": [
+        "asked",
+        "asked",
+        "called",
+        "said",
+        "said"
+      ],
+      "offsets": [
+        0,
+        1000,
+        2000,
+        4500,
+        5000
+      ],
+      "never": [
+        "ask_accounting"
+      ]
+    },
+    {
+      "name": "says what is still happening, and what failed",
+      "spans": [
+        {
+          "trace_id": "t1",
+          "span_id": "f1",
+          "span_name": "invoke_agent Sales",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.000Z",
+          "duration_ms": 0,
+          "attributes": {
+            "gen_ai.operation.name": "invoke_agent",
+            "gen_ai.agent.name": "Sales",
+            "gen_ai.input.messages": "[{\"role\": \"user\", \"parts\": [{\"type\": \"text\", \"content\": \"Open invoices?\"}]}]"
+          },
+          "in_progress": true
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "f2",
+          "span_name": "a2a SendStreamingMessage",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:01.000Z",
+          "duration_ms": 1000,
+          "attributes": {
+            "rpc.service": "a2a",
+            "peer.service": "Accounting",
+            "a2a.message.text": "Open invoices."
+          },
+          "parent_span_id": "f1",
+          "status_code": "ERROR",
+          "status_message": "TASK_STATE_FAILED"
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "f3",
+          "span_name": "execute_tool odoo_accounting_list_invoices",
+          "service_name": "Accounting",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.000Z",
+          "duration_ms": 0,
+          "attributes": {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.agent.name": "Accounting",
+            "gen_ai.tool.name": "odoo_accounting_list_invoices",
+            "datalayer.tool.kind": "mcp"
+          },
+          "parent_span_id": "f2",
+          "in_progress": true
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "f4",
+          "span_name": "a2a agent card",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.000Z",
+          "duration_ms": 0,
+          "attributes": {
+            "rpc.service": "a2a",
+            "peer.service": "Accounting"
+          },
+          "status_code": "OK"
+        }
+      ],
+      "lines": [
+        "You → Sales: Open invoices?",
+        "Sales → Accounting: Open invoices.",
+        "Accounting → Odoo: odoo_accounting_list_invoices…",
+        "Accounting: could not answer: TASK_STATE_FAILED (failed)"
+      ],
+      "open": [
+        false,
+        false,
+        true,
+        false
+      ],
+      "failed": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "names a tool that is no connection’s by where it comes from",
+      "spans": [
+        {
+          "trace_id": "t1",
+          "span_id": "h1",
+          "span_name": "execute_tool write_notebook",
+          "service_name": "Accounting",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.000Z",
+          "duration_ms": 0,
+          "attributes": {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.agent.name": "Accounting",
+            "gen_ai.tool.name": "write_notebook",
+            "datalayer.tool.kind": "runtime"
+          },
+          "in_progress": true
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "h2",
+          "span_name": "execute_tool show_chart",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.000Z",
+          "duration_ms": 0,
+          "attributes": {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.agent.name": "Sales",
+            "gen_ai.tool.name": "show_chart",
+            "datalayer.tool.kind": "frontend"
+          },
+          "in_progress": true
+        }
+      ],
+      "lines": [
+        "Accounting → its runtime: write_notebook…",
+        "Sales → the page: show_chart…"
+      ]
+    },
+    {
+      "name": "says one thing once when a runtime’s own spans repeat the answer",
+      "spans": [
+        {
+          "trace_id": "t1",
+          "span_id": "o1",
+          "span_name": "a2a SendStreamingMessage",
+          "service_name": "Sales",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.100Z",
+          "duration_ms": 100,
+          "attributes": {
+            "rpc.service": "a2a",
+            "peer.service": "Accounting",
+            "a2a.message.text": "Trial balance.",
+            "a2a.answer.text": "The trial balance balances."
+          },
+          "status_code": "OK"
+        },
+        {
+          "trace_id": "t1",
+          "span_id": "o2",
+          "span_name": "invoke_agent Accounting",
+          "service_name": "Accounting",
+          "kind": "INTERNAL",
+          "start_time": "2026-10-07T12:00:00.000Z",
+          "end_time": "2026-10-07T12:00:00.100Z",
+          "duration_ms": 100,
+          "attributes": {
+            "gen_ai.operation.name": "invoke_agent",
+            "gen_ai.agent.name": "Accounting",
+            "gen_ai.input.messages": "[{\"role\": \"user\", \"parts\": [{\"type\": \"text\", \"content\": \"Trial balance.\"}]}]",
+            "gen_ai.output.messages": "[{\"role\": \"assistant\", \"parts\": [{\"type\": \"text\", \"content\": \"The trial balance balances.\"}]}]"
+          },
+          "parent_span_id": "o1",
+          "status_code": "OK"
+        }
+      ],
+      "lines": [
+        "Sales → Accounting: Trial balance.",
+        "Accounting: The trial balance balances."
+      ]
+    }
+  ],
+  "record": {
+    "member": {
+      "id": "accounting",
+      "name": "Accounting",
+      "connections": [
+        {
+          "id": "odoo-accounting",
+          "name": "Odoo Accounting",
+          "label": "Odoo",
+          "tools": [
+            "odoo_accounting_aged_balance",
+            "odoo_accounting_list_invoices"
+          ],
+          "prefix": "odoo_accounting_"
+        }
+      ]
+    },
+    "entries": [
+      {
+        "uid": "t1",
+        "sessionUid": "s1",
+        "deploymentUid": "d1",
+        "version": 1,
+        "kind": "turn",
+        "summary": "Aged receivables?",
+        "payload": {
+          "asked": "Aged receivables?",
+          "answered": "Three customers owe 12,400 EUR."
+        },
+        "createdAt": "2026-10-07T12:00:05Z"
+      },
+      {
+        "uid": "c1",
+        "sessionUid": "s1",
+        "deploymentUid": "d1",
+        "version": 1,
+        "kind": "tool_call",
+        "summary": "odoo_accounting_aged_balance called",
+        "payload": {
+          "tool": "odoo_accounting_aged_balance",
+          "arguments": {},
+          "result": "…"
+        },
+        "createdAt": "2026-10-07T12:00:02Z"
+      },
+      {
+        "uid": "o1",
+        "sessionUid": "s1",
+        "deploymentUid": "d1",
+        "version": 1,
+        "kind": "output",
+        "summary": "Three customers owe 12,400 EUR.",
+        "payload": {},
+        "createdAt": "2026-10-07T12:00:05Z"
+      }
+    ],
+    "lines": [
+      "You → Accounting: Aged receivables?",
+      "Accounting → Odoo: odoo_accounting_aged_balance",
+      "Accounting: Three customers owe 12,400 EUR."
+    ],
+    "first_at": "2026-10-07T12:00:02Z",
+    "without_conversations": {
+      "entries": [
+        1,
+        2
+      ],
+      "lines": [
+        "Accounting → Odoo: odoo_accounting_aged_balance",
+        "Accounting: Three customers owe 12,400 EUR."
+      ]
+    }
+  }
+}

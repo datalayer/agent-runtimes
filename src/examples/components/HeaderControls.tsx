@@ -30,18 +30,14 @@ export const HeaderControls: React.FC<HeaderControlsProps> = ({
 
   return (
     <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        cursor: 'pointer',
-        '&:hover': {
-          opacity: 0.8,
-        },
-      }}
+      display="flex"
+      alignItems="center"
+      gap={2}
+      cursor="pointer"
+      hover={{ opacity: 0.8 }}
       onClick={onToggleContextTree}
     >
-      <Box sx={{ width: '120px', height: '30px' }}>
+      <Box width="120px" height="30px">
         <Sparklines data={sparklineData} width={120} height={30}>
           <SparklinesLine
             color="var(--fgColor-accent, #16A085)"

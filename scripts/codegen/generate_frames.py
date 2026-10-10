@@ -53,13 +53,13 @@ FIELDS = (
     "architecture",
     "prompts",
     "skills",
-    "tools",
+    "backend_tools",
     "mcp_servers",
     "guards",
 )
 
 #: Python field → TypeScript property, where they differ.
-CAMEL = {"mcp_servers": "mcpServers"}
+CAMEL = {"mcp_servers": "mcpServers", "backend_tools": "backendTools"}
 
 
 def load_frame_specs(specs_dir: Path) -> list[dict[str, Any]]:

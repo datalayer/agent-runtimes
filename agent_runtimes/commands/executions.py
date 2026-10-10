@@ -26,4 +26,9 @@ from __future__ import annotations
 
 from datalayer_core.cli.commands.executions import app
 
+# A crash's traceback shows the error, never the frames' locals (a runtime's
+# token, the account's key): every Typer app reachable from this CLI says so,
+# core's own included.
+app.pretty_exceptions_show_locals = False
+
 __all__ = ["app"]

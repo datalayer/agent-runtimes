@@ -1,0 +1,855 @@
+---
+sidebar_position: 1
+title: The floating assistant
+---
+
+# The floating assistant
+
+A chat can live on the page as a **character**, after the Office Assistant:
+it sits in a corner, idle and alive, acts out what the agent is doing, and
+says the agent's words in a speech balloon. Click it and the conversation
+opens in a balloon beside it; drag it and it moves, the conversation
+following; send it away and it leaves a way back.
+
+It is the fifth way `ChatFloating` shows a chat, and needs nothing from the
+page, as the other floating modes do.
+
+## The five display modes
+
+The header of an open chat offers the modes as a segmented toggle, in this
+order (`CHAT_VIEW_MODES`, in `chat/viewModes.ts`):
+
+| Mode | Label | What it is |
+| --- | --- | --- |
+| `floating` | Full-height popup | A panel pinned to the edge of the window, full height. |
+| `floating-small` | Floating popup | A popup over a round button in a corner. |
+| `floating-draggable` | Floating draggable | The popup with a handle, moved about the window. |
+| `assistant` | Floating assistant | A character in a corner that speaks in a balloon (a paper clip in the toggle). |
+| `sidebar` | Sidebar panel | The chat docked into the page. |
+
+The four floating modes need nothing from the page. *Sidebar panel* has to
+dock somewhere: the host passes `sidebarMountPoint` (an element, or a
+selector for one), and without it the option is shown greyed out, with the
+tooltip *No mount point for a sidebar on this page*.
+
+On a narrow screen (under 640 pixels) the character is not drawn: the round
+button of the floating popup stands in its place.
+
+## The character and its motions
+
+The character acts out the state of what answers — the same state an
+application's [presence](./presence.mdx) says in its line of status — plus
+three moments of its own. One set of motions serves every character
+(`chat/assistant/state.ts`, `AssistantStage.tsx`):
+
+| State | When | What it does |
+| --- | --- | --- |
+| `idle` | Between turns | Floats gently and blinks now and then. |
+| `thinking` | A turn runs and no tool is open | Tilts its head, eyes up. |
+| `working` | A tool has not returned | A quick sway, eyes down to the work. |
+| `waiting` | A tool waits on the person's approval | Calls for attention; the balloon holds the approval, with *Approve* and *Deny*. |
+| `paused` | Its owner paused its deployment | Dozes: its eyes shut, its breath slow, a little greyed; the balloon says it is paused. |
+| `greeting` | It has just appeared | Two hops on arrival. |
+| `speaking` | The answer is being written | Its mouth moves while the words arrive. |
+| `goodbye` | It is being sent away | Shrinks away. |
+
+The state is read from the chat itself — whether a turn is running and the
+newest tool call — never from the model's words (`assistantStateOf`); paused
+is the deployment's, said by its host. Going wins, being short; then
+*paused* — a paused application neither greets nor speaks; then arriving;
+then *waiting*, which must never be missed; then *speaking* over *thinking*.
+
+Nothing moves for a reader whose system asks for reduced motion
+(`prefers-reduced-motion`): each state stands as one still frame — paused,
+its eyes shut. A character one brings dozes with its own snooze or sleep
+animation when it has one (`IdleSnooze`, `Sleep`, `Rest`…), else idles.
+
+## The speech balloon
+
+**A click on the character toggles the conversation**: closed, it opens; open,
+it closes. A press that moves is a drag, not a click.
+
+### Closed: a peek
+
+While the conversation is closed, **what the agent has to say peeks from a
+small balloon over the character**, without opening the conversation: one
+short line and the actions it needs. A click on the line opens the
+conversation, where it is.
+
+- **A new message**: the agent's newest words, as the Office Assistant said
+  them (`latestSaying`) — only its own messages with text, not the person's
+  words nor a tool call, Markdown read as plain words — cut to their first
+  words (60 characters, at a word, `peekLine`). It shows while the words
+  arrive and for 12 seconds after, and on a hover until the conversation has
+  been opened — opening it counts the words as read; its × puts it away.
+- **An approval** the agent waits on is answered in the peek (T-23):
+  *Waiting for you*, what it asks to do, the rule it was asked under,
+  **Approve** and **Deny**, and how many more wait (*2 more*). It has no ×:
+  it stays until it is answered, there or in the conversation. The answer goes
+  where every approval of the application is answered (the Tool Approvals
+  page, its rules card, its page, the channels): over the ai-agents `/ws`,
+  where each decision is broadcast, so an approval answered in the balloon
+  leaves every list. In a LOOP workspace the assistant reads them as the
+  rules card does, by the application's id (`appId` in its config) and only
+  signed in; the chat's own floating assistant answers with the chat's own
+  `pendingApprovals`, `onApproveApproval` and `onRejectApproval`. Without
+  them, the balloon says *Waiting for you — open the conversation to
+  answer.*;
+- **A notification**: while its deployment is paused, the peek says
+  *Paused — it answers again once it is resumed.*
+
+With nothing new to say, a hover shows the chat's `description` — its
+welcome. The peek stays inside the window: it opens toward the middle of
+the page from whichever half the character stands in, and below the
+character when it stands near the top (`balloonSide`).
+
+### Open: the conversation as a balloon
+
+Open, **the balloon is the conversation itself**, over the character
+wherever it was put down, its tail toward it — above it, below it near the
+top of the window, beside it when the window is too short for either:
+
+- the history, drawn as the chat draws its messages, **the welcome first**
+  (the chat's `description`, never sent nor kept), and an approval waiting
+  as a message with **Approve** and **Deny**;
+- **the composer last**, its Lexical variant;
+- **a header line that counts it** — *Conversation · 6*, the messages of the
+  person and the agent, not the tool calls — and nothing else on top;
+- **no footer**, and none of the session's controls
+  (agents, model, tools, skills, context), no turn footers, no *Powered by*;
+- **a close control** in its corner (×) — closing keeps the conversation,
+  and Escape closes it too;
+- 380px wide and **60% of the window tall, 560px at most**: the history
+  scrolls inside it, kept on the newest message, and the composer stays in
+  sight at the bottom;
+- *Ask a decision* beside the composer, when it is given a runtime to ask
+  (below).
+
+That is the `history` display. The other one is `current`.
+
+### History or current
+
+**How the balloon shows the conversation is a setting of its own**,
+`balloonDisplay` on `ChatFloating` and `AssistantStage`, `balloon` in the
+LOOP assistant plugin's config, and `interface.balloon` in an application's
+Appspec (`history` or `current`; the page's own when unsaid):
+
+| | `history` | `current` |
+| --- | --- | --- |
+| Closed | every message of the conversation, the person's and the agent's, under *Conversation · 6*, scrolled to the newest (a peek of the newest words when the host gives no messages) | **Now**, then what is said or done now — the answer as it is written, whole (four lines at most, nothing to scroll), or the tool it calls |
+| Open | the whole conversation under *Conversation · 6*, scrolled, the composer last | that one line over the composer, 230px tall, no header, no history |
+| Looks | the plain balloon, the theme's border | a compact speech bubble edged with the theme's accent, *Now* with a dot that breathes while the agent works (still under reduced motion) |
+| Default for | the floating chat (`ChatFloating`), the LOOP workspace's assistant | a team's members (`A2ATeamGraph`) |
+
+**The balloon draws with the chat's own components**: its history is the
+chat's items as the chat holds them (`DisplayItem`s: messages and tool
+calls), listed by `ChatMessageList` in its `compact` density (no avatars,
+smaller bubbles and tool rows); the agent's words are drawn by the chat's
+markdown (`ChatMarkdown`: lists, code blocks, tables), the tool calls by
+the chat's tool card (`ToolCallDisplay`, with its approvals), and the three
+dots are the chat's. Drawn large (*Expand*), it is the same list in the
+chat's own density: closed with the dialog's ×, or Esc; in a page area,
+with its *Shrink* icon.
+
+```tsx
+<ChatFloating defaultViewMode="assistant" balloonDisplay="current" … />
+```
+
+```yaml
+interface:
+  assistant: wizard
+  balloon: current   # or history
+```
+
+In `current` the balloon replaces its content as the turn goes on —
+*Thinking…*, then the tool, then the words — and the words are read out
+once they have all arrived (`aria-busy` while they stream), not at every
+token. An application embedded as an assistant takes `interface.balloon`;
+its conversation, drawn by the page that hosts it, opens as it is drawn
+there.
+
+### A large visual in the balloon
+
+What goes with the words — a notebook given today, a chart or a table later
+— shows **in either display, and while a tool line is up**: compact in the
+balloon (`balloon.attachment`, a notebook's read-only preview). When it is
+the compact form of **a large visual** (`balloon.visual`: an id, a title,
+and how it is drawn large), the balloon offers *Expand*, and a click on the
+compact form does the same:
+
+- with **`expandTarget`** (on `AssistantStage`, `ChatFloating` and a
+  team's members), a ref to an element of the page, the visual is drawn
+  there, through a portal, scrolled to and focused, with a close control;
+  `expandOnArrival` draws it there as soon as it arrives;
+- **without one**, it opens in a dialog over the page, about 80% of the
+  window wide and tall, in the theme's colours; the focus stays in it, and
+  Esc closes it.
+
+The expanded visual stays while the balloon moves on to other words, until
+it is closed or another is expanded. **A notebook's large view is the one
+that runs**: `notebookBalloonVisual(notebook, title)` draws `TeamNotebook`,
+editable, on the browser sandbox (a Pyodide kernel in the page), loaded only
+once it is expanded.
+
+```tsx
+const area = useRef<HTMLDivElement>(null);
+<AssistantStage
+  balloon={{
+    text: 'Here is the notebook.',
+    attachment: <NotebookPreview notebook={nb.data} title="The notebook" />,
+    visual: notebookBalloonVisual(nb, 'The notebook'),
+  }}
+  expandTarget={area}   // leave out for the dialog
+  …
+/>
+<div ref={area} />
+```
+
+### Tool calls in the balloon
+
+**When the agent calls a tool, the balloon shows it as the chat does**: the
+chat's tool card, compact, *Executing…* while it runs, then *Complete* or
+*Failed*; a screen reader hears it in plain words, once as it starts and
+once as it ends: *Using **list_invoices**…*, *Done: list_invoices*,
+*list_invoices failed*. The name is the one the tool's spec displays when it
+has one (`Current Time` for `current_time`), else its name without its MCP
+server's prefix; the mark beside it is the catalogue's (its MCP server's,
+skill's or tool set's, `SpecMark`), a tool otherwise. Where the runtime says
+what a tool does in its own words, those are its card's summary (*Writing a
+notebook…*, *Asking Accounting…*); a LOOP turn's `activity`, which names no
+tool, is the agent's message saying it.
+
+- **Closed**, in either display, the peek is the tool line while the call
+  runs and while its turn goes on — the person sees what the agent is doing
+  without opening it;
+- **open in `current`**, it replaces the line said now;
+- **open in `history`**, the call is a compact line of the conversation, as
+  the chat draws every tool call (`ToolCallDisplay`).
+
+A screen reader hears a tool line **once when the call starts and once when
+it ends**, politely, from a live region of its own — never while it runs,
+nor at every redraw (`toolAnnouncement`).
+
+The lines are read from the chat's items (`newestToolLine`: the newest item,
+when it is a tool call), from a LOOP turn's `activity`, or, in a team, from
+the steps a peer tells over A2A (`toolLineOfStep`).
+
+### In a team
+
+A team's members (`A2ATeamGraph`) speak in `current` balloons: Sales says
+*Asking Accounting…* while its `ask_accounting` call runs, and Accounting
+*Using list_invoices…* while it calls Odoo, from the tool events A2A carries.
+When Accounting gives a notebook, **Sales' balloon shows it read-only**:
+jupyter-react's `Notebook` with `readonly`, on `ServiceManagerLess` — no
+kernel, no Pyodide, nothing to run or edit — loaded only when a notebook
+arrives (`NotebookPreview`), scrolled within the balloon, with *Open it below
+to run it* and *Expand*. The notebook that runs (`TeamNotebook`, on the
+browser sandbox) is the balloon's large visual, drawn into the area the page
+names under the graph (`expandTarget` on the member) as it arrives; a click
+in the balloon scrolls to it and focuses it. Without an area, *Expand* opens
+it in a dialog.
+
+### Suggestions in the balloon
+
+While the agent waits for a question (idle, or greeting), the balloon offers
+its **suggestions as chips** under its words, in either display. Click one
+to send it as the prompt, the same as typing it and pressing *Send*. Each
+chip is a button whose accessible name is the prompt it sends (*Ask: Which
+customer invoices are still open?*). The chips go away while the agent
+works.
+
+```tsx
+<AssistantStage
+  suggestions={[{ label: 'Open invoices', prompt: 'Which invoices are open?' }]}
+  onSuggestion={suggestion => send(suggestion.prompt)}
+  …
+/>
+```
+
+`ChatFloating` offers its chat's `suggestions` this way and sends them to
+its chat. A team's member takes `suggestions` and `onSuggestion`: the team
+example and the home page put Sales' starters there. The row of buttons under
+the graph is gone, and the row keeps only the trial key's clock.
+
+### While it works: three dots
+
+While the agent thinks, works or waits and has written nothing yet, the
+balloon shows the chat's own **three dots** (`TypingDots`, the same
+component the conversation uses). In `current` they follow the line said now
+(*Thinking*, *Using list_invoices*, *Asking Accounting*), or stand alone
+when there is no line. In `history` they are the last item. They stop when
+the answer's words stream in, or when the turn ends. They hold still, but
+stay visible, for a reader who asks for reduced motion, and a screen reader
+does not hear them: the balloon's live region already says the state.
+
+### More, less, and the history large
+
+When the words in a `current` balloon are cut, by the four lines it shows or
+because the host shortened them (a team member's `saying`, its uncut text in
+`fullText`), a **more** button follows them. It shows the whole text in the
+balloon, taller and scrolled, and **less** folds it back. It is a button
+with `aria-expanded`, and it shows only when something was cut.
+
+In `history`, the header's **Expand** button draws the whole history large:
+every message, the tool line and what goes with the words. It opens in the
+balloon's large-visual dialog, or in the host's `expandTarget` when there is
+one. **Shrink** (or Esc) puts it back in the balloon.
+
+## The assistant's menu
+
+Right-click the character, press Shift+F10 or the ContextMenu key while it
+has the focus, or long-press it on a touch screen. A menu opens where the
+pointer is, and Esc or a click outside closes it. Each host shows only the
+entries it supports:
+
+| Entry | Shown when the host passes |
+| --- | --- |
+| Inspect the agent… | `inspector`: the Agent Inspector in a large dialog, loaded only then |
+| Agent Details… | `about`: the agent's `AgentDetails` in a dialog, loaded only then. On a runtime (`about.agentId` and `about.apiBase`; the floating chat fills them from its `endpoint`) it reads the spec, MCP servers and codemode there; an agent in the page shows its spec, model, description and where it runs |
+| Code Sandbox Details… | `sandbox`: where the agent's code runs (Pyodide in the page, a local or remote Jupyter server, a Datalayer runtime, the runtime's own `eval`), its URL without tokens, its kernel, and its variables (jupyter-react's `KernelVariables`, with its renderers; ipywidgets live where the page talks to the kernel). The floating chat takes it from the runtime's codemode status, the Loop from its sandbox, a team's entry from the notebook open under the graph |
+| Open / Close the conversation | always, unless `conversationLabel={false}`; a host may rename it (*Ask Sales*) |
+| Stop the turn | `onStop`, while the agent works |
+| New conversation, Clear the conversation | `onNewChat`, `onClear` |
+| Suggestions | `suggestions` and `onSuggestion` |
+| Balloon: History / Current | `onBalloonDisplayChange`; the radio shows the display in use |
+| Change character… | `onChangeCharacter` |
+| Mute / Unmute speech | `speech` |
+| Reset position | `onResetPosition`, after a drag |
+| About this agent | `about`: its name, spec, model and where it runs |
+| Send away | always: for now, for this session, or for good, as the hover × does |
+
+A host or a plugin adds its own entries with `contextMenu`
+(`{id, label, onSelect, checked?, disabled?, group?}`). In the LOOP
+workspace, plugins contribute them to `loop.assistant.menu`
+(`LoopAssistantMenu`).
+
+`ChatFloating` keeps the balloon display chosen in the menu, and tells the
+host with `onBalloonDisplayChange`. It records its agent into `inspector`
+(OpenTelemetry spans, drawn by the Agent Inspector),
+stops and starts its chat, and mutes its voice. A team's members keep
+their own display choice, and their history lists what each was asked,
+said and did.
+
+## Ask a decision
+
+Given a runtime to ask, **the balloon offers *Ask a decision***: a typed
+decision asked of Jev, the typed-decision model
+(`cloudflare:wrk/typesafe/jev`), without going through the agent — beside the
+composer in the open conversation; in a LOOP workspace, whose conversation
+is the workspace's own, in the character's peek. It opens a small form:
+
+- **Situation**: the text the question is about — a ticket, a message, a
+  review;
+- **Question**: a statement to hold or not, or a question;
+- **Type**: *Yes or no*; *A choice*, with its options listed one per line (at
+  least two); *A score*, with its range, from 1 to 5 by default;
+- **Name**: what the answer is said under (*Answer* when left empty).
+
+*Ask* sends it to the runtime's `POST /api/v1/configure/inference/decisions`,
+the route that asks as the agent's `decide` tool does, through ai-inference,
+with the token the runtime calls its models with — so the token path is the
+same as the tool's. The answer comes back in the balloon, in plain words with
+its confidence:
+
+| Type | Answer |
+| --- | --- |
+| Yes or no | `Urgent: yes (0.87)` — a *no* is said with the probability that the statement does not hold |
+| A choice | `Team: Billing (0.94)` |
+| A score | `Score: 4 of 5 (0.5)` on a range of numbers; `Severity: blocking (0.7)` on a rubric of words |
+
+When nothing was decided, the runtime's sentence is said instead (*Nothing was
+decided: …*). While the form or its answer is on screen, the balloon stays,
+hovered or not; *Cancel* (or Escape) puts it away, *Ask another* clears the
+answer.
+
+The floating assistant of a chat takes the runtime as `decisions`; in a LOOP
+workspace, `LoopAssistantPlugin` takes it in its config. Without it, the
+balloon does not offer to ask:
+
+```tsx
+<ChatFloating
+  defaultViewMode="assistant"
+  decisions={{ serverUrl: 'http://localhost:8765' }}
+  {...chatProps}
+/>
+
+configurePlugin(LoopAssistantPlugin, {
+  app: app.interface.assistant,
+  decisions: { serverUrl: runtimeUrl, token },
+});
+```
+
+`token` is sent as a bearer when the runtime needs one; the machine's own
+server does not. See [The decide tool](../cli#the-decide-tool) for
+`/decisions`, the same route from the terminal.
+
+### The Decide example
+
+`AgentDecideExample` (`src/examples/AgentDecideExample.tsx`) draws the
+*Decide* application of the catalogue (agentspecs `apps/decide.yaml`: the
+agent `example-simple` with the `decide` tool, instructions to answer by
+asking a typed decision, decision questions as its starters, and one rule —
+deciding is a read, done without asking) in the LOOP workspace on the Local
+target, with the floating assistant beside it. Ask in the chat (*Is this
+ticket urgent? 'Help! My payouts have been failing for 3 days.'*) and the agent
+calls `decide`; or hover the character and *Ask a decision* from its balloon.
+
+It needs a local agent-runtimes server that reaches ai-inference. Start it
+with the key of your Datalayer account, never printed nor committed:
+
+```bash
+AGENT_RUNTIMES_INFERENCE_PROVIDER_OVERRIDE=datalayer \
+DATALAYER_AI_INFERENCE_URL=https://r1.datalayer.run \
+DATALAYER_AI_INFERENCE_API_KEY="$DATALAYER_API_KEY" \
+  python -m agent_runtimes serve --port 8765
+```
+
+then the examples (`npm run examples:vite`, on port 3000), and pick
+*AgentDecideExample* in their selector; it needs no sign-in. A server on
+another port is named in the page's address:
+`http://localhost:3000/?agentRuntimesUrl=http://localhost:<port>`.
+
+## The floating popup speaks too
+
+The same reading of the agent's words serves the plain *Floating popup*.
+Closed, its round button **blinks while the agent has said something not yet
+read** — a soft pulse of the accent, with a ring going out — and **hovered,
+it shows those words in the same balloon**, with *Open the conversation*.
+Once the chat is opened the words count as read and the blinking stops.
+Under reduced motion both stand still: no blink, and the ring is held around
+the button instead of going out.
+
+## Sending it away, and calling it back
+
+Hovering the character shows a small control in its corner. Its menu sends
+the assistant away for as long as the person says:
+
+| Choice | How long | Kept in |
+| --- | --- | --- |
+| *Hide for now* | This page | Nothing: a reload brings it back |
+| *Hide for this session* | Until the browser session ends | The session's storage |
+| *Don't show again* | For good | The browser's local storage |
+
+It says goodbye, and the popup's round button takes its place. Clicked, that
+button **calls it back** when it went *for now*, and **opens the chat**
+otherwise. Choosing *Floating assistant* in the header's toggle always calls
+it back, however long it went for, and forgets the choice.
+
+A press that moves is a drag, not a click: dragging the character never
+opens the conversation.
+
+## Out of the way
+
+The character never stands over something the person needs:
+
+- **an open dialog or overlay** — a Primer `Dialog`, an `ActionMenu` or
+  `SelectPanel` overlay, a native `<dialog>`, anything with the role
+  `dialog` or `alertdialog`;
+- **another chat's composer** — the box one types in, in any chat of the
+  page (its own conversation's composer does not count);
+- **the pointer at work** — a press, or a drag, over it or within 24 pixels
+  of it, outside the character and its own conversation.
+
+It **steps aside**: it fades out, leaves the tab order and lets the pointer
+through to what was under it. It comes back once the dialog or the composer
+is no longer under it, and once the pointer has been away from it for a
+second and a half — a pointer still moving there keeps it aside, so it does
+not reappear under the pointer. A pointer only passing by does not move it,
+and its own menu, open, puts nothing aside. The page is looked over every
+400 milliseconds (`useKeepClear`, in `AssistantStage.tsx`; the rules in
+`state.ts`).
+
+## Pictured
+
+Each state of the paper clip — idle, thinking, working, waiting for you (an
+approval peeking, with *Approve* and *Deny* and *1 more*), paused (its
+notification peeking), speaking (a new message peeking by its first words) —
+the paper clip stepped aside for a dialog, and the conversation open as its
+balloon (`assistant-open`: *Conversation · 2* over the history, the welcome
+first, the Lexical composer last, no footer) and the `current` balloon saying
+the tool it calls (`assistant-current`: *Now*, *Using list_invoices…*) are
+pictures, in the light and the dark mode, that `npm run test:pictures`
+takes in Chrome and compares with the ones kept in `pictures/baselines/`. A
+change in how the assistant is drawn fails that run with a picture of the
+difference; see *Pictures as tests* in `TESTING.md` to accept it. So are the
+wizard, the cat, the L👀P eyes and a character contributed by a plugin (the
+owl below), each idle in its light and its dark drawing:
+`npm run test:pictures -- -g "assistant|character"` takes only these.
+And the gallery's grid below, every character in every state, is one picture
+per mode (`assistant-gallery-light`, `assistant-gallery-dark`).
+
+## The gallery
+
+The *Assistant Gallery* example (`src/examples/AssistantGalleryExample.tsx`,
+in the examples' *Chat* group) shows every representation of the assistant,
+from static data — no agent, no server, no sign-in:
+
+- **every character**: Datalayer's four, the owl the example plugin
+  contributes to `loop.assistant.character`, and *Pixel*, a small test sprite
+  of our own read through the clippy.js reader (`readClippyCharacter`);
+- **every state**: idle, greeting, thinking, working, waiting (the approval in
+  its balloon, with *Approve* and *Deny*), speaking, paused, stepped aside (a
+  composer laid over it) and goodbye;
+- **light and dark**, one or side by side, and **reduced motion**;
+- **one at a time**: pick a character and a state, *Say something* for the
+  agent's latest saying in the balloon, drag the character, send it away
+  (its own menu, or *Send it away*) and call it back;
+- **the two balloon displays**: a *History* toggle (on, the conversation so
+  far, every message, as *Say something* adds to it; off, *Current*); *Use a
+  tool* steps a tool line through *Using list_invoices…*, *Done:
+  list_invoices* and *list_invoices failed*; *Give a notebook* puts a small
+  recorded notebook in the balloon, read-only, with jupyter-react's notebook
+  (no kernel, loaded only then), and *Expand* draws it large and editable on
+  the browser sandbox — into the area under the stage, or, with the *Expand
+  into the page* toggle off, in an overlay;
+- **a grid**: all the characters by all the states, small, for a quick visual
+  check (`AssistantGalleryGrid`, in `src/examples/utils/`), and under it the
+  balloon's displays for the chosen character — the history listed, a current
+  balloon with a tool line, and one with the same notebook
+  (`GalleryBalloons`).
+
+Every cell is the real `AssistantStage`; nothing in the gallery is drawn for
+it.
+
+## Datalayer's characters
+
+Four characters are drawn for this assistant and owned by Datalayer
+(`ASSISTANT_CHARACTERS`, in `chat/assistant/characters.tsx`):
+
+| Id | Name |
+| --- | --- |
+| `paperclip` | Paper clip (the default) |
+| `wizard` | Wizard |
+| `cat` | Cat |
+| `eyes` | L👀P eyes |
+
+Each is an SVG drawing that names its moving parts — `assistant-body`,
+`assistant-pupils`, `assistant-lids`, `assistant-mouth` — and the stage
+animates those parts by state, so every character has every motion. An id
+that is not one of these is refused with the list of those that are.
+
+### In dark mode
+
+Each character has a drawing of its own for the dark page, not the light
+drawing on black. The stage reads the chat's colour mode from the theme
+(Primer's `colorScheme`) and draws the matching one (`Drawing({ size,
+mode })`, `mode` being `'light'` or `'dark'`). The dark drawings take the
+`loop` theme's dark tokens: lines that were ink become the dark mode's ink
+(`loopColors.inkDark`), the paper clip's steel and the wizard's violets go
+lighter, the cat's whiskers turn light and its outline gives way to its fur,
+and the L👀P eyes keep their whites with a near-black pupil (`loopColors.black`)
+and a grey lid so a blink still shows.
+
+Both drawings are tested for contrast as the theme's own faces are
+(`assistant-characters-contrast.test.tsx`, after primer-addons'
+`loopContrast.test.ts`): each character names its key colours by mode
+(`keyColours`) — every colour along its edge, and its eyes — and the test
+holds them at **3 to 1**, WCAG's threshold for graphics and the parts of an
+interface one must see (SC 1.4.11, non-text contrast; 4.5 to 1 is for body
+text), against the page's canvas and every accent's stage, light and dark: the
+edge against the page, the pupil against the white of the eye, and the eye
+against what it sits on (the page, or the face). It also checks the drawing
+uses those colours. The light paper clip's wire was darkened to pass it
+(`#9AA0AA`, 2.2 to 1 on white, to `#7A808A`), and the light cat got an
+outline.
+
+## A character from a plugin
+
+The characters are a contribution point, `loop.assistant.character`
+(`LoopAssistantCharacter` in `apps/core`): the catalogue is what the enabled
+plugins contribute and nothing else. Datalayer's four come from their own
+plugin (`AssistantCharactersPlugin`, `apps/plugins/assistant-characters`);
+disabled, they leave the catalogue. A plugin contributes a character — a
+drawing, as Datalayer's are, or a character read from a file — under an id:
+
+```tsx
+import { contribution, definePlugin } from '@datalayer/reactor';
+import { LoopAssistantCharacter } from '@datalayer/agent-runtimes/lib/apps/core';
+import type { AssistantCharacter } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
+
+const OWL: AssistantCharacter = {
+  id: 'owl',
+  name: 'Owl',
+  // An SVG naming the parts the stage animates: assistant-body,
+  // assistant-pupils, assistant-lids, assistant-mouth; `mode` is the chat's.
+  Drawing: ({ size, mode = 'light' }) => <svg width={size} height={size}>…</svg>,
+};
+
+export const OwlCharacterPlugin = definePlugin({
+  name: '@datalayer/example-plugin-owl-character',
+  contributes: [
+    contribution(LoopAssistantCharacter, { id: 'owl', character: OWL }, { id: 'owl' }),
+  ],
+});
+```
+
+A page reads the catalogue from its reactor with `assistantCharactersOf`
+and a character by id with `assistantCharacterNamed`, which refuses an id no
+enabled plugin contributes with the list of those that are:
+
+```tsx
+const reactor = buildReactorFromPlugins([AssistantCharactersPlugin, OwlCharacterPlugin]);
+await reactor.start();
+assistantCharactersOf(reactor).map(entry => entry.id); // paperclip, wizard, cat, eyes, owl
+<ChatFloating defaultViewMode="assistant" assistantCharacter={assistantCharacterNamed(reactor, 'owl')} … />
+```
+
+The *Assistant* example does just this: its picker lists what the
+enabled plugins contribute, the owl of `src/examples/utils/owlCharacterPlugin.tsx`
+among them, and draws the one chosen.
+
+### Named by an application, chosen by a person
+
+An application names its character in its Appspec, by the id a plugin
+contributes it under: `interface.assistant: owl`. The spec (agentspecs
+0.0.27) checks only the id's shape — lowercase letters and digits, words
+joined by a hyphen, at most 64 characters — since which characters exist is
+known where the plugins are, not in the spec. A person may choose a character
+of their own, and whether the assistant shows at all, in their settings; on
+an application's page, **the application's own character wins** over the
+person's.
+
+`assistantCharacterFor(contributed, { app, person })` decides, in that order,
+and the paper clip when neither says: it returns the id, the character and
+who said it (`app`, `person` or `default`), or — when nothing enabled
+contributes that id — a sentence saying so, with the ids there are. An unknown
+id is never replaced by another character.
+
+### In an embedded application
+
+The embed's assistant mode (`<datalayer-app mode="assistant">`, `AppEmbed`)
+decides the same way, with no person's choice — a visitor to another
+product has none there: the application's own character, else the paper clip,
+looked up with `assistantCharacterFor` in what Datalayer's characters and the
+host's plugins contribute (`AppEmbed`'s `plugins`; the element takes none, so
+it draws one of the four). An id nothing contributes is said in the element's
+place. See [Embedding](../apps/embedding).
+
+### In the LOOP workspace
+
+`LoopAssistantPlugin` (`apps/plugins/assistant`) draws the assistant over a
+LOOP workspace — the `loop` page, an application's page, its Preview —
+through the workspace's `root` slot, from what the enabled plugins contribute.
+It is configured with the application's character and the person's:
+
+```tsx
+import { configurePlugin } from '@datalayer/reactor';
+import { AssistantCharactersPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant-characters';
+import { LoopAssistantPlugin } from '@datalayer/agent-runtimes/lib/apps/plugins/assistant';
+
+<AppRenderer
+  app={app}
+  plugins={[
+    AssistantCharactersPlugin,
+    OwlCharacterPlugin,
+    configurePlugin(LoopAssistantPlugin, {
+      app: app.interface.assistant,
+      person: 'cat',
+      appId: app.id,
+    }),
+  ]}
+/>
+```
+
+It acts out what the application is doing as its chat says it
+(`LoopChatTurn`'s `presence`: thinking, working while a tool runs, waiting
+for the person, paused when its deployment is, idle) and speaks while the
+answer is written; it says the agent's newest words in its balloon while the
+conversation is out of sight, holds there the approvals the application
+waits on when it is given the application's id (`appId`), answered with
+*Approve* or *Deny*,
+and is dragged and sent away as the chat's own assistant is. Clicked, it opens
+and closes the conversation panel on a page layout, and takes the person to
+the composer where the conversation is always on screen. An id nothing
+enabled contributes is said where the character would stand. Datalayer's
+landing adds it with the person's choice from their settings
+(`/settings/appearance`), unless they hid it.
+
+## A character one brings
+
+:::caution The characters of Office are Microsoft's
+
+Clippy, Merlin, Links, Rocky, The Dot and the other characters of Microsoft
+Office are Microsoft's. They are not shipped with Agent Runtimes. Load only
+a character file you have the right to use.
+
+:::
+
+A person or an organisation can bring a character of their own, in one of
+two formats. The readers (`chat/assistant/formats`) run **in the page**: the
+file is read there, drawn there, and **sent nowhere**.
+
+- **A Microsoft Agent character** — one `.acs` file:
+  `readAcsCharacter(await file.arrayBuffer())`. Its header, character,
+  palette, states, animations, frames, branches and sounds are read, its
+  images decompressed and composited into a sprite sheet on a canvas, its
+  mouth overlays composited too, one cell per mouth.
+- **A Microsoft Agent character for the web** — an `.acf` file and the `.aca`
+  files it names, picked together: `readAcfCharacter(acf, { 'greet.aca':
+  buffer, … })`. The `.acf` holds the character (its size, palette, states,
+  names) and names one `.aca` per animation; each `.aca` holds that
+  animation's frames, images, sounds and mouths. Every `.aca` the `.acf`
+  names has to be picked, the very one it names (their checksums agree);
+  otherwise it is refused in a sentence. It is drawn as an `.acs` is.
+- **A clippy.js character** — its `agent.js`, its map image (`map.png`), and
+  a `sounds-mp3.js` or `sounds-ogg.js` if there is one:
+  `readClippyCharacter({ agentJs, mapPng, soundsJs })`. The JavaScript is
+  read as data and never run: code where data is expected is refused.
+
+Both give one shape, `AssistantCharacterData` — a sprite sheet, frames that
+index into it, animations by name — that `SpriteCharacter` plays: frames
+stepped as authored, branches taken by their weights, the animation chosen
+by the state. Each state above is mapped to the character's own animations
+by the names Office characters use (`Thinking`, `Processing`,
+`GetAttention`, `Greeting`, `Explain`, `GoodBye`…) and by the states an Agent
+file declares (`Showing`, `Speaking`, `Hiding`, `IdlingLevel1`…); a state
+with no match plays the idle animations (`stateAnimations`).
+
+The files a person picked are read as one character by `readCharacterFiles`:
+one `.acs`; an `.acf` with its `.aca` files; or a clippy.js character's
+`agent.js` with its map image (and its sounds file); `characterFilesOf` says which of them make the character, and
+`CHARACTER_FILES_ACCEPT` is what a file input should accept. Once read, a
+character joins the others as a plugin of its own,
+`defineAssistantCharacterPlugin(id, character)`, contributed to
+`loop.assistant.character` under the id it is chosen by — that is how
+Datalayer's *Settings → Appearance* offers a person their own character on
+the pages of their applications, kept in their browser and never sent.
+
+A file that cannot be read is refused with a sentence that says why
+(`AssistantCharacterFormatError`).
+
+### Its mouth and its sounds
+
+While it speaks, a frame of a Microsoft Agent character that has mouths is
+drawn with one of them in place of the frame: the one its voice's loudness
+opens when it is heard (shut, a little, half, wide — `mouthLevel`, as
+Datalayer's characters open theirs), else one after another as its words
+come, every 110 ms (`mouthFor`, `MOUTH_STEP_MS`). Nothing moves for a reader
+who asks for reduced motion.
+
+A character's sounds — an Agent file's, or a clippy.js `sounds-*.js` — are
+**off until the person asks for them**: the character's right-click menu has
+*Play its sounds*, and then *Mute its sounds*. A shipped character has no
+such entry; it has none. Once asked, a frame's sound plays when the frame
+shows (`SpriteCharacter`'s `sounds`); a sound the browser will not play yet
+is skipped with a warning in the console.
+
+## Using it
+
+`ChatFloating` takes two props for the assistant:
+
+| Prop | Type | Default | |
+| --- | --- | --- | --- |
+| `defaultViewMode` | `'floating' \| 'floating-small' \| 'floating-draggable' \| 'assistant' \| 'panel'` | `'floating'` | `'assistant'` opens on the character. |
+| `assistantCharacter` | `string \| AssistantCharacter \| AssistantCharacterData` | `'paperclip'` | A Datalayer character by id, a contributed drawing, or one read from a file. |
+| `decisions` | `{ serverUrl: string; token?: string }` | — | The runtime its balloon asks typed decisions at: offers *Ask a decision* (see [Ask a decision](#ask-a-decision)). |
+
+The chat's `description` is what the character says on a hover before
+anything else has been said.
+
+A host that draws the conversation itself — the Loop workspace, as an
+embedded application does — passes it as `conversation`:
+`{ body, presence, saying, answering }`. The window holds `body` under its own
+header, and the character acts `presence` and says `saying` as it would its
+own chat's.
+
+From the *Assistant* example (`src/examples/AssistantExample.tsx`),
+with a picker of Datalayer's characters and a file input for a character one
+brings (the example itself lists the contributed characters, as above):
+
+```tsx
+import { useState } from 'react';
+import { ChatFloating } from '@datalayer/agent-runtimes';
+import { ASSISTANT_CHARACTERS } from '@datalayer/agent-runtimes/lib/chat/assistant/characters';
+import {
+  CHARACTER_FILES_ACCEPT,
+  readCharacterFiles,
+  type AssistantCharacterData,
+} from '@datalayer/agent-runtimes/lib/chat/assistant/formats';
+
+export function Page() {
+  const [character, setCharacter] = useState<string | AssistantCharacterData>(
+    ASSISTANT_CHARACTERS[0].id,
+  );
+  return (
+    <>
+      {ASSISTANT_CHARACTERS.map(option => (
+        <button key={option.id} onClick={() => setCharacter(option.id)}>
+          {option.name}
+        </button>
+      ))}
+      <p>
+        The characters of Microsoft Office are Microsoft's. Load only a
+        character file you have the right to use. It is read in this page and
+        sent nowhere.
+      </p>
+      <input
+        type="file"
+        multiple
+        accept={CHARACTER_FILES_ACCEPT}
+        onChange={async event =>
+          setCharacter(
+            await readCharacterFiles(Array.from(event.target.files ?? [])),
+          )
+        }
+      />
+      <ChatFloating
+        // A new character is a new stage: it greets again.
+        key={typeof character === 'string' ? character : character.sprite}
+        defaultViewMode="assistant"
+        assistantCharacter={character}
+        protocol="vercel-ai"
+        endpoint="http://127.0.0.1:8765/api/v1/vercel-ai/assistant"
+        title="Assistant"
+        description="Hello! Ask me anything about this page."
+        position="bottom-right"
+        useStore={false}
+      />
+    </>
+  );
+}
+```
+
+To try it, run the examples app (`npm run examples`) and open
+*Assistant*. The character, its balloon and its motions need no account and
+no runtime; a conversation needs the local server on port 8765, and says so
+when there is none.
+
+## What is verified, and what is not
+
+**Verified.** Unit tests cover the modes and their order
+(`viewModes.test.ts`); the state acted out, the balloon's words, the cut at
+a word and the away choices (`assistant.test.ts`); the stage in the DOM — the
+character drawn, the balloon while closed and never over the open
+conversation, a click against a drag, sending it away, where the balloon
+goes, stepping aside for a dialog, an overlay, another chat's composer and
+the pointer at work, and not for its own conversation
+(`assistant-stage.test.tsx`); the clippy.js, `.acs` and `.acf`/`.aca` readers,
+the mouths composited, the Agent image compression and the mapping of states
+(`assistant-formats.test.ts`, on hand-built files); the player's frames and
+branches (`sprite-character.test.ts`); its mouths while it speaks, its sounds
+off until asked and muted from its menu (`sprite-character-voice.test.tsx`). Seen in Chrome on 2026-10-04, in the examples
+app signed out: the paper clip arrives greeting and settles to idle, a hover
+shows the welcome in its balloon, a drag moves it and the conversation opens
+above it where it was put down, and the wizard, the cat and the eyes draw.
+Each character's dark drawing and its contrast, light and dark, are tested
+(`assistant-characters-contrast.test.tsx`), and so is the stage drawing the
+chat's mode; a character contributed by a plugin is drawn in the
+*Assistant* example and pictured (`character-owl-*.png`). The choice of a
+character — the application's over the person's over the paper clip, an
+unknown id said and not replaced — and the assistant in a LOOP workspace,
+drawn from a plugin's character and acting out the chat's turn, dozing while
+paused and holding an approval of its application in its balloon — answered
+there, never another application's — are tested (`loop-assistant.test.tsx`;
+the chat's own assistant in `chat-floating-conversation.test.tsx`); an Appspec naming a plugin's character is read,
+and a wrongly shaped id refused (`app-checks.test.ts`).
+
+**Not verified yet.** A real `.acs`, or `.acf` with its `.aca` files, someone
+holds the rights to (the readers are tested on hand-built files, after
+Lebeau's public description of the formats, whose `.aca` part is the least
+certain; and the clippy.js reader on the
+clippy.js characters, in memory, not kept); the floating popup's blink and
+balloon seen in a browser; stepping aside, seen in a browser; a brought
+character's mouths and sounds, seen and heard in a browser.
+
+**Not built yet.** Sharing a character one brought with one's organisation.

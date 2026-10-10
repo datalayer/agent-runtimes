@@ -27,6 +27,9 @@ import type {
   ExecutionResult,
   DisplayToolCallStatus,
 } from '../../types';
+import { SpecMark, hasMark, type Marks } from '../marks';
+import { useChatWords } from '../ChatLanguage';
+import type { ChatWords } from '../words';
 
 /**
  * Error type classification for display purposes
@@ -66,6 +69,19 @@ export interface ToolCallDisplayProps {
   onDeny?: () => void;
   /** Loading state for approval actions */
   approvalLoading?: boolean;
+  /**
+   * The marks of whoever the tool belongs to — its MCP server, skill,
+   * frontend tool set or runtime tool spec — drawn before its name: the
+   * icon, else the emoji, else nothing.
+   */
+  marks?: Marks | null;
+  /** What it does in its runtime's words: shown in place of the arguments. */
+  summary?: string;
+  /**
+   * How dense: the chat's (`comfortable`), or the floating assistant's
+   * balloon (`compact`: a smaller header, the same card).
+   */
+  density?: 'comfortable' | 'compact';
 }
 
 /**
@@ -73,7 +89,8 @@ export interface ToolCallDisplayProps {
  */
 function getStatusDisplay(
   status: DisplayToolCallStatus,
-  errorType?: ErrorType,
+  errorType: ErrorType | undefined,
+  chatText: ChatWords,
 ): {
   icon: React.ReactNode;
   color: string;
@@ -85,21 +102,21 @@ function getStatusDisplay(
       return {
         icon: <ClockIcon size={14} />,
         color: 'attention.fg',
-        label: 'Preparing...',
+        label: chatText.toolPreparing,
         bgColor: 'attention.subtle',
       };
     case 'executing':
       return {
         icon: <ClockIcon size={14} />,
         color: 'attention.fg',
-        label: 'Executing...',
+        label: chatText.toolExecuting,
         bgColor: 'attention.subtle',
       };
     case 'complete':
       return {
         icon: <CheckCircleIcon size={14} />,
         color: 'success.fg',
-        label: 'Complete',
+        label: chatText.toolComplete,
         bgColor: 'success.subtle',
       };
     case 'error':
@@ -108,28 +125,28 @@ function getStatusDisplay(
         return {
           icon: <AlertIcon size={14} />,
           color: 'danger.fg',
-          label: 'Execution Failed',
+          label: chatText.toolExecutionFailed,
           bgColor: 'danger.subtle',
         };
       } else if (errorType === 'code') {
         return {
           icon: <XCircleIcon size={14} />,
           color: 'severe.fg',
-          label: 'Code Error',
+          label: chatText.toolCodeError,
           bgColor: 'severe.subtle',
         };
       } else if (errorType === 'exit') {
         return {
           icon: <AlertIcon size={14} />,
           color: 'attention.fg',
-          label: 'Exited',
+          label: chatText.toolExited,
           bgColor: 'attention.subtle',
         };
       }
       return {
         icon: <XCircleIcon size={14} />,
         color: 'danger.fg',
-        label: 'Failed',
+        label: chatText.toolFailed,
         bgColor: 'danger.subtle',
       };
     default:
@@ -157,9 +174,12 @@ function formatToolName(name: string): string {
 /**
  * Get a brief summary of the tool arguments
  */
-function getArgsSummary(args: Record<string, unknown>): string {
+function getArgsSummary(
+  args: Record<string, unknown>,
+  chatText: ChatWords,
+): string {
   const entries = Object.entries(args);
-  if (entries.length === 0) return 'No parameters';
+  if (entries.length === 0) return chatText.noParameters;
 
   const summary = entries
     .slice(0, 2)
@@ -175,7 +195,7 @@ function getArgsSummary(args: Record<string, unknown>): string {
     .join(', ');
 
   if (entries.length > 2) {
-    return `${summary} (+${entries.length - 2} more)`;
+    return `${summary} ${chatText.moreArguments(entries.length - 2)}`;
   }
   return summary;
 }
@@ -207,7 +227,12 @@ export function ToolCallDisplay({
   onApprove,
   onDeny,
   approvalLoading = false,
+  marks,
+  summary,
+  density = 'comfortable',
 }: ToolCallDisplayProps) {
+  const chatText = useChatWords();
+  const compact = density === 'compact';
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Determine effective exit code from props or execution result
@@ -227,9 +252,9 @@ export function ToolCallDisplay({
             : 'unknown'
       : undefined;
 
-  const statusDisplay = getStatusDisplay(status, errorType);
+  const statusDisplay = getStatusDisplay(status, errorType, chatText);
   const displayName = formatToolName(toolName);
-  const argsSummary = getArgsSummary(args);
+  const argsSummary = summary || getArgsSummary(args, chatText);
   const resultObject =
     result && typeof result === 'object'
       ? (result as Record<string, unknown>)
@@ -265,38 +290,34 @@ export function ToolCallDisplay({
 
   return (
     <Box
-      sx={{
-        width: '100%',
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        backgroundColor: 'canvas.default',
-      }}
+      data-tool-call={toolName}
+      data-tool-call-status={status}
+      width="100%"
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={compact ? '8px' : '12px'}
+      overflow="hidden"
+      backgroundColor="canvas.default"
     >
       {/* Header - Always visible, clickable to expand */}
       <Box
         as="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        sx={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          padding: 2,
-          backgroundColor: 'canvas.subtle',
-          border: 'none',
-          borderBottom: isExpanded ? '1px solid' : 'none',
-          borderColor: 'border.default',
-          cursor: 'pointer',
-          textAlign: 'left',
-          '&:hover': {
-            backgroundColor: 'neutral.muted',
-          },
-        }}
+        width="100%"
+        display="flex"
+        alignItems="center"
+        gap={compact ? 1 : 2}
+        padding={compact ? 1 : 2}
+        backgroundColor="canvas.subtle"
+        border="none"
+        borderBottom={isExpanded ? '1px solid' : 'none'}
+        borderColor="border.default"
+        cursor="pointer"
+        textAlign="left"
+        hover={{ backgroundColor: 'neutral.muted' }}
       >
         {/* Expand/Collapse icon */}
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
+        <Box color="fg.muted" flexShrink={0}>
           {isExpanded ? (
             <ChevronDownIcon size={16} />
           ) : (
@@ -304,16 +325,18 @@ export function ToolCallDisplay({
           )}
         </Box>
 
-        {/* Tool icon */}
-        <Box sx={{ color: 'fg.muted', flexShrink: 0 }}>
-          <ToolsIcon size={16} />
-        </Box>
+        {/* Whose tool it is: the icon, else the emoji, else nothing */}
+        {hasMark(marks) && (
+          <Box color="fg.muted" flexShrink={0} display="flex">
+            <SpecMark icon={marks?.icon} emoji={marks?.emoji} size={16} />
+          </Box>
+        )}
 
         {/* Tool name */}
         <Text
           sx={{
             fontWeight: 'semibold',
-            fontSize: 1,
+            fontSize: compact ? 0 : 1,
             color: 'fg.default',
             flexShrink: 0,
           }}
@@ -323,18 +346,16 @@ export function ToolCallDisplay({
 
         {/* Status badge */}
         <Box
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 2,
-            py: '2px',
-            borderRadius: 2,
-            backgroundColor: statusDisplay.bgColor,
-            flexShrink: 0,
-          }}
+          display="inline-flex"
+          alignItems="center"
+          gap={1}
+          px={2}
+          py="2px"
+          borderRadius={2}
+          backgroundColor={statusDisplay.bgColor}
+          flexShrink={0}
         >
-          <Box sx={{ color: statusDisplay.color, display: 'flex' }}>
+          <Box color={statusDisplay.color} display="flex">
             {statusDisplay.icon}
           </Box>
           <Text
@@ -344,7 +365,9 @@ export function ToolCallDisplay({
               color: statusDisplay.color,
             }}
           >
-            {isPendingApproval ? 'Awaiting Approval' : statusDisplay.label}
+            {isPendingApproval
+              ? chatText.awaitingApproval
+              : statusDisplay.label}
           </Text>
         </Box>
 
@@ -368,9 +391,9 @@ export function ToolCallDisplay({
 
       {/* Expanded content */}
       {isExpanded && (
-        <Box sx={{ p: 3 }}>
+        <Box p={3}>
           {/* Parameters section */}
-          <Box sx={{ mb: result !== undefined || error ? 3 : 0 }}>
+          <Box mb={result !== undefined || error ? 3 : 0}>
             <Text
               sx={{
                 display: 'block',
@@ -382,17 +405,15 @@ export function ToolCallDisplay({
                 mb: 2,
               }}
             >
-              Parameters
+              {chatText.parameters}
             </Text>
             <Box
-              sx={{
-                backgroundColor: 'canvas.inset',
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'border.default',
-                overflow: 'auto',
-                maxHeight: '200px',
-              }}
+              backgroundColor="canvas.inset"
+              borderRadius={2}
+              border="1px solid"
+              borderColor="border.default"
+              overflow="auto"
+              maxHeight="200px"
             >
               <pre
                 style={{
@@ -408,74 +429,71 @@ export function ToolCallDisplay({
               >
                 {Object.keys(args).length > 0
                   ? JSON.stringify(args, null, 2)
-                  : '(no parameters)'}
+                  : `(${chatText.noParameters})`}
               </pre>
             </Box>
           </Box>
 
-          {/* Result section (when complete) */}
-          {status === 'complete' && result !== undefined && (
-            <Box>
-              <Text
-                sx={{
-                  display: 'block',
-                  fontSize: 0,
-                  fontWeight: 'semibold',
-                  color: 'success.fg',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  mb: 2,
-                }}
-              >
-                Result
-              </Text>
-              <Box
-                sx={{
-                  backgroundColor: 'success.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'success.muted',
-                  overflow: 'auto',
-                  maxHeight: '300px',
-                }}
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    padding: '12px',
-                    fontSize: '12px',
-                    fontFamily:
-                      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                    lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
+          {/* Result section (when complete, or as a step streams it, LOOP P-31) */}
+          {(status === 'complete' || status === 'executing') &&
+            result !== undefined && (
+              <Box>
+                <Text
+                  sx={{
+                    display: 'block',
+                    fontSize: 0,
+                    fontWeight: 'semibold',
+                    color: 'success.fg',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    mb: 2,
                   }}
                 >
-                  {typeof result === 'string'
-                    ? result
-                    : JSON.stringify(result, null, 2)}
-                </pre>
+                  {chatText.result}
+                </Text>
+                <Box
+                  backgroundColor="success.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="success.muted"
+                  overflow="auto"
+                  maxHeight="300px"
+                >
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: '12px',
+                      fontSize: '12px',
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                      lineHeight: 1.5,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {typeof result === 'string'
+                      ? result
+                      : JSON.stringify(result, null, 2)}
+                  </pre>
+                </Box>
               </Box>
-            </Box>
-          )}
+            )}
 
           {/* Approval section */}
           {approvalRequired && (
-            <Box
-              sx={{ mt: status === 'complete' && result !== undefined ? 3 : 0 }}
-            >
+            <Box mt={status === 'complete' && result !== undefined ? 3 : 0}>
               {approvalState === 'approved' ? (
                 <Box>
                   <Text
                     sx={{ color: 'success.fg', fontSize: 1, display: 'block' }}
                   >
-                    Approved. Executing tool.
+                    {chatText.approvedRunning}
                   </Text>
                   {approvalDecisionSource === 'external' && (
                     <Text
                       sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
                     >
-                      Approved from sidebar.
+                      {chatText.approvedElsewhere}
                     </Text>
                   )}
                 </Box>
@@ -484,28 +502,28 @@ export function ToolCallDisplay({
                   <Text
                     sx={{ color: 'danger.fg', fontSize: 1, display: 'block' }}
                   >
-                    Denied. Tool will not run.
+                    {chatText.deniedWontRun}
                   </Text>
                   {approvalDecisionSource === 'external' && (
                     <Text
                       sx={{ color: 'fg.muted', fontSize: 0, display: 'block' }}
                     >
-                      Decision came from sidebar.
+                      {chatText.decidedElsewhere}
                     </Text>
                   )}
                 </Box>
               ) : (
                 <>
                   <Text sx={{ fontSize: 1, color: 'fg.default' }}>
-                    This tool requires your approval to run.
+                    {chatText.approvalNeeded}
                   </Text>
-                  <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                  <Box mt={2} display="flex" gap={2}>
                     <Button
                       size="small"
                       onClick={onApprove}
                       disabled={approvalLoading || !onApprove}
                     >
-                      Approve
+                      {chatText.approve}
                     </Button>
                     <Button
                       size="small"
@@ -513,7 +531,7 @@ export function ToolCallDisplay({
                       onClick={onDeny}
                       disabled={approvalLoading || !onDeny}
                     >
-                      Deny
+                      {chatText.deny}
                     </Button>
                   </Box>
                 </>
@@ -535,16 +553,14 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                <AlertIcon size={12} /> Execution Error
+                <AlertIcon size={12} /> {chatText.executionError}
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'danger.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'danger.muted',
-                  p: 2,
-                }}
+                backgroundColor="danger.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="danger.muted"
+                p={2}
               >
                 <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
                   {effectiveExecutionError}
@@ -557,7 +573,7 @@ export function ToolCallDisplay({
                     mt: 1,
                   }}
                 >
-                  The sandbox or execution environment failed to run the code.
+                  {chatText.executionErrorWhy}
                 </Text>
               </Box>
             </Box>
@@ -577,29 +593,25 @@ export function ToolCallDisplay({
                   mb: 2,
                 }}
               >
-                Code Error: {effectiveCodeError.name}
+                {chatText.toolCodeError}: {effectiveCodeError.name}
               </Text>
               <Box
-                sx={{
-                  backgroundColor: 'severe.subtle',
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'severe.muted',
-                  overflow: 'hidden',
-                }}
+                backgroundColor="severe.subtle"
+                borderRadius={2}
+                border="1px solid"
+                borderColor="severe.muted"
+                overflow="hidden"
               >
-                <Box sx={{ p: 2 }}>
+                <Box p={2}>
                   <Text sx={{ fontSize: 1, color: 'severe.fg' }}>
                     {effectiveCodeError.value}
                   </Text>
                 </Box>
                 {effectiveCodeError.traceback && (
                   <Box
-                    sx={{
-                      borderTop: '1px solid',
-                      borderColor: 'severe.muted',
-                      backgroundColor: 'canvas.inset',
-                    }}
+                    borderTop="1px solid"
+                    borderColor="severe.muted"
+                    backgroundColor="canvas.inset"
                   >
                     <pre
                       style={{
@@ -641,16 +653,14 @@ export function ToolCallDisplay({
                     mb: 2,
                   }}
                 >
-                  Error
+                  {chatText.errorHeading}
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'danger.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'danger.muted',
-                    p: 2,
-                  }}
+                  backgroundColor="danger.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="danger.muted"
+                  p={2}
                 >
                   <Text sx={{ fontSize: 1, color: 'danger.fg' }}>
                     {effectiveError}
@@ -675,19 +685,17 @@ export function ToolCallDisplay({
                     mb: 2,
                   }}
                 >
-                  <AlertIcon size={12} /> Process Exited
+                  <AlertIcon size={12} /> {chatText.processExited}
                 </Text>
                 <Box
-                  sx={{
-                    backgroundColor: 'attention.subtle',
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'attention.muted',
-                    p: 2,
-                  }}
+                  backgroundColor="attention.subtle"
+                  borderRadius={2}
+                  border="1px solid"
+                  borderColor="attention.muted"
+                  p={2}
                 >
                   <Text sx={{ fontSize: 1, color: 'attention.fg' }}>
-                    Process exited with code {effectiveExitCode}
+                    {chatText.exitedWithCode(String(effectiveExitCode))}
                   </Text>
                   <Text
                     sx={{
@@ -697,19 +705,17 @@ export function ToolCallDisplay({
                       mt: 1,
                     }}
                   >
-                    The code called sys.exit() with a non-zero exit code.
+                    {chatText.nonZeroExit}
                   </Text>
                 </Box>
                 {effectiveExitOutput && (
                   <Box
-                    sx={{
-                      mt: 2,
-                      backgroundColor: 'canvas.inset',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'attention.muted',
-                      overflow: 'auto',
-                    }}
+                    mt={2}
+                    backgroundColor="canvas.inset"
+                    borderRadius={2}
+                    border="1px solid"
+                    borderColor="attention.muted"
+                    overflow="auto"
                   >
                     <pre
                       style={{
@@ -732,14 +738,7 @@ export function ToolCallDisplay({
             )}
 
           {/* Tool call ID (for debugging) */}
-          <Box
-            sx={{
-              mt: 3,
-              pt: 2,
-              borderTop: '1px solid',
-              borderColor: 'border.muted',
-            }}
-          >
+          <Box mt={3} pt={2} borderTop="1px solid" borderColor="border.muted">
             <Text
               sx={{ fontSize: 0, color: 'fg.subtle', fontFamily: 'monospace' }}
             >

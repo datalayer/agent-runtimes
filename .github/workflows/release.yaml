@@ -19,6 +19,12 @@ concurrency:
 permissions:
   contents: read
 
+# The registry times out now and then: a fetch is tried again rather than the run lost.
+env:
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_mintimeout: '20000'
+  npm_config_fetch_retry_maxtimeout: '120000'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -49,9 +55,24 @@ jobs:
       - name: Install
         run: npm install --workspaces --include-workspace-root --no-audit --no-fund
 
-      # `lib/` for the npm package, `dist/` (the Vite app) for the wheel.
-      - name: Build the frontend
+      # `lib/` for the npm package, `dist/` (the Vite app) for the wheel, and
+      # `dist-embed/` for the npm package: the `<datalayer-app>` element's
+      # script, the module and chunks it imports, and its stylesheet (STUDIO
+      # D-08), versioned with the runtime it talks to. The landing copies it
+      # from the package into `/embed/`. The embed's build prints every file's
+      # size and fails when the initial load is over its budget
+      # (vite.embed.config.ts).
+      - name: Build the frontend and the embed bundle
         run: npm run build
+
+      - name: Check the embed bundle
+        run: |
+          set -euo pipefail
+          test -s dist-embed/datalayer-app.js
+          test -s dist-embed/datalayer-app-main.js
+          test -s dist-embed/datalayer-app.css
+          du -sh dist-embed
+          find dist-embed -type f | wc -l
 
       - name: Check the frontend the wheel serves is complete
         run: |
@@ -71,9 +92,15 @@ jobs:
           ls dist-npm
           name="$(tar -xzOf dist-npm/*.tgz package/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).name")"
           test "$name" = "@datalayer/agent-runtimes"
+          # The embed bundle is in the package, not left behind.
+          tar -tzf dist-npm/*.tgz > npm-files.txt
+          grep -qx 'package/dist-embed/datalayer-app.js' npm-files.txt
+          grep -qx 'package/dist-embed/datalayer-app-main.js' npm-files.txt
+          grep -qx 'package/dist-embed/datalayer-app.css' npm-files.txt
 
       # The hatch build hook copies dist/ into agent_runtimes/static/dist, so
-      # the frontend has to be built first (above).
+      # the frontend has to be built first (above). It refuses a build that
+      # lacks a page the server serves, or a file such a page loads.
       - name: Build the Python package
         run: |
           python -m pip install --upgrade build
@@ -89,7 +116,15 @@ jobs:
           ls dist-py
           test -f "dist-py/agent_runtimes-${tag}-py3-none-any.whl"
           test -f "dist-py/agent_runtimes-${tag}.tar.gz"
-          unzip -Z1 "dist-py/agent_runtimes-${tag}-py3-none-any.whl" | grep -qx 'agent_runtimes/static/dist/index.html'
+          # The pages the terminal opens (/browser, /notebook, /document), in
+          # both. Listed to files first: `grep -q` closing a pipe early would
+          # fail the listing under pipefail.
+          unzip -Z1 "dist-py/agent_runtimes-${tag}-py3-none-any.whl" > wheel-files.txt
+          tar -tzf "dist-py/agent_runtimes-${tag}.tar.gz" > sdist-files.txt
+          for page in index.html agent.html agent-notebook.html agent-document.html; do
+            grep -qx "agent_runtimes/static/dist/${page}" wheel-files.txt
+            grep -qx "agent_runtimes-${tag}/agent_runtimes/static/dist/${page}" sdist-files.txt
+          done
 
       - uses: actions/upload-artifact@v4
         with:

@@ -233,11 +233,13 @@ def _default_judge() -> JudgeCall | None:
     if not url:
         import os  # noqa: PLC0415
 
+        from agent_runtimes.models.offered import inference_token  # noqa: PLC0415
+
         url = str(os.environ.get("DATALAYER_AI_INFERENCE_URL") or "").strip()
+        # The token the runtime calls ai-inference with: on Datalayer, its
+        # user's, narrowed to ai-inference.
         token = str(
-            os.environ.get("DATALAYER_API_KEY")
-            or os.environ.get("DATALAYER_TOKEN")
-            or ""
+            inference_token() or os.environ.get("DATALAYER_TOKEN") or ""
         ).strip()
     else:
         token = str(_judge_state.get("token") or "")
@@ -246,13 +248,46 @@ def _default_judge() -> JudgeCall | None:
     return make_judge(url=url, token=token)
 
 
+def default_judge() -> JudgeCall | None:
+    """The judge configured on this machine (`configure_judge`, or
+    ``DATALAYER_AI_INFERENCE_URL``); None when there is none.
+    """
+    return _default_judge()
+
+
+#: What the judge is told of a conversation's record, when it is handed one
+#: (STUDIO V-08): it grades on what was done, not only on what was said.
+RECORD_PREAMBLE = (
+    "What the runtime recorded it doing in this conversation (its record: the "
+    "tools it called, what its rules decided, what its checks said, the people "
+    "it asked):"
+)
+RECORD_NOTHING = "(nothing: it called no tool, and no rule or check acted)"
+RECORD_RULE = (
+    "Grade on what it did as its record has it, not only on what its answer "
+    "says: an answer that claims what its record does not show — or that hides "
+    "what its record shows it did — does not pass."
+)
+
+
 def _judge_prompt(
-    *, output_text: str, expected_text: str, rubric: str, failure_modes: tuple[str, ...]
+    *,
+    output_text: str,
+    expected_text: str,
+    rubric: str,
+    failure_modes: tuple[str, ...],
+    record: list[str] | None = None,
 ) -> str:
+    """What the judge is asked; with the conversation's record when there is one."""
+    said = ""
+    if record is not None:
+        lines = "\n".join(f"- {line}" for line in record) or RECORD_NOTHING
+        said = f"{RECORD_PREAMBLE}\n{lines}\n\n{RECORD_RULE}\n\n"
     return (
         f"{rubric}\n\n"
         f"Expected output:\n{expected_text or '(none given)'}\n\n"
         f"The agent's answer:\n{output_text or '(no answer)'}\n\n"
+        f"{said}"
         "Reply with one JSON object with exactly these keys: "
         '"score" (a number from 0 to 1), "passed" (true or false), '
         '"explanation" (one or two sentences), and "failure_mode" '
@@ -290,6 +325,12 @@ def _evaluate_llm_judge(
     explanation and a failure mode from the closed list. A judge that cannot
     be reached or does not answer JSON fails the case with the reason, as a
     scorer failure: a benchmark must not claim a judge it did not have.
+
+    Handed a conversation's record (``_record``: its lines, as
+    `loop.apps.validation.what_it_did` says them), the judge reads it beside
+    the answer and grades on what was done — a test of an application
+    (STUDIO V-08) is graded on its tool calls, its rules' decisions and its
+    checks, not on its words alone.
     """
     judge: JudgeCall | None = arguments.get("_judge") or _default_judge()
     threshold = float(
@@ -308,11 +349,15 @@ def _evaluate_llm_judge(
             "failure_mode": "other",
             "failure_stage": "scorer",
         }
+    # The conversation's record, when the caller read one (STUDIO V-08):
+    # `None` is a judge of the answer alone, `[]` a record that holds nothing.
+    record = arguments.get("_record")
     prompt = _judge_prompt(
         output_text=_coerce_text(output).strip(),
         expected_text=_coerce_text(expected).strip(),
         rubric=rubric,
         failure_modes=modes,
+        record=None if record is None else [str(line) for line in record],
     )
     try:
         reply = judge(prompt, model)

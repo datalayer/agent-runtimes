@@ -117,29 +117,25 @@ export function SpecPayloadPreview({
       role="dialog"
       aria-label={title}
       aria-modal="true"
-      sx={{
-        position: 'fixed',
-        inset: 24,
-        zIndex: 300,
-        bg: 'canvas.default',
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 1,
-        boxShadow: 'shadow.large',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      position="fixed"
+      inset={24}
+      zIndex={300}
+      bg="canvas.default"
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={1}
+      boxShadow="shadow.large"
+      display="flex"
+      flexDirection="column"
     >
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
       >
         <Text sx={{ fontWeight: 'bold' }}>{title}</Text>
         <IconButton
@@ -150,18 +146,16 @@ export function SpecPayloadPreview({
           onClick={onClose}
         />
       </Box>
-      <Box sx={{ p: 3, overflow: 'auto', flex: 1 }}>
+      <Box p={3} overflow="auto" flex={1}>
         {/* `pre` with no wrapping: YAML is significant whitespace, and a line
             re-wrapped to fit the panel is a line that no longer parses. */}
         <Box
           as="pre"
-          sx={{
-            m: 0,
-            whiteSpace: 'pre',
-            fontFamily: 'monospace',
-            fontSize: 0,
-            lineHeight: '20px',
-          }}
+          m={0}
+          whiteSpace="pre"
+          fontFamily="monospace"
+          fontSize={0}
+          lineHeight="20px"
         >
           {specToYaml(spec)}
         </Box>

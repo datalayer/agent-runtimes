@@ -117,7 +117,7 @@ export function InputPromptText({
   );
 
   return (
-    <Box sx={{ px: 2, py: 1 }}>
+    <Box px={2} py={1}>
       <Textarea
         ref={inputRef as React.Ref<HTMLTextAreaElement>}
         value={value}

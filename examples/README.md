@@ -27,6 +27,11 @@ Features demonstrated:
 - MCP Codemode examples: [ai/agent-codemode/examples/codemode_example.py](ai/agent-codemode/examples/codemode_example.py), [ai/agent-codemode/examples/codemode_patterns_example.py](ai/agent-codemode/examples/codemode_patterns_example.py)
 - Agent Skills examples: [ai/agent-skills/examples/skills_example.py](ai/agent-skills/examples/skills_example.py), [ai/agent-skills/examples/skills/SKILL.md](ai/agent-skills/examples/skills/SKILL.md)
 
+## Python applications
+
+- 🧭 [Packaged page side](./packaged-page-side/app.py): an application whose component is a file of its folder, packaged with `loop apps package` as a Reactor extension and drawn from the server it is installed beside (LOOP P-29).
+- 🧩 [Extended with Reactor](./reactor-extensible/app.py): an application that is a Reactor plugin and extends in Reactor's vocabulary — a point of its own another plugin extends, a third-party extension it uses (its agent tool given to its agent), a contribution to that extension's point, a Reactor command in its composer, a route of its own (LOOP P-35).
+
 ## Datalayer Client Examples
 
 These examples demonstrate the Datalayer Client and runtime workflows.
@@ -85,16 +90,16 @@ See [Next.js + Datalayer Notebook](./nextjs/README.md).
 
 ## Key Concepts
 
-### Code Mode
+### Codemode
 
-Instead of calling tools one-by-one through LLM inference, Code Mode allows agents to write Python code that orchestrates multiple tool calls. Benefits include:
+Instead of calling tools one-by-one through LLM inference, Codemode allows agents to write Python code that orchestrates multiple tool calls. Benefits include:
 
 - Reduced LLM calls for multi-step operations
 - Better error handling with try/except
 - Parallel execution with asyncio.gather
 - Complex logic with loops and conditionals
 
-Based on [Cloudflare's Code Mode](https://blog.cloudflare.com/introducing-code-mode).
+Based on [Cloudflare's Codemode](https://blog.cloudflare.com/introducing-code-mode).
 
 ### Skills
 

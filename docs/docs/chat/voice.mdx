@@ -1,0 +1,165 @@
+---
+sidebar_position: 3
+title: Voice
+---
+
+# Voice
+
+A person can talk to an agent instead of typing, and hear its answers. Voice
+is another way into the same conversation, not a second one: what is said
+becomes a message, what is heard is the answer the conversation shows, and the
+text stays on screen.
+
+- **Push-to-talk.** Hold the microphone in the composer, or `Ctrl`+`Space`,
+  speak, and let go. A click starts it and the next click stops it. `Esc`
+  cancels. What was said is heard **in the browser**, and the words go in the
+  composer for the person to read, edit and send. The sound never leaves the
+  page, and is forgotten once heard.
+- **Spoken answers.** The answer is cut into sentences as it is written. Each
+  sentence is said by **Datalayer's speech service**, `datalayer-speech` on r1 (Kokoro, from ai-agents' code) and
+  played as it arrives, so the first words are heard before the answer is
+  finished. The floating assistant's mouth moves with the sound, and while the
+  conversation is closed its balloon shows the sentence being said. `Esc`, or
+  *Stop speaking*, stops the voice, and so does opening the microphone.
+- **What is kept.** A spoken message is sent as text, marked as said
+  (`metadata.input: "voice"`, with its language, the model that heard it and
+  where it ran). It shows a small microphone in the conversation. An
+  application's record keeps the turn as its transcript, marked `spoken`.
+  Audio is never kept.
+
+## An application's voice
+
+An Appspec says it under `interface.voice`. Voice is off unless the spec turns
+it on:
+
+```yaml
+interface:
+  voice:
+    enabled: true
+    input: push_to_talk      # off | push_to_talk | hands_free
+    output: always           # off | on_request | always
+    voice: kokoro-af-heart   # a voice of the catalogue
+    language: en-US          # BCP 47; the person's when unsaid
+    where: auto              # auto | device | server
+```
+
+`POST /api/v1/apps/configure` and `GET /api/v1/apps/current` answer the
+voice, resolved against the catalogue, so the page knows it before the first
+answer. When a voice doesn't speak the language, the first voice of the
+catalogue that does is used, with its attribution when its licence asks for
+one. An application whose answers are heard runs with `VoiceCapability`. It
+tells the agent that its answers may be heard: short sentences, no table where
+a sentence will do, and numbers and links in words. The capability changes no
+tool and no rule.
+
+## The voice catalogue
+
+Voices and speech models come from agentspecs (`voices`, `speech-models`) and
+are generated into `agent_runtimes.specs.voices` and `src/specs/voices.ts`. A
+model or a voice is admitted by the licence of its weights and of its training
+data. The register (`speech-licences.yaml`) refuses any licence it doesn't
+allow, so non-commercial voices and models never load.
+
+| | Model | Languages | Where | Licence |
+|---|---|---|---|---|
+| Hearing | `moonshine-tiny-en`, `moonshine-base-en` | English | browser | MIT |
+| Hearing | `whisper-base` | French (and English) | browser | MIT |
+| Voice activity | `silero-vad` | — | browser | MIT |
+| Speaking | `kokoro-82m`: `kokoro-af-heart` (en-US), `kokoro-bf-emma` (en-GB), `kokoro-ff-siwis` (fr-FR, trained on the SIWIS database, CC BY 4.0) | | ai-agents | Apache-2.0 |
+
+There is no speech synthesis in the browser. Every small open voice
+phonemizes with eSpeak NG, which is GPL-3.0, and sending it to browsers would
+be distributing it. Answers are spoken on the server, where it only runs.
+
+## In a page
+
+`ChatBase` and `ChatFloating` take a `voice`:
+
+```tsx
+import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
+
+<ChatFloating
+  defaultViewMode="assistant"
+  protocol="vercel-ai"
+  endpoint={`${server}/api/v1/vercel-ai/assistant`}
+  voice={{
+    language: 'en-US',
+    input: 'push_to_talk',
+    output: 'always',
+    voice: 'kokoro-af-heart',
+    // The browser's models, from Datalayer's origin, each file checked
+    // against its SHA-256 before it is read.
+    modelsUrl: 'https://…/speech-models',
+    // The packages that hear, loaded the first time the microphone is used.
+    engines: {
+      transformers: () => import('@huggingface/transformers'),
+      vad: () => import('@ricky0123/vad-web'),
+    },
+    // Datalayer's speech service (datalayer-speech, on r1), and the token to ask it with.
+    speechUrl: 'https://r1.datalayer.run',
+    token,
+  }}
+/>;
+```
+
+The models are fetched only from `modelsUrl`, laid out as the pinned store is
+(`<model id>/<path>`), together with onnxruntime-web's WASM
+(`onnxruntime-web/<version>/`). A file whose hash isn't the catalogue's is
+refused. They are fetched on first use, with the progress shown, and kept in
+the browser's cache. Before the browser asks for the microphone the first time,
+one sentence says where the audio goes, and the answer is remembered for each
+application.
+
+## Run the example
+
+The **Voice chat** example (`VoiceChatExample`) puts the floating assistant on
+a page, with push-to-talk and spoken answers in English or French. It needs
+three things running on this machine. Each one can be named in the address
+instead.
+
+1. **The agent**: `agent-runtimes serve --port 8765 --agent-id
+   example-agentic-chat --agent-name assistant --protocol vercel-ai`
+   (`?agentRuntimesUrl=`).
+2. **The models**: fill the pinned store once, then serve it:
+
+   ```bash
+   python scripts/voice/pin_store.py --store ~/.cache/speech-store
+   python scripts/voice/serve_store.py --store ~/.cache/speech-store   # :8770
+   ```
+
+   (`?voiceModelsUrl=`).
+3. **The speech service**: Datalayer's, `datalayer-speech` on r1
+   (`https://r1.datalayer.run`, the default). It checks the caller's
+   Datalayer token, so sign in to the examples. To run it on this machine
+   instead, against the same store:
+
+   ```bash
+   cd services/ai-agents && pip install -e '.[speech]'
+   DATALAYER_SPEECH_MODELS_DIR=~/.cache/speech-store \
+     uvicorn datalayer_ai_agents.speech.main:app --port 4401
+   ```
+
+   and open the example with `?speechUrl=http://127.0.0.1:4401`.
+
+## Measured
+
+`scripts/voice/measure.py` runs the browser's models on the recorded fixtures
+(`tests/voice`: LibriSpeech and Multilingual LibriSpeech, CC BY 4.0). It also
+has each voice say its sample and a few of the product's sentences, then
+transcribes them back. The results go under `tests/voice/measured`.
+`test_voice_wer.py` fails any model or voice more than two points of word
+error rate above its baseline. Measured on 2026-10-05, with transformers.js on
+a CPU (in Node, not the browser):
+
+| | WER | Real-time factor |
+|---|---|---|
+| `moonshine-tiny-en`, English | 3.3% | 0.03 |
+| `moonshine-base-en`, English | 4.9% | 0.05 |
+| `whisper-base`, English | 4.1% | 0.16 |
+| `whisper-base`, French | 34.1% | 0.11 |
+| `kokoro-af-heart`, said and heard back | 18.9% | 0.28 |
+| `kokoro-bf-emma`, said and heard back | 16.2% | 0.30 |
+| `kokoro-ff-siwis`, said and heard back | 13.6% | 0.24 |
+
+French heard in the browser is weak with Whisper base. Hearing on the server
+(faster-whisper) is planned for the next phase.

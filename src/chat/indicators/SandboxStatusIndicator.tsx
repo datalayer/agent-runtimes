@@ -100,33 +100,35 @@ function renderSandboxGlyph(aggregate: SandboxAggregateStatus) {
   return (
     <Box
       as="span"
-      sx={{
-        display: 'inline-block',
-        width: 10,
-        height: 10,
-        borderRadius: '50%',
-        bg: SANDBOX_INDICATOR_COLORS[aggregate],
-        ...(aggregate === 'executing' && {
-          animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
-          '@keyframes sandbox-busy-fade': {
-            '0%': {
-              opacity: 1,
-              transform: 'scale(1)',
-              filter: 'saturate(1)',
-            },
-            '50%': {
-              opacity: 0.45,
-              transform: 'scale(0.92)',
-              filter: 'saturate(0.75)',
-            },
-            '100%': {
-              opacity: 1,
-              transform: 'scale(1)',
-              filter: 'saturate(1)',
-            },
-          },
-        }),
-      }}
+      display="inline-block"
+      width={10}
+      height={10}
+      borderRadius="50%"
+      bg={SANDBOX_INDICATOR_COLORS[aggregate]}
+      sx={
+        aggregate !== 'executing'
+          ? undefined
+          : {
+              animation: 'sandbox-busy-fade 1.2s ease-in-out infinite',
+              '@keyframes sandbox-busy-fade': {
+                '0%': {
+                  opacity: 1,
+                  transform: 'scale(1)',
+                  filter: 'saturate(1)',
+                },
+                '50%': {
+                  opacity: 0.45,
+                  transform: 'scale(0.92)',
+                  filter: 'saturate(0.75)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'scale(1)',
+                  filter: 'saturate(1)',
+                },
+              },
+            }
+      }
     />
   );
 }
@@ -227,12 +229,10 @@ export function SandboxStatusIndicator({
   return (
     <Box
       as="span"
-      sx={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      position="relative"
+      display="inline-flex"
+      alignItems="center"
+      justifyContent="center"
       onMouseEnter={() => setIsOverlayOpen(true)}
       onMouseLeave={() => setIsOverlayOpen(false)}
     >
@@ -260,10 +260,7 @@ export function SandboxStatusIndicator({
           lineHeight: 0,
         }}
       >
-        <Box
-          as="span"
-          sx={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-        >
+        <Box as="span" display="inline-flex" alignItems="center" flexShrink={0}>
           {renderSandboxGlyph(aggregate)}
         </Box>
       </button>
@@ -271,70 +268,68 @@ export function SandboxStatusIndicator({
       {isOverlayOpen && (
         <Box
           role="tooltip"
-          sx={{
-            position: 'absolute',
-            right: 0,
-            top: 'calc(100% + 6px)',
-            minWidth: 220,
-            px: 2,
-            py: 2,
-            borderRadius: 2,
-            bg: 'canvas.overlay',
-            color: 'fg.default',
-            fontSize: 0,
-            lineHeight: 1.5,
-            boxShadow: 'shadow.medium',
-            border: '1px solid',
-            borderColor: 'border.default',
-            zIndex: 1000,
-            fontFamily: 'mono',
-            pointerEvents: 'none',
-          }}
+          position="absolute"
+          right={0}
+          top="calc(100% + 6px)"
+          minWidth={220}
+          px={2}
+          py={2}
+          borderRadius={2}
+          bg="canvas.overlay"
+          color="fg.default"
+          fontSize={0}
+          lineHeight={1.5}
+          boxShadow="shadow.medium"
+          border="1px solid"
+          borderColor="border.default"
+          zIndex={1000}
+          fontFamily="mono"
+          pointerEvents="none"
         >
-          <Box sx={{ mb: 1, fontWeight: 600, fontFamily: 'normal' }}>
+          <Box mb={1} fontWeight={600} fontFamily="normal">
             {tooltipText}
           </Box>
           {effectiveStatus ? (
             <>
               <Box>
-                <Box as="span" sx={{ fontWeight: 600 }}>
+                <Box as="span" fontWeight={600}>
                   variant:{' '}
                 </Box>
                 <Box as="span">{effectiveStatus.variant}</Box>
               </Box>
               <Box>
-                <Box as="span" sx={{ fontWeight: 600 }}>
+                <Box as="span" fontWeight={600}>
                   sandbox_running:{' '}
                 </Box>
                 <Box as="span">{String(effectiveStatus.sandbox_running)}</Box>
               </Box>
               <Box>
-                <Box as="span" sx={{ fontWeight: 600 }}>
+                <Box as="span" fontWeight={600}>
                   is_executing:{' '}
                 </Box>
                 <Box as="span">{String(effectiveStatus.is_executing)}</Box>
               </Box>
               {effectiveStatus.jupyter_url && (
-                <Box sx={{ wordBreak: 'break-all' }}>
-                  <Box as="span" sx={{ fontWeight: 600 }}>
+                <Box wordBreak="break-all">
+                  <Box as="span" fontWeight={600}>
                     jupyter_url:{' '}
                   </Box>
                   <Box as="span">{effectiveStatus.jupyter_url}</Box>
                 </Box>
               )}
               {effectiveStatus.error && (
-                <Box sx={{ mt: 1, color: 'danger.fg' }}>
+                <Box mt={1} color="danger.fg">
                   {effectiveStatus.error}
                 </Box>
               )}
               {aggregate === 'executing' && (
-                <Box sx={{ mt: 1, fontFamily: 'normal', color: 'fg.muted' }}>
+                <Box mt={1} fontFamily="normal" color="fg.muted">
                   Click to interrupt execution
                 </Box>
               )}
             </>
           ) : (
-            <Box sx={{ fontFamily: 'normal', color: 'fg.muted' }}>
+            <Box fontFamily="normal" color="fg.muted">
               No sandbox configured for this agent.
             </Box>
           )}

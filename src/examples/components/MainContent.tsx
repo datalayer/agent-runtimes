@@ -45,18 +45,16 @@ export const MainContent: React.FC<MainContentProps> = ({
   isConfigured,
 }) => {
   return (
-    <Box sx={{ height: '100%', overflow: 'auto', padding: 3 }}>
+    <Box height="100%" overflow="auto" padding={3}>
       {/* MCP Server Manager - shown when agent is running */}
       {isConfigured && baseUrl && (
         <Box
-          sx={{
-            mb: 4,
-            p: 3,
-            bg: 'canvas.default',
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'border.default',
-          }}
+          mb={4}
+          p={3}
+          bg="canvas.default"
+          borderRadius={2}
+          border="1px solid"
+          borderColor="border.default"
         >
           <McpServerManager
             baseUrl={baseUrl}
@@ -72,12 +70,10 @@ export const MainContent: React.FC<MainContentProps> = ({
 
       {showWelcomeMessage && (
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-          }}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          height="100%"
         >
           <Text sx={{ color: 'fg.muted', fontSize: 1 }}>
             Configure your agent and start a conversation using the chat panel.

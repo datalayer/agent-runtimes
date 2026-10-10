@@ -25,11 +25,20 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
+    # An application is a Reactor plugin on a PluginPlatform (LOOP P-35):
+    # its contributions, its extension, its commands and routes.
+    "datalayer_reactor>=1.0.5",
+    # PAP is a runtime protocol capability, not an example-only dependency.
+    # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
+    # orchestration and a root-published TypeScript package.
+    "personal-agent-protocol>=0.3.3,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
     # The Appspec and its checks (`loop apps validate`): one validation, the spec's own.
-    "agentspecs>=0.0.16",
+    # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
+    # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
+    "agentspecs>=0.0.76",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -47,6 +56,9 @@ dependencies = [
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
     "croniter",
+    # A component placed from Python (`Application.component`) is checked
+    # against its JSON Schema, as its properties form checks it.
+    "jsonschema>=4.18",
     # `datalayer_core.orchestration.Usage`, what an attempt spent as its worker
     # reported it, arrived in 1.2.2.
     # 1.2.3 is where a delegable agentspec becomes a discoverable, reachable
@@ -71,22 +83,22 @@ dependencies = [
     "fastmcp-slim[client]>=4.0.0b3,<5",
     # OTEL: floors, and no ceiling below the next major.
     #
-    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.44.0`
-    # requires `opentelemetry-api == 1.44.0` and
-    # `opentelemetry-semantic-conventions == 0.65b0`, and each exporter
+    # These six packages pin *each other* exactly — `opentelemetry-sdk 1.45.0`
+    # requires `opentelemetry-api == 1.45.0` and
+    # `opentelemetry-semantic-conventions == 0.66b0`, and each exporter
     # requires `opentelemetry-sdk ~= its own version`. So a ceiling here does
     # not narrow a range, it selects one release of the whole stack, and
     # anything else in the environment with an opinion about OTEL then has
     # nowhere to go. `<0.66` on the two 0.x packages was doing exactly that.
-    "opentelemetry-api>=1.44.0,<2.0.0",
-    "opentelemetry-sdk>=1.44.0,<2.0.0",
-    "opentelemetry-semantic-conventions>=0.65b0,<1.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2.0.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.44.0,<2.0.0",
-    "opentelemetry-instrumentation>=0.65b0,<1.0",
+    "opentelemetry-api>=1.45.0,<2.0.0",
+    "opentelemetry-sdk>=1.45.0,<2.0.0",
+    "opentelemetry-semantic-conventions>=0.66b0,<1.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2.0.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.0,<2.0.0",
+    "opentelemetry-instrumentation>=0.66b0,<1.0",
     # `instrument_worker_transports` patches httpx through it, so the A2A
     # relay and the ACP client carry the trace out to the worker.
-    "opentelemetry-instrumentation-httpx>=0.65b0,<1.0",
+    "opentelemetry-instrumentation-httpx>=0.66b0,<1.0",
     # The agent-memories PostgreSQL a runtime on Kubernetes keeps its A2A
     # tasks and ACP sessions in (`protocol_state`); the runtime image installs
     # only these dependencies.
@@ -98,6 +110,9 @@ dependencies = [
     "tiktoken>=0.5.0",
     "typer>=0.16.0",
     "urllib3>=2.6.3",
+    # The DevTools protocol of the browser on an application's computer
+    # (LOOP R-23, `loop/apps/browser.py`).
+    "websockets>=13",
 ]
 dynamic = ["version"]
 
@@ -139,21 +154,13 @@ aws = [
 ]
 a2a = [
     "a2a-sdk[all]>=0.3.0,<0.4.0",
-    # 2.0: the worker publishes through its helpers and leaves the end of
-    # the stream to it, on Pydantic AI 2.
-    #
-    # Ceiling added 2026-09-12. The floor alone left every build re-resolve
-    # to whatever was newest on PyPI, and somewhere within 2.0.x
-    # `A2AClient.__init__` renamed its worker-URL argument from `base_url`
-    # to `agent`. Nothing failed at import or at startup — the two call
-    # sites that build one are wrapped in a `try` or run fine until asked
-    # to do something — so the first thing to notice was a team member`s
-    # dispatch on prod1 answering `A2AClient.__init__() got an unexpected
-    # keyword argument `base_url``. Every A2A dispatch through
-    # `relay_a2a_task` was broken until then, silently. `<2.1` matches the
-    # `agent=` constructor this pin was fixed against; move it only with
-    # the call sites that use it.
-    "fasta2a>=2.0.1,<2.1",
+    # 2.1 speaks A2A 1.0 JSON-RPC, which `@a2a-js/sdk` 1.x in the browser
+    # uses, and writes `security_schemes` on the agent card; 2.1.1 takes the
+    # card's output modes and hands the worker the modes a request accepts
+    # (`accepted_output_modes`), which output formats rest on. The ceiling stays:
+    # a fasta2a minor release has changed its API before (`A2AClient`'s
+    # `base_url` became `agent`), so move it with the call sites.
+    "fasta2a>=2.1.1,<2.2",
 ]
 # The ACP client the orchestration adapter speaks, and the route serves.
 #
@@ -184,11 +191,11 @@ ui = [
 # Nothing in the runtime needs it: the converter took one versioned
 # specification URL from it, which `agent_runtimes/a2ui/executions.py` now
 # carries as a literal it verifies against the SDK wherever the SDK is present.
-# What is left is the examples, which is what this extra is for. The OTEL
-# ceiling is restated here so that installing it resolves in seconds instead of
-# discovering the same cap through sixty google-adk releases.
+# What is left is the examples (and the A2UI routes and backend tool that load
+# them), which is what this extra is for. Against the OTEL floor above it does
+# not resolve at all: install `a2ui-agent-sdk` with `--no-deps` to run them.
 a2ui = [
-    "a2ui-agent-sdk>=0.6.0",
+    "a2ui-agent-sdk>=0.7.0",
 ]
 memory = [
     "mem0ai>=2.0.1",
@@ -197,9 +204,12 @@ durable = [
     "dbos",
     "pydantic-ai-slim[dbos]>=2.35.0,<3",
 ]
+# Opt-in and out of `all`: every logfire release up to 5.1.1 caps
+# `opentelemetry-sdk<1.45`, so this extra cannot resolve against the OTEL floor
+# above until one lifts it. Install it with `--no-deps` (it runs on 1.45) or wait.
 logfire = [
-    "logfire>=4.32.1",
-    "logfire-api>=4.33.0",
+    "logfire>=5.1.1",
+    "logfire-api>=5.1.1",
 ]
 docs = [
     "npdoc_to_md>=2.0.1",
@@ -214,6 +224,8 @@ examples = [
     "uvicorn",
 ]
 cli = [
+    # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
+    "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",
@@ -222,6 +234,9 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
+    # `loop apps package` builds an application's wheel (LOOP P-29).
+    "build",
+    "hatchling",
 ]
 chat = [
     "jupyter-nbmodel-client",
@@ -235,8 +250,22 @@ chat = [
 agent-sudo = [
     "agent-sudo>=0.4.0rc14",
 ]
+# An application's agent written with another framework (LOOP P-23,
+# `app.agent`): its runs become the session's steps, its tool calls decided by
+# the application's rules. Opt-in and out of `all`: each brings a framework of
+# its own, and `app.agent` refuses one that is missing with the extra to install.
+langchain = [
+    "langchain-core>=1.0.0,<2",
+]
+langgraph = [
+    "langchain-core>=1.0.0,<2",
+    "langgraph>=1.0.0,<2",
+]
+llamaindex = [
+    "llama-index-core>=0.14.0,<0.15",
+]
 all = [
-    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,logfire,memory,openai,ui]",
+    "agent_runtimes[a2a,acp,anthropic,aws,cli,durable,google,memory,openai,ui]",
 ]
 test = [
     # Several tests build agents from `openai:` model strings, and pydantic-ai
@@ -256,7 +285,14 @@ test = [
     "python-dotenv>=1.1.1",
     "types-requests>=2.32.4",
     "typing-extensions>=4.15.0",
-    "datalayer_reactor>=1.0.4",
+    # The build hook's own test imports it (test_agent_pages).
+    "hatchling",
+    # The word error rate of the voice checks (VOICE.md VO-51).
+    "jiwer>=4.0.0",
+    # A notebook an application writes analyses in pandas and charts in
+    # matplotlib; its test runs one (test_output_formats).
+    "matplotlib",
+    "pandas",
 ]
 
 [project.scripts]
@@ -347,6 +383,10 @@ disable_error_code = ["import-untyped"]
 [tool.ruff.lint]
 extend-select = ["I"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["agent_runtimes"]
+known-third-party = ["agentspecs"]
+
 [tool.poetry]
 version = "0.1.0"
 
@@ -411,4 +451,10 @@ skips = [
 
 [tool.interrogate]
 fail-under = 79.0
-exclude = ["agent_runtimes/tests", "scripts"]
+exclude = [
+    "agent_runtimes/tests",
+    "agentspecs/tests",
+    "tests",
+    "scripts",
+    "node_modules",
+]

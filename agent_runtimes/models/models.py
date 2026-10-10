@@ -5,7 +5,7 @@
 
 import logging
 import os
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 from pydantic_ai.settings import ModelSettings
 
@@ -151,11 +151,60 @@ def _normalize_ai_inference_base_url(raw_url: str | None) -> str:
     return f"{base}/api/ai-inference/v1"
 
 
+#: The headers datalayer-ai-inference reads the application and deployment
+#: of a call from, and stamps on its usage record (LOOP R-09). Spelled as
+#: ``datalayer_common.usage_dimensions`` spells them.
+APP_UID_HEADER = "X-Datalayer-App-Uid"
+DEPLOYMENT_UID_HEADER = "X-Datalayer-Deployment-Uid"
+
+#: The application instance each agent of this runtime serves, by agent id:
+#: what a model resolved again for one request (the Vercel AI transport) is
+#: attributed with, as the agent's own model was at creation.
+_APP_INSTANCES: dict[str, dict[str, Any]] = {}
+
+
+def remember_app_instance(
+    agent_id: str, app_instance: Mapping[str, Any] | None
+) -> None:
+    """Keep the application instance an agent serves; ``None`` forgets it."""
+    if app_instance:
+        _APP_INSTANCES[agent_id] = dict(app_instance)
+    else:
+        _APP_INSTANCES.pop(agent_id, None)
+
+
+def app_instance_of(agent_id: str | None) -> dict[str, Any] | None:
+    """The application instance an agent serves, or ``None``."""
+    return _APP_INSTANCES.get(agent_id or "")
+
+
+def app_usage_headers(app_instance: Mapping[str, Any] | None) -> dict[str, str]:
+    """The headers naming an application's instance on a model call.
+
+    Its ``app_uid`` and, when it is a deployment's, its ``deployment_uid``:
+    ai-inference meters the call on the caller's account with both, so the
+    owner reads what each application and each deployment spent. A Preview
+    or a test has its application and no deployment; an agent no
+    application runs sends neither.
+    """
+    if not app_instance:
+        return {}
+    app_uid = str(app_instance.get("app_uid") or "").strip()
+    if not app_uid:
+        return {}
+    headers = {APP_UID_HEADER: app_uid}
+    deployment_uid = str(app_instance.get("deployment_uid") or "").strip()
+    if deployment_uid:
+        headers[DEPLOYMENT_UID_HEADER] = deployment_uid
+    return headers
+
+
 def _create_inference_http_client(
     timeout: Any,
     *,
     source: str,
     follow_redirects: bool = True,
+    headers: Mapping[str, str] | None = None,
 ) -> Any:
     """Create an httpx AsyncClient that logs outbound inference request URLs."""
     import httpx
@@ -171,6 +220,7 @@ def _create_inference_http_client(
     return httpx.AsyncClient(
         timeout=timeout,
         follow_redirects=follow_redirects,
+        headers=dict(headers or {}),
         event_hooks={"request": [_log_request]},
     )
 
@@ -376,12 +426,14 @@ def resolve_model_for_inference_provider(
     model: str,
     inference_provider: str | None = None,
     timeout: float = 60.0,
+    app_instance: Mapping[str, Any] | None = None,
 ) -> Any:
     """Return a model object/string honoring the requested inference provider.
 
     - ``local`` (default): preserves existing direct model behavior.
     - ``datalayer``: routes OpenAI-compatible requests through the
-      datalayer-ai-inference service URL.
+      datalayer-ai-inference service URL, naming ``app_instance``'s
+      application and deployment on every call (``app_usage_headers``).
     """
     # A local model is routed to the machine it runs on, whatever inference
     # provider was requested: sending a prompt meant for Ollama to a hosted
@@ -411,25 +463,43 @@ def resolve_model_for_inference_provider(
         return model
 
     import httpx
+    from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
+    from agent_runtimes.models.offered import inference_api_key
+
     http_timeout = httpx.Timeout(timeout, connect=30.0)
     base_url = _normalize_ai_inference_base_url(os.getenv("DATALAYER_AI_INFERENCE_URL"))
-    api_key = (
-        os.getenv("DATALAYER_AI_INFERENCE_API_KEY")
-        or os.getenv("DATALAYER_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-        or "datalayer"
-    )
 
+    # The token is read as each call is made, not now: a pooled runtime builds
+    # its agent before it is assigned and given its token, and a call without
+    # one is refused in a sentence (``InferenceTokenMissing``), never made
+    # with another key. A deployment's agent calls with its application's
+    # principal's token, and only with it (LOOP I-03).
+    from agent_runtimes.loop.apps.principal import api_key_for, deployment_of
+    from agent_runtimes.loop.apps.visitors import turn_api_key, visitors_runtime
+
+    deployment = deployment_of(app_instance)
+    # On the visitors' runtime, every call is a visitor's, with their token
+    # and nothing else (LOOP R-30).
+    api_key = (
+        turn_api_key
+        if visitors_runtime()
+        else api_key_for(deployment)
+        if deployment
+        else inference_api_key
+    )
     provider = OpenAIProvider(
-        base_url=base_url,
-        api_key=api_key,
-        http_client=_create_inference_http_client(
-            http_timeout,
-            source="datalayer-ai-inference",
-        ),
+        openai_client=AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            http_client=_create_inference_http_client(
+                http_timeout,
+                source="datalayer-ai-inference",
+                headers=app_usage_headers(app_instance),
+            ),
+        )
     )
     logger.info(
         "Routing model '%s' through datalayer-ai-inference at %s",
@@ -443,66 +513,74 @@ def resolve_model_for_inference_provider(
     )
 
 
+class RequestModelRefused(ValueError):
+    """A model a chat request names that cannot be called: said in a sentence."""
+
+
+def bedrock_region() -> str:
+    """The AWS region a direct Bedrock call would use, or ``""``.
+
+    ``AWS_REGION``, ``AWS_DEFAULT_REGION``, else the region boto3 reads from
+    its configuration (``~/.aws/config``).
+    """
+    for name in ("AWS_REGION", "AWS_DEFAULT_REGION"):
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return value
+    try:
+        import boto3
+    except ImportError:
+        return ""
+    return str(boto3.session.Session().region_name or "").strip()
+
+
+def model_of_request(agent_id: str | None, model: str) -> Any:
+    """A model a chat request names, called as the agent's own model is.
+
+    Through the provider the agent was made with (`agent_inference_provider`):
+    on a Datalayer runtime, ai-inference, naming the application instance it
+    serves (LOOP R-09) — never a direct call around it. A direct Bedrock call
+    with no region to call is refused here, in a sentence, rather than at the
+    model with boto3's.
+
+    Raises
+    ------
+    RequestModelRefused
+        When the model would be called directly on Bedrock with no region.
+    """
+    from agent_runtimes.models.offered import agent_inference_provider
+
+    provider = agent_inference_provider(agent_id)
+    resolved = resolve_model_for_inference_provider(
+        model, provider, app_instance=app_instance_of(agent_id)
+    )
+    if (
+        isinstance(resolved, str)
+        and resolved.strip().lower().startswith("bedrock:")
+        and not bedrock_region()
+    ):
+        raise RequestModelRefused(
+            f"{model} would be called on Bedrock directly, and this runtime has "
+            "no AWS region (AWS_REGION or AWS_DEFAULT_REGION) nor routes its "
+            "inference through Datalayer: nothing was asked."
+        )
+    return resolved
+
+
 def create_default_models(tool_ids: list[str]) -> list[AIModelRuntime]:
     """
     Create default AI model configurations from the generated model catalogue.
+
+    Each model with its availability, as ``agent_runtimes.models.offered``
+    decides it: ai-inference's own list when the runtime routes through it
+    and it answered, else entitlement and credentials here.
 
     Args:
         tool_ids: List of tool IDs to associate with models
 
     Returns:
-        List of AIModelRuntime configurations with availability based on environment variables
+        List of AIModelRuntime configurations.
     """
-    # Build AIModelRuntime instances from the generated catalogue
-    models = []
-    for spec_model in AI_MODEL_CATALOGUE_DICT.values():
-        """
-        Two questions, and only one of them used to be asked.
+    from agent_runtimes.models.offered import model_rows
 
-        `check_env_vars_available` answers readiness — are the credentials for
-        this provider set — and the registry's own `available` answers
-        entitlement, whether this deployment may call the model at all. Every
-        Bedrock model shares one set of AWS credentials, so readiness said yes
-        to all of them the moment those were present, and the menu offered
-        Fable 5 and the whole Opus family to an account entitled to none of
-        them. Picking one returned `AccessDeniedException` from Bedrock.
-
-        A model has to pass both to be selectable, and the reason it failed
-        travels with it: a missing API key is something the reader can go and
-        fix, and a model we are not entitled to is not, so telling them the
-        second is the first sends them off to do something pointless.
-        """
-        env_ready = credentials_ready(spec_model)
-        entitled = getattr(spec_model, "available", True)
-        is_available = env_ready and entitled
-
-        if entitled and not env_ready:
-            reason = "Missing API key"
-        elif not entitled:
-            reason = "Not enabled for this deployment"
-        else:
-            reason = None
-
-        model = AIModelRuntime(
-            id=spec_model.id,
-            name=spec_model.name,
-            builtin_tools=tool_ids,
-            required_env_vars=spec_model.required_env_vars,
-            is_available=is_available,
-            unavailable_reason=reason,
-        )
-        models.append(model)
-
-        # Log availability status
-        if is_available:
-            logger.info(f"Model {spec_model.name} is available")
-        else:
-            logger.debug(f"Model {spec_model.name} is unavailable ({reason})")
-
-    # Log summary
-    available_count = sum(1 for m in models if m.is_available)
-    logger.info(
-        f"Loaded {available_count}/{len(models)} available models based on environment variables"
-    )
-
-    return models
+    return model_rows(list(AI_MODEL_CATALOGUE_DICT), tool_ids)

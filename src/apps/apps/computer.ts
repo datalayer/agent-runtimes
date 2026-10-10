@@ -1,0 +1,504 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * An application's computer (LOOP R-23, I-01): the sandbox its agent runs on,
+ * as the computer view shows it — its three parts, each off until it is
+ * turned on; what its agent ran on it, from the conversation's tool calls;
+ * its files, read-only; its browser's page, live; and *Take over* and
+ * *Hand back* — the person then clicks and types in that page — through the
+ * runtime's `/api/v1/apps/agents/{agent}/computer` routes.
+ *
+ * Pure but for `fetch`: no React.
+ *
+ * @module apps/apps/computer
+ */
+
+import type { AppSpec } from '../../types/agentspecs';
+import type { ConversationEntry } from '../core';
+
+/** The parts of a computer, in the order a person reads them. */
+export const COMPUTER_PARTS = ['browse', 'files', 'shell'] as const;
+
+export type ComputerPart = (typeof COMPUTER_PARTS)[number];
+
+export type ComputerParts = Record<ComputerPart, boolean>;
+
+/** The tools of each part, as the runtime gives them (`loop/apps/computer.py`). */
+export const COMPUTER_PART_TOOLS: Record<ComputerPart, readonly string[]> = {
+  browse: [
+    'open_page',
+    'read_page',
+    'page_screenshot',
+    'click_on_page',
+    'type_on_page',
+  ],
+  files: ['list_computer_files', 'read_computer_file', 'write_computer_file'],
+  shell: ['execute_code', 'run_skill_script'],
+};
+
+/** What the computer view says. */
+export const COMPUTER_WORDS = {
+  title: 'Computer',
+  part: {
+    browse: 'Browse',
+    files: 'Files',
+    shell: 'Shell',
+  } as Record<ComputerPart, string>,
+  on: 'on',
+  off: 'off',
+  none: 'It has no computer: browse, files and shell are all off. Turn one on in its permissions to give it one.',
+  offSaid: (parts: string[]) =>
+    `Off, so its agent is given no tool for it: ${parts.join(', ')}.`,
+  browser: 'Browser',
+  noBrowser: 'No browser is installed on its computer.',
+  noPage: 'Its browser has opened no page yet.',
+  pageAlt: (title: string) => `The page its browser shows: ${title}`,
+  clickToAct:
+    'Click on the page to click there; with the page selected, what you type goes to it.',
+  typeOnPage: 'Text to type on the page',
+  type: 'Type',
+  address: 'An address to open',
+  open: 'Open',
+  scrollUp: 'Scroll up',
+  scrollDown: 'Scroll down',
+  agentHas: 'Its agent has the computer.',
+  youHave:
+    'You have the computer: its agent waits for it until you hand it back.',
+  someoneHas: 'Somebody else has taken this computer over.',
+  takeOver: 'Take over',
+  handBack: 'Hand back',
+  run: 'Run',
+  yourCode: 'Python to run on its computer',
+  terminal: 'What ran on it',
+  nothingRan: 'Nothing has run on it yet in this conversation.',
+  files: 'Files',
+  notStarted: 'Its computer starts when its agent first uses it: no file yet.',
+  emptyDirectory: 'Empty.',
+  up: 'Up',
+  download: 'Download',
+  signedOut: 'Its computer is shown once you are signed in to Datalayer.',
+} as const;
+
+/** Each part of an application's computer, on or off, as its Appspec says. */
+export function computerParts(app: AppSpec): ComputerParts {
+  const computer = app.permissions?.computer;
+  return {
+    browse: Boolean(computer?.browse),
+    files: Boolean(computer?.files),
+    shell: Boolean(computer?.shell),
+  };
+}
+
+/** Whether its agent uses a computer at all. */
+export const hasComputer = (parts: ComputerParts): boolean =>
+  COMPUTER_PARTS.some(part => parts[part]);
+
+/** The parts turned off, in words. */
+export const partsOff = (parts: ComputerParts): string[] =>
+  COMPUTER_PARTS.filter(part => !parts[part]).map(part =>
+    COMPUTER_WORDS.part[part].toLowerCase(),
+  );
+
+/** The part of the computer a tool uses, or undefined. */
+export function partOf(toolName: string): ComputerPart | undefined {
+  return COMPUTER_PARTS.find(part =>
+    COMPUTER_PART_TOOLS[part].includes(toolName),
+  );
+}
+
+/** One thing its agent did on its computer: the command, and what it said. */
+export type TerminalEntry = {
+  tool: string;
+  part: ComputerPart;
+  /** The code run, or the file's path. */
+  command: string;
+  /** What came back; undefined while it runs. */
+  output?: string;
+};
+
+/** The most of an output the view shows. */
+export const OUTPUT_LIMIT = 4000;
+
+/**
+ * What a tool of its computer returned, as a terminal shows it: the printed
+ * output and the error of code run (Codemode answers with an object, or its
+ * JSON), anything else as it came.
+ */
+export function outputOf(value: unknown): string {
+  let found = value;
+  if (typeof found === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(found);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        found = parsed;
+      }
+    } catch {
+      // Text, as it came.
+    }
+  }
+  let text: string;
+  if (found && typeof found === 'object' && !Array.isArray(found)) {
+    const ran = found as Record<string, unknown>;
+    const printed = [
+      typeof ran.stdout === 'string' ? ran.stdout : ran.output,
+      ran.stderr,
+      ran.error ?? ran.execution_error ?? ran.code_error,
+    ].filter(
+      (part): part is string => typeof part === 'string' && part.trim() !== '',
+    );
+    text =
+      printed.length > 0
+        ? printed.join('\n')
+        : 'stdout' in ran || 'output' in ran
+          ? ''
+          : JSON.stringify(found, null, 2);
+  } else {
+    text =
+      typeof found === 'string'
+        ? found
+        : found === null || found === undefined
+          ? ''
+          : JSON.stringify(found, null, 2);
+  }
+  return text.length > OUTPUT_LIMIT
+    ? `${text.slice(0, OUTPUT_LIMIT)}\n… (${(text.length - OUTPUT_LIMIT).toLocaleString('en')} characters more)`
+    : text;
+}
+
+function commandOf(args: Record<string, unknown>): string {
+  for (const key of ['code', 'path', 'script_name', 'url', 'selector']) {
+    const value = args[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  // A call read back from history may come without its arguments.
+  return Object.keys(args).length ? JSON.stringify(args) : '';
+}
+
+/**
+ * What its agent ran on its computer, in order: the conversation's calls to
+ * the tools of its shell and of its files, each with what it returned —
+ * streamed, as the conversation is.
+ */
+export function terminalEntries(
+  conversation: readonly ConversationEntry[],
+): TerminalEntry[] {
+  const entries: TerminalEntry[] = [];
+  for (const entry of conversation) {
+    if (entry.role !== 'tool') {
+      continue;
+    }
+    const part = partOf(entry.name);
+    if (!part) {
+      continue;
+    }
+    entries.push({
+      tool: entry.name,
+      part,
+      command: commandOf(entry.args ?? {}),
+      output: entry.result === undefined ? undefined : outputOf(entry.result),
+    });
+  }
+  return entries;
+}
+
+/** Who has its computer, as the runtime says. */
+export type ComputerHolder = { kind: string; uid: string; since: number };
+
+/** Its computer, as the runtime describes it. */
+export type ComputerState = {
+  agent: string;
+  app: string;
+  parts: ComputerParts;
+  /** Whether a browser is installed where its agent runs, browse on. */
+  browser: boolean;
+  /** The page its browser has open; none before its first, or browse off. */
+  page?: BrowserPage | null;
+  started: boolean;
+  held: ComputerHolder | null;
+  /** Whether the person asking is who has it. */
+  yours: boolean;
+  /**
+   * The origin its files are served from, as the runtime says it (D-22):
+   * the host kept for what applications serve, or empty where the plane
+   * keeps none and the runtime's own host serves them.
+   */
+  servedFrom?: string;
+};
+
+/** A page its browser has open. */
+export type BrowserPage = { url: string; title: string };
+
+/** One entry of a directory of its computer. */
+export type ComputerFile = {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size: number;
+  modified: number;
+};
+
+/** What a person's code said on its computer. */
+export type RunOutput = { stdout: string; stderr: string; error: string };
+
+/** Where its computer is reached, and as whom. */
+export type ComputerContext = {
+  /** The agent-runtimes server its agent runs on. */
+  serverUrl: string;
+  /** Its agent, as the runtime names it. */
+  agentId: string;
+  /** The person's token; none on the machine itself. */
+  token?: string;
+  /**
+   * Where what an application serves a person is served from (STUDIO D-22):
+   * `user-apps.datalayer.run`, the same runtime behind another name. A file
+   * fetched from the runtimes' host would be same-origin with every other
+   * runtime; from this one it is origin of its own. Unset, the runtime's own
+   * host serves it, as it did.
+   */
+  userAppsUrl?: string;
+};
+
+/** The computer's routes, for an agent. */
+export const computerUrl = (context: ComputerContext, tail = ''): string =>
+  `${context.serverUrl.replace(/\/+$/, '')}/api/v1/apps/agents/${encodeURIComponent(context.agentId)}/computer${tail}`;
+
+/**
+ * Where a file of its computer is read (STUDIO D-22): the same path, on the
+ * host kept for what applications serve when there is one. Only the origin
+ * changes — the runtime is the same, and its prefix is answered there too.
+ */
+export function computerFileUrl(
+  context: ComputerContext,
+  path: string,
+): string {
+  const url = computerUrl(context, `/file?path=${encodeURIComponent(path)}`);
+  const served = (context.userAppsUrl || '').trim();
+  if (!served) {
+    return url;
+  }
+  try {
+    const asked = new URL(url);
+    const host = new URL(served);
+    asked.protocol = host.protocol;
+    asked.host = host.host;
+    return asked.toString();
+  } catch {
+    // An address that is not one: the runtime's own host serves it.
+    return url;
+  }
+}
+
+async function asked(
+  context: ComputerContext,
+  tail: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const response = await fetch(computerUrl(context, tail), {
+    ...init,
+    headers: {
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(context.token ? { Authorization: `Bearer ${context.token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+    } catch {
+      // A refusal without a sentence: its status says it.
+    }
+    throw new Error(detail);
+  }
+  return response;
+}
+
+/** Its parts, whether it started, who has it. */
+export const readComputer = async (
+  context: ComputerContext,
+): Promise<ComputerState> =>
+  (await asked(context, '')).json() as Promise<ComputerState>;
+
+/** A directory of its working directory. */
+export const listComputerFiles = async (
+  context: ComputerContext,
+  path = '.',
+): Promise<ComputerFile[]> => {
+  const response = await asked(
+    context,
+    `/files?path=${encodeURIComponent(path)}`,
+  );
+  const body = (await response.json()) as { entries: ComputerFile[] };
+  return body.entries;
+};
+
+/**
+ * One of its files, to save. Fetched from the host kept for what
+ * applications serve when there is one (D-22), with the person's token: the
+ * runtime is the same, only the name it answers to differs.
+ */
+export const downloadComputerFile = async (
+  context: ComputerContext,
+  path: string,
+): Promise<Blob> => {
+  const response = await fetch(computerFileUrl(context, path), {
+    headers: context.token ? { Authorization: `Bearer ${context.token}` } : {},
+  });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+    } catch {
+      // A refusal without a sentence: its status says it.
+    }
+    throw new Error(detail);
+  }
+  return response.blob();
+};
+
+/** Take it over: what runs is interrupted, its agent's calls wait. */
+export const takeOverComputer = async (
+  context: ComputerContext,
+): Promise<{ held: ComputerHolder; interrupted: boolean }> =>
+  (await asked(context, '/take-over', { method: 'POST' })).json();
+
+/** Hand it back to its agent. */
+export const handBackComputer = async (
+  context: ComputerContext,
+): Promise<void> => {
+  await asked(context, '/hand-back', { method: 'POST' });
+};
+
+/** Run code on it, as the person who took it over. */
+export const runOnComputer = async (
+  context: ComputerContext,
+  code: string,
+): Promise<RunOutput> =>
+  (
+    await asked(context, '/run', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+  ).json();
+
+/** The keys a person presses on its page, as the runtime takes them. */
+export const BROWSER_KEYS = [
+  'Enter',
+  'Tab',
+  'Backspace',
+  'Escape',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'PageUp',
+  'PageDown',
+] as const;
+
+/**
+ * The page its browser shows, as a PNG; undefined before its first page
+ * (the runtime answers 404).
+ */
+export const readBrowserScreenshot = async (
+  context: ComputerContext,
+): Promise<Blob | undefined> => {
+  const response = await fetch(computerUrl(context, '/browser/screenshot'), {
+    headers: context.token ? { Authorization: `Bearer ${context.token}` } : {},
+    cache: 'no-store',
+  });
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+    } catch {
+      // A refusal without a sentence: its status says it.
+    }
+    throw new Error(detail);
+  }
+  return response.blob();
+};
+
+const onBrowser = async (
+  context: ComputerContext,
+  step: string,
+  body: Record<string, unknown>,
+): Promise<BrowserPage> =>
+  (
+    (await (
+      await asked(context, `/browser/${step}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    ).json()) as { page: BrowserPage }
+  ).page;
+
+/** Click on its page, at a point of its screenshot, as who took it over. */
+export const clickOnBrowser = (
+  context: ComputerContext,
+  x: number,
+  y: number,
+): Promise<BrowserPage> => onBrowser(context, 'click', { x, y });
+
+/** Type where its page's focus is. */
+export const typeOnBrowser = (
+  context: ComputerContext,
+  text: string,
+): Promise<BrowserPage> => onBrowser(context, 'type', { text });
+
+/** Press one of `BROWSER_KEYS` on its page. */
+export const pressOnBrowser = (
+  context: ComputerContext,
+  key: string,
+): Promise<BrowserPage> => onBrowser(context, 'key', { key });
+
+/** Scroll its page, down for a positive `dy`. */
+export const scrollBrowser = (
+  context: ComputerContext,
+  dy: number,
+): Promise<BrowserPage> => onBrowser(context, 'scroll', { dy });
+
+/** Open an address in its browser. */
+export const openOnBrowser = (
+  context: ComputerContext,
+  url: string,
+): Promise<BrowserPage> => onBrowser(context, 'open', { url });
+
+/**
+ * Where a click on a screenshot drawn at another size lands on the page: its
+ * pixels are the page's (the runtime takes it at the page's own size).
+ */
+export function pointOnPage(
+  clicked: { x: number; y: number },
+  drawn: { width: number; height: number },
+  natural: { width: number; height: number },
+): { x: number; y: number } {
+  const scale = (value: number, from: number, to: number) =>
+    from > 0 ? Math.round((value * to) / from) : value;
+  return {
+    x: Math.max(
+      0,
+      Math.min(natural.width, scale(clicked.x, drawn.width, natural.width)),
+    ),
+    y: Math.max(
+      0,
+      Math.min(natural.height, scale(clicked.y, drawn.height, natural.height)),
+    ),
+  };
+}
+
+/** The directory above a path of its working directory. */
+export function parentOf(path: string): string {
+  const parts = path.split('/').filter(part => part && part !== '.');
+  parts.pop();
+  return parts.length ? parts.join('/') : '.';
+}

@@ -108,12 +108,10 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
         Cell Example
       </Heading>
       <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: ['1fr', null, 'repeat(3, minmax(0, 1fr))'],
-          gap: 3,
-          mb: 3,
-        }}
+        display="grid"
+        gridTemplateColumns={['1fr', null, 'repeat(3, minmax(0, 1fr))']}
+        gap={3}
+        mb={3}
       >
         <Box>
           <Text as="p" sx={{ mb: 0, wordBreak: 'break-word' }}>
@@ -125,7 +123,7 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
           <Text as="p" sx={{ mb: 2 }}>
             Outputs Count: {cellsStore.getOutputsCount(CELL_ID)}
           </Text>
-          <Box sx={{ mb: 2 }}>
+          <Box mb={2}>
             Kernel State:{' '}
             <Label>
               {activeKernel && kernelsStore.getExecutionState(activeKernel.id)}
@@ -147,7 +145,7 @@ const CellExampleContent = ({ serviceManager }: IJupyterCellExampleProps) => {
           >
             Run Cell
           </Button>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <Box display="flex" alignItems="center" gap={2} mb={3}>
             <Box>Code Sandbox:</Box>
             <KernelIndicator
               kernel={activeKernel && activeKernel.connection}

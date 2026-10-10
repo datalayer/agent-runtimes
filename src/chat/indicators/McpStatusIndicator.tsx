@@ -10,7 +10,7 @@
  *
  * Aggregate logic
  * ───────────────
- * - no servers array / empty → "none"  (gray, hidden or subtle)
+ * - no servers array / empty → "none"  (not drawn: nothing to report)
  * - any server "starting"   → "starting"  (amber, pulsing)
  * - any server "failed"     → "failed"    (red)
  * - all servers "started"   → "started"   (green)
@@ -55,7 +55,6 @@ function buildTooltipText(
   aggregate: McpAggregateStatus,
   servers: McpServerStatus[],
 ): string {
-  if (aggregate === 'none') return 'No MCP Server defined';
   const lines = [MCP_STATUS_LABELS[aggregate]];
   for (const s of servers) {
     let detail = `• ${s.id}: ${s.status}`;
@@ -106,14 +105,22 @@ export function McpStatusIndicator({
     [aggregate, servers],
   );
 
-  // Show a subtle gray dot when no MCP servers are configured.
-  // The tooltip tells the user none are defined.
+  /*
+   * Nothing drawn when the agent has no MCP server (LOOP H-21): a control
+   * that only says so was read out as *No MCP Server defined* in every
+   * composer, an in-page agent's and an application's alike. When there are
+   * some, it is named by their state, and the tooltip — its description —
+   * lists them.
+   */
+  if (aggregate === 'none') {
+    return null;
+  }
 
   return (
     <Tooltip text={tooltipText} direction="n">
       <button
         type="button"
-        aria-label={tooltipText}
+        aria-label={MCP_STATUS_LABELS[aggregate]}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -129,17 +136,18 @@ export function McpStatusIndicator({
       >
         <Box
           as="span"
-          sx={{
-            display: 'inline-block',
-            width: 12,
-            height: 12,
-            borderRadius: '50%',
-            bg: MCP_STATUS_COLORS[aggregate],
-            flexShrink: 0,
-            ...(aggregate === 'starting' && {
-              animation: 'mcp-pulse 1.5s ease-in-out infinite',
-            }),
-          }}
+          display="inline-block"
+          width={12}
+          height={12}
+          borderRadius="50%"
+          bg={MCP_STATUS_COLORS[aggregate]}
+          flexShrink={0}
+          animation={
+            aggregate === 'starting'
+              ? 'mcp-pulse 1.5s ease-in-out infinite'
+              : undefined
+          }
+          reducedMotion={{ animation: 'none' }}
         />
       </button>
     </Tooltip>

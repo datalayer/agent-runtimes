@@ -1,0 +1,1441 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * The instant checks of an application (LOOP V-01 to V-04): what an editor
+ * shows on every change, with no model call.
+ *
+ * The same checks `loop apps validate` runs with agentspecs, in the words it
+ * uses, read here from the catalogues this package generates:
+ *
+ * - **problems** — what stops the application from being used: what the spec
+ *   refuses, and every reference that does not resolve (V-01);
+ * - **attention** — what its builder should have decided rather than left to
+ *   the defaults: what it can do with no rule of its own, what it reaches with
+ *   the builder's account, a record of nothing (V-03);
+ * - **setup** — what it names that is not enabled today.
+ *
+ * The verdict is said in the Studio's words: *Not ready* with a problem,
+ * *Needs attention* with something to decide, and otherwise the instant
+ * checks pass — which is not yet *Ready*: that takes its tests.
+ *
+ * Pure: nothing here calls a service.
+ *
+ * @module apps/apps/checks
+ */
+
+import { getAgentspecs } from '../../specs/agents';
+import { getCog } from '../../specs/cogs';
+import { getFrame } from '../../specs/frames';
+import { getGate } from '../../specs/gates';
+import { GUARD_CATALOGUE } from '../../specs/guards';
+import { getComponent } from '../../specs/uiPlugins';
+import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
+import { getMemory } from '../../specs/memory';
+import { getModel } from '../../specs/models';
+import { getNotificationSpec } from '../../specs/notifications';
+import { getSkillSpec } from '../../specs/skills';
+import { getTeamSpec } from '../../specs/teams';
+import { getBackendToolSpec } from '../../specs/backendTools';
+import { getTrack } from '../../specs/tracks';
+import type {
+  ActionClass,
+  AppPageOutputComponent,
+  AppSpec,
+  ComponentSpec,
+} from '../../types/agentspecs';
+import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
+import {
+  APP_THEME_MODES,
+  APP_THEME_VARIANTS,
+  isAssistantCharacterId,
+  PAGE_OUTPUT_SHOWS,
+  parseAppspec,
+} from './appspec';
+import { classesOf, splitRef, toolBehaviours } from './rules';
+import { COMMAND_INPUT, COMMAND_NAME, MODE_ID } from './composer';
+import { HOST_NAME, HOST_USERS, hostToolsOf } from './hostTools';
+import { MAX_UPLOAD_MB, UPLOAD_KIND } from './uploads';
+import { formUiProblems } from './settingsInputs';
+import {
+  customComponentOf,
+  customComponentsProblems,
+  customNodeRefused,
+  customPropsRefused,
+} from './customComponents';
+import { translationProblems } from './language';
+
+export const NOT_READY = 'Not ready';
+export const NEEDS_ATTENTION = 'Needs attention';
+export const PASSES = 'Passes the instant checks';
+
+export type CheckVerdict =
+  typeof NOT_READY | typeof NEEDS_ATTENTION | typeof PASSES;
+
+export interface AppCheck {
+  verdict: CheckVerdict;
+  problems: string[];
+  attention: string[];
+  setup: string[];
+}
+
+/** The id of a reference, `id` or `id:version`. */
+const idOf = (ref: string): string => {
+  const at = ref.lastIndexOf(':');
+  return at > 0 && ref.slice(at + 1).includes('.') ? ref.slice(0, at) : ref;
+};
+
+/**
+ * The component a layout names (LOOP C-13), from the catalogs of the enabled
+ * UI plugins, by the name a surface gives it.
+ */
+export const componentNamed = (name: string): ComponentSpec | undefined =>
+  getComponent(name);
+
+const own = <T>(record: Record<string, T>, key: string): T | undefined =>
+  Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+
+const ACTIONS: Partial<Record<ActionClass, string>> = {
+  write: 'create or change things',
+  send: 'send',
+  buy: 'buy',
+  delete: 'delete',
+  publish: 'share or publish',
+};
+
+const CLASS_NAMES = new Set([
+  'read',
+  'write',
+  'send',
+  'buy',
+  'delete',
+  'publish',
+]);
+
+/** Whether a name matches a pattern of `*` and `?`, as the rules read it. */
+const matches = (name: string, pattern: string): boolean =>
+  new RegExp(
+    '^' +
+      Array.from(pattern, c =>
+        c === '*'
+          ? '[\\s\\S]*'
+          : c === '?'
+            ? '[\\s\\S]'
+            : c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      ).join('') +
+      '$',
+  ).test(name);
+
+/** The name of a function of an application's code (agentspecs' `CODE_NAME`). */
+const CODE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * What its code declares that agentspecs refuses (LOOP P-06): its tools,
+ * its checks and the tests it decides, each by a Python name, each name
+ * once; a tool says what it does, by class, each class once.
+ */
+export function ownCodeProblems(app: AppSpec): string[] {
+  const problems: string[] = [];
+  const tools = app.tools ?? [];
+  for (const tool of tools) {
+    if (!CODE_NAME.test(tool.name)) {
+      problems.push(
+        `Cannot use “${tool.name}” as a tool's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+    if (!tool.description.trim()) {
+      problems.push(
+        `The tool “${tool.name}” says what it does, for the agent.`,
+      );
+    }
+    if (tool.does.length === 0) {
+      problems.push(
+        `The tool “${tool.name}” says what it does: read, write, send, buy, delete or publish.`,
+      );
+    }
+    for (const action of tool.does) {
+      if (!CLASS_NAMES.has(action)) {
+        problems.push(
+          `The tool “${tool.name}” does “${action}”, which is no class of action.`,
+        );
+      }
+    }
+    if (new Set(tool.does).size !== tool.does.length) {
+      problems.push('A tool says each thing it does once.');
+    }
+  }
+  const names = tools.map(tool => tool.name);
+  if (new Set(names).size !== names.length) {
+    problems.push('Two of its tools have the same name.');
+  }
+  const checks = (app.checks.code ?? []).map(check => check.name);
+  for (const name of checks) {
+    if (!CODE_NAME.test(name)) {
+      problems.push(
+        `Cannot use “${name}” as a check's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+  }
+  if (new Set(checks).size !== checks.length) {
+    problems.push('Two checks of its code have the same name.');
+  }
+  const decided = app.tests.cases.flatMap(testCase =>
+    testCase.code ? [testCase.code] : [],
+  );
+  if (new Set(decided).size !== decided.length) {
+    problems.push('Two tests are decided by the same function of its code.');
+  }
+  problems.push(...pageProblems(app));
+  // The components its developer wrote, reviewed as the catalog's (P-17).
+  problems.push(...customComponentsProblems(app));
+  return problems;
+}
+
+/**
+ * What agentspecs refuses of a widget's page written in its code (LOOP
+ * P-05): a page that is not a widget's, inputs that are not a form, outputs
+ * of one name twice, drawn with another component, saying in their `props`
+ * what their value fills or lacking what their component needs, and an input
+ * named as a setting — both are on the page at `/inputs/<name>`.
+ */
+export function pageProblems(app: AppSpec): string[] {
+  const page = app.interface.page;
+  if (!page) {
+    return [];
+  }
+  const problems: string[] = [];
+  if (app.kind !== 'widget') {
+    problems.push(
+      `A page of inputs and outputs is a widget's: a ${app.kind} application has none. Remove \`interface.page\`, or make it a widget.`,
+    );
+  }
+  if (!CODE_NAME.test(page.function)) {
+    problems.push(
+      `Cannot use “${page.function}” as the function of its page: letters, digits and \`_\`, as in Python.`,
+    );
+  }
+  problems.push(
+    ...formProblems({
+      id: 'page inputs',
+      schema: page.inputs,
+      ui: page.inputsUi,
+    }),
+  );
+  if (page.outputs.length === 0) {
+    problems.push('Its page shows one output at least.');
+  }
+  const names = page.outputs.map(output => output.name);
+  if (new Set(names).size !== names.length) {
+    problems.push('Two outputs of its page have the same name.');
+  }
+  for (const output of page.outputs) {
+    if (!CODE_NAME.test(output.name)) {
+      problems.push(
+        `Cannot use “${output.name}” as an output's name: letters, digits and \`_\`, as in Python.`,
+      );
+    }
+    // A component its developer wrote (P-17): its value what it shows first.
+    const custom =
+      output.component in PAGE_OUTPUT_SHOWS
+        ? undefined
+        : customComponentOf(app, output.component);
+    if (custom) {
+      if (custom.shows.length === 0) {
+        problems.push(
+          `The output “${output.name}” is drawn with ${output.component}, which shows nothing: its value is what it shows first, under \`shows\`.`,
+        );
+        continue;
+      }
+      const refused = customPropsRefused(custom, output.props);
+      if (refused.length > 0) {
+        problems.push(
+          `The output “${output.name}” is a ${output.component} its schema refuses: ${refused.join('; ')}.`,
+        );
+      }
+      continue;
+    }
+    const shows = PAGE_OUTPUT_SHOWS[output.component as AppPageOutputComponent];
+    if (!shows) {
+      problems.push(
+        `The output “${output.name}” is drawn with ${output.component}: an output is one of ${Object.keys(PAGE_OUTPUT_SHOWS).join(', ')} or a component of its own (\`custom_components\`).`,
+      );
+      continue;
+    }
+    const said = [shows, 'id', 'component'].filter(key => key in output.props);
+    if (said.length > 0) {
+      problems.push(
+        `The output “${output.name}” says ${said.join(', ')} in its \`props\`: its id is its name, and what it shows is its value.`,
+      );
+    }
+    const schema = getComponent(output.component)?.properties as
+      { required?: string[] } | undefined;
+    const missing = (schema?.required ?? []).filter(
+      key => key !== shows && !(key in output.props),
+    );
+    if (missing.length > 0) {
+      problems.push(
+        `The output “${output.name}” is a ${output.component} without ${missing.join(', ')}: say it in its \`props\`.`,
+      );
+    }
+  }
+  const settings = Object.keys(app.interface.settings?.properties ?? {});
+  const inputs = Object.keys(page.inputs?.properties ?? {});
+  const shared = settings.filter(name => inputs.includes(name));
+  if (shared.length > 0) {
+    problems.push(
+      `${shared.map(name => `“${name}”`).join(', ')} is both a setting and an input of its page: name one otherwise.`,
+    );
+  }
+  return problems;
+}
+
+/** What the spec says of itself that the tolerant reader lets through. */
+function shapeProblems(app: AppSpec): string[] {
+  const problems: string[] = [];
+  if (!app.id.trim()) {
+    problems.push('The application has no `id`.');
+  } else if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(app.id)) {
+    problems.push(
+      `Cannot use “${app.id}” as an id: lower-case letters, digits and hyphens.`,
+    );
+  }
+  if (!app.name.trim()) {
+    problems.push('The application has no `name`.');
+  }
+  if (Boolean(app.agent) === Boolean(app.team)) {
+    problems.push(
+      'An application names who does the work: an `agent`, or a `team`, and not both.',
+    );
+  }
+  // agentspecs refuses either way round (LOOP E-01): off says why, on says nothing.
+  const because = (app.unavailable_because ?? '').trim();
+  if (!app.enabled && !because) {
+    problems.push(
+      'An application that is not offered says why, under `unavailable_because`.',
+    );
+  }
+  if (app.enabled && because) {
+    problems.push(
+      'An application offered today is available: remove `unavailable_because`, or set `enabled: false`.',
+    );
+  }
+  if (app.kind === 'decision' && !app.decision) {
+    problems.push(
+      'A decision application says what it decides, under `decision`.',
+    );
+  }
+  if (app.kind !== 'decision' && app.decision) {
+    problems.push(
+      `A ${app.kind} application decides nothing: remove \`decision\`, or make it a decision.`,
+    );
+  }
+  if (app.kind === 'worker') {
+    if (!app.goal.trim()) {
+      problems.push('A worker says its `goal`.');
+    }
+    if (app.triggers.length === 0) {
+      problems.push('A worker says what starts its work, under `triggers`.');
+    }
+  } else if (app.triggers.length > 0) {
+    problems.push(
+      `A ${app.kind} application starts when somebody opens it: \`triggers\` are a worker's.`,
+    );
+  }
+  // Its profiles (LOOP P-20): two at least, or none; each id slash-safe and
+  // said once, each with a label.
+  const profiles = app.interface.profiles ?? [];
+  if (profiles.length === 1) {
+    problems.push(
+      'One profile is the application itself: say two at least, or put its instructions, model and starters on the application.',
+    );
+  }
+  const profileIds = new Set<string>();
+  for (const profile of profiles) {
+    if (!MODE_ID.test(profile.id)) {
+      problems.push(
+        `Cannot use “${profile.id}” as a profile's id: lower-case letters, digits, \`_\` and \`-\`, a letter first.`,
+      );
+    }
+    if (!profile.label.trim()) {
+      problems.push(`The profile “${profile.id}” has no label.`);
+    }
+    if (profileIds.has(profile.id)) {
+      problems.push(`Two profiles are “${profile.id}”.`);
+    }
+    profileIds.add(profile.id);
+  }
+  // How its settings' fields are drawn (P-20): by a widget that draws each.
+  if (app.interface.settingsUi) {
+    if (!app.interface.settings) {
+      problems.push(
+        '`settings_ui` draws the settings’ fields: say `settings` first.',
+      );
+    } else {
+      problems.push(
+        ...formUiProblems(
+          'The form “settings”',
+          app.interface.settings as Record<string, unknown>,
+          app.interface.settingsUi,
+        ),
+      );
+    }
+  }
+  // Its words in other languages (P-26): of languages, of what it says.
+  problems.push(...translationProblems(app.interface));
+  // What the host page passes and offers (D-10): named once each, in words
+  // its agent's tools can carry, each function saying what it does.
+  const host = app.deployment.embedded?.host;
+  if (host) {
+    for (const name of host.context) {
+      if (!HOST_NAME.test(name)) {
+        problems.push(
+          `Cannot use “${name}” as a value of the host: lower-case letters, digits and \`_\`.`,
+        );
+      }
+    }
+    if (new Set(host.context).size !== host.context.length) {
+      problems.push('The host’s values are named once each.');
+    }
+    for (const fn of host.functions) {
+      if (!HOST_NAME.test(fn.name)) {
+        problems.push(
+          `Cannot use “${fn.name}” as a host function: lower-case letters, digits and \`_\`.`,
+        );
+      }
+      if (!fn.description.trim()) {
+        problems.push(`The host function “${fn.name}” says what it does.`);
+      }
+      if (fn.parameters.type !== 'object') {
+        problems.push(
+          `The host function “${fn.name}” takes its arguments as a JSON Schema of \`type: object\`.`,
+        );
+      }
+    }
+    const names = host.functions.map(fn => fn.name);
+    if (new Set(names).size !== names.length) {
+      problems.push('The host’s functions are named once each.');
+    }
+    // Who its user is (D-21): what the page says, or what its server signed.
+    if (host.user !== undefined && !HOST_USERS.includes(host.user)) {
+      problems.push(
+        `“${host.user}” is not how the host’s user is taken: claimed or signed.`,
+      );
+    }
+    const named = new Set(app.rules.flatMap(rule => rule.appliesTo));
+    for (const tool of hostToolsOf(host)) {
+      if (!named.has(tool)) {
+        problems.push(
+          `No rule names “${tool}”, which the host page offers it: it is left to the person until a rule decides it.`,
+        );
+      }
+    }
+  }
+  // What its code declares (LOOP P-06), as agentspecs refuses it.
+  problems.push(...ownCodeProblems(app));
+  const servers = app.connections.map(connection => idOf(connection.server));
+  if (new Set(servers).size !== servers.length) {
+    problems.push('The application connects to the same server twice.');
+  }
+  const seen = new Map<string, string>();
+  for (const rule of app.rules) {
+    if (!rule.action.trim()) {
+      problems.push('A rule names its action in words.');
+    }
+    if (rule.appliesTo.length === 0) {
+      problems.push(
+        `The rule “${rule.action}” applies to a class of action or to named tools.`,
+      );
+    }
+    for (const target of rule.appliesTo) {
+      const [server, name] = splitRef(target);
+      const key = server !== undefined ? `${idOf(server)}.${name}` : target;
+      const before = seen.get(key);
+      if (before !== undefined) {
+        problems.push(
+          `The rules “${before}” and “${rule.action}” both apply to “${key}”: keep one.`,
+        );
+      }
+      seen.set(key, rule.action);
+    }
+  }
+  return problems;
+}
+
+/** How an organization's own context is named: never a catalogue id (agentspecs' `ORGANIZATION_FRAME_PREFIX`). */
+/**
+ * What stops a Form block from asking (LOOP C-16), in agentspecs'
+ * `form_problems` sentences: its schema is an object of named fields, each
+ * required one among them, so that the page draws it and the runtime checks
+ * what it receives against the same schema.
+ */
+export function formProblems(node: Record<string, unknown>): string[] {
+  const said = `The form “${String(node.id)}”`;
+  const schema = node.schema;
+  if (!isPlainRecord(schema)) {
+    return [
+      `${said} has no fields: its schema is the JSON Schema of what it asks.`,
+    ];
+  }
+  const fields = schema.properties;
+  if (
+    schema.type !== 'object' ||
+    !isPlainRecord(fields) ||
+    Object.keys(fields).length === 0
+  ) {
+    return [
+      `${said} asks for no named field: its schema is an object with properties.`,
+    ];
+  }
+  const problems: string[] = [];
+  for (const [name, field] of Object.entries(fields)) {
+    if (!isPlainRecord(field)) {
+      problems.push(`${said}'s field “${name}” is not a schema.`);
+    }
+  }
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  const missing = required.filter(name => !(String(name) in fields));
+  if (missing.length > 0) {
+    problems.push(
+      `${said} requires ${missing.map(name => `“${String(name)}”`).join(', ')}, which it does not ask.`,
+    );
+  }
+  // How its fields are drawn (P-20): by a widget that draws each.
+  if (node.ui !== undefined && node.ui !== null) {
+    problems.push(...formUiProblems(said, schema, node.ui));
+  }
+  return problems;
+}
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export const ORGANIZATION_FRAME_PREFIX = 'org-';
+
+/** Whether a reference names an organization's own context rather than the catalogue's (LOOP U-32). */
+export const isOrganizationFrame = (ref: string): boolean =>
+  idOf(ref).startsWith(ORGANIZATION_FRAME_PREFIX);
+
+/**
+ * Every reference that does not resolve, in sentences. A context of an
+ * organization's own resolves among `organizationFrames`, the contexts of the
+ * organization the application belongs to; with none known, it is refused.
+ */
+function referenceProblems(
+  app: AppSpec,
+  organizationFrames: readonly string[] | undefined,
+): string[] {
+  const problems: string[] = [];
+  const missing = (what: string, ref: string) =>
+    problems.push(`There is no ${what} named “${ref}”.`);
+  if (app.agent && !getAgentspecs(idOf(app.agent)) && !getCog(app.agent)) {
+    missing('agent or Cog', app.agent);
+  }
+  if (app.team && !getTeamSpec(idOf(app.team))) {
+    missing('team', app.team);
+  }
+  for (const ref of app.context) {
+    if (!isOrganizationFrame(ref)) {
+      if (!getFrame(idOf(ref))) missing('Frame', ref);
+    } else if (organizationFrames === undefined) {
+      problems.push(
+        `“${ref}” is a context of an organization’s own: it is checked with the organization the application belongs to, which was not said.`,
+      );
+    } else if (!organizationFrames.includes(idOf(ref))) {
+      problems.push(`Its organization has no context named “${ref}”.`);
+    }
+  }
+  for (const connection of app.connections) {
+    if (!own(MCP_SERVER_LIBRARY, idOf(connection.server))) {
+      missing('MCP server', connection.server);
+    }
+  }
+  for (const ref of app.skills) {
+    if (!getSkillSpec(idOf(ref))) missing('skill', ref);
+  }
+  for (const ref of app.backendTools) {
+    if (!getBackendToolSpec(idOf(ref))) missing('tool', ref);
+  }
+  for (const ref of app.checks.guards) {
+    if (!own(GUARD_CATALOGUE, idOf(ref))) missing('Guard', ref);
+  }
+  for (const ref of app.checks.gates) {
+    if (!getGate(ref)) missing('Gate', ref);
+  }
+  if (app.checks.track && !getTrack(app.checks.track)) {
+    missing('Track', app.checks.track);
+  }
+  if (app.memory && !getMemory(idOf(app.memory))) {
+    missing('memory', app.memory);
+  }
+  for (const ref of app.notifications) {
+    if (!getNotificationSpec(idOf(ref))) missing('notification', ref);
+  }
+  if (app.model && !getModel(app.model)) {
+    missing('model', app.model);
+  }
+  // The model a profile runs on is the catalogue's (LOOP P-20).
+  for (const profile of app.interface.profiles ?? []) {
+    if (profile.model && !getModel(profile.model)) {
+      problems.push(
+        `The profile “${profile.id}” runs on “${profile.model}”, which is no model.`,
+      );
+    }
+  }
+  // The model a mode runs on is the catalogue's (LOOP P-19).
+  for (const mode of app.interface.modes ?? []) {
+    for (const option of mode.options) {
+      if (option.model && !getModel(option.model)) {
+        problems.push(
+          `The mode “${mode.id}” runs “${option.id}” on “${option.model}”, which is no model.`,
+        );
+      }
+    }
+  }
+  // The components it may use, and those its surface uses, are the catalog's (C-13).
+  // Those its developer wrote are of the catalog for it alone (P-17).
+  for (const name of app.interface.components ?? []) {
+    if (!componentNamed(name) && !customComponentOf(app, name)) {
+      problems.push(`There is no component named “${name}” in the catalog.`);
+    }
+  }
+  for (const node of app.interface.surface?.components ?? []) {
+    const custom = customComponentOf(app, String(node.component));
+    if (custom) {
+      const refused = customNodeRefused(custom, node);
+      if (refused.length > 0) {
+        problems.push(
+          `The surface's “${String(node.id)}” is a ${custom.name} its schema refuses: ${refused.join('; ')}.`,
+        );
+      }
+    } else if (!componentNamed(String(node.component))) {
+      problems.push(
+        `The surface's “${String(node.id)}” is a “${String(node.component)}”, which the catalog does not have.`,
+      );
+    } else if (node.component === 'Form') {
+      problems.push(...formProblems(node));
+    }
+  }
+  const decider = app.decision?.decisionModel;
+  if (decider) {
+    const model = getModel(decider);
+    if (!model) {
+      problems.push(`There is no model named “${decider}” to decide with.`);
+    } else if (!(model.capabilities ?? []).includes('decisions')) {
+      problems.push(`The model “${decider}” does not answer typed decisions.`);
+    }
+  }
+  const run = new Set(app.checks.guards.map(idOf));
+  for (const ref of app.checks.gates) {
+    for (const guard of getGate(ref)?.guards ?? []) {
+      if (!run.has(idOf(guard))) {
+        problems.push(
+          `The Gate “${ref}” reads the Guard “${guard}”, which the application does not run: add it under \`checks.guards\`.`,
+        );
+      }
+    }
+  }
+  for (const connection of app.connections) {
+    if (
+      connection.access === 'write' &&
+      own(MCP_SERVER_LIBRARY, idOf(connection.server)) &&
+      Object.keys(toolBehaviours({ ...app, connections: [connection] }))
+        .length === 0
+    ) {
+      problems.push(
+        `The application may write through “${connection.server}”, whose tools nobody has classed: every one of them is left to the person until they are.`,
+      );
+    }
+  }
+  // The tools of the host page are the application's own (D-10).
+  const hostTools = hostToolsOf(app.deployment.embedded?.host);
+  for (const rule of app.rules) {
+    for (const target of rule.appliesTo) {
+      if (CLASS_NAMES.has(target)) continue;
+      const [server, name] = splitRef(target);
+      if (server === undefined) {
+        if (hostTools.includes(target)) continue;
+        // A tool of its own, written in its code (LOOP P-06).
+        if ((app.tools ?? []).some(tool => tool.name === target)) continue;
+        if (!getBackendToolSpec(name)) {
+          problems.push(
+            `The rule “${rule.action}” names the tool “${target}”, which the catalogue does not have.`,
+          );
+        }
+        continue;
+      }
+      const connection = app.connections.find(
+        c => idOf(c.server) === idOf(server),
+      );
+      if (!connection) {
+        problems.push(
+          `The rule “${rule.action}” names “${target}”, and the application is not connected to “${server}”.`,
+        );
+      } else if (
+        connection.only.length > 0 &&
+        !connection.only.some(pattern => matches(name, pattern))
+      ) {
+        problems.push(
+          `The rule “${rule.action}” names “${target}”, which the connection to “${server}” leaves out (\`only\`).`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+/** What the application can do with no rule of its own, and what it keeps. */
+function attentionNotes(app: AppSpec): string[] {
+  const notes: string[] = [];
+  // Versions aside: `slack:0.0.1.post` and `slack.post` are one tool.
+  const normal = (target: string): string => {
+    if (CLASS_NAMES.has(target)) return target;
+    const [server, name] = splitRef(target);
+    return server !== undefined ? `${idOf(server)}.${name}` : name;
+  };
+  const ruled = new Set(app.rules.flatMap(rule => rule.appliesTo.map(normal)));
+  const unruled = new Map<ActionClass, string[]>();
+  for (const tool of Object.keys(toolBehaviours(app))) {
+    for (const action of classesOf(tool)) {
+      if (ACTIONS[action] && !ruled.has(action) && !ruled.has(tool)) {
+        unruled.set(action, [...(unruled.get(action) ?? []), tool]);
+      }
+    }
+  }
+  for (const [action, tools] of [...unruled.entries()].sort()) {
+    const shown = [...tools].sort().slice(0, 3).join(', ');
+    const more = tools.length > 3 ? ` and ${tools.length - 3} more` : '';
+    notes.push(
+      `It can ${ACTIONS[action]} (${shown}${more}), and no rule of its own says what then: it will ask first. Write the rule.`,
+    );
+  }
+  for (const connection of app.connections) {
+    if (connection.as === 'owner' && connection.access === 'write') {
+      notes.push(
+        `It writes through ${connection.server} with its builder's account, for everybody who uses it. Is that meant?`,
+      );
+    }
+  }
+  if (app.record.include.length === 0) {
+    notes.push('It keeps no record of what it did.');
+  }
+  // A Guard the runtime does not run checks nothing (LOOP R-06): said here,
+  // where the builder decides, rather than found out in production.
+  for (const ref of app.checks.guards) {
+    const guard = own(GUARD_CATALOGUE, idOf(ref));
+    if (guard && !EXECUTED_GUARDS.includes(guard.id)) {
+      const judge =
+        guard.method === 'cog'
+          ? 'a Cog'
+          : guard.method === 'human'
+            ? 'a person'
+            : 'a method';
+      notes.push(
+        `The ${guard.name} is judged by ${judge} the runtime does not run yet: nothing is checked by it.`,
+      );
+    }
+  }
+  return notes;
+}
+
+/**
+ * The Guards the runtime executes (agent-runtimes `loop/apps/guards.py`): the
+ * three of a session's start, run once before its model is first asked and
+ * each written to the record, and the two of every tool call and the answer.
+ */
+export const EXECUTED_GUARDS: readonly string[] = [
+  'required-frame-guard',
+  'permission-guard',
+  'data-source-authorization-guard',
+  'sensitive-data-guard',
+  'tool-use-policy-guard',
+];
+
+/** Whether a spec of the catalogue says it is not offered today. */
+const isOff = (spec: unknown): boolean => {
+  const fields = (spec ?? {}) as { enabled?: unknown; available?: unknown };
+  return fields.enabled === false || fields.available === false;
+};
+
+/**
+ * What it names that is not offered today: everything it references, as
+ * agentspecs' `app_setup` says it.
+ */
+function setupNotes(app: AppSpec): string[] {
+  const setup: string[] = [];
+  const note = (what: string, ref: string, spec: unknown) => {
+    if (spec && isOff(spec)) {
+      setup.push(`The ${what} “${ref}” is not enabled.`);
+    }
+  };
+  if (app.agent) {
+    const cog = getCog(app.agent);
+    note(
+      cog ? 'Cog' : 'agent',
+      app.agent,
+      cog ?? getAgentspecs(idOf(app.agent)),
+    );
+  }
+  if (app.team) note('team', app.team, getTeamSpec(idOf(app.team)));
+  for (const ref of app.context) note('Frame', ref, getFrame(idOf(ref)));
+  for (const connection of app.connections) {
+    note(
+      'MCP server',
+      connection.server,
+      own(MCP_SERVER_LIBRARY, idOf(connection.server)),
+    );
+  }
+  for (const ref of app.skills) note('skill', ref, getSkillSpec(idOf(ref)));
+  for (const ref of app.backendTools)
+    note('tool', ref, getBackendToolSpec(idOf(ref)));
+  for (const ref of app.checks.guards)
+    note('Guard', ref, own(GUARD_CATALOGUE, idOf(ref)));
+  for (const ref of app.checks.gates) note('Gate', ref, getGate(ref));
+  if (app.checks.track)
+    note('Track', app.checks.track, getTrack(app.checks.track));
+  if (app.memory) note('memory', app.memory, getMemory(idOf(app.memory)));
+  for (const ref of app.notifications)
+    note('notification', ref, getNotificationSpec(idOf(ref)));
+  return setup;
+}
+
+/**
+ * Where an application is checked: the plugins its organization has turned
+ * off (catalogue ids, `plugins_off` in IAM), none when it has decided nothing
+ * or the checks run with no organization; and the ids of its organization's
+ * contexts (`frames` in IAM: its versions and its own, LOOP U-32), unsaid
+ * when no organization is known — a context of an organization's own is then
+ * refused.
+ */
+export interface CheckContext {
+  pluginsOff: readonly string[];
+  organizationFrames?: readonly string[];
+}
+
+const NO_ORGANIZATION: CheckContext = { pluginsOff: [] };
+
+/** The instant checks of an application as an editor holds it. */
+export function checkApp(
+  app: AppSpec,
+  read: string[] = [],
+  context: CheckContext = NO_ORGANIZATION,
+): AppCheck {
+  const problems = [
+    ...read,
+    ...shapeProblems(app),
+    ...referenceProblems(app, context.organizationFrames),
+  ];
+  // A block its page uses from a plugin its organization turned off is said
+  // with the rest of what is not enabled today (C-12).
+  const setup = [
+    ...setupNotes(app),
+    ...pluginsOffSetupNotes(app, context.pluginsOff),
+  ];
+  if (problems.length > 0) {
+    return { verdict: NOT_READY, problems, attention: [], setup };
+  }
+  const attention = attentionNotes(app);
+  return {
+    verdict: attention.length > 0 ? NEEDS_ATTENTION : PASSES,
+    problems,
+    attention,
+    setup,
+  };
+}
+
+type Raw = Record<string, unknown>;
+
+const isRaw = (value: unknown): value is Raw =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const ENUMS = {
+  access: ['read', 'write'],
+  as: ['owner', 'user'],
+  behaviour: ['do_it', 'if_asked', 'ask_first', 'leave_to_me'],
+  layout: ['chat', 'page', 'split'],
+  accent: ['green', 'rose', 'sky', 'lime', 'sun', 'violet'],
+  record: [
+    'conversations',
+    'actions',
+    'decisions',
+    'approvals',
+    'checks',
+    'sources',
+    'outputs',
+    'feedback',
+  ],
+  visibility: ['private', 'invited', 'organization', 'link', 'public'],
+  mode: ['inline', 'bubble', 'panel', 'assistant'],
+  balloon: ['history', 'current'],
+  themeVariant: APP_THEME_VARIANTS,
+  themeMode: APP_THEME_MODES,
+  trigger: ['schedule', 'event', 'once'],
+  criterion: ['metric', 'noul', 'choice', 'score'],
+  direction: ['higher', 'lower'],
+  measure: ['', 'pass_rate', 'cost_per_task', 'seconds_per_task'],
+} as const;
+
+/**
+ * What the document says in a shape the spec refuses — a list where a list is
+ * not, a word where a choice is — which the tolerant reader replaces with a
+ * default. `loop apps validate` refuses these; so does this.
+ */
+export function documentShapeProblems(document: unknown): string[] {
+  const problems: string[] = [];
+  if (!isRaw(document)) return problems;
+  const at = (path: string, what: string) => problems.push(`${path}: ${what}.`);
+  const text = (value: unknown, path: string) => {
+    if (value !== undefined && typeof value !== 'string')
+      at(path, 'is a word or a sentence');
+  };
+  const oneOf = (value: unknown, allowed: readonly string[], path: string) => {
+    if (value !== undefined && !allowed.includes(value as string)) {
+      at(path, `is one of ${allowed.filter(Boolean).join(', ')}`);
+    }
+  };
+  const texts = (value: unknown, path: string) => {
+    if (value === undefined) return;
+    if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
+      at(path, 'is a list of words');
+    }
+  };
+  const records = (
+    value: unknown,
+    path: string,
+    each: (item: Raw, where: string) => void,
+  ) => {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) {
+      at(path, 'is a list');
+      return;
+    }
+    value.forEach((item, index) => {
+      if (!isRaw(item)) at(`${path}.${index}`, 'is a mapping');
+      else each(item, `${path}.${index}`);
+    });
+  };
+  const mapping = (value: unknown, path: string, each: (item: Raw) => void) => {
+    if (value === undefined) return;
+    if (!isRaw(value)) at(path, 'is a mapping');
+    else each(value);
+  };
+  const required = (item: Raw, key: string, where: string) => {
+    if (item[key] === undefined) at(`${where}.${key}`, 'is missing');
+  };
+  const unknownKeys = (
+    item: Raw,
+    known: readonly string[],
+    where: string,
+    what: string,
+  ) => {
+    for (const key of Object.keys(item)) {
+      if (!known.includes(key)) {
+        at(`${where}.${key}`, `is not a key of ${what}: ${known.join(', ')}`);
+      }
+    }
+  };
+  const d = document;
+  for (const key of [
+    'id',
+    'version',
+    'name',
+    'description',
+    'owner',
+    'agent',
+    'team',
+    'instructions',
+    'model',
+    'goal',
+    'memory',
+    'emoji',
+    'icon',
+    'avatar',
+    'banner',
+  ]) {
+    text(d[key], key);
+  }
+  // A drawing is named as it is in the profile's sets, `AstronautIcon`.
+  for (const key of ['avatar', 'banner']) {
+    const name = typeof d[key] === 'string' ? (d[key] as string).trim() : '';
+    if (name && !/^[A-Z][A-Za-z0-9]{0,63}$/.test(name)) {
+      at(key, 'is named as its drawing is, `AstronautIcon`');
+    }
+  }
+  for (const key of [
+    'skills',
+    'backend_tools',
+    'context',
+    'contents',
+    'notifications',
+    'tags',
+  ])
+    texts(d[key], key);
+  if (d.enabled !== undefined && typeof d.enabled !== 'boolean')
+    at('enabled', 'is true or false');
+  records(d.connections, 'connections', (item, where) => {
+    required(item, 'server', where);
+    text(item.server, `${where}.server`);
+    oneOf(item.access, ENUMS.access, `${where}.access`);
+    oneOf(item.as, ENUMS.as, `${where}.as`);
+    texts(item.only, `${where}.only`);
+  });
+  records(d.rules, 'rules', (item, where) => {
+    required(item, 'action', where);
+    required(item, 'applies_to', where);
+    required(item, 'behaviour', where);
+    text(item.action, `${where}.action`);
+    if (typeof item.applies_to !== 'string')
+      texts(item.applies_to, `${where}.applies_to`);
+    oneOf(item.behaviour, ENUMS.behaviour, `${where}.behaviour`);
+  });
+  mapping(d.permissions, 'permissions', permissions => {
+    records(permissions.spaces, 'permissions.spaces', (item, where) => {
+      required(item, 'space', where);
+      oneOf(item.access, ENUMS.access, `${where}.access`);
+    });
+    mapping(permissions.computer, 'permissions.computer', computer => {
+      for (const key of ['browse', 'files', 'shell']) {
+        if (computer[key] !== undefined && typeof computer[key] !== 'boolean') {
+          at(`permissions.computer.${key}`, 'is true or false');
+        }
+      }
+    });
+  });
+  mapping(d.interface, 'interface', ui => {
+    oneOf(ui.layout, ENUMS.layout, 'interface.layout');
+    oneOf(ui.accent, ENUMS.accent, 'interface.accent');
+    oneOf(ui.balloon, ENUMS.balloon, 'interface.balloon');
+    // The theme it runs in by default (T-30): a theme of Appearance's, a mode.
+    mapping(ui.theme, 'interface.theme', theme => {
+      required(theme, 'variant', 'interface.theme');
+      oneOf(theme.variant, ENUMS.themeVariant, 'interface.theme.variant');
+      oneOf(theme.mode, ENUMS.themeMode, 'interface.theme.mode');
+      for (const key of Object.keys(theme)) {
+        if (key !== 'variant' && key !== 'mode') {
+          at(
+            `interface.theme.${key}`,
+            'is not a key of a theme: variant, mode',
+          );
+        }
+      }
+    });
+    if (ui.assistant !== undefined && !isAssistantCharacterId(ui.assistant)) {
+      at(
+        'interface.assistant',
+        'names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`',
+      );
+    }
+    text(ui.welcome, 'interface.welcome');
+    texts(ui.components, 'interface.components');
+    const starter = (item: Raw, where: string) => {
+      required(item, 'label', where);
+      required(item, 'message', where);
+      text(item.category, `${where}.category`);
+      unknownKeys(item, ['label', 'message', 'category'], where, 'a starter');
+    };
+    records(ui.starters, 'interface.starters', starter);
+    // Its profiles (LOOP P-20), as agentspecs refuses them: no key unknown.
+    records(ui.profiles, 'interface.profiles', (profile, where) => {
+      required(profile, 'id', where);
+      required(profile, 'label', where);
+      for (const key of [
+        'id',
+        'label',
+        'description',
+        'instructions',
+        'model',
+      ]) {
+        text(profile[key], `${where}.${key}`);
+      }
+      unknownKeys(
+        profile,
+        ['id', 'label', 'description', 'instructions', 'model', 'starters'],
+        where,
+        'a profile',
+      );
+      records(profile.starters, `${where}.starters`, starter);
+    });
+    text(ui.language, 'interface.language');
+    mapping(ui.translations, 'interface.translations', translations => {
+      for (const [tag, words] of Object.entries(translations)) {
+        mapping(words, `interface.translations.${tag}`, said =>
+          unknownKeys(
+            said,
+            [
+              'name',
+              'description',
+              'welcome',
+              'starters',
+              'categories',
+              'settings',
+              'commands',
+              'modes',
+              'profiles',
+            ],
+            `interface.translations.${tag}`,
+            'a translation',
+          ),
+        );
+      }
+    });
+    // Its commands and modes in the composer (LOOP P-19), as agentspecs
+    // refuses them: names and ids slash-safe and said once, no key unknown.
+    const named = new Set<string>();
+    records(ui.commands, 'interface.commands', (item, where) => {
+      for (const key of ['name', 'description', 'prompt']) {
+        required(item, key, where);
+        text(item[key], `${where}.${key}`);
+      }
+      unknownKeys(item, ['name', 'description', 'prompt'], where, 'a command');
+      if (typeof item.name === 'string') {
+        if (!COMMAND_NAME.test(item.name)) {
+          at(
+            `${where}.name`,
+            'is what follows the slash: lower-case letters, digits and hyphens, a letter first',
+          );
+        }
+        if (named.has(item.name)) {
+          at(`${where}.name`, `names /${item.name} a second time`);
+        }
+        named.add(item.name);
+      }
+      if (typeof item.prompt === 'string') {
+        for (const placeholder of item.prompt.match(/\{[^{}]*\}/g) ?? []) {
+          if (placeholder !== COMMAND_INPUT) {
+            at(
+              `${where}.prompt`,
+              `takes the words typed after the command as ${COMMAND_INPUT}, not ${placeholder}`,
+            );
+          }
+        }
+      }
+    });
+    const modeIds = new Set<string>();
+    const choosingModel: string[] = [];
+    records(ui.modes, 'interface.modes', (mode, where) => {
+      required(mode, 'id', where);
+      required(mode, 'label', where);
+      required(mode, 'options', where);
+      text(mode.label, `${where}.label`);
+      text(mode.default, `${where}.default`);
+      unknownKeys(mode, ['id', 'label', 'options', 'default'], where, 'a mode');
+      if (typeof mode.id === 'string') {
+        if (!MODE_ID.test(mode.id)) {
+          at(
+            `${where}.id`,
+            'is lower-case letters, digits, `_` and `-`, a letter first',
+          );
+        }
+        if (modeIds.has(mode.id)) {
+          at(`${where}.id`, `names the mode ${mode.id} a second time`);
+        }
+        modeIds.add(mode.id);
+      }
+      const optionIds: string[] = [];
+      let model = false;
+      records(mode.options, `${where}.options`, (option, place) => {
+        required(option, 'id', place);
+        required(option, 'label', place);
+        for (const key of ['label', 'description', 'instructions', 'model']) {
+          text(option[key], `${place}.${key}`);
+        }
+        unknownKeys(
+          option,
+          ['id', 'label', 'description', 'instructions', 'model'],
+          place,
+          'an option',
+        );
+        if (typeof option.id === 'string') {
+          if (!MODE_ID.test(option.id)) {
+            at(
+              `${place}.id`,
+              'is lower-case letters, digits, `_` and `-`, a letter first',
+            );
+          }
+          if (optionIds.includes(option.id)) {
+            at(`${place}.id`, `names the option ${option.id} a second time`);
+          }
+          optionIds.push(option.id);
+        }
+        model ||= typeof option.model === 'string' && option.model !== '';
+      });
+      if (Array.isArray(mode.options) && mode.options.length < 2) {
+        at(`${where}.options`, 'are two at least');
+      }
+      if (
+        typeof mode.default === 'string' &&
+        !optionIds.includes(mode.default)
+      ) {
+        at(`${where}.default`, 'is one of its options');
+      }
+      if (model) {
+        choosingModel.push(String(mode.id));
+      }
+    });
+    if (choosingModel.length > 1) {
+      at(
+        'interface.modes',
+        `let only one mode choose the model, not ${choosingModel.join(', ')}`,
+      );
+    }
+    // Its settings are the JSON Schema of a form (C-16), checked as a Form's
+    // schema is; the list of settings of earlier versions is refused.
+    if (Array.isArray(ui.settings)) {
+      at(
+        'interface.settings',
+        'is the JSON Schema of a form, an object of named fields (LOOP C-16), not a list of settings: say each one as a property, its title and its default',
+      );
+    } else {
+      mapping(ui.settings, 'interface.settings', settings => {
+        problems.push(...formProblems({ id: 'settings', schema: settings }));
+      });
+    }
+    // What a person may send without being asked (LOOP P-21), as agentspecs
+    // refuses it: a kind at least, each a type said once, sizes it takes.
+    mapping(ui.uploads, 'interface.uploads', uploads => {
+      unknownKeys(
+        uploads,
+        ['kinds', 'max_files'],
+        'interface.uploads',
+        'uploads',
+      );
+      required(uploads, 'kinds', 'interface.uploads');
+      const types = new Set<string>();
+      records(uploads.kinds, 'interface.uploads.kinds', (kind, where) => {
+        required(kind, 'type', where);
+        unknownKeys(kind, ['type', 'max_mb'], where, 'a kind of upload');
+        if (kind.type !== undefined) {
+          if (typeof kind.type !== 'string' || !UPLOAD_KIND.test(kind.type)) {
+            at(
+              `${where}.type`,
+              'is a media type (application/pdf), a family (image/*) or an extension (.csv), lowercase',
+            );
+          } else if (types.has(kind.type)) {
+            at(`${where}.type`, `names ${kind.type} a second time`);
+          } else {
+            types.add(kind.type);
+          }
+        }
+        const size = kind.max_mb;
+        if (
+          size !== undefined &&
+          (typeof size !== 'number' || size <= 0 || size > MAX_UPLOAD_MB)
+        ) {
+          at(`${where}.max_mb`, `is more than 0 and ${MAX_UPLOAD_MB} at most`);
+        }
+      });
+      if (Array.isArray(uploads.kinds) && uploads.kinds.length === 0) {
+        at('interface.uploads.kinds', 'are one at least');
+      }
+      const most = uploads.max_files;
+      if (
+        most !== undefined &&
+        (typeof most !== 'number' ||
+          !Number.isInteger(most) ||
+          most < 1 ||
+          most > 20)
+      ) {
+        at('interface.uploads.max_files', 'is a whole number from 1 to 20');
+      }
+    });
+    mapping(ui.surface, 'interface.surface', surface => {
+      records(
+        surface.components,
+        'interface.surface.components',
+        (item, where) => {
+          required(item, 'id', where);
+          required(item, 'component', where);
+        },
+      );
+    }); // A widget's page written in its code (LOOP P-05), as agentspecs reads it.
+    mapping(ui.page, 'interface.page', page => {
+      unknownKeys(
+        page,
+        ['function', 'inputs', 'inputs_ui', 'outputs', 'live'],
+        'interface.page',
+        'a page',
+      );
+      required(page, 'function', 'interface.page');
+      required(page, 'inputs', 'interface.page');
+      required(page, 'outputs', 'interface.page');
+      if (page.live !== undefined && typeof page.live !== 'boolean') {
+        at('interface.page.live', 'is true or false');
+      }
+      records(page.outputs, 'interface.page.outputs', (output, where) => {
+        required(output, 'name', where);
+        unknownKeys(
+          output,
+          ['name', 'title', 'component', 'props'],
+          where,
+          'an output',
+        );
+      });
+    });
+  });
+  mapping(d.tests, 'tests', tests => {
+    const readyAt = tests.ready_at;
+    if (
+      readyAt !== undefined &&
+      (typeof readyAt !== 'number' || readyAt < 0 || readyAt > 1)
+    ) {
+      at('tests.ready_at', 'is a share, from 0 to 1');
+    }
+    text(tests.evalset, 'tests.evalset');
+    records(tests.cases, 'tests.cases', (item, where) => {
+      // One message (`ask`) or a conversation (`turns`), never both (E-01).
+      const asks = typeof item.ask === 'string' && item.ask.trim() !== '';
+      const converses = Array.isArray(item.turns) && item.turns.length > 0;
+      if (asks === converses) {
+        at(where, 'asks one message (ask) or has a conversation (turns)');
+      }
+      text(item.ask, `${where}.ask`);
+      required(item, 'expect', where);
+      records(item.turns, `${where}.turns`, (turn, place) => {
+        const does = ['say', 'choose', 'press'].filter(key => {
+          const said = turn[key];
+          return typeof said === 'string' && said.trim() !== '';
+        });
+        if (does.length !== 1) {
+          at(place, 'says, chooses or presses one thing');
+        }
+        if (turn.payload !== undefined && !does.includes('press')) {
+          at(`${place}.payload`, 'goes with an action pressed');
+        }
+        mapping(turn.payload, `${place}.payload`, () => undefined);
+      });
+      if (converses && item.files !== undefined) {
+        at(
+          `${where}.files`,
+          "go with the message it asks: a conversation's turns take none",
+        );
+      }
+      records(item.files, `${where}.files`, (file, at) => {
+        required(file, 'name', at);
+        required(file, 'text', at);
+      });
+    });
+  });
+  mapping(d.record, 'record', record => {
+    text(record.keep_for, 'record.keep_for');
+    if (record.include !== undefined) {
+      if (!Array.isArray(record.include)) at('record.include', 'is a list');
+      else
+        record.include.forEach((item, index) =>
+          oneOf(item, ENUMS.record, `record.include.${index}`),
+        );
+    }
+    if (
+      record.suggest_tests !== undefined &&
+      typeof record.suggest_tests !== 'boolean'
+    ) {
+      at('record.suggest_tests', 'is true or false');
+    }
+  });
+  mapping(d.checks, 'checks', checks => {
+    texts(checks.guards, 'checks.guards');
+    texts(checks.gates, 'checks.gates');
+    text(checks.track, 'checks.track');
+  });
+  mapping(d.deployment, 'deployment', deployment => {
+    mapping(deployment.hosted, 'deployment.hosted', hosted => {
+      oneOf(
+        hosted.visibility,
+        ENUMS.visibility,
+        'deployment.hosted.visibility',
+      );
+      if (
+        hosted.slug !== undefined &&
+        (typeof hosted.slug !== 'string' ||
+          (hosted.slug &&
+            !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(hosted.slug)))
+      ) {
+        at(
+          'deployment.hosted.slug',
+          'is lower-case letters, digits and hyphens',
+        );
+      }
+      if (
+        hosted.character_alone !== undefined &&
+        typeof hosted.character_alone !== 'boolean'
+      ) {
+        at('deployment.hosted.character_alone', 'is true or false');
+      }
+    });
+    mapping(deployment.embedded, 'deployment.embedded', embedded => {
+      oneOf(embedded.mode, ENUMS.mode, 'deployment.embedded.mode');
+      texts(embedded.origins, 'deployment.embedded.origins');
+      if (Array.isArray(embedded.origins)) {
+        embedded.origins.forEach((origin, index) => {
+          if (
+            typeof origin === 'string' &&
+            !/^https:\/\/[A-Za-z0-9.-]+(?::\d+)?$|^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(
+              origin,
+            )
+          ) {
+            at(
+              `deployment.embedded.origins.${index}`,
+              'is an origin: https://example.com, without a path',
+            );
+          }
+        });
+      }
+      mapping(embedded.host, 'deployment.embedded.host', host => {
+        texts(host.context, 'deployment.embedded.host.context');
+        records(
+          host.functions,
+          'deployment.embedded.host.functions',
+          (item, where) => {
+            required(item, 'name', where);
+            required(item, 'description', where);
+            text(item.name, `${where}.name`);
+            text(item.description, `${where}.description`);
+            mapping(item.parameters, `${where}.parameters`, () => undefined);
+          },
+        );
+      });
+    });
+  });
+  records(d.triggers, 'triggers', (item, where) => {
+    required(item, 'type', where);
+    oneOf(item.type, ENUMS.trigger, `${where}.type`);
+  });
+  mapping(d.decision, 'decision', decision => {
+    required(decision, 'question', 'decision');
+    texts(decision.alternatives, 'decision.alternatives');
+    records(decision.criteria, 'decision.criteria', (item, where) => {
+      required(item, 'name', where);
+      oneOf(item.kind, ENUMS.criterion, `${where}.kind`);
+      oneOf(item.direction, ENUMS.direction, `${where}.direction`);
+      oneOf(item.measure, ENUMS.measure, `${where}.measure`);
+      if (
+        item.weight !== undefined &&
+        (typeof item.weight !== 'number' || item.weight < 0)
+      ) {
+        at(`${where}.weight`, 'is a number, zero or more');
+      }
+      texts(item.options, `${where}.options`);
+    });
+    const minimum = decision.min_confidence;
+    if (
+      minimum !== undefined &&
+      (typeof minimum !== 'number' || minimum < 0 || minimum > 1)
+    ) {
+      at('decision.min_confidence', 'is a share, from 0 to 1');
+    }
+  });
+  return problems;
+}
+
+/** The instant checks of an application's document, what reading it found included. */
+export function checkAppspec(
+  document: unknown,
+  context: CheckContext = NO_ORGANIZATION,
+): AppCheck {
+  const { app, problems } = parseAppspec(document);
+  return checkApp(
+    app,
+    [...problems, ...documentShapeProblems(document)],
+    context,
+  );
+}

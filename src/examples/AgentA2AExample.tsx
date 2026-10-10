@@ -27,9 +27,9 @@ import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
 import { resolveExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
-import { LoopEmbed } from '../loop';
-import { AgentA2APlugin } from '../loop/plugins/agent-a2a';
-import { A2ASidebarPlugin } from '../loop/plugins/a2a-sidebar';
+import { LoopEmbed } from '../apps';
+import { AgentA2APlugin } from '../apps/plugins/agent-a2a';
+import { A2ASidebarPlugin } from '../apps/plugins/a2a-sidebar';
 import { getAgentspecs } from '../specs/agents';
 
 const AGENT_NAME = 'a2a-example-agent';
@@ -49,24 +49,20 @@ const AgentA2AExample: React.FC = () => {
   return (
     <ThemedProvider>
       <Box
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          bg: 'canvas.default',
-        }}
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        bg="canvas.default"
       >
         <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'border.default',
-            flexShrink: 0,
-          }}
+          display="flex"
+          alignItems="center"
+          gap={2}
+          px={3}
+          py={2}
+          borderBottom="1px solid"
+          borderColor="border.default"
+          flexShrink={0}
         >
           <BroadcastIcon size={16} />
           <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -84,7 +80,7 @@ const AgentA2AExample: React.FC = () => {
             agent to the page, and the delegation over A2A happens on the
             server, so the agent must run there. The sidebar is a Loop plugin
             and renders in the workspace's own sidebar column. */}
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+        <Box flex={1} minHeight={0}>
           <LoopEmbed
             serverUrl={resolveExampleAgentRuntimesUrl('local')}
             target="local"

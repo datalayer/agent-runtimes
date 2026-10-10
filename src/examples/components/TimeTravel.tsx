@@ -29,23 +29,14 @@ export const TimeTravel: React.FC<TimeTravelProps> = ({
 }) => {
   return (
     <Box
-      sx={{
-        marginTop: 3,
-        padding: 3,
-        border: '1px solid',
-        borderColor: 'border.default',
-        borderRadius: 2,
-        backgroundColor: 'canvas.default',
-      }}
+      marginTop={3}
+      padding={3}
+      border="1px solid"
+      borderColor="border.default"
+      borderRadius={2}
+      backgroundColor="canvas.default"
     >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 3,
-          marginBottom: 2,
-        }}
-      >
+      <Box display="flex" alignItems="center" gap={3} marginBottom={2}>
         <Text sx={{ fontSize: 0, fontWeight: 'semibold' }}>Time Travel</Text>
         <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
           Navigate through history: {value} steps

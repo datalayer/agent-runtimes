@@ -26,7 +26,8 @@
 
 import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Box, Text } from '@primer/react';
+import { Box } from '@datalayer/primer-addons';
+import { Text } from '@primer/react';
 import {
   Cell,
   Output,
@@ -312,26 +313,22 @@ export function NotebookToolSurfaces({
       {liveOutputs || outputs ? (
         /* An execution's outputs, and nothing else — see above. */
         <Box
-          sx={{
-            mt: 1,
-            // The full column, not the content's own width: a surface sized
-            // to its longest line reads as a fragment.
-            width: '100%',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            overflow: 'hidden',
-            bg: 'canvas.default',
-          }}
+          mt={1}
+          // The full column, not the content's own width: a surface sized
+          // to its longest line reads as a fragment.
+          width="100%"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          overflow="hidden"
+          bg="canvas.default"
         >
           <Box
-            sx={{
-              px: 2,
-              py: 1,
-              bg: 'canvas.subtle',
-              borderBottom: '1px solid',
-              borderColor: 'border.muted',
-            }}
+            px={2}
+            py={1}
+            bg="canvas.subtle"
+            borderBottom="1px solid"
+            borderColor="border.muted"
           >
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
               Output ·{' '}
@@ -342,7 +339,7 @@ export function NotebookToolSurfaces({
                   : 'executed'}
             </Text>
           </Box>
-          <Box sx={{ p: 2 }}>
+          <Box p={2}>
             {liveOutputs ? (
               /* The adapter's live mirror of the run: the area follows the
                  model, so each line lands here the moment the kernel prints
@@ -369,26 +366,22 @@ export function NotebookToolSurfaces({
           a captioned card, the change first, the outputs after.
         */
         <Box
-          sx={{
-            mt: 1,
-            // The full column, not the content's own width: a surface sized
-            // to its longest line reads as a fragment.
-            width: '100%',
-            border: '1px solid',
-            borderColor: 'border.default',
-            borderRadius: 2,
-            overflow: 'hidden',
-            bg: 'canvas.default',
-          }}
+          mt={1}
+          // The full column, not the content's own width: a surface sized
+          // to its longest line reads as a fragment.
+          width="100%"
+          border="1px solid"
+          borderColor="border.default"
+          borderRadius={2}
+          overflow="hidden"
+          bg="canvas.default"
         >
           <Box
-            sx={{
-              px: 2,
-              py: 1,
-              bg: 'canvas.subtle',
-              borderBottom: '1px solid',
-              borderColor: 'border.muted',
-            }}
+            px={2}
+            py={1}
+            bg="canvas.subtle"
+            borderBottom="1px solid"
+            borderColor="border.muted"
           >
             <Text sx={{ fontSize: 0, color: 'fg.muted' }}>
               {index !== undefined ? `Cell ${index}` : 'Cell'}
@@ -411,13 +404,7 @@ export function NotebookToolSurfaces({
               re-render on the model's account. */}
           {cellOutputsModel &&
           (status === 'executing' || cellOutputsModel.length > 0) ? (
-            <Box
-              sx={{
-                borderTop: '1px solid',
-                borderColor: 'border.muted',
-                p: 2,
-              }}
-            >
+            <Box borderTop="1px solid" borderColor="border.muted" p={2}>
               <Output
                 id={`${context.toolCallId}-outputs`}
                 model={cellOutputsModel}

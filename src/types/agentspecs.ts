@@ -6,7 +6,7 @@
 import type { SkillSpec } from './skills';
 import type { MCPServer, AgentMCPServerToolConfig } from './mcp';
 import type {
-  ToolSpec,
+  BackendToolSpec,
   FrontendToolSpec,
   FrontendRenderToolSpec,
 } from './tools';
@@ -88,6 +88,35 @@ export interface AgentCapability {
 }
 
 /**
+ * A visual component a UI plugin renders (LOOP C-13), named as a surface names
+ * it. A standard one's properties are its protocol's own; Datalayer's own
+ * carry theirs as a JSON Schema, from which its properties form is drawn (C-14).
+ */
+export interface ComponentSpec {
+  /** The name a surface gives it (e.g. 'Table'). */
+  id: string;
+  name: string;
+  /** What it is for, in a sentence. */
+  description: string;
+  /** text, input, action, data, conversation, media, layout. */
+  category: string;
+  /** Its face on the palette. */
+  emoji: string;
+  /** Its version in the catalog. */
+  version: string;
+  /** Named and drawn as its protocol says (A2UI's basic catalog). */
+  standard: boolean;
+  /** Its properties as a JSON Schema: what a builder sets (C-13). */
+  properties: Record<string, unknown>;
+  /** What it can be bound to: what it shows, what it sends. */
+  bindings?: { shows: string[]; sends: string[] };
+  /** What it reports. */
+  events: string[];
+  /** A valid configuration of it. */
+  example?: Record<string, unknown>;
+}
+
+/**
  * How an agent's answer becomes an interface: a protocol the host renders
  * (`agentspecs/ui-plugins`). An agent spec's `uiPlugin` names one.
  */
@@ -102,6 +131,10 @@ export interface UIPluginSpec {
   docsUrl: string;
   /** Whether an agent spec may name it today. */
   enabled: boolean;
+  /** The catalog its components are written in. */
+  catalog: string;
+  /** The visual components it renders (LOOP C-13). */
+  components: ComponentSpec[];
 }
 
 /** A check a Frame requires of the output of work done under it. */
@@ -155,7 +188,8 @@ export interface FrameSpec {
   architecture: string;
   prompts: FramePromptSpec[];
   skills: string[];
-  tools: string[];
+  /** Backend tools (agentspecs/backend-tools), `id:version`. */
+  backendTools: string[];
   mcpServers: string[];
   guards: FrameGuardSpec[];
 }
@@ -362,10 +396,19 @@ export interface ServerActionsSpec {
   tools: Record<string, ActionClass[]>;
   /** What an argument makes a tool do besides, by tool. */
   conditions: Record<string, ActionConditionSpec[]>;
+  /** The argument carrying what a tool sends, signed with the application's byline (LOOP I-10), by tool. */
+  signs?: Record<string, string>;
 }
 
 /** What kind of application it is: what its user meets. */
 export type AppKind = 'chat' | 'widget' | 'decision' | 'worker';
+
+/**
+ * How an application was built: in Python (its `app.py`), on the Canvas (its
+ * page composed there) or written out as its spec. Carried beside the
+ * catalogue (`APP_BUILT`), since an Appspec does not hold it.
+ */
+export type AppBuilt = 'python' | 'canvas' | 'written';
 
 /** What an application does when it meets an action. */
 export type AppBehaviour = 'do_it' | 'if_asked' | 'ask_first' | 'leave_to_me';
@@ -374,6 +417,46 @@ export type AppLayout = 'chat' | 'page' | 'split';
 
 /** The one colour of an application; everything else is neutral. */
 export type AppAccent = 'green' | 'rose' | 'sky' | 'lime' | 'sun' | 'violet';
+
+/** A theme of Appearance's, which an application may run in (LOOP T-30). */
+export type AppThemeVariant =
+  | 'datalayer'
+  | 'spatial'
+  | 'lovely'
+  | 'matrix'
+  | 'earth'
+  | 'sand'
+  | 'ivory'
+  | 'sun'
+  | 'loop';
+
+/** The colour mode it is worn in: `auto` follows the device. */
+export type AppThemeMode = 'light' | 'dark' | 'auto';
+
+/**
+ * The theme an application runs in by default (LOOP T-30): at its address,
+ * embedded, in the Studio's Preview and as an example. The person's own
+ * when unsaid; the mode, when unsaid, is the person's.
+ */
+export interface AppThemeSpec {
+  variant: AppThemeVariant;
+  mode?: AppThemeMode;
+}
+
+/**
+ * The character an application's floating assistant shows (LOOP T-24): the id
+ * an enabled plugin contributes it under to `loop.assistant.character` —
+ * Datalayer's are `paperclip`, `wizard`, `cat` and `eyes`. The spec checks
+ * its shape (`APP_ASSISTANT_CHARACTER_ID`); whether a plugin gives it is
+ * known only where the plugins are.
+ */
+export type AppAssistantCharacter = string;
+
+/** How a floating assistant's balloon shows the conversation (LOOP T-23). */
+export type AppBalloonDisplay = 'history' | 'current';
+
+/** How an application sits in another product's page (LOOP D-07). */
+export type AppEmbedMode = 'inline' | 'bubble' | 'panel' | 'assistant';
 
 /** Something an application reaches. */
 export interface AppConnectionSpec {
@@ -406,17 +489,126 @@ export interface AppPermissionsSpec {
 export interface AppStarterSpec {
   label: string;
   message: string;
+  /**
+   * The heading it is offered under (LOOP P-20): the starters of one
+   * category together, those without one first. Absent when unsaid.
+   */
+  category?: string;
 }
 
-export interface AppSettingSpec {
+/**
+ * One of several assistants in one application (LOOP P-20): picked before
+ * the conversation starts — the first unless another is — and kept to its
+ * end. Its instructions are told in every run, its model run in place of the
+ * application's (a mode's wins over it), its starters offered in place of
+ * the application's.
+ */
+export interface AppProfileSpec {
   id: string;
-  type: 'select' | 'text' | 'toggle' | 'slider' | 'number';
   label: string;
-  options: string[];
-  default?: string | boolean | number;
-  min?: number;
-  max?: number;
+  description: string;
+  instructions: string;
+  model: string | null;
+  starters: AppStarterSpec[];
 }
+
+/**
+ * What a person reads of an application in another language (LOOP P-26):
+ * each part keyed by what names it in the spec — a starter by its label, a
+ * category by its words, a setting by its field, a command by its name, a
+ * mode and a profile by their ids. Every key present; empty is untranslated.
+ */
+export interface AppTranslationSpec {
+  name: string;
+  description: string;
+  welcome: string;
+  starters: Record<string, { label: string; message: string }>;
+  categories: Record<string, string>;
+  settings: Record<
+    string,
+    { title: string; description: string; options: Record<string, string> }
+  >;
+  commands: Record<string, string>;
+  modes: Record<
+    string,
+    {
+      label: string;
+      options: Record<string, { label: string; description: string }>;
+    }
+  >;
+  profiles: Record<string, { label: string; description: string }>;
+}
+
+/** A slash command the user picks in the composer (LOOP P-19). */
+export interface AppCommandSpec {
+  /** What follows the slash: lower-case letters, digits and hyphens. */
+  name: string;
+  /** What the composer's menu says it does. */
+  description: string;
+  /** What picking it sends: `{input}` the words typed after it. */
+  prompt: string;
+}
+
+/** One position of a mode switch (LOOP P-19). */
+export interface AppModeOptionSpec {
+  id: string;
+  label: string;
+  description?: string;
+  /** What the agent is told in every run in this mode. */
+  instructions?: string;
+  /** The model a run in this mode runs on, in place of the application's. */
+  model?: string | null;
+}
+
+/** A mode switch in the composer (LOOP P-19). */
+export interface AppModeSpec {
+  id: string;
+  label: string;
+  /** Its positions, two at least. */
+  options: AppModeOptionSpec[];
+  /** The option it starts on; the first when unsaid. */
+  default?: string | null;
+}
+
+/**
+ * What a run in the modes chosen is told, and the model it runs on (LOOP
+ * P-19): agentspecs' `ModeEffect`.
+ */
+export interface AppModeEffect {
+  /** The instructions of the options chosen, in the order of the modes. */
+  instructions: string;
+  /** The model an option chosen names; the application's when unsaid. */
+  model?: string;
+}
+
+/**
+ * One field of a form (LOOP C-16): its JSON Schema — a `type`, the `title` a
+ * person reads, its `default`, and what it takes (`enum`, `minimum`,
+ * `maximum`…).
+ */
+export type AppFormField = {
+  type?: string;
+  title?: string;
+  description?: string;
+  default?: unknown;
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  [keyword: string]: unknown;
+};
+
+/**
+ * The JSON Schema of a form (LOOP C-16): an object of named fields, drawn with
+ * `@datalayer/primer-rjsf` and checked by the runtime against the same schema.
+ * An application's settings are one (`interface.settings`), as a Form block's
+ * schema is.
+ */
+export type AppFormSchema = {
+  type: 'object';
+  properties: Record<string, AppFormField>;
+  required?: string[];
+  [keyword: string]: unknown;
+};
 
 /** The component tree a user meets, over the approved catalog (A2UI). */
 export interface AppSurfaceSpec {
@@ -430,21 +622,229 @@ export interface AppSurfaceSpec {
   composedAt: string;
 }
 
+/** What a page's output is drawn with of the catalog (LOOP P-05). */
+export type AppPageOutputComponent = 'Text' | 'Image' | 'Table' | 'Chart';
+
+/**
+ * A component its developer wrote (LOOP P-17), of one application only: the
+ * catalog grows for it, it does not open. Reviewed as the catalog's own — its
+ * properties a JSON Schema, what it shows and sends bindings — and drawn in a
+ * sandboxed frame of no origin from the built ES module at `source`.
+ */
+export interface AppCustomComponentSpec {
+  /** Its name on a surface (`Gauge`); none of the catalog's own. */
+  name: string;
+  /** What it is for, in a sentence: what the palette says. */
+  description: string;
+  /** Its properties: the JSON Schema of an object. */
+  props: Record<string, unknown>;
+  /** What it shows from the page's data: bindings. */
+  shows: string[];
+  /** What it sends back: bindings it writes, then its action. */
+  sends: string[];
+  /** The address of its module: `https://`, or `http://localhost` while written. */
+  source: string;
+  /** Its Subresource Integrity hash (`sha384-…`); empty when unsaid. */
+  integrity: string;
+  /** Its height on the page, in pixels. */
+  height: number;
+  /** A configuration its schema accepts: what the palette previews. */
+  example?: Record<string, unknown>;
+}
+
+/** One thing a widget's page shows for its inputs (LOOP P-05), at `/outputs/<name>`. */
+export interface AppPageOutputSpec {
+  name: string;
+  /** What a person reads above it; none when empty. */
+  title: string;
+  /**
+   * `Text` (words) unless said, `Image` (an address), `Table` (rows), `Chart`
+   * (points) — an `AppPageOutputComponent` — or a component of the
+   * application's own (P-17), its value what it shows first.
+   */
+  component: string;
+  /** The component's other properties: a Table's `columns`, a Chart's `kind`, `x`, `y`. */
+  props: Record<string, unknown>;
+}
+
+/**
+ * A widget's page written in its code (LOOP P-05, `@app.page`): its inputs a
+ * form, drawn at `/inputs/<name>`; its outputs values, shown at
+ * `/outputs/<name>`. As an input changes, the function its code names runs
+ * again on all of them, and the outputs change in place.
+ */
+export interface AppPageSpec {
+  /** The function of its code that runs it. */
+  function: string;
+  inputs: AppFormSchema;
+  /** How the inputs are drawn, as `settingsUi` draws the settings. */
+  inputsUi?: Record<string, unknown>;
+  outputs: AppPageOutputSpec[];
+  /** Whether it runs again as an input changes; else when Run is pressed. */
+  live: boolean;
+}
+
+/**
+ * An application's voice (VOICE.md VO-41), off unless said: whether a person
+ * may talk to it, whether its answers are heard, with which voice of the
+ * catalogue (`specs/voices`), in which language (BCP 47) and where its
+ * speech runs.
+ */
+export interface AppVoiceSpec {
+  enabled: boolean;
+  input: 'off' | 'push_to_talk' | 'hands_free';
+  output: 'off' | 'on_request' | 'always';
+  voice: string;
+  language: string;
+  where: 'auto' | 'device' | 'server';
+}
+
+/**
+ * A kind of file a person may send, and how large (LOOP P-21): a media type
+ * (`application/pdf`), a family (`image/*`, `audio/*`) or an extension
+ * (`.csv`), lowercase.
+ */
+export interface AppUploadKindSpec {
+  type: string;
+  /** The largest file of this kind, in megabytes; 10 unless said, 25 at most. */
+  maxMb: number;
+}
+
+/**
+ * What a person may send in the composer without being asked (LOOP P-21):
+ * the kinds it takes, each with its largest size, and how many at once.
+ */
+export interface AppUploadsSpec {
+  kinds: AppUploadKindSpec[];
+  /** The most files sent with one message; 5 unless said. */
+  maxFiles: number;
+}
+
 /** What the user of an application sees. */
 export interface AppInterfaceSpec {
   layout: AppLayout;
-  accent: AppAccent;
+  /**
+   * Its one colour, over whichever theme it runs in; unsaid, it wears the
+   * theme's own colours (decided 2026-10-07).
+   */
+  accent?: AppAccent;
+  /** The theme it runs in by default; the person's own when unsaid (T-30). */
+  theme?: AppThemeSpec;
   welcome: string;
   starters: AppStarterSpec[];
-  settings: AppSettingSpec[];
+  /** Slash commands picked in the composer: typing `/` lists them (P-19). */
+  commands: AppCommandSpec[];
+  /** Mode switches in the composer, the option picked going with every run (P-19). */
+  modes: AppModeSpec[];
+  /**
+   * Several assistants in one application (P-20): two at least, or none.
+   * Absent from a spec made before profiles.
+   */
+  profiles?: AppProfileSpec[];
+  /**
+   * What a person may set: the JSON Schema of a form (C-16), drawn beside the
+   * conversation and on a deployment's Ship card; none when unsaid.
+   */
+  settings?: AppFormSchema;
+  /**
+   * How the settings' fields are drawn (P-20): a uiSchema as
+   * `@datalayer/primer-rjsf` reads it, by field name — `ui:widget` one of
+   * `select`, `radio`, `range`, `updown`, `switch`, `checkbox`, `text`,
+   * `textarea`, `date`, `checkboxes`, `tags`. Each field's own when unsaid.
+   */
+  settingsUi?: Record<string, unknown>;
+  /** The language its own words are in, BCP 47 (P-26); `en` when absent. */
+  language?: string;
+  /** Its words in other languages, by BCP 47 tag (P-26). */
+  translations?: Record<string, AppTranslationSpec>;
+  /**
+   * What a person may send in the composer without being asked (P-21): none
+   * when unsaid — the composer offers no attachment, and the runtime refuses
+   * a file sent with a message.
+   */
+  uploads?: AppUploadsSpec;
   /** The components of the catalog the surface may use. */
   components: string[];
+  /** Components its developer wrote (P-17); absent from a spec made before them. */
+  customComponents?: AppCustomComponentSpec[];
   surface?: AppSurfaceSpec;
+  /** A widget's page written in its code (P-05); none when unsaid. */
+  page?: AppPageSpec;
+  /**
+   * The character its floating assistant shows; the paper clip when unsaid.
+   * Said, it wins over the one the person chose in their settings.
+   */
+  assistant?: AppAssistantCharacter;
+  /**
+   * How its floating assistant's balloon shows the conversation: `history`
+   * (every message, the composer last) or `current` (only what it says or
+   * does now). The page's own when unsaid.
+   */
+  balloon?: AppBalloonDisplay;
+  /** Its voice: off unless said (VO-41); absent from a spec made before voice. */
+  voice?: AppVoiceSpec;
+  /**
+   * The formats its answers come in, by media type, words first:
+   * `text/markdown`, then `application/x-ipynb+json` for a Jupyter notebook.
+   * Over A2A, its agent card's output modes. Empty: plain text alone.
+   */
+  outputs: string[];
+}
+
+/** A text file a test gives with what it asks, as a person gives one on its page. */
+export interface AppTestFileSpec {
+  /** Its name, without a folder: `orders.csv`. */
+  name: string;
+  /** What it holds. */
+  text: string;
+}
+
+/**
+ * One turn of a test's conversation: what the person says, the option of a
+ * choice they pick, or an action of its code they press with its payload —
+ * exactly one of `say`, `choose` and `press`.
+ */
+export interface AppTestTurnSpec {
+  /** What the person says. */
+  say?: string;
+  /** The option they pick, of the choice it asked. */
+  choose?: string;
+  /** The action of its code they press, by name (`@app.action`). */
+  press?: string;
+  /** What the action is given with its press. */
+  payload?: Record<string, unknown>;
 }
 
 export interface AppTestCaseSpec {
+  /** What it is asked, in one message; empty when it has `turns`. */
   ask: string;
+  /**
+   * The conversation it is had in, turn by turn, in place of one message,
+   * judged whole. Absent for a case of one message.
+   */
+  turns?: AppTestTurnSpec[];
   expect: string;
+  /**
+   * The function of its code that decides the case, by name (LOOP P-06:
+   * `@app.test`); `expect` still says it in words, and decides it without
+   * the file. Empty, or absent, for a case in words alone.
+   */
+  code?: string;
+  /**
+   * Text files it is given with what it is asked, each in the message after
+   * it. Absent for a case in words alone.
+   */
+  files?: AppTestFileSpec[];
+}
+
+/**
+ * What was verified, and how, each in a sentence a person reads (LOOP E-14):
+ * what was tried live, what runs on recorded data, what is not verified yet.
+ */
+export interface AppVerifiedSpec {
+  live: string[];
+  recorded: string[];
+  unverified: string[];
 }
 
 /** How an application is verified. */
@@ -453,6 +853,8 @@ export interface AppTestsSpec {
   readyAt: number;
   evalset: string;
   cases: AppTestCaseSpec[];
+  /** What was verified live, what runs on recorded data, what is not yet. */
+  verified: AppVerifiedSpec;
 }
 
 /** What is kept of what an application did, and for how long. */
@@ -461,21 +863,98 @@ export interface AppRecordSpec {
   keepFor: string;
   retentionDays: number;
   include: string[];
+  /**
+   * Whether its conversations may be used to suggest tests (LOOP V-16): off
+   * unless said, and only those kept while it is on are sampled.
+   */
+  suggestTests: boolean;
 }
 
-/** Optional checks from the catalogue. */
+/** Where a check of an application's code runs (LOOP P-06). */
+export type AppCheckStage = 'answer' | 'tool_call';
+
+/** A check written in an application's code (LOOP P-06: `@app.check`). */
+export interface AppCodeCheckSpec {
+  /** The function of its code that checks. */
+  name: string;
+  /** On every answer, or every tool call the rules let through. */
+  on: AppCheckStage;
+  /** What it checks, in a sentence a person reads. */
+  description: string;
+}
+
+/** Optional checks from the catalogue, and its code's own. */
 export interface AppChecksSpec {
   guards: string[];
   gates: string[];
   track: string;
+  /** Checks written in its code (LOOP P-06); absent when it has none. */
+  code?: AppCodeCheckSpec[];
 }
+
+/**
+ * A tool of an application's own, written in its code (LOOP P-06:
+ * `@app.tool`): its agent calls it, and the rules decide each call by what
+ * it `does`, or by a rule that names it by its name alone.
+ */
+export interface AppToolSpec {
+  name: string;
+  /** What it does, for the agent. */
+  description: string;
+  /** The JSON Schema of its arguments, an object. */
+  parameters: Record<string, unknown>;
+  /** What it does, by class of action: `read`, `write`, `send`… */
+  does: string[];
+}
+
+/** A function of the host page the application's agent may call (LOOP D-10). */
+export interface AppHostFunctionSpec {
+  /** Lower-case words joined by `_`: called as the tool `host_<name>`. */
+  name: string;
+  /** What it does, for the agent: when to call it. */
+  description: string;
+  /** Its arguments, a JSON Schema of `type: object`. */
+  parameters: Record<string, unknown>;
+}
+
+/**
+ * What the host page and an embedded application say to each other (LOOP
+ * D-10): the host's values it reads (`user`, `page`, or the host's own),
+ * through the tool `host_context`, and the host's functions it may call,
+ * each through `host_<name>` — every one of them decided by a rule that
+ * names it.
+ */
+export interface AppHostBridgeSpec {
+  context: string[];
+  functions: AppHostFunctionSpec[];
+  /**
+   * Who its user is (LOOP D-21): `claimed`, what the page says (unless
+   * said); `signed`, only a token the host's server signed with the
+   * deployment's secret — the unsigned one refused.
+   */
+  user?: AppHostUser;
+}
+
+/** What the host page's word on its visitor is worth (LOOP D-21). */
+export type AppHostUser = 'claimed' | 'signed';
 
 export interface AppDeploymentSpec {
   hosted?: {
     visibility: 'private' | 'invited' | 'organization' | 'link' | 'public';
     slug: string;
+    /**
+     * At its address, only its character (LOOP T-21): the conversation
+     * opens in its balloon, as when it is shipped as `assistant`. Off
+     * unless said.
+     */
+    characterAlone?: boolean;
   };
-  embedded?: { mode: 'inline' | 'bubble' | 'panel'; origins: string[] };
+  embedded?: {
+    mode: AppEmbedMode;
+    origins: string[];
+    /** What the host page passes it and the functions of the host it may call (LOOP D-10). */
+    host?: AppHostBridgeSpec;
+  };
 }
 
 /** What starts a worker's work. */
@@ -510,7 +989,36 @@ export interface AppDecisionSpec {
   criteria: AppCriterionSpec[];
   minConfidence: number;
   scenarios: AppScenarioSpec[];
-  judgmentModel: string;
+  decisionModel: string;
+}
+
+/** A document of its `contents`, as Datalayer publishes it with the application. */
+export interface AppSampleDocumentSpec {
+  /** The document, as its `contents` names it. */
+  name: string;
+  /** The file it is given as, in a sandbox: `price-list.csv`. */
+  file: string;
+  /** What it holds. */
+  text: string;
+}
+
+/** An alternative a decision is tried on, and what is known about it. */
+export interface AppSampleAlternativeSpec {
+  name: string;
+  /** What is known about it: the text its typed questions are asked on. */
+  evidence: string;
+  /** What each metric criterion found for it, by the criterion's name. */
+  metrics: Record<string, number>;
+}
+
+/**
+ * What it is tried on before it is anybody's (STUDIO E-06, E-11): published
+ * with it by Datalayer, read only — what a visitor without an account
+ * computes from, or decides on, in the browser.
+ */
+export interface AppSamplesSpec {
+  documents: AppSampleDocumentSpec[];
+  alternatives: AppSampleAlternativeSpec[];
 }
 
 /**
@@ -535,7 +1043,10 @@ export interface AppSpec {
   instructions: string;
   model: string;
   skills: string[];
-  tools: string[];
+  /** Backend tools (agentspecs/backend-tools) it adds to its agent's. */
+  backendTools: string[];
+  /** Tools of its own, written in its code (LOOP P-06); absent when it has none. */
+  tools?: AppToolSpec[];
   /** The Frames it works under. */
   context: string[];
   /** The documents and datasets it answers from. */
@@ -554,13 +1065,27 @@ export interface AppSpec {
   memory: string;
   notifications: string[];
   decision?: AppDecisionSpec;
+  /** What it is tried on before it is anybody's, published with it. */
+  samples: AppSamplesSpec;
   /** What it names that is not enabled today, in sentences. */
   setup: string[];
   enabled: boolean;
+  /**
+   * Why it is not offered today, in a sentence its page shows: said when
+   * `enabled` is false, and only then (empty otherwise).
+   */
+  unavailable_because: string;
   tags: string[];
   icon?: string;
   /** Its face: one emoji, shown wherever the application appears. */
   emoji: string;
+  /**
+   * Its avatar, by name: a drawing of the set people choose theirs from on
+   * their profile. Empty, its emoji stands for it.
+   */
+  avatar: string;
+  /** Its banner, by name, from the same profile's set. Empty, its id seeds one. */
+  banner: string;
 }
 
 export interface Agentspec {
@@ -584,14 +1109,19 @@ export interface Agentspec {
   enabled: boolean;
   /** AI model identifier to use for this agent */
   model?: string;
+  /**
+   * Other models of the catalogue this agent may be switched to, beside its
+   * `model`. The runtime offers those of them its inference serves.
+   */
+  modelAdditionals?: string[];
   /** Inference provider routing strategy */
   inferenceProvider?: 'local' | 'datalayer';
   /** MCP servers used by this agent */
   mcpServers: MCPServer[];
   /** Skills available to this agent */
   skills: SkillSpec[];
-  /** Runtime tools available to this agent */
-  tools?: ToolSpec[];
+  /** Backend tools available to this agent: they run on the runtime */
+  backendTools?: BackendToolSpec[];
   /** Disable tool approvals for this spec (default: false). */
   disableToolApprovals?: boolean;
   /** Frontend tool sets available to this agent */

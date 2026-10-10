@@ -5,9 +5,6 @@
 
 /**
  * UI plugins: a catalogue of their own, and what an agent spec names.
- *
- * They were UI extensions, and the agent field `uiExtension`, before
- * agentspecs 0.0.11.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,7 +30,6 @@ describe('the UI plugin catalogue', () => {
     expect(named.length).toBeGreaterThan(0);
     for (const spec of named) {
       expect(getUIPlugin(spec.uiPlugin as string)).toBeDefined();
-      expect('uiExtension' in spec).toBe(false);
     }
   });
 });

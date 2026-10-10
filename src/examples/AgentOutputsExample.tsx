@@ -38,8 +38,8 @@ import { AuthRequiredView } from './components';
 import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { uniqueAgentId } from './utils/agentId';
-import { LoopEmbed } from '../loop';
-import { AgentOutputsPlugin } from '../loop/plugins/agent-outputs';
+import { LoopEmbed } from '../apps';
+import { AgentOutputsPlugin } from '../apps/plugins/agent-outputs';
 import { useChatStore } from '../stores/chatStore';
 import type { ChatMessage } from '../types';
 import { useExampleAgentRuntimesUrl } from './utils/useExampleAgentRuntimesUrl';
@@ -249,29 +249,21 @@ const MarkdownTable: React.FC<{ source: string }> = ({ source }) => {
 
   if (headers.length === 0) {
     return (
-      <Box
-        as="pre"
-        sx={{
-          fontFamily: 'mono',
-          fontSize: 0,
-          whiteSpace: 'pre-wrap',
-          m: 0,
-        }}
-      >
+      <Box as="pre" fontFamily="mono" fontSize={0} whiteSpace="pre-wrap" m={0}>
         {source}
       </Box>
     );
   }
 
   return (
-    <Box sx={{ overflowX: 'auto' }}>
+    <Box overflowX="auto">
       <Box
         as="table"
+        width="100%"
+        tableLayout="auto"
+        borderCollapse="collapse"
+        fontSize={0}
         sx={{
-          width: '100%',
-          tableLayout: 'auto',
-          borderCollapse: 'collapse',
-          fontSize: 0,
           'th, td': {
             border: '1px solid',
             borderColor: 'border.muted',
@@ -356,15 +348,13 @@ const ChartView: React.FC<{ source: string }> = ({ source }) => {
     return (
       <Box
         as="pre"
-        sx={{
-          fontFamily: 'mono',
-          fontSize: 0,
-          whiteSpace: 'pre-wrap',
-          bg: 'canvas.default',
-          p: 2,
-          borderRadius: 2,
-          m: 0,
-        }}
+        fontFamily="mono"
+        fontSize={0}
+        whiteSpace="pre-wrap"
+        bg="canvas.default"
+        p={2}
+        borderRadius={2}
+        m={0}
       >
         {source}
       </Box>
@@ -436,25 +426,17 @@ const AgentOutputsInner: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <Box height="100%" display="flex" flexDirection="column">
       {/* Toolbar */}
       <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          py: 2,
-          borderBottom: '1px solid',
-          borderColor: 'border.default',
-          flexShrink: 0,
-        }}
+        display="flex"
+        alignItems="center"
+        gap={2}
+        px={3}
+        py={2}
+        borderBottom="1px solid"
+        borderColor="border.default"
+        flexShrink={0}
       >
         <TableIcon size={16} />
         <Heading as="h3" sx={{ fontSize: 2, flex: 1 }}>
@@ -462,9 +444,9 @@ const AgentOutputsInner: React.FC = () => {
         </Heading>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <Box flex={1} minHeight={0} display="flex">
         {/* Left: Chat */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box flex={1} minWidth={0}>
           <LoopEmbed
             serverUrl={agentBaseUrl}
             target="local"
@@ -478,23 +460,19 @@ const AgentOutputsInner: React.FC = () => {
 
         {/* Right: Output panel */}
         <Box
-          sx={{
-            width: 420,
-            borderLeft: '1px solid',
-            borderColor: 'border.default',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
+          width={420}
+          borderLeft="1px solid"
+          borderColor="border.default"
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
         >
           {/* Output type tabs */}
           <Box
-            sx={{
-              display: 'flex',
-              borderBottom: '1px solid',
-              borderColor: 'border.default',
-              flexShrink: 0,
-            }}
+            display="flex"
+            borderBottom="1px solid"
+            borderColor="border.default"
+            flexShrink={0}
           >
             {(
               [
@@ -532,7 +510,7 @@ const AgentOutputsInner: React.FC = () => {
           </Box>
 
           {/* Artifact list */}
-          <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
+          <Box p={3} flex={1} overflow="auto">
             <Heading as="h4" sx={{ fontSize: 1, mb: 2 }}>
               {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} outputs
             </Heading>
@@ -547,22 +525,18 @@ const AgentOutputsInner: React.FC = () => {
               filtered.map((d, idx) => (
                 <Box
                   key={d.messageId + ':' + idx}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'border.default',
-                    borderRadius: 2,
-                  }}
+                  p={2}
+                  mb={2}
+                  border="1px solid"
+                  borderColor="border.default"
+                  borderRadius={2}
                 >
                   <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 2,
-                      gap: 2,
-                    }}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={2}
+                    gap={2}
                   >
                     <Text sx={{ fontSize: 1, fontWeight: 'bold' }}>
                       {d.filename ?? `${d.tab} output`}
@@ -576,17 +550,15 @@ const AgentOutputsInner: React.FC = () => {
                   {d.tab === 'json' && (
                     <Box
                       as="pre"
-                      sx={{
-                        bg: 'canvas.default',
-                        p: 2,
-                        borderRadius: 2,
-                        fontFamily: 'mono',
-                        fontSize: 0,
-                        maxHeight: 320,
-                        overflow: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        m: 0,
-                      }}
+                      bg="canvas.default"
+                      p={2}
+                      borderRadius={2}
+                      fontFamily="mono"
+                      fontSize={0}
+                      maxHeight={320}
+                      overflow="auto"
+                      whiteSpace="pre-wrap"
+                      m={0}
                     >
                       {(() => {
                         try {
@@ -602,18 +574,16 @@ const AgentOutputsInner: React.FC = () => {
                     <>
                       <Box
                         as="pre"
-                        sx={{
-                          bg: 'canvas.default',
-                          p: 2,
-                          borderRadius: 2,
-                          fontFamily: 'mono',
-                          fontSize: 0,
-                          maxHeight: 200,
-                          overflow: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          m: 0,
-                          mb: 2,
-                        }}
+                        bg="canvas.default"
+                        p={2}
+                        borderRadius={2}
+                        fontFamily="mono"
+                        fontSize={0}
+                        maxHeight={200}
+                        overflow="auto"
+                        whiteSpace="pre-wrap"
+                        m={0}
+                        mb={2}
                       >
                         {d.payload}
                       </Box>

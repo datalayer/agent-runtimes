@@ -115,15 +115,13 @@ export const Agent: React.FC = () => {
     return (
       <DatalayerThemeProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <Spinner size="large" />
           <Text sx={{ color: 'fg.muted' }}>
@@ -139,15 +137,13 @@ export const Agent: React.FC = () => {
     return (
       <DatalayerThemeProvider>
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 3,
-            bg: 'canvas.default',
-          }}
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          height="100vh"
+          gap={3}
+          bg="canvas.default"
         >
           <AlertIcon size={48} />
           <Text sx={{ color: 'danger.fg', fontSize: 2 }}>

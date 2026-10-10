@@ -56,4 +56,103 @@ describe('Runtimes API', () => {
     expect(String(call?.url || '')).toContain('agent_id=agent-1');
     expect(result.memories).toHaveLength(1);
   });
+
+  it('forgets one memory of the caller by its id', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      forgotten: 1,
+    });
+
+    const result = await runtimes.forgetRuntimeMemory(MOCK_JWT_TOKEN, 'm 1');
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('DELETE');
+    expect(String(call.url)).toMatch(/\/api\/runtimes\/v1\/memories\/m%201$/);
+    expect(result).toEqual({ success: true, forgotten: 1 });
+  });
+
+  it('corrects one memory in place, with the words it should remember', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      memory: {
+        id: 'm 1',
+        memory: 'Prefers long replies',
+        corrected_by: 'ada',
+      },
+    });
+
+    const result = await runtimes.correctRuntimeMemory(
+      MOCK_JWT_TOKEN,
+      'm 1',
+      'Prefers long replies',
+    );
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('PATCH');
+    expect(String(call.url)).toMatch(/\/api\/runtimes\/v1\/memories\/m%201$/);
+    expect(call.body).toEqual({ memory: 'Prefers long replies' });
+    expect(result.memory.corrected_by).toBe('ada');
+    await expect(
+      runtimes.correctRuntimeMemory(MOCK_JWT_TOKEN, 'm 1', ' '),
+    ).rejects.toThrow();
+  });
+
+  it('forgets everything an application remembers, no more than confirmed', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      forgotten: 7,
+    });
+
+    const result = await runtimes.forgetRuntimeMemories(
+      MOCK_JWT_TOKEN,
+      'app:01ABC',
+      7,
+    );
+
+    const call = vi.mocked(requestDatalayerAPI).mock.calls.at(0)?.[0] as any;
+    expect(call.method).toBe('DELETE');
+    expect(String(call.url)).toContain(
+      '/api/runtimes/v1/memories?agent_id=app%3A01ABC&count=7',
+    );
+    expect(result.forgotten).toBe(7);
+    await expect(
+      runtimes.forgetRuntimeMemories(MOCK_JWT_TOKEN, 'app:01ABC', -1),
+    ).rejects.toThrow('the count confirmed');
+  });
+  it('reads, allows and stops what an application shares of the caller', async () => {
+    vi.mocked(requestDatalayerAPI).mockResolvedValue({
+      success: true,
+      shares: [{ source: 'app:01A', reader: 'app:01B', allowed_at: null }],
+      share: { source: 'app:01A', reader: 'app:01B', allowed_at: null },
+    });
+
+    const shares = await runtimes.listRuntimeMemoryShares(MOCK_JWT_TOKEN, {
+      source: 'app:01A',
+    });
+    let call = vi.mocked(requestDatalayerAPI).mock.calls.at(-1)?.[0] as any;
+    expect(call.method).toBe('GET');
+    expect(String(call.url)).toMatch(
+      /\/api\/runtimes\/v1\/memory-shares\?source=app%3A01A$/,
+    );
+    expect(shares[0].reader).toBe('app:01B');
+
+    await runtimes.allowRuntimeMemoryShare(
+      MOCK_JWT_TOKEN,
+      'app:01A',
+      'app:01B',
+    );
+    call = vi.mocked(requestDatalayerAPI).mock.calls.at(-1)?.[0] as any;
+    expect(call.method).toBe('PUT');
+    expect(call.body).toEqual({ source: 'app:01A', reader: 'app:01B' });
+
+    await runtimes.stopRuntimeMemoryShare(MOCK_JWT_TOKEN, 'app:01A', 'app:01B');
+    call = vi.mocked(requestDatalayerAPI).mock.calls.at(-1)?.[0] as any;
+    expect(call.method).toBe('DELETE');
+    expect(String(call.url)).toContain(
+      '/memory-shares?source=app%3A01A&reader=app%3A01B',
+    );
+    await expect(
+      runtimes.allowRuntimeMemoryShare(MOCK_JWT_TOKEN, ' ', 'app:01B'),
+    ).rejects.toThrow();
+  });
 });

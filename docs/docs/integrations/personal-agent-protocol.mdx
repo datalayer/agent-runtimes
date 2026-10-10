@@ -1,0 +1,98 @@
+---
+sidebar_position: 2
+title: Personal Agent Protocol
+---
+
+# Personal Agent Protocol
+
+Agent Runtimes depends on Personal Agent Protocol (PAP) in Python and
+TypeScript. The integration divides responsibility explicitly:
+
+- the PAP SDK validates discovery, issuer/domain binding, client metadata,
+  same-domain JWKS, protocol models, and cryptographic flows;
+- Agent Runtimes decides what is safe to place in a tool result, model context,
+  trace, or UI state; and
+- Datalayer host services own DNS-pinned egress, key custody, one-use
+  authorization state, tokens, consent, and audit.
+
+## Python
+
+`PapPersonalAgentCapability` currently exposes two credential-free methods:
+
+```python
+from agent_runtimes.pap import PapPersonalAgentCapability
+
+async with PapPersonalAgentCapability() as pap:
+    company = await pap.discover_company("example.com")
+    identity = await pap.inspect_agent("https://agent.example/agent.json")
+```
+
+`PapCompanySummary` contains the verified organization, domain, protocol
+version, issuer, sign-in choices, interface kinds, and extension versions.
+`PapAgentIdentitySummary` contains the verified client identity, redirect
+count, signing algorithms, and extension versions. Neither contains endpoint
+operational endpoint URLs, response bodies, JWK coordinates, assertions,
+proofs, or tokens. The verified issuer and client ID remain visible because
+they are the public identities being inspected.
+
+## TypeScript
+
+The TypeScript package provides the same boundary and vocabulary:
+
+```typescript
+import { PapPersonalAgentCapability } from '@datalayer/agent-runtimes';
+
+const pap = new PapPersonalAgentCapability();
+const company = await pap.discoverCompany('example.com');
+const identity = await pap.inspectAgent('https://agent.example/agent.json');
+```
+
+Both methods accept injected PAP clients/functions for server policy and
+testing. Production backends should inject a Reactor host whose metadata
+transport enforces connected-address policy and tenant-scoped caching.
+
+## Authorization boundary
+
+Discovery and public identity are safe agent tools. Direct Sign-In, Session
+start/renewal, DPoP generation, Account Token handling, and callbacks are not.
+Those flows run as deterministic capabilities outside the model loop and give
+applications only safe status or opaque references.
+
+The repository's
+[Personal Agent Protocol examples](https://github.com/datalayer/agent-runtimes/tree/main/examples/personal-agent-protocol)
+provide one small application per feature and make that boundary executable.
+The PAP repository separately provides plain Pydantic AI examples with no
+Agent Runtimes dependency.
+
+The `dpop-proof` pair is the reference for proof-of-possession: both examples
+create and verify a real ES256 proof in trusted host code, demonstrate method,
+URL, token, nonce, and replay binding, and return only non-secret policy
+evidence to the model. The browser gallery adds a Reactor-contributed view that
+uses non-exportable Web Crypto key material and retains neither generated
+proof in React state. Protocol details remain canonical in the PAP
+[JOSE and DPoP guide](https://personal-agent-protocol.datalayer.tech/guides/cryptography/).
+
+The `session-lifecycle` pair drives the real `SessionClient` through signed-out
+start, one DPoP nonce challenge, and renewal. Its deterministic company
+transport makes the wire behavior observable without external credentials,
+while the Loop tool returns only lifecycle evidence. Session IDs, pairwise
+subjects, assertions, proofs, nonces, and tokens remain host-owned. See the
+canonical [Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).
+
+## Guided interaction example
+
+`PAP Guided Journey` is the user-facing companion to the focused diagnostic
+examples. It synchronizes three perspectives across five navigable steps:
+
+- the user's conversation and company-owned sign-in page in a phone frame;
+- the minimum Session, conversation, authorization, and result state the
+  fictional company is allowed to see; and
+- an expandable protocol inspector whose assertions, proofs, state, codes,
+  identifiers, and tokens are explicitly host-only or redacted.
+
+The view is contributed through the same Reactor plugin mould as the other PAP
+examples. On load, it validates the fictional discovery document, creates a
+real Session-assertion shape, and creates a real S256 Direct Sign-In request
+with the TypeScript PAP SDK. It stores none of the generated security material
+in React state. This keeps the visual narrative aligned with executable SDK
+behavior rather than presenting an unrelated mockup.
