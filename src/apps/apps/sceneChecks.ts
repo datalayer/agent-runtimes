@@ -91,6 +91,31 @@ export const SCENE_PARTS: readonly SceneSection[] = [
   'rehearsal',
 ];
 
+/**
+ * Each section of a scene, and the keys of the spec it is written in.
+ * *Where it plays* is the stage directions and the addresses together: where
+ * each player runs is one thing, said in two keys. Read by the editor's
+ * parts (S-09) and by `sceneShape`, which files a refusal of the scene's
+ * shape under the part whose key it names.
+ */
+export const SCENE_SECTION_KEYS: Readonly<
+  Record<SceneSection, readonly string[]>
+> = {
+  scene: ['name', 'description', 'emoji', 'icon', 'tags', 'version'],
+  cast: ['entry', 'team', 'cast'],
+  setting: ['setting'],
+  script: ['script'],
+  stage: ['stage', 'deployment'],
+  audience: ['audience'],
+  rehearsal: ['rehearsal'],
+};
+
+/** The section a key of the spec is written in; the scene's own otherwise. */
+export const sectionOfKey = (key: string): SceneSection =>
+  (Object.entries(SCENE_SECTION_KEYS).find(([, keys]) =>
+    keys.includes(key),
+  )?.[0] as SceneSection | undefined) ?? 'scene';
+
 /** What a person reads each section as, in the editor's panel. */
 export const SECTION_WORDS: Record<SceneSection, string> = {
   scene: 'The scene',

@@ -32,6 +32,7 @@ import {
   sceneCheck,
   sceneProblems,
   sceneShapeProblem,
+  sectionOfKey,
   transcriptLineOf,
 } from '../apps/sceneChecks';
 import { sceneOfYaml, sceneTextProblems, sceneYamlOf } from '../apps/sceneYaml';
@@ -67,24 +68,31 @@ describe('what an editor refuses of a scene is what `loop` refuses (S-10)', () =
     expect(table.cases.filter(one => one.says.length === 0)).toHaveLength(2);
   });
 
+  // As a person meets it: the text in, agentspecs' sentences out — its shape
+  // refused before it is read into a spec, as pydantic refuses it, and the
+  // rules read on what it says once its shape is right.
+  const says = (yaml: string): string[] =>
+    sceneTextProblems(yaml).map(problem => problem.says);
+
   for (const one of table.cases) {
     it(`says the same of ${one.name}`, () => {
-      expect(sceneProblems(specOf(one.yaml))).toEqual(one.says);
+      expect(says(one.yaml)).toEqual(one.says);
     });
   }
 
   it('says nothing twice: every case is one sentence at a time, as agentspecs stops where it stops', () => {
     for (const one of table.cases) {
-      const says = sceneProblems(specOf(one.yaml));
-      expect(new Set(says).size).toBe(says.length);
+      const said = says(one.yaml);
+      expect(new Set(said).size).toBe(said.length);
     }
   });
 
-  it('reads a text’s own refusals as the checks over what the text says', () => {
+  it('reads the rules on the spec a text says, once its shape is right', () => {
     for (const one of table.cases) {
-      expect(sceneTextProblems(one.yaml).map(problem => problem.says)).toEqual(
-        one.says,
-      );
+      const read = sceneOfYaml(one.yaml);
+      if (read.spec) {
+        expect(sceneProblems(read.spec)).toEqual(one.says);
+      }
     }
     expect(sceneTextProblems('cast: [')[0].says).toMatch(
       /^The text does not read/,
@@ -133,9 +141,35 @@ describe('each refusal says which part of the scene it is about (S-09)', () => {
     ]);
     expect(STAGE_SECTIONS).toEqual(['stage', 'audience']);
     for (const one of table.cases) {
-      for (const problem of sceneCheck(specOf(one.yaml))) {
+      for (const problem of sceneTextProblems(one.yaml)) {
         expect(SECTION_WORDS[problem.section]).toBeTruthy();
       }
+    }
+  });
+
+  it('files a refusal of the shape under the part whose key it names', () => {
+    const section = (name: string) =>
+      sceneTextProblems(named(name).yaml)[0].section;
+    expect(section('a cast that is a word')).toBe('cast');
+    expect(section('a member running nowhere')).toBe('cast');
+    expect(section('an audience nobody can be')).toBe('audience');
+    expect(section('a rehearsal bound that is no duration')).toBe('rehearsal');
+    expect(section('places that are a word')).toBe('stage');
+    expect(section('a name that is a number')).toBe('scene');
+    // Both faults are said; the part is the first's.
+    expect(section('two things wrong at once')).toBe('cast');
+    expect(sectionOfKey('deployment')).toBe('stage');
+    expect(sectionOfKey('nothing-of-the-kind')).toBe('scene');
+  });
+
+  it('never throws on a scene of the wrong shape: it refuses it', () => {
+    // A cast written as one word used to make the reader throw.
+    for (const yaml of [
+      'schema: loop.scene/v1\nid: x\nname: X\ncast: sales\n',
+      'schema: loop.scene/v1\nid: x\nname: X\nscript: 3\nstage: []\n',
+    ]) {
+      expect(() => sceneTextProblems(yaml)).not.toThrow();
+      expect(sceneTextProblems(yaml).length).toBe(1);
     }
   });
 });

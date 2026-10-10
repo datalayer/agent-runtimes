@@ -209,6 +209,97 @@
       "name": "a scene that plays",
       "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    talks_to:\n      - member: books\n        over: a2a\n  - member: books\n    app: accounting\n    role: contributor\n    runs_in: runtime\n    persona:\n      name: Accounting\nsetting:\n  systems:\n    - server: odoo-accounting\n      as: Odoo\n      holds: Datalayer's books\nstage:\n  positions:\n    sales:\n      x: 0\n      y: 0\n    books:\n      x: 0.5\n      y: 0\n  opens_first: sales\nscript:\n  - id: open\n    cue:\n      say: Show the books\n    expect: The books are read\n    moves:\n      - who: sales\n        asks: books\n        over: a2a\n        what: the open invoices\n      - who: sales\n        answers: table\nrehearsal:\n  beats:\n    - beat: open\n      lines:\n        - 'You → Sales'\n        - 'Sales → Accounting'\n        - 'Sales: a table'\n",
       "says": []
+    },
+    {
+      "name": "a cast that is a word",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast: sales\n",
+      "says": ["probe: cast: Input should be a valid list"]
+    },
+    {
+      "name": "a name that is a number",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: 123\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": ["probe: name: Input should be a valid string"]
+    },
+    {
+      "name": "a scene with no name",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": ["probe: name is missing"]
+    },
+    {
+      "name": "a field the spec does not have",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\ncolour: red\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": ["probe: colour is not a field of the spec"]
+    },
+    {
+      "name": "a member with a field it does not have",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\n    mood: happy\n",
+      "says": ["probe: cast.0.mood is not a field of the spec"]
+    },
+    {
+      "name": "a member running nowhere",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: nowhere\n    persona:\n      name: Sales\n",
+      "says": ["probe: cast.0.runs_in: Input should be 'browser' or 'runtime'"]
+    },
+    {
+      "name": "a member's role nobody plays",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: boss\n    runs_in: runtime\n    persona:\n      name: Sales\n",
+      "says": [
+        "probe: cast.0.role: Input should be 'coordinator', 'initiator', 'contributor', 'reviewer' or 'finalizer'"
+      ]
+    },
+    {
+      "name": "an audience that is a word",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\naudience: everyone\n",
+      "says": [
+        "probe: audience: Input should be a valid dictionary or instance of SceneAudience"
+      ]
+    },
+    {
+      "name": "an audience nobody can be",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\naudience:\n  who: nobody-at-all\n",
+      "says": [
+        "probe: audience.who: Input should be 'visitors', 'signed-in' or 'nobody'"
+      ]
+    },
+    {
+      "name": "a ceiling below nothing",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\naudience:\n  ceiling_per_ask: -1\n",
+      "says": [
+        "probe: audience.ceiling_per_ask: Input should be greater than or equal to 0"
+      ]
+    },
+    {
+      "name": "a ceiling that is no number",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\naudience:\n  ceiling_per_ask: lots\n",
+      "says": [
+        "probe: audience.ceiling_per_ask: Input should be a valid number, unable to parse string as a number"
+      ]
+    },
+    {
+      "name": "a rehearsal bound that is no duration",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nrehearsal:\n  within: soon\n",
+      "says": [
+        "probe: rehearsal.within: String should match pattern '^(?:[1-9]\\d*(?:ms|s|m|h))?$'"
+      ]
+    },
+    {
+      "name": "a stage that is a list",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nstage: []\n",
+      "says": [
+        "probe: stage: Input should be a valid dictionary or instance of SceneStage"
+      ]
+    },
+    {
+      "name": "places that are a word",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast:\n  - member: sales\n    app: sales\n    role: initiator\n    runs_in: runtime\n    persona:\n      name: Sales\nstage:\n  positions: everywhere\n",
+      "says": ["probe: stage.positions: Input should be a valid dictionary"]
+    },
+    {
+      "name": "two things wrong at once",
+      "yaml": "schema: loop.scene/v1\nid: probe\nversion: 0.0.1\nname: Probe\nentry: sales\ncast: sales\nrehearsal:\n  within: soon\n",
+      "says": [
+        "probe: cast: Input should be a valid list; rehearsal.within: String should match pattern '^(?:[1-9]\\d*(?:ms|s|m|h))?$'"
+      ]
     }
   ]
 }

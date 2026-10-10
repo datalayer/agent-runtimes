@@ -25,7 +25,13 @@
 
 import { parse, stringify } from 'yaml';
 import type { SceneSpec } from '../../types/scenes';
-import { entryOf, sceneCheck, type SceneProblem } from './sceneChecks';
+import {
+  entryOf,
+  sceneCheck,
+  type SceneProblem,
+  type SceneSection,
+} from './sceneChecks';
+import { sceneShapeSays } from './sceneShape';
 
 export type { SceneSpec };
 
@@ -181,6 +187,8 @@ export function sceneYamlOf(spec: SceneSpec): string {
 export function sceneOfYaml(text: string): {
   spec?: SceneSpec;
   problem?: string;
+  /** The part of the scene the problem is about, when it is about one. */
+  section?: SceneSection;
 } {
   let parsed: unknown;
   try {
@@ -199,6 +207,13 @@ export function sceneOfYaml(text: string): {
     return {
       problem: `The text is not a scene: it says schema ${JSON.stringify(parsed.schema ?? '')}, and a scene says ${SCENE_SCHEMA}.`,
     };
+  }
+  // A scene of the wrong shape is refused as `loop` refuses it, before it is
+  // read into a spec: read into one, a cast written as one word made the
+  // reader throw (`sceneShape`, 2026-10-10). Checked as agentspecs spells it.
+  const shape = sceneShapeSays(respelled(parsed, SPEC_KEYS));
+  if (shape) {
+    return { problem: shape.says, section: shape.section };
   }
   // Spelled as agentspecs spells it, or as the spec does: both read.
   return {
@@ -271,7 +286,7 @@ export function sceneOfData(spec: Partial<SceneSpec>): SceneSpec {
 export function sceneTextProblems(text: string): SceneProblem[] {
   const read = sceneOfYaml(text);
   if (!read.spec) {
-    return [{ says: read.problem ?? '', section: 'scene' }];
+    return [{ says: read.problem ?? '', section: read.section ?? 'scene' }];
   }
   return sceneCheck(read.spec);
 }

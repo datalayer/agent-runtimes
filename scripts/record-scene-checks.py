@@ -445,6 +445,70 @@ rehearsal:
         - 'Sales: a table'
 """,
     },
+    # --- the shape of a scene: what pydantic refuses before any rule is read ---
+    # Each mistyped once, as a person typing a scene by hand does. agentspecs
+    # reports every issue pydantic finds, joined by "; ", and its after
+    # validators never run on a scene of the wrong shape.
+    {
+        "name": "a cast that is a word",
+        "yaml": HEAD + "entry: sales\ncast: sales\n",
+    },
+    {
+        "name": "a name that is a number",
+        "yaml": HEAD.replace("name: Probe", "name: 123") + "entry: sales\ncast:\n" + SALES,
+    },
+    {
+        "name": "a scene with no name",
+        "yaml": HEAD.replace("name: Probe\n", "") + "entry: sales\ncast:\n" + SALES,
+    },
+    {
+        "name": "a field the spec does not have",
+        "yaml": HEAD + "colour: red\nentry: sales\ncast:\n" + SALES,
+    },
+    {
+        "name": "a member with a field it does not have",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "    mood: happy\n",
+    },
+    {
+        "name": "a member running nowhere",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES.replace("runs_in: runtime", "runs_in: nowhere"),
+    },
+    {
+        "name": "a member's role nobody plays",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES.replace("role: initiator", "role: boss"),
+    },
+    {
+        "name": "an audience that is a word",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience: everyone\n",
+    },
+    {
+        "name": "an audience nobody can be",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  who: nobody-at-all\n",
+    },
+    {
+        "name": "a ceiling below nothing",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  ceiling_per_ask: -1\n",
+    },
+    {
+        "name": "a ceiling that is no number",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "audience:\n  ceiling_per_ask: lots\n",
+    },
+    {
+        "name": "a rehearsal bound that is no duration",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "rehearsal:\n  within: soon\n",
+    },
+    {
+        "name": "a stage that is a list",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "stage: []\n",
+    },
+    {
+        "name": "places that are a word",
+        "yaml": HEAD + "entry: sales\ncast:\n" + SALES + "stage:\n  positions: everywhere\n",
+    },
+    {
+        "name": "two things wrong at once",
+        "yaml": HEAD + "entry: sales\ncast: sales\nrehearsal:\n  within: soon\n",
+    },
 ]
 
 
