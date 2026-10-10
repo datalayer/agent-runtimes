@@ -71,7 +71,7 @@ export const CONNECTION_PARTS: CanvasPartContribution[] = Object.values(
   id: `connection:${server.id}`,
   kind: 'connection',
   label: server.name,
-  says: server.description,
+  says: server.description ?? '',
   emoji: server.emoji,
   example: { server: server.id, access: 'read', as: 'owner', only: [] },
   enabled: server.enabled,
