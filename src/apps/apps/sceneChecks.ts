@@ -134,7 +134,6 @@ export const SECTION_WORDS: Record<SceneSection, string> = {
  * loads the scene. Said here so that no second set of them is written.
  */
 export const AGENTSPECS_OWN: readonly string[] = [
-  'A system reached through a connection of an application kept in your space, rather than one of the catalogue.',
   "A rehearsal's recording, which is a file beside the scenes.",
 ];
 
@@ -235,13 +234,48 @@ function castMakesNoTeam(spec: SceneSpec): string | undefined {
   return undefined;
 }
 
+/**
+ * One of the person's own applications, kept in their Space: what the checks
+ * read of it when a member of the cast is one of them rather than an
+ * application of the catalogue — its name and face, and what its connections
+ * reach. agentspecs reads the catalogue only, so to `loop` a member that is
+ * the person's own application reaches no system at all; the Studio has the
+ * person's applications, and judges them by what they truly reach, in the
+ * same sentences (decided 2026-10-10, S-10).
+ */
+export type SceneOwnApp = {
+  name: string;
+  emoji?: string;
+  connections: readonly { server: string; only?: readonly string[] }[];
+};
+
+/** The person's own applications, by uid — the reference a scene's cast writes for one. */
+export type SceneOwnApps = Readonly<Record<string, SceneOwnApp>>;
+
+/** A member's application: the catalogue's, else one of the person's own. */
+function appOf(
+  ref: string | undefined,
+  own: SceneOwnApps | undefined,
+): SceneOwnApp | undefined {
+  if (!ref) {
+    return undefined;
+  }
+  const id = idOf(ref);
+  const catalogued: SceneOwnApp | undefined = APP_CATALOGUE[id];
+  return (
+    catalogued ??
+    (own && Object.prototype.hasOwnProperty.call(own, id) ? own[id] : undefined)
+  );
+}
+
 /** Whether a member reaches a system: through its application's connection, or a link over MCP. */
 function reaches(
   member: CastMember,
   cast: readonly CastMember[],
   serverId: string,
+  own: SceneOwnApps | undefined,
 ): boolean {
-  const app = member.app ? APP_CATALOGUE[idOf(member.app)] : undefined;
+  const app = appOf(member.app, own);
   if (
     app &&
     app.connections.some(connection => idOf(connection.server) === serverId)
@@ -284,6 +318,7 @@ function moveProblems(
   beatId: string,
   move: SceneMoveSpec,
   links: ReadonlySet<string>,
+  own: SceneOwnApps | undefined,
 ): string[] {
   const where = `Beat '${beatId}':`;
   const mover = spec.cast.find(member => member.member === move.who);
@@ -309,7 +344,7 @@ function moveProblems(
         `${where} '${move.who}' asks '${move.asks}' over a2a, a system: a system is asked over mcp.`,
       ];
     }
-    if (!reaches(mover, spec.cast, idOf(system.server))) {
+    if (!reaches(mover, spec.cast, idOf(system.server), own)) {
       return [
         `${where} '${move.who}' asks '${move.asks}' (${idOf(system.server)}), which it reaches through no connection.`,
       ];
@@ -317,10 +352,11 @@ function moveProblems(
     if (move.tool) {
       const why = toolProblem(
         mover,
-        personaNameOf(spec.cast, mover.member),
+        personaNameOf(resolvedCast(spec.cast, own), mover.member),
         idOf(system.server),
         move.tool,
         move.does,
+        own,
       );
       return why
         ? [`${where} '${move.who}' asks '${move.asks}' for ${why}`]
@@ -414,9 +450,10 @@ function toolProblem(
   name: string,
   serverId: string,
   tool: string,
-  does?: string | null,
+  does: string | null | undefined,
+  own: SceneOwnApps | undefined,
 ): string | undefined {
-  const app = member.app ? APP_CATALOGUE[idOf(member.app)] : undefined;
+  const app = appOf(member.app, own);
   if (app) {
     const connections = app.connections.filter(
       connection => idOf(connection.server) === serverId,
@@ -502,9 +539,12 @@ function castOfTeam(
  * rehearsal may use and the faces a scene may not wear: a member of an
  * inline cast that says no name is read as its application's.
  */
-function resolvedCast(cast: readonly CastMember[]): readonly CastMember[] {
+function resolvedCast(
+  cast: readonly CastMember[],
+  own: SceneOwnApps | undefined,
+): readonly CastMember[] {
   return cast.map(member => {
-    const app = member.app ? APP_CATALOGUE[idOf(member.app)] : undefined;
+    const app = appOf(member.app, own);
     return {
       ...member,
       persona: {
@@ -514,7 +554,7 @@ function resolvedCast(cast: readonly CastMember[]): readonly CastMember[] {
           (app
             ? app.name
             : idOf(member.ref || member.app || member.server) || member.member),
-        face: member.persona?.face || (app ? app.emoji : ''),
+        face: member.persona?.face || (app?.emoji ?? ''),
       },
     };
   });
@@ -577,7 +617,10 @@ export function sceneShapeProblem(spec: SceneSpec): SceneProblem | undefined {
  * What stops a scene from being played, each in agentspecs' sentence with
  * the section it is about; empty when nothing does.
  */
-export function sceneCheck(spec: SceneSpec): SceneProblem[] {
+export function sceneCheck(
+  spec: SceneSpec,
+  own?: SceneOwnApps,
+): SceneProblem[] {
   // 1. The shape of the scene, as it is read (`parse_scene`): the first stops.
   const shape = sceneShapeProblem(spec);
   if (shape) {
@@ -618,7 +661,10 @@ export function sceneCheck(spec: SceneSpec): SceneProblem[] {
         });
       }
     }
-    return [...castProblems, ...sceneOverTeam(spec, castOfTeam(spec, team))];
+    return [
+      ...castProblems,
+      ...sceneOverTeam(spec, castOfTeam(spec, team), own),
+    ];
   }
   const entry = entryOf(spec);
   if (!spec.cast.some(member => member.member === entry)) {
@@ -633,13 +679,14 @@ export function sceneCheck(spec: SceneSpec): SceneProblem[] {
   if (noTeam) {
     return [{ says: noTeam, section: 'cast' }];
   }
-  return sceneOverTeam(spec, spec.cast);
+  return sceneOverTeam(spec, spec.cast, own);
 }
 
 /** The scene read over the team on stage: everything after `team_of` passed. */
 function sceneOverTeam(
   spec: SceneSpec,
   cast: readonly CastMember[],
+  own: SceneOwnApps | undefined,
 ): SceneProblem[] {
   const problems: SceneProblem[] = [];
   const say = (section: SceneSection, says: string) =>
@@ -659,7 +706,7 @@ function sceneOverTeam(
       `The scene enters at '${entry}', a system: the audience talks to an agent.`,
     );
   }
-  const resolved = resolvedCast(cast);
+  const resolved = resolvedCast(cast, own);
   const faces = resolved.map(member => member.persona?.face).filter(Boolean);
   if (spec.emoji && faces.includes(spec.emoji)) {
     say(
@@ -674,7 +721,7 @@ function sceneOverTeam(
       say('setting', `There is no MCP server named ${quoted(system.server)}.`);
     } else if (
       !cast.some(
-        member => reaches(member, cast, id) || idOf(member.server) === id,
+        member => reaches(member, cast, id, own) || idOf(member.server) === id,
       )
     ) {
       say(
@@ -709,6 +756,7 @@ function sceneOverTeam(
         beat.id,
         move,
         links,
+        own,
       )) {
         say('script', says);
       }
@@ -813,10 +861,11 @@ function sceneOverTeam(
       if (systemIds.has(whom) && line.detail && asker) {
         const why = toolProblem(
           asker,
-          personaNameOf(cast, asker.member),
+          personaNameOf(resolved as CastMember[], asker.member),
           whom,
           line.detail,
           null,
+          own,
         );
         if (why) {
           say(
@@ -831,8 +880,8 @@ function sceneOverTeam(
 }
 
 /** What stops a scene from being played, in agentspecs' sentences; empty when nothing does. */
-export const sceneProblems = (spec: SceneSpec): string[] =>
-  sceneCheck(spec).map(problem => problem.says);
+export const sceneProblems = (spec: SceneSpec, own?: SceneOwnApps): string[] =>
+  sceneCheck(spec, own).map(problem => problem.says);
 
 /** The refusals of one section of the spec: the stage's, for S-09's own panel. */
 export const problemsOfSections = (

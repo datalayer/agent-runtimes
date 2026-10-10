@@ -28,6 +28,7 @@ import type { SceneSpec } from '../../types/scenes';
 import {
   entryOf,
   sceneCheck,
+  type SceneOwnApps,
   type SceneProblem,
   type SceneSection,
 } from './sceneChecks';
@@ -283,12 +284,15 @@ export function sceneOfData(spec: Partial<SceneSpec>): SceneSpec {
  * agentspecs' sentence with the part of the scene it is about — a text that
  * is no scene first of all, since nothing else can be read of it.
  */
-export function sceneTextProblems(text: string): SceneProblem[] {
+export function sceneTextProblems(
+  text: string,
+  own?: SceneOwnApps,
+): SceneProblem[] {
   const read = sceneOfYaml(text);
   if (!read.spec) {
     return [{ says: read.problem ?? '', section: read.section ?? 'scene' }];
   }
-  return sceneCheck(read.spec);
+  return sceneCheck(read.spec, own);
 }
 
 /** The member the audience talks to, as the text says it (`entryOf`); empty while it does not read. */

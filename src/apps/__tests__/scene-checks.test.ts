@@ -180,11 +180,12 @@ describe('what stays agentspecs’', () => {
   it('names the checks the browser cannot make, so no second set of them is written', () => {
     // A tool a system does not offer is the browser's since 2026-10-10: the
     // catalogue says what each server offers and for what (\`SERVER_ACTIONS\`).
-    expect(AGENTSPECS_OWN).toHaveLength(2);
+    expect(AGENTSPECS_OWN).toHaveLength(1);
     expect(AGENTSPECS_OWN.join(' ')).not.toMatch(
       /tool a system does not offer/,
     );
-    expect(AGENTSPECS_OWN.join(' ')).toMatch(/kept in your space/);
+    // And a person's own application since the same day: the Studio has them.
+    expect(AGENTSPECS_OWN.join(' ')).not.toMatch(/kept in your space/);
     expect(AGENTSPECS_OWN.join(' ')).toMatch(/recording/);
     // And a cast under a team since the same day: the editor writes an inline
     // cast, so a team in its text is one a person wrote.
@@ -251,5 +252,75 @@ describe('the pieces of the reading', () => {
   it('writes back what it read: a scene that plays reads the same after a round trip', () => {
     const spec = specOf(named('a scene that plays').yaml);
     expect(specOf(sceneYamlOf(spec))).toEqual(spec);
+  });
+});
+
+describe("a scene of the person's own applications", () => {
+  /*
+   * agentspecs reads the catalogue only, so to `loop` a member that is one of
+   * the person's own applications — written as its uid — reaches no system.
+   * The Studio has the person's applications and judges them by what they
+   * truly reach, in the same sentences (decided 2026-10-10).
+   */
+  const OWN = `schema: loop.scene/v1
+id: probe
+version: 0.0.1
+name: Probe
+entry: mine
+cast:
+  - member: mine
+    app: 01MYOWNAPPUID000000000000
+    role: contributor
+    runs_in: runtime
+setting:
+  systems:
+    - server: odoo-accounting
+      as: Odoo
+script:
+  - id: open
+    cue:
+      say: Show the books
+    expect: It is answered
+    moves:
+      - who: mine
+        asks: odoo-accounting
+        over: mcp
+        tool: odoo_accounting_list_invoices
+`;
+  const mine = (only?: string[]) => ({
+    '01MYOWNAPPUID000000000000': {
+      name: 'Mine',
+      emoji: '\u{1F4D2}',
+      connections: [{ server: 'odoo-accounting', ...(only ? { only } : {}) }],
+    },
+  });
+  const said = (own?: Parameters<typeof sceneTextProblems>[1]) =>
+    sceneTextProblems(OWN, own).map(problem => problem.says);
+
+  it('without them, says what `loop` says: the system is reached by no one', () => {
+    expect(said()).toEqual([
+      "The system 'Odoo' (odoo-accounting) is on stage, and no member of the cast reaches it.",
+      "Beat 'open': 'mine' asks 'odoo-accounting' (odoo-accounting), which it reaches through no connection.",
+    ]);
+  });
+
+  it('with them, reads what the application really reaches: nothing stands in the way', () => {
+    expect(said(mine())).toEqual([]);
+  });
+
+  it('refuses a tool its connections do not reach, naming it as the cast does', () => {
+    // No persona name is said, so the member is read by its application's name.
+    expect(said(mine(['odoo_accounting_get_*']))).toEqual([
+      "Beat 'open': 'mine' asks 'odoo-accounting' for 'odoo_accounting_list_invoices', a tool no connection of Mine offers.",
+    ]);
+  });
+
+  it('never lets one of them stand in for an application of the catalogue', () => {
+    // The catalogue's answer wins: an own app may not shadow `accounting`.
+    const shadow = { accounting: { name: 'Shadow', connections: [] } };
+    const books = named('a system reached through a connection');
+    expect(
+      sceneTextProblems(books.yaml, shadow).map(problem => problem.says),
+    ).toEqual(books.says);
   });
 });
