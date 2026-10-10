@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.98
+
+- **A Python application's page side, as a package** (STUDIO P-29) ([Python applications, Its page side, as a package](https://agent-runtimes.datalayer.tech/docs/apps/python-applications)). `loop apps package app.py` writes the distribution `loop-app-<id>` and builds its wheel: the application's module, the files its custom components name from its folder under `share/datalayer/reactor/extensions/loop-app-<id>/`, and a `datalayer.reactor.extensions` entry point — a Reactor extension whose Python half is the application's server plugin and whose page half requires it (F-15). The server it is installed beside serves it at `/api/v1/apps/<id>/plugins/frontend-extensions` and `/api/v1/apps/<id>/reactor-extensions/loop-app-<id>/<path>`; the page installs it (`bootstrapExtensions`, the `loop.app.files` point) and draws a component of a folder file from there, in the same sandboxed frame. Requires `agentspecs>=0.0.70`.
+- **A floating embed bridges the page once** (STUDIO P-25, P-27): in a bubble, a panel or the assistant, each window message of a turn reached the page twice.
+- mypy clean again: `SceneStore.create_scene` (was `create`, which shadowed `Deployments.create`).
+
 ## 1.3.97
 
 - **A step that streams, and tool calls as steps** (STUDIO P-31, P-33) ([Python applications](https://agent-runtimes.datalayer.tech/docs/apps/python-applications)). `await step.stream(pieces)` writes a step's output as the model writes it — the terminal under the step's line, the Session API as `loop.step` again for each piece, the chat redrawing the row in place; every tool call of a session's agent is a `tool` step of its own, in this process and on a runtime, started when the model makes it and ended with its result or why it failed, nested in the step the code was in.
