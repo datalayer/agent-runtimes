@@ -9,3 +9,6 @@ context.
 ```bash
 loop apps run examples/personal-agent-protocol/company-discovery/app.py
 ```
+
+See the canonical
+[company guide](https://personal-agent-protocol.datalayer.tech/guides/company/).

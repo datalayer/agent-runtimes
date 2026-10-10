@@ -363,6 +363,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Generate real Session and Direct Sign-In security material while showing only safe policy status.',
   ),
   makeEntry(
+    'PapDpopProofExample',
+    () => import('./PapDpopProofExample'),
+    'Create fresh request-bound DPoP proofs while withholding proof, token, nonce, identifiers, and key material.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',

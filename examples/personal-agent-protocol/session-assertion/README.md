@@ -8,3 +8,6 @@ presented as a usable assertion.
 ```bash
 loop apps run examples/personal-agent-protocol/session-assertion/app.py
 ```
+
+See the canonical
+[Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).

@@ -8,3 +8,6 @@ material never become a tool result.
 ```bash
 loop apps run examples/personal-agent-protocol/agent-identity/app.py
 ```
+
+See the canonical
+[personal-agent guide](https://personal-agent-protocol.datalayer.tech/guides/personal-agent/).

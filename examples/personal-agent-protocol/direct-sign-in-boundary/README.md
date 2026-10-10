@@ -8,3 +8,6 @@ host persists one-use state and hands the URL directly to a user-owned browser.
 ```bash
 loop apps run examples/personal-agent-protocol/direct-sign-in-boundary/app.py
 ```
+
+See the canonical
+[Direct Sign-In guide](https://personal-agent-protocol.datalayer.tech/guides/direct-sign-in/).

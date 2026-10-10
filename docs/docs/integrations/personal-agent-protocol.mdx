@@ -63,3 +63,11 @@ The repository's
 provide one small application per feature and make that boundary executable.
 The PAP repository separately provides plain Pydantic AI examples with no
 Agent Runtimes dependency.
+
+The `dpop-proof` pair is the reference for proof-of-possession: both examples
+create and verify a real ES256 proof in trusted host code, demonstrate method,
+URL, token, nonce, and replay binding, and return only non-secret policy
+evidence to the model. The browser gallery adds a Reactor-contributed view that
+uses non-exportable Web Crypto key material and retains neither generated
+proof in React state. Protocol details remain canonical in the PAP
+[JOSE and DPoP guide](https://personal-agent-protocol.datalayer.tech/guides/cryptography/).
