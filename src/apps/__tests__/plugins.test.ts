@@ -5,7 +5,15 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+/*
+ * These suites drive *Local* — a local agent with the Jupyter server it
+ * starts — which is offered inside JupyterLab and held on the web since
+ * 2026-10-10 (`heldTargetReason`). They run as JupyterLab does, so Local is
+ * there to drive; `held-targets.test.ts` holds the web to its side.
+ */
+vi.mock('../plugins/agents/host', () => ({ insideJupyterLab: () => true }));
 import { buildReactorFromPlugins, configurePlugin } from '@datalayer/reactor';
 import {
   LoopChatSurface,

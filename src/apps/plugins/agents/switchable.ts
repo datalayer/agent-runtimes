@@ -30,6 +30,7 @@ import {
   type Signal,
 } from '@datalayer/reactor';
 import type { Kernel } from '@jupyterlab/services';
+import { insideJupyterLab } from './host';
 import type { SandboxSnapshot } from '../../core';
 import {
   browserSource,
@@ -83,6 +84,24 @@ export const SANDBOX_TARGETS: readonly SandboxTarget[] = [
   'jupyter',
   'datalayer',
 ];
+
+/**
+ * Why a target is shown but not offered here — said on it — or nothing when
+ * it is offered.
+ *
+ * *Local* is a local agent with the Jupyter server it starts beside itself,
+ * and a web page has no machine of the reader's to start them on. Decided
+ * 2026-10-10 (Eric): not offered on the web for now, and left in the switch,
+ * held, so that a reader sees what exists and why it is not here. Inside
+ * JupyterLab it is offered as before — the same line the code-sandbox picker
+ * draws for a Jupyter Server's kernels (`codeSandboxProviders`).
+ */
+export function heldTargetReason(target: SandboxTarget): string | undefined {
+  if (target === 'local' && !insideJupyterLab()) {
+    return 'Not offered on the web for now: a local agent and the Jupyter server it starts run beside JupyterLab, not in a page.';
+  }
+  return undefined;
+}
 
 export const TARGET_SPECS: Record<SandboxTarget, SandboxTargetSpec> = {
   browser: {
@@ -422,6 +441,11 @@ export function createSwitchableSandboxService({
       const previous = target.peek();
       if (next === previous) {
         return;
+      }
+      // Held here: refused whoever asks, not only by the switch's button.
+      const held = heldTargetReason(next);
+      if (held) {
+        throw new Error(held);
       }
       // Disconnect first: two live sandboxes would race to report status, and
       // the reader would watch the header flicker between them.

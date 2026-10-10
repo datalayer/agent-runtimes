@@ -31,6 +31,7 @@ import { useOptionalSandboxService } from './useSandboxService';
 import {
   SANDBOX_TARGETS,
   TARGET_SPECS,
+  heldTargetReason,
   type SandboxTarget,
 } from './switchable';
 
@@ -130,17 +131,31 @@ export function SandboxSelector(_props: {
           '& > li::marker': { content: 'none' },
         }}
       >
-        {SANDBOX_TARGETS.map((entry, position) => (
-          <SegmentedControl.Button
-            key={entry}
-            selected={position === index}
-            sx={{ listStyle: 'none' }}
-            title={TARGET_SPECS[entry].hint}
-            onClick={() => void choose(entry)}
-          >
-            {TARGET_SPECS[entry].label}
-          </SegmentedControl.Button>
-        ))}
+        {SANDBOX_TARGETS.map((entry, position) => {
+          // Held here: drawn, said why on hover, not taken. `aria-disabled`
+          // rather than `disabled`: a disabled button takes no pointer, and
+          // its reason would never be read.
+          const held = heldTargetReason(entry);
+          return (
+            <SegmentedControl.Button
+              key={entry}
+              selected={position === index}
+              aria-disabled={held ? true : undefined}
+              data-sandbox-target={entry}
+              data-sandbox-target-held={held ? '' : undefined}
+              sx={{
+                listStyle: 'none',
+                ...(held
+                  ? { color: 'fg.subtle', cursor: 'not-allowed' }
+                  : null),
+              }}
+              title={held ?? TARGET_SPECS[entry].hint}
+              onClick={() => (held ? undefined : void choose(entry))}
+            >
+              {TARGET_SPECS[entry].label}
+            </SegmentedControl.Button>
+          );
+        })}
       </SegmentedControl>
       {/* A status readout, not a control. Primer's `Tooltip` requires its
           child to *be* the interactive element and throws otherwise, so the

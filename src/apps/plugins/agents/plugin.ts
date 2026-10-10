@@ -45,6 +45,7 @@ import { TeamMemberPicker } from './TeamMemberPicker';
 import { createTeamSelection, type TeamSelection } from './team';
 import {
   createSwitchableSandboxService,
+  heldTargetReason,
   type SandboxTarget,
   type SwitchableSandboxService,
   TARGET_SPECS,
@@ -169,6 +170,10 @@ export type AgentsOutput = {
   components: ReactorSlotComponent[];
 };
 
+/** The target asked for, or the page itself when this page holds it. */
+const offeredTarget = (target: SandboxTarget): SandboxTarget =>
+  heldTargetReason(target) ? 'browser' : target;
+
 export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
   name: AGENTS_PLUGIN_NAME,
   displayName: 'Agents',
@@ -199,8 +204,12 @@ export const AgentsPlugin = definePlugin<AgentsConfig, unknown, AgentsOutput>({
         // must not be started on a target the reader cannot move off — unless
         // the host fixed the target itself, as an application deployed on
         // Datalayer is (AppRenderer): there is nothing for the reader to move.
-        initialTarget:
+        //
+        // And never on a target this page holds: *Local*, the default, is
+        // held on the web (`heldTargetReason`), so a page starts in itself.
+        initialTarget: offeredTarget(
           showVariants || config.targetFixed ? config.target : 'browser',
+        ),
         kernelSource: config.kernelSource,
         localAgent: config.localAgent,
         // The capacity plugins' say, read at switch time — lazily, because a
