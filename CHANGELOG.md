@@ -7,6 +7,11 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.103
+
+- **A kept deployment's principal is renewed** (STUDIO A-08): a deployment kept always on that only answers over A2A called nothing about an hour after its agent was made, because its principal's token expired and nothing asked for it again. `POST /api/v1/apps/principal` now asks ai-agents again with the owner's key, whatever the runtime holds, and ai-agents' keeper calls it every half hour.
+- **A peer's refusal is said in its route's sentence** (STUDIO H-25): a visitor at Accounting's limit read the A2A client's raw `HTTP error establishing stream … 429 . Response: {"detail": …}` in the balloon. The peer now says the route's own sentence. Test: vitest `a2aPeer` (+1).
+
 ## 1.3.102
 
 - **A kept runtime is given its deployment's user secret** (STUDIO D-21): the secrets a runtime is given are what its specs declare (R-19), and a deployment that takes a signed user declares `DATALAYER_APP_USER_SECRET_<UID>` — read from `deployment.embedded.host.user: signed`, as the Appspec says it. A `signed_user` key no Appspec has was read instead, so a kept runtime was never given the secret and answered every session *This runtime was not given the secret …* (503), seen on r1. The test now builds its application from the real `AppSpec`.
