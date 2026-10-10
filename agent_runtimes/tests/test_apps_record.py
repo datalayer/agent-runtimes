@@ -538,3 +538,60 @@ async def test_a_call_carrying_a_github_token_is_stopped_and_recorded():
     }
     assert "The arguments of `search` hold a GitHub token" in entries[2]["summary"]
     assert GITHUB not in str(sent[0])
+
+
+async def test_a_call_after_its_first_words_is_kept_in_the_record():
+    """Words and a call in one response ("let me check…", then the search) do
+    not end the turn: the run goes on, and the search and the answer after it
+    are on the record — closed at the first words, the call was lost and the
+    judge read the answer as not from its sources (STUDIO E-01, 2026-10-10)."""
+    import asyncio
+    import json
+
+    from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
+
+    turns = 0
+
+    async def stream(messages: Any, info: AgentInfo):
+        nonlocal turns
+        turns += 1
+        if turns == 1:
+            yield "Let me check the documents."
+            yield {
+                1: DeltaToolCall(name="search", json_args=json.dumps({"q": "refunds"}))
+            }
+        else:
+            yield "Refunds are handled by a person."
+
+    def whole(
+        messages: Any, info: AgentInfo
+    ) -> Any:  # pragma: no cover - streamed only
+        raise AssertionError("streamed")
+
+    sent: list = []
+    recorder = AppRecorder(
+        app=app(["actions", "outputs"]),
+        app_uid="app-1",
+        version=3,
+        send=kept_by_session(sent),
+        deployment_uid="dep-1",
+    )
+    agent: Agent = Agent(
+        FunctionModel(whole, stream_function=stream),
+        capabilities=[AppRecordCapability(recorder=recorder)],
+    )
+
+    @agent.tool_plain
+    def search(q: str) -> str:
+        return f"results for {q}"
+
+    async with agent.run_stream_events("A refund?") as events:
+        async for _ in events:
+            pass
+    for _ in range(20):
+        if sent and sent[0]["entries"][-1]["kind"] == "output":
+            break
+        await asyncio.sleep(0.05)
+    kinds = [entry["kind"] for entry in sent[0]["entries"]]
+    assert "tool_call" in kinds, kinds
+    assert sent[0]["entries"][-1]["summary"] == "Refunds are handled by a person."

@@ -877,10 +877,19 @@ class AppRecordCapability(AbstractCapability[Any]):
         key = self._key(ctx)
         cancelled = False
         final = False
+        # A response that also calls a tool is not the last: words and a call
+        # in one response ("let me check…", then the search) carry the run on,
+        # and closing the turn at its words lost the call and every answer
+        # after it from the record (STUDIO E-01, 2026-10-10).
+        called = False
         try:
             async for event in stream:
                 if isinstance(event, FinalResultEvent):
                     final = True
+                if isinstance(event, PartStartEvent) and isinstance(
+                    event.part, ToolCallPart
+                ):
+                    called = True
                 if isinstance(event, PartStartEvent) and isinstance(
                     event.part, TextPart
                 ):
@@ -901,7 +910,7 @@ class AppRecordCapability(AbstractCapability[Any]):
             # First, before closing what it wraps: closing an MCP server's
             # stream from another task raises (anyio's cancel scope), and
             # nothing after a raise in a `finally` runs.
-            if (cancelled or final) and key in self._sessions:
+            if (cancelled or (final and not called)) and key in self._sessions:
                 # The answer is given, or the client went: sent now, in a task
                 # of its own, which neither a cancellation nor a client that
                 # stops reading at `RUN_FINISHED` (and stops the runtime with
