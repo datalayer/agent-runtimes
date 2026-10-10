@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.107
+
+- **What it sends says who wrote it** (STUDIO I-10; agentspecs 0.0.74, now required): a call through a connection that sends — Gmail, Google Chat, Slack, any tool whose catalogue entry names the argument it `signs` — carries the application's byline and the person it acts for, added before the person approves it; the person named from their verified token, never their uid.
+- **The computer's browser** (STUDIO R-23): with *computer: browse* on, an application opens, reads and takes screenshots of pages (`open_page`, `read_page`, `page_screenshot`), and clicks and types by its rules (`click_on_page`, `type_on_page`); a visitor's turn only reads; private and loopback addresses refused. The computer view shows the page live, with *Take over* and *Hand back*.
+- The Personal Agent Protocol: signed app controls and a live guided journey.
+
 ## 1.3.106
 
 - **A test gives its application files** (STUDIO E-01; agentspecs 0.0.73, now required): `tests.cases[].files` in the types, the Appspec reader and writer, the checks and the catalogue.
