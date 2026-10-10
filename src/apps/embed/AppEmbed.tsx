@@ -699,7 +699,11 @@ export function AppEmbed({
   host,
   resume = true,
 }: AppEmbedProps): JSX.Element {
-  const bridge = useHostBridge(app, host);
+  const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
+  // Inline, the page is bridged here; in a bubble, a panel or the assistant,
+  // `AppFloating` bridges it itself. Bridged twice, every window message of a
+  // turn reached the page twice (seen 2026-10-10 with P-27's copilot).
+  const bridge = useHostBridge(app, shownAs === 'inline' ? host : undefined);
   // Where a visitor without an account runs it (D-07): one object, so that
   // the renderer never reads a change.
   const renderer = useMemo(
@@ -720,7 +724,6 @@ export function AppEmbed({
   const variant = app.interface.theme?.variant ?? 'loop';
   const asked = colorMode ?? app.interface.theme?.mode ?? 'auto';
   const resolvedMode = asked === 'auto' ? system : asked;
-  const shownAs = mode ?? app.deployment.embedded?.mode ?? 'inline';
   const view = floatingViewOf(shownAs);
   const worn = accent ?? app.interface.accent;
   const themeOverrides = useMemo(
