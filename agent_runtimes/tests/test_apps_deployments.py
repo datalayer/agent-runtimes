@@ -521,3 +521,46 @@ def test_a_kept_agent_is_created_once_and_one_already_there_is_kept():
         client=_runtime([httpx.Response(409)], seen),
     )
     assert there == "digest"
+
+
+def test_an_application_the_runtime_refuses_is_said_once_in_its_sentence():
+    """A refusal is the application's, not the runtime's: not asked again,
+    and its sentence is the runtime's own (STUDIO D-21)."""
+    from agent_runtimes.loop.apps.deployments import (
+        ApplicationRefused,
+        SessionNotStarted,
+        create_agent,
+    )
+
+    seen: list[httpx.Request] = []
+    said = "digest runs its code in the browser: it is not started on a runtime."
+    with pytest.raises(ApplicationRefused) as refused:
+        create_agent(
+            ingress="https://rt",
+            token="t",
+            payload={"name": "digest"},
+            wait_seconds=0,
+            client=_runtime([httpx.Response(422, json={"detail": said})], seen),
+        )
+    assert refused.value.reason == said and len(seen) == 1
+    assert isinstance(refused.value, SessionNotStarted)
+    with pytest.raises(ApplicationRefused) as problems:
+        create_agent(
+            ingress="https://rt",
+            token="t",
+            payload={"name": "digest"},
+            client=_runtime(
+                [httpx.Response(422, json={"detail": {"problems": ["a", "b"]}})], seen
+            ),
+        )
+    assert problems.value.reason == "a b"
+    with pytest.raises(SessionNotStarted) as silent:
+        create_agent(
+            ingress="https://rt",
+            token="t",
+            payload={"name": "digest"},
+            attempts=2,
+            wait_seconds=0,
+            client=_runtime([httpx.Response(502)] * 2, seen),
+        )
+    assert not isinstance(silent.value, ApplicationRefused)

@@ -7,6 +7,10 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+- **A refused application is said as refused** (STUDIO D-21): `create_agent` raises `ApplicationRefused` (a `SessionNotStarted`, with the runtime's own sentence as `reason`, `detail.problems` joined) when the runtime answers 400 or 422, and is not asked again; a runtime that does not answer is still `SessionNotStarted`. ai-agents' keeper stops a deployment kept always on at once in that sentence instead of launching it three times and saying its computer stopped. Tests: `test_apps_deployments` (+1).
+
 ## 1.3.99
 
 - **An embedded application is offered the page's functions** (STUDIO D-10) ([Embedding, The page and the application, talking](https://agent-runtimes.datalayer.tech/docs/apps/embedding#the-page-and-the-application-talking)). Seen on a host page on 2026-10-10: the run carried no tool at all, so the agent never had `host_<name>` or `host_context`. Two causes, both fixed. The chat sends the page's own tools (`chatExtras.frontendTools`) with each run to an agent on a server and runs them when it calls one; before, they were only handed to an in-page agent. And `element.functions` and `element.context` set by the page before the async script defined `<datalayer-app>` hid the element's own setters; they are now taken over as it is constructed (`adoptPropertiesSetEarly`). Tests: `embed-config` (+2). `examples/embed-host` takes `spec=` (an Appspec's address, run instead of `app`) and `user-token=`.

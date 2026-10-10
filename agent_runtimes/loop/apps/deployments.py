@@ -515,6 +515,28 @@ class SessionNotStarted(RuntimeError):
     """Why a woken session could not start on its runtime, in a sentence."""
 
 
+class ApplicationRefused(SessionNotStarted):
+    """The runtime answered and refused the application (400, 422): asking
+    again changes nothing — the application, not the runtime, is what is to
+    change. `reason` is the runtime's own sentence."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"The runtime refused the application: {reason}")
+        self.reason = reason
+
+
+def _refusal_of(response: httpx.Response) -> str:
+    """The runtime's sentence for a refused application: its ``detail``, or
+    its ``detail.problems`` joined, else the body as it came."""
+    try:
+        detail = (response.json() or {}).get("detail")
+    except ValueError:
+        return response.text[:500]
+    if isinstance(detail, Mapping) and isinstance(detail.get("problems"), list):
+        return " ".join(str(problem) for problem in detail["problems"])[:500]
+    return str(detail if detail is not None else response.text)[:500]
+
+
 def create_agent(
     *,
     ingress: str,
@@ -529,9 +551,10 @@ def create_agent(
 
     The runtime may not answer yet when it has just been launched: creating
     the agent is tried again for ``attempts`` times, ``wait_seconds`` apart.
-    An agent already there (409) is the one kept. `SessionNotStarted` when
-    the agent could not be created — the runtime never answered, or refused
-    the application.
+    An agent already there (409) is the one kept. `ApplicationRefused` when
+    the runtime refused the application (400, 422: not asked again);
+    `SessionNotStarted` when the agent could not be created otherwise — the
+    runtime never answered.
     """
     import time
 
@@ -557,9 +580,7 @@ def create_agent(
                 if response.status_code == 409:
                     return fallback
                 if response.status_code in (400, 422):
-                    raise SessionNotStarted(
-                        f"The runtime refused the application: {response.text[:500]}"
-                    )
+                    raise ApplicationRefused(_refusal_of(response))
                 if response.status_code < 300:
                     created = response.json() if response.content else {}
                     return str((created or {}).get("id") or fallback)
