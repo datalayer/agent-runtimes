@@ -7,7 +7,8 @@
  * An application's computer (LOOP R-23, I-01): the sandbox its agent runs on,
  * as the computer view shows it — its three parts, each off until it is
  * turned on; what its agent ran on it, from the conversation's tool calls;
- * its files, read-only; and *Take over* and *Hand back*, through the
+ * its files, read-only; its browser's page, live; and *Take over* and
+ * *Hand back* — the person then clicks and types in that page — through the
  * runtime's `/api/v1/apps/agents/{agent}/computer` routes.
  *
  * Pure but for `fetch`: no React.
@@ -27,8 +28,13 @@ export type ComputerParts = Record<ComputerPart, boolean>;
 
 /** The tools of each part, as the runtime gives them (`loop/apps/computer.py`). */
 export const COMPUTER_PART_TOOLS: Record<ComputerPart, readonly string[]> = {
-  // No sandbox Datalayer runs has a browser yet.
-  browse: [],
+  browse: [
+    'open_page',
+    'read_page',
+    'page_screenshot',
+    'click_on_page',
+    'type_on_page',
+  ],
   files: ['list_computer_files', 'read_computer_file', 'write_computer_file'],
   shell: ['execute_code', 'run_skill_script'],
 };
@@ -46,8 +52,18 @@ export const COMPUTER_WORDS = {
   none: 'It has no computer: browse, files and shell are all off. Turn one on in its permissions to give it one.',
   offSaid: (parts: string[]) =>
     `Off, so its agent is given no tool for it: ${parts.join(', ')}.`,
-  noBrowser:
-    'Browser: no browser runs on its computer yet, so there is nothing to show.',
+  browser: 'Browser',
+  noBrowser: 'No browser is installed on its computer.',
+  noPage: 'Its browser has opened no page yet.',
+  pageAlt: (title: string) => `The page its browser shows: ${title}`,
+  clickToAct:
+    'Click on the page to click there; with the page selected, what you type goes to it.',
+  typeOnPage: 'Text to type on the page',
+  type: 'Type',
+  address: 'An address to open',
+  open: 'Open',
+  scrollUp: 'Scroll up',
+  scrollDown: 'Scroll down',
   agentHas: 'Its agent has the computer.',
   youHave:
     'You have the computer: its agent waits for it until you hand it back.',
@@ -153,7 +169,7 @@ export function outputOf(value: unknown): string {
 }
 
 function commandOf(args: Record<string, unknown>): string {
-  for (const key of ['code', 'path', 'script_name']) {
+  for (const key of ['code', 'path', 'script_name', 'url', 'selector']) {
     const value = args[key];
     if (typeof value === 'string' && value.trim()) {
       return value;
@@ -198,7 +214,10 @@ export type ComputerState = {
   agent: string;
   app: string;
   parts: ComputerParts;
+  /** Whether a browser is installed where its agent runs, browse on. */
   browser: boolean;
+  /** The page its browser has open; none before its first, or browse off. */
+  page?: BrowserPage | null;
   started: boolean;
   held: ComputerHolder | null;
   /** Whether the person asking is who has it. */
@@ -210,6 +229,9 @@ export type ComputerState = {
    */
   servedFrom?: string;
 };
+
+/** A page its browser has open. */
+export type BrowserPage = { url: string; title: string };
 
 /** One entry of a directory of its computer. */
 export type ComputerFile = {
@@ -364,6 +386,115 @@ export const runOnComputer = async (
       body: JSON.stringify({ code }),
     })
   ).json();
+
+/** The keys a person presses on its page, as the runtime takes them. */
+export const BROWSER_KEYS = [
+  'Enter',
+  'Tab',
+  'Backspace',
+  'Escape',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'PageUp',
+  'PageDown',
+] as const;
+
+/**
+ * The page its browser shows, as a PNG; undefined before its first page
+ * (the runtime answers 404).
+ */
+export const readBrowserScreenshot = async (
+  context: ComputerContext,
+): Promise<Blob | undefined> => {
+  const response = await fetch(computerUrl(context, '/browser/screenshot'), {
+    headers: context.token ? { Authorization: `Bearer ${context.token}` } : {},
+    cache: 'no-store',
+  });
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === 'string' ? body.detail : detail;
+    } catch {
+      // A refusal without a sentence: its status says it.
+    }
+    throw new Error(detail);
+  }
+  return response.blob();
+};
+
+const onBrowser = async (
+  context: ComputerContext,
+  step: string,
+  body: Record<string, unknown>,
+): Promise<BrowserPage> =>
+  (
+    (await (
+      await asked(context, `/browser/${step}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+    ).json()) as { page: BrowserPage }
+  ).page;
+
+/** Click on its page, at a point of its screenshot, as who took it over. */
+export const clickOnBrowser = (
+  context: ComputerContext,
+  x: number,
+  y: number,
+): Promise<BrowserPage> => onBrowser(context, 'click', { x, y });
+
+/** Type where its page's focus is. */
+export const typeOnBrowser = (
+  context: ComputerContext,
+  text: string,
+): Promise<BrowserPage> => onBrowser(context, 'type', { text });
+
+/** Press one of `BROWSER_KEYS` on its page. */
+export const pressOnBrowser = (
+  context: ComputerContext,
+  key: string,
+): Promise<BrowserPage> => onBrowser(context, 'key', { key });
+
+/** Scroll its page, down for a positive `dy`. */
+export const scrollBrowser = (
+  context: ComputerContext,
+  dy: number,
+): Promise<BrowserPage> => onBrowser(context, 'scroll', { dy });
+
+/** Open an address in its browser. */
+export const openOnBrowser = (
+  context: ComputerContext,
+  url: string,
+): Promise<BrowserPage> => onBrowser(context, 'open', { url });
+
+/**
+ * Where a click on a screenshot drawn at another size lands on the page: its
+ * pixels are the page's (the runtime takes it at the page's own size).
+ */
+export function pointOnPage(
+  clicked: { x: number; y: number },
+  drawn: { width: number; height: number },
+  natural: { width: number; height: number },
+): { x: number; y: number } {
+  const scale = (value: number, from: number, to: number) =>
+    from > 0 ? Math.round((value * to) / from) : value;
+  return {
+    x: Math.max(
+      0,
+      Math.min(natural.width, scale(clicked.x, drawn.width, natural.width)),
+    ),
+    y: Math.max(
+      0,
+      Math.min(natural.height, scale(clicked.y, drawn.height, natural.height)),
+    ),
+  };
+}
 
 /** The directory above a path of its working directory. */
 export function parentOf(path: string): string {

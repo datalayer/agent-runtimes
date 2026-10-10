@@ -6,11 +6,11 @@
 /**
  * An application's computer beside its page (LOOP R-23, R-01b): a plugin of
  * the workspace's sidebar, mounted by the preset with the rules card and the
- * activity feed. It says which of its parts are off, says that no browser
- * runs, lists what its agent ran on it from the conversation's tool calls,
- * shows its files read-only to download, and takes it over and hands it
- * back through the runtime's computer routes — read through a stubbed
- * `fetch`.
+ * activity feed. It says which of its parts are off, lists what its agent
+ * ran on it from the conversation's tool calls, shows its files read-only
+ * to download, shows the page its browser has open, and takes it over —
+ * clicks and typing then go to that page — and hands it back through the
+ * runtime's computer routes — read through a stubbed `fetch`.
  */
 
 import React, { act } from 'react';
@@ -32,6 +32,7 @@ import {
   outputOf,
   parentOf,
   partOf,
+  pointOnPage,
   terminalEntries,
 } from '../apps/computer';
 import {
@@ -177,6 +178,7 @@ const state = (held: unknown = null, yours = false, servedFrom = '') => ({
   app: 'web-research',
   parts: { browse: false, files: true, shell: true },
   browser: false,
+  page: null,
   started: true,
   held,
   yours,
@@ -193,6 +195,26 @@ describe('the computer, as words', () => {
     expect(partOf('execute_code')).toBe('shell');
     expect(partOf('write_computer_file')).toBe('files');
     expect(partOf('tavily_search')).toBeUndefined();
+    expect(partOf('open_page')).toBe('browse');
+    expect(partOf('click_on_page')).toBe('browse');
+    expect(
+      terminalEntries([
+        {
+          role: 'tool',
+          name: 'open_page',
+          args: { url: 'https://example.com' },
+          result: 'Opened: Example Domain — https://example.com',
+        },
+      ])[0].command,
+    ).toBe('https://example.com');
+    // A click on a screenshot drawn at half its size lands at twice the point.
+    expect(
+      pointOnPage(
+        { x: 100, y: 50 },
+        { width: 640, height: 400 },
+        { width: 1280, height: 800 },
+      ),
+    ).toEqual({ x: 200, y: 100 });
     expect(parentOf('files/s1')).toBe('files');
     expect(parentOf('files')).toBe('.');
     expect(
@@ -336,7 +358,10 @@ describe('the computer view', () => {
     expect(text).toContain('Browse: off');
     expect(text).toContain('Shell: on');
     expect(text).toContain(COMPUTER_WORDS.offSaid(['browse']));
-    expect(text).toContain(COMPUTER_WORDS.noBrowser);
+    // Browse off: no browser is drawn.
+    expect(container.querySelector('[data-testid="computer-browser"]')).toBe(
+      null,
+    );
     expect(text).toContain('$ execute_code: print(1 + 2)');
     expect(text).not.toContain('tavily_search');
     expect(text).toContain(COMPUTER_WORDS.agentHas);
@@ -472,6 +497,150 @@ describe('the computer view', () => {
     await settle();
     expect(container.textContent).toContain(COMPUTER_WORDS.agentHas);
     expect(container.querySelector('textarea')).toBeNull();
+  });
+
+  it('shows its browser’s page live, and the person who took it over clicks and types in it', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    let held: unknown = null;
+    const page = { url: 'https://example.com/', title: 'Example Domain' };
+    const browsing = (held: unknown) => ({
+      ...state(held, held !== null),
+      parts: { browse: true, files: false, shell: false },
+      browser: true,
+      page,
+    });
+    const calls = runtime({
+      'GET ': () => browsing(held),
+      'GET /files': () => ({ entries: [] }),
+      'GET /browser/screenshot': () => 'png',
+      'POST /take-over': () => {
+        held = { kind: 'person', uid: 'ada', since: 1 };
+        return { held, interrupted: false };
+      },
+      'POST /browser/click': () => ({ page }),
+      'POST /browser/type': () => ({ page }),
+      'POST /browser/key': () => ({ page }),
+      'POST /browser/open': () => ({
+        page: { url: 'https://example.org/', title: 'Other' },
+      }),
+      'POST /hand-back': () => {
+        held = null;
+        return { held: null };
+      },
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:shot');
+    URL.revokeObjectURL = vi.fn();
+    const { container } = await render(
+      <AppComputer app={app({ browse: true })} workspace={workspace} />,
+    );
+    const settle = async () => {
+      for (let i = 0; i < 6; i += 1) {
+        await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
+      }
+    };
+    await settle();
+    const shown = () =>
+      container.querySelector<HTMLImageElement>(
+        '[data-testid="computer-browser-page"]',
+      )!;
+    expect(shown().getAttribute('src')).toBe('blob:shot');
+    expect(container.textContent).toContain('Example Domain');
+    expect(container.textContent).toContain('https://example.com/');
+    // Its screenshot is asked with the person's token.
+    const asked = calls.find(([url]) => url.endsWith('/browser/screenshot'));
+    expect((asked?.[1]?.headers as Record<string, string>).Authorization).toBe(
+      'Bearer jwt',
+    );
+    // Before taking it over a click does nothing.
+    await act(async () => shown().click());
+    expect(calls.some(([url]) => url.endsWith('/browser/click'))).toBe(false);
+    expect(
+      container.querySelector('[data-testid="computer-browser-controls"]'),
+    ).toBeNull();
+    const button = (label: string) =>
+      [...container.querySelectorAll('button')].find(
+        each => each.textContent === label,
+      )!;
+    await act(async () => button(COMPUTER_WORDS.takeOver).click());
+    await settle();
+    expect(container.textContent).toContain(COMPUTER_WORDS.clickToAct);
+    const image = shown();
+    image.getBoundingClientRect = () =>
+      ({ left: 10, top: 20, width: 640, height: 400 }) as DOMRect;
+    Object.defineProperty(image, 'naturalWidth', { value: 1280 });
+    Object.defineProperty(image, 'naturalHeight', { value: 800 });
+    await act(async () =>
+      image.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, clientX: 110, clientY: 70 }),
+      ),
+    );
+    await act(async () =>
+      image.dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, key: 'a' }),
+      ),
+    );
+    await act(async () =>
+      image.dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }),
+      ),
+    );
+    const address = container.querySelector<HTMLInputElement>(
+      `input[aria-label="${COMPUTER_WORDS.address}"]`,
+    )!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )!.set!;
+      setter.call(address, 'https://example.org/');
+      address.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => button(COMPUTER_WORDS.open).click());
+    await settle();
+    const sent = (step: string) =>
+      calls
+        .filter(([url]) => url.endsWith(`/browser/${step}`))
+        .map(([, init]) => JSON.parse(String(init?.body)));
+    expect(sent('click')).toEqual([{ x: 200, y: 100 }]);
+    expect(sent('type')).toEqual([{ text: 'a' }]);
+    expect(sent('key')).toEqual([{ key: 'Enter' }]);
+    expect(sent('open')).toEqual([{ url: 'https://example.org/' }]);
+    expect(container.textContent).toContain('Other');
+    await act(async () => button(COMPUTER_WORDS.handBack).click());
+    await settle();
+    expect(
+      container.querySelector('[data-testid="computer-browser-controls"]'),
+    ).toBeNull();
+  });
+
+  it('says when its browser has opened no page, or none is installed', async () => {
+    iamStore.setState({ token: 'jwt' } as never);
+    runtime({
+      'GET ': () => ({
+        ...state(),
+        parts: { browse: true, files: false, shell: false },
+        browser: true,
+      }),
+      'GET /files': () => ({ entries: [] }),
+    });
+    const { container } = await render(
+      <AppComputer app={app({ browse: true })} workspace={workspace} />,
+    );
+    expect(container.textContent).toContain(COMPUTER_WORDS.noPage);
+    for (const root of mounted.splice(0)) {
+      act(() => root.unmount());
+    }
+    runtime({
+      'GET ': () => ({
+        ...state(),
+        parts: { browse: true, files: false, shell: false },
+      }),
+      'GET /files': () => ({ entries: [] }),
+    });
+    const again = await render(
+      <AppComputer app={app({ browse: true })} workspace={workspace} />,
+    );
+    expect(again.container.textContent).toContain(COMPUTER_WORDS.noBrowser);
   });
 
   it('says somebody else has it, and offers nothing to do', async () => {

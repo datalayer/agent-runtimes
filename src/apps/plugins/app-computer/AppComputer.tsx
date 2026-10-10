@@ -13,17 +13,27 @@
  *   wrote, each with what came back, streamed from the conversation's tool
  *   calls;
  * - its **files**, read-only, each to download, read again as each turn ends;
- * - its **browser**: none runs on any sandbox yet, and it says so;
+ * - its **browser**, when browse is on: the page it has open, live — a
+ *   screenshot read again every moment;
  * - **Take over**: what runs on it is interrupted and its agent's calls to it
- *   wait while the person runs code on it themselves; **Hand back** lets its
- *   agent go on.
+ *   wait while the person runs code on it themselves, and clicks and types
+ *   in its page — a click on the screenshot is a click there; **Hand back**
+ *   lets its agent go on.
  *
  * @module apps/plugins/app-computer/AppComputer
  */
 
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent, MouseEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Heading, Label, Spinner, Text, Textarea } from '@primer/react';
+import {
+  Button,
+  Heading,
+  Label,
+  Spinner,
+  Text,
+  TextInput,
+  Textarea,
+} from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { signal } from '@datalayer/reactor';
 import { useContributions, useSignalValue } from '@datalayer/reactor/react';
@@ -40,19 +50,28 @@ import {
   type LoopWorkspaceContext,
 } from '../../core';
 import {
+  BROWSER_KEYS,
   COMPUTER_PARTS,
   COMPUTER_WORDS,
+  clickOnBrowser,
   computerParts,
   downloadComputerFile,
   handBackComputer,
   hasComputer,
   listComputerFiles,
+  openOnBrowser,
   parentOf,
   partsOff,
+  pointOnPage,
+  pressOnBrowser,
+  readBrowserScreenshot,
   readComputer,
   runOnComputer,
+  scrollBrowser,
   takeOverComputer,
   terminalEntries,
+  typeOnBrowser,
+  type BrowserPage,
   type ComputerContext,
   type ComputerFile,
   type ComputerState,
@@ -292,6 +311,225 @@ function Files({
   );
 }
 
+/** How often the page its browser shows is read again, in milliseconds. */
+export const BROWSER_POLL_MS = 1500;
+
+function BrowserView({
+  context,
+  state,
+  mine,
+}: {
+  context: ComputerContext;
+  state: ComputerState;
+  mine: boolean;
+}): JSX.Element {
+  const [shot, setShot] = useState<string | undefined>();
+  const [none, setNone] = useState(false);
+  const [page, setPage] = useState<BrowserPage | null | undefined>(state.page);
+  const [error, setError] = useState('');
+  const [text, setText] = useState('');
+  const [address, setAddress] = useState('');
+  const [asked, setAsked] = useState(0);
+  const shown = useRef<string | undefined>(undefined);
+  useEffect(() => setPage(state.page), [state.page]);
+  useEffect(() => {
+    if (!state.browser) {
+      return undefined;
+    }
+    let cancelled = false;
+    const look = () =>
+      readBrowserScreenshot(context).then(
+        blob => {
+          if (cancelled) {
+            return;
+          }
+          setError('');
+          setNone(!blob);
+          if (shown.current) {
+            URL.revokeObjectURL(shown.current);
+          }
+          shown.current = blob ? URL.createObjectURL(blob) : undefined;
+          setShot(shown.current);
+        },
+        (failed: unknown) =>
+          !cancelled &&
+          setError(failed instanceof Error ? failed.message : String(failed)),
+      );
+    void look();
+    const every = setInterval(look, BROWSER_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(every);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.serverUrl, context.agentId, context.token, state.browser, asked]);
+  useEffect(
+    () => () => {
+      if (shown.current) {
+        URL.revokeObjectURL(shown.current);
+      }
+    },
+    [],
+  );
+  const act = (step: Promise<BrowserPage>) =>
+    step.then(
+      found => {
+        setPage(found);
+        setError('');
+        setAsked(previous => previous + 1);
+      },
+      (failed: unknown) =>
+        setError(failed instanceof Error ? failed.message : String(failed)),
+    );
+  const onClick = (event: MouseEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    const box = image.getBoundingClientRect();
+    const point = pointOnPage(
+      { x: event.clientX - box.left, y: event.clientY - box.top },
+      { width: box.width, height: box.height },
+      { width: image.naturalWidth, height: image.naturalHeight },
+    );
+    image.focus();
+    void act(clickOnBrowser(context, point.x, point.y));
+  };
+  const onKey = (event: KeyboardEvent<HTMLImageElement>) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    if ((BROWSER_KEYS as readonly string[]).includes(event.key)) {
+      event.preventDefault();
+      void act(pressOnBrowser(context, event.key));
+    } else if (event.key.length === 1) {
+      event.preventDefault();
+      void act(typeOnBrowser(context, event.key));
+    }
+  };
+  return (
+    <Box data-testid="computer-browser">
+      <Heading as="h4" sx={{ fontSize: 1, mt: 3, mb: 1 }}>
+        {COMPUTER_WORDS.browser}
+        {page ? (
+          <Text sx={{ fontWeight: 'normal', color: 'fg.muted' }}>
+            {` · ${page.title || page.url}`}
+          </Text>
+        ) : null}
+      </Heading>
+      {!state.browser ? (
+        <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', m: 0 }}>
+          {COMPUTER_WORDS.noBrowser}
+        </Text>
+      ) : none || !shot ? (
+        <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', m: 0 }}>
+          {none ? COMPUTER_WORDS.noPage : null}
+        </Text>
+      ) : (
+        <>
+          {page ? (
+            <Text
+              as="p"
+              sx={{
+                fontFamily: MONO_FACE,
+                fontSize: 0,
+                color: 'fg.muted',
+                m: 0,
+                mb: 1,
+                wordBreak: 'break-all',
+              }}
+            >
+              {page.url}
+            </Text>
+          ) : null}
+          <img
+            src={shot}
+            alt={COMPUTER_WORDS.pageAlt(page?.title || page?.url || '')}
+            data-testid="computer-browser-page"
+            tabIndex={mine ? 0 : -1}
+            onClick={mine ? onClick : undefined}
+            onKeyDown={mine ? onKey : undefined}
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              border: '1px solid var(--borderColor-muted, #d0d7de)',
+              borderRadius: 6,
+              cursor: mine ? 'pointer' : 'default',
+            }}
+          />
+        </>
+      )}
+      {error ? (
+        <Text as="p" sx={{ fontSize: 1, color: 'danger.fg', m: 0, mt: 1 }}>
+          {error}
+        </Text>
+      ) : null}
+      {mine && state.browser ? (
+        <Box mt={2} data-testid="computer-browser-controls">
+          <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', m: 0, mb: 1 }}>
+            {COMPUTER_WORDS.clickToAct}
+          </Text>
+          <Box display="flex" gap={1} mb={1}>
+            <TextInput
+              size="small"
+              aria-label={COMPUTER_WORDS.typeOnPage}
+              placeholder={COMPUTER_WORDS.typeOnPage}
+              value={text}
+              onChange={event => setText(event.target.value)}
+              sx={{ flex: 1 }}
+            />
+            <Button
+              size="small"
+              disabled={!text}
+              onClick={() => {
+                void act(typeOnBrowser(context, text));
+                setText('');
+              }}
+            >
+              {COMPUTER_WORDS.type}
+            </Button>
+            <Button
+              size="small"
+              onClick={() => void act(pressOnBrowser(context, 'Enter'))}
+            >
+              Enter
+            </Button>
+          </Box>
+          <Box display="flex" gap={1} mb={1}>
+            <TextInput
+              size="small"
+              aria-label={COMPUTER_WORDS.address}
+              placeholder={COMPUTER_WORDS.address}
+              value={address}
+              onChange={event => setAddress(event.target.value)}
+              sx={{ flex: 1 }}
+            />
+            <Button
+              size="small"
+              disabled={!address.trim()}
+              onClick={() => void act(openOnBrowser(context, address.trim()))}
+            >
+              {COMPUTER_WORDS.open}
+            </Button>
+          </Box>
+          <Box display="flex" gap={1}>
+            <Button
+              size="small"
+              onClick={() => void act(scrollBrowser(context, -400))}
+            >
+              {COMPUTER_WORDS.scrollUp}
+            </Button>
+            <Button
+              size="small"
+              onClick={() => void act(scrollBrowser(context, 400))}
+            >
+              {COMPUTER_WORDS.scrollDown}
+            </Button>
+          </Box>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
 function YourTerminal({ context }: { context: ComputerContext }): JSX.Element {
   const [code, setCode] = useState('');
   const [running, setRunning] = useState(false);
@@ -481,9 +719,6 @@ export function AppComputer({
         </Text>
       ) : (
         <>
-          <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', m: 0, mt: 1 }}>
-            {COMPUTER_WORDS.noBrowser}
-          </Text>
           {noRuntime ? (
             <Text
               as="p"
@@ -529,6 +764,9 @@ export function AppComputer({
                 </>
               ) : null}
             </Box>
+          ) : null}
+          {parts.browse && state && context ? (
+            <BrowserView context={context} state={state} mine={me} />
           ) : null}
           <Terminal conversation={conversation} />
           {state && context ? (
