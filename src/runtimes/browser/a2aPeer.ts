@@ -372,6 +372,28 @@ export type AskA2APeerOptions = {
  * besides words comes with it, by media type. A task that ends other than
  * completed is thrown, with what the peer said.
  */
+/**
+ * What a peer that refused said, in its own sentence (STUDIO H-25): the A2A
+ * client throws an HTTP refusal as `HTTP error … : 429 . Response:
+ * {"detail": "…"}`, which a balloon would draw as it is — the route's
+ * sentence (a visitor's limit, a paused deployment) is its `detail`.
+ */
+export function peerRefusalOf(reason: unknown): string {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  const body = /Response:\s*(\{[\s\S]*\})\s*$/.exec(message)?.[1];
+  if (body) {
+    try {
+      const detail = (JSON.parse(body) as { detail?: unknown }).detail;
+      if (typeof detail === 'string' && detail.trim()) {
+        return detail.trim();
+      }
+    } catch {
+      // Not JSON: the message as it came.
+    }
+  }
+  return message;
+}
+
 export async function askA2APeer(
   peer: A2APeer,
   request: string,
@@ -386,9 +408,11 @@ export async function askA2APeer(
   try {
     return await streamTask(peer, request, signal, onEvent, accept, action);
   } catch (reason) {
-    const error = reason instanceof Error ? reason.message : String(reason);
+    const error = peerRefusalOf(reason);
     onEvent?.({ phase: 'failed', error });
-    throw reason;
+    throw reason instanceof Error && error !== reason.message
+      ? new Error(error)
+      : reason;
   }
 }
 
@@ -589,9 +613,7 @@ export function a2aPeerTool(options: A2APeerToolOptions): Tool {
             }
           : { answer };
       } catch (reason) {
-        return {
-          error: reason instanceof Error ? reason.message : String(reason),
-        };
+        return { error: peerRefusalOf(reason) };
       }
     },
   });

@@ -26,6 +26,7 @@ import {
   connectA2APeer,
   faceOfCard,
   offeredFormats,
+  peerRefusalOf,
   peerToolDescription,
   type A2APeerEvent,
 } from '../browser/a2aPeer';
@@ -151,7 +152,11 @@ describe('Sales asks Accounting over A2A', () => {
       { request: 'Which invoices are open?' },
       { toolCallId: 'call-1', messages: [] },
     );
-    expect(result).toMatchObject({ error: expect.stringContaining('403') });
+    // The route's own sentence, not the client's HTTP error around it (H-25).
+    expect(result).toMatchObject({
+      error:
+        'accounting answers a key granted to its A2A route, and this token was not granted to it.',
+    });
     expect(events.map(event => event.phase)).toEqual(['asked', 'failed']);
   });
 
@@ -341,5 +346,27 @@ describe('faceOfCard', () => {
       },
     ];
     expect(faceOfCard(card)).toEqual({ emoji: '🧾', avatar: 'wizard' });
+  });
+});
+
+describe('peerRefusalOf', () => {
+  it("says a refusing route's sentence, not the client's HTTP error (H-25)", () => {
+    const thrown = new Error(
+      'HTTP error establishing stream for SendStreamingMessage: 429 . Response: ' +
+        '{"detail":"You have asked Accounting 3 times today without an account: sign in to keep going, or come back tomorrow."}',
+    );
+    expect(peerRefusalOf(thrown)).toBe(
+      'You have asked Accounting 3 times today without an account: sign in to keep going, or come back tomorrow.',
+    );
+  });
+
+  it('keeps any other message as it came', () => {
+    expect(peerRefusalOf(new Error('Accounting failed: no books.'))).toBe(
+      'Accounting failed: no books.',
+    );
+    expect(
+      peerRefusalOf(new Error('HTTP error: 502 . Response: {not json}')),
+    ).toBe('HTTP error: 502 . Response: {not json}');
+    expect(peerRefusalOf('aborted')).toBe('aborted');
   });
 });
