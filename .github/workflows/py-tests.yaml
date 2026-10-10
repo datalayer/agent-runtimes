@@ -73,3 +73,6 @@ jobs:
           DATALAYER_API_KEY: ${{ secrets.TEST_DATALAYER_API_KEY }}
         run: |
           pytest agent_runtimes/tests/ --cov=agent_runtimes --cov-report term-missing
+
+      - name: Validate Personal Agent Protocol examples
+        run: python scripts/validate_pap_examples.py

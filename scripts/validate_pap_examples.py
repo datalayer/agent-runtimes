@@ -12,6 +12,17 @@ from agent_runtimes.loop.apps.build import build
 
 ROOT = Path(__file__).parents[1]
 EXAMPLES = ROOT / "examples" / "personal-agent-protocol"
+HOST_ONLY_TOOL_ARGUMENTS = {
+    "access_token",
+    "authorization_code",
+    "callback_url",
+    "client_assertion",
+    "code_verifier",
+    "local_user_id",
+    "pairwise_user_id",
+    "redirect_uri",
+    "session_token",
+}
 
 
 def main() -> int:
@@ -33,6 +44,13 @@ def main() -> int:
             if key in tool_names:
                 raise RuntimeError(f"Duplicate example tool: {app_id}/{tool.name}")
             tool_names.add(key)
+            properties = tool.parameters.get("properties", {})
+            unsafe = HOST_ONLY_TOOL_ARGUMENTS.intersection(properties)
+            if unsafe:
+                names = ", ".join(sorted(unsafe))
+                raise RuntimeError(
+                    f"Host-only PAP values exposed by {app_id}/{tool.name}: {names}"
+                )
         sys.stdout.write(
             f"{path.relative_to(ROOT)}: {app_id} "
             f"({len(built.application.spec.tools)} tool)\n"

@@ -2,7 +2,9 @@
 
 This application builds a real state- and PKCE-protected authorization
 request inside a deterministic tool, then returns only safe status. The
-authorization URL, state and verifier are not model-visible. A production
+registration, discovery, redirect, and allowed-scope values come from trusted
+`PAP_*` host configuration rather than model-controlled tool arguments. The
+authorization URL, state, and verifier are not model-visible. A production
 host persists one-use state and hands the URL directly to a user-owned browser.
 
 ```bash
