@@ -1351,6 +1351,77 @@ drives an application from Python: `events` holds everything delivered, in
 order; `messages` the whole messages; `questions` everything asked; and
 `reply(answer)` answers the question being asked, or the next one.
 
+## A scene and its stage, in Python
+
+An application is `loop.app(...)` — the `Application` of this page. Beside it,
+`loop.scene(...)` and `loop.stage(...)` write the rest of the lifecycle: a
+**scene**, applications of the catalogue playing together, and its
+**stage**, where each plays and who may watch.
+
+```python
+from agent_runtimes import loop
+
+scene = loop.scene("desk-and-sales", "Desk & Sales", emoji="🎬", entry="desk")
+scene.player("desk", app="support-desk", role="initiator", talks_to=["sales"],
+             name="Desk", brief="Ask Sales, and report what it answers.")
+scene.player("sales", app="sales", name="Sales")
+
+beat = scene.beat("pipeline", say="Ask Sales what a sales pipeline is.",
+                  expect="The desk asks Sales, and reports its sentence.")
+beat.asks("desk", "sales", what="what a sales pipeline is")
+beat.answers("sales", "words")
+beat.answers("desk", "words")
+beat.rehearse("You → Desk", "Desk → Sales", "Desk: words", must_say=["pipeline"], within="3m")
+
+loop.stage(scene, runs_in={"desk": "browser", "sales": "browser"},
+           positions={"desk": (0.25, 0.5), "sales": (0.75, 0.5)})
+```
+
+What it writes is the scene spec, `loop.scene/v1` — the same one the Studio's
+spec editor and its Canvas write, and nothing of its own:
+
+- **`loop.scene(id, name, …)`** — its face (`emoji`, `description`, `tags`),
+  and either a `team` of the catalogue, whose members are then its players,
+  or `entry`, the player the audience talks to.
+- **`scene.player(member, …)`** — what it is (`app`, an application of the
+  catalogue by its id), whom it asks (`talks_to`), its `role`, and how it
+  appears (`name`, `face`, `line`) with its `brief` in this scene. On a
+  scene of a `team`, a player says its persona and its brief only.
+- **`scene.system(server, shown_as=, holds=)`** and **`scene.setting(…)`** —
+  the MCP servers on stage, and the period, the language and what the
+  audience is told first.
+- **`scene.beat(id, say=| schedule=| event=, expect=, …)`** — a beat, after
+  the ones before it; on the `Beat` it returns, **`asks(who, whom, …)`**
+  (`over` is said for you: `mcp` to a system, `a2a` to a player),
+  **`answers(who, kind)`**, **`branch(decision, …)`** and **`rehearse(*lines,
+  must_say=, must_not_say=, within=)`**, the shape its transcript must take.
+- **`loop.stage(scene, …)`** — a stage is not a spec of its own: it writes
+  the scene's parts that say where it plays — `runs_in` for each player
+  (`browser` or `runtime`), `positions` as fractions of the box, `opens_first`,
+  the `transcript` and `inspectors`, the `audience` (`visitors`, `signed-in`
+  or `nobody`) and what an ask may cost, the `account`, `page` and
+  `addresses` it is deployed with.
+
+`scene.spec` is the spec agentspecs reads; what agentspecs refuses is said in
+agentspecs' own sentences (`SceneNotPlayable`), as the Studio and `loop` say
+them — a stage that puts a player at `x: 5`, a beat whose cue nobody
+answers, a player of a team that says where it runs. `scene.yaml()` is its
+text.
+
+```bash
+loop scenes rehearse scene.py                  # played beat by beat, here
+loop scenes build scene.py --out scene.yaml    # the scene spec, loop.scene/v1
+loop scenes push scene.py --space <space id>   # a new scene of yours, in that space
+loop scenes push scene.py --scene <scene uid>  # saved as a scene of yours
+```
+
+`loop scenes push` keeps it in your Space exactly as the Studio's *Save
+scene* does — an item of type `scene`, its spec its content — so the Studio
+opens it as any scene of yours: its spec editor reads the same text, its
+stage draws the same players. A file that writes no scene, or two, is refused
+in a sentence. A player is an application of the catalogue: an `app.py` of
+your own is not cast yet. The example is `examples/scene-in-python/scene.py`.
+
 ## From the command line
 
 `loop apps init` starts one: a folder named by its id, with an `app.py`, the

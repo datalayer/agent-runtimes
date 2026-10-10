@@ -31,6 +31,10 @@ and its rehearsal, the shape each beat's transcript must take.
   and no live run says its recording stands. What a rehearsal on Datalayer
   found is kept as the catalogue scene's last (`write_played`), which is what
   *Live* reads — never a local run's, never a scene file's.
+- ``loop scenes build scene.py`` writes the scene spec a scene written in
+  Python amounts to (``loop.scene``, ``loop.stage``; LOOP P-30), and
+  ``loop scenes push`` keeps a scene in the person's Space as the Studio keeps
+  one; ``rehearse`` takes a ``scene.py`` as it takes a YAML file.
 """
 
 from __future__ import annotations
@@ -78,10 +82,43 @@ def _require_scenes() -> Any:
     return module
 
 
+def written_scene_of(path: Path) -> Any:
+    """The scene a ``scene.py`` writes (LOOP P-30); refused in a sentence."""
+    from agent_runtimes.loop.scenes.written import load_scene_file
+
+    if not path.is_file():
+        raise typer.BadParameter(f"{path} is not a file.")
+    try:
+        return load_scene_file(path)
+    except Exception as error:  # noqa: BLE001 - the developer's file, said in a sentence
+        raise typer.BadParameter(
+            f"{path.name} does not load: {type(error).__name__}: {error}"
+        ) from None
+
+
+def spec_of_written(path: Path) -> Any:
+    """The scene spec a ``scene.py`` amounts to, checked by agentspecs; refused in its sentences."""
+    from agent_runtimes.loop.scenes.written import SceneNotPlayable
+
+    written = written_scene_of(path)
+    try:
+        return written.spec
+    except SceneNotPlayable as refused:
+        raise typer.BadParameter(
+            f"{path.name} is not a scene: " + " ".join(refused.problems)
+        ) from None
+
+
 def scene_of(name: str) -> Any:
-    """A scene by its id in the catalogue, or from a file; refused in a sentence."""
+    """A scene by its id in the catalogue, or from a file.
+
+    The file is YAML, or a ``scene.py`` written in Python (LOOP P-30);
+    refused in a sentence.
+    """
     module = _require_scenes()
     path = Path(name)
+    if path.suffix == ".py":
+        return spec_of_written(path)
     if path.suffix in (".yaml", ".yml") or path.exists():
         if not path.exists():
             raise typer.BadParameter(f"{name} is not a file.")
@@ -416,7 +453,9 @@ def say_beat(verdict: Any) -> None:
 @app.command(name="rehearse")
 def scenes_rehearse(
     scene_name: str = typer.Argument(
-        ..., metavar="SCENE", help="A scene of the catalogue by id, or a scene file."
+        ...,
+        metavar="SCENE",
+        help="A scene of the catalogue by id, or a scene file: YAML, or a scene.py.",
     ),
     local: bool = typer.Option(
         False, "--local", help="Play it on this machine, in this process (the default)."
@@ -544,6 +583,115 @@ def scenes_rehearse(
         console.print(f"  [{colour}]{verdict.says}[/{colour}]", highlight=False)
     if verdict.exit_code:
         raise typer.Exit(verdict.exit_code)
+
+
+@app.command(name="build")
+def scenes_build(
+    path: Path = typer.Argument(
+        ..., dir_okay=False, help="The scene, a scene.py written with loop.scene."
+    ),
+    out: Path = typer.Option(
+        None, "--out", "-o", help="Where to write the scene spec; printed when unsaid."
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Overwrite a file that is there."
+    ),
+) -> None:
+    """Write the scene spec a scene.py amounts to (LOOP P-30): loop.scene/v1, as YAML.
+
+    Refused, with agentspecs' sentences, when the file writes no scene or more
+    than one, or agentspecs refuses the scene it writes.
+    """
+    if path.suffix != ".py":
+        console.print(
+            f"[red]✗[/red] {path} is not a scene.py: a spec is built already."
+        )
+        raise typer.Exit(1)
+    _require_scenes()
+    try:
+        written = written_scene_of(path)
+        spec_of_written(path)
+    except typer.BadParameter as refused:
+        console.print(f"[red]✗[/red] {refused.message}", highlight=False)
+        raise typer.Exit(1)
+    text = written.yaml(path.name)
+    if out is None:
+        typer.echo(text, nl=False)
+        return
+    if out.exists() and not force:
+        console.print(f"[red]✗[/red] {out} is there already; --force overwrites it.")
+        raise typer.Exit(1)
+    out.write_text(text)
+    console.print(
+        f"[green]✓[/green] {written.spec.name} written to {out}.", highlight=False
+    )
+
+
+@app.command(name="push")
+def scenes_push(
+    path: Path = typer.Argument(
+        ...,
+        dir_okay=False,
+        help="The scene: a scene.py, built first, or a scene spec in YAML.",
+    ),
+    scene_uid: str = typer.Option(
+        None, "--scene", help="The scene of yours it is saved as, by its uid."
+    ),
+    space: str = typer.Option(
+        None, "--space", help="A space of yours to make it a new scene in, by its id."
+    ),
+) -> None:
+    """Keep a scene in your Space as the Studio keeps one (LOOP P-30).
+
+    The Studio then opens it as any scene of yours — the same spec in its
+    spec editor and on its stage. --scene saves it as a scene that is there;
+    --space makes a new one.
+    """
+    import httpx
+
+    from agent_runtimes.loop.apps.deployments import DeployRefused
+    from agent_runtimes.loop.launch import NotSignedIn, make_client
+    from agent_runtimes.loop.scenes.store import SceneStore
+
+    if bool(scene_uid) == bool(space):
+        console.print(
+            "[red]✗[/red] Say where it goes: --scene <uid> to save a scene of yours, or --space <id> for a new one."
+        )
+        raise typer.Exit(1)
+    module = _require_scenes()
+    try:
+        spec = scene_of(str(path))
+    except typer.BadParameter as refused:
+        console.print(f"[red]✗[/red] {refused.message}", highlight=False)
+        raise typer.Exit(1)
+    problems = module.scene_problems(spec)
+    if problems:
+        for problem in problems:
+            console.print(f"[red]✗[/red] {problem}", highlight=False)
+        raise typer.Exit(1)
+    document = module.dump_scene(spec)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    try:
+        client, token = make_client()
+    except NotSignedIn as refused:
+        console.print(f"[red]✗[/red] {refused} Sign in with `datalayer login`.")
+        raise typer.Exit(1)
+    store = SceneStore(client.urls.spacer_url, token)
+    try:
+        if space:
+            uid = store.create(space, document)
+            said = f"{spec.name} is a new scene of yours: {uid}."
+        else:
+            done = store.save(scene_uid, document)
+            said = (
+                f"{spec.name} saved as {scene_uid}."
+                if done == "saved"
+                else f"Nothing to save: {scene_uid} is this scene."
+            )
+    except (DeployRefused, httpx.HTTPError) as refused:
+        console.print(f"[red]✗[/red] {refused}")
+        raise typer.Exit(1)
+    console.print(f"[green]✓[/green] {said}", highlight=False)
 
 
 class _Named:

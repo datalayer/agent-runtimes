@@ -503,7 +503,19 @@ loop scenes rehearse sales-and-accounting --cloud --key accounting=<key>   # eve
 loop scenes rehearse sales-and-accounting --cloud -e ai-env -m 20 --keep   # the environment, the minutes reserved, left running
 loop scenes rehearse sales-and-accounting --cloud --address accounting=<A2A url> --key accounting=<key>   # at a runtime kept, or a deployment's stable address
 loop scenes rehearse scenes/my-scene.yaml --json
+loop scenes rehearse scene.py                    # a scene written in Python (loop.scene, loop.stage)
+loop scenes build scene.py --out scene.yaml      # the scene spec it writes, loop.scene/v1
+loop scenes push scene.py --space <space id>     # kept in your Space, where the Studio opens it
 ```
+
+A scene written in Python — `loop.scene(...)` and `loop.stage(...)`, see
+[A scene and its stage, in
+Python](/apps/python-applications#a-scene-and-its-stage-in-python) — is
+rehearsed as a YAML one: `rehearse` reads the scene spec it writes. `build`
+prints that spec, or writes it with `--out` (`--force` to overwrite), and
+`push` saves it as a scene of yours (`--scene <uid>`) or makes a new one in a
+space (`--space <id>`), as the Studio saves one. What agentspecs refuses of it
+is said in agentspecs' sentences, and nothing is written.
 
 Both need agentspecs 0.0.61 or later, which carries the scenes; the
 rehearsal that was played is kept from 0.0.67.
