@@ -24,7 +24,7 @@ scenes = pytest.importorskip("agentspecs.scenes")
 
 from agent_runtimes import loop  # noqa: E402
 from agent_runtimes.commands import scenes as scenes_command  # noqa: E402
-from agent_runtimes.loop.scenes.store import SceneStore  # noqa: E402
+from agent_runtimes.loop.scenes.store import STUDIO_KEYS, SceneStore  # noqa: E402
 from agent_runtimes.loop.scenes.written import (  # noqa: E402
     SceneNotPlayable,
     load_scene_file,
@@ -293,6 +293,18 @@ class _Spacer:
         return httpx.Response(200, json={"success": True})
 
 
+def test_the_studio_keys_are_the_studios_own() -> None:
+    """The map is `TEXT_KEYS` in the Studio's reader, key for key."""
+    source = (
+        Path(__file__).resolve().parents[2] / "src" / "apps" / "apps" / "sceneYaml.ts"
+    ).read_text()
+    block = source[source.index("export const TEXT_KEYS") :]
+    block = block[: block.index("};")]
+    for text, studio in STUDIO_KEYS.items():
+        assert f"{text}: '{studio}'" in block
+    assert block.count(": '") == len(STUDIO_KEYS)
+
+
 def test_push_keeps_it_as_the_studio_keeps_a_scene(scene_py: Path) -> None:
     spacer = _Spacer()
     store = SceneStore(
@@ -317,7 +329,20 @@ def test_push_keeps_it_as_the_studio_keeps_a_scene(scene_py: Path) -> None:
     }
     stored = json.loads(item["model_s"])
     assert stored["format"] == "loop.scene.item/v1"
-    assert scenes.parse_scene(stored["spec"]) == load_scene_file(scene_py).spec
+    # Spelled as the Studio's item is (`sceneOfStored` reads it as it is):
+    # a link kept as `talks_to` was read in the Studio as none (2026-10-10).
+    inline = loop.scene("desk-and-sales", "Desk & Sales", emoji="🎬", entry="desk")
+    inline.player("desk", app="support-desk", role="initiator", talks_to=["sales"])
+    inline.player("sales", app="sales")
+    inline.beat("pipeline", say="What is a pipeline?", expect="Sales says.").asks(
+        "desk", "sales", what="a pipeline"
+    ).answers("desk", "words")
+    loop.stage(inline, runs_in={"desk": "browser", "sales": "runtime"})
+    written = scenes.dump_scene(inline.spec)
+    spec = json.loads(spacer.items[store.create("space-1", written)]["model_s"])["spec"]
+    assert spec["cast"][0]["talksTo"] == written["cast"][0]["talks_to"]
+    assert [member["runsIn"] for member in spec["cast"]] == ["browser", "runtime"]
+    assert not set(STUDIO_KEYS) & set(json.dumps(spec).replace('"', " ").split())
     # Saved again: the same is unchanged, a change is saved and renamed.
     assert store.save(uid, document) == "unchanged"
     changed = {**document, "name": "Books, renamed"}

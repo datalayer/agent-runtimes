@@ -38,13 +38,38 @@ class SceneItem:
     model: Dict[str, Any]
 
 
+#: The keys agentspecs spells with an underscore, as the Studio's item spells
+#: them (`sceneYaml.ts`'s `TEXT_KEYS`): the item holds the Studio's
+#: `SceneSpec`, and `sceneOfStored` reads it without respelling, so a
+#: `talks_to` kept as written was read as no link at all (seen 2026-10-10).
+STUDIO_KEYS: Dict[str, str] = {
+    "runs_in": "runsIn",
+    "talks_to": "talksTo",
+    "opens_first": "opensFirst",
+    "rests_after": "restsAfter",
+    "ceiling_per_ask": "ceilingPerAsk",
+    "asks_a_day": "asksADay",
+    "must_say": "mustSay",
+    "must_not_say": "mustNotSay",
+}
+
+
+def _respelled(value: Any) -> Any:
+    """Every key the map names renamed, deep; a member's id, which it does not name, kept."""
+    if isinstance(value, list):
+        return [_respelled(item) for item in value]
+    if isinstance(value, dict):
+        return {STUDIO_KEYS.get(key, key): _respelled(item) for key, item in value.items()}
+    return value
+
+
 def stored(spec: Dict[str, Any]) -> Dict[str, Any]:
-    """The content of a scene's item: the format, and the spec."""
+    """The content of a scene's item: the format, and the spec as the Studio spells it."""
     if spec.get("schema") != "loop.scene/v1":
         raise DeployRefused(
             "This is not a scene spec: its schema is not loop.scene/v1."
         )
-    return {"format": SCENE_ITEM_FORMAT, "spec": spec}
+    return {"format": SCENE_ITEM_FORMAT, "spec": _respelled(spec)}
 
 
 class SceneStore(Deployments):
