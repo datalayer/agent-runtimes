@@ -223,6 +223,9 @@ cli = [
     "requests",
     "rich>=13.0.0",
     "textual",
+    # `loop apps package` builds an application's wheel (LOOP P-29).
+    "build",
+    "hatchling",
 ]
 chat = [
     "jupyter-nbmodel-client",

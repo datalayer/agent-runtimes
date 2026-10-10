@@ -705,7 +705,10 @@ deployment:
       document.body.appendChild(element);
     });
     await settle();
-    expect(element.shadowRoot!.textContent).toBe(
+    // The sentence said, not the shadow root's text: its stylesheet is in it too.
+    expect(
+      element.shadowRoot!.querySelector('.datalayer-app-said')?.textContent,
+    ).toBe(
       'datalayer-app: No application is at this address. Embedded for a visitor it refuses, it takes its embed token (the "token" attribute).',
     );
     expect(seen.renderer).toHaveLength(0);

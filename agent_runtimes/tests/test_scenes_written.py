@@ -11,6 +11,7 @@ it in the person's Space as the Studio keeps a scene.
 from __future__ import annotations
 
 import json
+import re
 import textwrap
 from pathlib import Path
 from typing import Any, Dict, List
@@ -212,8 +213,9 @@ def test_a_file_that_writes_no_scene_or_two_is_refused(tmp_path: Path) -> None:
     path.write_text("from agent_runtimes import loop\n")
     result = runner.invoke(scenes_command.app, ["rehearse", str(path)])
     assert result.exit_code == 2
-    # Typer draws the refusal in a box: read it as one line.
-    said = " ".join(result.output.replace("│", " ").split())
+    # Typer draws the refusal in a box, coloured on CI: read it as one plain line.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    said = " ".join(plain.replace("│", " ").split())
     assert (
         "scene.py does not load: ValueError: scene.py writes 0 scenes; it has to write one."
         in said
