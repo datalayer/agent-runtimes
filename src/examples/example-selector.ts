@@ -19,6 +19,7 @@ const DISPLAY_NAME_EXCEPTIONS: [RegExp, string][] = [
   [/\bAg Ui\b/g, 'AG-UI'],
   [/\bA2 Ui\b/g, 'A2UI'],
   [/\bA2 A\b/g, 'A2A'],
+  [/\bPap\b/g, 'PAP'],
   [/\bCopilot Kit\b/g, 'CopilotKit'],
   [/\bGen Ui\b/g, 'Gen UI'],
   [/\bM C P\b/g, 'MCP'],
@@ -47,6 +48,7 @@ function inferTags(id: string): string[] {
   if (id.startsWith('AgUi')) tags.add('ag-ui');
   if (id.startsWith('A2Ui')) tags.add('a2ui');
   if (id.startsWith('AgentA2A')) tags.add('a2a');
+  if (id.startsWith('Pap')) tags.add('pap');
   if (id.includes('Notebook')) tags.add('notebook');
   if (id.includes('Lexical') || id.includes('Document')) tags.add('document');
   if (id.includes('Chat')) tags.add('chat');
@@ -344,6 +346,21 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'AgentA2ATeamExample',
     () => import('./AgentA2ATeamExample'),
     'Two applications as a team over A2A: Sales in the browser (@a2a-js/sdk) asks Accounting on a runtime (fasta2a, Odoo read only), each an Office Assistant character.',
+  ),
+  makeEntry(
+    'PapCompanyDiscoveryExample',
+    () => import('./PapCompanyDiscoveryExample'),
+    'Validate a PAP company document and reduce it to the public capabilities safe for an agent or UI.',
+  ),
+  makeEntry(
+    'PapAgentIdentityExample',
+    () => import('./PapAgentIdentityExample'),
+    'Verify personal-agent client metadata and signing policy without exposing JWK coordinates.',
+  ),
+  makeEntry(
+    'PapAuthorizationBoundaryExample',
+    () => import('./PapAuthorizationBoundaryExample'),
+    'Generate real Session and Direct Sign-In security material while showing only safe policy status.',
   ),
   makeEntry(
     'AgentNotificationsExample',

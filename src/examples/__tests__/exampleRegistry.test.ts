@@ -77,3 +77,22 @@ describe('the Assistant group', () => {
     expect(getExampleGroup('ChatExample')).toBe('Chat');
   });
 });
+
+describe('the Personal Agent Protocol group', () => {
+  it('contains the PAP examples beside the protocol groups', () => {
+    const papIds = getExampleEntries()
+      .map(entry => entry.id)
+      .filter(id => id.startsWith('Pap'));
+
+    expect(papIds).toEqual([
+      'PapCompanyDiscoveryExample',
+      'PapAgentIdentityExample',
+      'PapAuthorizationBoundaryExample',
+    ]);
+    for (const id of papIds) {
+      expect(getExampleGroup(id)).toBe('Personal Agent Protocol');
+    }
+    const a2a = EXAMPLE_GROUP_ORDER.indexOf('A2A');
+    expect(EXAMPLE_GROUP_ORDER[a2a + 1]).toBe('Personal Agent Protocol');
+  });
+});

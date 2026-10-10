@@ -137,6 +137,12 @@ const ANONYMOUS_EXAMPLES = new Set([
   'DocumentPageAgent',
   // The decks plugin in a Loop; the agent and the decks both live in the page.
   'DecksAgent',
+  // PAP protocol examples are deterministic browser views. They validate
+  // fixtures and generate local Web Crypto material without allocating a
+  // runtime or authenticating to Datalayer.
+  'PapCompanyDiscoveryExample',
+  'PapAgentIdentityExample',
+  'PapAuthorizationBoundaryExample',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
   'AssistantExample',
