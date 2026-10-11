@@ -2193,6 +2193,42 @@ class AppConnectionSpec(BaseModel):
     )
 
 
+class AppPapOperationSpec(BaseModel):
+    """What a company application does for the person once they confirm (PAP_DATALAYER B-04)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    action: str = Field(..., description="The action's name at this company")
+    tool: str = Field(
+        ..., description="The application's tool that does it, called with the terms"
+    )
+    summary: str = Field(
+        ..., description="What the person is shown, `{term}` for each term"
+    )
+    user_approval_required: bool = Field(default=True)
+
+
+class AppPapCompanySpec(BaseModel):
+    """The application as a company personal agents work with."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    enabled: bool = Field(default=False)
+    signed_out: bool = Field(default=True)
+    scopes: List[str] = Field(default_factory=list)
+    extensions: List[str] = Field(default_factory=list)
+    operations: List[AppPapOperationSpec] = Field(default_factory=list)
+
+
+class AppPapSpec(BaseModel):
+    """Personal Agent Protocol: the companies it works with, and whether it is one."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    connections: List[Dict[str, Any]] = Field(default_factory=list)
+    company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
+
+
 class AppRuleSpec(BaseModel):
     """When an application acts alone, and when it asks."""
 
@@ -2867,6 +2903,7 @@ class AppSpec(BaseModel):
         default_factory=list, description="The documents it answers from"
     )
     connections: List[AppConnectionSpec] = Field(default_factory=list)
+    pap: AppPapSpec = Field(default_factory=AppPapSpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)
     interface: AppInterfaceSpec = Field(default_factory=AppInterfaceSpec)

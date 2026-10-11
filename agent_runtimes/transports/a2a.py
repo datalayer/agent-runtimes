@@ -483,6 +483,12 @@ class A2AWorker(_FastA2AWorker):
         # A visitor's run, as the application's gate marked it: it only reads,
         # whatever its rules say (LOOP R-30).
         visiting = enter_visitor_run(visitor_of_a2a(params["message"].get("metadata")))
+        # A turn asked by a personal agent through the company service: its
+        # declared operations are proposed, or performed once confirmed
+        # (PAP_DATALAYER B-04).
+        from ..loop.apps.pap_company import enter_pap_turn, leave_pap_turn, pap_turn_of
+
+        pap_turn = enter_pap_turn(pap_turn_of(params["message"].get("metadata")))
         # What it may give besides words: what its card declares and the
         # caller accepts. Its output tools are offered for those only.
         outputs = RunOutputs(
@@ -495,6 +501,7 @@ class A2AWorker(_FastA2AWorker):
             await self._stream_run(task_id, context_id, params, cancel, turn, outputs)
         finally:
             leave_run_outputs(composing)
+            leave_pap_turn(pap_turn)
             leave_visitor_run(visiting)
             if self.cancellation:
                 self.cancellation.unregister(task_id)
@@ -558,6 +565,13 @@ class A2AWorker(_FastA2AWorker):
             )
         if credential:
             set_request_user_jwt(credential)
+        from ..loop.apps.pap_company import current_pap_turn, perform_prompt, redeem
+
+        company_turn = current_pap_turn()
+        if company_turn is not None and company_turn.ticket:
+            # What the person confirmed, as the company service recorded it:
+            # the run makes that call, with those terms, and nothing else.
+            prompt = perform_prompt(await redeem(company_turn, credential or ""))
         # The execution this run is for, whose checkpoints it keeps, and the
         # checkpoint it resumes from when it was paused (O2-05).
         execution_id = execution_of(meta)
@@ -725,7 +739,9 @@ class A2AWorker(_FastA2AWorker):
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
         # What it composed besides words, each an artifact of its media type.
-        composed = artifacts_of(outputs)
+        from ..loop.apps.pap_company import proposal_artifacts
+
+        composed = [*artifacts_of(outputs), *proposal_artifacts(current_pap_turn())]
         await self.storage.update_task(
             task_id,
             state="completed",

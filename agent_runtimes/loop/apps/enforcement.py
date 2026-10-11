@@ -93,6 +93,7 @@ from agent_runtimes.loop.apps.host_user import (
     HOST_TOOL_PREFIX,
     host_tools,
 )
+from agent_runtimes.loop.apps.pap_company import performs, propose
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -103,6 +104,7 @@ from agent_runtimes.loop.apps.rules import (
     Decision,
     decision_for,
     gives,
+    is_read_only,
     matches,
     signs_of,
 )
@@ -602,6 +604,27 @@ class AppRulesCapability(AbstractCapability[Any]):
     ) -> dict[str, Any]:
         enforced = self.decide(call.tool_name, args)
         decision = enforced.decision
+        # Asked by a personal agent through the company service (PAP_DATALAYER
+        # B-04): a declared operation is proposed rather than made, and made
+        # only in the turn its confirmation was redeemed for, with the confirmed
+        # terms, once. What the Maker leaves to the person stays theirs.
+        if decision.behaviour != LEAVE_TO_ME:
+            performed = performs(self.app, call.tool_name, args)
+            if performed:
+                if self.record is not None:
+                    self.record(enforced)
+                await self._computer_free(call.tool_name)
+                return args
+            if performed is False and not is_read_only(decision.classes):
+                raise AppRuleBlockedError(
+                    replace(decision, behaviour=LEAVE_TO_ME),
+                    f"Only the operation the person confirmed is done in this turn: `{call.tool_name}` was not.",
+                )
+            proposed = propose(self.app, call.tool_name, args)
+            if proposed:
+                raise AppRuleBlockedError(
+                    replace(decision, behaviour=LEAVE_TO_ME), proposed
+                )
         # A visitor without an account only reads, and nobody is asked for
         # them: whatever the rules say, anything else is not done (LOOP R-30).
         refusal = visitor_refusal(call.tool_name, decision.classes, decision.behaviour)
