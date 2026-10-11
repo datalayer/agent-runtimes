@@ -629,7 +629,7 @@ const PartyView: React.FC<{
               sx={{ '&:last-child': { borderBottom: 0 } }}
             >
               <Text sx={{ color: 'fg.muted', fontSize: 1 }}>{fact.label}</Text>
-              <Text textAlign="right" sx={{ fontWeight: 600, fontSize: 1 }}>
+              <Text sx={{ textAlign: 'right', fontWeight: 600, fontSize: 1 }}>
                 {fact.value}
               </Text>
             </Box>
