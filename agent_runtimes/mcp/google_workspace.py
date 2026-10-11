@@ -302,15 +302,14 @@ def toolset_for_the_run(
     url : str
         Where the server's process answers.
     """
-    from pydantic_ai.mcp import MCPToolset
-
+    from agent_runtimes.mcp.displays import DisplayMCPToolset
     from agent_runtimes.mcp.tracing import tracing_client
 
     async def token() -> str:
         return await gmail_access_token(agent_id, bearer)
 
     client = tracing_client(auth=IamAccessTokenAuth(token))
-    inner = MCPToolset(url, id=GOOGLE_WORKSPACE_SERVER, http_client=client)
+    inner = DisplayMCPToolset(url, id=GOOGLE_WORKSPACE_SERVER, http_client=client)
     return GoogleWorkspaceToolset(wrapped=inner, agent_id=agent_id, bearer=bearer)
 
 

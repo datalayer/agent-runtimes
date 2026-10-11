@@ -14,7 +14,7 @@
  * the chat's own row.
  */
 
-import { act, createRef } from 'react';
+import React, { act, createRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -191,6 +191,46 @@ describe('tool renderers from plugins', () => {
     );
     expect(
       row('company_sign_in')?.querySelector('a[href^="https://manzanita"]'),
+    ).not.toBeNull();
+  });
+
+  it('draws the display the runtime keeps beside the model’s view', async () => {
+    // What agent-runtimes sends the page for an MCP result that carried a
+    // display: the model view the model read — no page, no code — with the
+    // whole display in `_meta` (agent_runtimes/transports/agui_displays.py).
+    const reactor = buildReactorFromPlugins([createPapSignInPlugin() as never]);
+    const page = {
+      type: PAP_SIGN_IN_TYPE,
+      text: 'Sign in at manzanita.example: open its sign-in page, shown here, and enter the code shown with it.',
+      data: { mode: 'device', expires_at: SIGN_IN.expires_at, sent_to: null },
+      _meta: {
+        [DISPLAY_META_KEY]: {
+          type: PAP_SIGN_IN_TYPE,
+          version: 1,
+          id: 's2',
+          text: 'Sign in at manzanita.example',
+          data: {
+            mode: 'device',
+            open: SIGN_IN.open,
+            code: SIGN_IN.code,
+            expires_at: SIGN_IN.expires_at,
+          },
+          actions: [],
+        },
+      },
+    };
+    expect(JSON.stringify({ ...page, _meta: undefined })).not.toContain(
+      SIGN_IN.code,
+    );
+    await mount(reactor, [call('c5', 'manzanita__pap_sign_in', page)]);
+    expect(row('manzanita__pap_sign_in')?.textContent).toContain(
+      'Sign in at manzanita.example',
+    );
+    expect(row('manzanita__pap_sign_in')?.textContent).toContain('WDJB-MJHT');
+    expect(
+      row('manzanita__pap_sign_in')?.querySelector(
+        'a[href^="https://manzanita.example/device"]',
+      ),
     ).not.toBeNull();
   });
 

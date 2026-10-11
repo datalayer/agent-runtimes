@@ -17,8 +17,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from pydantic_ai.mcp import MCPToolset
-
+from agent_runtimes.mcp.displays import DisplayMCPToolset
 from agent_runtimes.mcp.tracing import tracing_client
 
 __all__ = [
@@ -133,7 +132,7 @@ def toolsets_for_the_run(
             kept.append(toolset)
             continue
         swapped.append(
-            MCPToolset(
+            DisplayMCPToolset(
                 f"{gateway_url()}?{query}" if query else gateway_url(),
                 id=server_id if query else "datalayer",
                 http_client=tracing_client(
@@ -156,7 +155,7 @@ def toolsets_for_the_run(
             continue
         bearer = token if acting == "owner" else users_token
         swapped.append(
-            MCPToolset(
+            DisplayMCPToolset(
                 f"{gateway_url()}?{query}",
                 id=sid,
                 http_client=tracing_client(

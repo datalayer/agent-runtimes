@@ -22,15 +22,7 @@ import contextvars
 import json
 import logging
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, AsyncIterator, Iterator
-
-if TYPE_CHECKING:
-    from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-else:
-    try:
-        from pydantic_ai.ui.ag_ui._adapter import AGUIAdapter
-    except (ImportError, ModuleNotFoundError):
-        AGUIAdapter = None  # type: ignore[assignment,misc]
+from typing import Any, AsyncIterator, Iterator
 
 from starlette.applications import Starlette
 
@@ -43,6 +35,10 @@ from ..otel.prompt_turn_metrics import (
     extract_user_id_from_jwt,
     record_prompt_turn_completion,
 )
+
+# AG-UI's adapter, with a tool's display beside the result the page draws
+# (REACTOR_UI RU-1).
+from .agui_displays import DisplayAGUIAdapter as AGUIAdapter
 from .base import BaseTransport
 
 logger = logging.getLogger(__name__)

@@ -396,7 +396,8 @@ class MCPLifecycleManager:
             # Import pydantic_ai MCP support
             try:
                 from fastmcp.client.transports import StdioTransport
-                from pydantic_ai.mcp import MCPToolset
+
+                from agent_runtimes.mcp.displays import DisplayMCPToolset
             except ImportError as e:
                 error = f"pydantic_ai.mcp not available: {e}"
                 logger.error(error)
@@ -466,7 +467,7 @@ class MCPLifecycleManager:
                         server_id, config, env, expanded_args
                     )
 
-                pydantic_server = MCPToolset(
+                pydantic_server = DisplayMCPToolset(
                     StdioTransport(
                         command=config.command,
                         args=expanded_args,
@@ -644,8 +645,7 @@ class MCPLifecycleManager:
         tools are listed by each run's own toolset
         (`google_workspace.toolset_for_the_run`), never by the process's.
         """
-        from pydantic_ai.mcp import MCPToolset
-
+        from agent_runtimes.mcp.displays import DisplayMCPToolset
         from agent_runtimes.mcp.google_workspace import (
             start_http_process,
             stop_http_process,
@@ -677,7 +677,7 @@ class MCPLifecycleManager:
             config=config,
             # Never entered: each run is given a toolset of its own in its
             # place, bound to whom it acts for.
-            pydantic_server=MCPToolset(config.url, id=server_id),
+            pydantic_server=DisplayMCPToolset(config.url, id=server_id),
             exit_stack=exit_stack,
             tools=[],
         )
