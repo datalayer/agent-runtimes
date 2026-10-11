@@ -24,7 +24,8 @@ features need the PAP release after 0.3.3, or an editable install):
 python examples/personal-agent-protocol/traces/generate.py
 ```
 
-It writes `src/examples/pap/traces/<slug>.json`.
+It writes `src/examples/pap/traces/<slug>.json`. The commit hook then formats
+them with prettier; the content is unchanged.
 """
 
 from __future__ import annotations
