@@ -739,9 +739,9 @@ class A2AWorker(_FastA2AWorker):
             artifact_id=artifact_id, name="result", parts=[Part(text=output)]
         )
         # What it composed besides words, each an artifact of its media type.
-        from ..loop.apps.pap_company import proposal_artifacts
+        from ..loop.apps.pap_company import pap_artifacts
 
-        composed = [*artifacts_of(outputs), *proposal_artifacts(current_pap_turn())]
+        composed = [*artifacts_of(outputs), *pap_artifacts(current_pap_turn())]
         await self.storage.update_task(
             task_id,
             state="completed",

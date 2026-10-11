@@ -17,8 +17,8 @@ from agent_runtimes.loop.apps.pap_company import (
     Performing,
     enter_pap_turn,
     leave_pap_turn,
+    pap_artifacts,
     pap_turn_of,
-    proposal_artifacts,
     summary_of,
 )
 from agent_runtimes.specs.apps import APP_CATALOGUE
@@ -74,7 +74,7 @@ async def test_a_declared_operation_is_proposed_not_made(turn: PapTurn) -> None:
             "terms": TERMS,
         }
     ]
-    [artifact] = proposal_artifacts(turn)
+    [artifact] = pap_artifacts(turn)
     assert artifact["parts"][0]["data"] == {"pap_operation": turn.proposals[0]}
     # Reading is done as always.
     assert await harness.call(SEARCH, {"query": "is:unread"}) == {"query": "is:unread"}
@@ -102,6 +102,10 @@ async def test_the_confirmed_call_is_made_once_with_its_terms(turn: PapTurn) -> 
         await harness.call(SEND, TERMS)
     assert harness.asked == []
     assert turn.proposals == []
+    [artifact] = pap_artifacts(turn)
+    assert artifact["parts"][0]["data"] == {
+        "pap_performed": {"action": "mail.send", "done": True}
+    }
 
 
 @pytest.mark.asyncio

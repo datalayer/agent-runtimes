@@ -205,9 +205,28 @@ async def redeem(turn: PapTurn, credential: str = "") -> Performing:
     return turn.performing
 
 
-def proposal_artifacts(turn: Optional[PapTurn]) -> list[Any]:
-    """The operations a turn proposed, as one A2A data artifact."""
-    if turn is None or not turn.proposals:
+def pap_artifacts(turn: Optional[PapTurn]) -> list[Any]:
+    """What a company turn returns besides words, as one A2A data artifact.
+
+    The operations it proposed (`pap_operation`), or, in a perform turn,
+    whether the confirmed call was made (`pap_performed`): the company
+    service never takes a finished turn for a performed operation.
+    """
+    if turn is None:
+        return []
+    parts: list[dict[str, Any]] = [
+        {"pap_operation": proposal} for proposal in turn.proposals
+    ]
+    if turn.performing is not None:
+        parts.append(
+            {
+                "pap_performed": {
+                    "action": turn.performing.action,
+                    "done": turn.performing.done,
+                }
+            }
+        )
+    if not parts:
         return []
     import uuid  # noqa: PLC0415
 
@@ -216,10 +235,8 @@ def proposal_artifacts(turn: Optional[PapTurn]) -> list[Any]:
     return [
         Artifact(
             artifact_id=str(uuid.uuid4()),
-            name="pap_operations",
-            description="Operations proposed to the person, done only once they confirm.",
-            parts=[
-                Part(data={"pap_operation": proposal}) for proposal in turn.proposals
-            ],
+            name="pap",
+            description="Operations proposed to the person, or whether the confirmed one was made.",
+            parts=[Part(data=data) for data in parts],
         )
     ]
