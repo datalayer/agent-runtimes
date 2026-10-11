@@ -146,6 +146,15 @@ const ANONYMOUS_EXAMPLES = new Set([
   'PapDpopProofExample',
   'PapSessionLifecycleExample',
   'PapGuidedJourneyExample',
+  // Replays of redacted traces the PAP Python demo worlds generate: static
+  // JSON, no SDK call, no runtime.
+  'PapUserWithACompanyExample',
+  'PapTwoCompaniesExample',
+  'PapAccountTokensExample',
+  'PapMediatedSignInExample',
+  'PapConversationStreamingExample',
+  'PapConversationControlExample',
+  'PapOperationsExample',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
   'AssistantExample',

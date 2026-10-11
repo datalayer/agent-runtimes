@@ -44,6 +44,13 @@ export { default as PapAuthorizationBoundaryExample } from './PapAuthorizationBo
 export { default as PapDpopProofExample } from './PapDpopProofExample';
 export { default as PapSessionLifecycleExample } from './PapSessionLifecycleExample';
 export { default as PapGuidedJourneyExample } from './PapGuidedJourneyExample';
+export { default as PapUserWithACompanyExample } from './PapUserWithACompanyExample';
+export { default as PapTwoCompaniesExample } from './PapTwoCompaniesExample';
+export { default as PapAccountTokensExample } from './PapAccountTokensExample';
+export { default as PapMediatedSignInExample } from './PapMediatedSignInExample';
+export { default as PapConversationStreamingExample } from './PapConversationStreamingExample';
+export { default as PapConversationControlExample } from './PapConversationControlExample';
+export { default as PapOperationsExample } from './PapOperationsExample';
 export { default as ScenesExample } from './ScenesExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';

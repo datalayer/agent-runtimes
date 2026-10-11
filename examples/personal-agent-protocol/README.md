@@ -3,20 +3,34 @@
 Each directory is a small Agent Runtimes `Application` that teaches one PAP
 feature while keeping protocol secrets outside model context.
 
-| Example                                                   | Feature                                                | Model-visible result                         |
-| --------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| [`company-discovery`](./company-discovery/)               | Verified company discovery and interface inventory     | Credential-free company summary              |
-| [`agent-identity`](./agent-identity/)                     | Client metadata, same-domain JWKS and signing policy   | Credential-free identity summary             |
-| [`session-assertion`](./session-assertion/)               | Pairwise identity and short-lived assertion claims     | Policy only; no subject or `jti`             |
-| [`direct-sign-in-boundary`](./direct-sign-in-boundary/)   | State, S256 PKCE and browser handoff                   | Security properties only                     |
-| [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete Session upgrade and partial consent           | Lifecycle evidence; all secrets withheld     |
-| [`device-sign-in`](./device-sign-in/)                     | Device code, paced polling and protected token storage | Lifecycle evidence; all secrets withheld     |
-| [`dpop-proof`](./dpop-proof/)                             | Method, URL, token, nonce and replay binding           | Verified policy; all proof material withheld |
-| [`session-lifecycle`](./session-lifecycle/)               | Start, nonce retry, and renewal over HTTP              | Lifecycle evidence; credentials withheld     |
-| [`browser-session`](./browser-session/)                   | Controlled form POST and one-use browser assertion     | Browser policy; all credentials withheld     |
-| [`dpop-transport`](./dpop-transport/)                     | Nonce retry and redirect-bound fresh proofs            | Transport policy; credentials withheld       |
-| [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs         | Conversation state; credentials withheld     |
-| [`conversation-events`](./conversation-events/)           | Long poll and de-duplicate ordered conversation events | Event evidence; credentials withheld         |
+| Example                                                   | Feature                                                | Model-visible result                              |
+| --------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------- |
+| [`company-discovery`](./company-discovery/)               | Verified company discovery and interface inventory     | Credential-free company summary                   |
+| [`agent-identity`](./agent-identity/)                     | Client metadata, same-domain JWKS and signing policy   | Credential-free identity summary                  |
+| [`session-assertion`](./session-assertion/)               | Pairwise identity and short-lived assertion claims     | Policy only; no subject or `jti`                  |
+| [`direct-sign-in-boundary`](./direct-sign-in-boundary/)   | State, S256 PKCE and browser handoff                   | Security properties only                          |
+| [`direct-sign-in-lifecycle`](./direct-sign-in-lifecycle/) | Complete Session upgrade and partial consent           | Lifecycle evidence; all secrets withheld          |
+| [`device-sign-in`](./device-sign-in/)                     | Device code, paced polling and protected token storage | Lifecycle evidence; all secrets withheld          |
+| [`dpop-proof`](./dpop-proof/)                             | Method, URL, token, nonce and replay binding           | Verified policy; all proof material withheld      |
+| [`session-lifecycle`](./session-lifecycle/)               | Start, nonce retry, and renewal over HTTP              | Lifecycle evidence; credentials withheld          |
+| [`browser-session`](./browser-session/)                   | Controlled form POST and one-use browser assertion     | Browser policy; all credentials withheld          |
+| [`dpop-transport`](./dpop-transport/)                     | Nonce retry and redirect-bound fresh proofs            | Transport policy; credentials withheld            |
+| [`conversation-messages`](./conversation-messages/)       | Start and continue with idempotent message IDs         | Conversation state; credentials withheld          |
+| [`conversation-events`](./conversation-events/)           | Long poll and de-duplicate ordered conversation events | Event evidence; credentials withheld              |
+| [`account-tokens`](./account-tokens/)                     | Refresh, rotation, narrowing and revocation            | Lifecycle evidence; token and reference withheld  |
+| [`mediated-sign-in`](./mediated-sign-in/)                 | Credentials on `pap.protectedInput`, sent once         | Questions asked and outcome; credentials withheld |
+| [`conversation-streaming`](./conversation-streaming/)     | SSE events, display-only deltas, Last-Event-ID         | Event evidence; credentials withheld              |
+| [`conversation-control`](./conversation-control/)         | Direct Conversation, handoff and close                 | Statuses and event types; credentials withheld    |
+| [`operations`](./operations/)                             | Operations v1: exact approval, at most once            | States, revisions and company summaries           |
+| [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                      | What each party saw; codes and tokens withheld    |
+| [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind          | Who approved what, and where; secrets withheld    |
+
+The last seven examples need the next PAP release (0.3.3 does not include
+Account Tokens, Mediated Sign-In, conversation streaming and control,
+Operations, or the `demo` worlds); run them against an editable install of the
+PAP Python SDK until then. They run the SDK's self-contained `demo` worlds:
+real keys, proofs and HTTP over ASGI in one process, with no network and no
+model.
 
 The first two examples use Agent Runtimes' Python
 `PapPersonalAgentCapability`. The remaining examples use PAP primitives inside
@@ -55,3 +69,22 @@ Each step pairs a phone-style user view with the company's allowed state and
 an expandable, redacted protocol exchange. The discovery, Session assertion,
 and Direct Sign-In fixtures are validated with the TypeScript PAP SDK in the
 browser; no live credentials or network service are required.
+
+## Replayed traces
+
+Seven more gallery examples (**PAP User with a Company**, **PAP Two
+Companies**, **PAP Account Tokens**, **PAP Mediated Sign-In**, **PAP
+Conversation Streaming**, **PAP Conversation Control** and **PAP
+Operations**) replay, step by step, what the user sees, what each party holds,
+and the sequence of HTTP exchanges between them. The TypeScript SDK does not
+implement these features yet, so these views call no SDK function: they read
+redacted traces generated from the Python demo worlds:
+
+```bash
+python examples/personal-agent-protocol/traces/generate.py
+```
+
+The script writes `src/examples/pap/traces/<slug>.json`, replaces every token,
+code, proof, assertion and credential with a placeholder such as
+`‹session token›`, renumbers random identifiers, and refuses to write a trace
+in which a secret survives.

@@ -378,6 +378,41 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Follow a visual PAP return journey across discovery, signed-out conversation, Direct Sign-In, and an exact user-authorized result.',
   ),
   makeEntry(
+    'PapUserWithACompanyExample',
+    () => import('./PapUserWithACompanyExample'),
+    'Replay, step by step, Ada, her personal agent and one company: question, Device Sign-In, the same conversation, and one exactly approved operation.',
+  ),
+  makeEntry(
+    'PapTwoCompaniesExample',
+    () => import('./PapTwoCompaniesExample'),
+    "Replay two companies working together: Ledgerly is a company to Ada's agent and her personal agent at Northwind Bank; every approval is an Operation.",
+  ),
+  makeEntry(
+    'PapAccountTokensExample',
+    () => import('./PapAccountTokensExample'),
+    'Replay Account Token refresh, rotation, narrowing, re-consent and revocation, with the token kept behind a host reference.',
+  ),
+  makeEntry(
+    'PapMediatedSignInExample',
+    () => import('./PapMediatedSignInExample'),
+    "Replay Mediated Sign-In: credentials and a one-time code on the host's protected input, sent once to the company's own endpoint.",
+  ),
+  makeEntry(
+    'PapConversationStreamingExample',
+    () => import('./PapConversationStreamingExample'),
+    'Replay a PAP conversation over SSE: display-only text deltas, complete events, and a Last-Event-ID resume.',
+  ),
+  makeEntry(
+    'PapConversationControlExample',
+    () => import('./PapConversationControlExample'),
+    'Replay conversation control: a Direct Conversation, a handoff to a person, and closing.',
+  ),
+  makeEntry(
+    'PapOperationsExample',
+    () => import('./PapOperationsExample'),
+    'Replay PAP Operations v1: exact approval of one revision, terms changed, at-most-once confirmation, and cancellation.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',

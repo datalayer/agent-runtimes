@@ -1,0 +1,3018 @@
+{
+  "slug": "two-companies",
+  "title": "Two companies working together",
+  "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.1 defines no company-to-company protocol.",
+  "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "parties": [
+    {
+      "id": "user",
+      "name": "Ada",
+      "role": "person",
+      "initial": "A"
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "role": "Ada's personal agent",
+      "domain": "atlas.example",
+      "initial": "At"
+    },
+    {
+      "id": "ledgerly",
+      "name": "Ledgerly",
+      "role": "company to Atlas · personal agent at Northwind",
+      "domain": "ledgerly.example",
+      "initial": "L"
+    },
+    {
+      "id": "northwind",
+      "name": "Northwind Bank",
+      "role": "company",
+      "domain": "northwind.example",
+      "initial": "N"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Atlas finds Ledgerly",
+      "channel": "Discovery + Session",
+      "summary": "To Atlas, Ledgerly is an ordinary PAP company: Atlas reads its poppy.json and opens a signed-out, pairwise Session. Ledgerly verifies Atlas's keys.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Ledgerly keeps my books. Let it pay my Acme invoices from Northwind."
+        },
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "I'll connect to Ledgerly first."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed out · DPoP-bound"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "Empty"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind",
+            "value": "Not connected",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "None yet"
+          },
+          {
+            "label": "Sessions",
+            "value": "None"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/.well-known/poppy.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "protocol_version": "0.1",
+              "organization": {
+                "name": "Ledgerly",
+                "domain": "ledgerly.example"
+              },
+              "auth": {
+                "issuer": "https://ledgerly.example",
+                "device": {
+                  "scopes": ["books:read", "payments:write"]
+                },
+                "custom_scopes": {
+                  "books:read": "See your books",
+                  "payments:write": "Pay bills for you"
+                }
+              },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://ledgerly.example/poppy/conversations"
+                  }
+                ]
+              },
+              "extensions": {
+                "operations": {
+                  "version": "1",
+                  "endpoint": "https://ledgerly.example/poppy/operations"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/.well-known/oauth-authorization-server",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "issuer": "https://ledgerly.example",
+              "token_endpoint": "https://ledgerly.example/oauth/token",
+              "revocation_endpoint": "https://ledgerly.example/oauth/revoke",
+              "poppy_domains": ["ledgerly.example"],
+              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
+              "device_1": "https://ledgerly.example/oauth/device"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+              "assertion": "‹session assertion›",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "",
+              "session_id": "ses_1",
+              "signed_in": false
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Ada signs in to Ledgerly",
+      "channel": "Device Sign-In",
+      "summary": "Ada approves Atlas on Ledgerly's own page. Atlas's Session at Ledgerly is signed in.",
+      "chat": [
+        {
+          "speaker": "atlas",
+          "kind": "message",
+          "text": "Open ledgerly.example/device and enter ‹Ledgerly user code›."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "page",
+          "title": "ledgerly.example/device",
+          "text": "Ada signs in to Ledgerly and approves Atlas."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind",
+            "value": "Not connected",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "None yet"
+          },
+          {
+            "label": "Sessions",
+            "value": "None"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/oauth/device",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
+            },
+            "body": {
+              "scope": "books:read payments:write",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "device_code": "‹device code›",
+              "user_code": "‹user code›",
+              "verification_uri": "https://ledgerly.example/device",
+              "verification_uri_complete": "https://ledgerly.example/device?user_code=‹Ledgerly user code›",
+              "expires_in": 600,
+              "interval": 5
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "ledgerly",
+          "label": "Signs in on ledgerly.example/device and approves Atlas"
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+              "device_code": "‹device code›",
+              "session_id": "ses_1",
+              "client_id": "https://atlas.example/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3595,
+              "scope": "books:read payments:write",
+              "session_id": "ses_1",
+              "signed_in": true,
+              "refresh_token": "‹account token›"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://atlas.example/agent.json",
+              "client_name": "Atlas",
+              "jwks_uri": "https://atlas.example/jwks.json",
+              "redirect_uris": ["https://atlas.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "atlas",
+          "method": "GET",
+          "url": "https://atlas.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Ledgerly becomes a personal agent",
+      "channel": "Ledgerly → Northwind",
+      "summary": "To pay, Ledgerly needs Ada's Northwind account. It acts as a PAP personal agent with its own client_id and keys: it discovers Northwind, opens its own pairwise Session, and starts Device Sign-In there. Northwind verifies Ledgerly, not Atlas.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Pay INV-0042."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "message",
+          "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter ‹Northwind user code›. Tell me when done."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed out · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "Waiting for Ada on Northwind's page",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_1",
+                "sender": "human",
+                "text": "Pay INV-0042"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_1",
+                  "created_at": "2026-10-11T09:00:05Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_1",
+                    "sender": "human",
+                    "text": "Pay INV-0042",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_2",
+                  "created_at": "2026-10-11T09:00:05Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_2",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter ‹Northwind user code›. Tell me when done.",
+                    "data": {
+                      "connect": {
+                        "company": "Northwind Bank",
+                        "verification_uri": "https://northwind.example/device",
+                        "user_code": "‹user code›"
+                      }
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_2",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "GET",
+          "url": "https://northwind.example/.well-known/poppy.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "protocol_version": "0.1",
+              "organization": {
+                "name": "Northwind Bank",
+                "domain": "northwind.example"
+              },
+              "auth": {
+                "issuer": "https://northwind.example",
+                "device": {
+                  "scopes": ["accounts:read", "payments:write"]
+                },
+                "custom_scopes": {
+                  "accounts:read": "See balances",
+                  "payments:write": "Make payments"
+                }
+              },
+              "agent": {
+                "protocols": [
+                  {
+                    "type": "poppy",
+                    "endpoint": "https://northwind.example/poppy/conversations"
+                  }
+                ]
+              },
+              "extensions": {
+                "operations": {
+                  "version": "1",
+                  "endpoint": "https://northwind.example/poppy/operations"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "GET",
+          "url": "https://northwind.example/.well-known/oauth-authorization-server",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "issuer": "https://northwind.example",
+              "token_endpoint": "https://northwind.example/oauth/token",
+              "revocation_endpoint": "https://northwind.example/oauth/revoke",
+              "poppy_domains": ["northwind.example"],
+              "dpop_signing_alg_values_supported": ["ES256", "RS256"],
+              "device_1": "https://northwind.example/oauth/device"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+              "assertion": "‹session assertion›",
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3600,
+              "scope": "",
+              "session_id": "ses_2",
+              "signed_in": false
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/oauth/device",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json"
+            },
+            "body": {
+              "scope": "accounts:read payments:write",
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "device_code": "‹device code›",
+              "user_code": "‹user code›",
+              "verification_uri": "https://northwind.example/device",
+              "verification_uri_complete": "https://northwind.example/device?user_code=‹Northwind user code›",
+              "expires_in": 600,
+              "interval": 5
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Ada approves Ledgerly at Northwind",
+      "channel": "Northwind's page",
+      "summary": "Ada signs in on Northwind's own page and lets Ledgerly see balances and make payments. Northwind's credentials never reach Ledgerly or Atlas.",
+      "chat": [
+        {
+          "speaker": "northwind",
+          "kind": "page",
+          "title": "northwind.example/device",
+          "text": "Ada signs in to Northwind Bank and approves Ledgerly."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed out · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "Waiting for Ada on Northwind's page",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 0 signed in"
+          },
+          {
+            "label": "Who is it?",
+            "value": "A pairwise identifier only"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "northwind",
+          "label": "Signs in on northwind.example/device and approves Ledgerly"
+        }
+      ]
+    },
+    {
+      "title": "Northwind proposes; Ledgerly relays",
+      "channel": "Operation relayed",
+      "summary": "Ledgerly finishes signing in at Northwind and asks Northwind's agent to pay. Northwind proposes payments.transfer. No standing permission covers it, so Ledgerly relays it to Ada as its own operation, quoting Northwind's summary as written.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Done. Pay INV-0042."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "message",
+          "text": "Northwind Bank proposes this payment; it needs your approval."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "approval",
+          "title": "Revision 1 · needs your approval",
+          "text": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 4 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · proposed",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed in · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "in Ledgerly's vault, by reference",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_northwind"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "accounts:read payments:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · proposed"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_2&wait=0",
+          "status": 202,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_3",
+                "sender": "human",
+                "text": "Done. Pay INV-0042"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_3",
+                    "sender": "human",
+                    "text": "Done. Pay INV-0042",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_4",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Northwind Bank proposes this payment; it needs your approval.",
+                    "operation": {
+                      "operation_id": "op_1",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                      "terms": {
+                        "northwind_operation_id": "op_2",
+                        "northwind_revision": 1,
+                        "amount": {
+                          "amount": "1250.00",
+                          "currency": "EUR"
+                        },
+                        "payee": "Acme GmbH",
+                        "reference": "INV-0042",
+                        "from_account": "DE89 3704 0044 0532 0130 00"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": true,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_4",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/oauth/token",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/x-www-form-urlencoded",
+              "accept": "application/json",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+              "device_code": "‹device code›",
+              "session_id": "ses_2",
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+              "client_assertion": "‹client assertion›"
+            },
+            "encoding": "form"
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json",
+              "cache-control": "no-store"
+            },
+            "body": {
+              "access_token": "‹session token›",
+              "token_type": "DPoP",
+              "expires_in": 3595,
+              "scope": "accounts:read payments:write",
+              "session_id": "ses_2",
+              "signed_in": true,
+              "refresh_token": "‹account token›"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/poppy/agent.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "client_id": "https://ledgerly.example/poppy/agent.json",
+              "client_name": "Ledgerly",
+              "jwks_uri": "https://ledgerly.example/jwks.json",
+              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
+              "token_endpoint_auth_method": "private_key_jwt",
+              "extensions": {
+                "operations": {
+                  "version": "1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "northwind",
+          "to": "ledgerly",
+          "method": "GET",
+          "url": "https://ledgerly.example/jwks.json",
+          "status": 200,
+          "request": {
+            "headers": {
+              "accept": "application/json"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "keys": [
+                {
+                  "kty": "EC",
+                  "crv": "P-256",
+                  "x": "‹public key›",
+                  "y": "‹public key›",
+                  "kid": "key-1",
+                  "use": "sig",
+                  "alg": "ES256"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_5",
+                "sender": "agent",
+                "text": "Pay INV-0042: EUR 1250.00 to Acme GmbH"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_2",
+              "events": [
+                {
+                  "id": "evt_5",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_5",
+                    "sender": "agent",
+                    "text": "Pay INV-0042: EUR 1250.00 to Acme GmbH",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_6",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Ready to pay INV-0042.",
+                    "operation": {
+                      "operation_id": "op_2",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                      "terms": {
+                        "amount": {
+                          "amount": "1250.00",
+                          "currency": "EUR"
+                        },
+                        "payee": "Acme GmbH",
+                        "reference": "INV-0042",
+                        "from_account": "DE89 3704 0044 0532 0130 00"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": false,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_6",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Ada approves; Northwind pays",
+      "channel": "approved_by: user",
+      "summary": "Atlas confirms Ledgerly's operation. Ledgerly checks Northwind's revision is unchanged and confirms it at Northwind with approved_by: user. Northwind's result becomes Ledgerly's, as written.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "approval",
+          "title": "Revision 1 · approved",
+          "text": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "result",
+          "title": "Result",
+          "text": "Northwind Bank: Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 4 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed in · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "in Ledgerly's vault, by reference",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_northwind"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "accounts:read payments:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by user"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Approves Ledgerly's revision 1"
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/operations/op_1/confirm",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "revision": 1,
+              "approved_by": "user"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "operation_id": "op_1",
+              "revision": 1,
+              "state": "succeeded",
+              "summary": "At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+              "terms": {
+                "northwind_operation_id": "op_2",
+                "northwind_revision": 1,
+                "amount": {
+                  "amount": "1250.00",
+                  "currency": "EUR"
+                },
+                "payee": "Acme GmbH",
+                "reference": "INV-0042",
+                "from_account": "DE89 3704 0044 0532 0130 00"
+              },
+              "expires_at": null,
+              "user_approval_required": true,
+              "url": null,
+              "confirmation": {
+                "revision": 1,
+                "approved_by": "user",
+                "confirmed_at": "2026-10-11T09:00:10Z"
+              },
+              "result": {
+                "summary": "Northwind Bank: Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
+                "data": {
+                  "bank_reference": "NW-0001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/poppy/operations/op_2/confirm",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "revision": 1,
+              "approved_by": "user"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "operation_id": "op_2",
+              "revision": 1,
+              "state": "succeeded",
+              "summary": "Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+              "terms": {
+                "amount": {
+                  "amount": "1250.00",
+                  "currency": "EUR"
+                },
+                "payee": "Acme GmbH",
+                "reference": "INV-0042",
+                "from_account": "DE89 3704 0044 0532 0130 00"
+              },
+              "expires_at": null,
+              "user_approval_required": false,
+              "url": null,
+              "confirmation": {
+                "revision": 1,
+                "approved_by": "user",
+                "confirmed_at": "2026-10-11T09:00:10Z"
+              },
+              "result": {
+                "summary": "Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.",
+                "data": {
+                  "bank_reference": "NW-0001"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "A standing permission, approved",
+      "channel": "ledgerly.standing_permission",
+      "summary": "The permission is itself an operation Ada approves. Ledgerly records it in its pap.standingPermissionStore, bounded by payee, amount, currency, uses, and time.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "approval",
+          "title": "Revision 1 · approved",
+          "text": "Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "result",
+          "title": "Result",
+          "text": "Ledgerly may pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 6 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation ledgerly.standing_permission",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed in · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "in Ledgerly's vault, by reference",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Standing permission",
+            "value": "payments.transfer · 5 uses left · payee = Acme GmbH, amount.amount ≤ 2000.00, amount.currency = EUR",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_northwind"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "accounts:read payments:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by user"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
+          "status": 202,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_7",
+                "sender": "human",
+                "text": "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_7",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_7",
+                    "sender": "human",
+                    "text": "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_8",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Here is the permission, to approve.",
+                    "operation": {
+                      "operation_id": "op_3",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days.",
+                      "terms": {
+                        "company": "Northwind Bank",
+                        "action": "payments.transfer",
+                        "payee": "Acme GmbH",
+                        "maximum": {
+                          "amount": "2000.00",
+                          "currency": "EUR"
+                        },
+                        "uses": 5,
+                        "days": 30
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": true,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_8",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "action",
+          "from": "user",
+          "to": "atlas",
+          "label": "Approves the standing permission"
+        },
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/operations/op_3/confirm",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "revision": 1,
+              "approved_by": "user"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "operation_id": "op_3",
+              "revision": 1,
+              "state": "succeeded",
+              "summary": "Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days.",
+              "terms": {
+                "company": "Northwind Bank",
+                "action": "payments.transfer",
+                "payee": "Acme GmbH",
+                "maximum": {
+                  "amount": "2000.00",
+                  "currency": "EUR"
+                },
+                "uses": 5,
+                "days": 30
+              },
+              "expires_at": null,
+              "user_approval_required": true,
+              "url": null,
+              "confirmation": {
+                "revision": 1,
+                "approved_by": "user",
+                "confirmed_at": "2026-10-11T09:00:10Z"
+              },
+              "result": {
+                "summary": "Ledgerly may pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days.",
+                "data": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Within the bounds",
+      "channel": "approved_by: standing_permission",
+      "summary": "Northwind proposes the next payment; it is within the permission, so Ledgerly confirms it at Northwind with approved_by: standing_permission and tells Ada what was done.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Pay INV-0043."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "message",
+          "text": "Paid under your standing permission. Northwind Bank: Sent EUR 980.00 to Acme GmbH for INV-0043 from DE89 3704 0044 0532 0130 00. Bank reference NW-0002."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 8 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation ledgerly.standing_permission",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed in · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "in Ledgerly's vault, by reference",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Standing permission",
+            "value": "payments.transfer · 4 uses left · payee = Acme GmbH, amount.amount ≤ 2000.00, amount.currency = EUR",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_northwind"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "accounts:read payments:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by user"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by standing_permission"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_8&wait=0",
+          "status": 202,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_9",
+                "sender": "human",
+                "text": "Pay INV-0043"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_9",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_9",
+                    "sender": "human",
+                    "text": "Pay INV-0043",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_10",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_10",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Paid under your standing permission. Northwind Bank: Sent EUR 980.00 to Acme GmbH for INV-0043 from DE89 3704 0044 0532 0130 00. Bank reference NW-0002.",
+                    "data": {
+                      "northwind_operation_id": "op_4"
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_10",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_11",
+                "sender": "agent",
+                "text": "Pay INV-0043: EUR 980.00 to Acme GmbH"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_3",
+              "events": [
+                {
+                  "id": "evt_11",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_11",
+                    "sender": "agent",
+                    "text": "Pay INV-0043: EUR 980.00 to Acme GmbH",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_12",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_12",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Ready to pay INV-0043.",
+                    "operation": {
+                      "operation_id": "op_4",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                      "terms": {
+                        "amount": {
+                          "amount": "980.00",
+                          "currency": "EUR"
+                        },
+                        "payee": "Acme GmbH",
+                        "reference": "INV-0043",
+                        "from_account": "DE89 3704 0044 0532 0130 00"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": false,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_12",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/poppy/operations/op_4/confirm",
+          "status": 200,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "application/json",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "revision": 1,
+              "approved_by": "standing_permission"
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "operation_id": "op_4",
+              "revision": 1,
+              "state": "succeeded",
+              "summary": "Pay EUR 980.00 to Acme GmbH for INV-0043 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+              "terms": {
+                "amount": {
+                  "amount": "980.00",
+                  "currency": "EUR"
+                },
+                "payee": "Acme GmbH",
+                "reference": "INV-0043",
+                "from_account": "DE89 3704 0044 0532 0130 00"
+              },
+              "expires_at": null,
+              "user_approval_required": false,
+              "url": null,
+              "confirmation": {
+                "revision": 1,
+                "approved_by": "standing_permission",
+                "confirmed_at": "2026-10-11T09:00:10Z"
+              },
+              "result": {
+                "summary": "Sent EUR 980.00 to Acme GmbH for INV-0043 from DE89 3704 0044 0532 0130 00. Bank reference NW-0002.",
+                "data": {
+                  "bank_reference": "NW-0002"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "title": "Beyond the bounds",
+      "channel": "Ask again",
+      "summary": "EUR 3400.00 is over the permission's limit: Ledgerly does not confirm it and relays Northwind's proposal to Ada again. Nothing is paid until she approves.",
+      "chat": [
+        {
+          "speaker": "user",
+          "kind": "message",
+          "text": "Pay INV-0044."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "message",
+          "text": "Northwind Bank proposes this payment; it needs your approval."
+        },
+        {
+          "speaker": "ledgerly",
+          "kind": "approval",
+          "title": "Revision 1 · needs your approval",
+          "text": "At Northwind Bank: Pay EUR 3400.00 to Acme GmbH for INV-0044 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent."
+        }
+      ],
+      "views": {
+        "atlas": [
+          {
+            "label": "Company",
+            "value": "Ledgerly · discovery verified"
+          },
+          {
+            "label": "Session",
+            "value": "signed in · DPoP-bound"
+          },
+          {
+            "label": "Scopes",
+            "value": "books:read payments:write"
+          },
+          {
+            "label": "Vault (host only)",
+            "value": "1 Account Token by reference"
+          },
+          {
+            "label": "Model sees",
+            "value": "Summaries and statuses, never a credential"
+          }
+        ],
+        "ledgerly": [
+          {
+            "label": "Verified client",
+            "value": "atlas.example/agent.json",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_ledgerly",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "books:read payments:write",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 10 events",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation ledgerly.standing_permission",
+            "value": "revision 1 · succeeded · approved by user",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Operation northwind.payment",
+            "value": "revision 1 · proposed",
+            "group": "As a company to Atlas"
+          },
+          {
+            "label": "Northwind Session",
+            "value": "signed in · DPoP-bound",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Northwind Account Token",
+            "value": "in Ledgerly's vault, by reference",
+            "group": "As Ada's personal agent at Northwind"
+          },
+          {
+            "label": "Standing permission",
+            "value": "payments.transfer · 4 uses left · payee = Acme GmbH, amount.amount ≤ 2000.00, amount.currency = EUR",
+            "group": "As Ada's personal agent at Northwind"
+          }
+        ],
+        "northwind": [
+          {
+            "label": "Verified client",
+            "value": "ledgerly.example/poppy/agent.json"
+          },
+          {
+            "label": "Sessions",
+            "value": "1 live · 1 signed in"
+          },
+          {
+            "label": "Account behind the Session",
+            "value": "acct_ada_northwind"
+          },
+          {
+            "label": "Granted scopes",
+            "value": "accounts:read payments:write"
+          },
+          {
+            "label": "Account Tokens issued",
+            "value": "1 · 1 not revoked"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Conversation",
+            "value": "idle · agent · 2 events"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by user"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · succeeded · approved by standing_permission"
+          },
+          {
+            "label": "Operation payments.transfer",
+            "value": "revision 1 · proposed"
+          }
+        ]
+      },
+      "sequence": [
+        {
+          "kind": "http",
+          "from": "atlas",
+          "to": "ledgerly",
+          "method": "POST",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_10&wait=0",
+          "status": 202,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_13",
+                "sender": "human",
+                "text": "Pay INV-0044"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_1",
+              "events": [
+                {
+                  "id": "evt_13",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_13",
+                    "sender": "human",
+                    "text": "Pay INV-0044",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_14",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_14",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Northwind Bank proposes this payment; it needs your approval.",
+                    "operation": {
+                      "operation_id": "op_5",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "At Northwind Bank: Pay EUR 3400.00 to Acme GmbH for INV-0044 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                      "terms": {
+                        "northwind_operation_id": "op_6",
+                        "northwind_revision": 1,
+                        "amount": {
+                          "amount": "3400.00",
+                          "currency": "EUR"
+                        },
+                        "payee": "Acme GmbH",
+                        "reference": "INV-0044",
+                        "from_account": "DE89 3704 0044 0532 0130 00"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": true,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_14",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        },
+        {
+          "kind": "http",
+          "from": "ledgerly",
+          "to": "northwind",
+          "method": "POST",
+          "url": "https://northwind.example/poppy/conversations?wait=0",
+          "status": 201,
+          "request": {
+            "headers": {
+              "content-type": "application/json",
+              "accept": "*/*",
+              "authorization": "DPoP ‹session token›",
+              "dpop": "‹DPoP proof›"
+            },
+            "body": {
+              "message": {
+                "id": "msg_15",
+                "sender": "agent",
+                "text": "Pay INV-0044: EUR 3400.00 to Acme GmbH"
+              }
+            }
+          },
+          "response": {
+            "headers": {
+              "content-type": "application/json"
+            },
+            "body": {
+              "conversation_id": "cnv_4",
+              "events": [
+                {
+                  "id": "evt_15",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_15",
+                    "sender": "agent",
+                    "text": "Pay INV-0044: EUR 3400.00 to Acme GmbH",
+                    "role": "user"
+                  }
+                },
+                {
+                  "id": "evt_16",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "message",
+                  "message": {
+                    "id": "msg_16",
+                    "sender": "agent",
+                    "role": "company",
+                    "text": "Ready to pay INV-0044.",
+                    "operation": {
+                      "operation_id": "op_6",
+                      "revision": 1,
+                      "state": "proposed",
+                      "summary": "Pay EUR 3400.00 to Acme GmbH for INV-0044 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.",
+                      "terms": {
+                        "amount": {
+                          "amount": "3400.00",
+                          "currency": "EUR"
+                        },
+                        "payee": "Acme GmbH",
+                        "reference": "INV-0044",
+                        "from_account": "DE89 3704 0044 0532 0130 00"
+                      },
+                      "expires_at": "2026-10-11T09:15:10Z",
+                      "user_approval_required": false,
+                      "url": null,
+                      "confirmation": null,
+                      "result": null
+                    }
+                  }
+                }
+              ],
+              "cursor": "evt_16",
+              "has_more": false,
+              "status": "idle",
+              "responder": "agent"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
