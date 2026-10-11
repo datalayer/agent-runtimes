@@ -12,6 +12,7 @@ the gateway's own table, and a connection that reads gives only what reads.
 import pytest
 
 from agent_runtimes.loop.apps import pap_connections
+from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
 from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
 from agent_runtimes.specs.apps import APP_CATALOGUE
 from agent_runtimes.tests.test_apps_enforcement import Harness
@@ -111,3 +112,36 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
     assert capability.given("pap_ledgerly_example_pap_confirm") is False
     assert capability.given("pap_manzanita_example_pap_confirm") is True
     assert pap_connections.classes_of("pap_unknown_example_pap_ask") is None
+
+
+@pytest.mark.asyncio
+async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> None:
+    spec = app().model_copy(
+        update={
+            "rules": [
+                AppSpec.model_validate(
+                    {
+                        **app().model_dump(by_alias=True),
+                        "rules": [
+                            {
+                                "action": "Buy or change things",
+                                "applies_to": ["write", "buy"],
+                                "behaviour": "ask_first",
+                            }
+                        ],
+                    }
+                ).rules[0]
+            ]
+        }
+    )
+    pap_connections.remember_agent("agent-4", spec)
+    # Whatever rule would ask first, the runtime does not: the gateway asks the
+    # person with the company's own terms, once (PAP_DATALAYER R-04, R-05).
+    harness = Harness(spec)
+    args = {"operation_ref": "op_1", "revision": 1}
+    assert await harness.call("pap_manzanita_example_pap_confirm", args) == args
+    assert harness.asked == []
+    assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
+    # What the Maker leaves to the person stays theirs.
+    with pytest.raises(AppRuleBlockedError):
+        await Harness(app()).call("pap_manzanita_example_pap_confirm", args)

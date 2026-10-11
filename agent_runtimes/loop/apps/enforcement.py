@@ -169,6 +169,10 @@ Notify = Callable[[str, str], Awaitable[None]]
 Record = Callable[["Enforced"], None]
 
 
+#: Why a company's confirmation is not asked here: the gateway asks it (PAP R-04).
+GATEWAY_ASKS = "the_gateway_asks_the_person"
+
+
 class AppRuleBlockedError(GuardrailBlockedError):
     """A tool call the application's rules leave to the person."""
 
@@ -372,9 +376,17 @@ class AppRulesCapability(AbstractCapability[Any]):
         if company is not None:
             # A company's tool, through the gateway's `pap` toolset: what it
             # does is the gateway's own table (PAP_DATALAYER R-02).
-            return Enforced(
-                tool_name, decision_for(self.app, tool_name, classes=list(company))
-            )
+            decided = decision_for(self.app, tool_name, classes=list(company))
+            if tool_name.endswith("_pap_confirm") and decided.behaviour in (
+                ASK_FIRST,
+                IF_ASKED,
+            ):
+                # The gateway asks the person itself, with the company's own
+                # terms, unless an approval in advance covers them (R-04):
+                # asked here too, they would be asked twice, the first time
+                # without the terms. *Leave it to me* still refuses.
+                decided = replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
+            return Enforced(tool_name, decided)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
         if tool_name.startswith(HOST_TOOL_PREFIX):
