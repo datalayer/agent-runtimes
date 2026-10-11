@@ -90,6 +90,7 @@ def toolsets_for_the_run(
     *,
     in_users_name: frozenset[str] = frozenset(),
     users_token: str = "",
+    companies: tuple[tuple[str, str], ...] = (),
 ) -> list[Any]:
     """
     A run's toolsets, with the Datalayer gateway reached as the run.
@@ -108,6 +109,11 @@ def toolsets_for_the_run(
         The token of the person talking to it, naming the application;
         `""` when they have not let it act in their name, and the gateway
         then refuses those servers in its sentence.
+    companies : tuple[tuple[str, str], ...]
+        The companies its application works with as a personal agent
+        (PAP_DATALAYER ADR-1), as `(server id, in whose name)`: each the
+        gateway's `pap` toolset for that company, its tools named with the
+        server id, reached in the person's name unless it says `owner`.
 
     Returns
     -------
@@ -136,6 +142,27 @@ def toolsets_for_the_run(
                     }
                 ),
             )
+        )
+    from agent_runtimes.loop.apps.pap_connections import (
+        gateway_query as company_query,
+    )
+    from agent_runtimes.loop.apps.pap_connections import (
+        tool_prefix,
+    )
+
+    for sid, acting in companies:
+        query = company_query(sid)
+        if query is None:
+            continue
+        bearer = token if acting == "owner" else users_token
+        swapped.append(
+            MCPToolset(
+                f"{gateway_url()}?{query}",
+                id=sid,
+                http_client=tracing_client(
+                    headers={"Authorization": f"Bearer {bearer}"}
+                ),
+            ).prefixed(tool_prefix(sid))
         )
     if not swapped:
         # An agent not given the gateway is not given it by a delegation.

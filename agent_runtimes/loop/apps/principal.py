@@ -368,6 +368,7 @@ async def gateway_toolsets_of_the_run(
     list[Any]
         The toolsets, the gateway's reached with the application's token.
     """
+    from agent_runtimes.loop.apps.pap_connections import companies_of_agent
     from agent_runtimes.mcp.datalayer_gateway import toolsets_for_the_run
     from agent_runtimes.models.models import app_instance_of
 
@@ -379,15 +380,25 @@ async def gateway_toolsets_of_the_run(
         # A Preview: its session's run carries the person's token narrowed to
         # the granted Spaces (`sessions.LiveSession.run_token`); without one,
         # the gateway is reached with none and refuses.
-        return toolsets_for_the_run(toolsets, bearer or "")
+        return toolsets_for_the_run(
+            toolsets,
+            bearer or "",
+            users_token=bearer or "",
+            companies=companies_of_agent(agent_id),
+        )
     from agent_runtimes.loop.apps.acting import acting_token, servers_in_users_name
 
     in_users_name = servers_in_users_name(agent_id)
+    companies = companies_of_agent(agent_id)
+    in_their_name = bool(in_users_name) or any(
+        acting != "owner" for _, acting in companies
+    )
     return toolsets_for_the_run(
         toolsets,
         principal_token(deployment) or "",
         in_users_name=in_users_name,
-        users_token=(await acting_token(deployment, bearer) if in_users_name else ""),
+        users_token=(await acting_token(deployment, bearer) if in_their_name else ""),
+        companies=companies,
     )
 
 

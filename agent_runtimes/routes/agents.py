@@ -2652,6 +2652,11 @@ async def create_agent(
             remember_servers_in_users_name(
                 agent_id, running_app.connections if running_app is not None else None
             )
+            # The companies it works with as a personal agent, each the
+            # gateway's `pap` toolset for it (PAP_DATALAYER ADR-1).
+            from agent_runtimes.loop.apps.pap_connections import remember_agent
+
+            remember_agent(agent_id, running_app)
             # In whose name it reaches Gmail, with a token IAM mints per run
             # for them (STUDIO W-02).
             from agent_runtimes.mcp.google_workspace import remember_gmail_connection

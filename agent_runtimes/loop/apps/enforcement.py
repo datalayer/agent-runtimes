@@ -94,6 +94,12 @@ from agent_runtimes.loop.apps.host_user import (
     host_tools,
 )
 from agent_runtimes.loop.apps.pap_company import performs, propose
+from agent_runtimes.loop.apps.pap_connections import (
+    classes_of as company_classes,
+)
+from agent_runtimes.loop.apps.pap_connections import (
+    connection_actions as company_actions,
+)
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -362,6 +368,13 @@ class AppRulesCapability(AbstractCapability[Any]):
             return Enforced(tool_name, part, (part,))
         if tool_name in CODE_TOOLS:
             return self._decide_code(tool_name, args)
+        company = company_classes(tool_name)
+        if company is not None:
+            # A company's tool, through the gateway's `pap` toolset: what it
+            # does is the gateway's own table (PAP_DATALAYER R-02).
+            return Enforced(
+                tool_name, decision_for(self.app, tool_name, classes=list(company))
+            )
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
         if tool_name.startswith(HOST_TOOL_PREFIX):
@@ -492,6 +505,11 @@ class AppRulesCapability(AbstractCapability[Any]):
             return tool_given(tool_name)
         if part_of(tool_name) is not None or tool_name in READING_TOOLS:
             return True
+        granted = company_actions(self.app, tool_name)
+        if granted is not None:
+            # A connection to a company that reads gives only what reads.
+            classes = company_classes(tool_name) or ()
+            return all(item == "read" for item in classes) or "write" in granted
         if tool_name == "call_tool" or not self._is_mcp_tool(tool_name):
             return True
         ref = self.mcp_ref(tool_name)
