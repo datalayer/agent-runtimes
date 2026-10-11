@@ -42,6 +42,8 @@ import {
   LoopSlots,
   type LoopWorkspaceContext,
 } from '../../core';
+import { PapSignInCard } from '../pap-sign-in/PapSignInCard';
+import { isPapSignInTool } from '../pap-sign-in/signIn';
 import {
   SurfaceToolResult,
   type SurfaceRendered,
@@ -134,6 +136,11 @@ export function createA2uiSurfacePlugin(
   // every tool that is not a surface: this renderer is the chat's only one,
   // and returning nothing for a tool it does not own hid every other tool
   // row — the notebook reads, the cell runs — from the transcript.
+  //
+  // The chat keeps one renderer (`LoopChatExtras` merges later-wins), so the
+  // other tools drawn in the transcript are drawn from here too: the
+  // gateway's `pap_sign_in`, as *Sign in at a company* (AGENT_PROTOCOLS
+  // PI-56), with the same captured `send` for *Check again*.
   const renderToolResult = (context: ToolCallRenderContext): ReactNode =>
     tools.has(context.toolName) && context.status !== 'error' ? (
       <SurfaceToolResult
@@ -142,6 +149,12 @@ export function createA2uiSurfacePlugin(
         send={send}
         onRendered={options.onRendered}
         onSubmitted={options.onSubmitted}
+      />
+    ) : isPapSignInTool(context.toolName) && context.status === 'complete' ? (
+      <PapSignInCard
+        key={context.toolCallId}
+        context={context}
+        send={currentSend ? message => send(message) : undefined}
       />
     ) : (
       context.defaultUI
