@@ -340,6 +340,21 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app)).not.toHaveProperty('setup');
     expect(dumpAppspec(app).record).toBeUndefined();
   });
+  it('reads and writes the personal agents a company accepts (PAP_DATALAYER U-04)', () => {
+    const agent = 'https://agents.example/agent.json';
+    const company = {
+      enabled: true,
+      scopes: ['poppy:read'],
+      interfaces: ['agent', 'mcp'],
+      personal_agents: 'registered',
+      registered_agents: [agent],
+    };
+    const { app, problems } = parseAppspec({ kind: 'chat', pap: { company } });
+    expect(problems).toEqual([]);
+    expect(app.pap?.company.registeredAgents).toEqual([agent]);
+    expect(app.pap?.company.interfaces).toEqual(['agent', 'mcp']);
+    expect(dumpAppspec(app).pap).toEqual({ company });
+  });
   it('reads and writes Personal Agent Protocol (PAP_DATALAYER S-01)', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
@@ -376,6 +391,7 @@ describe('writing an Appspec', () => {
         scopes: ['poppy:read'],
         extensions: [],
         personalAgents: 'any',
+        registeredAgents: [],
         operations: [],
       },
     });

@@ -507,6 +507,8 @@ export interface AppPapCompanySpec {
   extensions: string[];
   /** `any`, or `registered` personal agents only. */
   personalAgents: 'any' | 'registered';
+  /** The personal agents it accepts when `registered` only, by `client_id` URL. */
+  registeredAgents: string[];
   /**
    * What it does for the person once they confirm (PAP_DATALAYER B-04, the
    * `operations` extension): each action and each tool once.

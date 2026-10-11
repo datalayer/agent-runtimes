@@ -400,6 +400,7 @@ function parsePap(data: Data): AppPapSpec {
         ['any', 'registered'] as const,
         'any',
       ),
+      registeredAgents: texts(company.registered_agents),
       operations: records(company.operations).map(operation => ({
         action: text(operation.action),
         tool: text(operation.tool),
@@ -440,6 +441,7 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         .list('scopes', pap.company.scopes)
         .list('extensions', pap.company.extensions)
         .value<string>('personal_agents', pap.company.personalAgents, 'any')
+        .list('registered_agents', pap.company.registeredAgents)
         .list(
           'operations',
           pap.company.operations.map(
