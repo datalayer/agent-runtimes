@@ -223,6 +223,19 @@ export function balloonLine(text: string, length = 120): string {
   return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
 }
 
+/**
+ * The entry's words with a new block of text added: a block that starts
+ * after another (the words before a tool, then the words after it) begins a
+ * paragraph of its own. Appended as they streamed, the blocks ran together —
+ * Orca read *…right away.Accounting looked up…* (H-21, 2026-10-11).
+ */
+export function joinBlock(said: string, block: string): string {
+  if (!said || !block || /\s$/.test(said) || /^\s/.test(block)) {
+    return said + block;
+  }
+  return `${said}\n\n${block}`;
+}
+
 /** The name of the entry's tool for a peer, as its instructions call it: `ask_<peer id>`. */
 export function askToolOf(peerId: string): string {
   return `ask_${peerId.replace(/-/g, '_')}`;
@@ -779,6 +792,8 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
       history.current = [...history.current, { role: 'user', content: asked }];
       abort.current = new AbortController();
       let said = '';
+      // A text block has started and has not yet written: its first words join the earlier ones as a paragraph.
+      let opened = false;
       // The turn, as a span: the entry's model, from the question to the
       // answer, and its tokens; its calls to the peers under it.
       const turnSpan = inspector
@@ -857,8 +872,15 @@ export function useA2ATeam(options: UseA2ATeamOptions): A2ATeam {
             // The peer has handed its answer over: back at rest, its last
             // words still in its balloon.
             setPersona(to.id, prev => ({ ...prev, state: 'idle' }));
+          } else if (part.type === 'text-start') {
+            opened = true;
           } else if (part.type === 'text-delta') {
-            said += part.text;
+            if (opened && part.text) {
+              said = joinBlock(said, part.text);
+              opened = false;
+            } else {
+              said += part.text;
+            }
             setEntryPersona(prev => ({
               ...prev,
               state: 'speaking',

@@ -190,6 +190,19 @@ describe('AnswerSurfaces', () => {
         'Accounting',
       ),
     ).toBe('You chose: Not now. Accounting: Nothing sent.');
+    // The reply in plain words: Orca was given its backticks (H-21, 2026-10-11).
+    expect(
+      answerSaid(
+        {
+          chose: 'Yes',
+          waiting: false,
+          reply: 'Without an account it only reads: `Yes` would do more.',
+        },
+        'Accounting',
+      ),
+    ).toBe(
+      'You chose: Yes. Accounting: Without an account it only reads: Yes would do more.',
+    );
     expect(answerSaid({ chose: 'Yes', waiting: true })).toBe(
       'You chose: Yes. Asking…',
     );
@@ -252,9 +265,9 @@ describe('AnswerSurfaces', () => {
         ),
       ).toBeTruthy();
       expect(screen.getByText('You chose: Send them')).toBeTruthy();
-      // Heard as one sentence, from a status there before the press (H-21).
+      // Heard as one sentence, from a status there before the press, in plain words (H-21).
       expect(screen.getByRole('status').textContent).toBe(
-        'You chose: Send them. Accounting: Without an account it only reads: `Send them` would do more than read, so it asked nobody and did nothing.',
+        'You chose: Send them. Accounting: Without an account it only reads: Send them would do more than read, so it asked nobody and did nothing.',
       );
       // One choice per surface.
       fireEvent.click(screen.getByRole('button', { name: 'Not now' }));

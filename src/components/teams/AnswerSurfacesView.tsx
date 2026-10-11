@@ -26,6 +26,7 @@ import {
 import { readA2uiToolResult } from '../../apps/plugins/a2ui-surface/toolResult';
 import { pressedOf, type AnswerSurfacesProps } from './AnswerSurfaces';
 import type { A2ATeamSurface } from './useA2ATeam';
+import { plainWords } from '../../voice/sentences';
 
 type Answered = {
   chose: string;
@@ -39,7 +40,8 @@ type Answered = {
  * What a screen reader hears of a press, as one sentence: the choice, then
  * that the member is asked, then its reply. The lines drawn were the live
  * region, and Orca read them run together with the spinner's own words —
- * *You chose: Not nowLoading Asking Accounting…* (H-21, 2026-10-11).
+ * *You chose: Not nowLoading Asking Accounting…* (H-21, 2026-10-11). The
+ * reply is said in plain words, without Markdown's signs (its backticks).
  */
 export function answerSaid(
   answered: Pick<Answered, 'chose' | 'reply' | 'waiting'> | null,
@@ -53,7 +55,8 @@ export function answerSaid(
     return `${chose} ${name ? `Asking ${name}…` : 'Asking…'}`;
   }
   if (answered.reply) {
-    return `${chose} ${name ? `${name}: ${answered.reply}` : answered.reply}`;
+    const reply = plainWords(answered.reply);
+    return `${chose} ${name ? `${name}: ${reply}` : reply}`;
   }
   return chose;
 }

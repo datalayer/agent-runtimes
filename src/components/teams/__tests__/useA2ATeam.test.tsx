@@ -504,3 +504,21 @@ describe('a button pressed on what a peer showed', () => {
     ]);
   });
 });
+
+describe('the entry’s words, block after block', () => {
+  it('starts a block written after another as a paragraph of its own (H-21)', async () => {
+    const { joinBlock } = await import('../useA2ATeam');
+    // Orca read "…right away.Accounting looked up…" (2026-10-11).
+    expect(
+      joinBlock(
+        'I will ask Accounting right away.',
+        'Accounting looked up the books.',
+      ),
+    ).toBe(
+      'I will ask Accounting right away.\n\nAccounting looked up the books.',
+    );
+    expect(joinBlock('', 'First words.')).toBe('First words.');
+    expect(joinBlock('Before. ', 'After.')).toBe('Before. After.');
+    expect(joinBlock('Before.', ' After.')).toBe('Before. After.');
+  });
+});
