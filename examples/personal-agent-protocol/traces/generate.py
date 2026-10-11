@@ -404,14 +404,38 @@ def fact(label: str, value: object, group: str | None = None) -> dict[str, str]:
     return item
 
 
-def company_facts(service: CompanyService, client_label: str) -> list[dict[str, str]]:
+async def company_facts(
+    service: CompanyService, client_label: str
+) -> list[dict[str, str]]:
     """What a company holds: Sessions, accounts, conversations, operations (never tokens)."""
 
+    from personal_agent_protocol.company.store import (
+        ACCOUNT_TOKEN,
+        CLIENT,
+        CONVERSATION,
+        OPERATION,
+        SESSION,
+        AccountGrant,
+        StoredConversation,
+        StoredOperation,
+        StoredSession,
+    )
+
     store = service.store
-    sessions = list(store.sessions.values())
+
+    async def records(kind: str, record: Any) -> list[Any]:
+        # The demo's memory store lists its live keys, for inspection.
+        found = []
+        for key in store.keys(kind):
+            entry = await store.get(kind, key)
+            if entry is not None:
+                found.append(record.from_json(entry.value))
+        return found
+
+    sessions = [stored.current for stored in await records(SESSION, StoredSession)]
     signed_in = [session for session in sessions if session.account_id]
     facts = [
-        fact("Verified client", client_label if service.extensions else "None yet"),
+        fact("Verified client", client_label if store.keys(CLIENT) else "None yet"),
         fact(
             "Sessions",
             f"{len(sessions)} live · {len(signed_in)} signed in"
@@ -424,13 +448,13 @@ def company_facts(service: CompanyService, client_label: str) -> list[dict[str, 
         facts.append(fact("Granted scopes", " ".join(signed_in[-1].scopes)))
     elif sessions:
         facts.append(fact("Who is it?", "A pairwise identifier only"))
-    grants = list(store.account_tokens.values())
+    grants = await records(ACCOUNT_TOKEN, AccountGrant)
     if grants:
         live = [grant for grant in grants if not grant.revoked]
         facts.append(
             fact("Account Tokens issued", f"{len(grants)} · {len(live)} not revoked")
         )
-    for conversation in store.conversations.values():
+    for conversation in await records(CONVERSATION, StoredConversation):
         kind = "Direct conversation" if conversation.parent_id else "Conversation"
         facts.append(
             fact(
@@ -438,7 +462,7 @@ def company_facts(service: CompanyService, client_label: str) -> list[dict[str, 
                 f"{conversation.status} · {conversation.responder} · {len(conversation.events)} events",
             )
         )
-    for stored in store.operations.values():
+    for stored in await records(OPERATION, StoredOperation):
         operation = stored.operation
         approved = (
             f" · approved by {operation.confirmation.approved_by}"
@@ -562,7 +586,7 @@ class World:
             "manzanita",
             "Signs in on manzanita.example/device, enters the code, approves Atlas",
         )
-        self.shop.approve_device(started.user_code, account_id="acct_ada")
+        await self.shop.approve_device(started.user_code, account_id="acct_ada")
         self.clock.advance(started.poll_interval)
         done = await device.poll(started.reference)
         assert done.status == "complete" and done.token is not None
@@ -575,11 +599,11 @@ class World:
     def atlas_view(self) -> list[dict[str, str]]:
         return atlas_facts(self.host, self.session, company="Manzanita Outfitters")
 
-    def shop_view(self) -> list[dict[str, str]]:
-        return company_facts(self.shop, "atlas.example/agent.json")
+    async def shop_view(self) -> list[dict[str, str]]:
+        return await company_facts(self.shop, "atlas.example/agent.json")
 
-    def views(self) -> dict[str, list[dict[str, str]]]:
-        return {"atlas": self.atlas_view(), "manzanita": self.shop_view()}
+    async def views(self) -> dict[str, list[dict[str, str]]]:
+        return {"atlas": self.atlas_view(), "manzanita": await self.shop_view()}
 
     def context(self) -> AccountTokenContext:
         return AccountTokenContext(
@@ -605,7 +629,7 @@ async def discover_and_start(world: World, chat: list[dict[str, Any]]) -> None:
         "Atlas reads Manzanita's public poppy.json and OAuth metadata, then opens a signed-out, "
         "pairwise Session. Manzanita verifies Atlas by fetching its client metadata and keys.",
         chat=chat,
-        views=world.views(),
+        views=await world.views(),
     )
 
 
@@ -656,7 +680,7 @@ async def user_with_a_company() -> Trace:
                 "Manzanita needs you to sign in before it can look up the order.",
             ),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
 
     done = await world.device_sign_in()
@@ -675,7 +699,7 @@ async def user_with_a_company() -> Trace:
             ),
             say("atlas", f"You're signed in: {', '.join(done.granted_scopes)}."),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
 
     page_ = await world.conversations.send(
@@ -698,7 +722,7 @@ async def user_with_a_company() -> Trace:
             say("manzanita", page_.events[-1].message.text),  # type: ignore[union-attr]
             approval("manzanita", proposal, "needs your approval"),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
 
     trace.action("user", "atlas", f"Approves revision {proposal.revision} as shown")
@@ -718,7 +742,7 @@ async def user_with_a_company() -> Trace:
             approval("user", proposal, "approved"),
             result("manzanita", outcome.operation),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
 
     trace.action("user", "atlas", "Disconnects Atlas from Manzanita")
@@ -736,7 +760,7 @@ async def user_with_a_company() -> Trace:
         ],
         views={
             "atlas": atlas_facts(world.host, None, company="Manzanita Outfitters"),
-            "manzanita": world.shop_view(),
+            "manzanita": await world.shop_view(),
         },
     )
     return trace
@@ -767,7 +791,7 @@ async def account_tokens() -> Trace:
             ),
             say("atlas", "Connected to Manzanita."),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     accounts = AccountTokenClient(reactor=world.reactor, http_client=world.http)
     reference = done.account_token_reference
@@ -782,7 +806,7 @@ async def account_tokens() -> Trace:
         "assertion, and a fresh DPoP proof. Manzanita rotates the token; the new one replaces "
         f"the old before the call returns (rotated: {refreshed.rotated}).",
         chat=[say("atlas", "(Signed in again in the background.)")],
-        views=world.views(),
+        views=await world.views(),
     )
     narrowed = await accounts.refresh(
         reference,
@@ -809,7 +833,7 @@ async def account_tokens() -> Trace:
                 "To do more than read your orders, I'd need you to sign in again.",
             )
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     trace.action("user", "atlas", "Disconnects Atlas from Manzanita")
     await accounts.revoke(reference, context=world.context())
@@ -827,7 +851,7 @@ async def account_tokens() -> Trace:
         ],
         views={
             "atlas": atlas_facts(world.host, None, company="Manzanita Outfitters"),
-            "manzanita": world.shop_view(),
+            "manzanita": await world.shop_view(),
         },
     )
     return trace
@@ -873,7 +897,7 @@ async def mediated_sign_in() -> Trace:
             ),
             say("atlas", f"Manzanita sent a code to {started.sent_to}."),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     trace.action("user", "atlas", "Mistypes the code on the protected input")
     wrong = await mediated.submit_code(
@@ -904,7 +928,7 @@ async def mediated_sign_in() -> Trace:
             ),
             say("atlas", f"You're signed in: {', '.join(done.granted_scopes)}."),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     return trace
 
@@ -926,7 +950,7 @@ async def conversation_streaming() -> Trace:
         "Conversation",
         "Atlas starts the conversation and returns at once with a receipt; the events come next.",
         chat=[],
-        views=world.views(),
+        views=await world.views(),
     )
     await world.conversations.close(
         world.endpoint, page_.conversation_id, token=world.session, **world.who
@@ -954,7 +978,7 @@ async def conversation_streaming() -> Trace:
             {"speaker": "manzanita", "kind": "delta", "text": deltas[0].text},
             say("manzanita", reply),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     await_items = [
         item
@@ -975,7 +999,7 @@ async def conversation_streaming() -> Trace:
         f"Reopened with Last-Event-ID, the stream skips the {len(events) - len(resumed)} event(s) "
         "already handled and continues to the end.",
         chat=[],
-        views=world.views(),
+        views=await world.views(),
     )
     return trace
 
@@ -1017,7 +1041,7 @@ async def conversation_control() -> Trace:
             say("manzanita", hello),
             say("user", "I'll take it from here."),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     try:
         await world.conversations.send(
@@ -1035,7 +1059,7 @@ async def conversation_control() -> Trace:
         f"While the direct conversation is open, the parent refuses Atlas's messages with "
         f"{refusal}, naming the open one.",
         chat=[],
-        views=world.views(),
+        views=await world.views(),
     )
     await world.conversations.close(
         world.endpoint, direct.conversation_id, token=world.session, **world.who
@@ -1049,7 +1073,7 @@ async def conversation_control() -> Trace:
         "Closing the direct conversation tells the parent (direct_closed). Atlas then asks for "
         f"a person: the parent goes queued, then a {receipt.responder} responds.",
         chat=[say("atlas", "A person at Manzanita will take it from here.")],
-        views=world.views(),
+        views=await world.views(),
     )
     await world.conversations.close(
         world.endpoint, parent.conversation_id, token=world.session, **world.who
@@ -1059,7 +1083,7 @@ async def conversation_control() -> Trace:
         "Close",
         "Atlas closes the conversation. Closing ends the conversation, not what it started.",
         chat=[say("atlas", "Conversation with Manzanita closed.")],
-        views=world.views(),
+        views=await world.views(),
     )
     return trace
 
@@ -1108,11 +1132,11 @@ async def operations() -> Trace:
             say("manzanita", page_.events[-1].message.text),  # type: ignore[union-attr]
             approval("manzanita", first, "needs your approval"),
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     trace.action("user", "atlas", "Approves revision 1")
     approval_of_first = approve(first)
-    world.shop.revise(
+    await world.shop.revise(
         first.operation_id,
         summary=f"{first.summary} Return the original by 2026-10-25.",
         terms={**(first.terms or {}), "return_by": "2026-10-25"},
@@ -1135,7 +1159,7 @@ async def operations() -> Trace:
             ),
             approval("manzanita", second, "needs your approval"),  # type: ignore[arg-type]
         ],
-        views=world.views(),
+        views=await world.views(),
     )
     trace.action("user", "atlas", f"Approves revision {second.revision}")  # type: ignore[union-attr]
     confirmed = await world.operations.confirm(
@@ -1161,7 +1185,7 @@ async def operations() -> Trace:
             approval("user", second, "approved"),
             result("manzanita", confirmed.operation),
         ],  # type: ignore[arg-type]
-        views=world.views(),
+        views=await world.views(),
     )
     page_ = await world.conversations.send(
         world.endpoint,
@@ -1182,7 +1206,7 @@ async def operations() -> Trace:
         "cancel",
         "A second proposal Ada declines is cancelled: nothing was changed.",
         chat=[approval("manzanita", other, "declined"), result("manzanita", cancelled)],
-        views=world.views(),
+        views=await world.views(),
     )
     return trace
 
@@ -1213,12 +1237,12 @@ async def two_companies() -> Trace:
     operations_client = OperationsClient(transport=transport)
     session: Any = None
 
-    def views() -> dict[str, list[dict[str, str]]]:
+    async def views() -> dict[str, list[dict[str, str]]]:
         link = next(iter(at_northwind.links.values()), None)
         as_agent = "As Ada's personal agent at Northwind"
         ledgerly_facts = [
             {**item, "group": "As a company to Atlas"}
-            for item in company_facts(firm, "atlas.example/agent.json")
+            for item in await company_facts(firm, "atlas.example/agent.json")
         ]
         if link is None:
             ledgerly_facts.append(fact("Northwind", "Not connected", as_agent))
@@ -1255,7 +1279,7 @@ async def two_companies() -> Trace:
         return {
             "atlas": atlas_facts(host, session, company="Ledgerly"),
             "ledgerly": ledgerly_facts,
-            "northwind": company_facts(bank, "ledgerly.example/poppy/agent.json"),
+            "northwind": await company_facts(bank, "ledgerly.example/poppy/agent.json"),
         }
 
     company = await DiscoveryClient(reactor=reactor, http_client=http).discover(
@@ -1286,7 +1310,7 @@ async def two_companies() -> Trace:
             ),
             say("atlas", "I'll connect to Ledgerly first."),
         ],
-        views=views(),
+        views=await views(),
     )
 
     device = DeviceSignInClient(reactor=reactor, http_client=http)
@@ -1304,7 +1328,7 @@ async def two_companies() -> Trace:
     trace.action(
         "user", "ledgerly", "Signs in on ledgerly.example/device and approves Atlas"
     )
-    firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
+    await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
     clock.advance(started.poll_interval)
     done = await device.poll(started.reference)
     session = done.token
@@ -1322,7 +1346,7 @@ async def two_companies() -> Trace:
                 "Ada signs in to Ledgerly and approves Atlas.",
             ),
         ],
-        views=views(),
+        views=await views(),
     )
 
     endpoint = company.document.agent.protocols[0].endpoint
@@ -1355,7 +1379,7 @@ async def two_companies() -> Trace:
         "its own client_id and keys: it discovers Northwind, opens its own pairwise Session, "
         "and starts Device Sign-In there. Northwind verifies Ledgerly, not Atlas.",
         chat=[say("user", "Pay INV-0042."), say("ledgerly", reply.text)],
-        views=views(),
+        views=await views(),
     )
 
     trace.action(
@@ -1363,7 +1387,7 @@ async def two_companies() -> Trace:
         "northwind",
         "Signs in on northwind.example/device and approves Ledgerly",
     )
-    bank.approve_device(connect["user_code"], account_id=ACCOUNT)
+    await bank.approve_device(connect["user_code"], account_id=ACCOUNT)
     clock.advance(5)
     trace.step(
         "Ada approves Ledgerly at Northwind",
@@ -1377,7 +1401,7 @@ async def two_companies() -> Trace:
                 "Ada signs in to Northwind Bank and approves Ledgerly.",
             )
         ],
-        views=views(),
+        views=await views(),
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Done. Pay INV-0042")
@@ -1393,7 +1417,7 @@ async def two_companies() -> Trace:
             say("ledgerly", page_.events[-1].message.text),
             approval("ledgerly", relayed, "needs your approval"),
         ],
-        views=views(),
+        views=await views(),
     )
 
     trace.action("user", "atlas", f"Approves Ledgerly's revision {relayed.revision}")
@@ -1410,7 +1434,7 @@ async def two_companies() -> Trace:
             approval("user", relayed, "approved"),
             result("ledgerly", paid.operation),
         ],
-        views=views(),
+        views=await views(),
     )
 
     page_ = await tell(
@@ -1436,7 +1460,7 @@ async def two_companies() -> Trace:
             approval("ledgerly", grant, "approved"),
             result("ledgerly", granted.operation),
         ],
-        views=views(),
+        views=await views(),
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0043")
@@ -1447,7 +1471,7 @@ async def two_companies() -> Trace:
         "Northwind proposes the next payment; it is within the permission, so Ledgerly confirms "
         "it at Northwind with approved_by: standing_permission and tells Ada what was done.",
         chat=[say("user", "Pay INV-0043."), say("ledgerly", told.text)],
-        views=views(),
+        views=await views(),
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0044")
@@ -1462,7 +1486,7 @@ async def two_companies() -> Trace:
             say("ledgerly", page_.events[-1].message.text),
             approval("ledgerly", over, "needs your approval"),
         ],
-        views=views(),
+        views=await views(),
     )
     assert len(bank_plugin.executor.performed) == 2
     return trace

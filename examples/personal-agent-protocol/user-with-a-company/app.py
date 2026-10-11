@@ -108,7 +108,7 @@ async def explain_user_with_a_company() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
             session_id=session.session_id,
         )
-        shop.approve_device(started.user_code, account_id="acct_ada")
+        await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
         done = await device.poll(started.reference)
         token = done.token
@@ -152,7 +152,7 @@ async def explain_user_with_a_company() -> dict[str, Any]:
 
     confirmed = outcome.operation
     assert confirmed is not None and confirmed.confirmation and confirmed.result
-    stored = shop.store.operations[proposal.operation_id]
+    stored = await shop.operation_record(proposal.operation_id)
     return {
         "personal_agent": "Atlas",
         "company": company.document.organization.name,

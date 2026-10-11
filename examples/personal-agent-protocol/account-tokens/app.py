@@ -72,7 +72,7 @@ async def explain_account_tokens() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
             session_id=session.session_id,
         )
-        shop.approve_device(started.user_code, account_id="acct_ada")
+        await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
         signed_in = await device.poll(started.reference)
         reference = signed_in.account_token_reference

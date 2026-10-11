@@ -93,7 +93,7 @@ async def explain_two_companies() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
             session_id=session.session_id,
         )
-        firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
+        await firm.approve_device(started.user_code, account_id="acct_ada_ledgerly")
         clock.advance(started.poll_interval)
         token = (await device.poll(started.reference)).token
         assert token is not None
@@ -124,7 +124,7 @@ async def explain_two_companies() -> dict[str, Any]:
         # 1. Ledgerly connects to Northwind as Ada's personal agent there.
         page = await say(None, None, "Pay INV-0042")
         connect = page.events[-1].message.data["connect"]
-        bank.approve_device(connect["user_code"], account_id=ACCOUNT)
+        await bank.approve_device(connect["user_code"], account_id=ACCOUNT)
         clock.advance(5)
 
         # 2. Northwind's proposal reaches Ada as a Ledgerly operation; she approves it.
@@ -152,7 +152,7 @@ async def explain_two_companies() -> dict[str, Any]:
         beyond = page.events[-1].message.operation
 
     at_bank = [
-        bank.store.operations[op_id].operation
+        (await bank.operation_record(op_id)).operation
         for op_id in bank_plugin.executor.performed
     ]
     permission = next(iter(at_northwind.standing.permissions.values()))

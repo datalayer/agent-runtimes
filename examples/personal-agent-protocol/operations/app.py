@@ -87,7 +87,7 @@ async def explain_operations() -> dict[str, Any]:
             pairwise_user_id=PAIRWISE,
             session_id=session.session_id,
         )
-        shop.approve_device(started.user_code, account_id="acct_ada")
+        await shop.approve_device(started.user_code, account_id="acct_ada")
         clock.advance(started.poll_interval)
         token = (await device.poll(started.reference)).token
         assert token is not None
@@ -136,7 +136,7 @@ async def explain_operations() -> dict[str, Any]:
 
         # Ada approved revision 1; the company added a return deadline before it was confirmed.
         approval_of_first = approve(first)
-        shop.revise(
+        await shop.revise(
             first.operation_id,
             summary=f"{first.summary} Return the original by 2026-10-25.",
             terms={**first.terms, "return_by": "2026-10-25"},
