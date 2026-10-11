@@ -178,6 +178,23 @@ describe('a surface a peer shows', () => {
 });
 
 describe('AnswerSurfaces', () => {
+  it('says a press as one sentence: the choice, the asking, the reply', async () => {
+    const { answerSaid } = await import('../AnswerSurfacesView');
+    expect(answerSaid(null, 'Accounting')).toBe('');
+    expect(answerSaid({ chose: 'Not now', waiting: true }, 'Accounting')).toBe(
+      'You chose: Not now. Asking Accounting…',
+    );
+    expect(
+      answerSaid(
+        { chose: 'Not now', waiting: false, reply: 'Nothing sent.' },
+        'Accounting',
+      ),
+    ).toBe('You chose: Not now. Accounting: Nothing sent.');
+    expect(answerSaid({ chose: 'Yes', waiting: true })).toBe(
+      'You chose: Yes. Asking…',
+    );
+  });
+
   it(
     'draws the catalog, and a button answers the peer with what it does',
     { timeout: 30000 },
@@ -230,9 +247,15 @@ describe('AnswerSurfaces', () => {
         does: 'send',
       });
       expect(
-        await screen.findByText(/Without an account it only reads/),
+        await screen.findByText(
+          /^Accounting: Without an account it only reads/,
+        ),
       ).toBeTruthy();
       expect(screen.getByText('You chose: Send them')).toBeTruthy();
+      // Heard as one sentence, from a status there before the press (H-21).
+      expect(screen.getByRole('status').textContent).toBe(
+        'You chose: Send them. Accounting: Without an account it only reads: `Send them` would do more than read, so it asked nobody and did nothing.',
+      );
       // One choice per surface.
       fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
       expect(onPress).toHaveBeenCalledTimes(1);
@@ -267,12 +290,15 @@ describe('AnswerSurfaces', () => {
         ),
       );
       expect(
-        await screen.findByText(/Wait for the answer under way/),
+        await screen.findByText(/^Accounting: Wait for the answer under way/),
       ).toBeTruthy();
       fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
       expect(await screen.findByText('Accounting: Nothing sent.')).toBeTruthy();
       expect(screen.getByText('You chose: Not now')).toBeTruthy();
       expect(onPress).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('status').textContent).toBe(
+        'You chose: Not now. Accounting: Nothing sent.',
+      );
       // Answered: one choice per surface.
       fireEvent.click(screen.getByRole('button', { name: 'Send them' }));
       expect(onPress).toHaveBeenCalledTimes(2);

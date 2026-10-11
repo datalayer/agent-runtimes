@@ -38,6 +38,10 @@ describe('an answer, as it is heard (VO-20)', () => {
         '## Result\n\nSee [the report](https://x.io/r) and **this**:\n\n```py\nprint(1)\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nDone.',
       ),
     ).toBe('Result. See the report and this: A code block. A table. Done.');
+    // A rule between parts is not said; a list's dash still goes (H-21).
+    expect(plainWords('Found it.\n\n---\n\n- one\n\n***\nDone.')).toBe(
+      'Found it. one Done.',
+    );
   });
 
   it('is cut into sentences as it is written, never in the middle of a number', () => {

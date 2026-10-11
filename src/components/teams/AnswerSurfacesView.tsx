@@ -16,7 +16,7 @@
 
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { Spinner, Text } from '@primer/react';
+import { Spinner, Text, VisuallyHidden } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import {
@@ -34,6 +34,29 @@ type Answered = {
   /** It failed: said, and another button can be pressed. */
   failed?: boolean;
 };
+
+/**
+ * What a screen reader hears of a press, as one sentence: the choice, then
+ * that the member is asked, then its reply. The lines drawn were the live
+ * region, and Orca read them run together with the spinner's own words —
+ * *You chose: Not nowLoading Asking Accounting…* (H-21, 2026-10-11).
+ */
+export function answerSaid(
+  answered: Pick<Answered, 'chose' | 'reply' | 'waiting'> | null,
+  name?: string,
+): string {
+  if (!answered) {
+    return '';
+  }
+  const chose = `You chose: ${answered.chose}.`;
+  if (answered.waiting) {
+    return `${chose} ${name ? `Asking ${name}…` : 'Asking…'}`;
+  }
+  if (answered.reply) {
+    return `${chose} ${name ? `${name}: ${answered.reply}` : answered.reply}`;
+  }
+  return chose;
+}
 
 function OneSurface({
   surface,
@@ -90,25 +113,32 @@ function OneSurface({
           This could not be drawn: it holds no surface.
         </Text>
       )}
+      {/* Mounted before a press, so that what it then says is heard. */}
+      <VisuallyHidden role="status" data-answer-said="">
+        {answerSaid(answered, name)}
+      </VisuallyHidden>
       {answered ? (
         <Box
-          role="status"
           data-answer-reply=""
           display="flex"
           flexDirection="column"
           gap={1}
           fontSize={1}
         >
-          <Text sx={{ color: 'fg.muted' }}>You chose: {answered.chose}</Text>
+          <Text as="p" sx={{ color: 'fg.muted', m: 0 }}>
+            You chose: {answered.chose}
+          </Text>
           {answered.waiting ? (
             <Box display="flex" alignItems="center" gap={2}>
-              <Spinner size="small" />
-              <Text sx={{ color: 'fg.muted' }}>
+              <Spinner size="small" srText={null} />
+              <Text as="p" sx={{ color: 'fg.muted', m: 0 }}>
                 {name ? `Asking ${name}…` : 'Asking…'}
               </Text>
             </Box>
           ) : answered.reply ? (
-            <Text>{name ? `${name}: ${answered.reply}` : answered.reply}</Text>
+            <Text as="p" sx={{ m: 0 }}>
+              {name ? `${name}: ${answered.reply}` : answered.reply}
+            </Text>
           ) : null}
         </Box>
       ) : null}

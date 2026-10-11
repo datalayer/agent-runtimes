@@ -29,6 +29,7 @@ import {
 } from './toolLine';
 import { useChatWords } from '../ChatLanguage';
 import { ENGLISH_CHAT_WORDS, type ChatWords } from '../words';
+import { plainWords } from '../../voice/sentences';
 
 /** Out of sight, still heard. */
 const VISUALLY_HIDDEN = {
@@ -168,6 +169,46 @@ export function ToolLineAnnouncer({
 }
 
 /**
+ * What a screen reader hears of the balloon's words: the whole of them, in
+ * plain words, once they are all written — never each word as it streams,
+ * nor the few lines the balloon is cut to, nor Markdown's signs. The words
+ * drawn were a live region of their own, with `aria-busy` while they
+ * streamed, which Orca does not wait for: it read *There*, then *There are
+ * 4 open customer invoices in the books, and*, then the balloon's cut ending
+ * in a table's pipes (H-21, 2026-10-11).
+ */
+export function WordsAnnouncer({
+  text,
+  speaking = false,
+}: {
+  /** The words, whole. */
+  text?: string;
+  /** Still arriving: said once they have. */
+  speaking?: boolean;
+}): JSX.Element {
+  const last = useRef<string | undefined>(undefined);
+  const [said, setSaid] = useState('');
+  useEffect(() => {
+    if (speaking || !text || text === last.current) {
+      return;
+    }
+    last.current = text;
+    setSaid(plainWords(text));
+  }, [text, speaking]);
+  return (
+    <Box
+      as="span"
+      role="status"
+      aria-live="polite"
+      data-balloon-words-announce=""
+      {...VISUALLY_HIDDEN}
+    >
+      {said}
+    </Box>
+  );
+}
+
+/**
  * The `current` balloon's mark: *Now*, with a dot that breathes while the
  * agent is at work — still for a reader who asks for reduced motion.
  */
@@ -292,6 +333,8 @@ export function CurrentBalloonBody({
   attachment?: ReactNode;
 }): JSX.Element {
   const textRef = useRef<HTMLElement | null>(null);
+  // Cut to the balloon's lines (`…`), the whole words being known.
+  const cut = !whole && !!text && !!fullText && fullText !== text;
   useLayoutEffect(() => {
     const element = textRef.current;
     if (!element || whole || !onOverflow) {
@@ -312,7 +355,7 @@ export function CurrentBalloonBody({
         <BalloonToolCall line={tool} waiting={waiting} />
       ) : text ? (
         <Box
-          aria-live="polite"
+          // Read in place, not live: `WordsAnnouncer` says the words.
           aria-busy={speaking}
           ref={textRef}
           data-balloon-current-text={whole ? 'whole' : ''}
@@ -323,10 +366,24 @@ export function CurrentBalloonBody({
           overflow={whole ? undefined : 'hidden'}
         >
           {/* The chat's own markdown: the words as written, whole. */}
-          <ChatMarkdown
-            density="compact"
-            text={whole ? (fullText ?? text) : text}
-          />
+          {cut ? (
+            <>
+              {/* Cut for the eye; a screen reader is given them whole, in
+                  plain words — Orca read the cut, *…or a customer…*
+                  (H-21, 2026-10-11). */}
+              <Box aria-hidden="true">
+                <ChatMarkdown density="compact" text={text} />
+              </Box>
+              <Box as="span" data-balloon-words-whole="" {...VISUALLY_HIDDEN}>
+                {plainWords(fullText ?? '')}
+              </Box>
+            </>
+          ) : (
+            <ChatMarkdown
+              density="compact"
+              text={whole ? (fullText ?? text) : text}
+            />
+          )}
           {waiting && (
             <Box as="span" ml={2} display="inline-flex">
               <TypingDots size={5} />
@@ -337,6 +394,10 @@ export function CurrentBalloonBody({
         <TypingDots size={6} />
       ) : null}
       {attachment}
+      <WordsAnnouncer
+        text={tool ? undefined : (fullText ?? text)}
+        speaking={speaking}
+      />
       <ToolLineAnnouncer line={tool} />
     </Box>
   );

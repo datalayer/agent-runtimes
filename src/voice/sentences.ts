@@ -21,6 +21,9 @@ export function plainWords(markdown: string): string {
       .replace(/```[\s\S]*?(```|$)/g, ' A code block. ')
       // A table: its rows, said once as what they are.
       .replace(/(^|\n)(\|[^\n]*\|[ \t]*(\n|$))+/g, '$1 A table. \n')
+      // A rule between parts (`---`) is not said: Orca read it out in the
+      // balloon's words (H-21, 2026-10-11).
+      .replace(/^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/gm, '')
       .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
       .replace(/`([^`]*)`/g, '$1')

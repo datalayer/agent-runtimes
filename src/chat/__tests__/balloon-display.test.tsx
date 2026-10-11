@@ -197,6 +197,8 @@ describe('the two balloon displays', () => {
     const words = balloon?.querySelector('[data-balloon-current-text]');
     expect(words?.textContent).toBe('Three customers wrote');
     expect(words?.getAttribute('aria-busy')).toBe('true');
+    // Read in place, not live: the announcer says them, once.
+    expect(words?.hasAttribute('aria-live')).toBe(false);
     // Nothing in it scrolls.
     expect(
       (words as HTMLElement | null)?.style.overflow ||
@@ -217,6 +219,89 @@ describe('the two balloon displays', () => {
         '[data-balloon-attachment] [data-testid="given"]',
       ),
     ).not.toBeNull();
+  });
+});
+
+describe('the words, to a screen reader (H-21)', () => {
+  const words = (container: HTMLElement) =>
+    container.querySelector('[data-balloon-words-announce]');
+
+  it('are said once all have arrived, whole and in plain words', async () => {
+    const whole =
+      'There are **4 open** invoices:\n\n| Invoice | Due |\n|---|---|\n| INV/1 | €3,993.00 |\n\nThe first is overdue.';
+    const { container, draw } = await render({
+      balloonDisplay: 'current',
+      balloon: { text: 'There', speaking: true, busy: true },
+    });
+    const region = words(container);
+    expect(region?.getAttribute('role')).toBe('status');
+    expect(region?.getAttribute('aria-live')).toBe('polite');
+    const changes: string[] = [];
+    const observer = new MutationObserver(() =>
+      changes.push(region?.textContent ?? ''),
+    );
+    observer.observe(region as Node, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    // As they stream, cut to the balloon's lines: nothing said.
+    await draw({
+      balloonDisplay: 'current',
+      balloon: {
+        text: 'There are 4 open invoices: | Invoic…',
+        fullText: whole.slice(0, 60),
+        speaking: true,
+        busy: true,
+      },
+    });
+    expect(region?.textContent).toBe('');
+    // Done: the whole of them, once.
+    await draw({
+      balloonDisplay: 'current',
+      balloon: {
+        text: 'There are 4 open invoices: | Invoic…',
+        fullText: whole,
+      },
+    });
+    await draw({
+      balloonDisplay: 'current',
+      balloon: {
+        text: 'There are 4 open invoices: | Invoic…',
+        fullText: whole,
+      },
+    });
+    observer.disconnect();
+    expect(region?.textContent).toBe(
+      'There are 4 open invoices: A table. The first is overdue.',
+    );
+    expect(changes.filter(Boolean)).toHaveLength(1);
+  });
+
+  it('are read whole where the balloon cuts them', async () => {
+    const { container } = await render({
+      balloonDisplay: 'current',
+      balloon: {
+        text: 'Ask me for a report, such as revenue or a customer…',
+        fullText:
+          'Ask me for a report, such as revenue or a customer’s **balance**.',
+      },
+    });
+    const drawn = container.querySelector('[data-balloon-current-text]');
+    expect(drawn?.querySelector('[aria-hidden="true"]')?.textContent).toBe(
+      'Ask me for a report, such as revenue or a customer…',
+    );
+    expect(
+      drawn?.querySelector('[data-balloon-words-whole]')?.textContent,
+    ).toBe('Ask me for a report, such as revenue or a customer’s balance.');
+  });
+
+  it('say nothing of a tool line: that is the tool announcer’s', async () => {
+    const { container } = await render({
+      balloonDisplay: 'current',
+      balloon: { text: 'Using list_invoices…', tool: line('running') },
+    });
+    expect(words(container)?.textContent).toBe('');
   });
 });
 
