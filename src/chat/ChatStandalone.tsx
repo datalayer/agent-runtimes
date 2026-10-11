@@ -146,7 +146,6 @@ export function ChatStandalone({
   animationDuration = 200,
   enableStreaming = true,
   emptyStateMessage = 'Start a conversation',
-  renderToolResult,
   onToolCallStart,
   onToolCallComplete,
   pendingPrompt,
@@ -524,7 +523,6 @@ export function ChatStandalone({
               onSettings: onSettingsClick,
             }}
             headerActions={closeButton}
-            renderToolResult={renderToolResult}
             onToolCallStart={onToolCallStart}
             onToolCallComplete={onToolCallComplete}
             description={description}

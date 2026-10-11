@@ -35,10 +35,10 @@ import {
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
 import {
-  useSpecRenderToolResult,
+  useSpecToolRenderers,
   specRendererClassName,
   type SpecRenderer,
-} from './hooks/useSpecRenderToolResult';
+} from './hooks/useToolRenderers';
 
 /**
  * Ref handle for haiku state synchronization between chat and main display
@@ -177,10 +177,8 @@ const AgUiHaikuGenUiExample: React.FC = () => {
   );
 
   // Tool name to match and CSS file to load are read from the agent spec.
-  const renderToolResult = useSpecRenderToolResult(
-    AGENTSPEC_ID,
-    haikuRenderers,
-  );
+  // Contributed as a Reactor plugin the chat resolves each tool call with.
+  useSpecToolRenderers(AGENTSPEC_ID, haikuRenderers);
 
   return (
     <ThemedProvider>
@@ -295,7 +293,6 @@ const AgUiHaikuGenUiExample: React.FC = () => {
           position="bottom-right"
           brandColor={brandColor}
           defaultOpen={true}
-          renderToolResult={renderToolResult}
           hideMessagesAfterToolUI={true}
           suggestions={[
             {

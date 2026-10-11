@@ -403,7 +403,6 @@ export function ChatFloating({
   buttonGlow = true,
   offset = 20,
   animationDuration = 200,
-  renderToolResult,
   frontendTools,
   initialState: _initialState,
   suggestions,
@@ -1714,7 +1713,6 @@ export function ChatFloating({
             brandUrl: 'https://datalayer.ai',
             ...poweredByProps,
           }}
-          renderToolResult={renderToolResult}
           description={description}
           onStateUpdate={onStateUpdate}
           onNewChat={onNewChat}

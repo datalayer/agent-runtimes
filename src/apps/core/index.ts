@@ -792,14 +792,6 @@ export type LoopChatExtrasValue = {
   /** Live codemode status for the footer indicator. */
   codemodeStatusData?: import('../../types/stream').CodemodeStatusData | null;
   /**
-   * A custom renderer for tool results in the transcript.
-   *
-   * For an example whose demonstration *is* how a tool result is drawn — the
-   * A2UI examples render their agent's surface here. Wins over the notebook
-   * tool-surface rendering when set. See `ChatBase.renderToolResult`.
-   */
-  renderToolResult?: import('../../types/chat').RenderToolResult;
-  /**
    * Extra frontend tools the agent may call, from the host example.
    *
    * Folded into the loop's frontend-tool set alongside the notebook and

@@ -13,6 +13,8 @@
 import { MicrophoneIcon } from '@datalayer/icons-react';
 import {
   Fragment,
+  lazy,
+  Suspense,
   type ReactNode,
   type RefObject,
   useState,
@@ -20,7 +22,11 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
 } from 'react';
+import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
+import { resolveToolResult } from '@datalayer/reactor/ui';
+import { ReactorDisplay } from '@datalayer/reactor/ui/react';
 import { Text, Spinner, Link, Label, RelativeTime } from '@primer/react';
 import {
   ArrowRightIcon,
@@ -55,12 +61,21 @@ import type {
   DisplayItem,
   ToolCallMessage,
   AvatarConfig,
-  RenderToolResult,
   RespondCallback,
+  ToolCallRenderContext,
 } from '../../types/chat';
 import type { ChatMessage } from '../../types/messages';
 import type { AgentStreamSubagentPayload } from '../../types/stream';
 import type { ContextSnapshotData } from '../../types/context';
+
+/** Subscribing to nothing, for a transcript with no Reactor platform behind it. */
+const NO_SUBSCRIPTION = () => () => {};
+
+/*
+ * The notebook's cell surfaces, loaded when a chat names a notebook: they
+ * bring the Jupyter output area, which a transcript without one never needs.
+ */
+const NotebookToolSurfaces = lazy(() => import('./NotebookToolSurfaces'));
 
 // ---------------------------------------------------------------------------
 // Tool Approval Config (kept for backward compat — no longer used for REST)
@@ -102,8 +117,12 @@ export interface ChatMessageListProps {
   >;
   /** Layout padding */
   padding: number;
-  /** Optional custom tool-result renderer */
-  renderToolResult?: RenderToolResult;
+  /**
+   * Show notebook tool results as read-only cell surfaces, addressed to this
+   * notebook document id (`ChatBase.notebookToolSurfacesId`). The surfaces
+   * stand in for the default row of the notebook tools.
+   */
+  notebookToolSurfacesId?: string;
   /** Content to render when there are no messages */
   emptyContent: ReactNode;
   /** Ref attached to the sentinel div at the bottom for auto-scrolling */
@@ -738,7 +757,7 @@ export function ChatMessageList({
   hideMessagesAfterToolUI,
   avatarConfig,
   padding,
-  renderToolResult,
+  notebookToolSurfacesId,
   emptyContent,
   messagesEndRef,
   onRespond,
@@ -750,6 +769,18 @@ export function ChatMessageList({
   mcpServers,
   density = 'comfortable',
 }: ChatMessageListProps) {
+  /*
+   * Who draws a tool call: the Reactor plugins of the page, when it has a
+   * platform. Each plugin binds its own tools (`ToolBindings`) and renders its
+   * own display types (`Renderers`), so two plugins never silence each other
+   * and a tool nobody claims keeps the chat's own row. Subscribed to the
+   * platform's revision, so a plugin enabled later redraws the transcript.
+   */
+  const platform = useOptionalReactorPlatform();
+  useSyncExternalStore(
+    platform?.subscribe ?? NO_SUBSCRIPTION,
+    () => platform?.getRevision() ?? 0,
+  );
   const compact = density === 'compact';
   if (compact) {
     // The balloon's: no avatars, no turn footers.
@@ -767,32 +798,9 @@ export function ChatMessageList({
     };
   };
 
-  // Build set of rendered tool call IDs to support hideMessagesAfterToolUI
-  const renderedToolCallIds = new Set<string>();
-  displayItems.forEach(item => {
-    if (isToolCallMessage(item)) {
-      if (renderToolResult) {
-        const rendered = renderToolResult({
-          toolCallId: item.toolCallId,
-          toolName: item.toolName,
-          name: item.toolName,
-          args: item.args,
-          result: item.result,
-          status: item.status,
-          error: item.error,
-          // Only tested for null-ness here, so the node itself is not built.
-          defaultUI: null,
-        });
-        if (rendered !== null && rendered !== undefined) {
-          renderedToolCallIds.add(item.toolCallId);
-        }
-      } else {
-        // Default display always renders tool calls
-        renderedToolCallIds.add(item.toolCallId);
-      }
-    }
-  });
-  const hasRenderedToolCall = renderedToolCallIds.size > 0;
+  // Every tool call draws something — a plugin's renderer or the chat's own
+  // row — which is what hideMessagesAfterToolUI hides behind.
+  const hasRenderedToolCall = displayItems.some(isToolCallMessage);
 
   /*
    * Turn boundaries: a turn opens at each of the person's messages and runs
@@ -870,16 +878,12 @@ export function ChatMessageList({
           : undefined;
 
       /*
-            The row the chat would draw by itself, handed to the caller.
-
-            `renderToolResult` replaces this outright, which is right for a
-            caller substituting a custom card and wrong for one that only
-            wants to add something beneath the row — that caller previously
-            had to reimplement it, and returning nothing for the tools it did
-            not care about hid those tools entirely. Offering the default as a
-            node lets it compose instead of choosing.
+            The row the chat would draw by itself — with the notebook's cell
+            surfaces under it when a notebook was named — handed to the
+            renderer as `defaultUI`, so a renderer composes with it or falls
+            back to it rather than reimplementing it.
           */
-      const defaultUI = (
+      const row = (
         <DefaultToolCallRenderer
           item={item}
           approvalConfig={approvalConfig}
@@ -888,22 +892,43 @@ export function ChatMessageList({
           density={density}
         />
       );
-
-      const toolUI = renderToolResult
-        ? renderToolResult({
-            toolCallId: item.toolCallId,
+      const context: ToolCallRenderContext = {
+        toolCallId: item.toolCallId,
+        toolName: item.toolName,
+        name: item.toolName,
+        args: item.args,
+        result: item.result,
+        status: item.status,
+        error: item.error,
+        respond,
+        defaultUI: row,
+      };
+      const defaultUI = notebookToolSurfacesId ? (
+        <Suspense fallback={row}>
+          <NotebookToolSurfaces
+            documentId={notebookToolSurfacesId}
+            context={context}
+          />
+        </Suspense>
+      ) : (
+        row
+      );
+      const display = platform
+        ? resolveToolResult(platform, {
             toolName: item.toolName,
-            name: item.toolName,
-            args: item.args,
             result: item.result,
-            status: item.status,
-            error: item.error,
-            respond,
-            defaultUI,
+            toolCallId: item.toolCallId,
           })
-        : defaultUI;
-
-      if (toolUI === null || toolUI === undefined) return null;
+        : undefined;
+      const toolUI = display ? (
+        <ReactorDisplay
+          display={display}
+          context={{ ...context, defaultUI }}
+          fallback={defaultUI}
+        />
+      ) : (
+        defaultUI
+      );
 
       return (
         <Box
@@ -998,10 +1023,7 @@ export function ChatMessageList({
       const prevIndex = index - 1;
       if (prevIndex >= 0) {
         const prevItem = displayItems[prevIndex];
-        if (
-          isToolCallMessage(prevItem) &&
-          renderedToolCallIds.has(prevItem.toolCallId)
-        ) {
+        if (isToolCallMessage(prevItem)) {
           return null;
         }
       }
@@ -1010,7 +1032,6 @@ export function ChatMessageList({
       const hitlToolCall = displayItems.find(
         di =>
           isToolCallMessage(di) &&
-          renderedToolCallIds.has(di.toolCallId) &&
           di.args &&
           'steps' in di.args &&
           Array.isArray(di.args.steps),

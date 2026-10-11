@@ -54,6 +54,7 @@ import { ThemedJupyterProvider, ThemedProvider } from './utils/themedProvider';
 import { A2uiMarkdownProvider } from './utils/a2uiMarkdownProvider';
 import { useA2uiProcessor } from './utils/a2ui';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { createToolRenderersPlugin } from './hooks/useToolRenderers';
 import { uniqueAgentId } from './utils/agentId';
 import { useRuntimeTarget } from './utils/runtimeTargetStore';
 
@@ -785,7 +786,8 @@ const A2UiJupyterOutputExample: React.FC = () => {
    * was told something happened and shown none of it, and had to look away to
    * find out what.
    *
-   * This is `renderToolResult` on `Chat` rather than the `render` field on the
+   * This is the tool's renderer, contributed as a Reactor plugin the chat
+   * resolves the call with, rather than the `render` field on the
    * tool definition. That field exists on `FrontendToolDefinition` and nothing
    * in the chat ever calls it; the first version of this was written there and
    * was simply dead code, which is only visible by grepping for the call site
@@ -796,7 +798,7 @@ const A2UiJupyterOutputExample: React.FC = () => {
    * figure or a widget's manager state in there would spend the context window
    * on bytes no model needs to read.
    */
-  const renderToolResult = useCallback(
+  const renderDemoTool = useCallback(
     ({ name, args, status, defaultUI, toolCallId }: ToolCallRenderContext) => {
       /*
         The chat's own tool row, and the output underneath it.
@@ -999,19 +1001,29 @@ const A2UiJupyterOutputExample: React.FC = () => {
   );
 
   // The chat column is the shared loop on the A2UI-jupyter-output capacity
-  // plugin; the bespoke run_jupyter_output_demo frontend tool and the surface
-  // renderer reach it through the chat-extras channel.
+  // plugin; the bespoke run_jupyter_output_demo frontend tool reaches it
+  // through the chat-extras channel, and its renderer as a plugin of its own.
   const { plugin: extrasPlugin, setExtras } = useMemo(
     () => createChatExtrasPlugin(),
     [],
   );
+  const { plugin: renderersPlugin, setRender } = useMemo(
+    () =>
+      createToolRenderersPlugin('@examples/a2ui-jupyter-output-demo', [
+        'run_jupyter_output_demo',
+      ]),
+    [],
+  );
   const chatPlugins = useMemo(
-    () => [AgentA2uiJupyterOutputPlugin, extrasPlugin],
-    [extrasPlugin],
+    () => [AgentA2uiJupyterOutputPlugin, extrasPlugin, renderersPlugin],
+    [extrasPlugin, renderersPlugin],
   );
   useEffect(() => {
-    setExtras({ frontendTools: [runDemoTool], renderToolResult });
-  }, [runDemoTool, renderToolResult, setExtras]);
+    setExtras({ frontendTools: [runDemoTool] });
+  }, [runDemoTool, setExtras]);
+  useEffect(() => {
+    setRender(renderDemoTool);
+  }, [renderDemoTool, setRender]);
 
   const outputPanels = (
     <Box

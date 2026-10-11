@@ -49,6 +49,7 @@ import {
 } from './plugins/chat';
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
+import { PapSignInPlugin } from './plugins/pap-sign-in';
 import { ChatViewPlugin } from './plugins/chat-view';
 import { DocumentViewPlugin } from './plugins/document-view';
 import { InputPromptPlugin } from './plugins/input-prompt';
@@ -361,6 +362,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // its surfaces drawn and submitted without a line of host code. Idle
     // for every other agent: it answers only for tools some spec bound.
     A2uiSurfacePlugin,
+    // *Sign in at a company*, where the gateway's `pap_sign_in` answers: its
+    // own renderer and binding, beside the surfaces rather than inside them.
+    PapSignInPlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not
     // contributed, so mounting these unconditionally costs an absent editor

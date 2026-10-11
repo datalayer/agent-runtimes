@@ -100,7 +100,6 @@ import {
 } from '../header/ChatHeaderBase';
 import { useChatAvailability } from './ChatAvailability';
 import { ChatEmptyState } from '../display/EmptyState';
-import { notebookToolSurfacesRenderer } from '../messages/NotebookToolSurfaces';
 import { FloatingBrandButton } from '../display/FloatingBrandButton';
 import { PoweredByTag } from '../display/PoweredByTag';
 import type { ToolbarItem } from '@datalayer/primer-addons';
@@ -866,7 +865,6 @@ function ChatBaseInner({
   showPoweredBy = false,
   poweredByProps,
   emptyState,
-  renderToolResult,
   renderHeader,
   showTurnFooter = true,
   notebookToolSurfacesId,
@@ -4668,22 +4666,6 @@ function ChatBaseInner({
   }, [configMcpServers, effectiveMcpStatusData, mcpServers]);
 
   // ---- Not ready ----
-  /*
-   * The transcript's tool renderer: the host's own, or — when a notebook was
-   * named — the built-in surfaces that show what each cell tool did. Baked
-   * in here rather than in any workspace, so every chat with a headless
-   * notebook gets the same transcript. Above the early return below, as
-   * every hook must be.
-   */
-  const effectiveRenderToolResult = useMemo(
-    () =>
-      renderToolResult ??
-      (notebookToolSurfacesId
-        ? notebookToolSurfacesRenderer(notebookToolSurfacesId)
-        : undefined),
-    [renderToolResult, notebookToolSurfacesId],
-  );
-
   if (!ready) {
     return (
       <Box
@@ -4810,7 +4792,10 @@ function ChatBaseInner({
         hideMessagesAfterToolUI={hideMessagesAfterToolUI}
         avatarConfig={defaultAvatarConfig}
         padding={padding}
-        renderToolResult={effectiveRenderToolResult}
+        // Tool calls are drawn by the page's Reactor plugins; a named
+        // notebook's cell surfaces stand in for the default row of its tools,
+        // so every chat with a headless notebook gets the same transcript.
+        notebookToolSurfacesId={notebookToolSurfacesId}
         approvalConfig={approvalConfig}
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}

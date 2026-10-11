@@ -12,7 +12,8 @@
  *
  * Backend: managed AG-UI agent runtime (agentspec: example-human-in-the-loop)
  *
- * Pattern: Uses renderToolResult with respond callback for human-in-the-loop
+ * Pattern: contributes a renderer for the tool (a Reactor plugin, see
+ * `useToolRenderers`) that receives a respond callback for human-in-the-loop
  * interactions, matching the CopilotKit useHumanInTheLoop pattern.
  */
 
@@ -31,6 +32,7 @@ import { ChatFloating } from '../chat';
 import type { ToolCallRenderContext } from '../types';
 import { uniqueAgentId } from './utils/agentId';
 import { useExampleAgentRuntime } from './hooks/useExampleAgentRuntime';
+import { useToolRenderers } from './hooks/useToolRenderers';
 import {
   TasklistIcon,
   CheckCircleFillIcon,
@@ -308,6 +310,9 @@ const StepsFeedback: React.FC<{
  * - respond: Callback to send result back (only when status === 'executing')
  * - result: Tool result (only when status === 'complete')
  */
+/** The tool this example draws. */
+const TASK_STEPS_TOOLS = ['generate_task_steps'];
+
 const renderTaskStepsTool = (context: ToolCallRenderContext) => {
   const { toolName, args, status, respond, result } = context;
 
@@ -343,6 +348,12 @@ const AGENTSPEC_ID = 'example-human-in-the-loop';
 const AgUiHumanInTheLoopExample: React.FC = () => {
   const brandColor = useThemeBrandColor();
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);
+  // The steps card, contributed as the tool's renderer.
+  useToolRenderers(
+    '@examples/human-in-the-loop',
+    TASK_STEPS_TOOLS,
+    renderTaskStepsTool,
+  );
   const { agentId, baseUrl } = useExampleAgentRuntime({
     exampleId: 'AgUiHumanInTheLoopExample',
     agentName,
@@ -432,7 +443,7 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
               Key Concept: respond() Callback
             </Text>
             <Text as="p" sx={{ fontSize: 1, color: 'fg.default' }}>
-              The <code>renderToolResult</code> function receives a{' '}
+              The renderer this example contributes for the tool receives a{' '}
               <code>respond</code> callback when the tool status is "executing".
               Calling <code>respond({'{ accepted: true, steps: [...] }'})</code>{' '}
               sends the user's decision back to the agent, completing the
@@ -451,7 +462,6 @@ const AgUiHumanInTheLoopExample: React.FC = () => {
             description="I can help you plan tasks. I'll generate steps for your review."
             position="bottom-right"
             brandColor={brandColor}
-            renderToolResult={renderTaskStepsTool}
             hideMessagesAfterToolUI={true}
             suggestions={[
               {

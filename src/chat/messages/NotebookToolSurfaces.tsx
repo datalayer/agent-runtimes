@@ -38,7 +38,7 @@ import type { ICellModel, ICodeCellModel } from '@jupyterlab/cells';
 import type { IOutputAreaModel } from '@jupyterlab/outputarea';
 import type { ICell, IOutput } from '@jupyterlab/nbformat';
 import { decode } from '@toon-format/toon';
-import type { RenderToolResult, ToolCallRenderContext } from '../../types/chat';
+import type { ToolCallRenderContext } from '../../types/chat';
 
 /**
  * The notebook tools whose result is a cell worth showing, by the reference
@@ -417,18 +417,6 @@ export function NotebookToolSurfaces({
         </Box>
       ) : null}
     </>
-  );
-}
-
-/**
- * The renderer `ChatBase` mounts when a host names a notebook: the default
- * row composed with this module's surfaces.
- */
-export function notebookToolSurfacesRenderer(
-  documentId: string,
-): RenderToolResult {
-  return context => (
-    <NotebookToolSurfaces documentId={documentId} context={context} />
   );
 }
 

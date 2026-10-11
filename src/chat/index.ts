@@ -64,10 +64,7 @@ export {
   ChatMessageList,
   type ChatMessageListProps,
 } from './messages/ChatMessageList';
-export {
-  NotebookToolSurfaces,
-  notebookToolSurfacesRenderer,
-} from './messages/NotebookToolSurfaces';
+export { NotebookToolSurfaces } from './messages/NotebookToolSurfaces';
 export { ChatSidebar, type ChatSidebarProps } from './ChatSidebar';
 export { ChatStandalone } from './ChatStandalone';
 export { ChatBase } from './base/ChatBase';

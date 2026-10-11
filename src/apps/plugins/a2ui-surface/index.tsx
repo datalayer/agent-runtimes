@@ -31,19 +31,18 @@
  * @module apps/plugins/a2ui-surface
  */
 
-import type { JSX, ReactNode } from 'react';
+import type { JSX } from 'react';
 import { useEffect } from 'react';
-import { contribution, definePlugin, signal } from '@datalayer/reactor';
+import { contribution, definePlugin } from '@datalayer/reactor';
 import type { ReactorPlugin } from '@datalayer/reactor';
+import { Renderers, ToolBindings } from '@datalayer/reactor/ui';
+import {
+  defineRenderer,
+  type RendererProps,
+} from '@datalayer/reactor/ui/react';
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { AGENTSPECS } from '../../../specs/agents';
-import {
-  LoopChatExtras,
-  LoopSlots,
-  type LoopWorkspaceContext,
-} from '../../core';
-import { PapSignInCard } from '../pap-sign-in/PapSignInCard';
-import { isPapSignInTool } from '../pap-sign-in/signIn';
+import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import {
   SurfaceToolResult,
   type SurfaceRendered,
@@ -54,6 +53,9 @@ export const A2UI_SURFACE_PLUGIN_NAME = '@datalayer/loop-plugin-a2ui-surface';
 
 /** The renderer name a spec binds a tool to. */
 export const A2UI_SURFACE_RENDERER = 'a2ui-surface';
+
+/** The display type this plugin draws: a tool result that is an A2UI surface. */
+export const A2UI_SURFACE_TYPE = 'application/vnd.datalayer.a2ui.surface+json';
 
 /**
  * Every tool some spec binds to this renderer.
@@ -130,19 +132,20 @@ export function createA2uiSurfacePlugin(
     return null;
   }
 
-  const tools = surfaceToolNames();
   // A failed call is the chat's to draw: its default card says what went
-  // wrong, and a spinner that never ends would say nothing at all. So is
-  // every tool that is not a surface: this renderer is the chat's only one,
-  // and returning nothing for a tool it does not own hid every other tool
-  // row — the notebook reads, the cell runs — from the transcript.
-  //
-  // The chat keeps one renderer (`LoopChatExtras` merges later-wins), so the
-  // other tools drawn in the transcript are drawn from here too: the
-  // gateway's `pap_sign_in`, as *Sign in at a company* (AGENT_PROTOCOLS
-  // PI-56), with the same captured `send` for *Check again*.
-  const renderToolResult = (context: ToolCallRenderContext): ReactNode =>
-    tools.has(context.toolName) && context.status !== 'error' ? (
+  // wrong, and a spinner that never ends would say nothing at all. Every
+  // other tool is another plugin's, or the chat's own row: this plugin binds
+  // only the tools some spec bound to it.
+  function Surface({
+    context,
+  }: RendererProps<ToolCallRenderContext>): JSX.Element | null {
+    if (!context) {
+      return null;
+    }
+    if (context.status === 'error') {
+      return <>{context.defaultUI}</>;
+    }
+    return (
       <SurfaceToolResult
         key={context.toolCallId}
         context={context}
@@ -150,15 +153,8 @@ export function createA2uiSurfacePlugin(
         onRendered={options.onRendered}
         onSubmitted={options.onSubmitted}
       />
-    ) : isPapSignInTool(context.toolName) && context.status === 'complete' ? (
-      <PapSignInCard
-        key={context.toolCallId}
-        context={context}
-        send={currentSend ? message => send(message) : undefined}
-      />
-    ) : (
-      context.defaultUI
     );
+  }
 
   const plugin = definePlugin({
     name:
@@ -172,9 +168,21 @@ export function createA2uiSurfacePlugin(
     emoji: '\u{1FA9F}',
     contributes: [
       contribution(
-        LoopChatExtras,
-        { id, extras: signal({ renderToolResult }) },
+        Renderers,
+        defineRenderer({
+          type: A2UI_SURFACE_TYPE,
+          component: Surface,
+          // A host's own instance, with its callbacks, over the preset's.
+          rank: options.onRendered || options.onSubmitted ? 1 : 0,
+        }),
         { id },
+      ),
+      ...[...surfaceToolNames()].map(tool =>
+        contribution(
+          ToolBindings,
+          { tool, type: A2UI_SURFACE_TYPE },
+          { id: `${id}:${tool}` },
+        ),
       ),
     ],
     build() {

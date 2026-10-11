@@ -2458,10 +2458,6 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 happened, and the default tool row is enough.
               */
               notebookToolSurfacesId={active ? undefined : workspace.surfaceId}
-              // A host example's own tool-result renderer, when it feeds one
-              // through the extras channel — the A2UI examples draw their
-              // surface here. Wins over the notebook surfaces in ChatBase.
-              renderToolResult={chatExtras.renderToolResult}
               showTurnFooter={
                 chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true
               }

@@ -26,8 +26,15 @@ spec's own suggestions. Around it:
   or run appears under its tool row as a captioned surface — the change
   first (the cell source, read-only), then its outputs bound to the live
   model's output area, so a run that prints as it goes streams into the
-  transcript. `executeCodeInNotebook` shows only its outputs. A host passing its own
-  `renderToolResult` overrides this outright.
+  transcript. `executeCodeInNotebook` shows only its outputs.
+- **Tool renderers are plugins.** Each tool call is resolved through the
+  page's Reactor platform (`resolveToolResult` from `@datalayer/reactor/ui`):
+  a display the result embeds in `_meta["reactor.ui/display"]` first, then a
+  tool a plugin bound in `ToolBindings`. The display is drawn by the renderer
+  its plugin contributed to `Renderers`, with the tool call as its `context`
+  (including `defaultUI`, the row above). Nothing claims the tool: the chat
+  draws its own row. The A2UI surfaces and *Sign in at a company* are two such
+  plugins; neither draws the other's tools. There is no render prop.
 - **`onSendReady`** hands the host imperative controls — `send`, `stop`,
   `newChat` — for a page whose input lives outside the component (the Loop
   workspace's prompt does).

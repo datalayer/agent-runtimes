@@ -120,7 +120,8 @@ export type DisplayToolCallStatus =
 export type RespondCallback = (result: unknown) => void;
 
 /**
- * Tool call render context passed to renderToolResult
+ * A tool call, as the chat hands it to the renderer a Reactor plugin
+ * contributed for it (`ReactorDisplay`'s `context`).
  */
 export interface ToolCallRenderContext {
   /** Tool call ID */
@@ -140,18 +141,9 @@ export interface ToolCallRenderContext {
   /**
    * What the chat would have drawn for this tool call by itself.
    *
-   * Supplying `renderToolResult` replaces the default row outright, and
-   * returning nothing from it draws nothing at all — so a caller who only
-   * wanted to *add* something under one tool had to either reimplement the
-   * row or lose it, and lose every other tool's row along with it.
-   *
-   * Render it to compose:
-   *
-   * ```tsx
-   * renderToolResult={({ name, defaultUI }) =>
-   *   name === 'my_tool' ? <>{defaultUI}<MyPanel /></> : defaultUI
-   * }
-   * ```
+   * A renderer composes with it — `<>{defaultUI}<MyPanel /></>` — or falls
+   * back to it for a status it does not draw (a failed call, one still
+   * running).
    */
   defaultUI?: ReactNode;
   /**
@@ -161,11 +153,6 @@ export interface ToolCallRenderContext {
    */
   respond?: RespondCallback;
 }
-
-/**
- * Render function for tool results
- */
-export type RenderToolResult = (context: ToolCallRenderContext) => ReactNode;
 
 /**
  * Internal type for tracking tool calls in messages
@@ -580,9 +567,10 @@ export interface ChatCommonProps {
   initialSkills?: string[];
 
   // ============ Tool Rendering & Hooks ============
-
-  /** Custom render function for tool results */
-  renderToolResult?: RenderToolResult;
+  //
+  // Tool results are drawn by Reactor plugins: a renderer per display type
+  // (`Renderers`) and the tools bound to it (`ToolBindings`), resolved for
+  // each call with `resolveToolResult` (`@datalayer/reactor/ui`).
 
   /** Frontend tool definitions to register with the chat */
   frontendTools?: FrontendToolDefinition[];
@@ -1230,8 +1218,6 @@ export interface ChatBaseProps {
   /** Empty state configuration */
   emptyState?: EmptyStateConfig;
 
-  /** Tool result renderer for tool calls */
-  renderToolResult?: RenderToolResult;
   /**
    * Draw the chat's title bar from these fully assembled props.
    *
@@ -1259,8 +1245,8 @@ export interface ChatBaseProps {
    * For a chat whose agent works a notebook the reader cannot see. A cell
    * that was inserted, updated or run appears under its tool row — source
    * first, then its outputs streaming from the live model; `executeCodeInNotebook`
-   * shows only what came back. Ignored when `renderToolResult` is given:
-   * a host that writes its own renderer owns the whole surface.
+   * shows only what came back. A tool a Reactor plugin renders is drawn by
+   * that plugin instead.
    */
   notebookToolSurfacesId?: string;
 

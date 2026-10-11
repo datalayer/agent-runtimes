@@ -332,7 +332,6 @@ export function Chat({
   ephemeralRuntimeOverride,
   onToolCallStart,
   onToolCallComplete,
-  renderToolResult,
   hideMessagesAfterToolUI = false,
   contextSnapshot,
   mcpStatusData,
@@ -773,7 +772,6 @@ export function Chat({
               ephemeralRuntimeOverride={ephemeralRuntimeOverride}
               onToolCallStart={onToolCallStart}
               onToolCallComplete={onToolCallComplete}
-              renderToolResult={renderToolResult}
               hideMessagesAfterToolUI={hideMessagesAfterToolUI}
               contextSnapshot={contextSnapshot}
               mcpStatusData={mcpStatusData}

@@ -47,9 +47,12 @@ export const PAP_SIGN_IN_WORDS = {
   qr: (host: string): string => `A code to scan to open ${host} on your phone`,
 } as const;
 
+/** `pap_sign_in`, as the gateway names it with or without a prefix. */
+export const PAP_SIGN_IN_TOOL = /(^|[_.:\-/])pap_sign_in$/;
+
 /** Whether a tool is `pap_sign_in`, as the gateway names it with or without a prefix. */
 export const isPapSignInTool = (name: string): boolean =>
-  /(^|[_.:\-/])pap_sign_in$/.test(name);
+  PAP_SIGN_IN_TOOL.test(name);
 
 /** An MCP result's own object: its structured content, or the JSON of its text. */
 function unwrapped(result: unknown): unknown {
