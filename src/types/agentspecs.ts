@@ -469,6 +469,52 @@ export interface AppConnectionSpec {
   only: string[];
 }
 
+/** How a Personal Agent Protocol company is reached (PAP §3.1). */
+export type PapInterface = 'agent' | 'openapi' | 'mcp' | 'web';
+
+/** How a person signs in at a company, in the order the application prefers. */
+export type PapSignIn = 'direct' | 'device' | 'mediated';
+
+/**
+ * A company the application works with as a personal agent
+ * (PAP_DATALAYER S-01): named by its domain, nothing else; what discovery
+ * verifies is the deployment's, never the spec's.
+ */
+export interface AppPapConnectionSpec {
+  /** Stable within the application: `orders`. */
+  id: string;
+  /** The company's domain, as discovery takes it: `example.com`. */
+  company: string;
+  access: 'read' | 'write';
+  /** In whose account: each person's own (`user`), or the builder's. */
+  as: 'owner' | 'user';
+  /** The fewest scopes the application needs. */
+  scopes: string[];
+  interfaces: PapInterface[];
+  /** Sign-in modes it accepts, preferred first. */
+  signIn: PapSignIn[];
+  extensions: string[];
+}
+
+/** The application as a company personal agents work with (PAP_DATALAYER U-04). */
+export interface AppPapCompanySpec {
+  /** Whether it publishes itself as a company at Ship. */
+  enabled: boolean;
+  /** Whether a personal agent may ask before signing in. */
+  signedOut: boolean;
+  interfaces: PapInterface[];
+  scopes: string[];
+  extensions: string[];
+  /** `any`, or `registered` personal agents only. */
+  personalAgents: 'any' | 'registered';
+}
+
+/** Personal Agent Protocol: the companies it works with, and whether it is one. */
+export interface AppPapSpec {
+  connections: AppPapConnectionSpec[];
+  company: AppPapCompanySpec;
+}
+
 /** When an application acts alone, and when it asks. */
 export interface AppRuleSpec {
   /** The action, in the words a person reads. */
@@ -1052,6 +1098,8 @@ export interface AppSpec {
   /** The documents and datasets it answers from. */
   contents: string[];
   connections: AppConnectionSpec[];
+  /** Personal Agent Protocol; absent, the application has none. */
+  pap?: AppPapSpec;
   rules: AppRuleSpec[];
   permissions: AppPermissionsSpec;
   interface: AppInterfaceSpec;

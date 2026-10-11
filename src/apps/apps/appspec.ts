@@ -39,6 +39,7 @@ import type {
   AppHostUser,
   AppCommandSpec,
   AppConnectionSpec,
+  AppPapSpec,
   AppCriterionSpec,
   AppCustomComponentSpec,
   AppDecisionSpec,
@@ -301,6 +302,7 @@ const KNOWN_KEYS = [
   'context',
   'contents',
   'connections',
+  'pap',
   'rules',
   'permissions',
   'interface',
@@ -345,6 +347,95 @@ function parseConnection(data: Data): AppConnectionSpec {
     as: oneOf(data.as, ['owner', 'user'] as const, 'owner'),
     only: texts(data.only),
   };
+}
+
+const PAP_INTERFACES = ['agent', 'openapi', 'mcp', 'web'] as const;
+const PAP_SIGN_IN = ['direct', 'device', 'mediated'] as const;
+const PAP_DEFAULT_INTERFACES = ['agent'] as const;
+const PAP_DEFAULT_SIGN_IN = ['direct', 'device'] as const;
+
+/** The values of a list that are one of `allowed`, or `otherwise` when it says none. */
+const enumsOf = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  otherwise: readonly T[],
+): T[] => {
+  if (!Array.isArray(value)) return [...otherwise];
+  return value.filter((item): item is T => allowed.includes(item as T));
+};
+
+/**
+ * Personal Agent Protocol (PAP_DATALAYER S-01): the companies the
+ * application works with, and whether it is one. Defaults are agentspecs'.
+ */
+function parsePap(data: Data): AppPapSpec {
+  const company = isData(data.company) ? data.company : {};
+  return {
+    connections: records(data.connections).map(connection => ({
+      id: text(connection.id),
+      company: text(connection.company),
+      access: oneOf(connection.access, ['read', 'write'] as const, 'read'),
+      as: oneOf(connection.as, ['owner', 'user'] as const, 'user'),
+      scopes: texts(connection.scopes),
+      interfaces: enumsOf(
+        connection.interfaces,
+        PAP_INTERFACES,
+        PAP_DEFAULT_INTERFACES,
+      ),
+      signIn: enumsOf(connection.sign_in, PAP_SIGN_IN, PAP_DEFAULT_SIGN_IN),
+      extensions: texts(connection.extensions),
+    })),
+    company: {
+      enabled: flag(company.enabled, false),
+      signedOut: flag(company.signed_out, true),
+      interfaces: enumsOf(
+        company.interfaces,
+        PAP_INTERFACES,
+        PAP_DEFAULT_INTERFACES,
+      ),
+      scopes: texts(company.scopes),
+      extensions: texts(company.extensions),
+      personalAgents: oneOf(
+        company.personal_agents,
+        ['any', 'registered'] as const,
+        'any',
+      ),
+    },
+  };
+}
+
+/** Personal Agent Protocol as its document says it, nothing at its default. */
+function dumpPap(pap: AppPapSpec | undefined): Data {
+  if (!pap) return {};
+  return new Writer()
+    .list(
+      'connections',
+      pap.connections.map(
+        connection =>
+          new Writer()
+            .text('id', connection.id, '\u0000')
+            .text('company', connection.company, '\u0000')
+            .value<string>('access', connection.access, 'read')
+            .value<string>('as', connection.as, 'user')
+            .list('scopes', connection.scopes)
+            .list('interfaces', connection.interfaces, [
+              ...PAP_DEFAULT_INTERFACES,
+            ])
+            .list('sign_in', connection.signIn, [...PAP_DEFAULT_SIGN_IN])
+            .list('extensions', connection.extensions).data,
+      ),
+    )
+    .part(
+      'company',
+      new Writer()
+        .value('enabled', pap.company.enabled, false)
+        .value('signed_out', pap.company.signedOut, true)
+        .list('interfaces', pap.company.interfaces, [...PAP_DEFAULT_INTERFACES])
+        .list('scopes', pap.company.scopes)
+        .list('extensions', pap.company.extensions)
+        .value<string>('personal_agents', pap.company.personalAgents, 'any')
+        .data,
+    ).data;
 }
 
 function parseRule(data: Data): AppRuleSpec {
@@ -993,6 +1084,9 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.decision)) {
     app.decision = parseDecision(data.decision);
   }
+  if (isData(data.pap)) {
+    app.pap = parsePap(data.pap);
+  }
   return { app, problems };
 }
 
@@ -1370,6 +1464,7 @@ export function dumpAppspec(app: AppSpec): Data {
             .list('only', connection.only).data,
       ),
     )
+    .part('pap', dumpPap(app.pap))
     .list(
       'rules',
       app.rules.map(rule => ({

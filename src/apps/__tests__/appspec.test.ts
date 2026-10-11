@@ -340,4 +340,58 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app)).not.toHaveProperty('setup');
     expect(dumpAppspec(app).record).toBeUndefined();
   });
+  it('reads and writes Personal Agent Protocol (PAP_DATALAYER S-01)', () => {
+    const { app, problems } = parseAppspec({
+      kind: 'chat',
+      pap: {
+        connections: [
+          {
+            id: 'orders',
+            company: 'manzanita.example',
+            access: 'write',
+            scopes: ['orders:read'],
+          },
+        ],
+        company: { enabled: true, scopes: ['poppy:read'] },
+      },
+    });
+    expect(problems).toEqual([]);
+    expect(app.pap).toEqual({
+      connections: [
+        {
+          id: 'orders',
+          company: 'manzanita.example',
+          access: 'write',
+          as: 'user',
+          scopes: ['orders:read'],
+          interfaces: ['agent'],
+          signIn: ['direct', 'device'],
+          extensions: [],
+        },
+      ],
+      company: {
+        enabled: true,
+        signedOut: true,
+        interfaces: ['agent'],
+        scopes: ['poppy:read'],
+        extensions: [],
+        personalAgents: 'any',
+      },
+    });
+    // Nothing at its default is written.
+    expect(dumpAppspec(app).pap).toEqual({
+      connections: [
+        {
+          id: 'orders',
+          company: 'manzanita.example',
+          access: 'write',
+          scopes: ['orders:read'],
+        },
+      ],
+      company: { enabled: true, scopes: ['poppy:read'] },
+    });
+    // Without it, the application has none.
+    expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
+  });
 });
