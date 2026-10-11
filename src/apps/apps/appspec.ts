@@ -400,6 +400,12 @@ function parsePap(data: Data): AppPapSpec {
         ['any', 'registered'] as const,
         'any',
       ),
+      operations: records(company.operations).map(operation => ({
+        action: text(operation.action),
+        tool: text(operation.tool),
+        summary: text(operation.summary),
+        userApprovalRequired: flag(operation.user_approval_required, true),
+      })),
     },
   };
 }
@@ -434,7 +440,21 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
         .list('scopes', pap.company.scopes)
         .list('extensions', pap.company.extensions)
         .value<string>('personal_agents', pap.company.personalAgents, 'any')
-        .data,
+        .list(
+          'operations',
+          pap.company.operations.map(
+            operation =>
+              new Writer()
+                .text('action', operation.action, '\u0000')
+                .text('tool', operation.tool, '\u0000')
+                .text('summary', operation.summary, '\u0000')
+                .value(
+                  'user_approval_required',
+                  operation.userApprovalRequired,
+                  true,
+                ).data,
+          ),
+        ).data,
     ).data;
 }
 

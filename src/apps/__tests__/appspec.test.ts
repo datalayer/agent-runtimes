@@ -376,6 +376,7 @@ describe('writing an Appspec', () => {
         scopes: ['poppy:read'],
         extensions: [],
         personalAgents: 'any',
+        operations: [],
       },
     });
     // Nothing at its default is written.
@@ -393,5 +394,45 @@ describe('writing an Appspec', () => {
     // Without it, the application has none.
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
+  });
+  it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
+    const operations = [
+      {
+        action: 'orders.exchange',
+        tool: 'exchange_order',
+        summary: 'Exchange order {order_id} for size {size}',
+      },
+      {
+        action: 'orders.cancel',
+        tool: 'cancel_order',
+        summary: 'Cancel order {order_id}',
+        user_approval_required: false,
+      },
+    ];
+    const source = {
+      kind: 'chat',
+      pap: {
+        company: { enabled: true, extensions: ['operations'], operations },
+      },
+    };
+    const { app, problems } = parseAppspec(source);
+    expect(problems).toEqual([]);
+    expect(app.pap?.company.operations).toEqual([
+      {
+        action: 'orders.exchange',
+        tool: 'exchange_order',
+        summary: 'Exchange order {order_id} for size {size}',
+        userApprovalRequired: true,
+      },
+      {
+        action: 'orders.cancel',
+        tool: 'cancel_order',
+        summary: 'Cancel order {order_id}',
+        userApprovalRequired: false,
+      },
+    ]);
+    // Only the person confirming is the default, and is not written.
+    expect(dumpAppspec(app).pap).toEqual(source.pap);
+    expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
   });
 });

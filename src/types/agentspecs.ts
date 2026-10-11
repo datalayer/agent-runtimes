@@ -507,6 +507,27 @@ export interface AppPapCompanySpec {
   extensions: string[];
   /** `any`, or `registered` personal agents only. */
   personalAgents: 'any' | 'registered';
+  /**
+   * What it does for the person once they confirm (PAP_DATALAYER B-04, the
+   * `operations` extension): each action and each tool once.
+   */
+  operations: AppPapOperationSpec[];
+}
+
+/**
+ * Something a personal agent may ask the application to do for the person,
+ * done only once they confirm its exact terms (PAP_DATALAYER B-04): the call
+ * of `tool` is proposed instead of made, its arguments the terms.
+ */
+export interface AppPapOperationSpec {
+  /** The action's name at this company: `orders.exchange`. */
+  action: string;
+  /** The application's tool that does it, called with the terms. */
+  tool: string;
+  /** What the person is shown, `{term}` for each term; never the model's. */
+  summary: string;
+  /** Whether only the person may confirm it, never an approval in advance. */
+  userApprovalRequired: boolean;
 }
 
 /** Personal Agent Protocol: the companies it works with, and whether it is one. */
