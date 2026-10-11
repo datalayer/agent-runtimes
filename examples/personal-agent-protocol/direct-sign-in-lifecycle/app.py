@@ -15,6 +15,7 @@ from personal_agent_protocol import (
     BROWSER_HANDOFFS,
     DPOP_PROOF_PROVIDERS,
     SIGNERS,
+    TOKEN_STORES,
     AuthorizationError,
     DirectSignInClient,
     DpopProofRequest,
@@ -63,6 +64,22 @@ class RecordingDpopProvider:
         return SecretStr(f"host-only-proof-{len(self.requests)}")
 
 
+class ProtectedTokenStore:
+    """The host's vault: the Account Token is kept here, behind a reference (PAP 0.5)."""
+
+    def __init__(self) -> None:
+        self.values: dict[str, SecretStr] = {}
+
+    async def put(self, reference: str, token: SecretStr) -> None:
+        self.values[reference] = token
+
+    async def get(self, reference: str) -> SecretStr | None:
+        return self.values.get(reference)
+
+    async def delete(self, reference: str) -> None:
+        self.values.pop(reference, None)
+
+
 class DirectSignInSecurityPlugin:
     def __init__(
         self,
@@ -71,6 +88,7 @@ class DirectSignInSecurityPlugin:
         signer: RecordingSigner,
         dpop: RecordingDpopProvider,
     ) -> None:
+        self.tokens = ProtectedTokenStore()
         self.store = store
         self.browser = browser
         self.signer = signer
@@ -84,6 +102,7 @@ class DirectSignInSecurityPlugin:
         contribute(BROWSER_HANDOFFS, self.browser, contribution_id="trusted-browser")
         contribute(SIGNERS, self.signer, contribution_id="protected-signer")
         contribute(DPOP_PROOF_PROVIDERS, self.dpop, contribution_id="protected-dpop")
+        contribute(TOKEN_STORES, self.tokens, contribution_id="protected-tokens")
 
 
 app = Application(
@@ -133,11 +152,12 @@ async def explain_direct_sign_in_lifecycle() -> dict[str, Any]:
     browser = RecordingBrowser()
     signer = RecordingSigner()
     dpop = RecordingDpopProvider()
+    security = DirectSignInSecurityPlugin(store, browser, signer, dpop)
     async with httpx.AsyncClient(transport=httpx.MockTransport(company)) as http:
         reactor, _ = build_pap_reactor(http_client=http)
         reactor.register_plugin(
             PluginManifest(name="pap-direct-sign-in-example-security", version="1"),
-            DirectSignInSecurityPlugin(store, browser, signer, dpop),
+            security,
         )
         client = DirectSignInClient(reactor=reactor, http_client=http)
         started = await client.begin(
@@ -189,4 +209,7 @@ async def explain_direct_sign_in_lifecycle() -> dict[str, Any]:
         "callback_and_code_withheld": True,
         "assertions_and_proofs_withheld": True,
         "session_and_account_tokens_withheld": True,
+        "account_token_stored_by_reference": getattr(result, "account_token_reference", None)
+        in security.tokens.values,
+        "account_token_not_in_result": result.token.refresh_token is None,
     }
