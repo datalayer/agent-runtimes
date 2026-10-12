@@ -136,6 +136,7 @@ export const PactPlugin = definePlugin({
         specification:
           'https://github.com/openpactprotocol/openpactprotocol/blob/main/docs/spec.md',
         plugin: PACT_PLUGIN,
+        catalogue: 'pact',
         points: POINTS.map(point => point.id),
       },
       { id: 'pact', order: DEFAULT_ORDER },

@@ -117,6 +117,7 @@ DESCRIPTION = ProtocolDescription(
     status="implemented",
     specification="https://a2a-protocol.org/latest/specification/",
     plugin=PLUGIN,
+    catalogue="a2a",
     points=tuple(point.id for point in POINTS),
 )
 

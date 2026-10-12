@@ -526,6 +526,7 @@ export const WebBotAuthPlugin = definePlugin({
         specification:
           'https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/',
         plugin: WEB_BOT_AUTH_PLUGIN,
+        catalogue: 'web-bot-auth',
         points: WEB_BOT_AUTH_POINTS.map(point => point.id),
       },
       { id: 'web_bot_auth', order: DEFAULT_ORDER },

@@ -114,6 +114,7 @@ export const UcpPlugin = definePlugin({
         status: 'partial',
         specification: `https://ucp.dev/${UCP_VERSION}/specification/overview`,
         plugin: UCP_PLUGIN,
+        catalogue: 'ucp',
         points: UCP_POINTS.map(point => point.id),
       },
       { id: 'ucp', order: DEFAULT_ORDER },

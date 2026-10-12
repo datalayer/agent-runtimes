@@ -102,6 +102,7 @@ export const A2APlugin = definePlugin({
         status: 'implemented',
         specification: 'https://a2a-protocol.org/latest/specification/',
         plugin: A2A_PLUGIN,
+        catalogue: 'a2a',
         points: EXTENSION_POINTS.map(point => point.id),
       },
       { id: 'a2a', order: DEFAULT_ORDER },

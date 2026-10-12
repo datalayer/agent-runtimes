@@ -37,6 +37,7 @@ export const McpPlugin = definePlugin({
         status: 'implemented',
         specification: 'https://modelcontextprotocol.io/specification',
         plugin: MCP_PLUGIN,
+        catalogue: 'mcp',
         points: [],
       },
       { id: 'mcp', order: DEFAULT_ORDER },

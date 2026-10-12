@@ -30,6 +30,7 @@ import {
   AgentProtocolsExtension,
   buildProtocolsReactor,
 } from './agentProtocols';
+import { getProtocol } from '../specs/protocols';
 import * as core from './core';
 import * as mcp from './mcp';
 import * as pact from './pact';
@@ -106,6 +107,14 @@ describe('the agent-protocols Extension', () => {
       expect(description?.points.sort()).toEqual(
         (file.points as Entry[]).map(e => e.id).sort(),
       );
+    }
+  });
+
+  it('each description names its entry in the agentspecs catalogue (PR-50)', () => {
+    for (const description of core.listProtocols(buildProtocolsReactor())) {
+      const spec = getProtocol(description.catalogue);
+      expect(spec, description.catalogue).toBeDefined();
+      expect(spec?.specVersion).toContain(description.version);
     }
   });
 });

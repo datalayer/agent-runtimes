@@ -154,6 +154,17 @@ def test_each_plugin_describes_its_protocol():
         assert description.version
 
 
+def test_each_description_names_its_catalogue_entry():
+    """A runtime's answer is read against the agentspecs catalogue by this id (PR-50):
+    it names a protocol the catalogue lists, and the version the catalogue says."""
+    from agent_runtimes.specs.protocols import get_protocol  # noqa: PLC0415
+
+    for description in list_protocols(_platform()):
+        spec = get_protocol(description.catalogue)
+        assert spec is not None, description.catalogue
+        assert description.version in spec.spec_version, (description.id, spec.spec_version)
+
+
 def test_a_lower_order_description_answers_in_place():
     better = ProtocolDescription(
         id="a2a",
@@ -164,6 +175,7 @@ def test_a_lower_order_description_answers_in_place():
         status="partial",
         specification="https://a2a-protocol.org",
         plugin="better",
+        catalogue="a2a",
     )
     platform = build_protocols_reactor(
         plugins=[

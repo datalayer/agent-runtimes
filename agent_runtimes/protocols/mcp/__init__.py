@@ -47,6 +47,7 @@ class McpPlugin:
                 status="implemented",
                 specification="https://modelcontextprotocol.io/specification",
                 plugin=PLUGIN,
+                catalogue="mcp",
                 points=(),
             ),
             contribution_id="mcp",

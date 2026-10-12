@@ -120,6 +120,7 @@ export const AgenticCommercePlugin = definePlugin({
         status: 'partial',
         specification: `https://github.com/agentic-commerce-protocol/agentic-commerce-protocol/tree/main/spec/${AGENTIC_COMMERCE_VERSION}`,
         plugin: AGENTIC_COMMERCE_PLUGIN,
+        catalogue: 'acp',
         points: POINTS.map(point => point.id),
       },
       { id: 'agentic_commerce', order: DEFAULT_ORDER },

@@ -60,6 +60,7 @@ DESCRIPTION = ProtocolDescription(
     status="implemented",
     specification="https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/",
     plugin=PLUGIN,
+    catalogue="web-bot-auth",
     points=tuple(point.id for point in POINTS),
 )
 

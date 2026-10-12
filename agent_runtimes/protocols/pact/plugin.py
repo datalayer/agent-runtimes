@@ -59,6 +59,7 @@ DESCRIPTION = ProtocolDescription(
     status="partial",
     specification="https://github.com/openpactprotocol/openpactprotocol/blob/main/docs/spec.md",
     plugin=PLUGIN,
+    catalogue="pact",
     points=tuple(point.id for point in POINTS),
 )
 

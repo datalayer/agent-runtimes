@@ -69,6 +69,7 @@ DESCRIPTION = ProtocolDescription(
     status="partial",
     specification=f"https://ucp.dev/{UCP_VERSION}/specification/overview",
     plugin=PLUGIN,
+    catalogue="ucp",
     points=tuple(point.id for point in POINTS),
 )
 

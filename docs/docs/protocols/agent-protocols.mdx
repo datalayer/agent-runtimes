@@ -133,6 +133,15 @@ personal agent at, the A2A card extensions it publishes:
 · Web Bot Auth (…) (web_bot_auth) draft-ietf-webbotauth-httpsig-protocol-00 — identity, signer, verifier, directory, implemented
 ```
 
+Each description also names its entry in the agentspecs protocols catalogue
+(`agentspecs/protocols`; `catalogue`: `web-bot-auth`, `acp`…), and
+implements the version the catalogue says (both held by
+`test_protocols_reactor_points.py` and `reactorPoints.unit.test.ts`). Studio's
+Protocols page (`/agentspecs/protocols`) reads `GET /api/v1/protocols` of a
+runtime of the person's against the catalogue: which protocols that runtime
+speaks, in which version and roles, and which the catalogue lists that it does
+not describe.
+
 ## A2A card extensions
 
 What an agent card publishes under `capabilities.extensions` is what the A2A

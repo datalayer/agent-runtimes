@@ -27,6 +27,7 @@ def test_the_route_lists_what_the_plugins_contributed():
     wba = next(p for p in body["protocols"] if p["id"] == "web_bot_auth")
     assert wba["version"] == "draft-ietf-webbotauth-httpsig-protocol-00"
     assert "web_bot_auth.signer" in wba["points"]
+    assert wba["catalogue"] == "web-bot-auth"
 
 
 def test_what_an_application_uses():

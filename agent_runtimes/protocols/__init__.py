@@ -68,6 +68,10 @@ class ProtocolDescription:
     specification: str
     #: The plugin that implements it.
     plugin: str
+    #: Its id in the agentspecs protocols catalogue (``agentspecs/protocols``,
+    #: AGENT_PROTOCOLS PS-01): ``web-bot-auth``, ``acp``… — how Studio reads a
+    #: runtime's answer against the catalogue (PR-50).
+    catalogue: str
     #: The contribution points its plugin declares, its extensions' included.
     points: tuple[str, ...] = ()
 

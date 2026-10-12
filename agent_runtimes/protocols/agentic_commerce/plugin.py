@@ -58,6 +58,7 @@ DESCRIPTION = ProtocolDescription(
     status="partial",
     specification="https://github.com/agentic-commerce-protocol/agentic-commerce-protocol/tree/main/spec/2026-04-17",
     plugin=PLUGIN,
+    catalogue="acp",
     points=tuple(point.id for point in POINTS),
 )
 
