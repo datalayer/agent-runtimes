@@ -35,6 +35,7 @@ const NO_STANCE = signal<ChatLayoutContribution['prompt'] | undefined>(
   undefined,
 );
 import {
+  useAgentToolBundles,
   useContributions,
   useSignalValue,
   useGate,
@@ -150,7 +151,10 @@ import {
   orderToolContributions,
   toolsForChatView,
 } from './chatViewTools';
-import { useAgentCommandTools } from '../../../tools/adapters/commands';
+import {
+  agentBundleToolDefinitions,
+  useAgentCommandTools,
+} from '../../../tools/adapters/commands';
 import {
   NONE_EDITOR,
   seedEditorChoice,
@@ -1249,6 +1253,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       ...commandTools.filter(tool => !taken.has(tool.name)),
     ];
   }, [notebookTools, commandTools]);
+  /*
+   * The page's own tools for an agent on a server: a host example's, and
+   * the tools of the `AgentTools` bundles its extras name (REACTOR_UI RU-7:
+   * the host page's functions, `host_<name>`, each running its command on
+   * this reactor). An in-page agent has every bundle already (above).
+   */
+  const bundles = useAgentToolBundles();
+  const handedBundles = chatExtras.agentToolBundles;
+  const pageTools = useMemo(() => {
+    const own = chatExtras.frontendTools ?? [];
+    if (!handedBundles?.length) {
+      return chatExtras.frontendTools;
+    }
+    const handed = agentBundleToolDefinitions(
+      bundles.filter(bundle => handedBundles.includes(bundle.id)),
+      reactor,
+    );
+    const taken = new Set(own.map(tool => tool.name));
+    return [...own, ...handed.filter(tool => !taken.has(tool.name))];
+  }, [chatExtras.frontendTools, handedBundles, bundles, reactor]);
   // The page's sandbox, while the agent turned here runs its code in it.
   pageSandboxRef.current =
     inPage && agentTools.some(tool => tool.name === BROWSER_CODE_TOOL)
@@ -2202,7 +2226,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 embedded application's run carried no tool at all (seen
                 2026-10-10: `toolsForRequest: []`).
               */
-              frontendTools={inPage ? undefined : chatExtras.frontendTools}
+              frontendTools={inPage ? undefined : pageTools}
               /*
                 The model this view is on, as the chat's opening pick.
 

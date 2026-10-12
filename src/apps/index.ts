@@ -361,8 +361,13 @@ export {
 } from './embed/embedSession';
 // The host page and an embedded application, talking (LOOP D-10).
 export {
+  HOST_CONTEXT_COMMAND,
   HOST_CONTEXT_TOOL,
-  hostFrontendTools,
+  HOST_TOOLS_BUNDLE,
+  hostAgentTools,
+  hostCommand,
+  hostCommands,
+  hostPlugin,
   hostNotAllowed,
   hostRefused,
   hostTool,

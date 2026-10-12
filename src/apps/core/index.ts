@@ -800,6 +800,14 @@ export type LoopChatExtrasValue = {
    */
   frontendTools?: FrontendToolDefinition[];
   /**
+   * The ids of the `AgentTools` bundles (Reactor's) the chat hands its agent
+   * wherever it runs — on a runtime too, where the plugins' bundles are not
+   * otherwise given — each tool running its command on this workspace's
+   * reactor (REACTOR_UI RU-7): the host page's (`host`), which an embedded
+   * application calls as `host_<name>`.
+   */
+  agentToolBundles?: string[];
+  /**
    * Take the composer off the screen, live.
    *
    * The chat plugin's `hidePrompt` is configuration — set once when the

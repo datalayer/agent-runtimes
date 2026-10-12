@@ -12,12 +12,18 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { agentToolBundles, buildReactorFromPlugins } from '@datalayer/reactor';
+import { agentBundleToolDefinitions } from '../../tools/adapters/commands';
 import { checkApp } from '../apps/checks';
 import { dumpAppspec, emptyAppspec, parseAppspec } from '../apps/appspec';
 import type { AppSpec } from '../../types/agentspecs';
+import type { FrontendToolDefinition } from '../../types/tools';
 import {
+  HOST_CONTEXT_COMMAND,
   HOST_CONTEXT_TOOL,
-  hostFrontendTools,
+  HOST_TOOLS_BUNDLE,
+  hostCommand,
+  hostPlugin,
   hostRefused,
   hostToolsOf,
   hostUserRunProps,
@@ -25,6 +31,24 @@ import {
   type AppEmbedHost,
   fetchUserToken,
 } from '../embed/hostBridge';
+
+/**
+ * The host's tools as the chat has them (REACTOR_UI RU-7): the host plugin
+ * mounted on a reactor, its agent tools bundle turned into tools that run
+ * its commands, as for any plugin's bundle.
+ */
+function hostTools(
+  app: AppSpec,
+  host: () => AppEmbedHost,
+): FrontendToolDefinition[] {
+  const plugin = hostPlugin(app, host);
+  if (!plugin) {
+    return [];
+  }
+  const reactor = buildReactorFromPlugins([plugin]);
+  reactor.start();
+  return agentBundleToolDefinitions(agentToolBundles(reactor), reactor);
+}
 
 const HOST = {
   context: ['user', 'page', 'plan'],
@@ -73,6 +97,35 @@ const RULED = hosted([
 const tool = (tools: ReturnType<typeof hostFrontendTools>, name: string) =>
   tools.find(each => each.name === name)!;
 
+describe('the host plugin (REACTOR_UI RU-7)', () => {
+  it('offers the page as its commands, named for the agent by its bundle', async () => {
+    const reactor = buildReactorFromPlugins([hostPlugin(RULED, () => ({}))!]);
+    reactor.start();
+    expect(
+      reactor
+        .listCommands()
+        .map(command => command.id)
+        .filter(id => id.startsWith('host.')),
+    ).toEqual([
+      HOST_CONTEXT_COMMAND,
+      hostCommand('open_ticket'),
+      hostCommand('refund'),
+    ]);
+    const [bundle] = agentToolBundles(reactor);
+    expect(bundle.id).toBe(HOST_TOOLS_BUNDLE);
+    expect(bundle.commands.map(each => [each.name, each.command])).toEqual([
+      ['host_context', 'host.context'],
+      ['host_open_ticket', 'host.open_ticket'],
+      ['host_refund', 'host.refund'],
+    ]);
+    // A command run by itself is decided as its tool is.
+    expect(await reactor.executeCommand(hostCommand('refund'), {})).toEqual({
+      error: hostRefused('host_refund'),
+    });
+    expect(hostPlugin(emptyAppspec('chat'), () => ({}))).toBeNull();
+  });
+});
+
 describe('the tools of the host', () => {
   it('are host_context and host_<name>, for what the Appspec names', () => {
     expect(hostToolsOf(HOST)).toEqual([
@@ -82,7 +135,7 @@ describe('the tools of the host', () => {
     ]);
     expect(hostToolsOf({ context: [], functions: [] })).toEqual([]);
     expect(hostToolsOf(undefined)).toEqual([]);
-    const tools = hostFrontendTools(RULED, () => ({}));
+    const tools = hostTools(RULED, () => ({}));
     expect(tools.map(each => [each.name, each.location])).toEqual([
       ['host_context', 'frontend'],
       ['host_open_ticket', 'frontend'],
@@ -91,7 +144,7 @@ describe('the tools of the host', () => {
     expect(tool(tools, 'host_open_ticket').parameters).toEqual(
       HOST.functions[0].parameters,
     );
-    expect(hostFrontendTools(emptyAppspec('chat'), () => ({}))).toEqual([]);
+    expect(hostTools(emptyAppspec('chat'), () => ({}))).toEqual([]);
   });
 
   it('read what the page passes now, only the values the Appspec names', async () => {
@@ -99,7 +152,7 @@ describe('the tools of the host', () => {
       user: { name: 'Ana' },
       secret: 'never',
     };
-    const tools = hostFrontendTools(RULED, () => ({ context: () => passed }));
+    const tools = hostTools(RULED, () => ({ context: () => passed }));
     const read = tool(tools, HOST_CONTEXT_TOOL).handler!;
     expect(await read({})).toEqual({
       values: { user: { name: 'Ana' } },
@@ -123,7 +176,7 @@ describe('the tools of the host', () => {
       onEvent,
       ask,
     };
-    const tools = hostFrontendTools(RULED, () => host);
+    const tools = hostTools(RULED, () => host);
     expect(
       await tool(tools, 'host_open_ticket').handler!({ title: 'Late' }),
     ).toEqual({ result: { ticket: 42, title: 'Late' } });
@@ -146,7 +199,7 @@ describe('the tools of the host', () => {
 
   it('refuse a call the person did not allow, and ask nobody for one done', async () => {
     const openTicket = vi.fn();
-    const tools = hostFrontendTools(RULED, () => ({
+    const tools = hostTools(RULED, () => ({
       functions: { open_ticket: openTicket },
       ask: async () => false,
     }));
@@ -157,7 +210,7 @@ describe('the tools of the host', () => {
     expect(openTicket).not.toHaveBeenCalled();
     // No page asker and no confirm to ask with: refused too.
     vi.stubGlobal('window', {});
-    const silent = hostFrontendTools(RULED, () => ({
+    const silent = hostTools(RULED, () => ({
       functions: { open_ticket: openTicket },
     }));
     expect(await tool(silent, 'host_open_ticket').handler!({})).toEqual({
@@ -166,7 +219,7 @@ describe('the tools of the host', () => {
     });
     vi.unstubAllGlobals();
     const ask = vi.fn(() => true);
-    const done = hostFrontendTools(
+    const done = hostTools(
       hosted([
         { action: 'Refund', appliesTo: ['host_refund'], behaviour: 'do_it' },
       ]),
@@ -181,7 +234,7 @@ describe('the tools of the host', () => {
   it('refuse, before the page is called, a tool no rule names', async () => {
     const onEvent = vi.fn();
     const refund = vi.fn();
-    const tools = hostFrontendTools(RULED, () => ({
+    const tools = hostTools(RULED, () => ({
       functions: { refund },
       onEvent,
       context: () => ({ user: 'Ana' }),
@@ -194,7 +247,7 @@ describe('the tools of the host', () => {
       'No rule of this application names host_refund: it is left to the person, and the page was not called.',
     );
     // Without the rule that names it, the page's values are not read either.
-    const unruled = hostFrontendTools(hosted(), () => ({
+    const unruled = hostTools(hosted(), () => ({
       context: () => ({ user: 'Ana' }),
     }));
     expect(await tool(unruled, HOST_CONTEXT_TOOL).handler!({})).toEqual({
@@ -203,14 +256,14 @@ describe('the tools of the host', () => {
   });
 
   it('say a function the page does not offer, and one that failed', async () => {
-    const tools = hostFrontendTools(RULED, () => ({
+    const tools = hostTools(RULED, () => ({
       functions: {},
       ask: () => true,
     }));
     expect(await tool(tools, 'host_open_ticket').handler!({})).toEqual({
       error: 'The page offers no function open_ticket: it was not called.',
     });
-    const failing = hostFrontendTools(RULED, () => ({
+    const failing = hostTools(RULED, () => ({
       ask: () => true,
       functions: {
         open_ticket: () => {

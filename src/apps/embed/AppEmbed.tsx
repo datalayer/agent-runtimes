@@ -84,12 +84,7 @@ import {
 } from '../plugins/assistant-characters';
 import type { DatalayerVisitors } from '../apps/visitorToken';
 import { floatingViewOf, type EmbedColorMode } from './embedConfig';
-import { createChatExtrasPlugin } from '../plugins/chat-extras';
-import {
-  hostFrontendTools,
-  hostUserRunProps,
-  type AppEmbedHost,
-} from './hostBridge';
+import { hostPlugin, hostUserRunProps, type AppEmbedHost } from './hostBridge';
 import { LoopRunProps } from '../core';
 import { embedThemeOverrides, embedThemeStyles } from './embedTheme';
 import {
@@ -365,16 +360,16 @@ export function useHostBridge(
 } {
   const hostRef = useRef(host);
   hostRef.current = host;
-  const handle = useMemo(() => createChatExtrasPlugin(), []);
   const bridge = app.deployment.embedded?.host;
   const key = JSON.stringify([bridge ?? null, app.rules, app.connections]);
-  useEffect(() => {
-    handle.setExtras({
-      frontendTools: hostFrontendTools(app, () => hostRef.current ?? {}),
-    });
-    // The tools change with what the Appspec names, and the rules that decide them.
+  // The host's plugin (REACTOR_UI RU-7): the page's functions as its
+  // commands, named for the agent by its agent tools bundle — made again
+  // when what the Appspec names, or the rules that decide them, change.
+  const hosting = useMemo(
+    () => hostPlugin(app, () => hostRef.current ?? {}) as PluginRef | null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handle, key]);
+    [app.id, key],
+  );
   // Who its user is (D-21): the token the host's server signed goes with
   // every run, for an application that takes only a signed user.
   const signed = bridge?.user === 'signed';
@@ -397,10 +392,10 @@ export function useHostBridge(
   }, [app.id, signed]);
   const plugins = useMemo(
     () =>
-      bridge
-        ? [handle.plugin as PluginRef, ...(userPlugin ? [userPlugin] : [])]
+      hosting
+        ? [hosting, ...(userPlugin ? [userPlugin] : [])]
         : NO_HOST_PLUGINS,
-    [bridge, handle, userPlugin],
+    [hosting, userPlugin],
   );
   // What its code tells the page during a turn (LOOP P-25), raised on it.
   useEffect(

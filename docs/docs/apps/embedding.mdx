@@ -336,7 +336,16 @@ the page, and tell the page what it did (LOOP D-10). What it may read and
 call is named in its Appspec, under `deployment.embedded.host`, and each is
 a tool its agent calls — `host_context` for the values, `host_<name>` for a
 function — decided by the rule that names it, as any tool of the
-application is:
+application is.
+
+Underneath, the page is a Reactor plugin of its own (REACTOR_UI RU-7,
+`hostPlugin`): each function is a **command** of it, `host.<name>`
+(`host.context` for the values), and its **agent tools** bundle (`host`)
+names them for the agent as `host_<name>` and `host_context`. The chat turns
+the bundle into tools that run the commands — as it does any plugin's — and
+hands them to the application's agent wherever it runs; the rule check, the
+question to the person and the `action` event are the command's, so a
+command run from anywhere else (a palette, a test) is decided the same way.
 
 ```yaml
 deployment:

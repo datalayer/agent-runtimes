@@ -17,6 +17,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { agentToolBundles, buildReactorFromPlugins } from '@datalayer/reactor';
+import { agentBundleToolDefinitions } from '../../tools/adapters/commands';
 import type { AppBehaviour, AppSpec } from '../../types/agentspecs';
 import type {
   FrontendToolDefinition,
@@ -25,12 +27,30 @@ import type {
 } from '../../types/tools';
 import { emptyAppspec } from '../apps/appspec';
 import {
-  hostFrontendTools,
+  hostPlugin,
   hostNotAllowed,
   hostRefused,
   hostTool,
   type AppEmbedHost,
 } from '../embed/hostBridge';
+
+/**
+ * The host's tools as the chat has them (REACTOR_UI RU-7): the host plugin
+ * mounted on a reactor, its agent tools bundle turned into tools that run
+ * its commands, as for any plugin's bundle.
+ */
+function hostTools(
+  app: AppSpec,
+  host: () => AppEmbedHost,
+): FrontendToolDefinition[] {
+  const plugin = hostPlugin(app, host);
+  if (!plugin) {
+    return [];
+  }
+  const reactor = buildReactorFromPlugins([plugin]);
+  reactor.start();
+  return agentBundleToolDefinitions(agentToolBundles(reactor), reactor);
+}
 
 /** The application, its page offering `open_ticket`, its rule naming the tool with `behaviour`. */
 function hosted(behaviour?: AppBehaviour): AppSpec {
@@ -147,7 +167,7 @@ function page(allow?: boolean) {
 describe('a host function called through the bridge, from a runtime', () => {
   it('is refused before the page is called when no rule names it', async () => {
     const { host, openTicket, onEvent, ask } = page(true);
-    const runtime = fakeRuntime(hostFrontendTools(hosted(), () => host));
+    const runtime = fakeRuntime(hostTools(hosted(), () => host));
     expect(await runtime.run()).toBe(
       `Refused: ${hostRefused('host_open_ticket')}`,
     );
@@ -173,9 +193,7 @@ describe('a host function called through the bridge, from a runtime', () => {
 
   it('is refused the same under leave it to me', async () => {
     const { host, openTicket, ask } = page(true);
-    const runtime = fakeRuntime(
-      hostFrontendTools(hosted('leave_to_me'), () => host),
-    );
+    const runtime = fakeRuntime(hostTools(hosted('leave_to_me'), () => host));
     expect(await runtime.run()).toBe(
       `Refused: ${hostRefused('host_open_ticket')}`,
     );
@@ -187,9 +205,7 @@ describe('a host function called through the bridge, from a runtime', () => {
     'asks the person on the page under %s, and does it when they allow',
     async behaviour => {
       const { host, openTicket, onEvent, ask } = page(true);
-      const runtime = fakeRuntime(
-        hostFrontendTools(hosted(behaviour), () => host),
-      );
+      const runtime = fakeRuntime(hostTools(hosted(behaviour), () => host));
       expect(await runtime.run()).toBe(
         'Done: {"ticket":42,"title":"Late order"}',
       );
@@ -212,9 +228,7 @@ describe('a host function called through the bridge, from a runtime', () => {
 
   it('is refused under ask me first when the person says no, the page not called', async () => {
     const { host, openTicket, ask } = page(false);
-    const runtime = fakeRuntime(
-      hostFrontendTools(hosted('ask_first'), () => host),
-    );
+    const runtime = fakeRuntime(hostTools(hosted('ask_first'), () => host));
     expect(await runtime.run()).toBe(
       `Refused: ${hostNotAllowed('host_open_ticket')}`,
     );
@@ -224,7 +238,7 @@ describe('a host function called through the bridge, from a runtime', () => {
 
   it('is done under do it, nobody asked', async () => {
     const { host, openTicket, ask } = page(true);
-    const runtime = fakeRuntime(hostFrontendTools(hosted('do_it'), () => host));
+    const runtime = fakeRuntime(hostTools(hosted('do_it'), () => host));
     expect(await runtime.run()).toBe(
       'Done: {"ticket":42,"title":"Late order"}',
     );
@@ -237,7 +251,7 @@ describe('a host function called through the bridge, from a runtime', () => {
     const app = hosted('do_it');
     // The Appspec names no host: the page offers no frontend tool at all.
     app.deployment = { embedded: { mode: 'bubble', origins: [] } };
-    const runtime = fakeRuntime(hostFrontendTools(app, () => host));
+    const runtime = fakeRuntime(hostTools(app, () => host));
     expect(await runtime.run()).toBe(
       'The runtime ran it itself: no frontend tool answered.',
     );
