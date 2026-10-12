@@ -200,6 +200,11 @@ class Application:
         The application's version. Unsaid, the spec's first version
         (``0.0.1``) until it is deployed: a deployment's stored version is
         then the version of a code that says none (`declared_version`).
+    protocols : Sequence[str]
+        The agent protocols it speaks, ids of agentspecs' ``protocols``
+        (``["mcp", "pap"]``); a block of a protocol it writes lists it too.
+    ui : Sequence[str]
+        The UI its answers render in, ids of agentspecs' ``ui`` (``["a2ui"]``).
     """
 
     def __init__(
@@ -215,6 +220,8 @@ class Application:
         model: str = "",
         goal: str = "",
         version: Optional[str] = None,
+        protocols: Sequence[str] = (),
+        ui: Sequence[str] = (),
     ) -> None:
         document: Dict[str, Any] = {
             "schema": "loop.app/v1",
@@ -233,6 +240,12 @@ class Application:
         ):
             if value:
                 document[key] = value
+        # What it speaks and where its answers render (AGENT_PROTOCOLS PS-02, PS-04):
+        # ids of agentspecs' protocols and ui catalogues, as the Appspec's lists.
+        if protocols:
+            document["protocols"] = list(protocols)
+        if ui:
+            document["ui"] = list(ui)
         self._document = document
         self._version_declared = version is not None
         self._attach_code()

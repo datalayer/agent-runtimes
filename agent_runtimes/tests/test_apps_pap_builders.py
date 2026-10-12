@@ -153,3 +153,20 @@ def test_what_the_builders_refuse() -> None:
             extensions=[],
             personal_agents="registered",
         )
+
+
+def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
+    """`protocols` and `ui` from Python (AGENT_PROTOCOLS PS-02, PS-04): the Canvas and the YAML read the same lists."""
+    from agent_runtimes.loop.apps.application import Application
+
+    app = Application(
+        "speaker",
+        "chat",
+        agent="example-blank:0.0.1",
+        protocols=["mcp", "a2a"],
+        ui=["a2ui"],
+    )
+    assert (app.spec.protocols, app.spec.ui) == (["mcp", "a2a"], ["a2ui"])
+    assert app.document["protocols"] == ["mcp", "a2a"] and app.document["ui"] == [
+        "a2ui"
+    ]
