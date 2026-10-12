@@ -11,4 +11,4 @@ Session ID, key, and company cookie remain host-owned.
 loop apps run examples/personal-agent-protocol/browser-session/app.py
 ```
 
-Read the [Browser Session flow](https://personalagentprotocol.org/examples/browser-session/).
+Read the [Browser Session flow](https://personal-agent-protocol.datalayer.tech/examples/browser-session/).

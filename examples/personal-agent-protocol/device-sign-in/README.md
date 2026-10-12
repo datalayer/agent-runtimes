@@ -12,4 +12,4 @@ proofs, Session Tokens, and Account Tokens remain in host-owned code.
 loop apps run examples/personal-agent-protocol/device-sign-in/app.py
 ```
 
-See the [PAP Device Sign-In guide](https://personalagentprotocol.org/docs/guides/device-sign-in).
+See the [PAP Device Sign-In guide](https://personal-agent-protocol.datalayer.tech/guides/device-sign-in/).

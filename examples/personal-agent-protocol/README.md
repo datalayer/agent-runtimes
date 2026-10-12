@@ -24,13 +24,26 @@ feature while keeping protocol secrets outside model context.
 | [`operations`](./operations/)                             | Operations v1: exact approval, at most once            | States, revisions and company summaries           |
 | [`user-with-a-company`](./user-with-a-company/)           | A user with a company, end to end                      | What each party saw; codes and tokens withheld    |
 | [`two-companies`](./two-companies/)                       | Two companies composed: Ledgerly at Northwind          | Who approved what, and where; secrets withheld    |
+| [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`, RU-1)      | Display's model view; no link, no code            |
+| [`company-connection`](./company-connection/)             | `pap.connections`: gateway server, level, scopes       | Tools given and withheld; credentials elsewhere   |
+| [`company-role`](./company-role/)                         | `pap.company`: propose, confirm, perform once          | Proposals, revisions and gate decisions           |
 
-The last seven examples need the next PAP release (0.3.3 does not include
-Account Tokens, Mediated Sign-In, conversation streaming and control,
-Operations, or the `demo` worlds); run them against an editable install of the
-PAP Python SDK until then. They run the SDK's self-contained `demo` worlds:
-real keys, proofs and HTTP over ASGI in one process, with no network and no
-model.
+Every example runs against the released PAP Python SDK, 0.9.0 (Agent Runtimes
+installs `personal-agent-protocol[ui]`), with no editable install. Most run
+the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
+one process, with no network and no model.
+
+The last three show what Agent Runtimes itself adds to PAP:
+
+- `sign-in-display`: a tool's `PapSignIn` display reaches the page through
+  `DisplayMCPToolset` and the AG-UI adapter, while the model reads only its
+  model view;
+- `company-connection`: an application working with a company as a personal
+  agent through Datalayer's gateway (`pap.connections`), given only the tools
+  its level gives, its sign-in asking only the scopes it names; and
+- `company-role`: an application that is itself a company (`pap.company`,
+  agentspecs 0.0.77), whose declared operation is proposed, confirmed by the
+  person at its exact revision, and performed once.
 
 The first two examples use Agent Runtimes' Python
 `PapPersonalAgentCapability`. The remaining examples use PAP primitives inside
@@ -47,6 +60,11 @@ From the Agent Runtimes repository:
 loop apps run examples/personal-agent-protocol/company-discovery/app.py
 python scripts/validate_pap_examples.py
 ```
+
+The validator builds every example, rejects duplicate application and tool
+IDs and tools that take a host-only value (a token, a verifier, a pairwise
+identifier), checks that each declared company operation names one of the
+application's tools, and runs every argument-free `read` tool once.
 
 Production Datalayer deployments inject metadata and authorization gateways.
 Those gateways own DNS pinning, egress, key custody, one-use state, token
@@ -76,9 +94,8 @@ Seven more gallery examples (**PAP User with a Company**, **PAP Two
 Companies**, **PAP Account Tokens**, **PAP Mediated Sign-In**, **PAP
 Conversation Streaming**, **PAP Conversation Control** and **PAP
 Operations**) replay, step by step, what the user sees, what each party holds,
-and the sequence of HTTP exchanges between them. The TypeScript SDK does not
-implement these features yet, so these views call no SDK function: they read
-redacted traces generated from the Python demo worlds:
+and the sequence of HTTP exchanges between them. These views call no SDK
+function: they read redacted traces generated from the Python demo worlds:
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py
@@ -88,3 +105,13 @@ The script writes `src/examples/pap/traces/<slug>.json`, replaces every token,
 code, proof, assertion and credential with a placeholder such as
 `‹session token›`, renumbers random identifiers, and refuses to write a trace
 in which a secret survives.
+
+## The sign-in card
+
+**PAP Sign-In Display** draws a `pap_sign_in` result the way the chat does:
+the AG-UI result carries the `PapSignIn` display in `_meta`,
+`resolveToolResult` (`@datalayer/reactor/ui`) finds it, and `ReactorDisplay`
+draws it with the renderer the `pap-sign-in` plugin contributes for
+`application/vnd.datalayer.pap.sign-in+json`: the company's domain, the page
+to open, the code for a device sign-in, and until when. A plain result of the
+same tool, with no display, is read by the plugin's tool binding.

@@ -15,8 +15,4 @@ Session Token, assertion, proof, or token reference reaches the Loop model.
 loop apps run examples/personal-agent-protocol/account-tokens/app.py
 ```
 
-> Requires the next Personal Agent Protocol release: PAP 0.3.3 on PyPI does
-> not include this feature yet. Until then, run it against an editable install
-> of the PAP Python SDK (`pip install -e path/to/personal-agent-protocol`).
-
-See the [PAP Sessions guide](https://personalagentprotocol.org/docs/guides/sessions).
+See the [PAP Sessions guide](https://personal-agent-protocol.datalayer.tech/guides/sessions/).

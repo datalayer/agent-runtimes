@@ -19,8 +19,4 @@ host.
 loop apps run examples/personal-agent-protocol/conversation-control/app.py
 ```
 
-> Requires the next Personal Agent Protocol release: PAP 0.3.3 on PyPI does
-> not include this feature yet. Until then, run it against an editable install
-> of the PAP Python SDK (`pip install -e path/to/personal-agent-protocol`).
-
-See the [PAP personal agent guide](https://personalagentprotocol.org/docs/guides/personal-agent).
+See the [PAP personal agent guide](https://personal-agent-protocol.datalayer.tech/guides/personal-agent/).

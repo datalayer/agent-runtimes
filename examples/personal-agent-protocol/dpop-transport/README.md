@@ -8,4 +8,4 @@ or caller-controlled authorization headers are rejected.
 loop apps run examples/personal-agent-protocol/dpop-transport/app.py
 ```
 
-Read the [DPoP transport flow](https://personalagentprotocol.org/examples/dpop-transport/).
+Read the [DPoP transport flow](https://personal-agent-protocol.datalayer.tech/examples/dpop-transport/).

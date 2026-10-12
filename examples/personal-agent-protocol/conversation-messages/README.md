@@ -8,4 +8,4 @@ The Python and TypeScript PAP clients enforce the same message-ID, retry,
 response-validation, and DPoP transport boundaries. This Python Loop example
 keeps the interaction compact while the linked guide documents both SDKs.
 
-Read the [conversation flow](https://personalagentprotocol.org/examples/conversation-messages/).
+Read the [conversation flow](https://personal-agent-protocol.datalayer.tech/examples/conversation-messages/).

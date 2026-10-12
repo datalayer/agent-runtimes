@@ -13,4 +13,4 @@ Account Token remains in host-owned code.
 loop apps run examples/personal-agent-protocol/direct-sign-in-lifecycle/app.py
 ```
 
-See the [PAP Direct Sign-In guide](https://personalagentprotocol.org/docs/guides/direct-sign-in).
+See the [PAP Direct Sign-In guide](https://personal-agent-protocol.datalayer.tech/guides/direct-sign-in/).

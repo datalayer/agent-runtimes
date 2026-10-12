@@ -17,8 +17,8 @@ replaced by a placeholder such as `‹session token›`, and every random opaque
 identifier by a stable one (`cnv_1`), so the output is deterministic. The
 script refuses to write a trace in which a secret survives.
 
-From the Agent Runtimes repository, with the PAP Python SDK installed (the
-features need the PAP release after 0.3.3, or an editable install):
+From the Agent Runtimes repository, with the PAP Python SDK installed (0.9.0,
+as Agent Runtimes installs it):
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py

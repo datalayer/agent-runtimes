@@ -1,10 +1,17 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Build every Agent Runtimes PAP example and reject duplicate identifiers."""
+"""Build every Agent Runtimes PAP example, run its read tools, and reject duplicate identifiers.
+
+Each example's argument-free ``read`` tool is run once: the demo worlds are in
+process, with no network and no model. An application that is a company
+(``pap.company``) must declare each operation on a tool of its own.
+"""
 
 from __future__ import annotations
 
+import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -51,9 +58,27 @@ def main() -> int:
                 raise RuntimeError(
                     f"Host-only PAP values exposed by {app_id}/{tool.name}: {names}"
                 )
+        declared = {tool.name for tool in built.application.spec.tools}
+        for operation in built.application.spec.pap.company.operations:
+            if operation.tool not in declared:
+                raise RuntimeError(
+                    f"{app_id} declares {operation.action} on {operation.tool}, "
+                    "which is not one of its tools"
+                )
+        ran = 0
+        handlers = built.application.tools
+        for tool in built.application.spec.tools:
+            if tool.does != ["read"] or tool.parameters.get("required"):
+                continue
+            result = asyncio.run(handlers[tool.name]())
+            if not isinstance(result, dict):
+                raise RuntimeError(f"{app_id}/{tool.name} returned {type(result)!r}")
+            json.dumps(result)
+            ran += 1
+        count = len(built.application.spec.tools)
         sys.stdout.write(
             f"{path.relative_to(ROOT)}: {app_id} "
-            f"({len(built.application.spec.tools)} tool)\n"
+            f"({count} tool{'s' if count != 1 else ''}, {ran} run)\n"
         )
     return 0
 
