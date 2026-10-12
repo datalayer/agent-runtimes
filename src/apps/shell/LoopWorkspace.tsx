@@ -134,8 +134,9 @@ export type LoopWorkspaceProps = {
   chatHeaderActions?: ReactNode;
   /**
    * The chat's view, kept by the host: offered in the chat's title bar by
-   * its view-mode toggle. The host draws the view picked — the assistant
-   * mode is `ChatFloating`'s, holding this workspace as its conversation.
+   * its view-mode toggle. The host draws the view picked — for the
+   * assistant, a chat layout (`LoopChatLayout`) that hands the transcript
+   * and the composer to `ChatFloating`'s assistant mode.
    */
   chatViewModes?: LoopChatViewModes;
   /**
