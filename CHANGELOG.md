@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.113
+
+- **PACT** `poll_sign_in` / `pollSignIn`: one question to the Brand's token endpoint, `None` while the person has not signed in — what the MCP gateway's `pact` toolset asks (AGENT_PROTOCOLS PI-10).
+- **What a runtime speaks** (AGENT_PROTOCOLS PR-50, EX-08): `GET {prefix}/protocols`, and `loop apps protocols [APP]` with what an application's spec uses.
+- **Web Bot Auth, one key, two languages** (EX-01): Python signs the base Cloudflare's library signs (the target, the `Signature-Agent` member, then `@method`, `@path`, `@query`), held by a cross-language fixture.
+- The Appspec type carries the `pact` block (agentspecs `pact.connections`).
+
 ## 1.3.112
 
 - **Agent protocols as Reactor plugins** (AGENT_PROTOCOLS §3.1): the `agent-protocols` Reactor Extension delivers one plugin each for MCP, A2A, Web Bot Auth, UCP, ACP and PACT, in Python and TypeScript; each protocol's extensions are contribution points of its plugin (`<protocol>.extension.*`), held by its `reactor-points.json` and table-driven tests. Web Bot Auth signs and verifies (the draft's vectors byte for byte) and every A2A route refuses a bad or replayed signature; UCP and ACP checkouts become exact proposals spent once; PACT's personal-agent side with a local provider. Examples under `examples/protocols/`, docs under *Protocols*.
