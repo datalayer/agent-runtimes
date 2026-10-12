@@ -66,6 +66,20 @@ it: exported under its id, declared by the plugin, its default at order 100
 (or none), replaced by a lower order, gone with its plugin, two at the same
 winning order failing closed.
 
+## Conformance
+
+Each protocol is checked in both languages against the same fixtures, so the
+two packages cannot drift apart:
+
+| Protocol | Shared fixture | Python | TypeScript | Secrets never seen by a model |
+| --- | --- | --- | --- | --- |
+| Web Bot Auth | `web_bot_auth/fixtures/vectors.json`: the draft's Ed25519 vectors E.2.1, E.2.2, E.2.3, reproduced byte for byte | `test_protocols_web_bot_auth.py` | `webBotAuth.unit.test.ts` | the private key: never in a header, the directory or a repr |
+| UCP 2026-08-25 | `ucp/fixtures/checkout.json`: a checkout and its revision digest | `test_protocols_ucp.py` (against the test merchant) | `ucp.unit.test.ts` | the payment token |
+| Agentic Commerce 2026-04-17 | `agentic_commerce/fixtures/session.json`: a session, the discovery document, the revision digest | `test_protocols_agentic_commerce.py` (against the test seller) | `agenticCommerce.unit.test.ts` | the payment token and the seller bearer |
+| PACT 1.0 | `pact/fixtures/card.json`: a Brand's card and how it is read | `test_protocols_pact.py` (against the local Provider) | `pact.unit.test.ts` | the device code and the delegation token |
+| A2A 1.0 extensions | — | `test_protocols_a2a_extensions.py`, `test_protocols_a2a_signed_requests.py` | `a2aExtensions.unit.test.ts` | — |
+| Every plugin | its `reactor-points.json` | `test_protocols_reactor_points.py` | `reactorPoints.unit.test.ts` | — |
+
 ## A2A card extensions
 
 What an agent card publishes under `capabilities.extensions` is what the A2A
@@ -80,3 +94,7 @@ from agent_runtimes.protocols.a2a import negotiate_extensions
 
 activated = negotiate_extensions(card, platform)  # ValueError if a required one is missing
 ```
+
+`examples/protocols/a2a/card_extensions.py` shows a card's extensions
+published from the plugin's points, a third party's extension added by its
+own plugin, and a client refusing an agent that requires one it lacks.
