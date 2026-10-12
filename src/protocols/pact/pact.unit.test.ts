@@ -139,7 +139,8 @@ async function brand(agentJwk: JsonWebKey & { kid: string }) {
       ts: '2026-10-12T00:00:00Z',
     };
     const jws = await new CompactSign(
-      new TextEncoder().encode(JSON.stringify(claims)),
+      // jsdom's TextEncoder answers its own realm's bytes; `jose` wants this one's.
+      new Uint8Array(new TextEncoder().encode(JSON.stringify(claims))),
     )
       .setProtectedHeader({ alg: 'ES256', kid: 'brand-key' })
       .sign(keys.privateKey);
