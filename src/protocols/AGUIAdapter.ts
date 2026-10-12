@@ -21,6 +21,10 @@ import {
   type AguiEvent,
 } from '@datalayer/reactor/ui';
 
+/** What the page says when a run's stream closes before the run said how it ended. */
+export const RUN_CUT_SHORT =
+  'The run stopped before it finished, without an answer or an error: send it again.';
+
 /**
  * AG-UI specific configuration
  */
@@ -588,10 +592,21 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
     this._streamParsingDepth++;
 
+    // Whether the run said how it ended. A stream that closes without
+    // RUN_FINISHED or RUN_ERROR is a run cut short — by the runtime, a proxy
+    // or the network — and the page says so instead of waiting for an answer
+    // that is not coming (a Preview gave no answer for minutes, 2026-10-12).
+    let ended = false;
+
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (!ended) {
+            throw new Error(RUN_CUT_SHORT);
+          }
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -607,6 +622,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
             try {
               const event = JSON.parse(data) as AGUI.Event;
+              const kind = (event as { type?: unknown }).type;
+              if (kind === 'RUN_FINISHED' || kind === 'RUN_ERROR') {
+                ended = true;
+              }
               this.handleAGUIEvent(
                 event as unknown as Record<string, unknown>,
                 {

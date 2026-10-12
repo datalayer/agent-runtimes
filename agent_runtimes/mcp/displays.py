@@ -36,7 +36,9 @@ from pydantic_ai.messages import ToolReturn, ToolReturnPart
 from reactor.ui import DISPLAY_META_KEY, DISPLAY_TYPES, DisplayWire
 
 __all__ = [
+    "MCP_INIT_TIMEOUT",
     "DisplayMCPToolset",
+    "McpServerUnreachable",
     "model_view_of",
     "page_meta",
     "returned",
@@ -111,15 +113,37 @@ def page_meta(part: object) -> dict[str, Any] | None:
     return None if display is None else {DISPLAY_META_KEY: display}
 
 
+#: How long an MCP server has to answer its handshake, in seconds, when the
+#: toolset is not told otherwise. pydantic-ai's own default is 5 s, and a cold
+#: gateway worker takes 7 to 10 s to start and answer `initialize`
+#: (2026-10-12: 9.6 s and 6.9 s): the run failed in 5 s with
+#: "Client failed to connect" before the gateway had answered.
+MCP_INIT_TIMEOUT = 30.0
+
+
+class McpServerUnreachable(RuntimeError):
+    """An MCP server a run needs did not open: said in a sentence, the run ends."""
+
+
 class DisplayMCPToolset(MCPToolset):
     """
     An MCP toolset whose results' displays reach the page, not the model.
 
     Built as ``MCPToolset`` is. Its client keeps what pydantic-ai's mapping of
-    a result drops: the display in its ``_meta``.
+    a result drops: the display in its ``_meta``. Without an `init_timeout` of
+    its own it waits :data:`MCP_INIT_TIMEOUT` for the handshake, and a server
+    that does not open ends the run with :class:`McpServerUnreachable`, which
+    names the server and how long it was given.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        from fastmcp.client import Client  # noqa: PLC0415
+
+        given = args[0] if args else kwargs.get("client")
+        if not isinstance(given, Client):
+            # A pre-built Client carries its own; passing one beside it is refused.
+            kwargs.setdefault("init_timeout", MCP_INIT_TIMEOUT)
+        self._init_timeout = kwargs.get("init_timeout")
         super().__init__(*args, **kwargs)
         call = self.client.call_tool
 
@@ -140,6 +164,26 @@ class DisplayMCPToolset(MCPToolset):
             return result
 
         self.client.call_tool = call_tool  # type: ignore[method-assign]
+
+    async def __aenter__(self) -> "DisplayMCPToolset":
+        try:
+            await super().__aenter__()
+        except Exception as error:
+            # pydantic-ai says "Client failed to connect: " — often with nothing
+            # after the colon (a timeout's message is empty). The run's error is
+            # what the page shows: it says which server, and how long it waited.
+            cause = error.__cause__ or error
+            detail = str(error).strip() or type(cause).__name__
+            waited = (
+                f" (it was given {self._init_timeout:g} s to answer)"
+                if isinstance(self._init_timeout, (int, float))
+                else ""
+            )
+            raise McpServerUnreachable(
+                f"The MCP server `{self.id or self.label}` did not open{waited}, "
+                f"so this run stopped before using it: {detail}"
+            ) from error
+        return self
 
     async def call_tool(
         self, name: str, tool_args: dict[str, Any], ctx: Any, tool: Any

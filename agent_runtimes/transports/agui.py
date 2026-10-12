@@ -51,6 +51,96 @@ _run_instructions: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 
 
+#: The events that end an AG-UI run: one of them is the last thing a page reads.
+RUN_ENDS = frozenset({"RUN_FINISHED", "RUN_ERROR"})
+
+
+def _run_events(text: str) -> Iterator[dict[str, Any]]:
+    """The AG-UI events in complete SSE text."""
+    for line in text.splitlines():
+        if line.startswith("data:"):
+            try:
+                event = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            if isinstance(event, dict):
+                yield event
+
+
+async def watch_run_stream(
+    chunks: AsyncIterator[Any], agent_id: str, started: float
+) -> AsyncIterator[bytes]:
+    """
+    A run's AG-UI stream, passed through, that always ends with a statement.
+
+    A Preview run on Datalayer gave no answer for minutes and nothing in the
+    runtime's logs (PAP browser pass, 2026-10-12): a run that ends in error
+    says so only to the page (`RUN_ERROR`), and a stream cut before its end
+    said so to nobody. Here each end is logged with the agent and how long
+    the run took — an error with its message, a stream the page closed
+    before the run ended — and a stream that ends without `RUN_FINISHED` or
+    `RUN_ERROR` ends with a `RUN_ERROR` of its own: the page never waits for
+    an end that is not coming.
+
+    Parameters
+    ----------
+    chunks : AsyncIterator[Any]
+        The stream's chunks, as the AG-UI adapter yields them.
+    agent_id : str
+        The agent the run belongs to, for the log.
+    started : float
+        `time.perf_counter()` when the request arrived.
+
+    Yields
+    ------
+    bytes
+        The chunks, unchanged, and a closing `RUN_ERROR` when none ended it.
+    """
+    import time  # noqa: PLC0415
+
+    ended: str | None = None
+    pending = ""
+    try:
+        async for chunk in chunks:
+            data = chunk if isinstance(chunk, bytes) else str(chunk).encode("utf-8")
+            pending += data.decode("utf-8", errors="replace")
+            complete, separator, pending = pending.rpartition("\n\n")
+            for event in _run_events(complete + separator):
+                kind = event.get("type")
+                if kind in RUN_ENDS:
+                    ended = kind
+                if kind == "RUN_ERROR":
+                    logger.warning(
+                        "AG-UI run of %s ended in error after %.1f s: %s",
+                        agent_id,
+                        time.perf_counter() - started,
+                        event.get("message") or "(no message)",
+                    )
+            yield data
+    except (asyncio.CancelledError, GeneratorExit):
+        if ended is None:
+            logger.warning(
+                "AG-UI run of %s stopped after %.1f s: the page closed its "
+                "stream before the run ended",
+                agent_id,
+                time.perf_counter() - started,
+            )
+        raise
+    if ended is None:
+        message = (
+            "The run stopped without finishing and without saying why: "
+            "no answer came back."
+        )
+        logger.error(
+            "AG-UI run of %s ended after %.1f s without RUN_FINISHED or "
+            "RUN_ERROR; the page is told it stopped",
+            agent_id,
+            time.perf_counter() - started,
+        )
+        closing = json.dumps({"type": "RUN_ERROR", "message": message})
+        yield f"data: {closing}\n\n".encode("utf-8")
+
+
 @contextmanager
 def run_instructions(instructions: str | None) -> Iterator[None]:
     """Tell the runs started inside this block ``instructions`` besides their agent's."""
@@ -637,11 +727,10 @@ class AGUITransport(BaseTransport):
                             )
 
                         async def _iter_with_usage_tail() -> AsyncIterator[bytes]:
-                            async for chunk in original_iter:
-                                if isinstance(chunk, bytes):
-                                    yield chunk
-                                else:
-                                    yield str(chunk).encode("utf-8")
+                            async for chunk in watch_run_stream(
+                                original_iter, agent_id, request_start
+                            ):
+                                yield chunk
                             if usage_event_payload is not None:
                                 payload = json.dumps(usage_event_payload)
                                 yield f"data: {payload}\n\n".encode("utf-8")
