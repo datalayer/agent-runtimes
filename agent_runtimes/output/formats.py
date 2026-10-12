@@ -535,7 +535,7 @@ def surface_of_components(
     Returns
     -------
     dict
-        ``{surfaceId, catalogId, title, messages}``, its id ``answer-…``.
+        ``{surfaceId, catalogId, title, messages}``.
 
     Raises
     ------

@@ -57,7 +57,7 @@ vi.mock('../../../runtimes/browser/model', () => ({
 afterEach(() => cleanup());
 
 /** What the runtime's `show_components` gives (`surface_of_components`): a table and a choice. */
-const SURFACE_ID = 'answer-7f3a';
+const SURFACE_ID = '7f3a0c1d';
 const SURFACE: A2APeerArtifact = {
   mediaType: 'application/json+a2ui',
   name: 'Payment reminders',
@@ -224,8 +224,15 @@ describe('AnswerSurfaces', () => {
         action: { name: 'Send them', payload: { does: 'send' } },
         does: 'send',
       });
-      // A form's submission is not an answer's button.
-      expect(pressedOf({ name: 'Send them', surfaceId: 'form-1' })).toBeNull();
+      // A form's submission is not an answer's button; the surface's id
+      // says nothing either way (REACTOR_UI RU-2: no `answer-` prefix).
+      expect(
+        pressedOf({ name: 'submit_a2ui_form', surfaceId: SURFACE_ID }),
+      ).toBeNull();
+      expect(pressedOf({ name: ' ', surfaceId: SURFACE_ID })).toBeNull();
+      expect(
+        pressedOf({ name: 'Send them', surfaceId: 'any-id' })?.message,
+      ).toBe('Send them');
 
       const onPress = vi.fn(
         async () =>

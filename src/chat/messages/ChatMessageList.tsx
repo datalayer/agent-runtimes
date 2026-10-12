@@ -26,7 +26,7 @@ import {
 } from 'react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
 import { resolveToolResult } from '@datalayer/reactor/ui';
-import { ReactorDisplay } from '@datalayer/reactor/ui/react';
+import { DisplayText, ReactorDisplay } from '@datalayer/reactor/ui/react';
 import { Text, Spinner, Link, Label, RelativeTime } from '@primer/react';
 import {
   ArrowRightIcon,
@@ -1284,6 +1284,26 @@ export function ChatMessageList({
                 />
               )}
             </Box>
+            {/* What it shows besides its words (REACTOR_UI RU-2): each
+                display drawn by its type's renderer, else its text. */}
+            {message.displays?.length ? (
+              <Box
+                data-chat-displays=""
+                display="flex"
+                flexDirection="column"
+                gap={2}
+                mt={2}
+                width="100%"
+              >
+                {message.displays.map(display =>
+                  platform ? (
+                    <ReactorDisplay key={display.id} display={display} />
+                  ) : (
+                    <DisplayText key={display.id} display={display} />
+                  ),
+                )}
+              </Box>
+            ) : null}
             {renderMessageFooter ? (
               <Box
                 display="flex"

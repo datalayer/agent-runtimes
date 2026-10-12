@@ -29,7 +29,11 @@ const panel: LoopElement = {
   id: 'runs',
   where: 'panel',
   title: 'Runs',
-  shows: { surfaceId: 'answer-runs', messages: [] },
+  shows: {
+    type: 'application/vnd.datalayer.loop.answer+json',
+    id: 'runs',
+    text: 'Runs showed Table runs',
+  },
 };
 
 afterEach(() => clearLoopElements());
@@ -56,12 +60,10 @@ describe('loop.element', () => {
       id: 'runs',
       closed: true,
     });
-    expect(loopElementChange(event({ id: 'p', where: 'page' }))).toEqual({
-      id: 'p',
-      where: 'page',
-      title: '',
-      shows: null,
-    });
+    // An element shows a display, or the event is refused (REACTOR_UI RU-2).
+    expect(() => loopElementChange(event({ id: 'p', where: 'page' }))).toThrow(
+      /shows no display/,
+    );
   });
 
   it('adds one opened, changes one in place, takes one closed away', () => {

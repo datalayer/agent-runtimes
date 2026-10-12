@@ -14,6 +14,7 @@
  */
 
 import type { A2uiMessage } from '@a2ui/web_core/v0_9';
+import type { Display } from '@datalayer/reactor/ui';
 
 export type A2uiRequiredField = {
   id: string;
@@ -168,41 +169,65 @@ export function validateA2uiSubmission(
     .filter((message): message is string => message !== null);
 }
 
-/** Where the surface of what an application's answer shows is named (LOOP P-04). */
-export const ANSWER_SURFACE_PREFIX = 'answer-';
+/**
+ * The display type of what an application's answer shows (LOOP P-04,
+ * REACTOR_UI RU-2): `AnswerShows` in `agent_runtimes.loop.apps.components`.
+ */
+export const ANSWER_DISPLAY_TYPE = 'application/vnd.datalayer.loop.answer+json';
 
-/** A button pressed on an answer's surface, as the chat sends it on. */
-export type AnswerAction = {
+/** A button pressed on what an answer shows, as the chat sends it on. */
+export type AnswerPress = {
   /** The person's turn, in words: the action's name. */
   message: string;
   /** What the session API reads besides the message (`forwardedProps.loop`). */
   forwardedProps: {
-    loop: { action: { name: string; payload: Record<string, unknown> } };
+    loop: {
+      action: {
+        name: string;
+        display_id: string;
+        token: string;
+        payload: Record<string, unknown>;
+      };
+    };
   };
 };
 
-/**
- * What a button pressed on the surface an application's answer shows sends:
- * its action, by name, with what it read — the application's code reacts
- * with its `@app.action(name)`, as to a button of its page. `null` for any
- * other surface, whose buttons stay the agent's form submission.
- */
-export function answerAction(action: {
-  name: string;
-  surfaceId: string;
-  context?: Record<string, unknown>;
-}): AnswerAction | null {
-  if (
-    !action.surfaceId.startsWith(ANSWER_SURFACE_PREFIX) ||
-    !action.name.trim()
-  ) {
+/** The A2UI surface an answer's display draws, or `null` for a display that has none. */
+export function answerSurface(
+  display: Display,
+  catalogId: string,
+): A2uiToolResult | null {
+  if (display.type !== ANSWER_DISPLAY_TYPE) {
     return null;
   }
+  return readA2uiToolResult(display.data?.surface, catalogId);
+}
+
+/**
+ * What a button pressed on what an answer shows sends: the action the
+ * display offered under that name, with its token and what the button read
+ * — the application's code reacts with its `@app.action(name)`. A button
+ * whose action the display did not offer sends nothing: the sentence why.
+ */
+export function answerPress(
+  display: Display,
+  action: { name: string; context?: Record<string, unknown> },
+): AnswerPress | { refused: string } {
+  const name = action.name.trim();
+  const offer = (display.actions ?? []).find(one => one.name === name);
+  if (!offer) {
+    return { refused: `“${name || 'This button'}” was not offered here.` };
+  }
   return {
-    message: action.name.trim(),
+    message: name,
     forwardedProps: {
       loop: {
-        action: { name: action.name.trim(), payload: { ...action.context } },
+        action: {
+          name,
+          display_id: display.id,
+          token: offer.token,
+          payload: { ...action.context },
+        },
       },
     },
   };

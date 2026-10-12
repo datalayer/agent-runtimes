@@ -832,8 +832,8 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
 
 
 async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
-    """An answer's components arrive as the result of the tool the chat draws
-    surfaces for, under the message, and come back with a resume (LOOP P-04)."""
+    """An answer's components arrive as a display under the message, and come
+    back with a resume (LOOP P-04, REACTOR_UI RU-2)."""
     from agent_runtimes.loop.apps import AppHost, Application
     from agent_runtimes.loop.apps.callers import Caller
 
@@ -877,23 +877,27 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
             if line.startswith("data:")
         )
     kinds = [e["type"] for e in events]
-    assert kinds[:7] == [
+    # What it shows is a display under the message, not a tool call
+    # (REACTOR_UI RU-2).
+    assert kinds[:4] == [
         "TEXT_MESSAGE_START",
         "TEXT_MESSAGE_CONTENT",
         "TEXT_MESSAGE_END",
-        "TOOL_CALL_START",
-        "TOOL_CALL_ARGS",
-        "TOOL_CALL_END",
-        "TOOL_CALL_RESULT",
+        "ACTIVITY_SNAPSHOT",
     ]
-    assert "TOOL_CALL_START" not in kinds[7:]
-    start, result = events[3], events[6]
-    assert (start["toolCallName"], start["parentMessageId"]) == (
-        sessions.SHOW_TOOL,
-        sent.id,
-    )
-    surface = json.loads(result["content"])
-    assert surface["surfaceId"] == f"answer-{sent.id}"
+    assert "ACTIVITY_SNAPSHOT" not in kinds[4:]
+    assert not [kind for kind in kinds if kind.startswith("TOOL_CALL")]
+    activity = events[3]
+    assert activity["activityType"] == "reactor.ui"
+    assert activity["content"]["scope"] == live.uid
+    display = activity["content"]["display"]
+    assert display["type"] == "application/vnd.datalayer.loop.answer+json"
+    assert display["id"] == activity["messageId"] == f"{sent.id}-shows"
+    assert display["data"]["message_id"] == sent.id
+    assert display["text"] == "Notes assistant showed Table runs"
+    assert display["actions"] == []
+    surface = display["data"]["surface"]
+    assert surface["surfaceId"] == display["id"]
     components = surface["messages"][1]["updateComponents"]["components"]
     assert [c["id"] for c in components] == ["root", "runs"]
     assert surface["messages"][2]["updateDataModel"]["value"] == {
@@ -902,11 +906,12 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
 
     snapshot = [
         m.model_dump(by_alias=True, exclude_none=True)
-        for m in sessions._snapshot(live.messages)
+        for m in sessions._snapshot(live.messages, live.uid)
     ]
-    assert [m["role"] for m in snapshot] == ["assistant", "tool", "assistant"]
-    assert snapshot[0]["toolCalls"][0]["function"]["name"] == sessions.SHOW_TOOL
-    assert json.loads(snapshot[1]["content"]) == surface
+    assert [m["role"] for m in snapshot] == ["assistant", "activity", "assistant"]
+    assert "toolCalls" not in snapshot[0]
+    assert snapshot[1]["activityType"] == "reactor.ui"
+    assert snapshot[1]["content"] == {"scope": live.uid, "display": display}
 
     # The record keeps what was shown, by kind, id and words; not the data.
     shown = await session.send(

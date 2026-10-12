@@ -161,6 +161,7 @@ import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
 import { loopStepOf, withLoopStep } from './loopStep';
 import { applyLoopElement, loopElementChange } from './loopElement';
 import { loopWindowMessage, tellLoopWindow } from './loopWindow';
+import { uiOpOf, withUiOp } from './uiOps';
 import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -3675,6 +3676,27 @@ function ChatBaseInner({
           break;
 
         case 'activity': {
+          // A display under a message, shown, changed or gone (REACTOR_UI
+          // RU-2): kept on the message, drawn by its type's renderer.
+          const uiOp = uiOpOf(event.activity);
+          if (uiOp) {
+            const apply = <T extends DisplayItem | ChatMessage>(
+              items: T[],
+            ): T[] => {
+              try {
+                return withUiOp(items, uiOp);
+              } catch (error) {
+                console.error('[ChatBase] reactor.ui op not applied:', error);
+                return items;
+              }
+            };
+            setDisplayItems(prev => apply(prev));
+            if (useStoreMode) {
+              const store = useChatStore.getState();
+              store.setMessages(apply(store.messages));
+            }
+            break;
+          }
           // A step of an application's code, drawn as it runs (LOOP P-16).
           const step = loopStepOf(event.activity);
           if (step) {

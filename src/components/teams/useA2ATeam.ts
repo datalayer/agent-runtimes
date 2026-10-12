@@ -157,7 +157,7 @@ export const COMPONENTS_NOTEBOOK_AND_WORDS: readonly string[] = [
 
 /** A surface of components a member showed with an answer: who gave it, and the surface. */
 export type A2ATeamSurface = {
-  /** Its surface's id: `answer-…`. */
+  /** Its surface's id. */
   id: string;
   /** The member that showed it, by its id. */
   giver: string;

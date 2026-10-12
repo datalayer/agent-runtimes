@@ -9,13 +9,15 @@
  * an element is a message, and the chat draws it as one (P-04).
  *
  * The session API says it with a `CUSTOM` event named `loop.element` —
- * `{id, where, title, shows}`, `shows` the A2UI surface an answer's
- * components are drawn from, or `{id, closed: true}` — which the AG-UI
+ * `{id, where, title, shows}`, `shows` the element's display (an answer's,
+ * REACTOR_UI RU-2), or `{id, closed: true}` — which the AG-UI
  * adapter hands on as an `activity`. The chat does not draw it: it keeps
  * what is open here, and whoever draws panels and pages (the `app-elements`
  * plugin) listens. One store per page, as there is one chat per
  * application on it.
  */
+
+import { isDisplay, type Display } from '@datalayer/reactor/ui';
 
 /** The `CUSTOM` event's name. */
 export const LOOP_ELEMENT = 'loop.element';
@@ -28,8 +30,8 @@ export type LoopElement = {
   id: string;
   where: LoopElementWhere;
   title: string;
-  /** The surface it draws: what `render_a2ui_surface` returns. */
-  shows: unknown;
+  /** The display it draws: what an answer shows (`AnswerShows`). */
+  shows: Display;
 };
 
 /** What an event says: an element opened or changed, or one closed. */
@@ -44,11 +46,14 @@ export function loopElementChange(
   if (!data || typeof data.id !== 'string' || !data.id) return null;
   if (data.closed === true) return { id: data.id, closed: true };
   if (data.where !== 'panel' && data.where !== 'page') return null;
+  if (!isDisplay(data.shows)) {
+    throw new Error(`Element ${data.id} shows no display`);
+  }
   return {
     id: data.id,
     where: data.where,
     title: typeof data.title === 'string' ? data.title : '',
-    shows: data.shows ?? null,
+    shows: data.shows,
   };
 }
 

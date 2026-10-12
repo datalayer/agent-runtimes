@@ -43,6 +43,8 @@ import {
 import type { ToolCallRenderContext } from '../../../types/chat';
 import { AGENTSPECS } from '../../../specs/agents';
 import { LoopSlots, type LoopWorkspaceContext } from '../../core';
+import { AnswerShowsView } from './AnswerShows';
+import { ANSWER_DISPLAY_TYPE } from './toolResult';
 import {
   SurfaceToolResult,
   type SurfaceRendered,
@@ -156,6 +158,12 @@ export function createA2uiSurfacePlugin(
     );
   }
 
+  // What an application's answer shows (REACTOR_UI RU-2): its buttons press
+  // what the display offered, through the workspace's chat.
+  function Answer({ display }: RendererProps): JSX.Element {
+    return <AnswerShowsView display={display} send={send} />;
+  }
+
   const plugin = definePlugin({
     name:
       counter === 1
@@ -176,6 +184,11 @@ export function createA2uiSurfacePlugin(
           rank: options.onRendered || options.onSubmitted ? 1 : 0,
         }),
         { id },
+      ),
+      contribution(
+        Renderers,
+        defineRenderer({ type: ANSWER_DISPLAY_TYPE, component: Answer }),
+        { id: `${id}:answer` },
       ),
       ...[...surfaceToolNames()].map(tool =>
         contribution(
@@ -204,12 +217,16 @@ export function createA2uiSurfacePlugin(
 export const A2uiSurfacePlugin = createA2uiSurfacePlugin();
 
 export type { SurfaceRendered, SurfaceSubmitted } from './SurfaceToolResult';
+export { AnswerShowsView } from './AnswerShows';
 export {
-  answerAction,
+  ANSWER_DISPLAY_TYPE,
+  answerPress,
+  answerSurface,
   readA2uiToolResult,
   validateA2uiField,
   validateA2uiSubmission,
   type A2uiFieldRule,
   type A2uiToolResult,
+  type AnswerPress,
 } from './toolResult';
 export default A2uiSurfacePlugin;

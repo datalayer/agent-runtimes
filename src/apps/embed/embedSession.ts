@@ -27,6 +27,8 @@
 
 import type { ChatMessage } from '../../types/messages';
 import { windowTurnOf } from '../../chat/base/loopWindow';
+import { withUiOp } from '../../chat/base/uiOps';
+import { AGUI_NAME, isDisplay, UI_WIRE_VERSION } from '@datalayer/reactor/ui';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
@@ -139,16 +141,47 @@ export function messagesOfThread(messages: unknown): ChatMessage[] {
   if (!Array.isArray(messages)) {
     return [];
   }
-  const drawn: ChatMessage[] = [];
+  let drawn: ChatMessage[] = [];
   for (const message of messages) {
     if (!message || typeof message !== 'object') {
       continue;
     }
-    const { id, role, content } = message as {
+    const { id, role, content, activityType } = message as {
       id?: unknown;
       role?: unknown;
       content?: unknown;
+      activityType?: unknown;
     };
+    // What a message showed: its display, as the activity that drew it
+    // (REACTOR_UI RU-2), kept on the message it is under.
+    if (role === 'activity' && activityType === AGUI_NAME) {
+      const shown = content as { scope?: unknown; display?: unknown } | null;
+      if (
+        !shown ||
+        typeof shown.scope !== 'string' ||
+        !isDisplay(shown.display)
+      ) {
+        throw new Error(`Activity ${String(id)} is not { scope, display }`);
+      }
+      // A message that said nothing but shows something is drawn for it.
+      const under = shown.display.data?.message_id;
+      if (typeof under === 'string' && !drawn.some(one => one.id === under)) {
+        drawn.push({
+          id: under,
+          role: 'assistant',
+          content: '',
+          createdAt: new Date(),
+        });
+      }
+      drawn = withUiOp(drawn, {
+        v: UI_WIRE_VERSION,
+        op: 'show',
+        scope: shown.scope,
+        id: shown.display.id,
+        body: shown.display,
+      });
+      continue;
+    }
     if (
       (role === 'user' || role === 'assistant') &&
       typeof id === 'string' &&

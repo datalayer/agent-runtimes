@@ -278,20 +278,35 @@ refused (409), as is anything but `resume` on a stopped session.
   under that name. The conversation a resume snapshots keeps each author as
   the message's `name`.
   What an answer shows besides its text (`session.send(text, show=[...],
-  data={...})`) follows its message as the call of the tool the chat draws
-  surfaces for, `render_a2ui_surface`, under the message
-  (`parentMessageId`), its result the A2UI messages that draw it —
-  `{surfaceId: "answer-<message id>", title, messages}`: `createSurface`,
-  `updateComponents` and, with data, `updateDataModel`. A resume's snapshot
-  brings it back as that call and its result. The run's record keeps it as
-  an `output` entry (under `outputs`): the message, each component's kind,
-  id and words, the names of its data. A Button pressed on it sends its action
-  the same way as a button of the page, `forwardedProps.loop.action` with
-  the action's name and what it read, to the application's code.
+  data={...})`) follows its message as a **display** (`reactor.ui`,
+  REACTOR_UI RU-2): an `ACTIVITY_SNAPSHOT` of activity type `reactor.ui`
+  whose content is `{scope, display}` — the scope the session's uid, the
+  display an `AnswerShows` (`application/vnd.datalayer.loop.answer+json`,
+  id `<message id>-shows`) whose `text` says the components by kind and
+  words, and whose `data` holds `message_id`, `title` and `surface`, the
+  A2UI messages that draw it (`createSurface`, `updateComponents` and, with
+  data, `updateDataModel`; the surface's id is the display's). The model
+  reads the text, never the surface. There is no tool call. A resume's
+  snapshot brings it back as an `ActivityMessage` after its message, and
+  `GET …/messages` the same. The run's record keeps it as an `output` entry
+  (under `outputs`): the message, each component's kind, id and words, the
+  names of its data.
+  Each button of an answer (`action={"event": {"name": ...}}`) is
+  **offered** by the display: `actions` lists `{name, token}`, the token
+  minted by the session for this session, this display and this action
+  (Reactor's `ActionRegistry`). A button naming an action the code has no
+  `@app.action` for is refused as the answer is sent (`ValueError`). Pressed,
+  it sends `forwardedProps.loop.action` as `{name, display_id, token,
+  payload}`; the session checks it before anything runs — a token minted for
+  another display, action or session is a **403**, an action nobody
+  registered or a press missing its token a **422** — and runs the
+  `@app.action` through the registry, a retry with the same
+  `idempotency_id` answered once. A press with no `display_id` is a page
+  block's (REACTOR_UI RU-5 types and checks those).
   An element its code opens beside the conversation (`session.show(...,
   where="panel")` or `where="page"`, LOOP P-18) is a `CUSTOM` event named
-  `loop.element` — `{id, where, title, shows}`, `shows` the surface an
-  answer's components are drawn from, under `answer-<id>` — sent again
+  `loop.element` — `{id, where, title, shows}`, `shows` its `AnswerShows`
+  display, its buttons offered the same way — sent again
   whole when it changes, and `{id, closed: true}` when its code closes it.
   The `app-elements` plugin draws a panel on the workspace's trailing edge
   and a page over it, each with its own Close; a resume sends again what is
@@ -494,7 +509,7 @@ refused for an application whose code reads none. A widget's page
 `loop.page` event, nothing said in the conversation, its inputs refused with
 422 in a sentence, and refused for an application with no page of its code.
 The page side is tested with vitest
-(`app-page`, `app-page-blocks`, `app-page-code`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`, `app-uploads`, `loopWindow`, `embed-session`).
+(`app-page`, `app-page-blocks`, `app-page-code`, `embed-element`, `loopMessage`, `loopStep`, `answer-action`, `answer-displays`, `app-uploads`, `loopWindow`, `embed-session`).
 
 A Preview held to its grants (`agent_runtimes/tests/test_app_preview_grants.py`):
 its token asked with the person's, for the Spaces of the Appspec it runs; each

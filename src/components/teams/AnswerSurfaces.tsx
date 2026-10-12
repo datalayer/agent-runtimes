@@ -27,7 +27,6 @@
 import type { JSX } from 'react';
 import { Suspense, lazy } from 'react';
 import { Text } from '@primer/react';
-import { answerAction } from '../../apps/plugins/a2ui-surface/toolResult';
 import type { A2APeerAction } from '../../runtimes/browser/a2aPeer';
 import type { A2ATeamSurface } from './useA2ATeam';
 
@@ -44,21 +43,22 @@ export type AnswerPressed = {
 };
 
 /**
- * What a button pressed on an answer's surface sends back, or `null` for an
- * action that is not one of an answer's buttons (a form's submission).
+ * What a button pressed on a member's surface sends back, or `null` for an
+ * action that is not one of its buttons (a form's submission). A member's
+ * surface is an answer by how it came — an A2A artifact — not by its id.
  */
 export function pressedOf(action: {
   name: string;
   surfaceId: string;
   context?: Record<string, unknown>;
 }): AnswerPressed | null {
-  const pressed = answerAction(action);
-  if (!pressed) {
+  const name = action.name.trim();
+  if (!name || name === 'submit_a2ui_form') {
     return null;
   }
-  const { name, payload } = pressed.forwardedProps.loop.action;
+  const payload = { ...action.context };
   const does = typeof payload.does === 'string' ? payload.does : 'read';
-  return { message: pressed.message, action: { name, payload }, does };
+  return { message: name, action: { name, payload }, does };
 }
 
 export type AnswerSurfacesProps = {

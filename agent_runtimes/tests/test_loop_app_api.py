@@ -539,12 +539,12 @@ def test_an_answers_surface_lays_its_components_in_a_column():
     )
     surface = answer_surface("m1", "Notes", nodes, {"rows": []})
     create, components, data = surface["messages"]
-    assert create["createSurface"]["surfaceId"] == surface["surfaceId"] == "answer-m1"
+    assert create["createSurface"]["surfaceId"] == surface["surfaceId"] == "m1"
     root = components["updateComponents"]["components"][0]
     # A child is drawn where its parent puts it, not again in the column.
     assert root == {"id": "root", "component": "Column", "children": ["go", "intro"]}
     assert data["updateDataModel"] == {
-        "surfaceId": "answer-m1",
+        "surfaceId": "m1",
         "path": "/",
         "value": {"rows": []},
     }

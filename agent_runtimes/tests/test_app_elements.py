@@ -186,8 +186,12 @@ async def test_over_the_session_api_an_element_is_a_loop_element_event() -> None
     ] * 3
     shown = events[0]["value"]
     assert (shown["id"], shown["where"], shown["title"]) == (panel.id, "panel", "Runs")
-    assert shown["shows"]["surfaceId"] == f"answer-{panel.id}"
-    assert shown["shows"]["messages"][2]["updateDataModel"]["value"] == {
+    # What it shows is its display (REACTOR_UI RU-2), the surface in its data.
+    assert shown["shows"]["type"] == "application/vnd.datalayer.loop.answer+json"
+    assert shown["shows"]["id"] == panel.id
+    surface = shown["shows"]["data"]["surface"]
+    assert surface["surfaceId"] == panel.id
+    assert surface["messages"][2]["updateDataModel"]["value"] == {
         "runs": [{"model": "a"}]
     }
     assert events[1]["value"]["where"] == "page"

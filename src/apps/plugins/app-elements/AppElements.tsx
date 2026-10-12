@@ -6,9 +6,9 @@
 /**
  * The elements an application's code opened beside the conversation (LOOP
  * P-18): a side panel on the trailing edge, and a page of its own over the
- * workspace — each drawn from the same A2UI surface an answer is drawn from
- * (`InlineSurface`), its buttons sent to the application's actions as an
- * answer's are (`answerAction`), and closed with its own button.
+ * workspace — each drawn from its display as an answer is (`AnswerShowsView`),
+ * its buttons pressing the actions the display offered, and closed with its
+ * own button.
  *
  * Drawn from the workspace's root slot, positioned against the workspace:
  * nothing is drawn, and nothing is laid out, while nothing is open.
@@ -17,11 +17,10 @@
  */
 
 import type { JSX } from 'react';
-import { useMemo, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { IconButton, Text } from '@primer/react';
 import { XIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
-import type { A2uiClientAction } from '@a2ui/web_core/v0_9';
 import {
   closeLoopElement,
   onLoopElements,
@@ -29,12 +28,7 @@ import {
   type LoopElement,
 } from '../../../chat/base/loopElement';
 import type { LoopWorkspaceContext } from '../../core';
-import {
-  InlineSurface,
-  SURFACE_CATALOG_ID,
-} from '../a2ui-surface/InlineSurface';
-import { answerAction, readA2uiToolResult } from '../a2ui-surface/toolResult';
-import { useOwnCatalog } from '../a2ui-surface/ownComponents';
+import { AnswerShowsView } from '../a2ui-surface/AnswerShows';
 
 /** How wide the side panel is, at most. */
 export const APP_PANEL_WIDTH = 380;
@@ -60,28 +54,14 @@ function ElementBody({
   element: LoopElement;
   send: Send;
 }): JSX.Element {
-  const parsed = useMemo(
-    () => readA2uiToolResult(element.shows, SURFACE_CATALOG_ID),
-    [element.shows],
-  );
-  // With the components its developer wrote (P-17).
-  const catalog = useOwnCatalog();
-  const onAction = (action: A2uiClientAction): void => {
-    // A button of what its code shows: its action goes to the application,
-    // as a button of an answer does (LOOP P-04).
-    const pressed = answerAction(action);
-    if (pressed) send?.(pressed.message, pressed.forwardedProps);
-  };
-  if (!parsed?.messages || parsed.messages.length === 0) {
-    return <Text sx={{ color: 'fg.muted' }}>Nothing to show.</Text>;
-  }
+  // What its code shows, drawn as an answer's display is: its buttons press
+  // what the display offered (LOOP P-04, REACTOR_UI RU-2).
   return (
-    <InlineSurface
-      // Drawn again whole when the code changes it.
-      key={JSON.stringify(element.shows)}
-      messages={parsed.messages}
-      onAction={onAction}
-      catalog={catalog}
+    <AnswerShowsView
+      display={element.shows}
+      send={(message, forwardedProps) =>
+        send !== undefined && !send(message, forwardedProps)
+      }
     />
   );
 }

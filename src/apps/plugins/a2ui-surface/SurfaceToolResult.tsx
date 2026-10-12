@@ -27,7 +27,6 @@ import { encodeFormSubmission } from '../../../chat/messages/formSubmission';
 import { InlineSurface, SURFACE_CATALOG_ID } from './InlineSurface';
 import { useOwnCatalog } from './ownComponents';
 import {
-  answerAction,
   readA2uiToolResult,
   validateA2uiSubmission,
   type A2uiToolResult,
@@ -94,12 +93,9 @@ export function SurfaceToolResult({
   const handleAction = useCallback(
     (action: A2uiClientAction) => {
       if (action.name !== 'submit_a2ui_form') {
-        // A button of what an application's answer shows: its action goes to
-        // the application, as a button of its page does (LOOP P-04).
-        const pressed = answerAction(action);
-        if (pressed && !send(pressed.message, pressed.forwardedProps)) {
-          setValidationError('The chat is not ready to take it yet.');
-        }
+        // A tool's surface submits its form, and nothing else: the buttons
+        // of what an application's answer shows are its display's
+        // (`AnswerShowsView`, REACTOR_UI RU-2).
         return;
       }
       const values = (action.context ?? {}) as Record<string, unknown>;

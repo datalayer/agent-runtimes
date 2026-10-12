@@ -14,6 +14,7 @@ application relies on: the card it reads, the 1.0 requests and answers of
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -1031,7 +1032,7 @@ class TestTheComponents:
             )
         [part] = [p for p in self._parts(response.text) if p.get("mediaType") == A2UI]
         surface = part["data"]
-        assert surface["surfaceId"].startswith("answer-")
+        assert re.fullmatch(r"[0-9a-f]{32}", surface["surfaceId"])
         assert surface["title"] == "Payment reminders"
         components = {
             node["id"]: node

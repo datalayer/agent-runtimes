@@ -18,6 +18,8 @@ import {
 } from '../../chat/base/loopElement';
 import type { LoopWorkspaceContext } from '../core';
 import { AppElements, elementsByPlace } from '../plugins/app-elements';
+import { ANSWER_DISPLAY_TYPE } from '../plugins/a2ui-surface/toolResult';
+import type { Display } from '@datalayer/reactor/ui';
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -26,26 +28,38 @@ import { AppElements, elementsByPlace } from '../plugins/app-elements';
 const CATALOG =
   'https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json';
 
-/** What the session API sends: an answer's surface, under the element's id. */
-function shows(id: string, title: string, text: string) {
-  const surfaceId = `answer-${id}`;
+/** What the session API sends: the element's display (REACTOR_UI RU-2). */
+function shows(id: string, title: string, text: string): Display {
+  const surfaceId = id;
   return {
-    surfaceId,
-    catalogId: CATALOG,
-    title,
-    messages: [
-      { version: 'v0.9', createSurface: { surfaceId, catalogId: CATALOG } },
-      {
-        version: 'v0.9',
-        updateComponents: {
-          surfaceId,
-          components: [
-            { id: 'root', component: 'Column', children: ['t'] },
-            { id: 't', component: 'Text', text },
-          ],
-        },
+    type: ANSWER_DISPLAY_TYPE,
+    version: 1,
+    id,
+    text: `${title} showed Text ${text}`,
+    data: {
+      message_id: id,
+      title,
+      summary: `${title} showed Text ${text}`,
+      surface: {
+        surfaceId,
+        catalogId: CATALOG,
+        title,
+        messages: [
+          { version: 'v0.9', createSurface: { surfaceId, catalogId: CATALOG } },
+          {
+            version: 'v0.9',
+            updateComponents: {
+              surfaceId,
+              components: [
+                { id: 'root', component: 'Column', children: ['t'] },
+                { id: 't', component: 'Text', text },
+              ],
+            },
+          },
+        ],
       },
-    ],
+    },
+    actions: [],
   };
 }
 
@@ -115,7 +129,7 @@ describe('the side panel and the pages', () => {
       id,
       where,
       title: id,
-      shows: null,
+      shows: shows(id, id, id),
     });
     const placed = elementsByPlace([
       element('a', 'panel'),

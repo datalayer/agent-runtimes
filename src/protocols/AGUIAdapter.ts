@@ -15,6 +15,11 @@ import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
 import { agUiRefusal, refusalBody } from './agUiRefusal';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
+import {
+  AguiUiDecoder,
+  AGUI_NAME,
+  type AguiEvent,
+} from '@datalayer/reactor/ui';
 
 /**
  * AG-UI specific configuration
@@ -50,6 +55,11 @@ export class AGUIAdapter extends BaseProtocolAdapter {
    */
   private inFlight = new Set<AbortController>();
   private currentThreadId: string | null = null;
+  /**
+   * The `reactor.ui` ops of the streams this adapter reads (REACTOR_UI RU-2):
+   * one decoder, which remembers each display's scope for its deltas.
+   */
+  private uiDecoder = new AguiUiDecoder();
 
   // Track in-progress tool calls to accumulate args and emit results
   private pendingToolCalls: Map<
@@ -876,9 +886,28 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         break;
       }
 
+      case 'ACTIVITY_SNAPSHOT':
+      case 'ACTIVITY_DELTA': {
+        // A display shown or changed (`reactor.ui`): handed on as its op.
+        // An activity that is not the reactor's is nobody's here.
+        const op = this.uiDecoder.decode(event as AguiEvent);
+        if (op) {
+          this.emit({
+            type: 'activity',
+            activity: { type: AGUI_NAME, data: op },
+            timestamp: new Date(),
+          });
+        }
+        break;
+      }
+
       case 'CUSTOM': {
         const name = event.name as string | undefined;
-        const value = event.value;
+        // An op of `reactor.ui`, checked: one of the wrong shape throws.
+        const value =
+          name === AGUI_NAME
+            ? this.uiDecoder.decode(event as AguiEvent)
+            : event.value;
         this.emit({
           type: 'activity',
           activity: {

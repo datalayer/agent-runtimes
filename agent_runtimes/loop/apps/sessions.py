@@ -47,6 +47,7 @@ import binascii
 import json
 import logging
 import re
+import secrets
 import traceback
 import uuid
 from dataclasses import dataclass, field, replace
@@ -65,11 +66,15 @@ from typing import (
     Tuple,
 )
 
+from pydantic import BaseModel, ConfigDict
+from reactor.ui import ActionRegistry, ShowOp, UiAction, UiActionError
+from reactor.ui.agui import AGUI_NAME, encode_agui
+
 from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.guardrails.credentials import redact
 from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.components import answer_surface
+from agent_runtimes.loop.apps.components import AnswerShows, answer_actions
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
 from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
 from agent_runtimes.loop.apps.host_user import HostUser, reads_user, signed_host_context
@@ -450,19 +455,19 @@ LOOP_STEP = "loop.step"
 
 #: The ``CUSTOM`` event that opens, changes or closes an element of a side
 #: panel or a page of its own (LOOP P-18): ``{id, where, title, shows}`` —
-#: ``shows`` what an answer's surface is (`answer_surface`) — or
+#: ``shows`` the element's `AnswerShows` display, its offers minted — or
 #: ``{id, closed: true}``.
 LOOP_ELEMENT = "loop.element"
 
 
-def element_of(shown: Shown) -> Dict[str, Any]:
-    """An element as the ``loop.element`` event carries it."""
-    return {
-        "id": shown.id,
-        "where": shown.where,
-        "title": shown.title,
-        "shows": answer_surface(shown.id, shown.title, shown.components, shown.data),
-    }
+class AnswerPress(BaseModel):
+    """What a button of an answer sends with its action: what it read.
+
+    Its fields are the application's own until its actions are typed
+    (REACTOR_UI RU-5).
+    """
+
+    model_config = ConfigDict(extra="allow")
 
 
 #: The ``CUSTOM`` event that hands the page a message of the code's (LOOP
@@ -500,14 +505,8 @@ def step_of(step: Step) -> Dict[str, Any]:
     }
 
 
-#: The tool whose result the chat draws as an A2UI surface where it lands
-#: (``frontend_render_tools``, the ``a2ui-surface`` renderer): what an answer
-#: shows besides its text is sent as its result, under the message (LOOP P-04).
-SHOW_TOOL = "render_a2ui_surface"
-
-
-def _shown_call_id(message_id: str) -> str:
-    """The tool call that carries what a message shows."""
+def _shows_id(message_id: str) -> str:
+    """The display of what a message shows (REACTOR_UI RU-2)."""
     return f"{message_id}-shows"
 
 
@@ -556,6 +555,7 @@ class LiveSession:
     _question: Optional[Question] = field(default=None, init=False, repr=False)
     _answer: Optional[asyncio.Future[Any]] = field(default=None, init=False, repr=False)
     _unasked: List[UploadedFile] = field(default_factory=list, init=False, repr=False)
+    _ui_actions: Optional[ActionRegistry] = field(default=None, init=False, repr=False)
     _sent_settings: Dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _streamed: Dict[str, List[str]] = field(
         default_factory=dict, init=False, repr=False
@@ -623,7 +623,7 @@ class LiveSession:
         """
         return [
             message.model_dump(mode="json", by_alias=True, exclude_none=True)
-            for message in _snapshot(self.messages)
+            for message in _snapshot(self.messages, self.uid)
         ]
 
     def answers_to(self, caller: Caller) -> bool:
@@ -797,10 +797,6 @@ class LiveSession:
             TextMessageContentEvent,
             TextMessageEndEvent,
             TextMessageStartEvent,
-            ToolCallArgsEvent,
-            ToolCallEndEvent,
-            ToolCallResultEvent,
-            ToolCallStartEvent,
         )
 
         if isinstance(event, Delta):
@@ -833,30 +829,18 @@ class LiveSession:
                 "content": event.text,
             }
             if event.components:
-                # What it shows: a surface under the message, as the result
-                # of the tool the chat draws surfaces for (LOOP P-04).
-                shown = answer_surface(
-                    event.id, event.author, event.components, event.data
+                # What it shows: a display under the message, its buttons
+                # offered with the tokens this session minted (LOOP P-04,
+                # REACTOR_UI RU-2).
+                shown = self._answer_shows(
+                    _shows_id(event.id),
+                    event.id,
+                    event.author,
+                    event.components,
+                    event.data,
                 )
-                call_id = _shown_call_id(event.id)
-                self.emit(
-                    ToolCallStartEvent(
-                        tool_call_id=call_id,
-                        tool_call_name=SHOW_TOOL,
-                        parent_message_id=event.id,
-                    )
-                )
-                self.emit(ToolCallArgsEvent(tool_call_id=call_id, delta="{}"))
-                self.emit(ToolCallEndEvent(tool_call_id=call_id))
-                self.emit(
-                    ToolCallResultEvent(
-                        message_id=_new_id(),
-                        tool_call_id=call_id,
-                        content=json.dumps(shown),
-                        role="tool",
-                    )
-                )
-                kept["shows"] = shown
+                self.emit(encode_agui(ShowOp(scope=self.uid, id=shown.id, body=shown)))
+                kept["shows"] = shown.model_dump(mode="json")
                 # And on the run's record, as the answer is (LOOP P-04).
                 self.recorder.start(self.uid)
                 self.recorder.shown(
@@ -911,7 +895,7 @@ class LiveSession:
         elif isinstance(event, Shown):
             # A side panel or a page of its own, opened or changed (LOOP P-18).
             self._elements[event.id] = event
-            self.emit(CustomEvent(name=LOOP_ELEMENT, value=element_of(event)))
+            self.emit(CustomEvent(name=LOOP_ELEMENT, value=self._element_of(event)))
         elif isinstance(event, WindowMessage):
             # For the page the application sits in, not the conversation (P-25).
             self.emit(CustomEvent(name=LOOP_WINDOW, value={"data": event.data}))
@@ -930,6 +914,100 @@ class LiveSession:
                     name=LOOP_ELEMENT, value={"id": event.element_id, "closed": True}
                 )
             )
+
+    # --- what its answers offer (REACTOR_UI RU-2) -----------------------------------
+
+    def _actions(self) -> ActionRegistry:
+        """The actions of its code, each pressable only where a display offered it.
+
+        Minted with a secret of this session's: a token says this session,
+        this display and this action, and nothing else.
+        """
+        if self._ui_actions is None:
+            if self.host is None:
+                raise RuntimeError(
+                    f"{self.app.name} has no code here: nothing offers an action."
+                )
+            registry = ActionRegistry(secrets.token_bytes(32))
+            for name in self.host.app.actions:
+                registry.register(
+                    name, AnswerPress, self._run_pressed, plugin=self.app.id
+                )
+            self._ui_actions = registry
+        return self._ui_actions
+
+    async def _run_pressed(self, payload: AnswerPress, context: Any) -> None:
+        """A press the registry let through: the code's `@app.action`."""
+        assert self.session is not None
+        await self.host.action(self.session, context.action, payload.model_dump())
+
+    def _answer_shows(
+        self,
+        display_id: str,
+        message_id: str,
+        title: str,
+        nodes: Any,
+        data: Optional[Mapping[str, Any]],
+    ) -> Any:
+        """What an answer or an element shows, as its display, its buttons offered.
+
+        A button pressing an action its code has none of is refused here, as
+        the answer is sent: never a button that does nothing, or a message.
+        """
+        shown = AnswerShows.of(display_id, message_id, title, nodes, data)
+        names = answer_actions(nodes)
+        if names:
+            registry = self._actions()
+            missing = [name for name in names if name not in registry.names()]
+            if missing:
+                raise ValueError(
+                    f"{self.app.name} shows a button for {', '.join(missing)}, "
+                    "which it has no @app.action for."
+                )
+            shown.actions = [
+                registry.offer(self.uid, display_id, name) for name in names
+            ]
+        return shown.wire()
+
+    def _element_of(self, shown: Shown) -> Dict[str, Any]:
+        """An element as the ``loop.element`` event carries it."""
+        return {
+            "id": shown.id,
+            "where": shown.where,
+            "title": shown.title,
+            "shows": self._answer_shows(
+                shown.id, shown.id, shown.title, shown.components, shown.data
+            ).model_dump(mode="json"),
+        }
+
+    def pressed(self, action: Mapping[str, Any]) -> UiAction:
+        """A press of something a display offered, checked: offered to this
+        session, on that display. Anything else is refused with the status
+        the registry says (403 not offered, 422 unknown or malformed)."""
+        if self.host is None:
+            raise SessionRefused(
+                422, f"{self.app.name} has no code here: it showed nothing to press."
+            )
+        try:
+            press = UiAction.model_validate(
+                {
+                    "action": action.get("name"),
+                    "display_id": action.get("display_id"),
+                    "token": action.get("token"),
+                    "payload": action.get("payload") or {},
+                    "idempotency_id": action.get("idempotency_id"),
+                }
+            )
+        except ValueError as wrong:
+            raise SessionRefused(
+                422,
+                f"The press sent is not {{name, display_id, token, payload}}: {wrong}",
+            ) from None
+        try:
+            self._actions().authorize(self.opened_by, self.uid, press)
+        except UiActionError as refused:
+            raise SessionRefused(refused.status_code, str(refused)) from None
+        return press
 
     async def ask(self, session_id: str, question: Question) -> Any:
         """What the code asks: a file already given answers a file; else the person is asked.
@@ -1181,6 +1259,7 @@ class LiveSession:
         payload: Mapping[str, Any],
         text: str,
         given: List[UploadedFile],
+        press: Optional[UiAction] = None,
     ) -> None:
         """A block's action, for the code: its handler, else a message.
 
@@ -1195,6 +1274,13 @@ class LiveSession:
                 await self._open_code()
             assert self.session is not None
             await self.host.page(self.session, payload.get("inputs") or {})
+            return
+        if press is not None:
+            # A button of a display: run through the registry that offered it
+            # (REACTOR_UI RU-2), which answers a retry of the same press once.
+            if self.session is None:
+                await self._open_code()
+            await self._actions().dispatch(self.opened_by, self.uid, press)
             return
         handler = self.host.app.actions.get(name)
         if handler is None:
@@ -1260,8 +1346,12 @@ class LiveSession:
         bearer: str = "",
         run_id: str = "",
         head: str = "",
+        press: Optional[UiAction] = None,
     ) -> AsyncIterator[str]:
         """A page block's action: its code's handler, else a turn of its agent.
+
+        ``press`` is a button of a display its code showed, already checked
+        (`pressed`): it runs the action it offered, and nothing else.
 
         Files given with it are the session's: they answer what the code asks
         for a file, or are put in the sandbox of an agent with a shell (a text
@@ -1289,7 +1379,7 @@ class LiveSession:
             )
         if self.host is not None:
             return self._start_turn(
-                lambda: self._action_code(name, payload or {}, text, given),
+                lambda: self._action_code(name, payload or {}, text, given, press),
                 run_id=run_id,
                 wraps_run=True,
                 head=head,
@@ -1520,10 +1610,12 @@ class LiveSession:
 
         async def work() -> None:
             """The turn."""
-            self.emit(MessagesSnapshotEvent(messages=_snapshot(self.messages)))
+            self.emit(
+                MessagesSnapshotEvent(messages=_snapshot(self.messages, self.uid))
+            )
             # What was open beside the conversation, open again (LOOP P-18).
             for shown in self._elements.values():
-                self.emit(CustomEvent(name=LOOP_ELEMENT, value=element_of(shown)))
+                self.emit(CustomEvent(name=LOOP_ELEMENT, value=self._element_of(shown)))
             self.recorder.start(self.uid, resumed=self.resumed)
             await self.recorder.flush(self.uid)
             if self.host is not None:
@@ -1734,6 +1826,13 @@ class LiveSession:
         action = loop.get("action")
         if action is not None and not isinstance(action, Mapping):
             raise SessionRefused(422, "The action sent is not {name, payload}.")
+        # A button of a display the code showed: offered here, or refused
+        # before anything runs (REACTOR_UI RU-2).
+        press = (
+            self.pressed(action)
+            if action is not None and "display_id" in action
+            else None
+        )
         if self.state == "waiting":
             return self._answer_waiting(
                 text=text, files=files, values=settings, run_id=run_id
@@ -1768,6 +1867,7 @@ class LiveSession:
                 text=text,
                 files=files,
                 run_id=run_id,
+                press=press,
             )
         if files and not text:
             raise SessionRefused(
@@ -1817,19 +1917,13 @@ class LiveSession:
         return self._start_turn(work, run_id=run_id, wraps_run=False)
 
 
-def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
+def _snapshot(messages: List[Dict[str, Any]], scope: str) -> List[Any]:
     """The conversation as AG-UI messages, for a snapshot.
 
-    What a message showed comes back as the call of the tool that drew it,
-    and its result (LOOP P-04).
+    What a message showed comes back as the activity that drew it, right
+    after it: its display, as ``encode_agui`` shows it (REACTOR_UI RU-2).
     """
-    from ag_ui.core import (
-        AssistantMessage,
-        FunctionCall,
-        ToolCall,
-        ToolMessage,
-        UserMessage,
-    )
+    from ag_ui.core import ActivityMessage, AssistantMessage, UserMessage
 
     shown: List[Any] = []
     for message in messages:
@@ -1840,31 +1934,20 @@ def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
             )
         elif message.get("role") == "assistant":
             message_id = str(message.get("id") or _new_id())
-            surface = message.get("shows")
-            call_id = _shown_call_id(message_id)
             shown.append(
                 AssistantMessage(
                     id=message_id,
                     content=content,
                     name=message.get("name") or None,
-                    tool_calls=(
-                        [
-                            ToolCall(
-                                id=call_id,
-                                function=FunctionCall(name=SHOW_TOOL, arguments="{}"),
-                            )
-                        ]
-                        if surface
-                        else None
-                    ),
                 )
             )
-            if surface:
+            display = message.get("shows")
+            if display:
                 shown.append(
-                    ToolMessage(
-                        id=f"{call_id}-result",
-                        tool_call_id=call_id,
-                        content=json.dumps(surface),
+                    ActivityMessage(
+                        id=display["id"],
+                        activity_type=AGUI_NAME,
+                        content={"scope": scope, "display": display},
                     )
                 )
     return shown

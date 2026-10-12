@@ -161,7 +161,7 @@
         "@datalayer/primer-addons": "^1.0.39",
         "@datalayer/primer-rjsf": "^1.0.3",
         "@datalayer/personal-agent-protocol": "^0.6.0",
-        "@datalayer/reactor": "^1.0.4",
+        "@datalayer/reactor": "^1.1.1",
         "@datalayer/reactor-commands": "^1.0.4",
         "@datalayer/reactor-manager": "^1.0.4",
         "@datalayer/reactor-shell": "^1.0.4",

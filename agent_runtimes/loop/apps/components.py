@@ -9,14 +9,15 @@ answer (``session.send(text, show=[session.ui.table(...)])``) is a component
 the Canvas places, its properties checked against the same JSON Schema.
 
 An answer's components are drawn as an A2UI surface of their own, under the
-message they came with (`answer_surface`).
+message they came with: an `AnswerShows` display (REACTOR_UI RU-2).
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Annotated, Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 import jsonschema
+from reactor.ui import Display, audience, display_type
 
 from agent_runtimes.specs.ui_plugins import get_component
 from agent_runtimes.types import AppCustomComponentSpec, ComponentSpec
@@ -187,12 +188,12 @@ def answer_components(
 
 
 def answer_surface(
-    message_id: str,
+    surface_id: str,
     title: str,
     nodes: Sequence[Mapping[str, Any]],
     data: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """An answer's components as the A2UI messages that draw them, under the message.
+    """An answer's components as the A2UI messages that draw them.
 
     The nodes no other node names are laid in a column, in the order shown,
     unless one is ``root``; ``data`` is the surface's data model, what a
@@ -201,10 +202,9 @@ def answer_surface(
     Returns
     -------
     dict
-        ``{surfaceId, catalogId, title, messages}``: what the chat draws a
-        surface from (`render_a2ui_surface`'s result).
+        ``{surfaceId, catalogId, title, messages}``: what a page draws the
+        surface from (an `AnswerShows` display's ``surface``).
     """
-    surface_id = f"answer-{message_id}"
     components = [dict(node) for node in nodes]
     if not any(node["id"] == "root" for node in components):
         named = {child for node in components for child in _children_of(node)}
@@ -252,10 +252,104 @@ def answer_surface(
     }
 
 
+#: The components that only lay others out: an answer's text does not name them.
+_LAYOUT = ("Row", "Column", "Card", "List", "Tabs")
+
+
+def answer_actions(nodes: Sequence[Mapping[str, Any]]) -> List[str]:
+    """The actions an answer's buttons press, by name, in the order shown.
+
+    A button says its action as A2UI does, ``{"event": {"name": ...}}``.
+    """
+    names: List[str] = []
+    for node in nodes:
+        action = node.get("action")
+        if action is None:
+            continue
+        event = action.get("event") if isinstance(action, Mapping) else None
+        name = event.get("name") if isinstance(event, Mapping) else None
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(
+                f"{node.get('id')} presses no action: say it as "
+                '{"event": {"name": "<an @app.action>"}}.'
+            )
+        if name not in names:
+            names.append(name)
+    return names
+
+
+def answer_text(title: str, nodes: Sequence[Mapping[str, Any]]) -> str:
+    """What an answer's components read as without a renderer: each by its
+    kind and the words it shows (a title, a text, a label, a name)."""
+    said: List[str] = []
+    for node in nodes:
+        if node.get("component") in _LAYOUT:
+            continue
+        words = next(
+            (
+                node[key]
+                for key in ("title", "text", "label", "name")
+                if isinstance(node.get(key), str) and node[key]
+            ),
+            "",
+        )
+        said.append(f"{node.get('component')} {words or node.get('id')}")
+    return f"{title} showed " + ", ".join(said) if said else f"{title} showed nothing"
+
+
+#: The display type of what an answer shows (REACTOR_UI RU-2).
+ANSWER_DISPLAY_TYPE = "application/vnd.datalayer.loop.answer+json"
+
+
+@display_type(ANSWER_DISPLAY_TYPE, version=1)
+class AnswerShows(Display):
+    """What an answer of an application's code shows, under its message: a
+    display, drawn by the page's A2UI surface plugin (REACTOR_UI RU-2).
+
+    Its buttons press the actions it offers, each with the token the session
+    minted for this display (``actions``); a press of anything else is refused.
+    The model reads its text: the components by kind and words, never the
+    data they draw.
+    """
+
+    message_id: str
+    """The message it is under; an element's own id for an element."""
+    title: str
+    surface: Annotated[Dict[str, Any], audience("page")]
+    """``{surfaceId, catalogId, title, messages}``: the A2UI surface (`answer_surface`)."""
+    summary: str
+    """What it reads as (`answer_text`)."""
+
+    def text(self) -> str:
+        return self.summary
+
+    @classmethod
+    def of(
+        cls,
+        display_id: str,
+        message_id: str,
+        title: str,
+        nodes: Sequence[Mapping[str, Any]],
+        data: Optional[Mapping[str, Any]] = None,
+    ) -> "AnswerShows":
+        """An answer's components as its display, its id the surface's."""
+        return cls(
+            id=display_id,
+            message_id=message_id,
+            title=title,
+            surface=answer_surface(display_id, title, nodes, data),
+            summary=answer_text(title, nodes),
+        )
+
+
 __all__ = [
     "ANSWER_CATALOG_ID",
+    "ANSWER_DISPLAY_TYPE",
+    "AnswerShows",
+    "answer_actions",
     "answer_components",
     "answer_surface",
+    "answer_text",
     "component_node",
     "placer",
 ]

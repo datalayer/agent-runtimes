@@ -12,6 +12,7 @@ reader's browser does not have offline, or a credential.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import nbformat
@@ -301,7 +302,7 @@ class TestTheComponents:
                 "options": [{"label": "Send", "does": "send"}, {"label": "Not now"}],
             },
         )
-        assert surface["surfaceId"].startswith("answer-")
+        assert re.fullmatch(r"[0-9a-f]{32}", surface["surfaceId"])
         [created, components, data] = surface["messages"]
         assert created["createSurface"]["surfaceId"] == surface["surfaceId"]
         nodes = {
