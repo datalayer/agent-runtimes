@@ -12,6 +12,7 @@ the spec, in comments the YAML keeps and a reader sees::
     # loop:code message: reply (app.py:18)
     # loop:code action save: save (app.py:23)
     # loop:code tool lookup_order: lookup_order (app.py:30)
+    # loop:code pap company manzanita.example: company_connection (app.py:9)
 
 A spec forbids fields it does not define, so the marks are comments: the same
 file validates, is pushed and is deployed as any Appspec is, and a spec without
@@ -48,7 +49,9 @@ class CodeMark:
     ``command <name>``, or what its code adds (LOOP P-06): ``tool <name>``,
     ``check <name>``, ``test <name>``; and ``agent <framework>``, the agent
     its code gives it (P-23): ``function``, ``langgraph``, ``langchain``,
-    ``llamaindex-agent`` or ``llamaindex-workflow``."""
+    ``llamaindex-agent`` or ``llamaindex-workflow``; and what it decides of
+    the Personal Agent Protocol (PAP_DATALAYER U-06): ``pap company
+    <domain>``, ``pap company-role``, ``pap operation <action>``."""
 
     handler: str
     """The handler's name."""
@@ -154,6 +157,10 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
                     f"{kind} {name}", _named(handler, name), _where(handler, source)
                 )
             )
+    # The Personal Agent Protocol its builders decide (PAP_DATALAYER U-06): read-only
+    # on the Studio's cards, each a link to its line.
+    for moment, handler, line in application.pap_marks:
+        marks.append(CodeMark(moment, handler, f"{source}:{line}" if line else source))
     return marks
 
 

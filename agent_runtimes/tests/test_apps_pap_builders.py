@@ -170,3 +170,40 @@ def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
     assert app.document["protocols"] == ["mcp", "a2a"] and app.document["ui"] == [
         "a2ui"
     ]
+
+
+def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
+    tmp_path: Path,
+) -> None:
+    """U-06: each company, the company role and each operation built in Python are
+    marked as the code's, with the line that decides them — the Studio's cards
+    show them read-only, each a link to that line."""
+    from agent_runtimes.loop.apps.build import read_code_marks
+
+    (tmp_path / "app.py").write_text(SOURCE)
+    built = build(tmp_path / "app.py")
+    lines = SOURCE.splitlines()
+    marks = {mark.moment: mark for mark in read_code_marks(built.text)}
+    assert {moment for moment in marks if moment.startswith("pap ")} == {
+        "pap company northwind.example",
+        "pap company-role",
+        "pap operation books.close_month",
+    }
+    for moment, handler, says in (
+        (
+            "pap company northwind.example",
+            "company_connection",
+            "app.company_connection(",
+        ),
+        ("pap company-role", "as_company", "app.as_company("),
+        ("pap operation books.close_month", "close_month", "@app.company_operation("),
+    ):
+        mark = marks[moment]
+        assert mark.handler == handler
+        line = int(mark.where.split(":")[1])
+        assert lines[line - 1].startswith(says), (moment, lines[line - 1])
+    # Built in a test, too: the builder's caller is the line.
+    assert _order_desk().pap_marks[0][:2] == (
+        "pap company manzanita.example",
+        "company_connection",
+    )

@@ -306,6 +306,9 @@ class Application:
         self._checks: Dict[str, Handler] = {}
         self._tests: Dict[str, Handler] = {}
         self._code_agent: Optional[CodeAgent] = None
+        # What its code decides of the Personal Agent Protocol, and on which line
+        # (PAP_DATALAYER U-06): `(moment, builder, line)`, marked by `loop apps build`.
+        self._pap_marks: List[Tuple[str, str, int]] = []
         self._page_signature: Optional[PageSignature] = None
         # Reactor's vocabulary (LOOP P-35).
         self._contributed: List[Contributed] = []
@@ -845,6 +848,24 @@ class Application:
 
     # --- the Personal Agent Protocol, both roles (PAP_DATALAYER S-04) ------------
 
+    @property
+    def pap_marks(self) -> List[Tuple[str, str, int]]:
+        """What its code decides of the Personal Agent Protocol (U-06): each
+        company it works with (``pap company <domain>``), its company role
+        (``pap company-role``) and each operation it declares (``pap operation
+        <action>``), with the builder or tool that decides it and its line."""
+        return list(self._pap_marks)
+
+    def _pap_mark(self, moment: str, handler: str) -> None:
+        """Mark a moment of the `pap` block as decided by the line that called the builder."""
+        caller = inspect.currentframe()
+        caller = caller.f_back if caller is not None else None
+        while caller is not None and caller.f_code.co_filename == __file__:
+            caller = caller.f_back
+        self._pap_marks.append(
+            (moment, handler, caller.f_lineno if caller is not None else 0)
+        )
+
     def _pap(self) -> Dict[str, Any]:
         pap = self._document.setdefault("pap", {})
         # Its `pap` block is read only with the protocol listed (AGENT_PROTOCOLS
@@ -916,6 +937,7 @@ class Application:
         self._pap().setdefault("connections", []).append(
             connection.model_dump(mode="json", by_alias=True, exclude_defaults=True)
         )
+        self._pap_mark(f"pap company {connection.company}", "company_connection")
         return connection
 
     def as_company(
@@ -975,6 +997,7 @@ class Application:
         )
         # `enabled` is the role itself: written even though it is not the default's.
         pap["company"]["enabled"] = True
+        self._pap_mark("pap company-role", "as_company")
         return company
 
     def company_operation(
@@ -1039,6 +1062,10 @@ class Application:
             )
             self._pap()["company"].setdefault("operations", []).append(
                 operation.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+            )
+            # Decided by its tool, where the tool is.
+            self._pap_marks.append(
+                (f"pap operation {action}", name, function.__code__.co_firstlineno)
             )
             return function
 
