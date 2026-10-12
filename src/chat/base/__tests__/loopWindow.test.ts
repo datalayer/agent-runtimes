@@ -10,11 +10,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { WindowOp } from '@datalayer/reactor/ui';
 import {
-  LOOP_WINDOW,
-  loopWindowMessage,
   onLoopWindowMessage,
   tellLoopWindow,
+  windowMessageOf,
   windowTurnOf,
 } from '../loopWindow';
 import {
@@ -25,22 +25,32 @@ import {
 const sse = (...events: unknown[]): string =>
   events.map(event => `data: ${JSON.stringify(event)}\n\n`).join('');
 
+/** A window op, as the session API sends one (REACTOR_UI RU-3). */
+const windowOp = (name: string, args?: Record<string, unknown>): WindowOp => ({
+  v: 1,
+  op: 'window',
+  scope: 's',
+  id: null,
+  body: { name, ...(args ? { args } : {}) },
+});
+
+const told = (data: unknown) => ({
+  type: 'CUSTOM',
+  name: 'reactor.ui',
+  value: windowOp('message', { data }),
+});
+
 describe('window messages', () => {
-  it('are read from the loop.window activity, and nothing else', () => {
+  it('are read from a window op named message, and refused otherwise', () => {
     expect(
-      loopWindowMessage({
-        type: LOOP_WINDOW,
-        data: { data: { open: 'cart' } },
-      }),
-    ).toEqual({ data: { open: 'cart' } });
-    expect(
-      loopWindowMessage({ type: LOOP_WINDOW, data: { data: null } }),
-    ).toEqual({ data: null });
-    expect(loopWindowMessage({ type: LOOP_WINDOW, data: {} })).toBeNull();
-    expect(
-      loopWindowMessage({ type: 'loop.element', data: { data: 1 } }),
-    ).toBeNull();
-    expect(loopWindowMessage(undefined)).toBeNull();
+      windowMessageOf(windowOp('message', { data: { open: 'cart' } })),
+    ).toEqual({ open: 'cart' });
+    expect(windowMessageOf(windowOp('message', { data: null }))).toBeNull();
+    expect(() => windowMessageOf(windowOp('message', {}))).toThrow(/no data/);
+    expect(() => windowMessageOf(windowOp('message'))).toThrow(/no data/);
+    expect(() => windowMessageOf(windowOp('focus', { data: 1 }))).toThrow(
+      /not one this page acts on/,
+    );
   });
 
   it('are handed to whoever listens, until they stop', () => {
@@ -56,7 +66,7 @@ describe('window messages', () => {
     const stream = sse(
       { type: 'CUSTOM', name: 'loop.session', value: { uid: 's' } },
       { type: 'RUN_STARTED' },
-      { type: 'CUSTOM', name: LOOP_WINDOW, value: { data: { seen: '/cart' } } },
+      told({ seen: '/cart' }),
       { type: 'RUN_FINISHED' },
     );
     expect(windowTurnOf(stream)).toEqual({
@@ -70,6 +80,18 @@ describe('window messages', () => {
       said: [],
       error: null,
     });
+    // Nothing named loop.window is read any more; a reactor.ui event of the
+    // wrong shape is refused.
+    expect(
+      windowTurnOf(
+        sse({ type: 'CUSTOM', name: 'loop.window', value: { data: 1 } }),
+      ),
+    ).toEqual({ said: [], error: null });
+    expect(() =>
+      windowTurnOf(
+        sse({ type: 'CUSTOM', name: 'reactor.ui', value: { data: 1 } }),
+      ),
+    ).toThrow(/not an op/);
   });
 
   it('are posted to the session, with the visit’s token, and refused in the runtime’s sentence', async () => {
@@ -85,15 +107,7 @@ describe('window messages', () => {
       uid: 'session 1',
       token: 'visit-token',
       data: { page: '/checkout' },
-      fetcher: answer(
-        new Response(
-          sse({
-            type: 'CUSTOM',
-            name: LOOP_WINDOW,
-            value: { data: { seen: '/checkout' } },
-          }),
-        ),
-      ),
+      fetcher: answer(new Response(sse(told({ seen: '/checkout' })))),
     });
     expect(said).toEqual([{ seen: '/checkout' }]);
     expect(asked[0].url).toBe(

@@ -4,34 +4,52 @@
  */
 
 /**
- * A step of an application's code (LOOP P-16): the session API's `loop.step`
- * event, as the chat draws it.
+ * A step of an application's code (LOOP P-16): its `reactor.ui` display
+ * (REACTOR_UI RU-3), as the chat draws it.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { DisplayItem } from '../../../types/chat';
-import { loopStepOf, withLoopStep } from '../loopStep';
+import type { Display } from '@datalayer/reactor/ui';
+import { STEP_DISPLAY_TYPE, stepOfDisplay, withLoopStep } from '../loopStep';
 
-const event = (data: Record<string, unknown>) => ({ type: 'loop.step', data });
+/** A step's display, as the session API shows it. */
+const display = ({
+  id,
+  ...data
+}: Record<string, unknown> & { id: string }): Display => ({
+  type: STEP_DISPLAY_TYPE,
+  id,
+  text: `step ${String(data.name)}`,
+  data,
+});
 
-describe('loop.step', () => {
-  it('reads a step, and nothing else', () => {
-    expect(loopStepOf({ type: 'loop.message', data: { id: 'a' } })).toBeNull();
-    expect(loopStepOf(event({ name: 'Searching' }))).toBeNull();
+const stepOf = (data: Record<string, unknown> & { id: string }) =>
+  stepOfDisplay(display(data));
+
+describe('steps', () => {
+  it('read a step display, and refuse anything else', () => {
+    expect(() =>
+      stepOfDisplay({
+        type: 'application/x',
+        id: 'a',
+        text: 'a',
+        data: { name: 'a' },
+      }),
+    ).toThrow(/not a step/);
+    expect(() => stepOfDisplay(display({ id: 's' }))).toThrow(/not a step/);
     expect(
-      loopStepOf(
-        event({
-          id: 's1',
-          name: 'Searching',
-          kind: 'tool',
-          parent_id: null,
-          input: 'q',
-          output: null,
-          error: '',
-          started_at: '2026-10-06T10:00:00+00:00',
-          ended_at: null,
-        }),
-      ),
+      stepOf({
+        id: 's1',
+        name: 'Searching',
+        kind: 'tool',
+        parent_id: null,
+        input: 'q',
+        output: null,
+        error: '',
+        started_at: '2026-10-06T10:00:00+00:00',
+        ended_at: null,
+      }),
     ).toEqual({
       id: 's1',
       name: 'Searching',
@@ -47,11 +65,10 @@ describe('loop.step', () => {
   it('draws what a running step wrote so far, in place (LOOP P-31)', () => {
     let items: DisplayItem[] = [];
     for (const output of [null, 'SELECT', 'SELECT 1']) {
-      const read = loopStepOf(
-        event({ id: 'gen', name: 'gen_query', kind: 'tool', output }),
+      items = withLoopStep(
+        items,
+        stepOf({ id: 'gen', name: 'gen_query', kind: 'tool', output }),
       );
-      if (!read) throw new Error('not a step');
-      items = withLoopStep(items, read);
     }
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
@@ -63,10 +80,8 @@ describe('loop.step', () => {
 
   it('draws a step as a row that runs, then ends in place, nested in its parent', () => {
     let items: DisplayItem[] = [];
-    const step = (data: Record<string, unknown>) => {
-      const read = loopStepOf(event(data));
-      if (!read) throw new Error('not a step');
-      items = withLoopStep(items, read);
+    const step = (data: Record<string, unknown> & { id: string }) => {
+      items = withLoopStep(items, stepOf(data));
     };
     step({ id: 'outer', name: 'Researching', kind: 'run', input: 'q' });
     step({ id: 'inner', name: 'Searching', kind: 'tool', parent_id: 'outer' });

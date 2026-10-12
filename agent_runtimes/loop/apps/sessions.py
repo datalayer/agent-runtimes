@@ -67,7 +67,20 @@ from typing import (
 )
 
 from pydantic import BaseModel, ConfigDict
-from reactor.ui import ActionRegistry, ShowOp, UiAction, UiActionError
+from reactor.ui import (
+    ActionRegistry,
+    Display,
+    MetaOp,
+    PatchOp,
+    RemoveOp,
+    ShowOp,
+    UiAction,
+    UiActionError,
+    UiOp,
+    WindowBody,
+    WindowOp,
+    display_type,
+)
 from reactor.ui.agui import AGUI_NAME, encode_agui
 
 from agent_runtimes.context.identities import get_request_user_jwt
@@ -444,22 +457,6 @@ def code_of(app: AppSpec, agent_id: str = "") -> Any:
     return _CODE[key]
 
 
-#: The ``CUSTOM`` event that says a message's author, or that it was removed
-#: (LOOP P-15): ``{id, author}`` or ``{id, removed: true}``.
-LOOP_MESSAGE = "loop.message"
-
-#: The ``CUSTOM`` event that says a step whole, as it starts and as it ends
-#: (LOOP P-16): ``{id, name, kind, parent_id, input, output, error,
-#: started_at, ended_at}``.
-LOOP_STEP = "loop.step"
-
-#: The ``CUSTOM`` event that opens, changes or closes an element of a side
-#: panel or a page of its own (LOOP P-18): ``{id, where, title, shows}`` —
-#: ``shows`` the element's `AnswerShows` display, its offers minted — or
-#: ``{id, closed: true}``.
-LOOP_ELEMENT = "loop.element"
-
-
 class AnswerPress(BaseModel):
     """What a button of an answer sends with its action: what it read.
 
@@ -468,11 +465,6 @@ class AnswerPress(BaseModel):
     """
 
     model_config = ConfigDict(extra="allow")
-
-
-#: The ``CUSTOM`` event that hands the page a message of the code's (LOOP
-#: P-25): ``{data}``, what ``session.send_window_message(data)`` said.
-LOOP_WINDOW = "loop.window"
 
 
 #: The longest input or output of a step the chat is sent, in characters.
@@ -490,19 +482,55 @@ def _step_value(value: Any) -> Any:
     return value if len(said) <= STEP_VALUE_LIMIT else said[:STEP_VALUE_LIMIT]
 
 
-def step_of(step: Step) -> Dict[str, Any]:
-    """A step as the ``loop.step`` event carries it."""
-    return {
-        "id": step.id,
-        "name": step.name,
-        "kind": step.kind,
-        "parent_id": step.parent_id,
-        "input": _step_value(step.input),
-        "output": _step_value(step.output),
-        "error": step.error,
-        "started_at": step.started_at.isoformat(),
-        "ended_at": step.ended_at.isoformat() if step.ended_at else None,
-    }
+#: The display type of a step of an application's code (LOOP P-16,
+#: REACTOR_UI RU-3).
+STEP_DISPLAY_TYPE = "application/vnd.datalayer.loop.step+json"
+
+
+@display_type(STEP_DISPLAY_TYPE, version=1)
+class StepShown(Display):
+    """A step of an application's code, as the page draws it: shown as it
+    starts and again as it ends (a ``show`` of the same id), its output
+    patched in as it streams (LOOP P-31). Its id is the step's.
+    """
+
+    name: str
+    kind: str
+    """`run`, `tool`, `model` or `retrieval`."""
+    parent_id: Optional[str] = None
+    """The step it is nested in."""
+    input: Any = None
+    output: Any = None
+    error: str = ""
+    started_at: str
+    ended_at: Optional[str] = None
+
+    def text(self) -> str:
+        if self.error:
+            return f"{self.kind} step {self.name} failed: {self.error}"
+        return f"{self.kind} step {self.name}" + (
+            " ended" if self.ended_at else " running"
+        )
+
+    @classmethod
+    def of(cls, step: Step) -> "StepShown":
+        """A step, already shown (`shown_step`), as its display."""
+        return cls(
+            id=step.id,
+            name=step.name,
+            kind=step.kind,
+            parent_id=step.parent_id,
+            input=_step_value(step.input),
+            output=_step_value(step.output),
+            error=step.error,
+            started_at=step.started_at.isoformat(),
+            ended_at=step.ended_at.isoformat() if step.ended_at else None,
+        )
+
+
+#: The window op that hands the page a message of the code's (LOOP P-25):
+#: ``{data}``, what ``session.send_window_message(data)`` said.
+WINDOW_MESSAGE = "message"
 
 
 def _shows_id(message_id: str) -> str:
@@ -839,7 +867,7 @@ class LiveSession:
                     event.components,
                     event.data,
                 )
-                self.emit(encode_agui(ShowOp(scope=self.uid, id=shown.id, body=shown)))
+                self.show_op(ShowOp(scope=self.uid, id=shown.id, body=shown))
                 kept["shows"] = shown.model_dump(mode="json")
                 # And on the run's record, as the answer is (LOOP P-04).
                 self.recorder.start(self.uid)
@@ -848,11 +876,9 @@ class LiveSession:
                 )
             if event.author != self.app.name:
                 kept["name"] = event.author
-                self.emit(
-                    CustomEvent(
-                        name=LOOP_MESSAGE,
-                        value={"id": event.id, "author": event.author},
-                    )
+                # Who said it, a fact about the message (LOOP P-15).
+                self.show_op(
+                    MetaOp(scope=self.uid, id=event.id, body={"author": event.author})
                 )
             if self._said is not None:
                 self._said[event.id] = event.text
@@ -866,21 +892,25 @@ class LiveSession:
             self.messages = [
                 said for said in self.messages if said.get("id") != event.message_id
             ]
-            self.emit(
-                CustomEvent(
-                    name=LOOP_MESSAGE, value={"id": event.message_id, "removed": True}
-                )
-            )
+            # The message goes, and what it showed with it (LOOP P-15).
+            self.show_op(RemoveOp(scope=self.uid, id=event.message_id))
         elif isinstance(event, StepDelta):
-            # A step's output as it comes (LOOP P-31): the step said again,
-            # running, its output what it wrote so far — any credential in
-            # it withheld (R-19) — which the chat draws in place.
+            # A step's output as it comes (LOOP P-31): its output so far
+            # patched in — any credential in it withheld (R-19) — which the
+            # chat draws in place.
             running = self._steps.get(event.step_id)
             if running is None:
                 raise ValueError(f"Step {event.step_id} is not running.")
             running = replace(running, output=(running.output or "") + event.text)
             self._steps[event.step_id] = running
-            self.emit(CustomEvent(name=LOOP_STEP, value=step_of(shown_step(running))))
+            output = StepShown.of(shown_step(running)).output
+            self.show_op(
+                PatchOp(
+                    scope=self.uid,
+                    id=event.step_id,
+                    body=[{"op": "replace", "path": "/data/output", "value": output}],
+                )
+            )
         elif isinstance(event, Step):
             if event.ended_at is None:
                 self._steps[event.id] = event
@@ -890,15 +920,21 @@ class LiveSession:
                 self.emit(StepFinishedEvent(step_name=event.name))
             # AG-UI's step is its name: what the chat shows of it — its
             # kind, the step it is nested in, its input, output or error —
-            # is said beside it (LOOP P-16).
-            self.emit(CustomEvent(name=LOOP_STEP, value=step_of(event)))
+            # is its display beside it (LOOP P-16, REACTOR_UI RU-3).
+            shown = StepShown.of(event).wire()
+            self.show_op(ShowOp(scope=self.uid, id=shown.id, body=shown))
         elif isinstance(event, Shown):
             # A side panel or a page of its own, opened or changed (LOOP P-18).
             self._elements[event.id] = event
-            self.emit(CustomEvent(name=LOOP_ELEMENT, value=self._element_of(event)))
+            self.show_op(self._element_op(event))
         elif isinstance(event, WindowMessage):
             # For the page the application sits in, not the conversation (P-25).
-            self.emit(CustomEvent(name=LOOP_WINDOW, value={"data": event.data}))
+            self.show_op(
+                WindowOp(
+                    scope=self.uid,
+                    body=WindowBody(name=WINDOW_MESSAGE, args={"data": event.data}),
+                )
+            )
         elif isinstance(event, PageShown):
             # A widget's page, shown in place for its inputs (LOOP P-05).
             self.emit(
@@ -909,11 +945,11 @@ class LiveSession:
             )
         elif isinstance(event, Closed):
             self._elements.pop(event.element_id, None)
-            self.emit(
-                CustomEvent(
-                    name=LOOP_ELEMENT, value={"id": event.element_id, "closed": True}
-                )
-            )
+            self.show_op(RemoveOp(scope=self.uid, id=event.element_id))
+
+    def show_op(self, op: UiOp) -> None:
+        """Stream a ``reactor.ui`` op, as AG-UI carries it (REACTOR_UI RU-3)."""
+        self.emit(encode_agui(op))
 
     # --- what its answers offer (REACTOR_UI RU-2) -----------------------------------
 
@@ -948,13 +984,14 @@ class LiveSession:
         title: str,
         nodes: Any,
         data: Optional[Mapping[str, Any]],
+        where: str = "inline",
     ) -> Any:
         """What an answer or an element shows, as its display, its buttons offered.
 
         A button pressing an action its code has none of is refused here, as
         the answer is sent: never a button that does nothing, or a message.
         """
-        shown = AnswerShows.of(display_id, message_id, title, nodes, data)
+        shown = AnswerShows.of(display_id, message_id, title, nodes, data, where)
         names = answer_actions(nodes)
         if names:
             registry = self._actions()
@@ -969,16 +1006,12 @@ class LiveSession:
             ]
         return shown.wire()
 
-    def _element_of(self, shown: Shown) -> Dict[str, Any]:
-        """An element as the ``loop.element`` event carries it."""
-        return {
-            "id": shown.id,
-            "where": shown.where,
-            "title": shown.title,
-            "shows": self._answer_shows(
-                shown.id, shown.id, shown.title, shown.components, shown.data
-            ).model_dump(mode="json"),
-        }
+    def _element_op(self, shown: Shown) -> ShowOp:
+        """An element opened or changed: its display, where it shows said in it."""
+        display = self._answer_shows(
+            shown.id, shown.id, shown.title, shown.components, shown.data, shown.where
+        )
+        return ShowOp(scope=self.uid, id=display.id, body=display)
 
     def pressed(self, action: Mapping[str, Any]) -> UiAction:
         """A press of something a display offered, checked: offered to this
@@ -1600,7 +1633,7 @@ class LiveSession:
 
     def resume(self, *, head: str = "") -> AsyncIterator[str]:
         """Resume: the conversation so far, then the code's ``resume``; open again."""
-        from ag_ui.core import CustomEvent, MessagesSnapshotEvent
+        from ag_ui.core import MessagesSnapshotEvent
 
         if self.state != "stopped":
             raise SessionRefused(
@@ -1615,7 +1648,7 @@ class LiveSession:
             )
             # What was open beside the conversation, open again (LOOP P-18).
             for shown in self._elements.values():
-                self.emit(CustomEvent(name=LOOP_ELEMENT, value=self._element_of(shown)))
+                self.show_op(self._element_op(shown))
             self.recorder.start(self.uid, resumed=self.resumed)
             await self.recorder.flush(self.uid)
             if self.host is not None:
@@ -2203,11 +2236,13 @@ async def conversation_from_record(
 
 __all__ = [
     "FILES_DIR",
-    "LOOP_MESSAGE",
     "MAX_FILE_BYTES",
     "MAX_TEXT_CHARACTERS",
     "STATES",
+    "STEP_DISPLAY_TYPE",
+    "WINDOW_MESSAGE",
     "LiveSession",
+    "StepShown",
     "SessionRefused",
     "agent_app",
     "code_of",

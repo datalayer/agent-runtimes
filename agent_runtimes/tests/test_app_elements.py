@@ -156,7 +156,9 @@ def _drain(queue: Any) -> List[Dict[str, Any]]:
     return events
 
 
-async def test_over_the_session_api_an_element_is_a_loop_element_event() -> None:
+async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows() -> (
+    None
+):
     application = runs_app()
     app = application.spec
     live = sessions.LiveSession(
@@ -181,21 +183,33 @@ async def test_over_the_session_api_an_element_is_a_loop_element_event() -> None
     page = await session.show(session.ui.text("t", text="Hi"), where="page", id="hello")
     await page.close()
     events = _drain(queue)
-    assert [(e["type"], e["name"]) for e in events] == [
-        ("CUSTOM", sessions.LOOP_ELEMENT)
-    ] * 3
-    shown = events[0]["value"]
-    assert (shown["id"], shown["where"], shown["title"]) == (panel.id, "panel", "Runs")
-    # What it shows is its display (REACTOR_UI RU-2), the surface in its data.
-    assert shown["shows"]["type"] == "application/vnd.datalayer.loop.answer+json"
-    assert shown["shows"]["id"] == panel.id
-    surface = shown["shows"]["data"]["surface"]
+    # Opened and changed: a show of its display; closed: a remove
+    # (REACTOR_UI RU-3).
+    assert [e["type"] for e in events] == [
+        "ACTIVITY_SNAPSHOT",
+        "ACTIVITY_SNAPSHOT",
+        "CUSTOM",
+    ]
+    shows = events[0]["content"]["display"]
+    assert events[0]["content"]["scope"] == live.uid
+    # What it shows is its display (REACTOR_UI RU-2), where it shows in it.
+    assert shows["type"] == "application/vnd.datalayer.loop.answer+json"
+    assert (shows["id"], shows["data"]["where"], shows["data"]["title"]) == (
+        panel.id,
+        "panel",
+        "Runs",
+    )
+    surface = shows["data"]["surface"]
     assert surface["surfaceId"] == panel.id
     assert surface["messages"][2]["updateDataModel"]["value"] == {
         "runs": [{"model": "a"}]
     }
-    assert events[1]["value"]["where"] == "page"
-    assert events[2]["value"] == {"id": "hello", "closed": True}
+    assert events[1]["content"]["display"]["data"]["where"] == "page"
+    assert (events[2]["name"], events[2]["value"]["op"], events[2]["value"]["id"]) == (
+        "reactor.ui",
+        "remove",
+        "hello",
+    )
     # A resume draws again what was open beside the conversation, and its
     # code can still close it.
     live.state = "stopped"
@@ -206,8 +220,13 @@ async def test_over_the_session_api_an_element_is_a_loop_element_event() -> None
             for line in chunk.splitlines()
             if line.startswith("data:")
         )
-    again = [e["value"] for e in resumed if e.get("name") == sessions.LOOP_ELEMENT]
-    assert [(value["id"], value["where"]) for value in again] == [(panel.id, "panel")]
+    again = [
+        e["content"]["display"] for e in resumed if e["type"] == "ACTIVITY_SNAPSHOT"
+    ]
+    assert [(shown["id"], shown["data"]["where"]) for shown in again] == [
+        (panel.id, "panel")
+    ]
     queue = live._open_stream()
     await live.session.close(panel.id)
-    assert _drain(queue)[-1]["value"] == {"id": panel.id, "closed": True}
+    closed = _drain(queue)[-1]["value"]
+    assert (closed["op"], closed["id"]) == ("remove", panel.id)

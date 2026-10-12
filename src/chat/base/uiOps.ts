@@ -4,16 +4,23 @@
  */
 
 /**
- * The displays a conversation's messages show (REACTOR_UI RU-2).
+ * What a server says to a conversation's page, as `reactor.ui` ops
+ * (REACTOR_UI RU-2, RU-3).
  *
- * A server shows a display under one of its messages with a `reactor.ui`
- * op — `show`, then `patch` or `append` as it changes, `remove` when it goes
- * — which the AG-UI adapter decodes (`AguiUiDecoder`) and hands on as an
- * `activity` of type `reactor.ui`. A display says the message it is under in
- * `data.message_id`; it is kept on that message (`ChatMessage.displays`) and
- * drawn there by the renderer a plugin contributed for its type.
+ * The AG-UI adapter decodes them (`AguiUiDecoder`) and hands each on as an
+ * `activity` of type `reactor.ui`; `routeUiOp` says where each goes:
  *
- * Pure: the chat applies it to what it draws, and to its store.
+ * - a `window` op to the page the conversation sits in (`loopWindow`);
+ * - a step's display to its row (`loopStep`), patched as it streams;
+ * - a display that says it shows in a panel or on a page to the elements
+ *   open (`loopElement`), a `remove` of its id closing it;
+ * - everything else to the messages (`withUiOp`): a display under a message
+ *   (`data.message_id`) kept on it (`ChatMessage.displays`) and drawn by the
+ *   renderer a plugin contributed for its type; a `meta` op's `author` the
+ *   message's voice; a `remove` of a message's id the message gone.
+ *
+ * Pure: the chat applies it to what it draws, and to its store. Nothing it
+ * was not told to expect is guessed at: an op it cannot place throws.
  *
  * @module chat/base/uiOps
  */
@@ -21,10 +28,16 @@
 import {
   AGUI_NAME,
   applyPatch,
+  applyUiOp,
   isUiOp,
   type Display,
+  type UiModel,
   type UiOp,
 } from '@datalayer/reactor/ui';
+import type { MessageSpeaker } from '../../types/messages';
+import { elementOfDisplay, type LoopElementChange } from './loopElement';
+import { isStepDisplay, stepOfDisplay, type LoopStep } from './loopStep';
+import { windowMessageOf } from './loopWindow';
 
 /** The op an activity carries, or `null` when it is not the reactor's. */
 export function uiOpOf(
@@ -46,7 +59,16 @@ export function messageOfDisplay(display: Display): string {
   return id;
 }
 
-type WithDisplays = { id?: string; displays?: Display[] };
+/** Who a message is by, as the chat draws a named voice. */
+export function speakerOf(author: string): MessageSpeaker {
+  return { id: `author:${author}`, name: author };
+}
+
+type WithDisplays = {
+  id?: string;
+  displays?: Display[];
+  speaker?: MessageSpeaker;
+};
 
 /** The messages with one display changed by `change`, or taken away when it answers nothing. */
 function changed<T extends WithDisplays>(
@@ -83,13 +105,16 @@ function replaced(displays: Display[], display: Display): Display[] {
 }
 
 /**
- * The messages with an op applied to the displays they show: a display
- * shown (or asked) kept on its message, replacing one of its id; patched,
- * appended to or removed where it is. `state`, `meta` and `window` ops are
- * not about a message's displays: the messages come back as they were.
+ * The messages with an op applied: a display shown (or asked) kept on its
+ * message, replacing one of its id; patched, appended to or removed where it
+ * is. A `remove` of a message's own id takes the message away, with what it
+ * showed; a `meta` op about a message gives it its `author`. `state` ops are
+ * not about the messages: they come back as they were.
  *
- * Throws for a display under no message here, and for a change to a display
- * no message shows: the server said something the page never saw.
+ * Throws for a display under no message here, for a change to a display no
+ * message shows, for a removal of nothing here, and for a `meta` op that
+ * says anything but a message's author: the server said something the page
+ * never saw, or does not read.
  */
 export function withUiOp<T extends WithDisplays>(items: T[], op: UiOp): T[] {
   switch (op.op) {
@@ -108,8 +133,16 @@ export function withUiOp<T extends WithDisplays>(items: T[], op: UiOp): T[] {
           : item,
       );
     }
-    case 'remove':
-      return changed(items, op.id, () => undefined);
+    case 'remove': {
+      const showsIt = items.some(item =>
+        (item.displays ?? []).some(display => display.id === op.id),
+      );
+      if (showsIt) return changed(items, op.id, () => undefined);
+      if (!items.some(item => item.id === op.id)) {
+        throw new Error(`Nothing here is ${op.id}: it cannot be removed`);
+      }
+      return items.filter(item => item.id !== op.id);
+    }
     case 'patch': {
       const operations = op.body;
       return changed(items, op.id, display => applyPatch(display, operations));
@@ -120,7 +153,98 @@ export function withUiOp<T extends WithDisplays>(items: T[], op: UiOp): T[] {
         applyPatch(display, [{ op: 'add', path: `${path}/-`, value }]),
       );
     }
+    case 'meta': {
+      const author = op.body.author;
+      const keys = Object.keys(op.body);
+      if (
+        !op.id ||
+        keys.length !== 1 ||
+        typeof author !== 'string' ||
+        !author.trim()
+      ) {
+        throw new Error(
+          `A meta op says ${JSON.stringify(op.body)}: only a message's author is read`,
+        );
+      }
+      if (!items.some(item => item.id === op.id)) {
+        throw new Error(
+          `Message ${op.id} is not here: it has no author to say`,
+        );
+      }
+      return items.map(item =>
+        item.id === op.id
+          ? { ...item, speaker: speakerOf(author.trim()) }
+          : item,
+      );
+    }
+    case 'window':
+      throw new Error('A window op is for the page, not the messages');
     default:
       return items;
+  }
+}
+
+/** Where an op goes (`routeUiOp`). */
+export type RoutedUiOp =
+  | { to: 'window'; data: unknown }
+  | { to: 'step'; step: LoopStep }
+  | { to: 'element'; change: LoopElementChange }
+  | { to: 'messages'; op: UiOp };
+
+/**
+ * Where an op goes, and the steps kept after it: a step's display is kept
+ * (in a Reactor `UiModel`) so a patch of its output applies to it.
+ *
+ * `elements` is the ids of the elements shown in this conversation: a
+ * `remove` of one closes it (a no-op when the person closed it already).
+ */
+export function routeUiOp(
+  op: UiOp,
+  steps: UiModel,
+  elements: ReadonlySet<string>,
+): { routed: RoutedUiOp; steps: UiModel } {
+  switch (op.op) {
+    case 'window':
+      return { routed: { to: 'window', data: windowMessageOf(op) }, steps };
+    case 'show':
+    case 'ask': {
+      if (isStepDisplay(op.body)) {
+        const kept = applyUiOp(steps, op);
+        return {
+          routed: { to: 'step', step: stepOfDisplay(op.body) },
+          steps: kept,
+        };
+      }
+      const element = elementOfDisplay(op.body);
+      if (element) {
+        return { routed: { to: 'element', change: element }, steps };
+      }
+      return { routed: { to: 'messages', op }, steps };
+    }
+    case 'patch':
+    case 'append': {
+      if (op.id in steps.displays) {
+        const kept = applyUiOp(steps, op);
+        return {
+          routed: { to: 'step', step: stepOfDisplay(kept.displays[op.id]) },
+          steps: kept,
+        };
+      }
+      return { routed: { to: 'messages', op }, steps };
+    }
+    case 'remove': {
+      if (op.id in steps.displays) {
+        throw new Error(`Step ${op.id} is never removed: it ends`);
+      }
+      if (elements.has(op.id)) {
+        return {
+          routed: { to: 'element', change: { id: op.id, closed: true } },
+          steps,
+        };
+      }
+      return { routed: { to: 'messages', op }, steps };
+    }
+    default:
+      return { routed: { to: 'messages', op }, steps };
   }
 }

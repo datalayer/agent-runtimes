@@ -747,8 +747,9 @@ def test_end_and_logout(runtime: Runtime, remote: TestClient) -> None:
 
 
 async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> None:
-    """A message changed is written again under its id, its author said, one
-    removed said removed; the code's end and logout run (LOOP P-14, P-15)."""
+    """A message changed is written again under its id, its author said (a
+    ``reactor.ui`` meta op), one removed said removed (a remove op); the
+    code's end and logout run (LOOP P-14, P-15, REACTOR_UI RU-3)."""
     from agent_runtimes.loop.apps import AppHost, Application, Session
     from agent_runtimes.loop.apps.callers import Caller
 
@@ -811,12 +812,29 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
         (
             "CUSTOM",
             events[4]["messageId"],
-            {"id": events[4]["messageId"], "author": "Searcher"},
+            {
+                "v": 1,
+                "op": "meta",
+                "scope": "session-0014",
+                "id": events[4]["messageId"],
+                "body": {"author": "Searcher"},
+            },
         ),
         ("TEXT_MESSAGE_START", first.id, None),
         ("TEXT_MESSAGE_CONTENT", first.id, "Searched: 3 results."),
-        ("CUSTOM", first.id, {"id": first.id, "removed": True}),
+        (
+            "CUSTOM",
+            first.id,
+            {
+                "v": 1,
+                "op": "remove",
+                "scope": "session-0014",
+                "id": first.id,
+                "body": None,
+            },
+        ),
     ]
+    assert {e.get("name") for e in events if e["type"] == "CUSTOM"} == {"reactor.ui"}
     assert [(m["content"], m.get("name")) for m in live.messages] == [
         ("Found 3.", "Searcher")
     ]
@@ -937,7 +955,8 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
 
 
 async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
-    """STEP_STARTED and STEP_FINISHED carry a name; loop.step the step (LOOP P-16)."""
+    """STEP_STARTED and STEP_FINISHED carry a name; the step's display the
+    step (LOOP P-16, REACTOR_UI RU-3)."""
     from agent_runtimes.loop.apps import AppHost, Application
     from agent_runtimes.loop.apps.callers import Caller
 
@@ -970,27 +989,38 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
             for line in chunk.splitlines()
             if line.startswith("data:")
         )
-    assert [(e["type"], e.get("stepName") or e["value"]["name"]) for e in events] == [
+
+    def named(event: Dict[str, Any]) -> str:
+        if event["type"] == "ACTIVITY_SNAPSHOT":
+            return event["content"]["display"]["data"]["name"]
+        return event["stepName"]
+
+    assert [(e["type"], named(e)) for e in events] == [
         ("STEP_STARTED", "Researching"),
-        ("CUSTOM", "Researching"),
+        ("ACTIVITY_SNAPSHOT", "Researching"),
         ("STEP_STARTED", "Searching"),
-        ("CUSTOM", "Searching"),
+        ("ACTIVITY_SNAPSHOT", "Searching"),
         ("STEP_FINISHED", "Searching"),
-        ("CUSTOM", "Searching"),
+        ("ACTIVITY_SNAPSHOT", "Searching"),
         ("STEP_FINISHED", "Researching"),
-        ("CUSTOM", "Researching"),
+        ("ACTIVITY_SNAPSHOT", "Researching"),
     ]
-    started, ended = events[3]["value"], events[5]["value"]
-    assert events[3]["name"] == sessions.LOOP_STEP
-    assert started["parent_id"] == events[1]["value"]["id"]
+    # Each a step display, under the step's id, in the session's scope.
+    displays = [e["content"]["display"] for e in events if "content" in e]
+    assert {d["type"] for d in displays} == {sessions.STEP_DISPLAY_TYPE}
+    assert {e["content"]["scope"] for e in events if "content" in e} == {"session-0017"}
+    started, ended = displays[1]["data"], displays[2]["data"]
+    assert displays[1]["id"] == events[3]["messageId"]
+    assert started["parent_id"] == displays[0]["id"]
     assert (started["kind"], started["input"], started["ended_at"]) == (
         "tool",
         {"q": "x"},
         None,
     )
+    assert displays[1]["text"] == "tool step Searching running"
     # What JSON does not carry is said in words.
     assert ended["output"].startswith("<object object at") and ended["ended_at"]
-    assert events[7]["value"]["output"] == {"found": 2}
+    assert displays[3]["data"]["output"] == {"found": 2}
 
 
 async def _nothing() -> None:
@@ -1116,9 +1146,9 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "CUSTOM:loop.session",
         "RUN_STARTED",
         "STEP_STARTED",
-        "CUSTOM:loop.step",
+        "ACTIVITY_SNAPSHOT",
         "STEP_FINISHED",
-        "CUSTOM:loop.step",
+        "ACTIVITY_SNAPSHOT",
         "TEXT_MESSAGE_START",
         "TEXT_MESSAGE_END",
         "RUN_FINISHED",

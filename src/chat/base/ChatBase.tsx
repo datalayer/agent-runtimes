@@ -26,6 +26,7 @@ import React, {
 } from 'react';
 import { Text, Spinner, IconButton } from '@primer/react';
 import { ReactorLazy } from '@datalayer/reactor/react';
+import { emptyUiModel, type UiModel } from '@datalayer/reactor/ui';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -157,11 +158,10 @@ import {
   chatSpanRecorder,
   type ChatSpanRecorder,
 } from '../../components/inspector/chatSpans';
-import { loopMessageChange, speakerOf, withLoopMessage } from './loopMessage';
-import { loopStepOf, withLoopStep } from './loopStep';
-import { applyLoopElement, loopElementChange } from './loopElement';
-import { loopWindowMessage, tellLoopWindow } from './loopWindow';
-import { uiOpOf, withUiOp } from './uiOps';
+import { withLoopStep } from './loopStep';
+import { applyLoopElement } from './loopElement';
+import { tellLoopWindow } from './loopWindow';
+import { routeUiOp, uiOpOf, withUiOp } from './uiOps';
 import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -1813,6 +1813,10 @@ function ChatBaseInner({
   const [historyLoaded, setHistoryLoaded] = useState(!historyScopeId);
   const [historyRefreshTick, setHistoryRefreshTick] = useState(0);
   const historyRetryAttemptsRef = useRef<Map<string, number>>(new Map());
+  // The steps of an application's code shown so far, as displays (patched
+  // as they stream), and the elements it showed (REACTOR_UI RU-3).
+  const uiStepsRef = useRef<UiModel>(emptyUiModel());
+  const uiElementsRef = useRef<Set<string>>(new Set());
   // Adapter-ready flag — flipped to true once the protocol adapter is initialised
   const [adapterReady, setAdapterReady] = useState(false);
   // Guard so each distinct pending prompt is sent at most once. Stores the
@@ -3676,15 +3680,44 @@ function ChatBaseInner({
           break;
 
         case 'activity': {
-          // A display under a message, shown, changed or gone (REACTOR_UI
-          // RU-2): kept on the message, drawn by its type's renderer.
+          // What the server says as `reactor.ui` ops (REACTOR_UI RU-2,
+          // RU-3): a window message, a step, an element, or the messages'
+          // displays, authors and removals. An op nothing here can place
+          // is refused, and said in the console.
           const uiOp = uiOpOf(event.activity);
-          if (uiOp) {
+          if (!uiOp) break;
+          let routed: ReturnType<typeof routeUiOp>['routed'];
+          try {
+            const next = routeUiOp(
+              uiOp,
+              uiStepsRef.current,
+              uiElementsRef.current,
+            );
+            uiStepsRef.current = next.steps;
+            routed = next.routed;
+          } catch (error) {
+            console.error('[ChatBase] reactor.ui op not applied:', error);
+            break;
+          }
+          if (routed.to === 'window') {
+            // For the page it sits in, outside the conversation (LOOP P-25).
+            tellLoopWindow(routed.data);
+          } else if (routed.to === 'step') {
+            // A step of its code, drawn as it runs (LOOP P-16).
+            const step = routed.step;
+            setDisplayItems(prev => withLoopStep(prev, step));
+          } else if (routed.to === 'element') {
+            // In a side panel or on a page of its own (LOOP P-18): kept
+            // for whoever draws them.
+            uiElementsRef.current.add(routed.change.id);
+            applyLoopElement(routed.change);
+          } else {
+            const op = routed.op;
             const apply = <T extends DisplayItem | ChatMessage>(
               items: T[],
             ): T[] => {
               try {
-                return withUiOp(items, uiOp);
+                return withUiOp(items, op);
               } catch (error) {
                 console.error('[ChatBase] reactor.ui op not applied:', error);
                 return items;
@@ -3694,41 +3727,6 @@ function ChatBaseInner({
             if (useStoreMode) {
               const store = useChatStore.getState();
               store.setMessages(apply(store.messages));
-            }
-            break;
-          }
-          // A step of an application's code, drawn as it runs (LOOP P-16).
-          const step = loopStepOf(event.activity);
-          if (step) {
-            setDisplayItems(prev => withLoopStep(prev, step));
-            break;
-          }
-          // What its code tells the page it sits in, outside the
-          // conversation (LOOP P-25): handed to whoever listens.
-          const windowMessage = loopWindowMessage(event.activity);
-          if (windowMessage) {
-            tellLoopWindow(windowMessage.data);
-            break;
-          }
-          // An element its code opened in a side panel or on a page of its
-          // own, changed or closed (LOOP P-18): kept for whoever draws them.
-          const element = loopElementChange(event.activity);
-          if (element) {
-            applyLoopElement(element);
-            break;
-          }
-          // An application's code changed a message it sent: its author
-          // said, or the message taken away (LOOP P-15).
-          const change = loopMessageChange(event.activity);
-          if (!change) break;
-          setDisplayItems(prev => withLoopMessage(prev, change));
-          if (useStoreMode) {
-            if ('removed' in change) {
-              useChatStore.getState().deleteMessage(change.id);
-            } else {
-              useChatStore.getState().updateMessage(change.id, {
-                speaker: speakerOf(change.author),
-              });
             }
           }
           break;

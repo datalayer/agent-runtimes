@@ -132,12 +132,30 @@ async def test_the_session_api_says_the_step_again_with_what_it_wrote_so_far() -
             for line in chunk.splitlines()
             if line.startswith("data:")
         )
+    # Shown running, its output patched in piece by piece, shown ended: one
+    # display, one row, in place (REACTOR_UI RU-3).
     said = [
-        (e["value"]["output"], e["value"]["ended_at"] is not None)
+        (
+            (
+                e["content"]["display"]["data"]["output"],
+                e["content"]["display"]["data"]["ended_at"] is not None,
+            )
+            if e["type"] == "ACTIVITY_SNAPSHOT"
+            else (e["patch"], False)
+        )
         for e in events
-        if e["type"] == "CUSTOM" and e["name"] == sessions.LOOP_STEP
+        if e["type"] in ("ACTIVITY_SNAPSHOT", "ACTIVITY_DELTA")
     ]
-    # Running, then running with each piece added, then ended: one row, in place.
+    said = [
+        (output[0]["value"], ended) if isinstance(output, list) else (output, ended)
+        for output, ended in said
+    ]
+    assert {e["activityType"] for e in events if e["type"].startswith("ACTIVITY_")} == {
+        "reactor.ui"
+    }
+    assert [e["patch"][0]["path"] for e in events if e["type"] == "ACTIVITY_DELTA"] == [
+        "/display/data/output"
+    ] * 2
     assert said == [
         (None, False),
         ("SELECT", False),
@@ -306,9 +324,10 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
             if line.startswith("data:")
         )
     steps = [
-        e["value"]
+        e["content"]["display"]["data"]
         for e in events
-        if e["type"] == "CUSTOM" and e["name"] == sessions.LOOP_STEP
+        if e["type"] == "ACTIVITY_SNAPSHOT"
+        and e["content"]["display"]["type"] == sessions.STEP_DISPLAY_TYPE
     ]
     assert [(s["name"], s["kind"], s["ended_at"] is not None) for s in steps] == [
         ("lookup_order", "tool", False),

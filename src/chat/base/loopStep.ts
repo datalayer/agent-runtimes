@@ -8,21 +8,22 @@
  * (LOOP P-16): the chain of thought.
  *
  * AG-UI's `STEP_STARTED` and `STEP_FINISHED` carry a step's name only; the
- * session API says the step whole beside them, with a `CUSTOM` event named
- * `loop.step` — `{id, name, kind, parent_id, input, output, error,
- * started_at, ended_at}` — which the AG-UI adapter hands on as an
- * `activity`. A step is drawn as the chat draws a tool call: one row,
- * collapsed, its input and output inside, running until it ends; a nested
- * step says the step it is in. A step that streams its output (LOOP P-31)
- * is said again as it writes, its output so far, and drawn in place.
+ * session API shows the step whole beside them as a `reactor.ui` display of
+ * type `application/vnd.datalayer.loop.step+json` (REACTOR_UI RU-3) — its
+ * data `{name, kind, parent_id, input, output, error, started_at,
+ * ended_at}`, its id the step's — shown as it starts and again as it ends,
+ * its output patched in as it streams (LOOP P-31). A step is drawn as the
+ * chat draws a tool call: one row, collapsed, its input and output inside,
+ * running until it ends; a nested step says the step it is in.
  */
 
+import type { Display } from '@datalayer/reactor/ui';
 import type { DisplayItem, ToolCallMessage } from '../../types/chat';
 
-/** The `CUSTOM` event's name. */
-export const LOOP_STEP = 'loop.step';
+/** The display type of a step. */
+export const STEP_DISPLAY_TYPE = 'application/vnd.datalayer.loop.step+json';
 
-/** A step, as the event says it. */
+/** A step, as its display says it. */
 export type LoopStep = {
   id: string;
   name: string;
@@ -34,22 +35,18 @@ export type LoopStep = {
   ended: boolean;
 };
 
-/** The step an activity says, or `null` when it says none. */
-export function loopStepOf(
-  activity: { type: string; data: unknown } | undefined,
-): LoopStep | null {
-  if (!activity || activity.type !== LOOP_STEP) return null;
-  const data = activity.data as Record<string, unknown> | null;
-  if (
-    !data ||
-    typeof data.id !== 'string' ||
-    !data.id ||
-    typeof data.name !== 'string'
-  ) {
-    return null;
+/** Whether a display is a step's. */
+export const isStepDisplay = (display: Display): boolean =>
+  display.type === STEP_DISPLAY_TYPE;
+
+/** The step a step's display says. Throws for one that is not a step's. */
+export function stepOfDisplay(display: Display): LoopStep {
+  const data = display.data ?? {};
+  if (!isStepDisplay(display) || typeof data.name !== 'string') {
+    throw new Error(`Display ${display.id} is not a step`);
   }
   return {
-    id: data.id,
+    id: display.id,
     name: data.name,
     kind: typeof data.kind === 'string' ? data.kind : 'run',
     parentId:

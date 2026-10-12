@@ -8,19 +8,15 @@
  * panel beside the conversation, or on a page of its own over it. Inline,
  * an element is a message, and the chat draws it as one (P-04).
  *
- * The session API says it with a `CUSTOM` event named `loop.element` —
- * `{id, where, title, shows}`, `shows` the element's display (an answer's,
- * REACTOR_UI RU-2), or `{id, closed: true}` — which the AG-UI
- * adapter hands on as an `activity`. The chat does not draw it: it keeps
- * what is open here, and whoever draws panels and pages (the `app-elements`
- * plugin) listens. One store per page, as there is one chat per
- * application on it.
+ * The session API shows it as a `reactor.ui` display that says where it
+ * shows in its data (`where: "panel" | "page"`, with its `title`) — an
+ * answer's display (REACTOR_UI RU-2) — and closes it with a `remove` of its
+ * id (RU-3). The chat does not draw it: it keeps what is open here, and
+ * whoever draws panels and pages (the `app-elements` plugin) listens. One
+ * store per page, as there is one chat per application on it.
  */
 
-import { isDisplay, type Display } from '@datalayer/reactor/ui';
-
-/** The `CUSTOM` event's name. */
-export const LOOP_ELEMENT = 'loop.element';
+import type { Display } from '@datalayer/reactor/ui';
 
 /** Where an element opens, besides inline. */
 export type LoopElementWhere = 'panel' | 'page';
@@ -34,26 +30,23 @@ export type LoopElement = {
   shows: Display;
 };
 
-/** What an event says: an element opened or changed, or one closed. */
+/** What changed: an element opened or changed, or one closed. */
 export type LoopElementChange = LoopElement | { id: string; closed: true };
 
-/** The change an activity says, or `null` when it says none. */
-export function loopElementChange(
-  activity: { type: string; data: unknown } | undefined,
-): LoopElementChange | null {
-  if (!activity || activity.type !== LOOP_ELEMENT) return null;
-  const data = activity.data as Record<string, unknown> | null;
-  if (!data || typeof data.id !== 'string' || !data.id) return null;
-  if (data.closed === true) return { id: data.id, closed: true };
-  if (data.where !== 'panel' && data.where !== 'page') return null;
-  if (!isDisplay(data.shows)) {
-    throw new Error(`Element ${data.id} shows no display`);
-  }
+/**
+ * The element a display is, or `null` for one shown inline, under its
+ * message: a display is an element when it says it shows in a panel or on
+ * a page.
+ */
+export function elementOfDisplay(display: Display): LoopElement | null {
+  const where = display.data?.where;
+  if (where !== 'panel' && where !== 'page') return null;
+  const title = display.data?.title;
   return {
-    id: data.id,
-    where: data.where,
-    title: typeof data.title === 'string' ? data.title : '',
-    shows: data.shows,
+    id: display.id,
+    where,
+    title: typeof title === 'string' ? title : '',
+    shows: display,
   };
 }
 

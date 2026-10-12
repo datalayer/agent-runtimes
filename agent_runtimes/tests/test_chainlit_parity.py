@@ -301,8 +301,11 @@ def test_the_copilot_sits_in_the_host_page_and_talks_to_it(
         )
     )
     assert answer_of(started) == "Hello, world!"
-    [told] = [event for event in started if event.get("name") == "loop.window"]
-    assert told["value"] == {"data": "Server: Normal message received: Hi"}
+    [told] = [event for event in started if event.get("name") == "reactor.ui"]
+    assert told["value"]["body"] == {
+        "name": "message",
+        "args": {"data": "Server: Normal message received: Hi"},
+    }
     answered = events_of(
         copilot.post(
             "/copilot/api/v1/apps/sessions/session-c-001/window",
@@ -310,9 +313,12 @@ def test_the_copilot_sits_in_the_host_page_and_talks_to_it(
         )
     )
     assert answer_of(answered) == "Window message received: Client: hello from the page"
-    [told] = [event for event in answered if event.get("name") == "loop.window"]
-    assert told["value"] == {
-        "data": "Server: Window message received: Client: hello from the page"
+    [told] = [event for event in answered if event.get("name") == "reactor.ui"]
+    assert told["value"]["body"] == {
+        "name": "message",
+        "args": {
+            "data": "Server: Window message received: Client: hello from the page"
+        },
     }
 
 

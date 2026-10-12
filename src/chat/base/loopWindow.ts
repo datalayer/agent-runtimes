@@ -7,23 +7,30 @@
  * Window messages (LOOP P-25): what an application's code tells the page it
  * sits in, outside the conversation — ``session.send_window_message(data)``.
  *
- * The session API says it with a `CUSTOM` event named `loop.window` —
- * `{data}` — which the AG-UI adapter hands on as an `activity`. The chat
- * does not draw it: it hands it to whoever listens here — the embed's host
- * bridge, which raises it on the element as its `window-message` event.
+ * The session API says it with a `reactor.ui` `window` op named `message`,
+ * its `args` `{data}` (REACTOR_UI RU-3). The chat does not draw it: it hands
+ * it to whoever listens here — the embed's host bridge, which raises it on
+ * the element as its `window-message` event. A window op of another name is
+ * not one this page acts on: refused, it throws.
  */
 
-/** The `CUSTOM` event's name. */
-export const LOOP_WINDOW = 'loop.window';
+import { AGUI_NAME, isUiOp, type WindowOp } from '@datalayer/reactor/ui';
 
-/** What an activity says to the page, or `null` when it is not a window message. */
-export function loopWindowMessage(
-  activity: { type: string; data: unknown } | undefined,
-): { data: unknown } | null {
-  if (!activity || activity.type !== LOOP_WINDOW) return null;
-  const said = activity.data as Record<string, unknown> | null;
-  if (!said || typeof said !== 'object' || !('data' in said)) return null;
-  return { data: said.data };
+/** The name of the window op that hands the page a message. */
+export const WINDOW_MESSAGE = 'message';
+
+/** What a window op hands the page. Throws for a window op of another name. */
+export function windowMessageOf(op: WindowOp): unknown {
+  if (op.body.name !== WINDOW_MESSAGE) {
+    throw new Error(
+      `A window op named ${op.body.name} is not one this page acts on`,
+    );
+  }
+  const args = op.body.args;
+  if (!args || !('data' in args)) {
+    throw new Error('A window message says no data');
+  }
+  return args.data;
 }
 
 const listeners = new Set<(data: unknown) => void>();
@@ -44,8 +51,8 @@ export function onLoopWindowMessage(
 }
 
 /**
- * What a turn's stream says to the page — the `loop.window` events of the
- * turn a window message posted by the page ran — and the sentence its
+ * What a turn's stream says to the page — the window messages of the turn
+ * a window message posted by the page ran — and the sentence its
  * `RUN_ERROR` said, if it failed.
  */
 export function windowTurnOf(stream: string): {
@@ -69,12 +76,13 @@ export function windowTurnOf(stream: string): {
     }
     if (event.type === 'RUN_ERROR') {
       error = String(event.message ?? 'The turn failed.');
-    } else if (event.type === 'CUSTOM') {
-      const message = loopWindowMessage({
-        type: String(event.name),
-        data: event.value,
-      });
-      if (message) said.push(message.data);
+    } else if (event.type === 'CUSTOM' && event.name === AGUI_NAME) {
+      if (!isUiOp(event.value)) {
+        throw new Error('CUSTOM reactor.ui: its value is not an op');
+      }
+      if (event.value.op === 'window') {
+        said.push(windowMessageOf(event.value));
+      }
     }
   }
   return { said, error };

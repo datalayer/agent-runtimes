@@ -1,0 +1,223 @@
+[
+  {
+    "type": "TEXT_MESSAGE_START",
+    "messageId": "id-1",
+    "role": "assistant"
+  },
+  {
+    "type": "TEXT_MESSAGE_CONTENT",
+    "messageId": "id-1",
+    "delta": "Searching…"
+  },
+  {
+    "type": "TEXT_MESSAGE_END",
+    "messageId": "id-1"
+  },
+  {
+    "type": "TEXT_MESSAGE_START",
+    "messageId": "id-2",
+    "role": "assistant"
+  },
+  {
+    "type": "TEXT_MESSAGE_CONTENT",
+    "messageId": "id-2",
+    "delta": "Found 3."
+  },
+  {
+    "type": "TEXT_MESSAGE_END",
+    "messageId": "id-2"
+  },
+  {
+    "type": "CUSTOM",
+    "name": "reactor.ui",
+    "value": {
+      "v": 1,
+      "scope": "session-ru3",
+      "id": "id-2",
+      "op": "meta",
+      "body": {
+        "author": "Searcher"
+      }
+    }
+  },
+  {
+    "type": "STEP_STARTED",
+    "stepName": "gen_query"
+  },
+  {
+    "type": "ACTIVITY_SNAPSHOT",
+    "messageId": "id-3",
+    "activityType": "reactor.ui",
+    "content": {
+      "scope": "session-ru3",
+      "display": {
+        "type": "application/vnd.datalayer.loop.step+json",
+        "version": 1,
+        "id": "id-3",
+        "text": "tool step gen_query running",
+        "data": {
+          "name": "gen_query",
+          "kind": "tool",
+          "parent_id": null,
+          "input": "q",
+          "output": null,
+          "error": "",
+          "started_at": "2026-10-12T00:00:00+00:00",
+          "ended_at": null
+        },
+        "actions": []
+      }
+    },
+    "replace": true
+  },
+  {
+    "type": "ACTIVITY_DELTA",
+    "messageId": "id-3",
+    "activityType": "reactor.ui",
+    "patch": [
+      {
+        "path": "/display/data/output",
+        "op": "replace",
+        "value": "SELECT"
+      }
+    ]
+  },
+  {
+    "type": "ACTIVITY_DELTA",
+    "messageId": "id-3",
+    "activityType": "reactor.ui",
+    "patch": [
+      {
+        "path": "/display/data/output",
+        "op": "replace",
+        "value": "SELECT 1"
+      }
+    ]
+  },
+  {
+    "type": "STEP_FINISHED",
+    "stepName": "gen_query"
+  },
+  {
+    "type": "ACTIVITY_SNAPSHOT",
+    "messageId": "id-3",
+    "activityType": "reactor.ui",
+    "content": {
+      "scope": "session-ru3",
+      "display": {
+        "type": "application/vnd.datalayer.loop.step+json",
+        "version": 1,
+        "id": "id-3",
+        "text": "tool step gen_query ended",
+        "data": {
+          "name": "gen_query",
+          "kind": "tool",
+          "parent_id": null,
+          "input": "q",
+          "output": "SELECT 1",
+          "error": "",
+          "started_at": "2026-10-12T00:00:00+00:00",
+          "ended_at": "2026-10-12T00:00:00+00:00"
+        },
+        "actions": []
+      }
+    },
+    "replace": true
+  },
+  {
+    "type": "ACTIVITY_SNAPSHOT",
+    "messageId": "id-4",
+    "activityType": "reactor.ui",
+    "content": {
+      "scope": "session-ru3",
+      "display": {
+        "type": "application/vnd.datalayer.loop.answer+json",
+        "version": 1,
+        "id": "id-4",
+        "text": "Runs showed Text Three runs",
+        "data": {
+          "message_id": "id-4",
+          "title": "Runs",
+          "where": "panel",
+          "surface": {
+            "surfaceId": "id-4",
+            "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
+            "title": "Runs",
+            "messages": [
+              {
+                "version": "v0.9",
+                "createSurface": {
+                  "surfaceId": "id-4",
+                  "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+                }
+              },
+              {
+                "version": "v0.9",
+                "updateComponents": {
+                  "surfaceId": "id-4",
+                  "components": [
+                    {
+                      "id": "root",
+                      "component": "Column",
+                      "children": [
+                        "note"
+                      ]
+                    },
+                    {
+                      "id": "note",
+                      "component": "Text",
+                      "text": "Three runs"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "summary": "Runs showed Text Three runs"
+        },
+        "actions": []
+      }
+    },
+    "replace": true
+  },
+  {
+    "type": "CUSTOM",
+    "name": "reactor.ui",
+    "value": {
+      "v": 1,
+      "scope": "session-ru3",
+      "id": null,
+      "op": "window",
+      "body": {
+        "name": "message",
+        "args": {
+          "data": {
+            "open": "cart"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "CUSTOM",
+    "name": "reactor.ui",
+    "value": {
+      "v": 1,
+      "scope": "session-ru3",
+      "id": "id-1",
+      "op": "remove",
+      "body": null
+    }
+  },
+  {
+    "type": "CUSTOM",
+    "name": "reactor.ui",
+    "value": {
+      "v": 1,
+      "scope": "session-ru3",
+      "id": "id-4",
+      "op": "remove",
+      "body": null
+    }
+  }
+]

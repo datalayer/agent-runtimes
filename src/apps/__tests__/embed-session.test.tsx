@@ -445,8 +445,14 @@ describe('window messages, between the page and the application (LOOP P-25)', ()
         new Response(
           `data: ${JSON.stringify({
             type: 'CUSTOM',
-            name: 'loop.window',
-            value: { data: { seen: '/cart' } },
+            name: 'reactor.ui',
+            value: {
+              v: 1,
+              op: 'window',
+              scope: 's',
+              id: null,
+              body: { name: 'message', args: { data: { seen: '/cart' } } },
+            },
           })}\n\n`,
         ),
     );

@@ -14,7 +14,17 @@ message they came with: an `AnswerShows` display (REACTOR_UI RU-2).
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+)
 
 import jsonschema
 from reactor.ui import Display, audience, display_type
@@ -315,6 +325,9 @@ class AnswerShows(Display):
     message_id: str
     """The message it is under; an element's own id for an element."""
     title: str
+    where: Literal["inline", "panel", "page"] = "inline"
+    """Under its message, or an element in a side panel or on a page of its
+    own (LOOP P-18, REACTOR_UI RU-3)."""
     surface: Annotated[Dict[str, Any], audience("page")]
     """``{surfaceId, catalogId, title, messages}``: the A2UI surface (`answer_surface`)."""
     summary: str
@@ -331,12 +344,14 @@ class AnswerShows(Display):
         title: str,
         nodes: Sequence[Mapping[str, Any]],
         data: Optional[Mapping[str, Any]] = None,
+        where: str = "inline",
     ) -> "AnswerShows":
         """An answer's components as its display, its id the surface's."""
         return cls(
             id=display_id,
             message_id=message_id,
             title=title,
+            where=where,
             surface=answer_surface(display_id, title, nodes, data),
             summary=answer_text(title, nodes),
         )

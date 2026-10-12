@@ -120,7 +120,7 @@ describe('displays under messages', () => {
         scope: 's',
         id: 'gone',
       }),
-    ).toThrow(/under no message/);
+    ).toThrow(/Nothing here is gone/);
   });
 
   it('draws a thread’s displays again under their messages', () => {

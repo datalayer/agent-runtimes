@@ -128,9 +128,13 @@ def test_the_mount_serves_the_page_the_session_api_and_the_developers_own_routes
         )
     )
     assert answer_of(started) == "You said Hi."
-    # What its code tells the page: a loop.window event, not a message.
-    [window] = [e for e in started if e.get("name") == "loop.window"]
-    assert window["value"] == {"data": {"open": "cart"}}
+    # What its code tells the page: a window op, not a message (REACTOR_UI RU-3).
+    [window] = [
+        e["value"]
+        for e in started
+        if e.get("name") == "reactor.ui" and e["value"]["op"] == "window"
+    ]
+    assert window["body"] == {"name": "message", "args": {"data": {"open": "cart"}}}
     # And the runtime's own routes, its status among them.
     assert (
         client.get("/assistant/api/v1/apps/sessions/session-m-001").json()["python"]
@@ -157,10 +161,16 @@ def test_the_page_posts_a_window_message_that_its_code_answers(
     assert types_of(answered) == [
         "CUSTOM:loop.session",
         "RUN_STARTED",
-        "CUSTOM:loop.window",
+        "CUSTOM:reactor.ui",
         "RUN_FINISHED",
     ]
-    assert answered[2]["value"] == {"data": {"seen": "/checkout"}}
+    assert answered[2]["value"] == {
+        "v": 1,
+        "op": "window",
+        "scope": "session-m-002",
+        "id": None,
+        "body": {"name": "message", "args": {"data": {"seen": "/checkout"}}},
+    }
     # A message the page posts is not one of the conversation's.
     turns = client.get("/assistant/api/v1/apps/sessions/session-m-002").json()["turns"]
     assert turns == 0

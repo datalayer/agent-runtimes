@@ -921,7 +921,8 @@ await session.close("report")
 On the channel, a panel or a page is a `Shown` event, delivered again when it
 changes, and `Closed` when it goes (`MemoryChannel.shown` is what is open);
 inline, it is a `Message`. Over the [Session API](./session-api) it is a
-`loop.element` event, drawn by the `app-elements` plugin every application's
+`reactor.ui` display that says where it shows (a `remove` op closes it),
+drawn by the `app-elements` plugin every application's
 workspace mounts; a resume draws again what was open, and its code can still
 close it. A terminal cannot open one: it names it (*▸ Runs, shown in the
 side panel*) and its components.
@@ -1066,7 +1067,7 @@ On the channel, a message changed is the same `Message` delivered again
 under its id; one removed is a `Removed(message_id, session_id)`.
 `MemoryChannel.messages` says the conversation as it is now. Over the
 [Session API](./session-api) a change is the message written again under its
-id, and the author or the removal a `loop.message` event. A terminal does not
+id, the author a `reactor.ui` `meta` op and the removal a `remove` op. A terminal does not
 write over what it printed: it prints the message again, marked
 *↻ edited*, or says *✗ a message was removed.*
 
@@ -1140,8 +1141,9 @@ Steps are the application's chain of thought:
   call — collapsed, running until it ends, its kind and input inside, then
   its output or its error; a nested step says the step it is in (*tool
   step, inside Researching*). Over the [Session API](./session-api) a step
-  is AG-UI's `STEP_STARTED` and `STEP_FINISHED`, and beside each a
-  `loop.step` event that says it whole.
+  is AG-UI's `STEP_STARTED` and `STEP_FINISHED`, and beside each the
+  step's `reactor.ui` display that says it whole, its output patched in as
+  it streams.
 - **In the record**, each step that ended is a `step` entry when the
   Appspec's `record.include` names `actions`: `{id, name, kind, parent_id,
   input, output, error, started_at, ended_at}`, its input, output and error
@@ -1855,7 +1857,7 @@ naming it; an answer refused and asked again, a tool call stopped, both
 recorded; tests run and decided by their code, from `validate --tests
 --local`. `agent_runtimes/tests/test_app_steps_live.py` covers a step that streams —
 its pieces between its start and its end, through a `MemoryChannel`, the
-terminal and the Session API's `loop.step`, text only — each tool call of the
+terminal and the Session API's step display, text only — each tool call of the
 agent as a `tool` step, nested where it was called, ended with its result or
 with the refusal of the person asked, streamed or not, in this process and
 through a runtime's agent (`agent_maker`); and the blank agent built here with
@@ -1875,7 +1877,7 @@ was also run on a real model (Bedrock) in this process — its agent called
 run --web`, its `/app/health` answering.
 `agent_runtimes/tests/test_app_elements.py` covers `show` and
 `close` — a panel, a page, inline, what is refused, the terminal — and the
-`loop.element` events of the Session API, drawn again on a resume.
+element displays of the Session API, drawn again on a resume.
 `agent_runtimes/tests/test_app_page.py` covers `@app.page`: inputs from
 parameters and `app.input`, outputs from `app.output`, the page in the spec
 and marked by `build`, refused in sentences when declared and when run; run

@@ -5,7 +5,8 @@
 
 /**
  * An element of an application's code in a side panel or on a page (LOOP
- * P-18): the session API's `loop.element` event, kept for whoever draws it.
+ * P-18): a display that says it shows in a panel or on a page (REACTOR_UI
+ * RU-3), kept for whoever draws it.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -13,17 +14,12 @@ import {
   applyLoopElement,
   clearLoopElements,
   closeLoopElement,
-  loopElementChange,
+  elementOfDisplay,
   onLoopElements,
   openLoopElements,
   withLoopElement,
   type LoopElement,
 } from '../loopElement';
-
-const event = (data: Record<string, unknown>) => ({
-  type: 'loop.element',
-  data,
-});
 
 const panel: LoopElement = {
   id: 'runs',
@@ -33,37 +29,29 @@ const panel: LoopElement = {
     type: 'application/vnd.datalayer.loop.answer+json',
     id: 'runs',
     text: 'Runs showed Table runs',
+    data: { message_id: 'runs', title: 'Runs', where: 'panel' },
   },
 };
 
 afterEach(() => clearLoopElements());
 
-describe('loop.element', () => {
-  it('reads an element opened or closed, and nothing else', () => {
-    expect(
-      loopElementChange({ type: 'loop.step', data: { id: 'a' } }),
-    ).toBeNull();
-    expect(loopElementChange(event({ where: 'panel' }))).toBeNull();
-    expect(loopElementChange(event({ id: 'a', where: 'dock' }))).toBeNull();
-    expect(loopElementChange(undefined)).toBeNull();
-    expect(
-      loopElementChange(
-        event({
-          id: 'runs',
-          where: 'panel',
-          title: 'Runs',
-          shows: panel.shows,
-        }),
-      ),
-    ).toEqual(panel);
-    expect(loopElementChange(event({ id: 'runs', closed: true }))).toEqual({
-      id: 'runs',
-      closed: true,
+describe('elements', () => {
+  it('are the displays that say they show in a panel or on a page', () => {
+    expect(elementOfDisplay(panel.shows)).toEqual(panel);
+    const page = { ...panel.shows, id: 'report', data: { where: 'page' } };
+    expect(elementOfDisplay(page)).toEqual({
+      id: 'report',
+      where: 'page',
+      title: '',
+      shows: page,
     });
-    // An element shows a display, or the event is refused (REACTOR_UI RU-2).
-    expect(() => loopElementChange(event({ id: 'p', where: 'page' }))).toThrow(
-      /shows no display/,
-    );
+    // Inline, or anywhere else, a display is not an element.
+    for (const where of ['inline', 'dock', undefined]) {
+      expect(
+        elementOfDisplay({ ...panel.shows, data: { message_id: 'm', where } }),
+      ).toBeNull();
+    }
+    expect(elementOfDisplay({ type: 't', id: 'x', text: 'x' })).toBeNull();
   });
 
   it('adds one opened, changes one in place, takes one closed away', () => {
