@@ -32,6 +32,17 @@ from agent_runtimes.loop.apps import Application
 TENANT = "atlas-demo"
 PAIRWISE = "usr_ada_at_ledgerly_00000000"
 
+
+def _last(page: Any, what: str) -> Any:
+    """The page's last event carrying a `message` (or an `error`): SDK 0.10 ends a
+    page with the conversation's state, so it is not always the last event."""
+    return next(
+        getattr(event, what)
+        for event in reversed(page.events)
+        if getattr(event, what, None) is not None
+    )
+
+
 app = Application(
     id="pap-two-companies",
     name="PAP Two Companies",
@@ -123,13 +134,13 @@ async def explain_two_companies() -> dict[str, Any]:
 
         # 1. Ledgerly connects to Northwind as Ada's personal agent there.
         page = await say(None, None, "Pay INV-0042")
-        connect = page.events[-1].message.data["connect"]
+        connect = _last(page, "message").data["connect"]
         await bank.approve_device(connect["user_code"], account_id=ACCOUNT)
         clock.advance(5)
 
         # 2. Northwind's proposal reaches Ada as a Ledgerly operation; she approves it.
         page = await say(page.conversation_id, page.cursor, "Done. Pay INV-0042")
-        relayed = page.events[-1].message.operation
+        relayed = _last(page, "message").operation
         paid = await operations.confirm(
             ops, relayed, approval=approve(relayed), token=token, **who
         )
@@ -140,16 +151,16 @@ async def explain_two_companies() -> dict[str, Any]:
             page.cursor,
             "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking",
         )
-        grant = page.events[-1].message.operation
+        grant = _last(page, "message").operation
         granted = await operations.confirm(
             ops, grant, approval=approve(grant), token=token, **who
         )
 
         # 4. Within the bounds Ledgerly pays and tells Ada; beyond them it asks again.
         page = await say(page.conversation_id, page.cursor, "Pay INV-0043")
-        within = page.events[-1].message
+        within = _last(page, "message")
         page = await say(page.conversation_id, page.cursor, "Pay INV-0044")
-        beyond = page.events[-1].message.operation
+        beyond = _last(page, "message").operation
 
     at_bank = [
         (await bank.operation_record(op_id)).operation

@@ -37,6 +37,17 @@ from agent_runtimes.loop.apps import Application
 TENANT = "atlas-demo"
 PAIRWISE = "usr_ada_at_manzanita_000000"
 
+
+def _last(page: Any, what: str) -> Any:
+    """The page's last event carrying a `message` (or an `error`): SDK 0.10 ends a
+    page with the conversation's state, so it is not always the last event."""
+    return next(
+        getattr(event, what)
+        for event in reversed(page.events)
+        if getattr(event, what, None) is not None
+    )
+
+
 app = Application(
     id="pap-user-with-a-company",
     name="PAP User with a Company",
@@ -93,7 +104,7 @@ async def explain_user_with_a_company() -> dict[str, Any]:
         page = await conversations.start(
             endpoint, say("Where is my jacket order?"), token=session, wait=0, **who
         )
-        asked_to_sign_in = page.events[-1].error
+        asked_to_sign_in = _last(page, "error")
         first_conversation = page.conversation_id
 
         # 3. Device Sign-In: Ada approves on Manzanita's own page.
@@ -124,7 +135,7 @@ async def explain_user_with_a_company() -> dict[str, Any]:
             wait=0,
             **who,
         )
-        proposal = page.events[-1].message.operation  # type: ignore[union-attr]
+        proposal = _last(page, "message").operation  # type: ignore[union-attr]
         assert proposal is not None
 
         # 5. Ada approves exactly this revision in Atlas; it is confirmed once.

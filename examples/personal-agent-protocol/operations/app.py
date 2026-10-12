@@ -112,7 +112,13 @@ async def explain_operations() -> dict[str, Any]:
                 wait=0,
                 **who,
             )
-            return page.events[-1].message.operation  # type: ignore[union-attr]
+            # The company's message proposing it: SDK 0.10 ends a page with
+            # the conversation's state, so it is not always the last event.
+            return next(
+                event.message.operation
+                for event in reversed(page.events)
+                if event.message is not None and event.message.operation is not None
+            )
 
         negotiated = operations_endpoint(
             company.document, ClientMetadata.model_validate(atlas.metadata)
