@@ -726,8 +726,12 @@ def session_result(lines: Iterable[str]) -> tuple[str, dict[str, Any]]:
         kind = event.get("type")
         if kind == "CUSTOM" and event.get("name") == "loop.session" and not uid:
             uid = str((event.get("value") or {}).get("uid") or "")
-        elif kind == "CUSTOM" and event.get("name") == "loop.ask":
-            asked = str((event.get("value") or {}).get("prompt") or "a question")
+        elif kind == "RUN_FINISHED" and isinstance(event.get("result"), Mapping):
+            # A run that ended on a question says it in its result (RU-4).
+            asking = event["result"].get("asking")
+            if isinstance(asking, Mapping):
+                asked = str(asking.get("prompt") or "a question")
+            finished = True
         elif kind == "TEXT_MESSAGE_CONTENT":
             text.append(str(event.get("delta") or ""))
         elif kind == "RUN_ERROR":

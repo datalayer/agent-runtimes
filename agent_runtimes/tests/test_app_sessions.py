@@ -1160,15 +1160,24 @@ def test_report_from_a_file_takes_its_file_from_the_page(
             json={"name": "run", "text": "Again"},
         )
     )
-    [question] = [e for e in asked if e["type"] == "CUSTOM" and e["name"] == "loop.ask"]
-    assert question["value"] == {
-        "kind": "file",
-        "prompt": "Which file?",
-        "accept": [".csv"],
-        "max_bytes": 25 * 1024 * 1024,
+    # The run ends on the question, its result saying what it asks; the
+    # question is a display on the ui socket (REACTOR_UI RU-4).
+    assert asked[-1]["type"] == "RUN_FINISHED"
+    assert asked[-1]["result"] == {
+        "asking": {
+            "kind": "file",
+            "prompt": "Which file?",
+            "accept": [".csv"],
+            "max_bytes": 25 * 1024 * 1024,
+        }
     }
     assert answer_of(asked) == "Which file? (a file: .csv)"
-    assert types_of(asked)[-1] == "RUN_FINISHED"
+    (frame,) = [f for f in sessions.UI_HUB.ops("session-0007") if f.op.op == "ask"]
+    shown = frame.op.body.model_dump(mode="json")
+    assert shown["type"] == sessions.QUESTION_DISPLAY_TYPE
+    assert (shown["data"]["kind"], shown["data"]["accept"]) == ("file", [".csv"])
+    # A file is attached, not pressed: nothing offered (until RU-6).
+    assert shown["actions"] == []
     waiting = local.get("/api/v1/apps/sessions/session-0007").json()
     assert (waiting["state"], waiting["asking"]["kind"]) == ("waiting", "file")
     assert local.post(

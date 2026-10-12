@@ -404,17 +404,32 @@ upload gives it, up to 25 MB:
 
 ## When the application asks
 
-When the code asks the person something, the stream ends on the question: a
-`CUSTOM` event named `loop.ask` — `{kind, prompt}` and, by kind, `options`,
-`accept` and `max_bytes`, or `fields` — the question in words as a message,
-then `RUN_FINISHED`. The session is `waiting`; the answer goes on the turn,
-streamed on its own request:
+When the code asks the person something, the stream ends on the question
+(REACTOR_UI RU-4): the question in words as a message, its **display** under
+that message on the [ui socket](#the-ui-socket) — an `ask` op of a
+`QuestionShown` (`application/vnd.datalayer.loop.question+json`, id
+`<message id>-ask`, `data` `{message_id, kind, prompt, options, accept,
+max_bytes, form, answered}`) offering `reactor.answer` with a token this
+session minted for it — then `RUN_FINISHED` whose `result` is `{asking:
+{kind, prompt, …}}`, which a reader with no page (a schedule, a test) reads as
+waiting. The session is `waiting`. The chat draws the question with the
+`app-elements` plugin's renderer: a choice as its buttons — a rule's prompt
+(*ask first*) is *Allow* and *Refuse* — words as a field, a form as its
+fields; a press is the answer:
 
-| It asks | Answered by |
-| --- | --- |
-| text, a choice | a message |
-| a file | an action with the file |
-| a form (its fields are the settings) | a settings change |
+| It asks | Answered on the page by | Answered by an API client by |
+| --- | --- | --- |
+| text, a choice | a press of `reactor.answer` (`{value}`) up the socket, the run naming it (`forwardedProps.loop.press`) | a message |
+| a form | the same press, `{value: {field: …}}` | a settings change (its fields are the settings) |
+| a file | the file attached to the run (until RU-6) | an action with the file |
+
+The answer is checked against what was asked before the code goes on: a
+choice not among the options, words for a form, a field its schema refuses —
+**422**, the question still waiting; a press of a question no longer asked,
+**409**. The person's words (a choice, text) are the conversation's; a form's
+values are the code's only. Answered, the question is patched: `answered` says
+what answered it, and it offers nothing. A message typed in the chat while it
+waits is not an answer (409, what it waits for).
 
 Anything else while it waits is refused with what it waits for: *Report from a
 File is waiting for an answer: Which file? (a file: .csv)*.

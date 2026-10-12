@@ -39,7 +39,9 @@ and the presses of what they offer come up it, checked, each waiting for the
 run that names it (``forwardedProps.loop.press``).
 
 When the code asks the person something, the stream ends on the question —
-a ``loop.ask`` custom event and the question in words — and the session
+the question in words, its display on the ui socket (an ``ask`` op offering
+``reactor.answer``, REACTOR_UI RU-4), and ``RUN_FINISHED`` whose result is
+``{asking}`` — and the session
 waits: a message answers text or a choice, an action's file a file, a
 settings change a form; the rest of the turn is streamed on that answer's
 request.
@@ -74,7 +76,10 @@ from typing import (
 
 from pydantic import BaseModel, ConfigDict
 from reactor.ui import (
+    ANSWER_ACTION,
     ActionRegistry,
+    Answer,
+    AskOp,
     Display,
     MetaOp,
     PatchOp,
@@ -120,6 +125,7 @@ from agent_runtimes.loop.apps.session import (
     TextQuestion,
     UploadedFile,
     WindowMessage,
+    _checked,
     form_values,
     shown_step,
 )
@@ -536,6 +542,62 @@ class StepShown(Display):
         )
 
 
+#: The display type of what an application's code asks (REACTOR_UI RU-4).
+QUESTION_DISPLAY_TYPE = "application/vnd.datalayer.loop.question+json"
+
+
+@display_type(QUESTION_DISPLAY_TYPE, version=1)
+class QuestionShown(Display):
+    """What the code asks, under the message that asks it in words: shown by
+    an ``ask`` op, offering ``reactor.answer`` — the choice as buttons, the
+    words as a field, a form as its fields; a file is attached (until
+    REACTOR_UI RU-6). Answered, it says what answered it and offers nothing.
+    """
+
+    message_id: str
+    kind: str
+    """``text``, ``choice``, ``file`` or ``form``."""
+    prompt: str
+    options: List[str] = []
+    accept: List[str] = []
+    max_bytes: Optional[int] = None
+    form: Dict[str, Any] = {}
+    """A form's JSON Schema, for a form."""
+    answered: Optional[str] = None
+    """What answered it, in words; none while it waits."""
+
+    def text(self) -> str:
+        return self.prompt + (f" — {self.answered}" if self.answered else "")
+
+    @classmethod
+    def of(
+        cls, display_id: str, message_id: str, question: Question
+    ) -> "QuestionShown":
+        asked = question_of(question)
+        return cls(
+            id=display_id,
+            message_id=message_id,
+            kind=asked["kind"],
+            prompt=asked["prompt"],
+            options=list(asked.get("options") or []),
+            accept=list(asked.get("accept") or []),
+            max_bytes=asked.get("max_bytes"),
+            form=dict(asked.get("schema") or {}),
+        )
+
+
+def answer_in_words(question: Question, answer: Any) -> str:
+    """What answered a question, as the person reads it."""
+    if isinstance(question, FormQuestion) and isinstance(answer, Mapping):
+        return ", ".join(
+            f"{field_title(question.schema, key)}: {value}"
+            for key, value in answer.items()
+        )
+    if isinstance(answer, UploadedFile):
+        return answer.name
+    return str(answer)
+
+
 #: The window op that hands the page a message of the code's (LOOP P-25):
 #: ``{data}``, what ``session.send_window_message(data)`` said.
 WINDOW_MESSAGE = "message"
@@ -593,6 +655,8 @@ class LiveSession:
     _unasked: List[UploadedFile] = field(default_factory=list, init=False, repr=False)
     _ui_actions: Optional[ActionRegistry] = field(default=None, init=False, repr=False)
     _presses: Dict[str, UiAction] = field(default_factory=dict, init=False, repr=False)
+    _asked: Optional[QuestionShown] = field(default=None, init=False, repr=False)
+    """The question waiting, as the page was shown it (REACTOR_UI RU-4)."""
     """Presses checked on the ui socket, waiting for the run that runs them (RU-W)."""
     _sent_settings: Dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _streamed: Dict[str, List[str]] = field(
@@ -812,6 +876,7 @@ class LiveSession:
             finally:
                 self._question = None
                 self._answer = None
+                self._asked = None
                 if self.state != "stopped":
                     self.state = "open"
                 if not cancelled:
@@ -981,8 +1046,17 @@ class LiveSession:
                 registry.register(
                     name, AnswerPress, self._run_pressed, plugin=self.app.id
                 )
+            # What answers what its code asks (REACTOR_UI RU-4): taken by the
+            # run that names the press, never dispatched.
+            registry.register(
+                ANSWER_ACTION, Answer, self._never_dispatched, plugin=self.app.id
+            )
             self._ui_actions = registry
         return self._ui_actions
+
+    async def _never_dispatched(self, payload: Answer, context: Any) -> None:
+        """An answer is the waiting question's, taken by `_answered`."""
+        raise RuntimeError("An answer is taken by the run that names it.")
 
     async def _run_pressed(self, payload: AnswerPress, context: Any) -> None:
         """A press the registry let through: the code's `@app.action`."""
@@ -1062,18 +1136,32 @@ class LiveSession:
 
         The stream ends on the question, and the turn waits for the answer.
         """
-        from ag_ui.core import CustomEvent, RunFinishedEvent
+        from ag_ui.core import RunFinishedEvent
 
         if isinstance(question, FileQuestion) and self._unasked:
             return self._unasked.pop(0)
         self._question = question
         future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
         self._answer = future
-        self.emit(CustomEvent(name="loop.ask", value=question_of(question)))
-        await self.deliver(
-            Message(_new_id(), self.uid, question_in_words(question), self.app.name)
+        # Asked in words in the conversation, and as a display under those
+        # words that answers it (REACTOR_UI RU-4): its choices as buttons, its
+        # fields as a form, each press of it the answer.
+        said = Message(_new_id(), self.uid, question_in_words(question), self.app.name)
+        await self.deliver(said)
+        asked = QuestionShown.of(f"{said.id}-ask", said.id, question)
+        if not isinstance(question, FileQuestion):
+            asked.actions = [self._actions().offer(self.uid, asked.id, ANSWER_ACTION)]
+        self._asked = asked
+        self.show_op(AskOp(scope=self.uid, id=asked.id, body=asked.wire()))
+        # The run ends on the question, and says so in its result: what a
+        # reader with no page — a schedule, a test — reads as waiting.
+        self.emit(
+            RunFinishedEvent(
+                thread_id=self.uid,
+                run_id=self._run_id,
+                result={"asking": question_of(question)},
+            )
         )
-        self.emit(RunFinishedEvent(thread_id=self.uid, run_id=self._run_id))
         self.state = "waiting"
         self._end_stream()
         return await future
@@ -1086,6 +1174,25 @@ class LiveSession:
 
         future = self._answer
         assert future is not None
+        question = self._question
+        asked = self._asked
+        if asked is not None and question is not None:
+            # Answered: it says by what, and offers nothing any more.
+            self.show_op(
+                PatchOp(
+                    scope=self.uid,
+                    id=asked.id,
+                    body=[
+                        {
+                            "op": "replace",
+                            "path": "/data/answered",
+                            "value": answer_in_words(question, answer),
+                        },
+                        {"op": "replace", "path": "/actions", "value": []},
+                    ],
+                )
+            )
+        self._asked = None
         queue = self._open_stream(run_id)
         self.state = "running"
         self._question = None
@@ -1339,6 +1446,26 @@ class LiveSession:
         assert self.session is not None
         body = {**dict(payload), **({"files": given} if given else {})}
         await self.host.action(self.session, name, body)
+
+    def _answered(
+        self, press: UiAction, *, run_id: str = "", head: str = ""
+    ) -> AsyncIterator[str]:
+        """The question waiting, answered by a press of what it offered
+        (``reactor.answer``, REACTOR_UI RU-4): checked against what was asked
+        before the code goes on; the person's words are the conversation's.
+        """
+        question, asked = self._question, self._asked
+        if self.state != "waiting" or question is None or asked is None:
+            raise SessionRefused(409, f"{self.app.name} asks nothing now.")
+        if press.display_id != asked.id:
+            raise SessionRefused(409, "That question is no longer asked.")
+        try:
+            value = _checked(question, Answer.model_validate(press.payload).value)
+        except (InvalidAnswer, ValueError) as wrong:
+            raise SessionRefused(422, str(wrong)) from None
+        if isinstance(question, (TextQuestion, ChoiceQuestion)):
+            self.messages.append({"id": _new_id(), "role": "user", "content": value})
+        return self._go_on(value, run_id=run_id, head=head)
 
     def _answer_waiting(
         self,
@@ -1646,6 +1773,7 @@ class LiveSession:
             self._answer.cancel()
         self._question = None
         self._answer = None
+        self._asked = None
         self._end_stream()
 
     def resume(self, *, head: str = "") -> AsyncIterator[str]:
@@ -1893,11 +2021,15 @@ class LiveSession:
             if action is not None:
                 raise SessionRefused(422, "A run names a press or an action, not both.")
             press = self._take_press(loop.get("press"))
+            if press.action == ANSWER_ACTION:
+                return self._answered(press, run_id=run_id)
             action = {"name": press.action, "payload": dict(press.payload)}
         if self.state == "waiting":
-            return self._answer_waiting(
-                text=text, files=files, values=settings, run_id=run_id
-            )
+            # The chat answers by pressing what the question offered; only a
+            # file, attached, answers a file (until REACTOR_UI RU-6).
+            if not (isinstance(self._question, FileQuestion) and files):
+                raise SessionRefused(409, self._waiting_for())
+            return self._answer_waiting(files=files, run_id=run_id)
         if action is None:
             # Files sent without being asked: what its Appspec takes (P-21).
             refused = unasked_refused(self.app, files)
@@ -2268,10 +2400,12 @@ __all__ = [
     "MAX_TEXT_CHARACTERS",
     "STATES",
     "MAX_PRESSES",
+    "QUESTION_DISPLAY_TYPE",
     "STEP_DISPLAY_TYPE",
     "UI_HUB",
     "WINDOW_MESSAGE",
     "LiveSession",
+    "QuestionShown",
     "StepShown",
     "SessionRefused",
     "agent_app",

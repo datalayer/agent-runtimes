@@ -353,9 +353,12 @@ def test_a_woken_session_creates_its_agent_then_opens_a_session_woken():
             [
                 SESSION_SAID,
                 {"type": "RUN_STARTED"},
-                {"type": "CUSTOM", "name": "loop.ask", "value": {"prompt": "Which?"}},
                 {"type": "TEXT_MESSAGE_CONTENT", "delta": "Which?"},
-                {"type": "RUN_FINISHED"},
+                # A run that ended on a question says so in its result (RU-4).
+                {
+                    "type": "RUN_FINISHED",
+                    "result": {"asking": {"kind": "text", "prompt": "Which?"}},
+                },
             ],
             {
                 "status": "waiting",

@@ -1165,6 +1165,12 @@ goes on with their answer:
 An answer that does not answer the question raises `InvalidAnswer`, in a
 sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
+On a page, the question is drawn under its words as a display (REACTOR_UI
+RU-4): a choice as buttons, text as a field, a form as its fields, a file
+asked of the message box; the person's press is the answer, checked against
+the question before your code has it. In the terminal it is asked as it
+always was.
+
 ### What a person sends
 
 A person sends a file two ways: when the application asks
@@ -1308,8 +1314,8 @@ with its rules, its checks and its record attached:
 
 Every run is a turn of the session's conversation: the history is kept from
 turn to turn. A rule that says *ask first* asks the person of this session —
-a `ChoiceQuestion` with *Allow* and *Refuse* — and a refusal raises
-`AppRuleBlockedError`.
+a `ChoiceQuestion` with *Allow* and *Refuse*, two buttons on the page —
+and a refusal raises `AppRuleBlockedError`.
 
 The host builds the agent. `local_agent`, the default, builds it in this
 process from the Appspec: the application's model and instructions, else its

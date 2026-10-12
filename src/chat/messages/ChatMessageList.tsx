@@ -25,7 +25,11 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useOptionalReactorPlatform } from '@datalayer/reactor/react';
-import { resolveToolResult } from '@datalayer/reactor/ui';
+import {
+  resolveToolResult,
+  type Display,
+  type UiAct,
+} from '@datalayer/reactor/ui';
 import { DisplayText, ReactorDisplay } from '@datalayer/reactor/ui/react';
 import { Text, Spinner, Link, Label, RelativeTime } from '@primer/react';
 import {
@@ -95,6 +99,12 @@ export interface ToolApprovalConfig {
 export interface ChatMessageListProps {
   /** All display items (messages + tool calls) */
   displayItems: DisplayItem[];
+  /**
+   * How a message's display presses what it offered (REACTOR_UI RU-4, RU-W):
+   * the chat sends it up the conversation's ui socket. Absent, its
+   * displays offer nothing to press.
+   */
+  actOn?: (display: Display) => UiAct;
   /** Whether the agent is loading */
   isLoading: boolean;
   /** Whether the agent is currently streaming */
@@ -751,6 +761,7 @@ function DefaultToolCallRenderer({
 
 export function ChatMessageList({
   displayItems,
+  actOn,
   isLoading,
   isStreaming,
   showLoadingIndicator,
@@ -1297,7 +1308,11 @@ export function ChatMessageList({
               >
                 {message.displays.map(display =>
                   platform ? (
-                    <ReactorDisplay key={display.id} display={display} />
+                    <ReactorDisplay
+                      key={display.id}
+                      display={display}
+                      act={actOn?.(display)}
+                    />
                   ) : (
                     <DisplayText key={display.id} display={display} />
                   ),

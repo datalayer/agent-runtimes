@@ -26,7 +26,14 @@ import React, {
 } from 'react';
 import { Text, Spinner, IconButton } from '@primer/react';
 import { ReactorLazy } from '@datalayer/reactor/react';
-import { emptyUiModel, type UiModel, type UiOp } from '@datalayer/reactor/ui';
+import {
+  ANSWER_ACTION,
+  emptyUiModel,
+  type Display,
+  type UiAct,
+  type UiModel,
+  type UiOp,
+} from '@datalayer/reactor/ui';
 import { UiSocket } from '@datalayer/reactor/ui/ws';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
@@ -4465,6 +4472,42 @@ function ChatBaseInner({
     protocol?.agentId,
   ]);
 
+  /*
+   * How a message's display presses what it offered (REACTOR_UI RU-4,
+   * RU-W): with the token of the offer, as the run's press — which
+   * `handleSend` sends up the ui socket before the run, the run naming it
+   * only. An answer is the person's words in the conversation; any other
+   * press, the action's name.
+   */
+  const actOnDisplay = useCallback(
+    (display: Display): UiAct =>
+      async action => {
+        const offer = display.actions?.find(one => one.name === action.action);
+        if (!offer) {
+          throw new Error(`“${action.action}” was not offered here.`);
+        }
+        const value = (action.payload as { value?: unknown } | undefined)
+          ?.value;
+        const words =
+          action.action === ANSWER_ACTION
+            ? typeof value === 'string'
+              ? value
+              : 'Answered.'
+            : action.action;
+        await handleSend(words, {
+          loop: {
+            action: {
+              name: action.action,
+              display_id: display.id,
+              token: offer.token,
+              payload: action.payload ?? {},
+            },
+          },
+        });
+      },
+    [handleSend],
+  );
+
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {
     setDisplayItems([]);
@@ -4963,6 +5006,7 @@ function ChatBaseInner({
     >
       <ChatMessageList
         displayItems={welcomedItems}
+        actOn={protocol?.uiSocket ? actOnDisplay : undefined}
         isLoading={isLoading}
         isStreaming={isStreaming}
         showLoadingIndicator={showLoadingIndicator}
