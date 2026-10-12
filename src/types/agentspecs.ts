@@ -538,6 +538,29 @@ export interface AppPapSpec {
   company: AppPapCompanySpec;
 }
 
+/**
+ * A business the application asks for each person over PACT 1.0
+ * (AGENT_PROTOCOLS PI-01): its domain, and the audience its Provider
+ * assigned. Always in each person's own name; never a credential.
+ */
+export interface AppPactConnectionSpec {
+  /** Stable within the application: `support`. */
+  id: string;
+  /** The business's domain: `example.com`; its card is at `/.well-known/agent-card.json`. */
+  brand: string;
+  /** The audience the Brand's Provider assigned (PACT §3.1). */
+  audience: string;
+  /** `read`: asks as the application alone; `write`: also for the person, delegated. */
+  access: 'read' | 'write';
+  /** The Brand's scopes it may ask the person for: `orders:read`. */
+  scopes: string[];
+}
+
+/** PACT: the businesses it asks for each person. */
+export interface AppPactSpec {
+  connections: AppPactConnectionSpec[];
+}
+
 /** When an application acts alone, and when it asks. */
 export interface AppRuleSpec {
   /** The action, in the words a person reads. */
@@ -1123,6 +1146,8 @@ export interface AppSpec {
   connections: AppConnectionSpec[];
   /** Personal Agent Protocol; absent, the application has none. */
   pap?: AppPapSpec;
+  /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */
+  pact?: AppPactSpec;
   rules: AppRuleSpec[];
   permissions: AppPermissionsSpec;
   interface: AppInterfaceSpec;
