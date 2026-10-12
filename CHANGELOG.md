@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.114
+
+- **A2A extensions an application declares** (`a2a.extensions` in its Appspec, agentspecs 0.0.80) published on its Agent Card after the runtime's own, in Python and TypeScript (AGENT_PROTOCOLS PR-02).
+- **The protocols' tools classed by agentspecs** (`protocol-tools`): the PAP, PACT, UCP and ACP tool classes generated in both languages from one table (AGENT_PROTOCOLS PR-54, PAP_DATALAYER R-02).
+- **Personal Agent Protocol in the Loop Python surface**, both roles: `app.company_connection`, `app.as_company`, `@app.company_operation` (PAP_DATALAYER S-04); the PAP examples run again on SDK 0.10.
+- **Displays** on the Vercel AI stream and in a reloaded history (REACTOR_UI RU-1).
+
 ## 1.3.113
 
 - **PACT** `poll_sign_in` / `pollSignIn`: one question to the Brand's token endpoint, `None` while the person has not signed in — what the MCP gateway's `pact` toolset asks (AGENT_PROTOCOLS PI-10).
