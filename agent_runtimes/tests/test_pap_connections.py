@@ -192,3 +192,57 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
     assert TOOL_CLASSES["pap_confirm"] == ("write", "buy")
     assert {name: (cls,) for name, cls in UCP_CLASSES.items()} == of("ucp")
     assert {name: (cls,) for name, cls in ACP_CLASSES.items()} == of("agentic-commerce")
+
+
+def business() -> AppSpec:
+    """Travel Desk: a person's agent at Example Air over PACT (AGENT_PROTOCOLS PI-20)."""
+    return APP_CATALOGUE["travel-desk"].model_copy(deep=True)
+
+
+def test_a_pact_business_is_the_gateways_pact_toolset_in_the_persons_name() -> None:
+    spec = business()
+    assert [c["brand"] for c in spec.pact.connections] == ["air.example"]
+    pap_connections.remember_agent("agent-6", spec)
+    companies = pap_connections.companies_of_agent("agent-6")
+    assert companies == (("pact_air_example", "user"),)
+    assert pap_connections.protocol_of("pact_air_example") == "pact"
+    assert pap_connections.domain_of("pact_air_example") == "air.example"
+    (built,) = toolsets_for_the_run(
+        [], "principal-token", users_token="person-token", companies=companies
+    )
+    assert built.prefix == "pact_air_example"
+    transport = built.wrapped.client.transport
+    assert transport.url.endswith("/mcp?only=pact&pact-brand=air.example")
+    assert (
+        transport.httpx_client_factory().headers["authorization"]
+        == "Bearer person-token"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_rules_decide_a_businesss_pact_tools_by_what_they_do() -> None:
+    spec = business()
+    pap_connections.remember_agent("agent-7", spec)
+    harness = Harness(spec)
+    ask = "pact_air_example_pact_ask"
+    assert await harness.call(ask, {"message": "When is my flight?"}) == {
+        "message": "When is my flight?"
+    }
+    assert harness.recorded[-1].decision.classes == ("read",)
+    assert pap_connections.classes_of("pact_air_example_pact_ask_for_person") == (
+        "write",
+    )
+    # A PAP tool's name under a PACT server is no tool of it.
+    assert pap_connections.classes_of("pact_air_example_pap_confirm") is None
+    # The level of its connection decides what is given.
+    access = spec.pact.connections[0].get("access") or "read"
+    given = harness.capability.given("pact_air_example_pact_ask_for_person")
+    assert given is (access == "write")
+    assert harness.capability.given("pact_air_example_pact_ask") is True
+
+
+def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
+    assert pap_connections.server_id("air.example", "pact") == "pact_air_example"
+    assert pap_connections.server_id("air.example") == "pap_air_example"
+    with pytest.raises(ValueError, match="no gateway toolset"):
+        pap_connections.server_id("air.example", "ucp")

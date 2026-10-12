@@ -66,6 +66,25 @@ reader.
 | `pact.receiptStore` | `memory` | the record receipts are kept in |
 | `pact.extension.delegated` | `device-code` | the Delegated profile; without it, Identity alone |
 
+## In an application
+
+An application lists `pact` in `protocols` and names each business in its
+`pact` block (`pact.connections[]`: the Brand's domain, the audience its
+Provider assigned, a level, the scopes it may ask each person for). On
+Datalayer the runtime holds nothing of it: each business is one server,
+`pact_<domain>` (`pact_air_example` for `air.example`), which is the MCP
+gateway's `pact` toolset (`/mcp?only=pact&pact-brand=<domain>`) reached in
+the person's name; its tools are named with it
+(`pact_air_example_pact_ask`). The gateway signs the personal-agent JWT with
+the application's key and keeps the person's delegation.
+
+The application's Rules decide those tools as any other, by what agentspecs
+says each does (`protocol-tools/pact.yaml`): `pact_brand`, `pact_ask`,
+`pact_sign_in` and `pact_sign_in_status` read; `pact_ask_for_person` and
+`pact_disconnect` write. A connection that reads gives only what reads.
+PAP companies are reached the same way (`pap_<domain>`,
+`agent_runtimes.loop.apps.pap_connections`).
+
 ## The local Provider
 
 `agent_runtimes.protocols.pact.provider.ExampleAir` serves one Brand's card,

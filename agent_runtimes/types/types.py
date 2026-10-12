@@ -2274,6 +2274,19 @@ class AppPapSpec(BaseModel):
     company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
 
 
+class AppPactSpec(BaseModel):
+    """PACT 1.0: the businesses it works with as a person's agent (AGENT_PROTOCOLS PI-01, PI-20).
+
+    Each connection names a Brand's domain (`brand`), the audience its Provider
+    assigned, a level and the scopes it may ask each person for; never a
+    credential. The gateway's `pact` toolset reaches each one.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    connections: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class AppA2AExtensionSpec(BaseModel):
     """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
 
@@ -2988,6 +3001,7 @@ class AppSpec(BaseModel):
         description="The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04)",
     )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
+    pact: AppPactSpec = Field(default_factory=AppPactSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)

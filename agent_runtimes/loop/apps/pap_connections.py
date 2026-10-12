@@ -13,12 +13,17 @@ gateway, whose `pap` toolset acts for the person at that company
 token of the company's — and is reached in the person's name, with the token
 of who talks to the application, as a connection `as: user` is.
 
-In the runtime a company is one gateway server, named from its domain
-(:func:`server_id`): two companies' tools never share a name, as each tool is
-prefixed with it. What each tool does to the world is agentspecs' table of the
-`pap` toolset (:data:`TOOL_CLASSES`, which the gateway reads too), so that
-the application's Rules decide them as any other tool: reading reads, a
-confirmation does what an operation can do.
+A business over PACT (each `pact.connections[]`, AGENT_PROTOCOLS PI-20) is
+reached the same way, through the gateway's `pact` toolset
+(``/mcp?only=pact&pact-brand=<domain>``), in the person's name: the gateway
+signs the application's personal-agent JWT and holds the person's delegation.
+
+In the runtime a company is one gateway server, named from its protocol and
+domain (:func:`server_id`): two companies' tools never share a name, as each
+tool is prefixed with it. What each tool does to the world is agentspecs'
+table of the toolset (:data:`TOOL_CLASSES_BY_PROTOCOL`, which the gateway
+reads too), so that the application's Rules decide them as any other tool:
+reading reads, a confirmation does what an operation can do.
 """
 
 from __future__ import annotations
@@ -31,30 +36,49 @@ from agent_runtimes.specs.actions import PROTOCOL_TOOL_CLASSES
 
 #: What each tool of the gateway's `pap` toolset can do: agentspecs'
 #: ``protocol-tools/pap.yaml`` (AGENT_PROTOCOLS PR-54), as the gateway reads it.
-TOOL_CLASSES: Dict[str, Tuple[str, ...]] = {
-    name: tuple(classes)
-    for name, classes in PROTOCOL_TOOL_CLASSES["pap"]["tools"].items()
+TOOL_CLASSES_BY_PROTOCOL: Dict[str, Dict[str, Tuple[str, ...]]] = {
+    protocol: {
+        name: tuple(classes)
+        for name, classes in PROTOCOL_TOOL_CLASSES[protocol]["tools"].items()
+    }
+    for protocol in ("pap", "pact")
+}
+TOOL_CLASSES: Dict[str, Tuple[str, ...]] = TOOL_CLASSES_BY_PROTOCOL["pap"]
+
+#: Each protocol's block, the key of its counterpart's domain there, and the
+#: gateway's URL parameter naming it.
+_BLOCKS: Dict[str, Tuple[str, str]] = {
+    "pap": ("company", "pap-company"),
+    "pact": ("brand", "pact-brand"),
 }
 
-#: server id -> company domain, for every application this process runs.
-_DOMAINS: Dict[str, str] = {}
-
-_PREFIX = "pap_"
+#: server id -> (protocol, company domain), for every application this process runs.
+_DOMAINS: Dict[str, Tuple[str, str]] = {}
 
 
-def server_id(domain: str) -> str:
-    """A company's server in the runtime: `pap_` and its domain in plain characters."""
-    return _PREFIX + re.sub(r"[^a-z0-9]+", "_", domain.lower()).strip("_")
+def server_id(domain: str, protocol: str = "pap") -> str:
+    """A company's server in the runtime: its protocol and its domain in plain characters."""
+    if protocol not in _BLOCKS:
+        raise ValueError(f"no gateway toolset for the protocol {protocol!r}")
+    return f"{protocol}_" + re.sub(r"[^a-z0-9]+", "_", domain.lower()).strip("_")
 
 
 def connections_of(app: Any) -> Dict[str, Dict[str, Any]]:
-    """An application's companies, by server id."""
-    pap = getattr(app, "pap", None)
+    """An application's companies (PAP) and businesses (PACT), by server id.
+
+    Each carries `protocol` and `company` (its domain), whichever block it is from.
+    """
     found: Dict[str, Dict[str, Any]] = {}
-    for connection in getattr(pap, "connections", None) or []:
-        company = str((connection or {}).get("company") or "").strip().lower()
-        if company:
-            found[server_id(company)] = {**connection, "company": company}
+    for protocol, (key, _) in _BLOCKS.items():
+        block = getattr(app, protocol, None)
+        for connection in getattr(block, "connections", None) or []:
+            domain = str((connection or {}).get(key) or "").strip().lower()
+            if domain:
+                found[server_id(domain, protocol)] = {
+                    **connection,
+                    "company": domain,
+                    "protocol": protocol,
+                }
     return found
 
 
@@ -62,20 +86,28 @@ def remember(app: Any) -> list[str]:
     """Know an application's companies as gateway servers; answer their ids."""
     found = connections_of(app)
     for sid, connection in found.items():
-        _DOMAINS[sid] = connection["company"]
+        _DOMAINS[sid] = (connection["protocol"], connection["company"])
     return list(found)
 
 
 def domain_of(sid: str) -> Optional[str]:
-    return _DOMAINS.get(sid)
+    known = _DOMAINS.get(sid)
+    return known[1] if known else None
+
+
+def protocol_of(sid: str) -> Optional[str]:
+    """`pap` or `pact` for a company's server, None for any other."""
+    known = _DOMAINS.get(sid)
+    return known[0] if known else None
 
 
 def gateway_query(sid: str) -> Optional[str]:
     """How a company's server reaches the gateway, or None for any other server."""
-    domain = _DOMAINS.get(sid)
-    if domain is None:
+    known = _DOMAINS.get(sid)
+    if known is None:
         return None
-    return f"only=pap&pap-company={quote(domain, safe='')}"
+    protocol, domain = known
+    return f"only={protocol}&{_BLOCKS[protocol][1]}={quote(domain, safe='')}"
 
 
 def tool_prefix(sid: str) -> str:
@@ -86,9 +118,10 @@ def tool_prefix(sid: str) -> str:
 def pap_tool(tool_name: str) -> Optional[Tuple[str, str]]:
     """`(server id, tool)` for a company's tool as the model calls it, or None."""
     for sid in sorted(_DOMAINS, key=len, reverse=True):
+        tools = TOOL_CLASSES_BY_PROTOCOL[_DOMAINS[sid][0]]
         for separator in ("_", "__"):
             head = f"{sid}{separator}"
-            if tool_name.startswith(head) and tool_name[len(head) :] in TOOL_CLASSES:
+            if tool_name.startswith(head) and tool_name[len(head) :] in tools:
                 return sid, tool_name[len(head) :]
     return None
 
@@ -96,7 +129,9 @@ def pap_tool(tool_name: str) -> Optional[Tuple[str, str]]:
 def classes_of(tool_name: str) -> Optional[Tuple[str, ...]]:
     """What a company's tool does, or None for a tool of no company."""
     found = pap_tool(tool_name)
-    return TOOL_CLASSES[found[1]] if found else None
+    if found is None:
+        return None
+    return TOOL_CLASSES_BY_PROTOCOL[_DOMAINS[found[0]][0]][found[1]]
 
 
 def connection_actions(app: Any, tool_name: str) -> Optional[set[str]]:
@@ -123,7 +158,7 @@ def remember_agent(agent_id: str, app: Any) -> None:
     """Keep which companies an agent's application works with; none forgets."""
     found = connections_of(app) if app is not None else {}
     for sid, connection in found.items():
-        _DOMAINS[sid] = connection["company"]
+        _DOMAINS[sid] = (connection["protocol"], connection["company"])
     if found:
         _AGENTS[agent_id] = tuple((sid, acts_as(c)) for sid, c in sorted(found.items()))
     else:
