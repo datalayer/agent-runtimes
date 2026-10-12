@@ -129,6 +129,8 @@ export interface ChatBaseHeaderProps {
   onChatViewModeChange?: (mode: ChatViewMode) => void;
   /** Modes shown greyed out: the sidebar, when the host has no mount point. */
   disabledViewModes?: readonly ChatViewMode[];
+  /** The modes the toggle offers; all of them when unsaid. */
+  offeredViewModes?: readonly ChatViewMode[];
   /** Show the companion-surface segmented control (None / Notebook / Document). */
   showEphemeralSurfaceControl?: boolean;
   /** Whether the Notebook option is available in the surface control. */
@@ -170,6 +172,7 @@ export function ChatBaseHeader({
   chatViewMode,
   onChatViewModeChange,
   disabledViewModes = [],
+  offeredViewModes,
   showEphemeralSurfaceControl = false,
   enableEphemeralNotebookOption = false,
   enableEphemeralDocumentOption = false,
@@ -343,6 +346,7 @@ export function ChatBaseHeader({
               value={chatViewMode}
               onChange={onChatViewModeChange}
               disabledModes={disabledViewModes}
+              modes={offeredViewModes}
             />
           )}
           {/* Custom header actions */}

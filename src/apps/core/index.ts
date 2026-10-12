@@ -29,6 +29,7 @@ import type { AssistantCharacter } from '../../chat/assistant/characters';
 import type { AssistantCharacterData } from '../../chat/assistant/formats/types';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import type { ChatWords } from '../../chat/words';
+import type { ChatViewMode } from '../../types/chat';
 
 /** Lifecycle of the sandbox a workspace is attached to. */
 export type SandboxState =
@@ -251,6 +252,23 @@ export type LoopWorkspaceContext = {
    * part of the page and the chat's stay together at the trailing edge.
    */
   chatHeaderActions?: ReactNode;
+  /**
+   * The chat's view, as the host keeps it: the chat's title bar offers the
+   * views with its view-mode toggle, and the floating assistant shows only
+   * in the `assistant` view. Unsaid, the title bar offers none and the
+   * assistant shows wherever its plugin is enabled.
+   */
+  chatViewModes?: LoopChatViewModes;
+};
+
+/** The chat's view in a workspace whose host keeps it (`chatViewModes`). */
+export type LoopChatViewModes = {
+  /** The view the chat is in. */
+  value: ChatViewMode;
+  /** The person picked another view. */
+  onChange: (mode: ChatViewMode) => void;
+  /** The views offered, in the toggle's order; all of them when unsaid. */
+  offered?: readonly ChatViewMode[];
 };
 
 /**

@@ -53,6 +53,7 @@ import {
   createPromptChannel,
   parseCommand,
   loopSurfaceId,
+  type LoopChatViewModes,
   type LoopWorkspaceContext,
   type SandboxSnapshot,
   type ViewControls,
@@ -132,6 +133,12 @@ export type LoopWorkspaceProps = {
    */
   chatHeaderActions?: ReactNode;
   /**
+   * The chat's view, kept by the host: offered in the chat's title bar by
+   * its view-mode toggle, and the floating assistant shown only in the
+   * `assistant` view — from the first paint, since the host knows it then.
+   */
+  chatViewModes?: LoopChatViewModes;
+  /**
    * The host's own controls for the workspace header row.
    *
    * The same bargain as `chatHeaderActions`, for the other header: a page
@@ -185,6 +192,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
     showViewSelector = true,
     showHeader = true,
     chatHeaderActions,
+    chatViewModes,
     headerActions,
     headerContainer,
     sidebarRail = false,
@@ -212,6 +220,7 @@ export function LoopWorkspace(props: LoopWorkspaceProps): JSX.Element {
       showViewSelector={showViewSelector}
       showHeader={showHeader}
       chatHeaderActions={chatHeaderActions}
+      chatViewModes={chatViewModes}
       headerActions={headerActions}
       headerContainer={headerContainer}
       sidebarRail={sidebarRail}
@@ -243,6 +252,7 @@ function WorkspaceBody({
   showViewSelector = true,
   showHeader = true,
   chatHeaderActions,
+  chatViewModes,
   headerActions,
   headerContainer,
   sidebarRail = false,
@@ -354,6 +364,7 @@ function WorkspaceBody({
       viewControls,
       setViewControls,
       chatHeaderActions,
+      chatViewModes,
     }),
     [
       serverUrl,
@@ -367,6 +378,7 @@ function WorkspaceBody({
       viewControls,
       setViewControls,
       chatHeaderActions,
+      chatViewModes,
     ],
   );
 

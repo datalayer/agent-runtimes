@@ -2352,7 +2352,22 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                   ? headerProps => (
                       <HeaderComponent
                         workspace={workspace}
-                        header={headerProps}
+                        header={
+                          /* The chat's view, when the host keeps it: the
+                             title bar's toggle, given to the header only —
+                             the chat itself stays where the workspace
+                             places it, whichever view is picked. */
+                          workspace.chatViewModes
+                            ? {
+                                ...headerProps,
+                                chatViewMode: workspace.chatViewModes.value,
+                                onChatViewModeChange:
+                                  workspace.chatViewModes.onChange,
+                                offeredViewModes:
+                                  workspace.chatViewModes.offered,
+                              }
+                            : headerProps
+                        }
                       />
                     )
                   : undefined

@@ -33,6 +33,7 @@ export {
   type LoopCommandContext,
   type LoopViewProps,
   type LoopWorkspaceContext,
+  type LoopChatViewModes,
   type MentionCandidate,
   type MentionContribution,
   type PromptChannel,

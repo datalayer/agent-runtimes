@@ -51,6 +51,12 @@ export type ChatViewModeToggleProps = {
   onChange: (mode: ChatViewMode) => void;
   /** Modes shown greyed out: the sidebar, when the host has no mount point. */
   disabledModes?: readonly ChatViewMode[];
+  /**
+   * The modes offered, in `CHAT_VIEW_MODES` order whatever order they are
+   * given in: all of them when unsaid. A host that places only some of them
+   * — the workspace: its sidebar, or the assistant over it — leaves the rest out.
+   */
+  modes?: readonly ChatViewMode[];
   /** Where the tooltips open. Above by default; below for a control at the top of its window. */
   tooltipDirection?: 'n' | 's';
 };
@@ -59,8 +65,12 @@ export function ChatViewModeToggle({
   value,
   onChange,
   disabledModes = [],
+  modes,
   tooltipDirection = 'n',
 }: ChatViewModeToggleProps): JSX.Element {
+  const offered = modes
+    ? CHAT_VIEW_MODES.filter(option => modes.includes(option.mode))
+    : CHAT_VIEW_MODES;
   return (
     <Box
       role="group"
@@ -73,7 +83,7 @@ export function ChatViewModeToggle({
       p="2px"
       gap="1px"
     >
-      {CHAT_VIEW_MODES.map(({ mode, label }) => {
+      {offered.map(({ mode, label }) => {
         const ModeIcon = VIEW_MODE_ICONS[mode];
         const selected = value === mode;
         /* Greyed rather than left out: the person sees the mode exists, and

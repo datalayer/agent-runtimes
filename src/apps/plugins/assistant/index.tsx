@@ -26,7 +26,13 @@
  *
  * The workspace's chat is the conversation: on a page layout, its side panel
  * is opened and closed; where the conversation is always on screen, a click
- * takes the person to its composer.
+ * takes the person to its composer, and the character stands above that
+ * composer — under it, it would step aside for it and be gone (reported
+ * 2026-10-12) — appearing only once the composer is there to stand above.
+ *
+ * Where the workspace's host keeps the chat's view (`chatViewModes`), the
+ * character shows in the `assistant` view only, and its menu offers the
+ * views, as the chat's title bar does.
  *
  * @module apps/plugins/assistant
  */
@@ -86,6 +92,8 @@ import type {
   BalloonToolLine,
 } from '../../../chat/assistant/toolLine';
 import { useChatWords } from '../../../chat/ChatLanguage';
+import { CHAT_VIEW_MODES } from '../../../chat/viewModes';
+import type { AssistantMenuItem } from '../../../chat/assistant/AssistantContextMenu';
 
 export const LOOP_ASSISTANT_PLUGIN_NAME = '@datalayer/loop-plugin-assistant';
 
@@ -196,6 +204,41 @@ function focusComposer(): void {
   composer?.focus();
 }
 
+/** Room left between the composer and the character standing above it. */
+const ABOVE_COMPOSER = 12;
+
+/**
+ * How far above the window's bottom edge the workspace's composer begins, in
+ * pixels, while `watching`: undefined until a composer is on screen. Looked
+ * over on a short timer, as the stage's own keep-clear is — the composer
+ * mounts late, grows with what is typed, and moves without a mutation a
+ * listener would hear.
+ */
+export function useComposerClearance(watching: boolean): number | undefined {
+  const [clearance, setClearance] = useState<number>();
+  useEffect(() => {
+    if (!watching) {
+      setClearance(undefined);
+      return;
+    }
+    const measure = () => {
+      const composer = document.querySelector<HTMLElement>(
+        '[data-chat-composer]',
+      );
+      const box = composer?.getBoundingClientRect();
+      setClearance(
+        box && box.width > 0 && box.height > 0
+          ? Math.max(0, Math.round(window.innerHeight - box.top))
+          : undefined,
+      );
+    };
+    measure();
+    const timer = window.setInterval(measure, 400);
+    return () => window.clearInterval(timer);
+  }, [watching]);
+  return clearance;
+}
+
 export function LoopAssistant({
   app,
   person,
@@ -230,6 +273,37 @@ export function LoopAssistant({
   );
   const panelOpen = useSignalValue(pageLayoutPanelOpen);
   const open = onPageLayout && panelOpen;
+  // The chat's view, where the workspace's host keeps it: shown in the
+  // assistant view only.
+  const views = workspace?.chatViewModes;
+  const inView = !views || views.value === 'assistant';
+  // Where the conversation is always on screen, stand above its composer.
+  const clearance = useComposerClearance(
+    inView && !onPageLayout && turnEntries.length > 0,
+  );
+  // In a workspace that keeps the chat's view, the chat and its composer
+  // are there: the character waits for the composer rather than standing
+  // where the composer will come.
+  const awaitingComposer =
+    !!views &&
+    !onPageLayout &&
+    turnEntries.length > 0 &&
+    clearance === undefined;
+  const viewItems = useMemo<AssistantMenuItem[]>(
+    () =>
+      views
+        ? CHAT_VIEW_MODES.filter(
+            option => !views.offered || views.offered.includes(option.mode),
+          ).map(option => ({
+            id: `view-${option.mode}`,
+            label: option.label,
+            group: 'View',
+            checked: option.mode === views.value,
+            onSelect: () => views.onChange(option.mode),
+          }))
+        : [],
+    [views],
+  );
 
   const [away, setAway] = useState<AssistantAway>(keptAway);
   const [arriving, setArriving] = useState(true);
@@ -328,7 +402,7 @@ export function LoopAssistant({
     [decisions?.serverUrl, decisions?.token],
   );
 
-  if (away !== 'none') {
+  if (away !== 'none' || !inView || awaitingComposer) {
     return null;
   }
   if ('problem' in chosen) {
@@ -431,7 +505,10 @@ export function LoopAssistant({
         place={
           drag.position
             ? { left: `${drag.position.left}px`, top: `${drag.position.top}px` }
-            : { right: '24px', bottom: '24px' }
+            : {
+                right: '24px',
+                bottom: `${clearance === undefined ? 24 : clearance + ABOVE_COMPOSER}px`,
+              }
         }
         stageRef={stageRef}
         onDragStart={drag.onHandlePointerDown}
@@ -446,7 +523,11 @@ export function LoopAssistant({
         onBalloonDisplayChange={setChosenDisplay}
         about={agentAbout}
         sandbox={agentSandbox}
-        contextMenu={menuContributions}
+        contextMenu={
+          viewItems.length > 0
+            ? [...menuContributions, ...viewItems]
+            : menuContributions
+        }
       />
     </>
   );
