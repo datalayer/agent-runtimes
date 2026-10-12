@@ -1,0 +1,88 @@
+{
+  "description": "Every Reactor contribution point of this protocol's plugin, in both languages (AGENT_PROTOCOLS §3.1). test_protocols_reactor_points.py and src/protocols/reactorPoints.unit.test.ts hold each language to this file. A point whose `extension` is true is an extension the protocol defines; its contributions are implementations of it. `default` is the contribution id of the plugin's own default (order 100), null when a host must contribute one. `resolution` is `single` (the lowest order answers; two at the same order fail closed) or `all` (every contribution is used).",
+  "plugin": {
+    "python": "agent-runtimes.protocols.web-bot-auth",
+    "typescript": "@datalayer/agent-runtimes/protocols/web-bot-auth"
+  },
+  "points": [
+    {
+      "id": "web_bot_auth.signer",
+      "python": "agent_runtimes.protocols.web_bot_auth.plugin:SIGNERS",
+      "typescript": "WebBotAuthSigners",
+      "contract": "HttpSigner",
+      "members": [
+        "keyid",
+        "algorithm",
+        "sign"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": false,
+      "note": "The host holds the key (Vault transit in Datalayer)."
+    },
+    {
+      "id": "web_bot_auth.nonceStore",
+      "python": "agent_runtimes.protocols.web_bot_auth.plugin:NONCE_STORES",
+      "typescript": "WebBotAuthNonceStores",
+      "contract": "NonceStore",
+      "members": [
+        "check_and_record"
+      ],
+      "default": {
+        "python": "memory",
+        "typescript": "memory"
+      },
+      "resolution": "single",
+      "tenant": null,
+      "extension": false
+    },
+    {
+      "id": "web_bot_auth.extension.directory",
+      "python": "agent_runtimes.protocols.web_bot_auth.plugin:DIRECTORY_DISCOVERIES",
+      "typescript": "WebBotAuthDirectoryDiscoveries",
+      "contract": "KeyDiscovery",
+      "members": [
+        "keys"
+      ],
+      "default": {
+        "python": "httpx",
+        "typescript": "fetch"
+      },
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "note": "Signature-Agent type `directory`: the origin's well-known directory, its response signed (Appendix B)."
+    },
+    {
+      "id": "web_bot_auth.extension.jwks_uri",
+      "python": "agent_runtimes.protocols.web_bot_auth.plugin:JWKS_URI_DISCOVERIES",
+      "typescript": "WebBotAuthJwksUriDiscoveries",
+      "contract": "KeyDiscovery",
+      "members": [
+        "keys"
+      ],
+      "default": {
+        "python": "httpx",
+        "typescript": "fetch"
+      },
+      "resolution": "single",
+      "tenant": null,
+      "extension": true
+    },
+    {
+      "id": "web_bot_auth.extension.cimd",
+      "python": "agent_runtimes.protocols.web_bot_auth.plugin:CIMD_DISCOVERIES",
+      "typescript": "WebBotAuthCimdDiscoveries",
+      "contract": "KeyDiscovery",
+      "members": [
+        "keys"
+      ],
+      "default": null,
+      "resolution": "single",
+      "tenant": null,
+      "extension": true,
+      "note": "A client metadata document: no default, so a member of this type is unverified until a host contributes one."
+    }
+  ]
+}

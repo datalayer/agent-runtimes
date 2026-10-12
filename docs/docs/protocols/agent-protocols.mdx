@@ -1,0 +1,80 @@
+---
+sidebar_position: 20
+title: Agent protocols as plugins
+---
+
+# Agent protocols as plugins
+
+Besides the runtime protocols a client uses to talk to an agent (AG-UI,
+Vercel AI, ACP, A2A), an agent speaks **agent protocols** with the world:
+how it calls tools and other agents (MCP, A2A), who it is (Web Bot Auth),
+what a person consented to (PAP, PACT), how it buys (UCP, ACP — the
+*Agentic Commerce Protocol*, named `agentic_commerce` in code so it never
+collides with the Agent Client Protocol). The map is
+[poppy.md/compare](https://poppy.md/compare).
+
+## Every protocol is a Reactor plugin
+
+In [Reactor](https://github.com/datalayer/reactor)'s terms:
+
+- every protocol is a **Plugin**, in Python and in TypeScript, with a
+  manifest and the **Contribution Points** it declares, named
+  `<protocol>.<point>`: its stores, its signer, its egress;
+- its defaults are **Contributions** at order 100; a host replaces one by
+  contributing at a lower order (on Datalayer: IAM custody, the MCP
+  gateway's egress, Vault transit signing);
+- **every extension a protocol defines is a Contribution Point of its
+  plugin**, `<protocol>.extension.<name>`; an implementation of the
+  extension is a Contribution to it, and the protocol negotiates what it
+  offers from what is contributed there;
+- the **`agent-protocols` Reactor Extension** groups the plugins for
+  delivery (Python entry point `datalayer.reactor.extensions`), and decides
+  nothing;
+- each plugin says what it is on `protocols.description`.
+
+```python
+from agent_runtimes.protocols import build_protocols_reactor, list_protocols
+
+platform = build_protocols_reactor(plugins=[(host_manifest, host_plugin)])
+for protocol in list_protocols(platform):
+    print(protocol.id, protocol.version, protocol.roles, protocol.points)
+```
+
+```ts
+import { buildProtocolsReactor } from '@datalayer/agent-runtimes/lib/protocols/agentProtocols';
+import { listProtocols } from '@datalayer/agent-runtimes/lib/protocols/core';
+
+const reactor = buildProtocolsReactor([hostPlugin]);
+listProtocols(reactor);
+```
+
+## What is implemented
+
+| Protocol | Plugin | Version implemented | Points |
+| --- | --- | --- | --- |
+| MCP | `agent-runtimes.protocols.mcp` | Python `mcp` 2.1: 2026-07-28; TypeScript SDK 1.32: 2025-11-25 | none yet: its optional capabilities and extensions become `mcp.extension.*` when the client and server read them from contributions |
+| A2A | `agent-runtimes.protocols.a2a` | 1.0 | `a2a.extension.orchestration`, `a2a.extension.face` (Datalayer's), `a2a.extension.other` (any, by URI) |
+| Web Bot Auth | `agent-runtimes.protocols.web-bot-auth` | draft-ietf-webbotauth-httpsig-protocol-00 | `web_bot_auth.signer`, `web_bot_auth.nonceStore`, `web_bot_auth.extension.{directory,jwks_uri,cimd}` — [its page](./web-bot-auth) |
+| PAP | the PAP SDK's own plugins (`pap.*`) | 0.1 | see [Personal Agent Protocol](../integrations/personal-agent-protocol) |
+| PACT, UCP, ACP | planned | PACT 1.0, UCP 2026-08-25, ACP 2026-04-17 | — |
+
+Each protocol's points are listed in its `reactor-points.json` beside its
+Python package; a table-driven test in each language holds the plugin to
+it: exported under its id, declared by the plugin, its default at order 100
+(or none), replaced by a lower order, gone with its plugin, two at the same
+winning order failing closed.
+
+## A2A card extensions
+
+What an agent card publishes under `capabilities.extensions` is what the A2A
+plugin's extension points hold, then what the card itself declares
+(`A2AAgentCard.extensions`); a URI published twice is refused. A client
+negotiates with an agent from the same contributions: it activates the
+extensions of the card it implements, and refuses to call an agent that
+requires one it does not.
+
+```python
+from agent_runtimes.protocols.a2a import negotiate_extensions
+
+activated = negotiate_extensions(card, platform)  # ValueError if a required one is missing
+```

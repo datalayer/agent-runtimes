@@ -31,6 +31,7 @@ except ImportError:
     Skill = None
 
 from ..adapters.base import BaseAgent
+from ..protocols.a2a.plugin import FACE_URI
 
 logger = logging.getLogger(__name__)
 
@@ -61,11 +62,17 @@ class A2AAgentCard:
     #: one, ``avatar`` (a drawing's name). Carried by the face extension
     #: (`FACE_EXTENSION_URI`); its name stays plain text.
     face: dict[str, str] | None = None
+    #: Extensions it advertises besides the runtime's own (orchestration,
+    #: face): each ``{uri, description?, required?, params?}``, as A2A's
+    #: ``capabilities.extensions`` writes it (AGENT_PROTOCOLS PR-02). A URI
+    #: the runtime already publishes is refused.
+    extensions: list[dict[str, Any]] | None = None
 
 
 #: The extension an agent card carries its face in. Not required: a client
-#: that draws no face ignores it.
-FACE_EXTENSION_URI = "https://datalayer.ai/extensions/face/v1"
+#: that draws no face ignores it. Contributed by the A2A plugin to
+#: `a2a.extension.face`.
+FACE_EXTENSION_URI = FACE_URI
 
 
 @dataclass
@@ -272,9 +279,11 @@ def register_a2a_agent(
             async with app.task_manager, worker.run():
                 yield
 
-        from fasta2a.schema import AgentExtension
-
-        from ..context.delegation import EXTENSION_URI
+        # What the card publishes is what the A2A plugin's extension points
+        # hold (AGENT_PROTOCOLS §3.1, PR-02): Datalayer's orchestration and
+        # face by default, then what the card itself declares.
+        from ..protocols import protocols_platform
+        from ..protocols.a2a import CardContext, card_extensions
 
         a2a_app = FastA2A(
             storage=a2a_storage,
@@ -287,31 +296,17 @@ def register_a2a_agent(
             skills=skills,
             # The Datalayer orchestration extension (O2-05): a delegation names
             # its execution and may resume from a checkpoint; a running task can
-            # be paused at one and steered, at these routes.
+            # be paused at one and steered, at these routes. Contributed by the
+            # A2A plugin to `a2a.extension.orchestration`.
             extensions=[
-                AgentExtension(
-                    uri=EXTENSION_URI,
-                    description=(
-                        "Pause at a checkpoint and resume from it; steer a task while it works."
+                extension.to_fasta2a()
+                for extension in card_extensions(
+                    protocols_platform(),
+                    CardContext(
+                        agent_id=agent_id, api_prefix=_api_prefix, face=card.face
                     ),
-                    required=False,
-                    params={
-                        "pause": f"{_api_prefix}/a2a/pause",
-                        "steer": f"{_api_prefix}/a2a/steer",
-                    },
-                ),
-                *(
-                    [
-                        AgentExtension(
-                            uri=FACE_EXTENSION_URI,
-                            description="Its face: an emoji, and an avatar when it has one.",
-                            required=False,
-                            params=dict(card.face),
-                        )
-                    ]
-                    if card.face
-                    else []
-                ),
+                    card.extensions or [],
+                )
             ],
             security_schemes=card.security_schemes,
             security_requirements=card.security_requirements,

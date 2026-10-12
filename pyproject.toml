@@ -60,6 +60,9 @@ dependencies = [
     # 1.10.0 (the 1.9.x flat module paths are deprecated aliases there).
     "code-sandboxes>=1.10.0",
     "croniter",
+    # Web Bot Auth's signature bases (AGENT_PROTOCOLS PR-20): RFC 9651
+    # structured fields; the RFC 9421 library of PyPI ignores `;key=`.
+    "http-sfv>=0.9.9,<0.10",
     # A component placed from Python (`Application.component`) is checked
     # against its JSON Schema, as its properties form checks it.
     "jsonschema>=4.18",
@@ -315,6 +318,12 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 # both are installed, with the same plugin doing the extending.
 [project.entry-points."datalayer.reactor.cli"]
 agent-runtimes = "agent_runtimes.reactor_extension:plugin"
+
+# The agent protocols, each a Reactor plugin, delivered together as the
+# `agent-protocols` Reactor Extension (AGENT_PROTOCOLS §3.1): a host that
+# discovers extensions gets MCP, A2A and Web Bot Auth with their points.
+[project.entry-points."datalayer.reactor.extensions"]
+agent-protocols = "agent_runtimes.protocols.extension:extension"
 
 [tool.hatch.metadata]
 allow-direct-references = true

@@ -1,0 +1,137 @@
+---
+sidebar_position: 30
+title: Web Bot Auth
+---
+
+# Web Bot Auth: signed agent requests
+
+An agent signs its outbound HTTP requests so that a website can tell which
+agent is calling; a website verifies them with the agent's published keys.
+Agent Runtimes implements
+[`draft-ietf-webbotauth-httpsig-protocol-00`](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/)
+(IETF Web Bot Auth working group, 2026-09-01) over RFC 9421 HTTP Message
+Signatures, in Python and TypeScript.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.protocols.web_bot_auth` | `@datalayer/agent-runtimes/lib/protocols/web-bot-auth` |
+| Built on | `http-sfv` and `cryptography` (see below why not `http-message-signatures`) | Cloudflare's `web-bot-auth` 0.2.0 |
+| Algorithms | `ed25519`, `ecdsa-p256-sha256` | `ed25519` (signing), what `web-bot-auth` verifies |
+| Checked against | the draft's vectors E.2.1, E.2.2, E.2.3, byte for byte | E.2.1 and E.2.3, byte for byte |
+
+Both read the same vectors, `agent_runtimes/protocols/web_bot_auth/fixtures/vectors.json`.
+
+## What a signed request carries
+
+```http
+Signature-Agent: sig1="https://agent.example"
+Signature-Input: sig1=("@method" "@authority" "@path" "@query" "signature-agent";key="sig1");created=…;keyid="…";alg="ed25519";expires=…;nonce="…";tag="web-bot-auth"
+Signature: sig1=:…:
+```
+
+- `Signature-Agent` is a Dictionary: where the agent's keys are, and how
+  (`directory` by default; `jwks_uri`; `cimd`).
+- The signature always covers `@authority` and the `Signature-Agent`
+  member; Agent Runtimes also covers `@method`, `@path` and `@query`, and a
+  body through its `Content-Digest`, narrower than the draft's minimum as
+  its §5.2 advises.
+- `keyid` is the key's JWK SHA-256 thumbprint; `created` and `expires` are
+  required (a signature lives 60 seconds by default, 24 hours at most);
+  a fresh `nonce` is sent every time.
+
+## Signing, as an agent
+
+```python
+from agent_runtimes.protocols.web_bot_auth import WebBotAuth
+
+async with httpx.AsyncClient(auth=WebBotAuth(signer, agent="https://agent.example")) as client:
+    await client.get("https://shop.example/products")
+```
+
+```ts
+import { signedFetch } from '@datalayer/agent-runtimes/lib/protocols/web-bot-auth';
+
+const fetchSigned = signedFetch(signer, { agent: 'https://agent.example' });
+await fetchSigned('https://shop.example/products');
+```
+
+The `signer` is never a key: it is anything with a `keyid`, an `algorithm`
+and an async `sign(bytes)`, contributed by the host to the Web Bot Auth
+plugin's `web_bot_auth.signer` point. On Datalayer it is Vault transit; a
+runtime pod never holds the key. `LocalSigner` (Python) and `localSigner`
+(TypeScript) hold one in process, for tests and examples only.
+
+## Publishing the keys
+
+The agent's origin serves its key directory at
+`/.well-known/http-message-signatures-directory`
+(`application/http-message-signatures-directory+json`): a JWK Set of public
+keys, each `kid` its thumbprint, the response signed by every key it lists
+(the draft's Appendix B), so the set cannot be served under another
+authority nor swapped under a captured signature.
+
+```python
+body = directory_body([signer.public_jwk for signer in signers])
+signed = await sign_directory_response(body=body, authority_url=url, signers=signers)
+return Response(signed.body, headers=signed.headers)
+```
+
+Rotate by publishing the new key beside the old one until the old one's
+signatures have expired.
+
+## Verifying, as a website
+
+```python
+from agent_runtimes.protocols.web_bot_auth import DirectoryResolver, WebBotAuthMiddleware
+
+app = WebBotAuthMiddleware(app, resolver=DirectoryResolver.with_fetch())
+# request.scope["state"]["web_bot_auth"].outcome: "verified", "invalid" or "unverified"
+```
+
+A request is `verified` (and says by which agent), `invalid` (a signature
+that does not hold, an expired one, a replayed nonce — refused with 401 by
+the middleware), or `unverified` (unsigned, or keys that could not be
+found): the agent is never named from a URL that could not be resolved.
+Keys are looked up by the pair (agent URL, `keyid`), never by `keyid`
+alone; a directory is fetched over https only, never from a private or
+loopback address, with no redirect followed, a size limit, and a five-minute
+pause after a failed fetch that keeps what was cached.
+
+## The plugin and its points
+
+Web Bot Auth is a Reactor plugin, `agent-runtimes.protocols.web-bot-auth`,
+delivered with the other protocols by the `agent-protocols` Reactor
+Extension (see [Agent protocols as plugins](./agent-protocols)):
+
+| Point | Default | What a host contributes |
+| --- | --- | --- |
+| `web_bot_auth.signer` | none | its signer (the key stays with it) |
+| `web_bot_auth.nonceStore` | `memory` | a store shared by its processes |
+| `web_bot_auth.extension.directory` | `httpx` / `fetch` | its own egress to fetch directories |
+| `web_bot_auth.extension.jwks_uri` | `httpx` / `fetch` | idem |
+| `web_bot_auth.extension.cimd` | none | a client-metadata-document discovery |
+
+Each `Signature-Agent` type is an extension of the protocol, so a contribution
+point of its plugin: a member of type `cimd` is `unverified` until a host
+contributes a discovery for it.
+
+## Why not `http-message-signatures` in Python
+
+`pyauth/http-message-signatures` 2.0.1, the maintained RFC 9421 library of
+PyPI, ignores a component's `;key=` parameter, and Web Bot Auth covers
+`"signature-agent";key="…"` on every request: it signs the wrong base and
+fails the draft's vectors. The signature base is written here over
+`http-sfv` (RFC 9651 structured fields), for the components the draft uses.
+
+## Example
+
+`examples/protocols/web_bot_auth/signed_agent.py` runs an agent, its key
+directory and a shop in one process: the three headers and the signature
+base, a verified request, a replayed one refused, an unsigned one and a
+stranger's unverified, and a key rotation.
+
+## What never leaves the host
+
+No private key reaches a header, a directory, a log line or the model: the
+tests check that the private key appears in none of them, and that a
+directory refuses a private JWK.
