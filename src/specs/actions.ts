@@ -945,6 +945,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'ship-or-fix': {},
   'supplier-comparison': {},
   'support-desk': {},
+  'travel-desk': {},
   'web-research': {
     'tavily.tavily_crawl': 'do_it',
     'tavily.tavily_extract': 'do_it',
@@ -1015,5 +1016,6 @@ export const APP_ESCALATIONS: Record<
   'ship-or-fix': {},
   'supplier-comparison': {},
   'support-desk': {},
+  'travel-desk': {},
   'web-research': {},
 };

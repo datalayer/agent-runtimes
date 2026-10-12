@@ -561,6 +561,27 @@ export interface AppPactSpec {
   connections: AppPactConnectionSpec[];
 }
 
+/**
+ * An A2A extension the application's Agent Card advertises, beside the
+ * runtime's own (AGENT_PROTOCOLS PR-02). Its params are public: never a
+ * credential.
+ */
+export interface AppA2AExtensionSpec {
+  /** The extension's URI: an `https://` URL or a `urn:`. */
+  uri: string;
+  /** What it adds, for whoever reads the card. */
+  description: string;
+  /** Whether a client must support it to talk to the application at all. */
+  required: boolean;
+  /** Its parameters on the card, as the extension defines them. */
+  params: Record<string, unknown>;
+}
+
+/** A2A: the extensions its Agent Card advertises. */
+export interface AppA2ASpec {
+  extensions: AppA2AExtensionSpec[];
+}
+
 /** When an application acts alone, and when it asks. */
 export interface AppRuleSpec {
   /** The action, in the words a person reads. */
@@ -1148,6 +1169,8 @@ export interface AppSpec {
   pap?: AppPapSpec;
   /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */
   pact?: AppPactSpec;
+  /** A2A: the extensions its Agent Card advertises (AGENT_PROTOCOLS PR-02). */
+  a2a?: AppA2ASpec;
   rules: AppRuleSpec[];
   permissions: AppPermissionsSpec;
   interface: AppInterfaceSpec;

@@ -49,6 +49,60 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'ActsAs',
       type: 'string',
     },
+    AppA2A: {
+      additionalProperties: false,
+      description:
+        "A2A: what the application's Agent Card says beside its name and skill (AGENT_PROTOCOLS PR-02).",
+      properties: {
+        extensions: {
+          description:
+            "Extensions its card advertises, besides the runtime's own",
+          items: {
+            $ref: '#/$defs/AppA2AExtension',
+          },
+          title: 'Extensions',
+          type: 'array',
+        },
+      },
+      title: 'AppA2A',
+      type: 'object',
+    },
+    AppA2AExtension: {
+      additionalProperties: false,
+      description:
+        "An A2A extension the application's Agent Card advertises (A2A 1.0\n*Extensions*, AGENT_PROTOCOLS PR-02), beside the runtime's own.\n\nNamed by its URI, as `capabilities.extensions` writes it; its params are\npublished on the card as they are, so they never hold a credential.\nDatalayer's own extensions (orchestration, the face) are the runtime's,\nnever declared here.",
+      properties: {
+        uri: {
+          description:
+            "The extension's URI: `https://example.com/ext/gift-wrap/v1`",
+          title: 'Uri',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it adds, for whoever reads the card',
+          title: 'Description',
+          type: 'string',
+        },
+        required: {
+          default: false,
+          description:
+            'Whether a client must support it to talk to the application at all',
+          title: 'Required',
+          type: 'boolean',
+        },
+        params: {
+          additionalProperties: true,
+          description:
+            'Its parameters on the card, as the extension defines them; public',
+          title: 'Params',
+          type: 'object',
+        },
+      },
+      required: ['uri'],
+      title: 'AppA2AExtension',
+      type: 'object',
+    },
     AppChecks: {
       additionalProperties: false,
       description:
@@ -832,6 +886,63 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         },
       },
       title: 'AppOptionTranslation',
+      type: 'object',
+    },
+    AppPact: {
+      additionalProperties: false,
+      description:
+        'PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01).',
+      properties: {
+        connections: {
+          description: 'Businesses, over PACT',
+          items: {
+            $ref: '#/$defs/AppPactConnection',
+          },
+          title: 'Connections',
+          type: 'array',
+        },
+      },
+      title: 'AppPact',
+      type: 'object',
+    },
+    AppPactConnection: {
+      additionalProperties: false,
+      description:
+        "A business the application asks for each person, over PACT 1.0 (AGENT_PROTOCOLS PI-01).\n\nThe Brand is named by its domain — its Agent Card is at\n`https://<brand>/.well-known/agent-card.json` (PACT §2.1) — and its\nProvider's `audience`, which the Provider assigns at registration and\nthe personal-agent JWT carries (§3.1). Always in each person's own name:\nPACT acts for a person. No credential is ever part of a spec.",
+      properties: {
+        id: {
+          description: 'Stable within the application: `support`',
+          title: 'Id',
+          type: 'string',
+        },
+        brand: {
+          description: "The business's domain: `example.com`",
+          title: 'Brand',
+          type: 'string',
+        },
+        audience: {
+          description: 'The audience its Provider assigned (PACT §3.1)',
+          title: 'Audience',
+          type: 'string',
+        },
+        access: {
+          $ref: '#/$defs/Access',
+          default: 'read',
+          description:
+            'How far: `read` (asks as the application alone), or `write` (also for the person, delegated)',
+        },
+        scopes: {
+          description:
+            "The Brand's scopes it may ask the person for: `orders:read`",
+          items: {
+            type: 'string',
+          },
+          title: 'Scopes',
+          type: 'array',
+        },
+      },
+      required: ['id', 'brand', 'audience'],
+      title: 'AppPactConnection',
       type: 'object',
     },
     AppPage: {
@@ -2323,6 +2434,14 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       $ref: '#/$defs/AppPap',
       description:
         'Personal Agent Protocol: companies it works with, or being one',
+    },
+    pact: {
+      $ref: '#/$defs/AppPact',
+      description: 'PACT: businesses it asks for each person',
+    },
+    a2a: {
+      $ref: '#/$defs/AppA2A',
+      description: 'A2A: the extensions its Agent Card advertises',
     },
     rules: {
       description: 'When it acts alone, and when it asks',

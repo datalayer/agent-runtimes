@@ -98,3 +98,23 @@ activated = negotiate_extensions(card, platform)  # ValueError if a required one
 `examples/protocols/a2a/card_extensions.py` shows a card's extensions
 published from the plugin's points, a third party's extension added by its
 own plugin, and a client refusing an agent that requires one it lacks.
+
+An application declares its own extensions in its Appspec, under `a2a`;
+the runtime publishes them on the application's card after its own
+(orchestration, the face), in the order written:
+
+```yaml
+a2a:
+  extensions:
+    - uri: https://shop.example/extensions/gift-wrap/v1
+      description: Wraps an order as a gift.
+      required: false
+      params:
+        papers: [red, gold]
+```
+
+An extension is named by an `https://` URL or a `urn:`; Datalayer's own
+(`https://datalayer.ai/extensions/…`) are the runtime's and refused here.
+The params are published as they are, so a name that looks like a
+credential (`token`, `api_key`, `password`, …) is refused: a card is
+public. See the [Appspec reference](https://agentspecs.datalayer.tech/apps/reference) (`a2a`).

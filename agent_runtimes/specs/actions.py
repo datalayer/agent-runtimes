@@ -854,6 +854,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "ship-or-fix": {},
     "supplier-comparison": {},
     "support-desk": {},
+    "travel-desk": {},
     "web-research": {
         "tavily.tavily_crawl": "do_it",
         "tavily.tavily_extract": "do_it",
@@ -919,5 +920,6 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "ship-or-fix": {},
     "supplier-comparison": {},
     "support-desk": {},
+    "travel-desk": {},
     "web-research": {},
 }

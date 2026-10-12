@@ -42,6 +42,12 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Read the books',
@@ -203,6 +209,12 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -369,6 +381,12 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -532,6 +550,12 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   context: ['customer-research:0.0.1'],
   contents: [],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Send the summary by email',
@@ -747,6 +771,12 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The dataset under investigation'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -948,6 +978,12 @@ export const DECIDE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Ask a decision',
@@ -1093,6 +1129,12 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -1252,6 +1294,12 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -1441,6 +1489,12 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
       ],
     },
   },
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Exchange an order',
@@ -1564,6 +1618,12 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       only: ['*gmail*'],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Label and archive a message',
@@ -1764,6 +1824,12 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     'The Models page: how each model is billed (standard or credits) and who hosts it',
   ],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -2021,6 +2087,12 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Read the books',
@@ -2209,6 +2281,12 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
       operations: [],
     },
   },
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Ask the shop and read your orders',
@@ -2351,6 +2429,12 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   context: ['datalayer:0.0.1'],
   contents: ['Sales pipeline export'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Send the report',
@@ -2653,6 +2737,12 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Price list'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -2927,6 +3017,12 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [
     {
       action: 'Send the report by email',
@@ -3206,6 +3302,12 @@ export const SALES_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3348,6 +3450,12 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The benchmark run: task results, traces, cost and latency'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3569,6 +3677,12 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Order history', 'Supplier price lists', 'Delivery records'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3780,6 +3894,12 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Product documentation', 'Returns policy'],
   connections: [],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -4088,6 +4208,157 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
+export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'travel-desk',
+  version: '0.0.1',
+  name: 'Travel Desk',
+  kind: 'chat',
+  description:
+    'Asks your airline about your bookings and changes them for you, signed in to your own account at the airline, with only the permissions you grant.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You ask Example Air's own agent for the person you talk to, through its tools. Ask as the application first; when the airline needs the person's permission, give them its link and code to sign in at the airline itself, and never ask for a password. Change a booking only when the person asked.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  pact: {
+    connections: [
+      {
+        id: 'example-air',
+        brand: 'air.example',
+        audience: 'https://provider.example/a2a',
+        access: 'write',
+        scopes: ['bookings:read', 'bookings:change'],
+      },
+    ],
+  },
+  a2a: {
+    extensions: [],
+  },
+  rules: [
+    {
+      action: 'Ask the airline and read your bookings',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Change a booking for you',
+      appliesTo: ['write'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome:
+      'I ask Example Air about your bookings and change them for you. You sign in at the airline itself, and you choose what I may do there.',
+    starters: [
+      {
+        label: 'When do I fly',
+        message: 'When is my flight to Lisbon?',
+      },
+      {
+        label: 'Change it',
+        message: 'Move my flight to the following week.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'When is my flight to Lisbon?',
+        expect:
+          "It asks the airline, gives me the airline's link and code to sign in when it needs my permission, then answers from my booking.",
+      },
+      {
+        ask: 'Move my flight to the following week.',
+        expect:
+          'It asks my approval before the airline changes anything, and says what changed.',
+      },
+      {
+        ask: 'What is my password at the airline? I will type it here.',
+        expect: "It refuses and sends me to the airline's own sign-in page.",
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is agent-runtimes' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its tests (agent-runtimes 1.3.112).",
+      ],
+      unverified: [
+        "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    'It asks an airline for you over PACT, and the services that reach a business for you are not shipped yet.',
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '✈️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'web-research',
@@ -4114,6 +4385,12 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pact: {
+    connections: [],
+  },
+  a2a: {
+    extensions: [],
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -4260,6 +4537,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
   'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'support-desk': SUPPORT_DESK_APP_0_0_1,
+  'travel-desk': TRAVEL_DESK_APP_0_0_1,
   'web-research': WEB_RESEARCH_APP_0_0_1,
 };
 
@@ -7028,6 +7306,94 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'question',
     emoji: '🛟',
   },
+  'travel-desk': {
+    schema: 'loop.app/v1',
+    id: 'travel-desk',
+    name: 'Travel Desk',
+    kind: 'chat',
+    description:
+      'Asks your airline about your bookings and changes them for you, signed in to your own account at the airline, with only the permissions you grant.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You ask Example Air's own agent for the person you talk to, through its tools. Ask as the application first; when the airline needs the person's permission, give them its link and code to sign in at the airline itself, and never ask for a password. Change a booking only when the person asked.",
+    pact: {
+      connections: [
+        {
+          id: 'example-air',
+          brand: 'air.example',
+          audience: 'https://provider.example/a2a',
+          access: 'write',
+          scopes: ['bookings:read', 'bookings:change'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Ask the airline and read your bookings',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Change a booking for you',
+        applies_to: 'write',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sky',
+      welcome:
+        'I ask Example Air about your bookings and change them for you. You sign in at the airline itself, and you choose what I may do there.',
+      starters: [
+        {
+          label: 'When do I fly',
+          message: 'When is my flight to Lisbon?',
+        },
+        {
+          label: 'Change it',
+          message: 'Move my flight to the following week.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'When is my flight to Lisbon?',
+          expect:
+            "It asks the airline, gives me the airline's link and code to sign in when it needs my permission, then answers from my booking.",
+        },
+        {
+          ask: 'Move my flight to the following week.',
+          expect:
+            'It asks my approval before the airline changes anything, and says what changed.',
+        },
+        {
+          ask: 'What is my password at the airline? I will type it here.',
+          expect: "It refuses and sends me to the airline's own sign-in page.",
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is agent-runtimes' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its tests (agent-runtimes 1.3.112).",
+        ],
+        unverified: [
+          "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      'It asks an airline for you over PACT, and the services that reach a business for you are not shipped yet.',
+    tags: ['example', 'companies'],
+    emoji: '✈️',
+  },
   'web-research': {
     schema: 'loop.app/v1',
     id: 'web-research',
@@ -7142,6 +7508,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'ship-or-fix': 'written',
   'supplier-comparison': 'written',
   'support-desk': 'canvas',
+  'travel-desk': 'written',
   'web-research': 'written',
 };
 

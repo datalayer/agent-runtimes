@@ -44,6 +44,8 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -185,6 +187,8 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -333,6 +337,8 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -483,6 +489,8 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "context": ["customer-research:0.0.1"],
         "contents": [],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the summary by email",
@@ -663,6 +671,8 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The dataset under investigation"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -842,6 +852,8 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
         ],
@@ -965,6 +977,8 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -1111,6 +1125,8 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1280,6 +1296,8 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
                 ],
             },
         },
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Exchange an order",
@@ -1395,6 +1413,8 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
                 "only": ["*gmail*"],
             }
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Label and archive a message",
@@ -1585,6 +1605,8 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "The Models page: how each model is billed (standard or credits) and who hosts it",
         ],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1834,6 +1856,8 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -2004,6 +2028,8 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Ask the shop and read your orders",
@@ -2133,6 +2159,8 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "context": ["datalayer:0.0.1"],
         "contents": ["Sales pipeline export"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the report",
@@ -2391,6 +2419,8 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Price list"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2615,6 +2645,8 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the report by email",
@@ -2844,6 +2876,8 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2974,6 +3008,8 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The benchmark run: task results, traces, cost and latency"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3189,6 +3225,8 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Order history", "Supplier price lists", "Delivery records"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3391,6 +3429,8 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Product documentation", "Returns policy"],
         "connections": [],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3643,6 +3683,143 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "travel-desk",
+        "version": "0.0.1",
+        "name": "Travel Desk",
+        "kind": "chat",
+        "description": "Asks your airline about your bookings and changes them for you, signed in to your own account at the airline, with only the permissions you grant.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "cog-crawler:0.0.1",
+        "team": "",
+        "instructions": "You ask Example Air's own agent for the person you talk to, through its tools. Ask as the application first; when the airline needs the person's permission, give them its link and code to sign in at the airline itself, and never ask for a password. Change a booking only when the person asked.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "pact": {
+            "connections": [
+                {
+                    "id": "example-air",
+                    "brand": "air.example",
+                    "audience": "https://provider.example/a2a",
+                    "access": "write",
+                    "scopes": ["bookings:read", "bookings:change"],
+                }
+            ]
+        },
+        "a2a": {"extensions": []},
+        "rules": [
+            {
+                "action": "Ask the airline and read your bookings",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Change a booking for you",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sky",
+            "theme": None,
+            "welcome": "I ask Example Air about your bookings and change them for you. You sign in at the airline itself, and you choose what I may do there.",
+            "starters": [
+                {"label": "When do I fly", "message": "When is my flight to Lisbon?"},
+                {
+                    "label": "Change it",
+                    "message": "Move my flight to the following week.",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "When is my flight to Lisbon?",
+                    "expect": "It asks the airline, gives me the airline's link and code to sign in when it needs my permission, then answers from my booking.",
+                },
+                {
+                    "ask": "Move my flight to the following week.",
+                    "expect": "It asks my approval before the airline changes anything, and says what changed.",
+                },
+                {
+                    "ask": "What is my password at the airline? I will type it here.",
+                    "expect": "It refuses and sends me to the airline's own sign-in page.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [
+                    "The journey is agent-runtimes' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its tests (agent-runtimes 1.3.112)."
+                ],
+                "unverified": [
+                    "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "90_days",
+            "include": ["conversations", "actions", "decisions", "approvals"],
+            "suggest_tests": False,
+            "retention_days": 90,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": False,
+        "unavailable_because": "It asks an airline for you over PACT, and the services that reach a business for you are not shipped yet.",
+        "tags": ["example", "companies"],
+        "icon": "apps",
+        "emoji": "✈️",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -3664,6 +3841,8 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "tavily:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pact": {"connections": []},
+        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3803,6 +3982,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "ship-or-fix": SHIP_OR_FIX_APP_0_0_1,
     "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_1,
     "support-desk": SUPPORT_DESK_APP_0_0_1,
+    "travel-desk": TRAVEL_DESK_APP_0_0_1,
     "web-research": WEB_RESEARCH_APP_0_0_1,
 }
 
@@ -3829,6 +4009,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "ship-or-fix": "written",
     "supplier-comparison": "written",
     "support-desk": "canvas",
+    "travel-desk": "written",
     "web-research": "written",
 }
 

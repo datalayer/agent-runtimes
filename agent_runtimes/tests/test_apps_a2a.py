@@ -119,7 +119,10 @@ class Accounting(BaseAgent):
 
 @asynccontextmanager
 async def served(
-    state: Any, visitors: bool = False, visitors_key: str | None = None
+    state: Any,
+    visitors: bool = False,
+    visitors_key: str | None = None,
+    spec: Any = None,
 ) -> AsyncIterator[tuple[Any, Accounting]]:
     """The application's route, mounted and running, as the runtime serves it.
 
@@ -133,7 +136,7 @@ async def served(
     a2a_routes.set_a2a_app(None)
     try:
         said = apps_a2a.serve_app_over_a2a(
-            APP_CATALOGUE["accounting"],
+            spec or APP_CATALOGUE["accounting"],
             agent,
             URL,
             visitors=visitors,
@@ -228,6 +231,42 @@ class TestTheCard:
         ]
         assert [face["params"] for face in faces] == [{"emoji": "🧾"}]
         assert card["name"] == "Accounting"
+
+    @pytest.mark.asyncio
+    async def test_the_extensions_its_appspec_declares_are_on_its_card(
+        self, state: Any
+    ) -> None:
+        """AGENT_PROTOCOLS PR-02: `a2a.extensions` of the Appspec, published after
+        the runtime's own and read back by the A2A plugin's reader."""
+        from agentspecs.apps import AppSpec
+
+        from agent_runtimes.protocols.a2a import find_extension
+
+        gift = {
+            "uri": "https://shop.example/extensions/gift-wrap/v1",
+            "description": "Wraps an order as a gift.",
+            "params": {"papers": ["red", "gold"]},
+        }
+        accounting = APP_CATALOGUE["accounting"]
+        spec = AppSpec.model_validate(
+            {
+                **accounting.model_dump(by_alias=True),
+                "a2a": {"extensions": [gift, {"uri": "urn:example:loyalty", "required": True}]},
+            }
+        )
+        async with served(state, spec=spec) as (app, _), _client(app) as client:
+            card = (await client.get("/.well-known/agent-card.json")).json()
+        uris = [extension["uri"] for extension in card["capabilities"]["extensions"]]
+        assert uris[-2:] == [gift["uri"], "urn:example:loyalty"]
+        assert "https://datalayer.ai/extensions/face/v1" in uris[:-2]
+        found = find_extension(card, gift["uri"])
+        assert found is not None
+        assert (found.description, found.required, dict(found.params)) == (
+            gift["description"],
+            False,
+            gift["params"],
+        )
+        assert find_extension(card, "urn:example:loyalty").required is True
 
     @pytest.mark.asyncio
     async def test_the_browsers_fixture_is_the_card_the_runtime_serves(

@@ -190,7 +190,8 @@ def card_of(app: Any, url: str) -> Any:
         Its name, description and version, and one skill named for it: what
         it does, its tags, and its starters as examples. Text in; out, the
         formats its answers come in (``interface.outputs``), plain text when
-        it says none. Its face (its emoji, its avatar) in the face extension.
+        it says none. Its face (its emoji, its avatar) in the face extension,
+        and the extensions its Appspec declares (``a2a.extensions``).
     """
     from agent_runtimes.output.formats import card_output_modes
     from agent_runtimes.routes.a2a import A2AAgentCard
@@ -218,6 +219,12 @@ def card_of(app: Any, url: str) -> Any:
         default_input_modes=["text/plain"],
         default_output_modes=outputs,
         face={"emoji": app.emoji, **({"avatar": app.avatar} if app.avatar else {})},
+        # What the Appspec declares beside the runtime's own (AGENT_PROTOCOLS
+        # PR-02): published after the A2A plugin's contributions, a URI the
+        # runtime already publishes refused.
+        extensions=[
+            extension.model_dump(by_alias=True) for extension in app.a2a.extensions
+        ],
     )
 
 
