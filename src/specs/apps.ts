@@ -4072,7 +4072,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
       recorded: [],
       unverified: [
         'No conversation has run: its agent was switched on in the catalogue on 2026-10-06 and has not answered yet.',
-        "Its two documents are Datalayer's samples, for a made-up product: a builder gives their own on What it knows.",
+        "Its two documents are Datalayer's own examples, for a made-up product: a builder gives their own on What it knows.",
         'Its tests have not been run.',
       ],
     },
@@ -7191,7 +7191,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       verified: {
         unverified: [
           'No conversation has run: its agent was switched on in the catalogue on 2026-10-06 and has not answered yet.',
-          "Its two documents are Datalayer's samples, for a made-up product: a builder gives their own on What it knows.",
+          "Its two documents are Datalayer's own examples, for a made-up product: a builder gives their own on What it knows.",
           'Its tests have not been run.',
         ],
       },
