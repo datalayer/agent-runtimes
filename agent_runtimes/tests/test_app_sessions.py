@@ -140,6 +140,39 @@ def data_url(content: bytes, media_type: str) -> str:
     return f"data:{media_type};base64,{base64.b64encode(content).decode()}"
 
 
+def uploaded(
+    client: Any,
+    agent: str,
+    thread: str,
+    files: List[Dict[str, Any]],
+    headers: Dict[str, str] | None = None,
+) -> List[Dict[str, Any]]:
+    """Files as a page uploads them before the run that names them (REACTOR_UI
+    RU-6): what File upload holds (``{name, type, data_url}``) sent as bytes,
+    their refs back."""
+    from urllib.parse import quote
+
+    refs: List[Dict[str, Any]] = []
+    for given in files:
+        head, _, body = given["data_url"].partition(",")
+        content = (
+            base64.b64decode(body) if head.endswith(";base64") else body.encode()
+        )
+        answer = client.post(
+            f"/api/v1/apps/agents/{agent}/files",
+            content=content,
+            headers={
+                "X-Reactor-Scope": thread,
+                "X-Reactor-File-Name": quote(given["name"]),
+                "Content-Type": given.get("type") or "application/octet-stream",
+                **(headers or {}),
+            },
+        )
+        assert answer.status_code == 200, answer.text
+        refs.append(answer.json())
+    return refs
+
+
 class Runtime:
     """Agents made for applications, as the create route makes them."""
 
@@ -532,14 +565,18 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
                 "context": [],
                 "forwardedProps": {
                     "loop": {
-                        "files": [
-                            {
-                                "name": "../report.pdf",
-                                "type": "application/pdf",
-                                "size": len(pdf),
-                                "data_url": data_url(pdf, "application/pdf"),
-                            }
-                        ],
+                        "files": uploaded(
+                            local,
+                            "file-analyst",
+                            "thread-0002",
+                            [
+                                {
+                                    "name": "../report.pdf",
+                                    "type": "application/pdf",
+                                    "data_url": data_url(pdf, "application/pdf"),
+                                }
+                            ],
+                        ),
                     }
                 },
             },
@@ -590,13 +627,18 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
                 "session-0003",
                 "run-1",
                 "Summarise it.",
-                [
-                    {
-                        "name": "t.csv",
-                        "type": "text/csv",
-                        "data_url": data_url(csv, "text/csv"),
-                    }
-                ],
+                uploaded(
+                    local,
+                    "notes-assistant",
+                    "session-0003",
+                    [
+                        {
+                            "name": "t.csv",
+                            "type": "text/csv",
+                            "data_url": data_url(csv, "text/csv"),
+                        }
+                    ],
+                ),
             ),
         )
     )
@@ -624,13 +666,18 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
                 "session-0003",
                 "run-3",
                 "And this?",
-                [
-                    {
-                        "name": "x.zip",
-                        "type": "application/zip",
-                        "data_url": data_url(b"PK\x00", "application/zip"),
-                    }
-                ],
+                uploaded(
+                    local,
+                    "notes-assistant",
+                    "session-0003",
+                    [
+                        {
+                            "name": "x.zip",
+                            "type": "application/zip",
+                            "data_url": data_url(b"PK\x00", "application/zip"),
+                        }
+                    ],
+                ),
             ),
         )
     )
@@ -638,18 +685,31 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
     assert error["message"].startswith(
         "x.zip is not a text file, and the application has no computer"
     )
-    assert (
-        local.post(
-            url,
-            json=_page_run(
-                "session-0003",
-                "run-4",
-                "This.",
-                [{"name": "x", "data_url": "not a data url"}],
-            ),
-        ).json()["detail"]
-        == "x could not be read: it is not a data URL."
+    # A file's bytes never ride in the run (REACTOR_UI RU-6): uploaded first,
+    # named by their ref — and a ref is read back for its uploader only.
+    assert local.post(
+        url,
+        json=_page_run(
+            "session-0003",
+            "run-4",
+            "This.",
+            [{"name": "x", "data_url": data_url(b"x", "text/plain")}],
+        ),
+    ).json()["detail"] == (
+        "File 1 carries its bytes: a file is uploaded first "
+        "(POST /api/v1/apps/agents/{agent}/files), and a run names its ref."
     )
+    [elsewhere] = uploaded(
+        local,
+        "notes-assistant",
+        "session-0099",
+        [{"name": "y.txt", "type": "text/plain", "data_url": data_url(b"y", "text/plain")}],
+    )
+    unknown = local.post(
+        url, json=_page_run("session-0003", "run-5", "This.", [elsewhere])
+    )
+    assert unknown.status_code == 404
+    assert unknown.json()["detail"].startswith("No file")
 
 
 def test_settings_change_stop_and_resume(runtime: Runtime, local: TestClient) -> None:
@@ -1146,7 +1206,15 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     assert started[0]["value"]["python"] is True
     url = "/api/v1/apps/agents/report-from-a-file/ag-ui/"
     events = events_of(
-        local.post(url, json=_page_run("session-0007", "run-1", "Report: Full", [file]))
+        local.post(
+            url,
+            json=_page_run(
+                "session-0007",
+                "run-1",
+                "Report: Full",
+                uploaded(local, "report-from-a-file", "session-0007", [file]),
+            ),
+        )
     )
     assert types_of(events) == [
         "RUN_STARTED",
@@ -1179,8 +1247,10 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     shown = frame.op.body.model_dump(mode="json")
     assert shown["type"] == sessions.QUESTION_DISPLAY_TYPE
     assert (shown["data"]["kind"], shown["data"]["accept"]) == ("file", [".csv"])
-    # A file is attached, not pressed: nothing offered (until RU-6).
-    assert shown["actions"] == []
+    # A file answers it as any answer does: a press of reactor.answer, its
+    # value the ref its upload answered (REACTOR_UI RU-6).
+    [offer] = shown["actions"]
+    assert offer["name"] == "reactor.answer"
     waiting = local.get("/api/v1/apps/sessions/session-0007").json()
     assert (waiting["state"], waiting["asking"]["kind"]) == ("waiting", "file")
     assert local.post(
@@ -1188,8 +1258,36 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     ).json()["detail"] == (
         "Report from a File is waiting for an answer: Which file? (a file: .csv)"
     )
+    [ref] = uploaded(local, "report-from-a-file", "session-0007", [file])
+    # Attached to a run, it answers nothing: the question is pressed.
+    attached = local.post(url, json=_page_run("session-0007", "run-3", "Sent.", [ref]))
+    assert attached.status_code == 409
+    live = sessions.session_of("session-0007")
+    assert live is not None
+    from reactor.ui import UiAction
+
+    def answering(value: Any) -> str:
+        return live.press_up(
+            live.opened_by,
+            UiAction(
+                action="reactor.answer",
+                display_id=shown["id"],
+                token=offer["token"],
+                payload={"value": value},
+                idempotency_id=f"answer-{len(str(value))}",
+            ),
+        )["press"]
+
+    # A ref of another conversation is not found; the question still waits.
+    [other] = uploaded(local, "report-from-a-file", "session-0098", [file])
+    wrong = local.post(
+        url, json=_page_run("session-0007", "run-3", "", [], press=answering(other))
+    )
+    assert wrong.status_code == 404
     went_on = events_of(
-        local.post(url, json=_page_run("session-0007", "run-3", "Sent.", [file]))
+        local.post(
+            url, json=_page_run("session-0007", "run-3", "", [], press=answering(ref))
+        )
     )
     assert types_of(went_on)[0] == "RUN_STARTED"
     assert answer_of(went_on) == "Heard 2: Again"
@@ -1202,7 +1300,15 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "type": "application/pdf",
         "data_url": data_url(b"%PDF", "application/pdf"),
     }
-    refused = local.post(url, json=_page_run("session-0007", "run-4", "Run.", [pdf]))
+    refused = local.post(
+        url,
+        json=_page_run(
+            "session-0007",
+            "run-4",
+            "Run.",
+            uploaded(local, "report-from-a-file", "session-0007", [pdf]),
+        ),
+    )
     assert (refused.status_code, refused.json()["detail"]) == (
         422,
         "a.pdf is not a kind of file Report from a File's page asks for: it asks for .csv.",
@@ -1228,13 +1334,18 @@ def test_report_from_a_file_over_ag_ui_as_its_page_runs_it(
                 "forwardedProps": {
                     "loop": {
                         "settings": {"report": "Summary", "question": ""},
-                        "files": [
-                            {
-                                "name": "a.csv",
-                                "type": "text/csv",
-                                "data_url": data_url(csv, "text/csv"),
-                            }
-                        ],
+                        "files": uploaded(
+                            local,
+                            "report-from-a-file",
+                            "thread-0008",
+                            [
+                                {
+                                    "name": "a.csv",
+                                    "type": "text/csv",
+                                    "data_url": data_url(csv, "text/csv"),
+                                }
+                            ],
+                        ),
                     }
                 },
             },

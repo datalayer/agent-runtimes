@@ -23,6 +23,7 @@ from agent_runtimes.loop.apps import (
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.tests import test_app_sessions
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
+    uploaded,
     ASSISTANT,
     REPORT,
     Runtime,
@@ -126,7 +127,7 @@ def test_an_image_sent_without_being_asked_goes_to_the_model_whole(
         local.post(
             "/api/v1/apps/agents/notes-assistant/ag-ui/",
             json=composed(
-                "thread-0101", "What is in it?", [file("p.png", "image/png", png)]
+                "thread-0101", "What is in it?", uploaded(local, "notes-assistant", "thread-0101", [file("p.png", "image/png", png)])
             ),
         )
     )
@@ -182,7 +183,9 @@ def test_what_the_spec_does_not_take_is_refused_when_the_page_was_bypassed(
     model = runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1"})
     refused = local.post(
         "/api/v1/apps/agents/notes-assistant/ag-ui/",
-        json=composed("thread-0102", "Look.", files),
+        json=composed(
+                "thread-0102", "Look.", uploaded(local, "notes-assistant", "thread-0102", files)
+            ),
     )
     assert (refused.status_code, refused.json()["detail"]) == (422, sentence)
     assert model.prompts == []
@@ -197,7 +200,9 @@ def test_an_application_that_names_no_uploads_takes_no_file_with_a_message(
     )
     refused = local.post(
         "/api/v1/apps/agents/notes-assistant/ag-ui/",
-        json=composed("thread-0103", "Look.", [file("a.csv", "text/csv")]),
+        json=composed(
+                "thread-0103", "Look.", uploaded(local, "notes-assistant", "thread-0103", [file("a.csv", "text/csv")])
+            ),
     )
     assert refused.status_code == 422
     assert refused.json()["detail"].startswith(
@@ -212,7 +217,9 @@ def test_a_file_given_on_its_page_is_held_to_what_its_page_asks_for(
     """A page's block sends its files with a message (REACTOR_UI RU-5): held to
     what its File upload asks for, said first."""
     runtime.make("report-from-a-file", REPORT, {"app_uid": "app-3"})
-    run = composed("thread-0104", "Report: Full", [file("a.png", "image/png")])
+    run = composed(
+                "thread-0104", "Report: Full", uploaded(local, "report-from-a-file", "thread-0104", [file("a.png", "image/png")])
+            )
     refused = local.post("/api/v1/apps/agents/report-from-a-file/ag-ui/", json=run)
     assert (refused.status_code, refused.json()["detail"]) == (
         422,
@@ -255,7 +262,9 @@ def test_a_file_sent_without_being_asked_goes_to_app_file(
     events = events_of(
         local.post(
             "/api/v1/apps/agents/photo-desk/ag-ui/",
-            json=composed("thread-0105", "Crop it", [file("a.png", "image/png")]),
+            json=composed(
+                "thread-0105", "Crop it", uploaded(local, "photo-desk", "thread-0105", [file("a.png", "image/png")])
+            ),
         )
     )
     assert answer_of(events) == "Got 1 picture(s): Crop it"
@@ -267,7 +276,9 @@ def test_a_file_sent_without_being_asked_goes_to_app_file(
     # What its Appspec does not take never reaches its code.
     refused = local.post(
         "/api/v1/apps/agents/photo-desk/ag-ui/",
-        json=composed("thread-0106", "And this", [file("a.csv", "text/csv")]),
+        json=composed(
+                "thread-0106", "And this", uploaded(local, "photo-desk", "thread-0106", [file("a.csv", "text/csv")])
+            ),
     )
     assert refused.status_code == 422
     assert received == [(["a.png"], "Crop it")]
@@ -300,8 +311,49 @@ def test_without_app_file_the_words_go_to_message_and_the_file_answers_what_it_a
     events = events_of(
         local.post(
             "/api/v1/apps/agents/asker/ag-ui/",
-            json=composed("thread-0107", "Look", [file("a.png", "image/png")]),
+            json=composed(
+                "thread-0107", "Look", uploaded(local, "asker", "thread-0107", [file("a.png", "image/png")])
+            ),
         )
     )
     # Not asked again: the file sent with the message answers the question.
     assert answer_of(events) == "Look: a.png"
+
+
+# --- files as refs (REACTOR_UI RU-6) -------------------------------------------------
+
+
+def test_a_file_is_uploaded_once_named_by_its_ref_and_fetched_signed(
+    runtime: Runtime,  # noqa: F811 - the fixture
+    local: TestClient,  # noqa: F811 - the fixture
+) -> None:
+    from urllib.parse import quote
+
+    runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1"})
+    [ref] = uploaded(
+        local, "notes-assistant", "thread-0110", [file("a.csv", "text/csv", b"a,b\n")]
+    )
+    assert (ref["name"], ref["media_type"], ref["size"]) == ("a.csv", "text/csv", 4)
+    assert ref["url"].startswith(f"/api/v1/apps/files/thread-0110/{quote(ref['ref'], safe='')}?expires=")
+    fetched = local.get(ref["url"])
+    assert (fetched.status_code, fetched.content) == (200, b"a,b\n")
+    assert "attachment" in fetched.headers["content-disposition"]
+    assert local.get(ref["url"].replace("sig=", "sig=x")).status_code == 403
+    # Named by the run, read back here: the model reads its words.
+    events = events_of(
+        local.post(
+            "/api/v1/apps/agents/notes-assistant/ag-ui/",
+            json=composed("thread-0110", "Sum it.", [ref]),
+        )
+    )
+    assert "RUN_ERROR" not in [event["type"] for event in events]
+    # An upload says its conversation and its name; one too large is refused.
+    url = "/api/v1/apps/agents/notes-assistant/files"
+    assert local.post(url, content=b"x", headers={"X-Reactor-File-Name": "a"}).status_code == 400
+    assert local.post(url, content=b"x", headers={"X-Reactor-Scope": "thread-0110"}).status_code == 400
+    large = local.post(
+        url,
+        content=b"x" * (sessions.MAX_FILE_BYTES + 1),
+        headers={"X-Reactor-Scope": "thread-0110", "X-Reactor-File-Name": "big.bin"},
+    )
+    assert large.status_code == 413

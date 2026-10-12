@@ -1495,6 +1495,73 @@ async def session_window(uid: str, body: SessionWindowRequest, request: Request)
         raise _refused(refused) from None
 
 
+@router.post("/agents/{agent}/files")
+async def upload_file(agent: str, request: Request) -> Any:
+    """A file the page gives a conversation, uploaded before the run that
+    names it (REACTOR_UI RU-6): Reactor's `UiFilesRoutes` over the sessions'
+    `UI_FILES`. Its bytes are the body; the conversation (the thread, which
+    the session is or will be) in ``X-Reactor-Scope``, its name in
+    ``X-Reactor-File-Name``, its media type in ``Content-Type``, the caller's
+    token as for the session's other routes. Answers its ref —
+    ``{ref, name, media_type, size, url}``, the url signed and short-lived —
+    which the run names (``forwardedProps.loop.files``) or a press answering
+    a file carries. Kept for its uploader in that conversation only; at most
+    `MAX_FILE_BYTES` (413).
+    """
+    from reactor.ui.files import UiFilesRoutes, UiFileUnauthorized, UnknownUiFile
+
+    from agent_runtimes.loop.apps import sessions
+
+    async def authenticate(token: str, scope: str) -> Any:
+        live = sessions.session_of(scope)
+        try:
+            if live is None:
+                await _visitors_agent(agent, request)
+            app, instance = sessions.agent_app(agent)
+            authorized = await _authorize(
+                request, False, app, str(instance.get("app_uid") or "")
+            )
+            _reaches(authorized.caller, agent)
+        except sessions.SessionRefused as refused:
+            raise UnknownUiFile(refused.reason) from None
+        except HTTPException as refused:
+            if refused.status_code == 401:
+                raise UiFileUnauthorized(str(refused.detail)) from None
+            raise UnknownUiFile(str(refused.detail)) from None
+        if live is not None and (
+            live.agent_id != agent or not live.answers_to(authorized.caller)
+        ):
+            # Somebody else's conversation is not said to exist.
+            raise UnknownUiFile(f"No session {scope} of {agent} is held here.")
+        if live is not None:
+            # Kept for the session's own: read back by the run that names it.
+            return sessions.owner_of(live.opened_by)
+        return sessions.owner_of(authorized.caller)
+
+    return await UiFilesRoutes(
+        sessions.UI_FILES,
+        authenticate=authenticate,
+        prefix=sessions.FILES_PREFIX,
+    ).upload(request)
+
+
+@router.get("/files/{scope}/{ref}")
+async def download_file(scope: str, ref: str, request: Request) -> Any:
+    """A file of a conversation by its signed url (REACTOR_UI RU-6): its
+    bytes, as an attachment, until the url expires (403 after, or for a
+    signature that is not this file's; 404 for a file no longer kept)."""
+    from reactor.ui.files import UiFilesRoutes
+
+    from agent_runtimes.loop.apps import sessions
+
+    async def nobody(token: str, scope: str) -> Any:
+        raise PermissionError("A download is signed, never authenticated.")
+
+    return await UiFilesRoutes(
+        sessions.UI_FILES, authenticate=nobody, prefix=sessions.FILES_PREFIX
+    ).download(request, scope, ref)
+
+
 @router.websocket("/ui")
 async def session_ui(websocket: WebSocket) -> None:
     """The ui channel of a session over one WebSocket (REACTOR_UI RU-W).

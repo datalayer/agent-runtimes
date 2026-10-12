@@ -74,6 +74,13 @@ export interface ProtocolConfig {
    * conversation, its thread the scope.
    */
   uiSocket?: string;
+  /**
+   * Where a file of a conversation is uploaded before the run or the press
+   * that names it (REACTOR_UI RU-6): Reactor's upload, the bytes as the body,
+   * the conversation's thread its scope. A run carries the ref it answers,
+   * never the bytes. Set for an application's agent.
+   */
+  uiFiles?: string;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }

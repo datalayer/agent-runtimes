@@ -1173,8 +1173,10 @@ sentence; no answer within `timeout` seconds raises `AskTimeout`.
 
 On a page, the question is drawn under its words as a display (REACTOR_UI
 RU-4): a choice as buttons, text as a field, a form as its fields, a file
-asked of the message box; the person's press is the answer, checked against
-the question before your code has it. In the terminal it is asked as it
+as a file to choose — uploaded first, its ref the answer (RU-6); the
+person's press is the answer, checked against the question before your code
+has it. Your code has the `UploadedFile` whichever way it came: a file's
+bytes never ride in a run or a press. In the terminal it is asked as it
 always was.
 
 ### What a person sends

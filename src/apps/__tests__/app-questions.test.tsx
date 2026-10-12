@@ -6,8 +6,8 @@
 /**
  * What an application's code asks, drawn from its display (REACTOR_UI
  * RU-4): a choice as buttons — a rule's prompt is Allow and Refuse — the
- * words as a field, a file as a hint; each answer pressed through the
- * display's `act` as `reactor.answer`; answered, what answered it. The
+ * words as a field, a file chosen and uploaded first (RU-6); each answer
+ * pressed through the display's `act` as `reactor.answer`; answered, what answered it. The
  * `app-elements` plugin contributes the renderer for its type.
  */
 
@@ -48,12 +48,18 @@ function question(data: Record<string, unknown>, offered = true): Display {
 
 afterEach(() => document.body.replaceChildren());
 
-async function drawn(display: Display, pressed = vi.fn()) {
+async function drawn(
+  display: Display,
+  pressed = vi.fn(),
+  upload?: (file: File) => Promise<never>,
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
   await act(async () =>
-    root.render(<QuestionView display={display} act={pressed} />),
+    root.render(
+      <QuestionView display={display} act={pressed} upload={upload} />,
+    ),
   );
   return { container, pressed };
 }
@@ -141,16 +147,43 @@ describe('what the code asks', () => {
     expect(pressed).not.toHaveBeenCalled();
   });
 
-  it('asks a file of the message box, pressing nothing', async () => {
-    const { container } = await drawn(
-      question(
-        { kind: 'file', prompt: 'Which file?', accept: ['.csv'] },
-        false,
-      ),
+  it('uploads the file chosen, then presses its ref as the answer', async () => {
+    const ref = {
+      ref: 'r-1',
+      name: 'orders.csv',
+      media_type: 'text/csv',
+      size: 4,
+    };
+    const upload = vi.fn(async () => ref as never);
+    const { container, pressed } = await drawn(
+      question({ kind: 'file', prompt: 'Which file?', accept: ['.csv'] }),
+      vi.fn(),
+      upload,
     );
-    expect(container.textContent).toContain('Attach the file');
-    expect(container.textContent).toContain('.csv');
-    expect(container.querySelector('button')).toBeNull();
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    expect(input.accept).toBe('.csv');
+    const chosen = new File(['a,b\n'], 'orders.csv', { type: 'text/csv' });
+    Object.defineProperty(input, 'files', { value: [chosen] });
+    await act(async () => {
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(upload).toHaveBeenCalledWith(chosen);
+    // Its bytes never in the press: the ref its upload answered.
+    expect(pressed).toHaveBeenCalledWith({
+      action: ANSWER_ACTION,
+      payload: { value: ref },
+    });
+    // Nothing offered, or nowhere to upload: nothing chosen.
+    const { container: closed } = await drawn(
+      question({ kind: 'file', prompt: 'Which file?' }, false),
+      vi.fn(),
+      upload,
+    );
+    expect(
+      (closed.querySelector('input[type="file"]') as HTMLInputElement).disabled,
+    ).toBe(true);
   });
 
   it('is drawn by the renderer the app-elements plugin contributes', () => {

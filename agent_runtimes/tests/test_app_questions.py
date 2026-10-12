@@ -227,16 +227,37 @@ async def test_a_form_is_answered_with_its_values_checked() -> None:
     assert patch["body"][0]["value"] == "Seats: 3"
 
 
-async def test_a_file_is_attached_not_pressed() -> None:
-    live, _, _ = await asking("session-ask-6", FileQuestion("Which file?", (".csv",)))
-    display = asked_display(live)
-    assert display["actions"] == []
-    forged = UiAction(
-        action=ANSWER_ACTION,
-        display_id=display["id"],
-        token="forged",
-        payload={"value": "x"},
+async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
+    """REACTOR_UI RU-6: a file question offers reactor.answer as any other; its
+    value is the ref the upload answered, read back for whoever uploaded it in
+    this conversation, held to the question's kinds."""
+    live, got, _ = await asking(
+        "session-ask-6", FileQuestion("Which file?", (".csv",))
     )
-    with pytest.raises(UiActionError) as refused:
-        live.press_up(ADA, forged)
-    assert refused.value.status_code == 403
+    display = asked_display(live)
+    assert [offer["name"] for offer in display["actions"]] == [ANSWER_ACTION]
+    owner = sessions.owner_of(ADA)
+    csv = sessions.UI_FILES.put("session-ask-6", owner, "orders.csv", "text/csv", b"a\n1\n")
+    png = sessions.UI_FILES.put("session-ask-6", owner, "a.png", "image/png", b"x")
+    bobs = sessions.UI_FILES.put(
+        "session-ask-6", sessions.owner_of(Caller(kind="person", uid="bob")), "b.csv", "text/csv", b"b"
+    )
+    # Bytes in the press, another's file, a kind it did not ask: refused, still waiting.
+    for value, status in (
+        ({"name": "x.csv", "data_url": "data:text/csv;base64,eA=="}, 422),
+        (bobs.model_dump(), 404),
+        (png.model_dump(), 422),
+    ):
+        live.press_up(ADA, press(display, value, f"k-{status}"))
+        with pytest.raises(sessions.SessionRefused) as refused:
+            await answered(live, f"k-{status}")
+        assert refused.value.status == status
+        assert live.state == "waiting"
+    live.press_up(ADA, press(display, csv.model_dump(), "k-ok"))
+    events = await answered(live, "k-ok")
+    assert events[0]["type"] == "RUN_STARTED"
+    [file] = got
+    assert (file.name, file.media_type, file.content) == ("orders.csv", "text/csv", b"a\n1\n")
+    assert live.describe()["files"][-1]["name"] == "orders.csv"
+    patch = sessions.UI_HUB.ops(live.uid)[-1].op.model_dump(mode="json")
+    assert patch["body"][1] == {"op": "replace", "path": "/actions", "value": []}

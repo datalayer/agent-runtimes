@@ -1685,6 +1685,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               ...(runsApp
                 ? {
                     uiSocket: `${agentServerUrl.replace(/^http/, 'ws')}/api/v1/apps/ui`,
+                    // Its files, uploaded before what names them (RU-6).
+                    uiFiles: `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/files`,
                   }
                 : {}),
               agentId,

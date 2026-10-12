@@ -102,6 +102,7 @@ from reactor.ui import (
     WindowOp,
     display_type,
 )
+from reactor.ui.files import UiFiles
 from reactor.ui.ws import UiHub
 
 from agent_runtimes.context.identities import get_request_user_jwt
@@ -199,54 +200,53 @@ def _file_name(name: str) -> str:
     return safe
 
 
-def given_files(raw: Any) -> List[UploadedFile]:
-    """The files a run gives, as File upload hands them: ``{name, type, data_url}``.
+def owner_of(caller: Caller) -> Tuple[str, str, str]:
+    """Who a file uploaded is kept for (REACTOR_UI RU-6): the caller, as a
+    session tells its own apart (`LiveSession.answers_to`)."""
+    return (caller.kind, caller.uid, caller.visit)
+
+
+def given_files(raw: Any, *, scope: str, owner: Tuple[str, str, str]) -> List[UploadedFile]:
+    """The files a run names, by the refs their upload answered (REACTOR_UI
+    RU-6): each read back from `UI_FILES`, for whoever uploaded it in this
+    conversation. A file's bytes never ride in the run.
 
     Raises
     ------
     SessionRefused
-        For what is not a list of such files, a data URL that does not
-        decode, or a file larger than `MAX_FILE_BYTES`.
+        For what is not a list of refs (422) — a file's bytes in a
+        ``data_url`` among it — or a ref not kept here for this caller and
+        conversation (404).
     """
+    from reactor.ui import FileRef
+    from reactor.ui.files import UiFileError
+
     if raw is None:
         return []
     if not isinstance(raw, list):
         raise SessionRefused(422, "What was given as files is not a list of files.")
     files: List[UploadedFile] = []
     for index, item in enumerate(raw):
-        given = item if isinstance(item, Mapping) else {}
-        name, data_url = given.get("name"), given.get("data_url")
-        if not isinstance(name, str) or not isinstance(data_url, str):
+        if isinstance(item, Mapping) and "data_url" in item:
             raise SessionRefused(
                 422,
-                f"File {index + 1} is not a file as File upload gives it "
-                "({name, type, size, data_url}).",
-            )
-        head, comma, body = data_url.partition(",")
-        if not head.startswith("data:") or not comma:
-            raise SessionRefused(
-                422, f"{name} could not be read: it is not a data URL."
+                f"File {index + 1} carries its bytes: a file is uploaded first "
+                "(POST /api/v1/apps/agents/{agent}/files), and a run names its ref.",
             )
         try:
-            content = (
-                base64.b64decode(body, validate=True)
-                if head.endswith(";base64")
-                else body.encode("utf-8")
-            )
-        except (binascii.Error, ValueError):
+            ref = FileRef.model_validate(item)
+        except ValueError:
             raise SessionRefused(
-                422, f"{name} could not be read: its data URL does not decode."
+                422,
+                f"File {index + 1} is not a file's ref ({{ref, name, media_type}}).",
             ) from None
-        if len(content) > MAX_FILE_BYTES:
-            raise SessionRefused(
-                413,
-                f"{name} is {len(content):,} bytes: a session takes files of at most "
-                f"{MAX_FILE_BYTES:,}.",
-            )
-        media_type = given.get("type")
-        if not isinstance(media_type, str) or not media_type:
-            media_type = head[len("data:") :].split(";", 1)[0]
-        files.append(UploadedFile(_file_name(name), media_type, content))
+        try:
+            stored = UI_FILES.resolve(scope, ref, owner)
+        except UiFileError as refused:
+            raise SessionRefused(refused.status_code, str(refused)) from None
+        files.append(
+            UploadedFile(_file_name(stored.name), stored.media_type, stored.content)
+        )
     return files
 
 
@@ -554,8 +554,9 @@ QUESTION_DISPLAY_TYPE = "application/vnd.datalayer.loop.question+json"
 class QuestionShown(Display):
     """What the code asks, under the message that asks it in words: shown by
     an ``ask`` op, offering ``reactor.answer`` — the choice as buttons, the
-    words as a field, a form as its fields; a file is attached (until
-    REACTOR_UI RU-6). Answered, it says what answered it and offers nothing.
+    words as a field, a form as its fields, a file as the ref its upload
+    answered (REACTOR_UI RU-6). Answered, it says what answered it and offers
+    nothing.
     """
 
     message_id: str
@@ -1195,8 +1196,7 @@ class LiveSession:
         said = Message(_new_id(), self.uid, question_in_words(question), self.app.name)
         await self.deliver(said)
         asked = QuestionShown.of(f"{said.id}-ask", said.id, question)
-        if not isinstance(question, FileQuestion):
-            asked.actions = [self._actions().offer(self.uid, asked.id, ANSWER_ACTION)]
+        asked.actions = [self._actions().offer(self.uid, asked.id, ANSWER_ACTION)]
         self._asked = asked
         self.show_op(AskOp(scope=self.uid, id=asked.id, body=asked.wire()))
         # The run ends on the question, and says so in its result: what a
@@ -1487,10 +1487,19 @@ class LiveSession:
             raise SessionRefused(409, f"{self.app.name} asks nothing now.")
         if press.display_id != asked.id:
             raise SessionRefused(409, "That question is no longer asked.")
+        given = Answer.model_validate(press.payload).value
+        if isinstance(question, FileQuestion):
+            # A file is answered by the ref its upload answered (REACTOR_UI
+            # RU-6): read back for whoever uploaded it, here.
+            [given] = given_files(
+                [given], scope=self.uid, owner=owner_of(self.opened_by)
+            )
         try:
-            value = _checked(question, Answer.model_validate(press.payload).value)
+            value = _checked(question, given)
         except (InvalidAnswer, ValueError) as wrong:
             raise SessionRefused(422, str(wrong)) from None
+        if isinstance(question, FileQuestion):
+            self._keep([value])
         if isinstance(question, (TextQuestion, ChoiceQuestion)):
             self.messages.append({"id": _new_id(), "role": "user", "content": value})
         return self._go_on(value, run_id=run_id, head=head)
@@ -1499,17 +1508,12 @@ class LiveSession:
         self,
         *,
         text: str = "",
-        files: Optional[List[UploadedFile]] = None,
         values: Optional[Mapping[str, Any]] = None,
         run_id: str = "",
         head: str = "",
     ) -> AsyncIterator[str]:
         """Answer what the code waits on with what came, or say what it waits for."""
         question = self._question
-        if isinstance(question, FileQuestion) and files:
-            self._keep(files)
-            self._unasked.extend(files[1:])
-            return self._go_on(files[0], run_id=run_id, head=head)
         if isinstance(question, FormQuestion) and values is not None:
             return self._go_on(dict(values), run_id=run_id, head=head)
         if isinstance(question, (TextQuestion, ChoiceQuestion)) and text:
@@ -1761,6 +1765,7 @@ class LiveSession:
         self.state = "ended"
         _SESSIONS.pop(self.uid, None)
         UI_HUB.forget(self.uid)
+        UI_FILES.discard(self.uid)
 
     async def logout(self) -> None:
         """The person signed out: the code's ``logout`` runs, then the session ends (LOOP P-14)."""
@@ -1770,6 +1775,7 @@ class LiveSession:
         self.state = "ended"
         _SESSIONS.pop(self.uid, None)
         UI_HUB.forget(self.uid)
+        UI_FILES.discard(self.uid)
 
     async def _close(self) -> None:
         """Cancel the turn and the question waited on, and end the stream."""
@@ -2012,7 +2018,9 @@ class LiveSession:
             raise SessionRefused(422, str(wrong)) from None
         if self.session is not None:
             self.session._update_modes(self.modes)
-        files = given_files(loop.get("files"))
+        files = given_files(
+            loop.get("files"), scope=self.uid, owner=owner_of(self.opened_by)
+        )
         if "action" in loop:
             # A page's block says a message, its files and its settings; a
             # button presses what was offered, up the ui socket (REACTOR_UI RU-5).
@@ -2029,11 +2037,9 @@ class LiveSession:
                 self._take_press(loop.get("press")), files=files, run_id=run_id
             )
         if self.state == "waiting":
-            # The chat answers by pressing what the question offered; only a
-            # file, attached, answers a file (until REACTOR_UI RU-6).
-            if not (isinstance(self._question, FileQuestion) and files):
-                raise SessionRefused(409, self._waiting_for())
-            return self._answer_waiting(files=files, run_id=run_id)
+            # The chat answers by pressing what the question offered — a file
+            # by the ref its upload answered (REACTOR_UI RU-4, RU-6).
+            raise SessionRefused(409, self._waiting_for())
         # Files given: what its Appspec takes, or its page's File upload asks for (P-21).
         refused = given_refused(self.app, files)
         if refused:
@@ -2133,6 +2139,14 @@ _SESSIONS: Dict[str, LiveSession] = {}
 #: (``/api/v1/apps/ui``, `agent_runtimes.routes.apps`).
 UI_HUB = UiHub()
 
+#: The files the pages of this runtime's sessions uploaded (REACTOR_UI RU-6):
+#: by conversation and ref, for whoever uploaded them, each with a signed url
+#: (``/api/v1/apps/files``, `agent_runtimes.routes.apps`).
+UI_FILES = UiFiles(secrets.token_bytes(32), max_file=MAX_FILE_BYTES)
+
+#: Where a file's signed url points, on this runtime.
+FILES_PREFIX = "/api/v1/apps/files"
+
 #: How many presses checked on the socket may wait for their run.
 MAX_PRESSES = 16
 
@@ -2144,8 +2158,9 @@ def session_of(uid: str) -> Optional[LiveSession]:
 
 def forget_sessions() -> None:
     """Forget every session, and the code it was given to run (a test)."""
-    global UI_HUB
+    global UI_HUB, UI_FILES
     UI_HUB = UiHub()
+    UI_FILES = UiFiles(secrets.token_bytes(32), max_file=MAX_FILE_BYTES)
     _SESSIONS.clear()
     _SERVED.clear()
     _AGENT_CODE.clear()

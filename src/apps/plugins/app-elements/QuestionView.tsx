@@ -9,8 +9,10 @@
  * message that asks it in words. A choice is its buttons — a rule's prompt
  * is Allow and Refuse — the words a field, a form its fields; each press of
  * it is `reactor.answer`, through the display's `act`, which the chat sends
- * up the conversation's ui socket. A file is attached in the composer (until
- * RU-6). Answered, it says what answered it, and offers nothing.
+ * up the conversation's ui socket. A file is chosen here, uploaded first
+ * through the display's `upload`, and its ref is the answer (RU-6): its
+ * bytes never ride in the press. Answered, it says what answered it, and
+ * offers nothing.
  *
  * @module apps/plugins/app-elements/QuestionView
  */
@@ -71,7 +73,11 @@ export function questionOf(display: Display): {
   };
 }
 
-export function QuestionView({ display, act }: RendererProps): JSX.Element {
+export function QuestionView({
+  display,
+  act,
+  upload,
+}: RendererProps): JSX.Element {
   const question = questionOf(display);
   const [words, setWords] = useState('');
   const [said, setSaid] = useState<string | null>(null);
@@ -149,10 +155,29 @@ export function QuestionView({ display, act }: RendererProps): JSX.Element {
         </Suspense>
       ) : null}
       {question.kind === 'file' ? (
-        <Text as="p" sx={{ color: 'fg.muted', fontSize: 1, m: 0 }}>
-          Attach the file in the message box
-          {question.accept.length ? ` (${question.accept.join(', ')})` : ''}.
-        </Text>
+        <input
+          type="file"
+          aria-label={question.prompt}
+          accept={question.accept.join(',') || undefined}
+          disabled={!live || !upload}
+          onChange={event => {
+            const chosen = event.target.files?.[0];
+            if (!chosen) return;
+            if (!upload) {
+              setSaid('The chat cannot take a file here.');
+              return;
+            }
+            setSaid(null);
+            // Uploaded first: the answer is its ref (REACTOR_UI RU-6).
+            void upload(chosen)
+              .then(ref => answer(ref))
+              .catch((failure: unknown) =>
+                setSaid(
+                  failure instanceof Error ? failure.message : String(failure),
+                ),
+              );
+          }}
+        />
       ) : null}
       {said ? (
         <Text as="p" sx={{ color: 'danger.fg', fontSize: 1, m: 0 }}>

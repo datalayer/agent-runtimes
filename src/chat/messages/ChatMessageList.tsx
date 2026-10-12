@@ -29,6 +29,7 @@ import {
   resolveToolResult,
   type Display,
   type UiAct,
+  type UiUpload,
 } from '@datalayer/reactor/ui';
 import { DisplayText, ReactorDisplay } from '@datalayer/reactor/ui/react';
 import { Text, Spinner, Link, Label, RelativeTime } from '@primer/react';
@@ -105,6 +106,11 @@ export interface ChatMessageListProps {
    * displays offer nothing to press.
    */
   actOn?: (display: Display) => UiAct;
+  /**
+   * How a message's display uploads a file the person chose (REACTOR_UI
+   * RU-6): its ref, to press with. Absent, nothing is uploaded.
+   */
+  upload?: UiUpload;
   /** Whether the agent is loading */
   isLoading: boolean;
   /** Whether the agent is currently streaming */
@@ -762,6 +768,7 @@ function DefaultToolCallRenderer({
 export function ChatMessageList({
   displayItems,
   actOn,
+  upload,
   isLoading,
   isStreaming,
   showLoadingIndicator,
@@ -1312,6 +1319,7 @@ export function ChatMessageList({
                       key={display.id}
                       display={display}
                       act={actOn?.(display)}
+                      upload={upload}
                     />
                   ) : (
                     <DisplayText key={display.id} display={display} />

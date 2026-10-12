@@ -29,6 +29,8 @@ import { ReactorLazy } from '@datalayer/reactor/react';
 import {
   ANSWER_ACTION,
   emptyUiModel,
+  isFileRef,
+  uploadFile,
   type Display,
   type UiAct,
   type UiModel,
@@ -176,6 +178,11 @@ import {
   withPress,
   withUiOp,
 } from './uiOps';
+import {
+  namesFiles,
+  withUploadedFiles,
+  type UploadToConversation,
+} from './uiFiles';
 import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -2304,6 +2311,25 @@ function ChatBaseInner({
   const uiSocketUrl = protocol?.uiSocket;
   const uiSocketTokenRef = useRef(protocol?.authToken);
   uiSocketTokenRef.current = protocol?.authToken;
+  /*
+   * Its files (REACTOR_UI RU-6): uploaded to its runtime before the run or
+   * the press that names them, the conversation's thread their scope; the
+   * run carries the ref, never the bytes.
+   */
+  const uiFilesUrl = protocol?.uiFiles;
+  const uploadToConversation = useCallback<UploadToConversation>(
+    file => {
+      if (!uiFilesUrl) {
+        return Promise.reject(new Error('This conversation takes no file.'));
+      }
+      return uploadFile(file, {
+        url: uiFilesUrl,
+        scope: threadIdRef.current,
+        token: uiSocketTokenRef.current,
+      });
+    },
+    [uiFilesUrl],
+  );
 
   const applyToMessages = useCallback(
     (op: UiOp) => {
@@ -4129,6 +4155,20 @@ function ChatBaseInner({
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
+      // Its files are uploaded first: the run names their refs (RU-6).
+      if (forwardedPropsGiven && namesFiles(forwardedPropsGiven)) {
+        try {
+          forwardedPropsGiven = await withUploadedFiles(
+            forwardedPropsGiven,
+            uploadToConversation,
+          );
+        } catch (failure) {
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+          return;
+        }
+      }
       // A press of what a display offered goes up the ui socket, checked
       // there; the run that answers it names it only (REACTOR_UI RU-W).
       const pressed = displayPressOf(forwardedPropsGiven);
@@ -4340,6 +4380,7 @@ function ChatBaseInner({
       getEnabledSkillIds,
       noteThreadStarted,
       chatText,
+      uploadToConversation,
     ],
   );
 
@@ -4492,7 +4533,9 @@ function ChatBaseInner({
           action.action === ANSWER_ACTION
             ? typeof value === 'string'
               ? value
-              : 'Answered.'
+              : isFileRef(value)
+                ? value.name
+                : 'Answered.'
             : action.action;
         await handleSend(words, {
           loop: {
@@ -5007,6 +5050,7 @@ function ChatBaseInner({
       <ChatMessageList
         displayItems={welcomedItems}
         actOn={protocol?.uiSocket ? actOnDisplay : undefined}
+        upload={protocol?.uiFiles ? uploadToConversation : undefined}
         isLoading={isLoading}
         isStreaming={isStreaming}
         showLoadingIndicator={showLoadingIndicator}
