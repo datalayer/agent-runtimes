@@ -20,6 +20,7 @@ import {
   unsupportedRequired,
   type A2AExtension,
 } from './index';
+import type { AppA2ASpec } from '../../types/agentspecs';
 
 const LOYALTY = 'https://example.com/ext/loyalty/v1';
 const CARD = {
@@ -92,6 +93,38 @@ describe('A2A card extensions', () => {
     expect(() =>
       cardExtensions(reactor, { agentId: 'shop' }, [{ uri: LOYALTY }]),
     ).toThrow('published twice');
+  });
+
+  it("publishes the extensions an application's Appspec declares", () => {
+    // `a2a.extensions` as agentspecs writes it (AGENT_PROTOCOLS PR-02).
+    const a2a: AppA2ASpec = {
+      extensions: [
+        {
+          uri: 'https://shop.example/extensions/gift-wrap/v1',
+          description: 'Wraps an order as a gift.',
+          required: false,
+          params: { papers: ['red', 'gold'] },
+        },
+      ],
+    };
+    const card = {
+      capabilities: {
+        extensions: cardExtensions(
+          buildProtocolsReactor(),
+          { agentId: 'shop', face: { emoji: '🛍' } },
+          a2a.extensions,
+        ),
+      },
+    };
+    expect(extensionsOf(card).map(e => e.uri)).toEqual([
+      ORCHESTRATION_URI,
+      FACE_URI,
+      'https://shop.example/extensions/gift-wrap/v1',
+    ]);
+    expect(
+      findExtension(card, 'https://shop.example/extensions/gift-wrap/v1')
+        ?.params,
+    ).toEqual({ papers: ['red', 'gold'] });
   });
 
   it('a host replaces an extension by a lower order', () => {
