@@ -14,7 +14,13 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from agent_runtimes.loop.apps import Application, Session, WindowMessage, mounting
+from agent_runtimes.loop.apps import (
+    Application,
+    Session,
+    WindowMessage,
+    mounting,
+    sessions,
+)
 from agent_runtimes.loop.apps.session import MemoryChannel
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     ASSISTANT,
@@ -128,13 +134,18 @@ def test_the_mount_serves_the_page_the_session_api_and_the_developers_own_routes
         )
     )
     assert answer_of(started) == "You said Hi."
-    # What its code tells the page: a window op, not a message (REACTOR_UI RU-3).
+    # What its code tells the page: a window op on the session's ui socket,
+    # not a message, not on the run (REACTOR_UI RU-3, RU-W).
+    assert not [e for e in started if e.get("name") == "reactor.ui"]
     [window] = [
-        e["value"]
-        for e in started
-        if e.get("name") == "reactor.ui" and e["value"]["op"] == "window"
+        frame.op
+        for frame in sessions.UI_HUB.ops("session-m-001")
+        if frame.op.op == "window"
     ]
-    assert window["body"] == {"name": "message", "args": {"data": {"open": "cart"}}}
+    assert window.body.model_dump() == {
+        "name": "message",
+        "args": {"data": {"open": "cart"}},
+    }
     # And the runtime's own routes, its status among them.
     assert (
         client.get("/assistant/api/v1/apps/sessions/session-m-001").json()["python"]
@@ -161,10 +172,11 @@ def test_the_page_posts_a_window_message_that_its_code_answers(
     assert types_of(answered) == [
         "CUSTOM:loop.session",
         "RUN_STARTED",
-        "CUSTOM:reactor.ui",
         "RUN_FINISHED",
     ]
-    assert answered[2]["value"] == {
+    # What its code answers goes to the page on the session's ui socket.
+    [told] = sessions.UI_HUB.ops("session-m-002")
+    assert told.op.model_dump(mode="json") == {
         "v": 1,
         "op": "window",
         "scope": "session-m-002",

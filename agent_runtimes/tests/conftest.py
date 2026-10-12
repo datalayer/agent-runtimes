@@ -38,6 +38,21 @@ import pytest  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
+def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Each test starts with the sessions' ui hub empty (REACTOR_UI RU-W).
+
+    The hub numbers and keeps each session's ops for the page's socket; a
+    test reading them must not read another test's under the same uid.
+    """
+    from reactor.ui.ws import UiHub
+
+    from agent_runtimes.loop.apps import sessions
+
+    monkeypatch.setattr(sessions, "UI_HUB", UiHub())
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _logging_levels_kept() -> Iterator[None]:
     """Each test leaves the loggers' levels as it found them.
 

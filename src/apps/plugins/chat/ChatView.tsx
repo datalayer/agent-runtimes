@@ -1680,6 +1680,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 ? `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/ag-ui/`
                 : `${agentServerUrl}/api/v1/ag-ui/${agentId}/`,
               ...(runsApp && iamToken ? { authToken: iamToken } : {}),
+              // Its session's ui channel (REACTOR_UI RU-W): what its answers
+              // show, its steps and its elements, beside the run's text.
+              ...(runsApp
+                ? {
+                    uiSocket: `${agentServerUrl.replace(/^http/, 'ws')}/api/v1/apps/ui`,
+                  }
+                : {}),
               agentId,
               // `/api/v1/configure`, not `/api/v1/configure/config`: the hooks
               // strip one trailing `config`/`configure` segment to find the API

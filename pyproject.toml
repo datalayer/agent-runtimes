@@ -28,8 +28,9 @@ dependencies = [
     # An application is a Reactor plugin on a PluginPlatform (LOOP P-35):
     # its contributions, its extension, its commands and routes.
     # `reactor.ui` (1.1.0): a tool's display, its model view for the model and
-    # its wire for the page (REACTOR_UI RU-1).
-    "datalayer_reactor>=1.1.0",
+    # its wire for the page (REACTOR_UI RU-1); 1.1.1 (unreleased): the ui
+    # channel's WebSocket, `reactor.ui.ws` (RU-W).
+    "datalayer_reactor>=1.1.1",
     # PAP is a runtime protocol capability, not an example-only dependency.
     # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
     # orchestration and a root-published TypeScript package.

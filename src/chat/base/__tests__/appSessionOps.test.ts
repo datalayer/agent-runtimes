@@ -5,23 +5,21 @@
 
 /**
  * What a session says to its page besides its messages, as `reactor.ui` ops
- * (REACTOR_UI RU-3), drawn as the chat draws them: the stream of the
- * Python test's fixture (`agent_runtimes/tests/fixtures/app_session_ops.json`)
- * decoded with Reactor's `AguiUiDecoder` and placed by `routeUiOp` — a
+ * on its ui socket (REACTOR_UI RU-3, RU-W), drawn as the chat draws them:
+ * the Python test's fixture (`agent_runtimes/tests/fixtures/app_session_ops.json`)
+ * — `run`, the run stream's events, and `ui`, the socket's op frames —
+ * placed by `routeUiOp`, the socket's ops arriving before the run's text
+ * (two connections) and waiting for their messages (`placeable`): a
  * message's author, a step running then ended in place, an element opened
- * and closed, a window message, a message removed.
+ * and closed, a window message, a message removed. And a press of a
+ * display: up the socket, the run naming it only.
  */
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  AguiUiDecoder,
-  emptyUiModel,
-  type AguiEvent,
-  type UiOp,
-} from '@datalayer/reactor/ui';
+import { emptyUiModel, type UiOp } from '@datalayer/reactor/ui';
 import type { DisplayItem } from '../../../types/chat';
 import {
   applyLoopElement,
@@ -30,44 +28,60 @@ import {
   type LoopElement,
 } from '../loopElement';
 import { withLoopStep } from '../loopStep';
-import { routeUiOp, withUiOp } from '../uiOps';
+import {
+  displayPressOf,
+  placeable,
+  routeUiOp,
+  withPress,
+  withUiOp,
+} from '../uiOps';
 
 const FIXTURE = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '../../../../agent_runtimes/tests/fixtures/app_session_ops.json',
 );
 
-const events = JSON.parse(readFileSync(FIXTURE, 'utf8')) as AguiEvent[];
+const fixture = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {
+  run: { type: string; [key: string]: unknown }[];
+  ui: { t: 'op'; seq: number; op: UiOp }[];
+};
 
 afterEach(() => clearLoopElements());
 
-/** The fixture's stream, drawn: the conversation, the elements seen open, the window messages. */
+/**
+ * The fixture drawn: every op of the socket first, then the run's events —
+ * the worst order two connections can give — an op about a message not here
+ * yet waiting for it.
+ */
 function drawn(): {
   items: DisplayItem[];
   opened: LoopElement[][];
   windows: unknown[];
+  waited: number;
 } {
-  const decoder = new AguiUiDecoder();
   let items: DisplayItem[] = [];
   let steps = emptyUiModel();
   const elements = new Set<string>();
   const opened: LoopElement[][] = [];
   const windows: unknown[] = [];
-  for (const event of events) {
-    if (event.type === 'TEXT_MESSAGE_START') {
-      items = [
-        ...items,
-        {
-          id: String(event.messageId),
-          role: 'assistant',
-          content: '',
-          createdAt: new Date(0),
-        },
-      ];
-      continue;
+  let parked: UiOp[] = [];
+  let waited: number;
+  const place = (op: UiOp) => {
+    if (!placeable(items, op)) {
+      parked.push(op);
+      return;
     }
-    const op: UiOp | null = decoder.decode(event);
-    if (!op) continue;
+    items = withUiOp(items, op);
+  };
+  const retry = () => {
+    const waiting = parked;
+    parked = [];
+    for (const op of waiting) place(op);
+  };
+  expect(fixture.ui.map(frame => frame.seq)).toEqual(
+    fixture.ui.map((_, index) => index + 1),
+  );
+  for (const { op } of fixture.ui) {
     const next = routeUiOp(op, steps, elements);
     steps = next.steps;
     const routed = next.routed;
@@ -77,29 +91,50 @@ function drawn(): {
       elements.add(routed.change.id);
       applyLoopElement(routed.change);
       opened.push(openLoopElements());
-    } else items = withUiOp(items, routed.op);
+    } else place(routed.op);
   }
-  return { items, opened, windows };
+  waited = parked.length;
+  for (const event of fixture.run) {
+    if (event.type === 'TEXT_MESSAGE_START') {
+      const id = String(event.messageId);
+      if (!items.some(item => item.id === id)) {
+        items = [
+          ...items,
+          { id, role: 'assistant', content: '', createdAt: new Date(0) },
+        ];
+      }
+      retry();
+    }
+  }
+  expect(parked).toEqual([]);
+  return { items, opened, windows, waited };
 }
 
 describe('a session’s ops, from the Python fixture', () => {
-  it('carry no loop.* event', () => {
-    const names = events
-      .filter(event => event.type === 'CUSTOM')
-      .map(event => event.name);
-    expect(new Set(names)).toEqual(new Set(['reactor.ui']));
+  it('leave the run stream its text and steps by name', () => {
+    expect(new Set(fixture.run.map(event => event.type))).toEqual(
+      new Set([
+        'TEXT_MESSAGE_START',
+        'TEXT_MESSAGE_CONTENT',
+        'TEXT_MESSAGE_END',
+        'STEP_STARTED',
+        'STEP_FINISHED',
+      ]),
+    );
   });
 
   it('draw the author, the step in place, the element, the window message and the removal', () => {
-    const { items, opened, windows } = drawn();
+    const { items, opened, windows, waited } = drawn();
+    // The author and the removal waited for their messages.
+    expect(waited).toBe(2);
     // The first message removed; the second said by its author; the step
     // one row, ended, its streamed output whole.
     expect(items).toHaveLength(2);
-    expect(items[0]).toMatchObject({
+    expect(items[1]).toMatchObject({
       id: 'id-2',
       speaker: { id: 'author:Searcher', name: 'Searcher' },
     });
-    expect(items[1]).toMatchObject({
+    expect(items[0]).toMatchObject({
       type: 'tool-call',
       toolCallId: 'step-id-3',
       toolName: 'gen_query',
@@ -158,5 +193,37 @@ describe('a session’s ops, from the Python fixture', () => {
     expect(() =>
       routeUiOp(op({ op: 'remove', id: 'st' }), steps, elements),
     ).toThrow(/never removed/);
+  });
+
+  it('send a press of a display up the socket, the run naming it only', () => {
+    const forwarded = {
+      loop: {
+        settings: { a: 1 },
+        action: {
+          name: 'again',
+          display_id: 'm1-shows',
+          token: 't0k',
+          payload: { row: 2 },
+        },
+      },
+    };
+    expect(displayPressOf(forwarded)).toEqual({
+      action: 'again',
+      display_id: 'm1-shows',
+      token: 't0k',
+      payload: { row: 2 },
+    });
+    expect(withPress(forwarded, { press: 'p-1' })).toEqual({
+      loop: { settings: { a: 1 }, press: 'p-1' },
+    });
+    // A page block's action (no display) is not a display's press.
+    expect(
+      displayPressOf({ loop: { action: { name: 'submit', payload: {} } } }),
+    ).toBeNull();
+    expect(displayPressOf(undefined)).toBeNull();
+    expect(() =>
+      displayPressOf({ loop: { action: { name: 'again', display_id: 'd' } } }),
+    ).toThrow(/its token/);
+    expect(() => withPress(forwarded, {})).toThrow(/named none/);
   });
 });

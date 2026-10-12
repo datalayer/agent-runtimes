@@ -443,17 +443,7 @@ describe('window messages, between the page and the application (LOOP P-25)', ()
     const fetcher = vi.fn(
       async () =>
         new Response(
-          `data: ${JSON.stringify({
-            type: 'CUSTOM',
-            name: 'reactor.ui',
-            value: {
-              v: 1,
-              op: 'window',
-              scope: 's',
-              id: null,
-              body: { name: 'message', args: { data: { seen: '/cart' } } },
-            },
-          })}\n\n`,
+          `data: ${JSON.stringify({ type: 'RUN_STARTED' })}\n\ndata: ${JSON.stringify({ type: 'RUN_FINISHED' })}\n\n`,
         ),
     );
     globalThis.fetch = fetcher as unknown as typeof fetch;
@@ -477,15 +467,15 @@ describe('window messages, between the page and the application (LOOP P-25)', ()
       `${SERVER}/api/v1/apps/sessions/${encodeURIComponent(thread.id)}/window`,
       expect.objectContaining({ method: 'POST' }),
     );
+    // What its code answers comes on the conversation's ui socket, which
+    // the chat hands on (REACTOR_UI RU-W): raised as any window message.
+    expect(events).toEqual([]);
+    await act(async () => tellLoopWindow({ seen: '/cart' }));
+    await act(async () => tellLoopWindow({ open: 'invoice' }));
     expect(events).toEqual([
       { type: 'window-message', detail: { data: { seen: '/cart' } } },
+      { type: 'window-message', detail: { data: { open: 'invoice' } } },
     ]);
-    // What its code tells the page during a chat's turn, raised the same way.
-    await act(async () => tellLoopWindow({ open: 'invoice' }));
-    expect(events[1]).toEqual({
-      type: 'window-message',
-      detail: { data: { open: 'invoice' } },
-    });
     await act(async () => root.unmount());
     expect(ports[ports.length - 1]).toBeNull();
   });

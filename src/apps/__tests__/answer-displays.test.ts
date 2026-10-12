@@ -5,8 +5,8 @@
 
 /**
  * What a message shows arrives as a `reactor.ui` display and is kept on the
- * message (REACTOR_UI RU-2): live, decoded from the AG-UI stream, and again
- * from a thread's snapshot.
+ * message (REACTOR_UI RU-2), from the conversation's ui socket (RU-W); a
+ * thread's snapshot is its text, and refuses a display.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ import {
   type Display,
   type UiOp,
 } from '@datalayer/reactor/ui';
-import { uiOpOf, withUiOp } from '../../chat/base/uiOps';
+import { withUiOp } from '../../chat/base/uiOps';
 import { messagesOfThread } from '../embed/embedSession';
 import type { ChatMessage } from '../../types/messages';
 
@@ -41,19 +41,6 @@ const said = (id: string, content: string): ChatMessage => ({
 });
 
 describe('displays under messages', () => {
-  it('reads the op an activity carries, and nothing from another', () => {
-    const op: UiOp = {
-      v: 1,
-      op: 'show',
-      scope: 's',
-      id: 'd',
-      body: display('d', 'm1'),
-    };
-    expect(uiOpOf({ type: AGUI_NAME, data: op })).toBe(op);
-    expect(uiOpOf({ type: 'loop.step', data: {} })).toBeNull();
-    expect(() => uiOpOf({ type: AGUI_NAME, data: { op: 'show' } })).toThrow();
-  });
-
   it('keeps a display on its message, changes it in place, takes it away', () => {
     const decoder = new AguiUiDecoder();
     const shown = decoder.decode({
@@ -123,34 +110,28 @@ describe('displays under messages', () => {
     ).toThrow(/Nothing here is gone/);
   });
 
-  it('draws a thread’s displays again under their messages', () => {
+  it('draws a thread’s text, and refuses a display', () => {
     const drawn = messagesOfThread([
       { id: 'u1', role: 'user', content: 'Runs?' },
       { id: 'm1', role: 'assistant', content: 'Two runs.' },
-      {
-        id: 'm1-shows',
-        role: 'activity',
-        activityType: AGUI_NAME,
-        content: { scope: 's', display: display('m1-shows', 'm1') },
-      },
-      // A message that said nothing but showed something is drawn for it.
+      // A message that said nothing is drawn by the chat when its socket
+      // shows something under it (`ChatBase`, history).
       { id: 'm2', role: 'assistant', content: '' },
-      {
-        id: 'm2-shows',
-        role: 'activity',
-        activityType: AGUI_NAME,
-        content: { scope: 's', display: display('m2-shows', 'm2') },
-      },
     ]);
-    expect(drawn.map(m => [m.id, m.displays?.map(d => d.id)])).toEqual([
-      ['u1', undefined],
-      ['m1', ['m1-shows']],
-      ['m2', ['m2-shows']],
+    expect(drawn.map(m => [m.id, m.content])).toEqual([
+      ['u1', 'Runs?'],
+      ['m1', 'Two runs.'],
     ]);
+    // What a message showed comes on the ui socket, never in a thread.
     expect(() =>
       messagesOfThread([
-        { id: 'x', role: 'activity', activityType: AGUI_NAME, content: {} },
+        {
+          id: 'm1-shows',
+          role: 'activity',
+          activityType: AGUI_NAME,
+          content: { scope: 's', display: display('m1-shows', 'm1') },
+        },
       ]),
-    ).toThrow(/scope, display/);
+    ).toThrow(/ui socket/);
   });
 });

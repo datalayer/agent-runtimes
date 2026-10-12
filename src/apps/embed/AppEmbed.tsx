@@ -323,18 +323,14 @@ export function useWindowPort({
       if (!uid.current) {
         throw new Error(WINDOW_NOT_YET);
       }
-      const said = await postWindowMessage({
+      // What its code answers comes on the ui socket, raised as any
+      // window message is (REACTOR_UI RU-W).
+      await postWindowMessage({
         serverUrl,
         uid: uid.current,
         ...(embedToken ? { token: embedToken } : {}),
         data,
       });
-      for (const answer of said) {
-        hostRef.current?.onEvent?.({
-          type: 'window-message',
-          detail: { data: answer },
-        });
-      }
     });
     return () => port(null);
   }, [serverUrl, embedToken, host]);

@@ -5,10 +5,11 @@
 
 /**
  * What a server says to a conversation's page, as `reactor.ui` ops
- * (REACTOR_UI RU-2, RU-3).
+ * (REACTOR_UI RU-2, RU-3), and what the page presses back (RU-W).
  *
- * The AG-UI adapter decodes them (`AguiUiDecoder`) and hands each on as an
- * `activity` of type `reactor.ui`; `routeUiOp` says where each goes:
+ * The ops arrive on the conversation's ui socket (Reactor's `UiSocket`,
+ * one per session, beside the run stream that carries the conversation's
+ * text); `routeUiOp` says where each goes:
  *
  * - a `window` op to the page the conversation sits in (`loopWindow`);
  * - a step's display to its row (`loopStep`), patched as it streams;
@@ -19,6 +20,11 @@
  *   renderer a plugin contributed for its type; a `meta` op's `author` the
  *   message's voice; a `remove` of a message's id the message gone.
  *
+ * An op about a message that has not arrived on the run stream yet — the
+ * two are separate connections — waits until it has (`placeable`). A press
+ * of what a display offered goes up the socket (`displayPressOf`), and the
+ * run that answers it names it only (`withPress`).
+ *
  * Pure: the chat applies it to what it draws, and to its store. Nothing it
  * was not told to expect is guessed at: an op it cannot place throws.
  *
@@ -26,11 +32,10 @@
  */
 
 import {
-  AGUI_NAME,
   applyPatch,
   applyUiOp,
-  isUiOp,
   type Display,
+  type UiAction,
   type UiModel,
   type UiOp,
 } from '@datalayer/reactor/ui';
@@ -38,17 +43,6 @@ import type { MessageSpeaker } from '../../types/messages';
 import { elementOfDisplay, type LoopElementChange } from './loopElement';
 import { isStepDisplay, stepOfDisplay, type LoopStep } from './loopStep';
 import { windowMessageOf } from './loopWindow';
-
-/** The op an activity carries, or `null` when it is not the reactor's. */
-export function uiOpOf(
-  activity: { type: string; data: unknown } | undefined,
-): UiOp | null {
-  if (!activity || activity.type !== AGUI_NAME) return null;
-  if (!isUiOp(activity.data)) {
-    throw new Error('A reactor.ui activity carries no op');
-  }
-  return activity.data;
-}
 
 /** The message a display is under: its `data.message_id`. */
 export function messageOfDisplay(display: Display): string {
@@ -247,4 +241,77 @@ export function routeUiOp(
     default:
       return { routed: { to: 'messages', op }, steps };
   }
+}
+
+/**
+ * Whether the messages hold what an op is about: the message a display is
+ * under, the message a `meta` op names, the display a change is to, what a
+ * `remove` takes away. An op about what has not arrived yet waits.
+ */
+export function placeable<T extends WithDisplays>(
+  items: readonly T[],
+  op: UiOp,
+): boolean {
+  const hasItem = (id: string | null | undefined) =>
+    !!id && items.some(item => item.id === id);
+  const hasDisplay = (id: string | null | undefined) =>
+    !!id &&
+    items.some(item =>
+      (item.displays ?? []).some(display => display.id === id),
+    );
+  switch (op.op) {
+    case 'show':
+    case 'ask': {
+      const under = op.body.data?.message_id;
+      return typeof under === 'string' && hasItem(under);
+    }
+    case 'meta':
+      return hasItem(op.id);
+    case 'patch':
+    case 'append':
+      return hasDisplay(op.id);
+    case 'remove':
+      return hasDisplay(op.id) || hasItem(op.id);
+    default:
+      return true;
+  }
+}
+
+/**
+ * The press a run's `forwardedProps` carries for a display's button — what
+ * `AnswerShowsView` hands the chat — or `null` for a run that presses
+ * nothing of a display's. It goes up the ui socket, never in the run.
+ */
+export function displayPressOf(
+  forwardedProps: Record<string, unknown> | undefined,
+): UiAction | null {
+  const loop = forwardedProps?.loop as Record<string, unknown> | undefined;
+  const action = loop?.action as Record<string, unknown> | undefined;
+  if (!action || typeof action.display_id !== 'string') return null;
+  if (typeof action.name !== 'string' || typeof action.token !== 'string') {
+    throw new Error('A press of a display says its action and its token');
+  }
+  return {
+    action: action.name,
+    display_id: action.display_id,
+    token: action.token,
+    payload: (action.payload as Record<string, unknown> | undefined) ?? {},
+  };
+}
+
+/**
+ * The run's `forwardedProps` once its press was checked on the socket: the
+ * press named by the id the runtime answered, the action itself gone.
+ */
+export function withPress(
+  forwardedProps: Record<string, unknown>,
+  answered: unknown,
+): Record<string, unknown> {
+  const press = (answered as { press?: unknown } | null)?.press;
+  if (typeof press !== 'string' || !press) {
+    throw new Error('The runtime checked the press but named none');
+  }
+  const loop = { ...(forwardedProps.loop as Record<string, unknown>) };
+  delete loop.action;
+  return { ...forwardedProps, loop: { ...loop, press } };
 }

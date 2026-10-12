@@ -26,7 +26,8 @@ import React, {
 } from 'react';
 import { Text, Spinner, IconButton } from '@primer/react';
 import { ReactorLazy } from '@datalayer/reactor/react';
-import { emptyUiModel, type UiModel } from '@datalayer/reactor/ui';
+import { emptyUiModel, type UiModel, type UiOp } from '@datalayer/reactor/ui';
+import { UiSocket } from '@datalayer/reactor/ui/ws';
 import { SkeletonText } from '@primer/react/experimental';
 import { SidebarExpandIcon } from '@primer/octicons-react';
 import type { KernelMessage } from '@jupyterlab/services';
@@ -158,10 +159,16 @@ import {
   chatSpanRecorder,
   type ChatSpanRecorder,
 } from '../../components/inspector/chatSpans';
-import { withLoopStep } from './loopStep';
+import { isStepDisplay, withLoopStep } from './loopStep';
 import { applyLoopElement } from './loopElement';
 import { tellLoopWindow } from './loopWindow';
-import { routeUiOp, uiOpOf, withUiOp } from './uiOps';
+import {
+  displayPressOf,
+  placeable,
+  routeUiOp,
+  withPress,
+  withUiOp,
+} from './uiOps';
 import { useChatWords } from '../ChatLanguage';
 
 // Tracks pending prompts already auto-sent for a given conversation scope.
@@ -2273,6 +2280,174 @@ function ChatBaseInner({
       threadGivenRef.current?.onStarted?.(id);
     }
   }, []);
+
+  /*
+   * The conversation's ui channel (REACTOR_UI RU-W): one WebSocket per
+   * conversation, its thread the scope, opened once its session is there
+   * (the first event of its first run, or a thread reopened). What its
+   * messages show, its steps, its elements, its authors and its window
+   * messages arrive here as `reactor.ui` ops; the presses of what they
+   * offered go up it. An op about a message the run stream has not brought
+   * yet — they are two connections — waits for it (`placeable`).
+   */
+  const uiSocketRef = useRef<{ socket: UiSocket; scope: string } | null>(null);
+  const parkedUiOpsRef = useRef<UiOp[]>([]);
+  const historyStepsRef = useRef<Set<string>>(new Set());
+  const displayItemsRef = useRef<DisplayItem[]>([]);
+  const uiSocketUrl = protocol?.uiSocket;
+  const uiSocketTokenRef = useRef(protocol?.authToken);
+  uiSocketTokenRef.current = protocol?.authToken;
+
+  const applyToMessages = useCallback(
+    (op: UiOp) => {
+      const apply = <T extends DisplayItem | ChatMessage>(items: T[]): T[] => {
+        try {
+          return withUiOp(items, op);
+        } catch (error) {
+          console.error('[ChatBase] reactor.ui op not applied:', error);
+          return items;
+        }
+      };
+      setDisplayItems(prev => apply(prev));
+      if (useStoreMode) {
+        const store = useChatStore.getState();
+        store.setMessages(apply(store.messages));
+      }
+    },
+    [useStoreMode],
+  );
+
+  const applySocketOp = useCallback(
+    (op: UiOp, history: boolean) => {
+      // The past is drawn again, never acted on: a window message is not
+      // raised again, and the steps of turns long over are not drawn again.
+      if (history) {
+        if (op.op === 'window') return;
+        if ((op.op === 'show' || op.op === 'ask') && isStepDisplay(op.body)) {
+          historyStepsRef.current.add(op.body.id);
+          return;
+        }
+        if (
+          (op.op === 'patch' || op.op === 'append') &&
+          historyStepsRef.current.has(op.id)
+        ) {
+          return;
+        }
+      }
+      let next: ReturnType<typeof routeUiOp>;
+      try {
+        next = routeUiOp(op, uiStepsRef.current, uiElementsRef.current);
+      } catch (error) {
+        console.error('[ChatBase] reactor.ui op not applied:', error);
+        return;
+      }
+      uiStepsRef.current = next.steps;
+      const routed = next.routed;
+      if (routed.to === 'window') {
+        // For the page it sits in, outside the conversation (LOOP P-25).
+        tellLoopWindow(routed.data);
+      } else if (routed.to === 'step') {
+        // A step of its code, drawn as it runs (LOOP P-16).
+        const step = routed.step;
+        setDisplayItems(prev => withLoopStep(prev, step));
+      } else if (routed.to === 'element') {
+        // In a side panel or on a page of its own (LOOP P-18).
+        uiElementsRef.current.add(routed.change.id);
+        applyLoopElement(routed.change);
+      } else if (!placeable(displayItemsRef.current, routed.op)) {
+        const under =
+          routed.op.op === 'show' || routed.op.op === 'ask'
+            ? routed.op.body.data?.message_id
+            : undefined;
+        if (history && typeof under === 'string') {
+          // Shown in the past under a message that said nothing: the
+          // thread did not draw it, the chat draws it for what it showed.
+          const placeholder: ChatMessage = {
+            id: under,
+            role: 'assistant',
+            content: '',
+            createdAt: new Date(),
+          };
+          displayItemsRef.current = [...displayItemsRef.current, placeholder];
+          setDisplayItems(prev =>
+            prev.some(item => item.id === under)
+              ? prev
+              : [...prev, placeholder],
+          );
+          if (useStoreMode) useChatStore.getState().addMessage(placeholder);
+          applyToMessages(routed.op);
+        } else {
+          parkedUiOpsRef.current.push(routed.op);
+        }
+      } else {
+        applyToMessages(routed.op);
+      }
+    },
+    [applyToMessages, useStoreMode],
+  );
+  const applySocketOpRef = useRef(applySocketOp);
+  applySocketOpRef.current = applySocketOp;
+
+  // What waited for its message, applied once the message is here.
+  useEffect(() => {
+    displayItemsRef.current = displayItems;
+    if (parkedUiOpsRef.current.length === 0) return;
+    const parked = parkedUiOpsRef.current.splice(0);
+    let items: DisplayItem[] = displayItems;
+    for (const op of parked) {
+      if (!placeable(items, op)) {
+        parkedUiOpsRef.current.push(op);
+        continue;
+      }
+      try {
+        items = withUiOp(items, op);
+      } catch {
+        // Said by `applyToMessages`, which refuses it the same way.
+      }
+      applyToMessages(op);
+    }
+  }, [displayItems, applyToMessages]);
+
+  /** The conversation's ui socket, opened for its thread when it is not yet. */
+  const ensureUiSocket = useCallback((): UiSocket | null => {
+    if (!uiSocketUrl) return null;
+    const scope = threadIdRef.current;
+    const open = uiSocketRef.current;
+    if (open && open.scope === scope) return open.socket;
+    // Another conversation: what the last one showed goes with it.
+    open?.socket.close();
+    uiStepsRef.current = emptyUiModel();
+    uiElementsRef.current = new Set();
+    parkedUiOpsRef.current = [];
+    historyStepsRef.current = new Set();
+    const socket = new UiSocket({
+      url: uiSocketUrl,
+      scope,
+      token: () => uiSocketTokenRef.current ?? '',
+      onOp: (op, _seq, history) => applySocketOpRef.current(op, history),
+      onStatus: (status, reason) => {
+        if (status === 'refused' || status === 'gone') {
+          console.error(`[ChatBase] ui socket ${status}: ${reason ?? ''}`);
+        }
+      },
+    });
+    uiSocketRef.current = { socket, scope };
+    socket.connect();
+    return socket;
+  }, [uiSocketUrl]);
+  const ensureUiSocketRef = useRef(ensureUiSocket);
+  ensureUiSocketRef.current = ensureUiSocket;
+
+  // A thread reopened has its session already: its socket opens now.
+  useEffect(() => {
+    if (thread?.messages.length) ensureUiSocketRef.current();
+    return () => {
+      uiSocketRef.current?.socket.close();
+      uiSocketRef.current = null;
+    };
+    // At mount: the thread it was given.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -3273,6 +3448,8 @@ function ChatBaseInner({
     setAdapterReady(true);
 
     unsubscribeRef.current = adapter.subscribe((event: ProtocolEvent) => {
+      // The run's session is there once it answers: its ui socket opens.
+      ensureUiSocketRef.current();
       /*
        * Nothing more from a turn the reader has stopped.
        *
@@ -3679,58 +3856,11 @@ function ChatBaseInner({
           }
           break;
 
-        case 'activity': {
-          // What the server says as `reactor.ui` ops (REACTOR_UI RU-2,
-          // RU-3): a window message, a step, an element, or the messages'
-          // displays, authors and removals. An op nothing here can place
-          // is refused, and said in the console.
-          const uiOp = uiOpOf(event.activity);
-          if (!uiOp) break;
-          let routed: ReturnType<typeof routeUiOp>['routed'];
-          try {
-            const next = routeUiOp(
-              uiOp,
-              uiStepsRef.current,
-              uiElementsRef.current,
-            );
-            uiStepsRef.current = next.steps;
-            routed = next.routed;
-          } catch (error) {
-            console.error('[ChatBase] reactor.ui op not applied:', error);
-            break;
-          }
-          if (routed.to === 'window') {
-            // For the page it sits in, outside the conversation (LOOP P-25).
-            tellLoopWindow(routed.data);
-          } else if (routed.to === 'step') {
-            // A step of its code, drawn as it runs (LOOP P-16).
-            const step = routed.step;
-            setDisplayItems(prev => withLoopStep(prev, step));
-          } else if (routed.to === 'element') {
-            // In a side panel or on a page of its own (LOOP P-18): kept
-            // for whoever draws them.
-            uiElementsRef.current.add(routed.change.id);
-            applyLoopElement(routed.change);
-          } else {
-            const op = routed.op;
-            const apply = <T extends DisplayItem | ChatMessage>(
-              items: T[],
-            ): T[] => {
-              try {
-                return withUiOp(items, op);
-              } catch (error) {
-                console.error('[ChatBase] reactor.ui op not applied:', error);
-                return items;
-              }
-            };
-            setDisplayItems(prev => apply(prev));
-            if (useStoreMode) {
-              const store = useChatStore.getState();
-              store.setMessages(apply(store.messages));
-            }
-          }
+        case 'activity':
+          // What the server says besides the conversation's text comes on
+          // the ui socket (REACTOR_UI RU-W); the run's other activities —
+          // `loop.session`, `loop.page` — are their readers'.
           break;
-        }
 
         case 'done':
           /*
@@ -3992,6 +4122,33 @@ function ChatBaseInner({
       const messageContent = (messageOverride ?? input).trim();
       if (!messageContent || isLoading) return;
       if (!adapterRef.current && !onSendMessage) return;
+      // A press of what a display offered goes up the ui socket, checked
+      // there; the run that answers it names it only (REACTOR_UI RU-W).
+      const pressed = displayPressOf(forwardedPropsGiven);
+      if (pressed && forwardedPropsGiven) {
+        const socket = uiSocketRef.current?.socket;
+        if (!socket) {
+          setError(new Error('This conversation’s ui channel is not open.'));
+          return;
+        }
+        try {
+          const result = await socket.act(pressed);
+          if (!result.ok) {
+            setError(
+              new Error(
+                result.detail || `The press was refused (${result.status}).`,
+              ),
+            );
+            return;
+          }
+          forwardedPropsGiven = withPress(forwardedPropsGiven, result.value);
+        } catch (failure) {
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+          return;
+        }
+      }
       stoppedRef.current = false;
       inspectAnswerRef.current = '';
       recorderRef.current?.recorder.turnStarted(

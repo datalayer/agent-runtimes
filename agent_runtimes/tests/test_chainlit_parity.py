@@ -28,6 +28,7 @@ from agent_runtimes.loop.apps import (
     UploadedFile,
     load_application,
     mounting,
+    sessions,
 )
 from agent_runtimes.loop.apps.session import ChoiceQuestion
 from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
@@ -301,8 +302,9 @@ def test_the_copilot_sits_in_the_host_page_and_talks_to_it(
         )
     )
     assert answer_of(started) == "Hello, world!"
-    [told] = [event for event in started if event.get("name") == "reactor.ui"]
-    assert told["value"]["body"] == {
+    # Told on the session's ui socket (REACTOR_UI RU-W).
+    [told] = sessions.UI_HUB.ops("session-c-001")
+    assert told.op.body.model_dump() == {
         "name": "message",
         "args": {"data": "Server: Normal message received: Hi"},
     }
@@ -313,8 +315,8 @@ def test_the_copilot_sits_in_the_host_page_and_talks_to_it(
         )
     )
     assert answer_of(answered) == "Window message received: Client: hello from the page"
-    [told] = [event for event in answered if event.get("name") == "reactor.ui"]
-    assert told["value"]["body"] == {
+    told = sessions.UI_HUB.ops("session-c-001")[-1]
+    assert told.op.body.model_dump() == {
         "name": "message",
         "args": {
             "data": "Server: Window message received: Client: hello from the page"

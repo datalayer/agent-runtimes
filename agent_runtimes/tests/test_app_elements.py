@@ -182,16 +182,17 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     )
     page = await session.show(session.ui.text("t", text="Hi"), where="page", id="hello")
     await page.close()
-    events = _drain(queue)
-    # Opened and changed: a show of its display; closed: a remove
-    # (REACTOR_UI RU-3).
-    assert [e["type"] for e in events] == [
-        "ACTIVITY_SNAPSHOT",
-        "ACTIVITY_SNAPSHOT",
-        "CUSTOM",
+    # Nothing of it on the run stream: opened and changed, a show of its
+    # display; closed, a remove — on the session's ui socket (RU-3, RU-W).
+    assert _drain(queue) == []
+    ops = [frame.op.model_dump(mode="json") for frame in sessions.UI_HUB.ops(live.uid)]
+    assert [(op["op"], op["id"]) for op in ops] == [
+        ("show", panel.id),
+        ("show", "hello"),
+        ("remove", "hello"),
     ]
-    shows = events[0]["content"]["display"]
-    assert events[0]["content"]["scope"] == live.uid
+    shows = ops[0]["body"]
+    assert ops[0]["scope"] == live.uid
     # What it shows is its display (REACTOR_UI RU-2), where it shows in it.
     assert shows["type"] == "application/vnd.datalayer.loop.answer+json"
     assert (shows["id"], shows["data"]["where"], shows["data"]["title"]) == (
@@ -204,29 +205,18 @@ async def test_over_the_session_api_an_element_is_a_display_with_where_it_shows(
     assert surface["messages"][2]["updateDataModel"]["value"] == {
         "runs": [{"model": "a"}]
     }
-    assert events[1]["content"]["display"]["data"]["where"] == "page"
-    assert (events[2]["name"], events[2]["value"]["op"], events[2]["value"]["id"]) == (
-        "reactor.ui",
-        "remove",
-        "hello",
-    )
+    assert ops[1]["body"]["data"]["where"] == "page"
     # A resume draws again what was open beside the conversation, and its
     # code can still close it.
     live.state = "stopped"
-    resumed: List[Dict[str, Any]] = []
-    async for chunk in live.resume():
-        resumed.extend(
-            json.loads(line[len("data:") :])
-            for line in chunk.splitlines()
-            if line.startswith("data:")
-        )
-    again = [
-        e["content"]["display"] for e in resumed if e["type"] == "ACTIVITY_SNAPSHOT"
+    before = sessions.UI_HUB.last(live.uid)
+    async for _ in live.resume():
+        pass
+    again = [frame.op for frame in sessions.UI_HUB.ops(live.uid, before)]
+    assert [(op.op, op.id, op.body.data["where"]) for op in again] == [
+        ("show", panel.id, "panel")
     ]
-    assert [(shown["id"], shown["data"]["where"]) for shown in again] == [
-        (panel.id, "panel")
-    ]
-    queue = live._open_stream()
+    live._open_stream()
     await live.session.close(panel.id)
-    closed = _drain(queue)[-1]["value"]
-    assert (closed["op"], closed["id"]) == ("remove", panel.id)
+    (closed,) = sessions.UI_HUB.ops(live.uid, before + 1)
+    assert (closed.op.op, closed.op.id) == ("remove", panel.id)

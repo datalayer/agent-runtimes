@@ -55,7 +55,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
 from pydantic import BaseModel, Field
 
 from agent_runtimes.loop.apps.callers import (
@@ -226,10 +226,11 @@ class Authorized:
 
 
 async def _authorize(
-    request: Request,
+    request: Any,
     person_only: bool,
     for_app: Optional[AppSpec] = None,
     app_uid: str = "",
+    token: Optional[str] = None,
 ) -> Authorized:
     """Who is calling, or an HTTP refusal that says why.
 
@@ -237,6 +238,10 @@ async def _authorize(
     application of an agent a session is opened on (LOOP R-04). An embed
     token is checked against ``app_uid``, the application as the platform
     knows it, when the session's instance names it; its spec's id otherwise.
+
+    ``request`` is a request or a WebSocket (their headers and client); a
+    WebSocket's credential is ``token``, from its first frame, never a header
+    or the URL (REACTOR_UI RU-W).
     """
     app = for_app if for_app is not None else running_app()
     origin = request.headers.get("origin")
@@ -250,7 +255,8 @@ async def _authorize(
         )
     if is_loopback(request.client.host if request.client else None):
         return Authorized(LOCAL, app)
-    token = bearer_of(request.headers.get("authorization"))
+    if token is None:
+        token = bearer_of(request.headers.get("authorization"))
     if not token:
         from agent_runtimes.loop.apps.visitors import NO_TOKEN, visitors_runtime
 
@@ -1418,7 +1424,12 @@ async def session_message(
 
 @router.post("/sessions/{uid}/actions")
 async def session_action(uid: str, body: SessionActionRequest, request: Request) -> Any:
-    """A page block's action, with the files given with it."""
+    """A page block's action, with the files given with it.
+
+    A press of what a display offered is never sent here: it goes up the
+    session's ui socket (REACTOR_UI RU-W). A page block's action, which has
+    no token yet, moves there with its typed actions (RU-5).
+    """
     from agent_runtimes.loop.apps.sessions import SessionRefused, given_files
 
     live, bearer = await _held(uid, request)
@@ -1455,7 +1466,7 @@ async def session_settings(
 async def session_window(uid: str, body: SessionWindowRequest, request: Request) -> Any:
     """A message from the page the application sits in (LOOP P-25): its code's
     ``@app.window`` runs on it, streamed — what the code sends back is a
-    ``loop.window`` event.
+    ``window`` op on the session's ui socket (REACTOR_UI RU-W).
     """
     from agent_runtimes.loop.apps.sessions import SessionRefused
 
@@ -1464,6 +1475,64 @@ async def session_window(uid: str, body: SessionWindowRequest, request: Request)
         return _stream(live.window_message(body.data, head=live.session_event()))
     except SessionRefused as refused:
         raise _refused(refused) from None
+
+
+@router.websocket("/ui")
+async def session_ui(websocket: WebSocket) -> None:
+    """The ui channel of a session over one WebSocket (REACTOR_UI RU-W).
+
+    Reactor's `UiSocket` on the sessions' hub: the page says hello with its
+    token (as for the session's other routes, never in the URL) and the
+    session's uid, receives the session's ``reactor.ui`` ops — what its
+    messages show, its steps, its elements, its authors, its window
+    messages — numbered, and sends up the presses of what they offered, each
+    checked here and kept for the run that names it
+    (``forwardedProps.loop.press``). A session not held here, or not the
+    caller's, is refused (4403); a token refused, 4401.
+    """
+    from reactor.ui.ws import (
+        CLOSE_FORBIDDEN,
+        CLOSE_UNAUTHORIZED,
+        UiSocket,
+        UiSocketRefused,
+    )
+
+    from agent_runtimes.loop.apps import sessions
+
+    async def authenticate(token: str, scope: str) -> Caller:
+        live = sessions.session_of(scope)
+        if live is None:
+            raise UiSocketRefused(CLOSE_FORBIDDEN, f"No session {scope} is held here.")
+        try:
+            authorized = await _authorize(
+                websocket,
+                False,
+                live.app,
+                str(live.instance.get("app_uid") or ""),
+                token=token,
+            )
+            _reaches(authorized.caller, live.agent_id)
+        except HTTPException as refused:
+            raise UiSocketRefused(
+                CLOSE_UNAUTHORIZED if refused.status_code == 401 else CLOSE_FORBIDDEN,
+                str(refused.detail),
+            ) from None
+        if not live.answers_to(authorized.caller):
+            # Somebody else's is not said to exist.
+            raise UiSocketRefused(CLOSE_FORBIDDEN, f"No session {scope} is held here.")
+        return authorized.caller
+
+    def on_action(caller: Caller, scope: str, press: Any) -> Dict[str, str]:
+        from reactor.ui import UnknownUiAction
+
+        live = sessions.session_of(scope)
+        if live is None:
+            raise UnknownUiAction(f"Session {scope} is no longer held here.")
+        return live.press_up(caller, press)
+
+    await UiSocket(
+        sessions.UI_HUB, authenticate=authenticate, on_action=on_action
+    ).endpoint(websocket)
 
 
 @router.post("/sessions/{uid}/stop")

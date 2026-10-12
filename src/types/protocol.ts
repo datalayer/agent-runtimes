@@ -66,6 +66,14 @@ export interface ProtocolConfig {
   enableConfigQuery?: boolean;
   /** Config endpoint URL for non-Jupyter protocols (if not set, uses Jupyter requestAPI) */
   configEndpoint?: string;
+  /**
+   * The ui channel's WebSocket (`ws://` or `wss://`, REACTOR_UI RU-W): an
+   * application's session says on it what its messages show, its steps, its
+   * elements, its authors and its window messages, and takes the presses of
+   * what they offered. Set for an application's agent; one connection per
+   * conversation, its thread the scope.
+   */
+  uiSocket?: string;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }

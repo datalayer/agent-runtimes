@@ -2,16 +2,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 """What a session says to its page besides its messages, as ``reactor.ui``
-ops (REACTOR_UI RU-3): a message's author (``meta``), a message removed
-(``remove``), a step (a display, shown as it starts and ends, its output
-patched in as it streams), an element in a side panel or on a page (a
-display that says where it shows, a ``remove`` closing it), and a window
-message (``window``). No ``loop.message``, ``loop.step``, ``loop.element``
-or ``loop.window`` event is sent any more.
+ops on its ui socket (REACTOR_UI RU-3, RU-W): a message's author (``meta``),
+a message removed (``remove``), a step (a display, shown as it starts and
+ends, its output patched in as it streams), an element in a side panel or on
+a page (a display that says where it shows, a ``remove`` closing it), and a
+window message (``window``). The run stream carries the text and AG-UI's
+steps by name, and nothing of ``reactor.ui``; no ``loop.message``,
+``loop.step``, ``loop.element`` or ``loop.window`` event is sent any more.
 
-The stream is the fixture ``fixtures/app_session_ops.json``, its ids and
-times made stable; the TypeScript test (``src/chat/base/__tests__/
-appSessionOps.test.ts``) decodes the same fixture and draws it.
+Both are the fixture ``fixtures/app_session_ops.json`` — ``run``, the run
+stream's events, and ``ui``, the socket's op frames — its ids and times made
+stable; the TypeScript test (``src/chat/base/__tests__/appSessionOps.test.ts``)
+draws the same fixture, the socket's ops arriving before the run's text.
 """
 
 from __future__ import annotations
@@ -55,7 +57,7 @@ def _stable(value: Any, ids: Dict[str, str]) -> Any:
     return value
 
 
-async def _session_events() -> List[Dict[str, Any]]:
+async def _session_events() -> Dict[str, Any]:
     application = Application(id="runs-desk", kind="chat", agent="example-simple")
     app = application.spec
     live = sessions.LiveSession(
@@ -83,16 +85,17 @@ async def _session_events() -> List[Dict[str, Any]]:
     await first.remove()
     await panel.close()
 
-    events: List[Dict[str, Any]] = []
+    run: List[Dict[str, Any]] = []
     while not queue.empty():
         chunk = queue.get_nowait()
         assert chunk is not None
-        events.extend(
+        run.extend(
             json.loads(line[len("data:") :])
             for line in chunk.splitlines()
             if line.startswith("data:")
         )
-    return _stable(events, {})
+    ui = [frame.model_dump(mode="json") for frame in sessions.UI_HUB.ops(live.uid)]
+    return _stable({"run": run, "ui": ui}, {})
 
 
 async def test_the_session_says_steps_elements_authors_and_windows_as_ops() -> None:
@@ -102,13 +105,30 @@ async def test_the_session_says_steps_elements_authors_and_windows_as_ops() -> N
     # The fixture the page's test reads is what the session sends.
     assert events == json.loads(FIXTURE.read_text())
 
-    customs = [e for e in events if e["type"] == "CUSTOM"]
-    # Nothing but reactor.ui: the loop.* events are gone.
-    assert {e["name"] for e in customs} == {"reactor.ui"}
-    assert [e["value"]["op"] for e in customs] == ["meta", "window", "remove", "remove"]
-    activities = [e for e in events if e["type"].startswith("ACTIVITY_")]
-    assert {e["activityType"] for e in activities} == {"reactor.ui"}
-    shown = [e["content"]["display"] for e in activities if "content" in e]
+    run, ui = events["run"], events["ui"]
+    # Nothing of reactor.ui on the run: its text, and AG-UI's steps by name.
+    assert {e["type"] for e in run} == {
+        "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_CONTENT",
+        "TEXT_MESSAGE_END",
+        "STEP_STARTED",
+        "STEP_FINISHED",
+    }
+    # On the socket, numbered from 1 with no gap.
+    assert [frame["seq"] for frame in ui] == list(range(1, len(ui) + 1))
+    ops = [frame["op"] for frame in ui]
+    assert [op["op"] for op in ops] == [
+        "meta",
+        "show",
+        "patch",
+        "patch",
+        "show",
+        "show",
+        "window",
+        "remove",
+        "remove",
+    ]
+    shown = [op["body"] for op in ops if op["op"] == "show"]
     assert [d["type"] for d in shown] == [
         sessions.STEP_DISPLAY_TYPE,
         sessions.STEP_DISPLAY_TYPE,

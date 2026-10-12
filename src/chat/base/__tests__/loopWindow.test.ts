@@ -15,7 +15,7 @@ import {
   onLoopWindowMessage,
   tellLoopWindow,
   windowMessageOf,
-  windowTurnOf,
+  windowTurnErrorOf,
 } from '../loopWindow';
 import {
   WINDOW_NOT_YET,
@@ -62,36 +62,23 @@ describe('window messages', () => {
     expect(heard).toEqual([{ open: 'cart' }]);
   });
 
-  it('say what a turn told the page, and why it failed', () => {
+  it('say why the turn a page’s message ran failed, and refuse an op on the run', () => {
     const stream = sse(
       { type: 'CUSTOM', name: 'loop.session', value: { uid: 's' } },
       { type: 'RUN_STARTED' },
-      told({ seen: '/cart' }),
       { type: 'RUN_FINISHED' },
     );
-    expect(windowTurnOf(stream)).toEqual({
-      said: [{ seen: '/cart' }],
-      error: null,
-    });
+    expect(windowTurnErrorOf(stream)).toBeNull();
     expect(
-      windowTurnOf(sse({ type: 'RUN_ERROR', message: 'The turn failed: no.' })),
-    ).toEqual({ said: [], error: 'The turn failed: no.' });
-    expect(windowTurnOf('data: not json\n\n')).toEqual({
-      said: [],
-      error: null,
-    });
-    // Nothing named loop.window is read any more; a reactor.ui event of the
-    // wrong shape is refused.
-    expect(
-      windowTurnOf(
-        sse({ type: 'CUSTOM', name: 'loop.window', value: { data: 1 } }),
+      windowTurnErrorOf(
+        sse({ type: 'RUN_ERROR', message: 'The turn failed: no.' }),
       ),
-    ).toEqual({ said: [], error: null });
-    expect(() =>
-      windowTurnOf(
-        sse({ type: 'CUSTOM', name: 'reactor.ui', value: { data: 1 } }),
-      ),
-    ).toThrow(/not an op/);
+    ).toBe('The turn failed: no.');
+    expect(windowTurnErrorOf('data: not json\n\n')).toBeNull();
+    // What the code tells the page back comes on the ui socket (RU-W).
+    expect(() => windowTurnErrorOf(sse(told({ seen: '/cart' })))).toThrow(
+      /ui socket/,
+    );
   });
 
   it('are posted to the session, with the visit’s token, and refused in the runtime’s sentence', async () => {
@@ -107,9 +94,12 @@ describe('window messages', () => {
       uid: 'session 1',
       token: 'visit-token',
       data: { page: '/checkout' },
-      fetcher: answer(new Response(sse(told({ seen: '/checkout' })))),
+      fetcher: answer(
+        new Response(sse({ type: 'RUN_STARTED' }, { type: 'RUN_FINISHED' })),
+      ),
     });
-    expect(said).toEqual([{ seen: '/checkout' }]);
+    // What its code answers comes on the ui socket, not in the response.
+    expect(said).toBeUndefined();
     expect(asked[0].url).toBe(
       'https://shop.example/assistant/api/v1/apps/sessions/session%201/window',
     );

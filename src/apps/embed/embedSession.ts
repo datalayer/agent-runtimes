@@ -26,9 +26,8 @@
  */
 
 import type { ChatMessage } from '../../types/messages';
-import { windowTurnOf } from '../../chat/base/loopWindow';
-import { withUiOp } from '../../chat/base/uiOps';
-import { AGUI_NAME, isDisplay, UI_WIRE_VERSION } from '@datalayer/reactor/ui';
+import { windowTurnErrorOf } from '../../chat/base/loopWindow';
+import { AGUI_NAME } from '@datalayer/reactor/ui';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
@@ -135,13 +134,15 @@ export function forgetSessionsInMemory(): void {
 /**
  * A session's conversation as the chat draws it, from the AG-UI messages
  * the runtime says (`GET …/sessions/{uid}/messages`): what was said and
- * answered, in words. A page an answer drew is not drawn again here.
+ * answered, in words. What its messages showed comes on the conversation's
+ * ui socket once the chat opens it (REACTOR_UI RU-W), never here: a
+ * `reactor.ui` activity in a thread is refused.
  */
 export function messagesOfThread(messages: unknown): ChatMessage[] {
   if (!Array.isArray(messages)) {
     return [];
   }
-  let drawn: ChatMessage[] = [];
+  const drawn: ChatMessage[] = [];
   for (const message of messages) {
     if (!message || typeof message !== 'object') {
       continue;
@@ -152,35 +153,10 @@ export function messagesOfThread(messages: unknown): ChatMessage[] {
       content?: unknown;
       activityType?: unknown;
     };
-    // What a message showed: its display, as the activity that drew it
-    // (REACTOR_UI RU-2), kept on the message it is under.
     if (role === 'activity' && activityType === AGUI_NAME) {
-      const shown = content as { scope?: unknown; display?: unknown } | null;
-      if (
-        !shown ||
-        typeof shown.scope !== 'string' ||
-        !isDisplay(shown.display)
-      ) {
-        throw new Error(`Activity ${String(id)} is not { scope, display }`);
-      }
-      // A message that said nothing but shows something is drawn for it.
-      const under = shown.display.data?.message_id;
-      if (typeof under === 'string' && !drawn.some(one => one.id === under)) {
-        drawn.push({
-          id: under,
-          role: 'assistant',
-          content: '',
-          createdAt: new Date(),
-        });
-      }
-      drawn = withUiOp(drawn, {
-        v: UI_WIRE_VERSION,
-        op: 'show',
-        scope: shown.scope,
-        id: shown.display.id,
-        body: shown.display,
-      });
-      continue;
+      throw new Error(
+        `Activity ${String(id)}: what a message showed comes on the ui socket (REACTOR_UI RU-W)`,
+      );
     }
     if (
       (role === 'user' || role === 'assistant') &&
@@ -237,8 +213,10 @@ export const WINDOW_NOT_YET =
 
 /**
  * Post a window message to a session (LOOP P-25): its code's `@app.window`
- * runs on it. Returns what the code told the page back; refused — the
- * runtime's sentence — when the session or its code takes none.
+ * runs on it. What the code tells the page back arrives on the
+ * conversation's ui socket (REACTOR_UI RU-W), raised as any window message
+ * is; refused — the runtime's sentence — when the session or its code takes
+ * none.
  */
 export async function postWindowMessage({
   serverUrl,
@@ -252,7 +230,7 @@ export async function postWindowMessage({
   token?: string;
   data: unknown;
   fetcher?: typeof fetch;
-}): Promise<unknown[]> {
+}): Promise<void> {
   const response = await fetcher(
     `${serverUrl.replace(/\/+$/, '')}/api/v1/apps/sessions/${encodeURIComponent(uid)}/window`,
     {
@@ -276,11 +254,10 @@ export async function postWindowMessage({
       detail || `The window message was refused (${response.status}).`,
     );
   }
-  const turn = windowTurnOf(await response.text());
-  if (turn.error) {
-    throw new Error(turn.error);
+  const error = windowTurnErrorOf(await response.text());
+  if (error) {
+    throw new Error(error);
   }
-  return turn.said;
 }
 
 /** What the page says, once, when the conversation it kept is gone. */

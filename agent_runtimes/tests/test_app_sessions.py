@@ -809,32 +809,36 @@ async def test_the_codes_messages_change_and_its_end_runs_on_the_session() -> No
         ("TEXT_MESSAGE_CONTENT", first.id, "Searching…"),
         ("TEXT_MESSAGE_START", events[4]["messageId"], None),
         ("TEXT_MESSAGE_CONTENT", events[4]["messageId"], "Found 3."),
-        (
-            "CUSTOM",
-            events[4]["messageId"],
-            {
+        ("TEXT_MESSAGE_START", first.id, None),
+        ("TEXT_MESSAGE_CONTENT", first.id, "Searched: 3 results."),
+    ]
+    # The author and the removal are ops on the session's ui socket (RU-W).
+    assert [
+        frame.model_dump(mode="json") for frame in sessions.UI_HUB.ops("session-0014")
+    ] == [
+        {
+            "t": "op",
+            "seq": 1,
+            "op": {
                 "v": 1,
                 "op": "meta",
                 "scope": "session-0014",
                 "id": events[4]["messageId"],
                 "body": {"author": "Searcher"},
             },
-        ),
-        ("TEXT_MESSAGE_START", first.id, None),
-        ("TEXT_MESSAGE_CONTENT", first.id, "Searched: 3 results."),
-        (
-            "CUSTOM",
-            first.id,
-            {
+        },
+        {
+            "t": "op",
+            "seq": 2,
+            "op": {
                 "v": 1,
                 "op": "remove",
                 "scope": "session-0014",
                 "id": first.id,
                 "body": None,
             },
-        ),
+        },
     ]
-    assert {e.get("name") for e in events if e["type"] == "CUSTOM"} == {"reactor.ui"}
     assert [(m["content"], m.get("name")) for m in live.messages] == [
         ("Found 3.", "Searcher")
     ]
@@ -896,21 +900,15 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
         )
     kinds = [e["type"] for e in events]
     # What it shows is a display under the message, not a tool call
-    # (REACTOR_UI RU-2).
-    assert kinds[:4] == [
-        "TEXT_MESSAGE_START",
-        "TEXT_MESSAGE_CONTENT",
-        "TEXT_MESSAGE_END",
-        "ACTIVITY_SNAPSHOT",
-    ]
-    assert "ACTIVITY_SNAPSHOT" not in kinds[4:]
-    assert not [kind for kind in kinds if kind.startswith("TOOL_CALL")]
-    activity = events[3]
-    assert activity["activityType"] == "reactor.ui"
-    assert activity["content"]["scope"] == live.uid
-    display = activity["content"]["display"]
+    # (REACTOR_UI RU-2), on the session's ui socket, not the run (RU-W).
+    assert (
+        kinds == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT", "TEXT_MESSAGE_END"] * 2
+    )
+    (frame,) = sessions.UI_HUB.ops(live.uid)
+    assert (frame.seq, frame.op.op, frame.op.scope) == (1, "show", live.uid)
+    display = frame.op.body.model_dump(mode="json")
     assert display["type"] == "application/vnd.datalayer.loop.answer+json"
-    assert display["id"] == activity["messageId"] == f"{sent.id}-shows"
+    assert display["id"] == frame.op.id == f"{sent.id}-shows"
     assert display["data"]["message_id"] == sent.id
     assert display["text"] == "Notes assistant showed Table runs"
     assert display["actions"] == []
@@ -922,14 +920,14 @@ async def test_what_an_answer_shows_is_a_surface_under_its_message() -> None:
         "runs": [{"model": "a"}, {"model": "b"}]
     }
 
+    # A snapshot is the conversation's text; what it showed, the socket's.
     snapshot = [
         m.model_dump(by_alias=True, exclude_none=True)
-        for m in sessions._snapshot(live.messages, live.uid)
+        for m in sessions._snapshot(live.messages)
     ]
-    assert [m["role"] for m in snapshot] == ["assistant", "activity", "assistant"]
+    assert [m["role"] for m in snapshot] == ["assistant", "assistant"]
     assert "toolCalls" not in snapshot[0]
-    assert snapshot[1]["activityType"] == "reactor.ui"
-    assert snapshot[1]["content"] == {"scope": live.uid, "display": display}
+    assert live.messages[0]["shows"] == display
 
     # The record keeps what was shown, by kind, id and words; not the data.
     shown = await session.send(
@@ -990,27 +988,26 @@ async def test_a_step_is_said_whole_beside_ag_uis_step() -> None:
             if line.startswith("data:")
         )
 
-    def named(event: Dict[str, Any]) -> str:
-        if event["type"] == "ACTIVITY_SNAPSHOT":
-            return event["content"]["display"]["data"]["name"]
-        return event["stepName"]
-
-    assert [(e["type"], named(e)) for e in events] == [
+    # On the run stream, AG-UI's steps by name; the steps whole are displays
+    # on the session's ui socket (REACTOR_UI RU-3, RU-W).
+    assert [(e["type"], e["stepName"]) for e in events] == [
         ("STEP_STARTED", "Researching"),
-        ("ACTIVITY_SNAPSHOT", "Researching"),
         ("STEP_STARTED", "Searching"),
-        ("ACTIVITY_SNAPSHOT", "Searching"),
         ("STEP_FINISHED", "Searching"),
-        ("ACTIVITY_SNAPSHOT", "Searching"),
         ("STEP_FINISHED", "Researching"),
-        ("ACTIVITY_SNAPSHOT", "Researching"),
     ]
-    # Each a step display, under the step's id, in the session's scope.
-    displays = [e["content"]["display"] for e in events if "content" in e]
+    ops = [frame.op for frame in sessions.UI_HUB.ops("session-0017")]
+    assert [op.op for op in ops] == ["show"] * 4
+    assert {op.scope for op in ops} == {"session-0017"}
+    displays = [op.body.model_dump(mode="json") for op in ops]
+    assert [d["data"]["name"] for d in displays] == [
+        "Researching",
+        "Searching",
+        "Searching",
+        "Researching",
+    ]
     assert {d["type"] for d in displays} == {sessions.STEP_DISPLAY_TYPE}
-    assert {e["content"]["scope"] for e in events if "content" in e} == {"session-0017"}
     started, ended = displays[1]["data"], displays[2]["data"]
-    assert displays[1]["id"] == events[3]["messageId"]
     assert started["parent_id"] == displays[0]["id"]
     assert (started["kind"], started["input"], started["ended_at"]) == (
         "tool",
@@ -1146,9 +1143,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "CUSTOM:loop.session",
         "RUN_STARTED",
         "STEP_STARTED",
-        "ACTIVITY_SNAPSHOT",
         "STEP_FINISHED",
-        "ACTIVITY_SNAPSHOT",
         "TEXT_MESSAGE_START",
         "TEXT_MESSAGE_END",
         "RUN_FINISHED",

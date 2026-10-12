@@ -133,29 +133,18 @@ async def test_the_session_api_says_the_step_again_with_what_it_wrote_so_far() -
             if line.startswith("data:")
         )
     # Shown running, its output patched in piece by piece, shown ended: one
-    # display, one row, in place (REACTOR_UI RU-3).
-    said = [
-        (
-            (
-                e["content"]["display"]["data"]["output"],
-                e["content"]["display"]["data"]["ended_at"] is not None,
-            )
-            if e["type"] == "ACTIVITY_SNAPSHOT"
-            else (e["patch"], False)
-        )
-        for e in events
-        if e["type"] in ("ACTIVITY_SNAPSHOT", "ACTIVITY_DELTA")
-    ]
-    said = [
-        (output[0]["value"], ended) if isinstance(output, list) else (output, ended)
-        for output, ended in said
-    ]
-    assert {e["activityType"] for e in events if e["type"].startswith("ACTIVITY_")} == {
-        "reactor.ui"
-    }
-    assert [e["patch"][0]["path"] for e in events if e["type"] == "ACTIVITY_DELTA"] == [
-        "/display/data/output"
+    # display, one row, in place, on the session's ui socket (RU-3, RU-W).
+    assert [e["type"] for e in events] == ["STEP_STARTED", "STEP_FINISHED"]
+    ops = [frame.op.model_dump(mode="json") for frame in sessions.UI_HUB.ops(live.uid)]
+    assert [op["body"][0]["path"] for op in ops if op["op"] == "patch"] == [
+        "/data/output"
     ] * 2
+    said = [
+        (op["body"]["data"]["output"], op["body"]["data"]["ended_at"] is not None)
+        if op["op"] == "show"
+        else (op["body"][0]["value"], False)
+        for op in ops
+    ]
     assert said == [
         (None, False),
         ("SELECT", False),
@@ -324,10 +313,9 @@ async def test_on_a_runtime_a_tool_call_of_the_codes_agent_reaches_the_chat_as_a
             if line.startswith("data:")
         )
     steps = [
-        e["content"]["display"]["data"]
-        for e in events
-        if e["type"] == "ACTIVITY_SNAPSHOT"
-        and e["content"]["display"]["type"] == sessions.STEP_DISPLAY_TYPE
+        frame.op.body.data
+        for frame in sessions.UI_HUB.ops(live.uid)
+        if frame.op.op == "show" and frame.op.body.type == sessions.STEP_DISPLAY_TYPE
     ]
     assert [(s["name"], s["kind"], s["ended_at"] is not None) for s in steps] == [
         ("lookup_order", "tool", False),

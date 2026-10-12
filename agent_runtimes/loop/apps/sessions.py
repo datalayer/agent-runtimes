@@ -32,6 +32,12 @@ refused anything else, in a sentence. A file asked by an application's code
 (``session.ask(FileQuestion(...))``) is answered by a file given with an
 action — before or after it is asked.
 
+What the code shows besides its text — what its answers show, its steps,
+its elements, its messages' authors, its window messages — is said as
+``reactor.ui`` ops on the session's ui socket (`UI_HUB`, REACTOR_UI RU-W),
+and the presses of what they offer come up it, checked, each waiting for the
+run that names it (``forwardedProps.loop.press``).
+
 When the code asks the person something, the stream ends on the question —
 a ``loop.ask`` custom event and the question in words — and the session
 waits: a message answers text or a choice, an action's file a file, a
@@ -75,13 +81,15 @@ from reactor.ui import (
     RemoveOp,
     ShowOp,
     UiAction,
-    UiActionError,
+    UiActionBusy,
+    UiActionRefused,
     UiOp,
+    UnknownUiAction,
     WindowBody,
     WindowOp,
     display_type,
 )
-from reactor.ui.agui import AGUI_NAME, encode_agui
+from reactor.ui.ws import UiHub
 
 from agent_runtimes.context.identities import get_request_user_jwt
 from agent_runtimes.guardrails.credentials import redact
@@ -584,6 +592,8 @@ class LiveSession:
     _answer: Optional[asyncio.Future[Any]] = field(default=None, init=False, repr=False)
     _unasked: List[UploadedFile] = field(default_factory=list, init=False, repr=False)
     _ui_actions: Optional[ActionRegistry] = field(default=None, init=False, repr=False)
+    _presses: Dict[str, UiAction] = field(default_factory=dict, init=False, repr=False)
+    """Presses checked on the ui socket, waiting for the run that runs them (RU-W)."""
     _sent_settings: Dict[str, Any] = field(default_factory=dict, init=False, repr=False)
     _streamed: Dict[str, List[str]] = field(
         default_factory=dict, init=False, repr=False
@@ -651,7 +661,7 @@ class LiveSession:
         """
         return [
             message.model_dump(mode="json", by_alias=True, exclude_none=True)
-            for message in _snapshot(self.messages, self.uid)
+            for message in _snapshot(self.messages)
         ]
 
     def answers_to(self, caller: Caller) -> bool:
@@ -948,8 +958,10 @@ class LiveSession:
             self.show_op(RemoveOp(scope=self.uid, id=event.element_id))
 
     def show_op(self, op: UiOp) -> None:
-        """Stream a ``reactor.ui`` op, as AG-UI carries it (REACTOR_UI RU-3)."""
-        self.emit(encode_agui(op))
+        """Say a ``reactor.ui`` op to the page: on the session's ui socket,
+        numbered and kept for a resume (REACTOR_UI RU-W). The run stream
+        carries the conversation's text only."""
+        UI_HUB.emit(op)
 
     # --- what its answers offer (REACTOR_UI RU-2) -----------------------------------
 
@@ -1013,33 +1025,36 @@ class LiveSession:
         )
         return ShowOp(scope=self.uid, id=display.id, body=display)
 
-    def pressed(self, action: Mapping[str, Any]) -> UiAction:
-        """A press of something a display offered, checked: offered to this
-        session, on that display. Anything else is refused with the status
-        the registry says (403 not offered, 422 unknown or malformed)."""
+    def press_up(self, caller: Caller, press: UiAction) -> Dict[str, str]:
+        """A press of something a display offered, come up the ui socket
+        (REACTOR_UI RU-W): checked — offered to this session, on that display
+        (403 not offered, 422 unknown) — and kept for the run that runs it,
+        which names it (``forwardedProps.loop.press``). Nothing runs here.
+        """
         if self.host is None:
-            raise SessionRefused(
-                422, f"{self.app.name} has no code here: it showed nothing to press."
+            raise UnknownUiAction(
+                f"{self.app.name} has no code here: it showed nothing to press."
             )
-        try:
-            press = UiAction.model_validate(
-                {
-                    "action": action.get("name"),
-                    "display_id": action.get("display_id"),
-                    "token": action.get("token"),
-                    "payload": action.get("payload") or {},
-                    "idempotency_id": action.get("idempotency_id"),
-                }
+        if not self.answers_to(caller):
+            raise UiActionRefused(f"Session {self.uid} is not yours to press in.")
+        self._actions().authorize(self.opened_by, self.uid, press)
+        key = press.idempotency_id or secrets.token_urlsafe(12)
+        if key not in self._presses and len(self._presses) >= MAX_PRESSES:
+            raise UiActionBusy(
+                f"{len(self._presses)} presses wait for their run: run one first."
             )
-        except ValueError as wrong:
+        self._presses[key] = press.model_copy(update={"idempotency_id": key})
+        return {"press": key}
+
+    def _take_press(self, key: Any) -> UiAction:
+        """The press a run names, checked on the socket; once."""
+        press = self._presses.pop(str(key), None) if isinstance(key, str) else None
+        if press is None:
             raise SessionRefused(
                 422,
-                f"The press sent is not {{name, display_id, token, payload}}: {wrong}",
-            ) from None
-        try:
-            self._actions().authorize(self.opened_by, self.uid, press)
-        except UiActionError as refused:
-            raise SessionRefused(refused.status_code, str(refused)) from None
+                f"No press {key!r} waits here: press it again "
+                "(a press goes up the ui socket first).",
+            )
         return press
 
     async def ask(self, session_id: str, question: Question) -> Any:
@@ -1610,6 +1625,7 @@ class LiveSession:
             await self.host.end(self.session)
         self.state = "ended"
         _SESSIONS.pop(self.uid, None)
+        UI_HUB.forget(self.uid)
 
     async def logout(self) -> None:
         """The person signed out: the code's ``logout`` runs, then the session ends (LOOP P-14)."""
@@ -1618,6 +1634,7 @@ class LiveSession:
             await self.host.logout(self.session)
         self.state = "ended"
         _SESSIONS.pop(self.uid, None)
+        UI_HUB.forget(self.uid)
 
     async def _close(self) -> None:
         """Cancel the turn and the question waited on, and end the stream."""
@@ -1643,10 +1660,13 @@ class LiveSession:
 
         async def work() -> None:
             """The turn."""
-            self.emit(
-                MessagesSnapshotEvent(messages=_snapshot(self.messages, self.uid))
-            )
-            # What was open beside the conversation, open again (LOOP P-18).
+            self.emit(MessagesSnapshotEvent(messages=_snapshot(self.messages)))
+            # What its messages showed, and what was open beside the
+            # conversation, shown again on the socket (LOOP P-18, RU-W).
+            for message in self.messages:
+                display = message.get("shows")
+                if display:
+                    self.show_op(ShowOp(scope=self.uid, id=display["id"], body=display))
             for shown in self._elements.values():
                 self.show_op(self._element_op(shown))
             self.recorder.start(self.uid, resumed=self.resumed)
@@ -1859,13 +1879,21 @@ class LiveSession:
         action = loop.get("action")
         if action is not None and not isinstance(action, Mapping):
             raise SessionRefused(422, "The action sent is not {name, payload}.")
-        # A button of a display the code showed: offered here, or refused
-        # before anything runs (REACTOR_UI RU-2).
-        press = (
-            self.pressed(action)
-            if action is not None and "display_id" in action
-            else None
-        )
+        if action is not None and "display_id" in action:
+            # A display's button is pressed on the ui socket, never here.
+            raise SessionRefused(
+                422,
+                "A press of a display goes up the ui socket (REACTOR_UI RU-W): "
+                "the run names it with forwardedProps.loop.press.",
+            )
+        # A button of a display the code showed, checked on the socket
+        # (REACTOR_UI RU-2, RU-W): the run says which, and nothing else.
+        press: Optional[UiAction] = None
+        if "press" in loop:
+            if action is not None:
+                raise SessionRefused(422, "A run names a press or an action, not both.")
+            press = self._take_press(loop.get("press"))
+            action = {"name": press.action, "payload": dict(press.payload)}
         if self.state == "waiting":
             return self._answer_waiting(
                 text=text, files=files, values=settings, run_id=run_id
@@ -1950,13 +1978,13 @@ class LiveSession:
         return self._start_turn(work, run_id=run_id, wraps_run=False)
 
 
-def _snapshot(messages: List[Dict[str, Any]], scope: str) -> List[Any]:
-    """The conversation as AG-UI messages, for a snapshot.
+def _snapshot(messages: List[Dict[str, Any]]) -> List[Any]:
+    """The conversation as AG-UI messages, for a snapshot: its text only.
 
-    What a message showed comes back as the activity that drew it, right
-    after it: its display, as ``encode_agui`` shows it (REACTOR_UI RU-2).
+    What a message showed is said on the ui socket (REACTOR_UI RU-W), shown
+    again from the hub, and again by a resume.
     """
-    from ag_ui.core import ActivityMessage, AssistantMessage, UserMessage
+    from ag_ui.core import AssistantMessage, UserMessage
 
     shown: List[Any] = []
     for message in messages:
@@ -1966,29 +1994,27 @@ def _snapshot(messages: List[Dict[str, Any]], scope: str) -> List[Any]:
                 UserMessage(id=str(message.get("id") or _new_id()), content=content)
             )
         elif message.get("role") == "assistant":
-            message_id = str(message.get("id") or _new_id())
             shown.append(
                 AssistantMessage(
-                    id=message_id,
+                    id=str(message.get("id") or _new_id()),
                     content=content,
                     name=message.get("name") or None,
                 )
             )
-            display = message.get("shows")
-            if display:
-                shown.append(
-                    ActivityMessage(
-                        id=display["id"],
-                        activity_type=AGUI_NAME,
-                        content={"scope": scope, "display": display},
-                    )
-                )
     return shown
 
 
 # --- the sessions of this runtime ------------------------------------------------------
 
 _SESSIONS: Dict[str, LiveSession] = {}
+
+#: The ui channel of every session of this runtime (REACTOR_UI RU-W): each
+#: session's ops, numbered and kept, for the page's WebSocket
+#: (``/api/v1/apps/ui``, `agent_runtimes.routes.apps`).
+UI_HUB = UiHub()
+
+#: How many presses checked on the socket may wait for their run.
+MAX_PRESSES = 16
 
 
 def session_of(uid: str) -> Optional[LiveSession]:
@@ -1998,6 +2024,8 @@ def session_of(uid: str) -> Optional[LiveSession]:
 
 def forget_sessions() -> None:
     """Forget every session, and the code it was given to run (a test)."""
+    global UI_HUB
+    UI_HUB = UiHub()
     _SESSIONS.clear()
     _SERVED.clear()
     _AGENT_CODE.clear()
@@ -2239,7 +2267,9 @@ __all__ = [
     "MAX_FILE_BYTES",
     "MAX_TEXT_CHARACTERS",
     "STATES",
+    "MAX_PRESSES",
     "STEP_DISPLAY_TYPE",
+    "UI_HUB",
     "WINDOW_MESSAGE",
     "LiveSession",
     "StepShown",
