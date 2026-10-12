@@ -262,3 +262,87 @@ def test_a_registered_display_s_model_view_is_its_class_s() -> None:
     display = PapSignIn.from_answer(ANSWER)
     assert display is not None
     assert model_view_of(display.wire()) == display.model_view()
+
+
+@pytest.mark.asyncio
+async def test_the_vercel_ai_stream_puts_the_display_beside_the_output() -> None:
+    from pydantic_ai.ui.vercel_ai.response_types import ToolOutputAvailableChunk
+
+    from agent_runtimes.transports import vercel_ai
+    from agent_runtimes.transports.vercel_displays import (
+        DisplayVercelAIAdapter,
+        DisplayVercelAIEventStream,
+    )
+
+    # The transport streams with it.
+    assert vercel_ai.VercelAIAdapter is DisplayVercelAIAdapter
+    sign_in = PapSignIn.from_answer(ANSWER)
+    assert sign_in is not None
+    back = returned(sign_in.wire().model_dump(mode="json"))
+    part = ToolReturnPart(
+        "pap_sign_in",
+        back.return_value,
+        tool_call_id="c1",
+        metadata=back.metadata,
+    )
+
+    (output,) = [
+        chunk
+        async for chunk in DisplayVercelAIEventStream(None).handle_function_tool_result(
+            FunctionToolResultEvent(part)
+        )
+        if isinstance(chunk, ToolOutputAvailableChunk)
+    ]
+
+    display = output.output["_meta"][DISPLAY_META_KEY]
+    assert display["data"]["open"] == OPEN and display["data"]["code"] == CODE
+    assert "open" not in output.output["data"]
+
+
+@pytest.mark.asyncio
+async def test_a_plain_output_reaches_the_vercel_page_as_the_model_s() -> None:
+    from pydantic_ai.ui.vercel_ai.response_types import ToolOutputAvailableChunk
+
+    from agent_runtimes.transports.vercel_displays import DisplayVercelAIEventStream
+
+    part = ToolReturnPart("plain", {"open": OPEN}, tool_call_id="c1")
+    (output,) = [
+        chunk
+        async for chunk in DisplayVercelAIEventStream(None).handle_function_tool_result(
+            FunctionToolResultEvent(part)
+        )
+        if isinstance(chunk, ToolOutputAvailableChunk)
+    ]
+
+    assert output.output == {"open": OPEN}
+
+
+@pytest.mark.asyncio
+async def test_a_reloaded_history_draws_the_display_the_model_never_read(
+    gateway: DisplayMCPToolset,
+) -> None:
+    from agent_runtimes.context.usage import serialize_messages
+    from agent_runtimes.routes.history import _convert_to_chat_messages
+
+    seen: list[Any] = []
+    agent = agent_over(gateway, "pap_sign_in", seen)
+    async with agent.run_stream("Sign me in at Manzanita") as run:
+        await run.get_output()
+        messages = run.all_messages()
+
+    stored = serialize_messages(messages)
+    (kept,) = [
+        part
+        for message in stored
+        for part in message["parts"]
+        if part["part_kind"] == "tool-return"
+    ]
+    # What is stored as the model's content is the model view, as JSON.
+    assert OPEN not in kept["content"] and CODE not in kept["content"]
+    assert json.loads(kept["content"])["type"] == PapSignIn.display_type
+
+    (tool,) = [m for m in _convert_to_chat_messages(stored, "a1") if m.role == "tool"]
+    page = json.loads(tool.content)
+    display = page["_meta"][DISPLAY_META_KEY]
+    assert display["data"]["open"] == OPEN and display["data"]["code"] == CODE
+    assert "open" not in page["data"]

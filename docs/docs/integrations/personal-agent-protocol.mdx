@@ -104,6 +104,13 @@ model and hands them to the page:
 - `agent_runtimes.transports.agui_displays.DisplayAGUIAdapter` streams the
   AG-UI tool result with the display beside the model view, under `_meta`.
   The model's message history keeps the model view alone.
+  `agent_runtimes.transports.vercel_displays.DisplayVercelAIAdapter` does the
+  same on the Vercel AI stream (`tool-output-available`'s `output` carries the
+  `_meta`).
+- A reloaded history draws the card again: the stored tool return keeps the
+  model view as its content and the wire display beside it, and the history
+  route serves the page the model view with the display under `_meta`, as the
+  live stream did.
 - In the page, the chat calls `resolveToolResult` (`@datalayer/reactor/ui`):
   a result that embeds a display is drawn from it; otherwise a tool binding
   claims the tool by name. `ReactorDisplay` (`@datalayer/reactor/ui/react`)

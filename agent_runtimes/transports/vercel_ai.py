@@ -30,12 +30,6 @@ from starlette.responses import Response, StreamingResponse
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
-    from pydantic_ai.ui.vercel_ai import VercelAIAdapter
-else:
-    try:
-        from pydantic_ai.ui.vercel_ai import VercelAIAdapter
-    except (ImportError, ModuleNotFoundError):
-        VercelAIAdapter = None  # type: ignore[assignment,misc]
 
 from pydantic_ai import DeferredToolRequests
 from pydantic_ai.tools import ToolDefinition
@@ -52,6 +46,7 @@ from ..otel.prompt_turn_metrics import (
 )
 from ..streams.loop import get_agent_enabled_mcp_tool_names, get_known_mcp_tool_names
 from .base import BaseTransport
+from .vercel_displays import DisplayVercelAIAdapter as VercelAIAdapter
 
 logger = logging.getLogger(__name__)
 

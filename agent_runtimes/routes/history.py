@@ -11,8 +11,10 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from reactor.ui import DISPLAY_META_KEY
 
 from agent_runtimes.context.usage import get_usage_tracker
+from agent_runtimes.transports.agui_displays import with_page_meta
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +125,12 @@ def _convert_to_chat_messages(
                         )
                     )
                 elif part_kind == "tool-return":
-                    # Tool return - create a tool message
+                    # Tool return - create a tool message. A result that
+                    # carried a display (REACTOR_UI RU-1) reaches the page as
+                    # it did live: the model view with the display in `_meta`.
+                    display = part.get("display")
+                    if display is not None:
+                        content = with_page_meta(content, {DISPLAY_META_KEY: display})
                     messages.append(
                         HistoryMessage(
                             id=str(uuid.uuid4()),
