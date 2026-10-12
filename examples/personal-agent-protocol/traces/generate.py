@@ -17,8 +17,9 @@ replaced by a placeholder such as `‹session token›`, and every random opaque
 identifier by a stable one (`cnv_1`), so the output is deterministic. The
 script refuses to write a trace in which a secret survives.
 
-From the Agent Runtimes repository, with the PAP Python SDK installed (0.9.0,
-as Agent Runtimes installs it):
+From the Agent Runtimes repository, with the released PAP Python SDK installed
+(Agent Runtimes pins 0.15.0 and later; the traces in the repository were
+recorded with 0.16.0):
 
 ```bash
 python examples/personal-agent-protocol/traces/generate.py
@@ -50,6 +51,7 @@ from personal_agent_protocol import (
     SessionClient,
     generate_message_id,
 )
+from personal_agent_protocol.__version__ import __version__ as sdk_version
 from personal_agent_protocol.accounts import AccountTokenClient, AccountTokenContext
 from personal_agent_protocol.company import CompanyService, build_company, company_app
 from personal_agent_protocol.conversations import StreamReconnected, TextDelta
@@ -265,6 +267,8 @@ class Trace:
                 "title": self.title,
                 "description": self.description,
                 "generator": "examples/personal-agent-protocol/traces/generate.py",
+                # The released SDK it was recorded with: the views say it (E-14).
+                "sdk": f"personal-agent-protocol {sdk_version}",
                 "parties": self.parties,
                 "steps": self.steps,
             },
@@ -636,6 +640,20 @@ async def discover_and_start(world: World, chat: list[dict[str, Any]]) -> None:
 # Worlds -------------------------------------------------------------------------------
 
 
+def said(page_: Any) -> Any:
+    """The company's last message on a page: a ``state`` event may follow it (PAP SDK 0.15)."""
+    return next(
+        event.message
+        for event in reversed(page_.events)
+        if event.message and event.message.role != "user"
+    )
+
+
+def refused(page_: Any) -> Any:
+    """The last error event on a page: a ``state`` event may follow it (PAP SDK 0.15)."""
+    return next(event.error for event in reversed(page_.events) if event.error)
+
+
 async def user_with_a_company() -> Trace:
     trace = manzanita_trace(
         "user-with-a-company",
@@ -672,7 +690,7 @@ async def user_with_a_company() -> Trace:
         "Asking, signed out",
         "Conversation",
         "Atlas starts a conversation before anyone knows who Ada is. Manzanita's agent answers, "
-        f"then sends an authorization event: {page_.events[-1].error}.",
+        f"then sends an authorization event: {refused(page_)}.",
         chat=[
             say("manzanita", reply),
             say(
@@ -711,7 +729,7 @@ async def user_with_a_company() -> Trace:
         wait=0,
         **world.who,
     )
-    proposal = page_.events[-1].message.operation  # type: ignore[union-attr]
+    proposal = said(page_).operation
     trace.step(
         "The same conversation, signed in",
         "Conversation + Operation",
@@ -719,7 +737,7 @@ async def user_with_a_company() -> Trace:
         "operation: one summary, exact terms, revision 1. Nothing happens until it is confirmed.",
         chat=[
             say("user", "Exchange it for something warmer."),
-            say("manzanita", page_.events[-1].message.text),  # type: ignore[union-attr]
+            say("manzanita", said(page_).text),
             approval("manzanita", proposal, "needs your approval"),
         ],
         views=await world.views(),
@@ -1107,7 +1125,7 @@ async def operations() -> Trace:
         wait=0,
         **world.who,
     )
-    first = page_.events[-1].message.operation  # type: ignore[union-attr]
+    first = said(page_).operation
     try:
         await world.operations.confirm(
             world.ops,
@@ -1129,7 +1147,7 @@ async def operations() -> Trace:
                 "manzanita.example/device",
                 "Ada signs in and approves Atlas.",
             ),
-            say("manzanita", page_.events[-1].message.text),  # type: ignore[union-attr]
+            say("manzanita", said(page_).text),
             approval("manzanita", first, "needs your approval"),
         ],
         views=await world.views(),
@@ -1196,7 +1214,7 @@ async def operations() -> Trace:
         wait=0,
         **world.who,
     )
-    other = page_.events[-1].message.operation  # type: ignore[union-attr]
+    other = said(page_).operation
     trace.action("user", "atlas", "Declines the second proposal")
     cancelled = await world.operations.cancel(
         world.ops, other.operation_id, token=world.session, **world.who
@@ -1369,7 +1387,7 @@ async def two_companies() -> Trace:
         )
 
     page_ = await tell(None, None, "Pay INV-0042")
-    reply = page_.events[-1].message
+    reply = said(page_)
     connect = reply.data["connect"]
     trace.secret(connect["user_code"], "‹Northwind user code›")
     trace.step(
@@ -1405,7 +1423,7 @@ async def two_companies() -> Trace:
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Done. Pay INV-0042")
-    relayed = page_.events[-1].message.operation
+    relayed = said(page_).operation
     trace.step(
         "Northwind proposes; Ledgerly relays",
         "Operation relayed",
@@ -1414,7 +1432,7 @@ async def two_companies() -> Trace:
         "Ada as its own operation, quoting Northwind's summary as written.",
         chat=[
             say("user", "Done. Pay INV-0042."),
-            say("ledgerly", page_.events[-1].message.text),
+            say("ledgerly", said(page_).text),
             approval("ledgerly", relayed, "needs your approval"),
         ],
         views=await views(),
@@ -1442,7 +1460,7 @@ async def two_companies() -> Trace:
         page_.cursor,
         "Allow Ledgerly to pay Acme invoices up to EUR 2000 without asking",
     )
-    grant = page_.events[-1].message.operation
+    grant = said(page_).operation
     trace.action("user", "atlas", "Approves the standing permission")
     granted = await operations_client.confirm(
         ops, grant, approval=approve(grant), token=session, **who
@@ -1464,7 +1482,7 @@ async def two_companies() -> Trace:
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0043")
-    told = page_.events[-1].message
+    told = said(page_)
     trace.step(
         "Within the bounds",
         "approved_by: standing_permission",
@@ -1475,7 +1493,7 @@ async def two_companies() -> Trace:
     )
 
     page_ = await tell(page_.conversation_id, page_.cursor, "Pay INV-0044")
-    over = page_.events[-1].message.operation
+    over = said(page_).operation
     trace.step(
         "Beyond the bounds",
         "Ask again",
@@ -1483,7 +1501,7 @@ async def two_companies() -> Trace:
         "Northwind's proposal to Ada again. Nothing is paid until she approves.",
         chat=[
             say("user", "Pay INV-0044."),
-            say("ledgerly", page_.events[-1].message.text),
+            say("ledgerly", said(page_).text),
             approval("ledgerly", over, "needs your approval"),
         ],
         views=await views(),

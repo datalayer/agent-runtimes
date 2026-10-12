@@ -3,6 +3,7 @@
   "title": "Operations",
   "description": "Manzanita proposes an exchange; Atlas confirms only the exact revision Ada approved, at most once.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "sdk": "personal-agent-protocol 0.16.0",
   "parties": [
     {
       "id": "user",
@@ -96,6 +97,9 @@
               },
               "auth": {
                 "issuer": "https://manzanita.example",
+                "direct": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
                 "device": {
                   "scopes": ["orders:read", "orders:write"]
                 },
@@ -128,6 +132,21 @@
                   }
                 ]
               },
+              "apis": [
+                {
+                  "type": "openapi",
+                  "url": "https://manzanita.example/api/openapi.json",
+                  "description": "Orders and exchanges"
+                },
+                {
+                  "type": "mcp",
+                  "url": "https://manzanita.example/mcp",
+                  "description": "Orders and exchanges, as MCP tools"
+                }
+              ],
+              "web": {
+                "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
+              },
               "extensions": {
                 "operations": {
                   "version": "1",
@@ -159,7 +178,9 @@
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "poppy_domains": ["manzanita.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://manzanita.example/oauth/device"
+              "device_1": "https://manzanita.example/oauth/device",
+              "authorization_endpoint": "https://manzanita.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
             }
           }
         },
@@ -197,127 +218,6 @@
               "scope": "",
               "session_id": "ses_1",
               "signed_in": false
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
             }
           }
         },
@@ -453,7 +353,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -499,97 +399,6 @@
         },
         {
           "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
@@ -618,97 +427,6 @@
             },
             "body": {
               "error": "authorization_pending"
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
             }
           }
         },
@@ -759,97 +477,6 @@
         },
         {
           "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
@@ -891,6 +518,13 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
                     "id": "msg_2",
@@ -911,14 +545,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": true,
-                      "url": null,
+                      "url": "https://manzanita.example/operations/op_1",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_2",
+              "cursor": "evt_4",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -996,7 +637,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -1052,7 +693,7 @@
                 },
                 "expires_at": "2026-10-11T09:15:10Z",
                 "user_approval_required": true,
-                "url": null,
+                "url": "https://manzanita.example/operations/op_1",
                 "confirmation": null,
                 "result": null
               }
@@ -1125,7 +766,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -1176,9 +817,8 @@
                 },
                 "return_by": "2026-10-25"
               },
-              "expires_at": null,
               "user_approval_required": true,
-              "url": null,
+              "url": "https://manzanita.example/operations/op_1",
               "confirmation": {
                 "revision": 2,
                 "approved_by": "user",
@@ -1233,9 +873,8 @@
                 },
                 "return_by": "2026-10-25"
               },
-              "expires_at": null,
               "user_approval_required": true,
-              "url": null,
+              "url": "https://manzanita.example/operations/op_1",
               "confirmation": {
                 "revision": 2,
                 "approved_by": "user",
@@ -1320,7 +959,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events"
+            "value": "idle · agent · 8 events"
           },
           {
             "label": "Operation orders.exchange",
@@ -1338,7 +977,7 @@
           "from": "atlas",
           "to": "manzanita",
           "method": "POST",
-          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?cursor=evt_2&wait=0",
+          "url": "https://manzanita.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -1363,7 +1002,7 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_3",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1374,7 +1013,14 @@
                   }
                 },
                 {
-                  "id": "evt_4",
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_7",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1396,14 +1042,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": true,
-                      "url": null,
+                      "url": "https://manzanita.example/operations/op_2",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_4",
+              "cursor": "evt_8",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -1450,7 +1103,7 @@
               },
               "expires_at": "2026-10-11T09:15:10Z",
               "user_approval_required": true,
-              "url": null,
+              "url": "https://manzanita.example/operations/op_2",
               "confirmation": null,
               "result": {
                 "summary": "Nothing was changed.",

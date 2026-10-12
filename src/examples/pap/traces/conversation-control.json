@@ -3,6 +3,7 @@
   "title": "Conversation control",
   "description": "A Direct Conversation under an open one, a handoff to a person at Manzanita, and closing, through the real ConversationClient.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "sdk": "personal-agent-protocol 0.16.0",
   "parties": [
     {
       "id": "user",
@@ -96,6 +97,9 @@
               },
               "auth": {
                 "issuer": "https://manzanita.example",
+                "direct": {
+                  "scopes": ["orders:read", "orders:write"]
+                },
                 "device": {
                   "scopes": ["orders:read", "orders:write"]
                 },
@@ -128,6 +132,21 @@
                   }
                 ]
               },
+              "apis": [
+                {
+                  "type": "openapi",
+                  "url": "https://manzanita.example/api/openapi.json",
+                  "description": "Orders and exchanges"
+                },
+                {
+                  "type": "mcp",
+                  "url": "https://manzanita.example/mcp",
+                  "description": "Orders and exchanges, as MCP tools"
+                }
+              ],
+              "web": {
+                "browser_session_endpoint": "https://manzanita.example/poppy/browser-session"
+              },
               "extensions": {
                 "operations": {
                   "version": "1",
@@ -159,7 +178,9 @@
               "revocation_endpoint": "https://manzanita.example/oauth/revoke",
               "poppy_domains": ["manzanita.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://manzanita.example/oauth/device"
+              "device_1": "https://manzanita.example/oauth/device",
+              "authorization_endpoint": "https://manzanita.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
             }
           }
         },
@@ -197,127 +218,6 @@
               "scope": "",
               "session_id": "ses_1",
               "signed_in": false
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "manzanita",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
             }
           }
         },
@@ -434,11 +334,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 3 events"
+            "value": "idle · agent · 5 events"
           },
           {
             "label": "Direct conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           }
         ]
       },
@@ -486,6 +386,13 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:00Z",
                   "type": "message",
                   "message": {
                     "id": "msg_2",
@@ -493,9 +400,16 @@
                     "role": "company",
                     "text": "Hello from Manzanita Outfitters. Ask me about an order."
                   }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:00Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_2",
+              "cursor": "evt_4",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -577,11 +491,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 3 events"
+            "value": "idle · agent · 5 events"
           },
           {
             "label": "Direct conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           }
         ]
       },
@@ -666,11 +580,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · human · 6 events"
+            "value": "idle · human · 8 events"
           },
           {
             "label": "Direct conversation",
-            "value": "closed · agent · 3 events"
+            "value": "closed · agent · 5 events"
           }
         ]
       },
@@ -776,11 +690,11 @@
           },
           {
             "label": "Conversation",
-            "value": "closed · human · 7 events"
+            "value": "closed · human · 9 events"
           },
           {
             "label": "Direct conversation",
-            "value": "closed · agent · 3 events"
+            "value": "closed · agent · 5 events"
           }
         ]
       },

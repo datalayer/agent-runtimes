@@ -30,8 +30,9 @@ feature while keeping protocol secrets outside model context.
 | [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor   | Summaries only; tokens and device code withheld   |
 | [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company   | What the person was shown; ticket used once       |
 
-Every example runs against the released PAP Python SDK, 0.15.0 (Agent Runtimes
-installs `personal-agent-protocol[ui]`), with no editable install. Most run
+Every example runs against the released PAP Python SDK — Agent Runtimes pins
+0.15.0 and later (`personal-agent-protocol[ui]`); all of them ran on 0.16.0
+on 12 October 2026 (`python scripts/validate_pap_examples.py`). Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.
 
@@ -55,6 +56,13 @@ authorization URL, verifier, state, proof, or token.
 Each example links to the PAP Docusaurus site, which is canonical for protocol
 behavior and security guidance. A feature is considered demonstrated only when
 the raw PAP and Agent Runtimes examples agree on the same host/model boundary.
+
+The seven views of the examples gallery (`src/examples/Pap…Example.tsx`:
+Account Tokens, Mediated Sign-In, conversation streaming and control,
+Operations, a user with a company, two companies) replay traces recorded
+from the SDK's demo worlds by `traces/generate.py`: each trace names the SDK
+release that recorded it (`sdk`), and each view says it is recorded data, not
+live, with that release.
 
 From the Agent Runtimes repository:
 

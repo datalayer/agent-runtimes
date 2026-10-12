@@ -50,6 +50,14 @@ const VIEWS: Array<[string, React.FC, unknown]> = [
 afterEach(() => cleanup());
 
 describe('the PAP trace examples', () => {
+  it('refuses a trace that does not name the SDK release that recorded it', () => {
+    const { sdk: _sdk, ...unnamed } = operations as Record<string, unknown>;
+    expect(() => parsePapTrace(unnamed)).toThrow('Not a PAP trace');
+    expect(() =>
+      parsePapTrace({ ...operations, sdk: 'personal-agent-protocol main' }),
+    ).toThrow('Not a PAP trace');
+  });
+
   it.each(VIEWS)('%s replays every step of its trace', (_, View, raw) => {
     const trace: PapTrace = parsePapTrace(raw);
     expect(trace.steps.length).toBeGreaterThan(0);
@@ -57,6 +65,10 @@ describe('the PAP trace examples', () => {
     const view = render(<View />);
     const page = view.container;
     expect(page.textContent).toContain(trace.title);
+    // Said as recorded, with the released SDK that recorded it (E-14, AGENT_PROTOCOLS PR-05).
+    expect(page.textContent).toContain(
+      `Recorded data, not live: replayed from a trace the PAP Python SDK's demo world generated with ${trace.sdk}`,
+    );
     for (const party of trace.parties) {
       expect(page.textContent).toContain(party.name);
     }

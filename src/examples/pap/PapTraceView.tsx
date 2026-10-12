@@ -74,6 +74,8 @@ export type PapTrace = {
   title: string;
   description: string;
   generator: string;
+  /** The released SDK the trace was recorded with, as `personal-agent-protocol <version>`. */
+  sdk: string;
   parties: PapTraceParty[];
   steps: PapTraceStep[];
 };
@@ -84,6 +86,8 @@ export function parsePapTrace(value: unknown): PapTrace {
   if (
     !trace ||
     typeof trace.slug !== 'string' ||
+    typeof trace.sdk !== 'string' ||
+    !/^personal-agent-protocol \d+\.\d+\.\d+$/.test(trace.sdk) ||
     !Array.isArray(trace.parties) ||
     !Array.isArray(trace.steps) ||
     trace.steps.length === 0
@@ -655,7 +659,7 @@ export const PapTraceView: React.FC<{ trace: PapTrace; eyebrow?: string }> = ({
     <PapExamplePage
       eyebrow={eyebrow}
       title={trace.title}
-      description={`${trace.description} Replayed from a trace the PAP Python SDK's demo world generated (${trace.generator}); every token, code, proof and assertion is a placeholder.`}
+      description={`${trace.description} Recorded data, not live: replayed from a trace the PAP Python SDK's demo world generated with ${trace.sdk} (${trace.generator}); every token, code, proof and assertion is a placeholder.`}
       maxWidth={1240}
     >
       <Box

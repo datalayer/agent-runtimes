@@ -3,6 +3,7 @@
   "title": "Two companies working together",
   "description": "Ledgerly, an accounting firm, is a PAP company to Ada's agent Atlas and a PAP personal agent at Northwind Bank for her. Every approval is an Operation. This is composition: draft 0.1 defines no company-to-company protocol.",
   "generator": "examples/personal-agent-protocol/traces/generate.py",
+  "sdk": "personal-agent-protocol 0.16.0",
   "parties": [
     {
       "id": "user",
@@ -126,6 +127,9 @@
               },
               "auth": {
                 "issuer": "https://ledgerly.example",
+                "direct": {
+                  "scopes": ["books:read", "payments:write"]
+                },
                 "device": {
                   "scopes": ["books:read", "payments:write"]
                 },
@@ -173,7 +177,9 @@
               "revocation_endpoint": "https://ledgerly.example/oauth/revoke",
               "poppy_domains": ["ledgerly.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://ledgerly.example/oauth/device"
+              "device_1": "https://ledgerly.example/oauth/device",
+              "authorization_endpoint": "https://ledgerly.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
             }
           }
         },
@@ -211,127 +217,6 @@
               "scope": "",
               "session_id": "ses_1",
               "signed_in": false
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
             }
           }
         },
@@ -518,97 +403,6 @@
           }
         },
         {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
           "kind": "action",
           "from": "user",
           "to": "ledgerly",
@@ -652,97 +446,6 @@
               "refresh_token": "‹account token›"
             }
           }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://atlas.example/agent.json",
-              "client_name": "Atlas",
-              "jwks_uri": "https://atlas.example/jwks.json",
-              "redirect_uris": ["https://atlas.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "ledgerly",
-          "to": "atlas",
-          "method": "GET",
-          "url": "https://atlas.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
         }
       ]
     },
@@ -759,7 +462,7 @@
         {
           "speaker": "ledgerly",
           "kind": "message",
-          "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter ‹Northwind user code›. Tell me when done."
+          "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter the code shown with this message. Tell me when done."
         }
       ],
       "views": {
@@ -813,7 +516,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events",
+            "value": "idle · agent · 4 events",
             "group": "As a company to Atlas"
           },
           {
@@ -886,12 +589,19 @@
                 {
                   "id": "evt_2",
                   "created_at": "2026-10-11T09:00:05Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_3",
+                  "created_at": "2026-10-11T09:00:05Z",
                   "type": "message",
                   "message": {
                     "id": "msg_2",
                     "sender": "agent",
                     "role": "company",
-                    "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter ‹Northwind user code›. Tell me when done.",
+                    "text": "To pay from your Northwind account, let Ledgerly connect to it: open https://northwind.example/device and enter the code shown with this message. Tell me when done.",
                     "data": {
                       "connect": {
                         "company": "Northwind Bank",
@@ -900,9 +610,16 @@
                       }
                     }
                   }
+                },
+                {
+                  "id": "evt_4",
+                  "created_at": "2026-10-11T09:00:05Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_2",
+              "cursor": "evt_4",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -933,6 +650,9 @@
               },
               "auth": {
                 "issuer": "https://northwind.example",
+                "direct": {
+                  "scopes": ["accounts:read", "payments:write"]
+                },
                 "device": {
                   "scopes": ["accounts:read", "payments:write"]
                 },
@@ -980,7 +700,9 @@
               "revocation_endpoint": "https://northwind.example/oauth/revoke",
               "poppy_domains": ["northwind.example"],
               "dpop_signing_alg_values_supported": ["ES256", "RS256"],
-              "device_1": "https://northwind.example/oauth/device"
+              "device_1": "https://northwind.example/oauth/device",
+              "authorization_endpoint": "https://northwind.example/oauth/authorize",
+              "code_challenge_methods_supported": ["S256"]
             }
           }
         },
@@ -1018,127 +740,6 @@
               "scope": "",
               "session_id": "ses_2",
               "signed_in": false
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
             }
           }
         },
@@ -1237,97 +838,6 @@
               "interval": 5
             }
           }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
         }
       ]
     },
@@ -1394,7 +904,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events",
+            "value": "idle · agent · 4 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1505,7 +1015,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events",
+            "value": "idle · agent · 8 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1547,7 +1057,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -1561,7 +1071,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_2&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -1586,7 +1096,7 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_3",
+                  "id": "evt_5",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1597,7 +1107,14 @@
                   }
                 },
                 {
-                  "id": "evt_4",
+                  "id": "evt_6",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_7",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1623,14 +1140,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": true,
-                      "url": null,
+                      "url": "https://ledgerly.example/operations/op_1",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_8",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_4",
+              "cursor": "evt_8",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -1678,97 +1202,6 @@
         },
         {
           "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/poppy/agent.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "client_id": "https://ledgerly.example/poppy/agent.json",
-              "client_name": "Ledgerly",
-              "jwks_uri": "https://ledgerly.example/jwks.json",
-              "redirect_uris": ["https://ledgerly.example/oauth/callback"],
-              "token_endpoint_auth_method": "private_key_jwt",
-              "extensions": {
-                "operations": {
-                  "version": "1"
-                }
-              }
-            }
-          }
-        },
-        {
-          "kind": "http",
-          "from": "northwind",
-          "to": "ledgerly",
-          "method": "GET",
-          "url": "https://ledgerly.example/jwks.json",
-          "status": 200,
-          "request": {
-            "headers": {
-              "accept": "application/json"
-            }
-          },
-          "response": {
-            "headers": {
-              "content-type": "application/json"
-            },
-            "body": {
-              "keys": [
-                {
-                  "kty": "EC",
-                  "crv": "P-256",
-                  "x": "‹public key›",
-                  "y": "‹public key›",
-                  "kid": "key-1",
-                  "use": "sig",
-                  "alg": "ES256"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "kind": "http",
           "from": "ledgerly",
           "to": "northwind",
           "method": "POST",
@@ -1797,7 +1230,7 @@
               "conversation_id": "cnv_2",
               "events": [
                 {
-                  "id": "evt_5",
+                  "id": "evt_9",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1808,7 +1241,14 @@
                   }
                 },
                 {
-                  "id": "evt_6",
+                  "id": "evt_10",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_11",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -1832,14 +1272,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": false,
-                      "url": null,
+                      "url": "https://northwind.example/operations/op_2",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_12",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_6",
+              "cursor": "evt_12",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -1917,7 +1364,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 4 events",
+            "value": "idle · agent · 8 events",
             "group": "As a company to Atlas"
           },
           {
@@ -1959,7 +1406,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -2013,9 +1460,8 @@
                 "reference": "INV-0042",
                 "from_account": "DE89 3704 0044 0532 0130 00"
               },
-              "expires_at": null,
               "user_approval_required": true,
-              "url": null,
+              "url": "https://ledgerly.example/operations/op_1",
               "confirmation": {
                 "revision": 1,
                 "approved_by": "user",
@@ -2067,9 +1513,8 @@
                 "reference": "INV-0042",
                 "from_account": "DE89 3704 0044 0532 0130 00"
               },
-              "expires_at": null,
               "user_approval_required": false,
-              "url": null,
+              "url": "https://northwind.example/operations/op_2",
               "confirmation": {
                 "revision": 1,
                 "approved_by": "user",
@@ -2160,7 +1605,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 6 events",
+            "value": "idle · agent · 12 events",
             "group": "As a company to Atlas"
           },
           {
@@ -2212,7 +1657,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -2226,7 +1671,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_4&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_8&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -2251,7 +1696,7 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_7",
+                  "id": "evt_13",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2262,7 +1707,14 @@
                   }
                 },
                 {
-                  "id": "evt_8",
+                  "id": "evt_14",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_15",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2288,14 +1740,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": true,
-                      "url": null,
+                      "url": "https://ledgerly.example/operations/op_3",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_16",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_8",
+              "cursor": "evt_16",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -2347,9 +1806,8 @@
                 "uses": 5,
                 "days": 30
               },
-              "expires_at": null,
               "user_approval_required": true,
-              "url": null,
+              "url": "https://ledgerly.example/operations/op_3",
               "confirmation": {
                 "revision": 1,
                 "approved_by": "user",
@@ -2431,7 +1889,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 8 events",
+            "value": "idle · agent · 16 events",
             "group": "As a company to Atlas"
           },
           {
@@ -2483,11 +1941,11 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -2505,7 +1963,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_8&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_16&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -2530,7 +1988,7 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_9",
+                  "id": "evt_17",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2541,7 +1999,14 @@
                   }
                 },
                 {
-                  "id": "evt_10",
+                  "id": "evt_18",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_19",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2553,9 +2018,16 @@
                       "northwind_operation_id": "op_4"
                     }
                   }
+                },
+                {
+                  "id": "evt_20",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_10",
+              "cursor": "evt_20",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -2592,7 +2064,7 @@
               "conversation_id": "cnv_3",
               "events": [
                 {
-                  "id": "evt_11",
+                  "id": "evt_21",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2603,7 +2075,14 @@
                   }
                 },
                 {
-                  "id": "evt_12",
+                  "id": "evt_22",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_23",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2627,14 +2106,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": false,
-                      "url": null,
+                      "url": "https://northwind.example/operations/op_4",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_24",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_12",
+              "cursor": "evt_24",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -2678,9 +2164,8 @@
                 "reference": "INV-0043",
                 "from_account": "DE89 3704 0044 0532 0130 00"
               },
-              "expires_at": null,
               "user_approval_required": false,
-              "url": null,
+              "url": "https://northwind.example/operations/op_4",
               "confirmation": {
                 "revision": 1,
                 "approved_by": "standing_permission",
@@ -2770,7 +2255,7 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 10 events",
+            "value": "idle · agent · 20 events",
             "group": "As a company to Atlas"
           },
           {
@@ -2827,15 +2312,15 @@
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Conversation",
-            "value": "idle · agent · 2 events"
+            "value": "idle · agent · 4 events"
           },
           {
             "label": "Operation payments.transfer",
@@ -2857,7 +2342,7 @@
           "from": "atlas",
           "to": "ledgerly",
           "method": "POST",
-          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_10&wait=0",
+          "url": "https://ledgerly.example/poppy/conversations/cnv_1/messages?cursor=evt_20&wait=0",
           "status": 202,
           "request": {
             "headers": {
@@ -2882,7 +2367,7 @@
               "conversation_id": "cnv_1",
               "events": [
                 {
-                  "id": "evt_13",
+                  "id": "evt_25",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2893,7 +2378,14 @@
                   }
                 },
                 {
-                  "id": "evt_14",
+                  "id": "evt_26",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_27",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2919,14 +2411,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": true,
-                      "url": null,
+                      "url": "https://ledgerly.example/operations/op_5",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_28",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_14",
+              "cursor": "evt_28",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
@@ -2963,7 +2462,7 @@
               "conversation_id": "cnv_4",
               "events": [
                 {
-                  "id": "evt_15",
+                  "id": "evt_29",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2974,7 +2473,14 @@
                   }
                 },
                 {
-                  "id": "evt_16",
+                  "id": "evt_30",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "working",
+                  "responder": "agent"
+                },
+                {
+                  "id": "evt_31",
                   "created_at": "2026-10-11T09:00:10Z",
                   "type": "message",
                   "message": {
@@ -2998,14 +2504,21 @@
                       },
                       "expires_at": "2026-10-11T09:15:10Z",
                       "user_approval_required": false,
-                      "url": null,
+                      "url": "https://northwind.example/operations/op_6",
                       "confirmation": null,
                       "result": null
                     }
                   }
+                },
+                {
+                  "id": "evt_32",
+                  "created_at": "2026-10-11T09:00:10Z",
+                  "type": "state",
+                  "status": "idle",
+                  "responder": "agent"
                 }
               ],
-              "cursor": "evt_16",
+              "cursor": "evt_32",
               "has_more": false,
               "status": "idle",
               "responder": "agent"
