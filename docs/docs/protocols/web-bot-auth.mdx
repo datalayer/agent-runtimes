@@ -95,7 +95,13 @@ found): the agent is never named from a URL that could not be resolved.
 Keys are looked up by the pair (agent URL, `keyid`), never by `keyid`
 alone; a directory is fetched over https only, never from a private or
 loopback address, with no redirect followed, a size limit, and a five-minute
-pause after a failed fetch that keeps what was cached.
+pause after a failed fetch that keeps what was cached. In Python the fetch is
+the PAP SDK's resolving client (`create_resolving_client`, the one egress
+path Datalayer's gateway uses towards companies): the name is resolved first
+and refused unless every address is public, only that address is dialled, no
+proxy is used — so a name pointing inside the network is refused before
+anything is sent, not only an address written in the URL
+(`test_protocols_web_bot_auth_egress.py`).
 
 ## The plugin and its points
 
@@ -107,7 +113,7 @@ Extension (see [Agent protocols as plugins](./agent-protocols)):
 | --- | --- | --- |
 | `web_bot_auth.signer` | none | its signer (the key stays with it) |
 | `web_bot_auth.nonceStore` | `memory` | a store shared by its processes |
-| `web_bot_auth.extension.directory` | `httpx` / `fetch` | its own egress to fetch directories |
+| `web_bot_auth.extension.directory` | the PAP SDK's resolving client / `fetch` | its own egress to fetch directories |
 | `web_bot_auth.extension.jwks_uri` | `httpx` / `fetch` | idem |
 | `web_bot_auth.extension.cimd` | none | a client-metadata-document discovery |
 

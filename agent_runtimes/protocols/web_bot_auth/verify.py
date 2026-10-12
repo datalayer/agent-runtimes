@@ -120,20 +120,39 @@ def _refuse_host(url: str, insecure_hosts: frozenset[str]) -> str | None:
     return None
 
 
-async def httpx_fetch(url: str) -> Fetched:
-    """Fetch a directory: no redirect followed, a timeout, a size limit."""
-    import httpx
+def resolving_fetch(
+    *,
+    resolver: Callable[[str], Awaitable[list[str]]] | None = None,
+    transport: Any = None,
+) -> Fetch:
+    """A directory fetch on the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13).
 
-    async with httpx.AsyncClient(follow_redirects=False, timeout=5.0) as client:
-        async with client.stream(
-            "GET", url, headers={"Accept": DIRECTORY_MEDIA_TYPE}
-        ) as response:
-            body = b""
-            async for chunk in response.aiter_bytes():
-                body += chunk
-                if len(body) > MAX_DIRECTORY_BYTES:
-                    raise ValueError("the key directory is too large")
-            return response.status_code, dict(response.headers), body
+    ``create_resolving_client`` (personal-agent-protocol 0.14.0 and later):
+    the host is resolved before the request and refused unless HTTPS with
+    every address public (``unsafe_address``, nothing sent), only the
+    approved address is dialled, no redirect is followed, no proxy from the
+    environment is used, and the body is bounded. A name pointing inside —
+    which the URL check alone cannot see — is refused the same way.
+    """
+
+    async def fetch(url: str) -> Fetched:
+        from personal_agent_protocol import create_resolving_client
+        from personal_agent_protocol.reactor import resolve_addresses
+
+        async with create_resolving_client(
+            resolver=resolver or resolve_addresses,
+            transport=transport,
+            timeout=5.0,
+            max_response_bytes=MAX_DIRECTORY_BYTES,
+        ) as client:
+            response = await client.get(url, headers={"Accept": DIRECTORY_MEDIA_TYPE})
+            return response.status_code, dict(response.headers), response.content
+
+    return fetch
+
+
+#: The default fetch of the ``directory`` and ``jwks_uri`` discoveries.
+httpx_fetch: Fetch = resolving_fetch()
 
 
 class KeyDiscovery(Protocol):
@@ -175,7 +194,8 @@ class DirectoryDiscovery:
     """``type=directory``: the well-known directory of the agent's origin, its response signed."""
 
     fetch: Fetch = httpx_fetch
-    #: Hosts reached over plain http on purpose: a local example, never a deployment.
+    #: Hosts reached over plain http on purpose: a local example, never a
+    #: deployment — with a fetch of its own: the default refuses all but public HTTPS.
     insecure_hosts: frozenset[str] = frozenset()
 
     async def keys(self, agent: str, now: int) -> list[PublicKey]:
