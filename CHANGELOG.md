@@ -7,6 +7,17 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.4.0
+
+The ui channel on Reactor 1.2.0 (`reactor.ui`): a page and a runtime of this release move together — an older page loses what a newer runtime shows, and the other way round.
+
+- **Answers, steps, elements, authors and window messages are `reactor.ui` displays** (REACTOR_UI RU-2, RU-3): no `render_a2ui_surface` tool call, no `answer-` prefix, no `loop.*` events; each button offered with a token the session minted, a press checked before anything runs (403 not offered, 422 unknown).
+- **What the code asks is a display, a press its answer** (RU-4): `loop.ask` gone; a rule's *Ask first* is two buttons, Allow and Refuse; an answer checked before the code resumes (422, 409).
+- **One WebSocket for the ui channel** (RU-W): `WS /api/v1/apps/ui` — first-frame auth, numbered ops, resume, heartbeats, backpressure; no `reactor.ui` op rides the AG-UI run.
+- **Protocols as specs** (AGENT_PROTOCOLS PS-01 to PS-05, agentspecs 0.0.81): the protocols catalogue in both languages, `protocols` and `ui` on agents and applications, `Application(..., protocols=, ui=)`; UI plugins renamed **ui** (`UISpec`, `UI_CATALOGUE`), old keys refused.
+- **A Preview run ends with an answer or a stated error**: MCP toolsets wait 30 s for the handshake (a cold gateway worker), their client 30 s / 300 s read; a stream that ends without RUN_FINISHED or RUN_ERROR gets a closing RUN_ERROR, the page says the run stopped.
+- **PAP**: *Ask me first* reaches a company's confirmation (PAP_DATALAYER R-04); PAP and PACT in one task (EX-07); MCP and A2A inventory and the protocols docs (PR-01, PR-52, DOC-01, DOC-05).
+
 ## 1.3.114
 
 - **A2A extensions an application declares** (`a2a.extensions` in its Appspec, agentspecs 0.0.80) published on its Agent Card after the runtime's own, in Python and TypeScript (AGENT_PROTOCOLS PR-02).

@@ -30,7 +30,7 @@ dependencies = [
     # `reactor.ui` (1.1.0): a tool's display, its model view for the model and
     # its wire for the page (REACTOR_UI RU-1); 1.1.1 (unreleased): the ui
     # channel's WebSocket, `reactor.ui.ws` (RU-W).
-    "datalayer_reactor>=1.1.1",
+    "datalayer_reactor>=1.2.0",
     # PAP is a runtime protocol capability, not an example-only dependency.
     # 0.3.1 is the first release with matching Python/TypeScript Direct Sign-In
     # orchestration and a root-published TypeScript package.
@@ -44,7 +44,7 @@ dependencies = [
     # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
     # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
     # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
-    "agentspecs>=0.0.80",
+    "agentspecs>=0.0.81",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
