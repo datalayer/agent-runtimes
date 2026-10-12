@@ -17,6 +17,7 @@ export const EXAMPLE_GROUP_ORDER = [
   'A2UI',
   'A2A',
   'Personal Agent Protocol',
+  'Agent protocols',
   'AG-UI',
   'Chat',
   'Document',
@@ -41,6 +42,8 @@ export const getExampleGroup = (id: string): string => {
   // Agents reached over the A2A protocol: their own category, after A2UI.
   if (id.startsWith('AgentA2A')) return 'A2A';
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
+  // The other agent protocols' examples: signed requests, commerce (AGENT_PROTOCOLS EX-10).
+  if (id.startsWith('Protocol')) return 'Agent protocols';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';
   // Each remaining Agent* example demonstrates one capability of the

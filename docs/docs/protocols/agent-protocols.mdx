@@ -115,6 +115,7 @@ against a local test counterpart; none needs an account.
 | EX-07 | `python examples/protocols/pap_and_pact/app.py` | a PAP company and a PACT Brand, one record | [PAP and PACT](./pap-and-pact) |
 | EX-08 | `loop apps protocols agentspecs/agentspecs/apps/accounting.yaml` | what the runtime speaks, and what an application uses | below |
 | EX-09 | the fixtures of *Conformance* above | the same bytes in both languages | above |
+| EX-10 | `EXAMPLE=ProtocolSignedRequestsExample npm run dev`, `EXAMPLE=ProtocolUcpCheckoutExample npm run dev` | the gallery's *Agent protocols*: a request signed in the browser, a UCP checkout approved on a card | [Web Bot Auth](./web-bot-auth#in-the-browser), [UCP](./ucp#in-the-browser) |
 
 `loop apps protocols [APP]` (and `GET /api/v1/protocols`, `listProtocols()`
 in TypeScript) prints each plugin's description — name, id, version, layer,

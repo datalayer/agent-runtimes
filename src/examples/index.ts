@@ -38,6 +38,8 @@ export { default as AgentCodemodeExample } from './AgentCodemodeExample';
 export { default as AgentCodeSandboxesExample } from './AgentCodeSandboxesExample';
 export { default as AgentDecideExample } from './AgentDecideExample';
 export { default as AgentA2ATeamExample } from './AgentA2ATeamExample';
+export { default as ProtocolSignedRequestsExample } from './ProtocolSignedRequestsExample';
+export { default as ProtocolUcpCheckoutExample } from './ProtocolUcpCheckoutExample';
 export { default as PapCompanyDiscoveryExample } from './PapCompanyDiscoveryExample';
 export { default as PapAgentIdentityExample } from './PapAgentIdentityExample';
 export { default as PapAuthorizationBoundaryExample } from './PapAuthorizationBoundaryExample';

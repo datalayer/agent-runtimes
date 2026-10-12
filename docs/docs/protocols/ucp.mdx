@@ -91,6 +91,26 @@ and the same proposal refused a second time (*this proposal was used
 already*). Without `--yes` it asks you to approve. The TypeScript client
 (`ucp.unit.test.ts`) runs against an in-memory twin of the merchant.
 
+### In the browser
+
+The examples gallery's **UCP checkout** (*Agent protocols* group, example
+EX-10) buys from the same store, in TypeScript, in the page:
+`src/protocols/ucp/merchant.ts` is *Example Store* as a `fetch` (its
+catalogue, totals, email gate, idempotency and test payment; every answer
+read by the client's `@ucp-js/sdk` schema). *Propose* puts two Sencha teas in
+a checkout and proposes the exact purchase; *Complete the purchase* asks the
+host's `ucp.approver`, which is the card on the page — *Approve* buys once
+(the order shown), *Decline* buys nothing, and the same proposal is refused
+after (*this proposal was used already*). The test payment's token is held by
+the page's `ucp.paymentInstruments` and appears nowhere.
+
+```bash
+EXAMPLE=ProtocolUcpCheckoutExample npm run dev
+```
+
+Its work is `src/examples/protocols/ucpCheckoutDemo.ts`, run by
+`src/examples/__tests__/protocolExamples.test.ts`.
+
 ## Conformance
 
 UCP `2026-08-25`. `ucp/fixtures/checkout.json` (a checkout and its revision digest) is read by `test_protocols_ucp.py` and `ucp.unit.test.ts`: both languages compute the same digest. Every answer of the test merchant is validated by `ucp-sdk`; the TypeScript client validates with `@ucp-js/sdk`.

@@ -348,6 +348,16 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Two applications as a team over A2A: Sales in the browser (@a2a-js/sdk) asks Accounting on a runtime (fasta2a, Odoo read only), each an Office Assistant character.',
   ),
   makeEntry(
+    'ProtocolSignedRequestsExample',
+    () => import('./ProtocolSignedRequestsExample'),
+    'Web Bot Auth in the browser: a key made in the page signs a request — its three headers and the signature base — verified, then a replay and a changed path refused.',
+  ),
+  makeEntry(
+    'ProtocolUcpCheckoutExample',
+    () => import('./ProtocolUcpCheckoutExample'),
+    'A UCP checkout at a test store in the page: the exact purchase proposed, approved on a card once, bought once.',
+  ),
+  makeEntry(
     'PapCompanyDiscoveryExample',
     () => import('./PapCompanyDiscoveryExample'),
     'Validate a PAP company document and reduce it to the public capabilities safe for an agent or UI.',

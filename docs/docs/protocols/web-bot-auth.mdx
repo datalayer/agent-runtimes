@@ -140,6 +140,24 @@ in-flight requests finish. The same key signs in TypeScript: `vectors.json`'s
 `cross` request is signed in Python, reproduced header for header by
 `webBotAuth.unit.test.ts` and verified by the Python verifier.
 
+### In the browser
+
+The examples gallery's **Signed requests** (*Agent protocols* group, example
+EX-10) does the same in a page, with no server: a fresh Ed25519 key made with
+WebCrypto signs `GET https://shop.example/products?q=tea` through
+`signRequest`; the page shows the three headers, the signature base exactly
+as the signer was handed it, and the public key the directory lists (the
+private key is never shown), then what the shop's `verifyRequest` finds —
+`verified`, the same request again `invalid` (*the nonce was seen before*),
+and the path changed `invalid`. *Sign again with a new key* repeats it.
+
+```bash
+EXAMPLE=ProtocolSignedRequestsExample npm run dev
+```
+
+Its work is `src/examples/protocols/signedRequestsDemo.ts`, run by
+`src/examples/__tests__/protocolExamples.test.ts`.
+
 ## Conformance
 
 `draft-ietf-webbotauth-httpsig-protocol-00`. `web_bot_auth/fixtures/vectors.json` holds the draft's Ed25519 vectors E.2.1 to E.2.3, reproduced byte for byte by `test_protocols_web_bot_auth.py` and `webBotAuth.unit.test.ts`, and a `cross` request signed in Python that TypeScript reproduces header for header.
