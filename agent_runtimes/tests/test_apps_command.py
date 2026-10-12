@@ -118,9 +118,12 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "decide",
         "disaster-assessment",
         "event-response",
+        # The two Personal Agent Protocol examples (agentspecs 881a752, PAP_DATALAYER E-01, E-02).
+        "exchange-desk",
         "inbox-triage",
         "month-end-close",
         "model-choice",
+        "order-desk",
         "pipeline-report",
         "quote-calculator",
         "report-from-a-file",

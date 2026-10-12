@@ -56,6 +56,12 @@ CAMEL = {
     "character_alone": "characterAlone",
     "settings_ui": "settingsUi",
     "custom_components": "customComponents",
+    # Personal Agent Protocol (pap.connections[], pap.company, its operations).
+    "sign_in": "signIn",
+    "signed_out": "signedOut",
+    "personal_agents": "personalAgents",
+    "registered_agents": "registeredAgents",
+    "user_approval_required": "userApprovalRequired",
 }
 
 #: The keys whose value is carried as it is written: a component tree, weights
@@ -143,6 +149,11 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         # Components of its own: said only when it has some.
         if not spec["interface"].get("custom_components"):
             spec["interface"].pop("custom_components", None)
+        # Personal Agent Protocol only when the application says something of it:
+        # an Appspec that does not mention `pap` reads back with none (the TypeScript
+        # reader's rule), so the catalogue leaves the defaults out too.
+        if "pap" in spec and spec["pap"] == type(app.pap)().model_dump(mode="json", by_alias=True):
+            spec.pop("pap")
         for key in ("description", "instructions", "goal"):
             spec[key] = _flat(spec.get(key))
         spec["interface"]["welcome"] = _flat(spec["interface"].get("welcome"))
