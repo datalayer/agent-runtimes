@@ -24,6 +24,7 @@ def extension() -> ReactorExtension:
     from .agentic_commerce.plugin import plugin as agentic_commerce
     from .mcp import plugin as mcp
     from .pact.plugin import plugin as pact
+    from .pap import plugin as pap
     from .ucp.plugin import plugin as ucp
     from .web_bot_auth.plugin import plugin as web_bot_auth
 
@@ -32,7 +33,7 @@ def extension() -> ReactorExtension:
             name=EXTENSION,
             version="1.0.0",
             display_name="Agent protocols",
-            description="MCP, A2A, Web Bot Auth, UCP, the Agentic Commerce Protocol and PACT, each a plugin; their extensions its contribution points.",
+            description="MCP, A2A, Web Bot Auth, UCP, the Agentic Commerce Protocol, PACT and PAP, each a plugin; their extensions its contribution points.",
             octicon="plug",
         ),
         plugins=[
@@ -43,6 +44,7 @@ def extension() -> ReactorExtension:
             ucp(),
             agentic_commerce(),
             pact(),
+            pap(),
         ],
     )
 

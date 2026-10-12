@@ -6,7 +6,7 @@ title: Personal Agent Protocol
 # Personal Agent Protocol
 
 Agent Runtimes depends on Personal Agent Protocol (PAP) in Python and
-TypeScript: `personal-agent-protocol[ui]` (0.9.0, implementing the
+TypeScript: `personal-agent-protocol[ui]` (0.15.0, implementing the
 [draft 0.1 specification](https://personalagentprotocol.org/docs/spec) and
 Operations v1) and `@datalayer/personal-agent-protocol`. The integration
 divides responsibility explicitly:
@@ -20,7 +20,8 @@ divides responsibility explicitly:
 
 ## Python
 
-`PapPersonalAgentCapability` currently exposes two credential-free methods:
+Without a host, `PapPersonalAgentCapability` exposes two credential-free
+methods:
 
 ```python
 from agent_runtimes.pap import PapPersonalAgentCapability
@@ -37,6 +38,54 @@ count, signing algorithms, and extension versions. Neither contains endpoint
 operational endpoint URLs, response bodies, JWK coordinates, assertions,
 proofs, or tokens. The verified issuer and client ID remain visible because
 they are the public identities being inspected.
+
+### A local runtime's personal agent
+
+Given the host's PAP Reactor, the same capability is a local runtime's
+personal agent: it uses the SDK's `SessionClient`, `ConversationClient`,
+`DeviceSignInClient` and `OperationsClient`, and answers summaries only.
+
+```python
+from personal_agent_protocol import build_pap_reactor
+
+reactor, _ = build_pap_reactor(http_client=http, plugins=[host_plugin])
+pap = PapPersonalAgentCapability(
+    reactor=reactor, http_client=http,
+    client_id="https://atlas.example/agent.json", tenant_id="local",
+)
+answer = await pap.ask("manzanita.example", "Where is my order?", user_id="ada")
+# answer.authorization == {"error": "sign_in_required", "scope": "orders:read orders:write"}
+started = await pap.sign_in("manzanita.example", user_id="ada")
+# started.open and started.code are for the person, on the company's own page
+status = await pap.sign_in_status("manzanita.example", user_id="ada")
+answer = await pap.ask("manzanita.example", "Exchange it for a warmer one", user_id="ada")
+proposed = answer.operations[0]
+done = await pap.confirm("manzanita.example", proposed.operation_ref, proposed.revision, user_id="ada")
+```
+
+The host contributes to the SDK's points what a personal agent holds: its
+signing key (`pap.signer`), DPoP keys (`pap.dpopProofProvider`), tokens
+(`pap.tokenStore`), one-use authorization state
+(`pap.authorizationStateStore`), pairwise identities
+(`pap.pairwiseUserIdStore`) and the person's approval surface
+(`pap.approvalSurface`). The capability fails closed without them: no
+reactor, every session call raises `PapCapabilityError("no_host")`; no
+approval surface, `confirm` sends nothing (`no_approval_surface`).
+
+| Method | Answers | What never crosses |
+| --- | --- | --- |
+| `ask(domain, text, user_id=)` | `PapAnswer`: the company's words, what it asks for (`sign_in_required`, `insufficient_scope` and the scope), the operations it proposed | the Session Token, DPoP proofs, the pairwise id |
+| `sign_in(domain, user_id=, scopes=)` | `PapSignInSummary`: the company's link and the code the person types there; only scopes the company offers for Device Sign-In | the private device code |
+| `sign_in_status(domain, user_id=)` | `pending`, `signed_in` with granted and missing scopes | the Account Token |
+| `confirm(domain, operation_ref, revision, user_id=)` | `PapConfirmSummary`: `confirmed` with the result, `not_approved`, `terms_changed` (asked again) | the approval itself is the person's, on the host's surface |
+| `session_of(domain, user_id=)` | a one-way reference to the Session and whether someone is signed in | the Session ID |
+
+Only Device Sign-In is offered locally: Direct Sign-In needs a page the
+company returns the browser to, and Mediated Sign-In a trusted page to type
+on. In Datalayer the same journey is the gateway's `pap` toolset (`pap_ask`,
+`pap_sign_in`, `pap_sign_in_status`, `pap_confirm`), whose answers these
+mirror; there IAM holds every credential. The `local-personal-agent`
+example runs it against the SDK's Manzanita.
 
 ## TypeScript
 
@@ -315,6 +364,41 @@ sequenceDiagram
     S-->>A: the operation's result
 ```
 
+### A company in a local runtime
+
+`PapCompanyCapability` is the open-source form of that company service, for a
+local runtime: the SDK's reference company (`build_company`) with
+`pap.company.agent` being the application over its A2A route.
+
+```python
+from agent_runtimes.pap import A2AApplication, PapCompanyCapability
+from agent_runtimes.protocols import protocols_platform
+
+company = PapCompanyCapability(
+    name="Order Desk", domain="orders.example",
+    company=app_spec.pap.company,          # agentspecs AppPapCompany
+    application=A2AApplication("https://runtime.local/api/v1/a2a/order-desk/", http_client=http),
+    accounts=host_accounts,                # pap.company.accounts: whose account a person signs in to
+    http_client=http,
+)
+protocols_platform().register_plugin(*company.runtime_plugin())  # perform turns redeem its tickets
+asgi_app = company.asgi()                  # served at https://orders.example
+await company.approve_device(user_code, account_id="acct_ada")  # the host's own sign-in page
+```
+
+Its contributions: the application answers each turn (read scopes before the
+person's account is read, write scopes before an operation is proposed,
+nothing proposed for nobody signed in); each declared operation's executor
+issues a one-use ticket and asks the application to perform; the runtime
+redeems it at `pap.company.operationTickets` — a point of the
+`agent-runtimes.protocols.pap` plugin whose default is Datalayer's company
+service — and makes that one call, then says `pap_performed`; with
+`personal_agents: registered` only the listed agents are admitted. A local
+company offers the `agent` interface and Device Sign-In; an Appspec asking
+for `mcp` or `openapi` is refused when the capability is built. The
+`local-company` example runs it, reached by the `local-personal-agent`'s
+capability.
+
 ## Examples
 
 Each example in
@@ -335,6 +419,8 @@ an account, and none reaches a Datalayer service.
 | Example | Shows | Runs on |
 | --- | --- | --- |
 | `company-discovery`, `agent-identity` | `PapPersonalAgentCapability`: verified public summaries | live |
+| `local-personal-agent` | `PapPersonalAgentCapability` with the host's reactor: Session, Device Sign-In, conversation, an operation the person approves | demo worlds |
+| `local-company` | `PapCompanyCapability`: the application as a company over A2A, an operation performed once through its ticket | in process |
 | `session-assertion`, `session-lifecycle`, `browser-session` | Sessions: assertions, nonce retry, renewal, browser join | in process |
 | `direct-sign-in-boundary`, `direct-sign-in-lifecycle` | Direct Sign-In: state, PKCE, upgrade, partial consent | in process |
 | `device-sign-in` | Device Sign-In: link, code, paced polling | in process |

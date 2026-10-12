@@ -22,6 +22,7 @@ import agenticCommercePoints from '../../agent_runtimes/protocols/agentic_commer
 import a2aPoints from '../../agent_runtimes/protocols/a2a/reactor-points.json';
 import mcpPoints from '../../agent_runtimes/protocols/mcp/reactor-points.json';
 import pactPoints from '../../agent_runtimes/protocols/pact/reactor-points.json';
+import papPoints from '../../agent_runtimes/protocols/pap/reactor-points.json';
 import ucpPoints from '../../agent_runtimes/protocols/ucp/reactor-points.json';
 import webBotAuthPoints from '../../agent_runtimes/protocols/web_bot_auth/reactor-points.json';
 import * as a2a from './a2a';
@@ -34,14 +35,16 @@ import { getProtocol } from '../specs/protocols';
 import * as core from './core';
 import * as mcp from './mcp';
 import * as pact from './pact';
+import * as pap from './pap';
 import * as ucp from './ucp';
 import * as webBotAuth from './web-bot-auth';
 
 type Entry = {
   id: string;
-  typescript: string;
+  /** null: a point of the Python runtime alone, not declared here. */
+  typescript: string | null;
   members: string[];
-  default: { typescript: string } | null;
+  default: { typescript: string | null } | null;
   resolution: 'single' | 'all';
   extension: boolean;
 };
@@ -62,9 +65,14 @@ const FILES = [
     plugin: 'agent-runtimes.protocols.agentic-commerce',
   },
   { file: pactPoints, module: pact, plugin: 'agent-runtimes.protocols.pact' },
+  { file: papPoints, module: pap, plugin: 'agent-runtimes.protocols.pap' },
 ];
+/** The points declared in TypeScript (a Python-only one names no export). */
+function declaredHere(file: { points: unknown[] }): Entry[] {
+  return (file.points as Entry[]).filter(entry => entry.typescript !== null);
+}
 const POINTS = FILES.flatMap(({ file, module, plugin }) =>
-  (file.points as Entry[]).map(entry => ({ entry, module, plugin })),
+  declaredHere(file).map(entry => ({ entry, module, plugin })),
 );
 
 function host(
@@ -97,6 +105,7 @@ describe('the agent-protocols Extension', () => {
       'agentic_commerce',
       'mcp',
       'pact',
+      'pap',
       'ucp',
       'web_bot_auth',
     ]);
@@ -105,7 +114,9 @@ describe('the agent-protocols Extension', () => {
         d => d.plugin === plugin,
       );
       expect(description?.points.sort()).toEqual(
-        (file.points as Entry[]).map(e => e.id).sort(),
+        declaredHere(file)
+          .map(e => e.id)
+          .sort(),
       );
     }
   });
@@ -121,7 +132,7 @@ describe('the agent-protocols Extension', () => {
 
 describe.each(POINTS)('$entry.id', ({ entry, module, plugin }) => {
   const point = (module as Record<string, ContributionPoint<unknown>>)[
-    entry.typescript
+    entry.typescript as string
   ];
 
   it('is exported under its id and declared by its plugin', () => {

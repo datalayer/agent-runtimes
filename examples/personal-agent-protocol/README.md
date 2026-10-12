@@ -27,8 +27,10 @@ feature while keeping protocol secrets outside model context.
 | [`sign-in-display`](./sign-in-display/)                   | The sign-in card as a display (`PapSignIn`, RU-1)      | Display's model view; no link, no code            |
 | [`company-connection`](./company-connection/)             | `pap.connections`: gateway server, level, scopes       | Tools given and withheld; credentials elsewhere   |
 | [`company-role`](./company-role/)                         | `pap.company`: propose, confirm, perform once          | Proposals, revisions and gate decisions           |
+| [`local-personal-agent`](./local-personal-agent/)         | `PapPersonalAgentCapability` with the host's reactor   | Summaries only; tokens and device code withheld   |
+| [`local-company`](./local-company/)                       | `PapCompanyCapability`: the application as a company   | What the person was shown; ticket used once       |
 
-Every example runs against the released PAP Python SDK, 0.9.0 (Agent Runtimes
+Every example runs against the released PAP Python SDK, 0.15.0 (Agent Runtimes
 installs `personal-agent-protocol[ui]`), with no editable install. Most run
 the SDK's self-contained `demo` worlds: real keys, proofs and HTTP over ASGI in
 one process, with no network and no model.

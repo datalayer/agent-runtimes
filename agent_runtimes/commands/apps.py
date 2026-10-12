@@ -2178,7 +2178,7 @@ def apps_protocols(
         )
         if protocol.id in used:
             console.print(f"    it {used[protocol.id]}")
-    # PAP's plugins come with the PAP SDK, not this registry: said all the same.
+    # A protocol an application uses that no plugin here describes: said all the same.
     listed = {protocol.id for protocol in protocols}
     for protocol_id, sentence in used.items():
         if protocol_id not in listed:

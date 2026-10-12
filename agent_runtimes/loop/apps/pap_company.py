@@ -173,30 +173,26 @@ def perform_prompt(performing: Performing) -> str:
 async def redeem(turn: PapTurn, credential: str = "") -> Performing:
     """Take the confirmed operation a perform turn's ticket names, from the company service.
 
-    The service answers the action, the tool its Appspec declares for it and
-    the confirmed terms; the call is checked against this runtime's own
-    Appspec when it is made (`performs`). Raises when the ticket is not
-    honoured: nothing is performed then.
+    The ticket is redeemed where the runtime's ``pap.company.operationTickets``
+    contribution says: Datalayer's company service (ai-agents) by default, a
+    local company (``PapCompanyCapability``) when one is mounted. It answers
+    the action, the tool its Appspec declares for it and the confirmed terms;
+    the call is checked against this runtime's own Appspec when it is made
+    (`performs`). Raises when the ticket is not honoured: nothing is
+    performed then.
     """
-    import httpx  # noqa: PLC0415
-    from datalayer_core.utils.urls import DatalayerURLs  # noqa: PLC0415
+    from agent_runtimes.protocols import (  # noqa: PLC0415
+        first_contribution,
+        protocols_platform,
+    )
+    from agent_runtimes.protocols.pap import OPERATION_TICKETS  # noqa: PLC0415
 
-    base = (
-        getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
-    ).rstrip("/")
-    if not base:
-        raise RuntimeError("No company service to redeem the operation at")
-    headers = {"Authorization": f"Bearer {credential}"} if credential else {}
-    async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
-        answered = await client.post(
-            f"{base}/api/ai-agents/v1/pap-company/operations/redeem",
-            json={"ticket": turn.ticket},
-        )
-    if answered.status_code != 200:
-        raise RuntimeError(
-            f"The company service did not honour the ticket ({answered.status_code})"
-        )
-    body = answered.json()
+    tickets = first_contribution(
+        protocols_platform(), OPERATION_TICKETS, "operation tickets"
+    )
+    body = await tickets.redeem(turn.ticket, credential)
+    if body is None:
+        raise RuntimeError("The company service did not honour the ticket")
     action, tool, terms = body.get("action"), body.get("tool"), body.get("terms")
     if (
         not isinstance(action, str)

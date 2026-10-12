@@ -36,7 +36,10 @@ dependencies = [
     # orchestration and a root-published TypeScript package.
     # 0.7.0: `personal_agent_protocol.ui.PapSignIn`, the gateway's sign-in
     # display, read back here for its model view (the `ui` extra).
-    "personal-agent-protocol[ui]>=0.7.0,<1",
+    # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
+    # tested against (Sessions, Device Sign-In, conversations, Operations,
+    # the reference company of PapCompanyCapability; AGENT_PROTOCOLS PR-03).
+    "personal-agent-protocol[ui]>=0.15.0,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",

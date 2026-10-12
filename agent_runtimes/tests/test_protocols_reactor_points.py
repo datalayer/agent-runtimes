@@ -66,6 +66,7 @@ def test_one_file_per_protocol_plugin():
         "ucp",
         "agentic_commerce",
         "pact",
+        "pap",
     } <= names
 
 
@@ -142,6 +143,7 @@ def test_each_plugin_describes_its_protocol():
         "agentic_commerce",
         "mcp",
         "pact",
+        "pap",
         "ucp",
         "web_bot_auth",
     }
@@ -162,7 +164,10 @@ def test_each_description_names_its_catalogue_entry():
     for description in list_protocols(_platform()):
         spec = get_protocol(description.catalogue)
         assert spec is not None, description.catalogue
-        assert description.version in spec.spec_version, (description.id, spec.spec_version)
+        assert description.version in spec.spec_version, (
+            description.id,
+            spec.spec_version,
+        )
 
 
 def test_a_lower_order_description_answers_in_place():

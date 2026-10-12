@@ -16,7 +16,7 @@ from agent_runtimes.commands.apps import app as apps_cli
 from agent_runtimes.commands.apps import protocols_used
 from agent_runtimes.routes.protocols import router
 
-IDS = {"a2a", "agentic_commerce", "mcp", "pact", "ucp", "web_bot_auth"}
+IDS = {"a2a", "agentic_commerce", "mcp", "pact", "pap", "ucp", "web_bot_auth"}
 
 
 def test_the_route_lists_what_the_plugins_contributed():
@@ -60,7 +60,7 @@ def test_what_an_application_uses_of_pact_and_a2a():
     }
 
 
-def test_the_command_says_pap_though_its_plugins_are_the_sdks(tmp_path: Path):
+def test_the_command_says_pap_with_its_plugin(tmp_path: Path):
     spec = tmp_path / "app.yaml"
     spec.write_text(
         "id: x\nname: X\nkind: chat\npap:\n  connections:\n"
@@ -68,8 +68,9 @@ def test_the_command_says_pap_though_its_plugins_are_the_sdks(tmp_path: Path):
     )
     result = CliRunner().invoke(apps_cli, ["protocols", str(spec)])
     assert result.exit_code == 0, result.output
-    assert "(pap)" in result.output
+    assert "Personal Agent Protocol (pap) 0.1" in result.output
     assert "works with manzanita.example" in result.output
+    assert "its own SDK's plugins" not in result.output
 
 
 def test_the_command(tmp_path: Path):
