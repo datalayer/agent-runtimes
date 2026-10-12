@@ -264,6 +264,12 @@ def test_the_revision_fixture_both_languages_read():
     from agent_runtimes.protocols.ucp import revision_of
 
     fixture = json.loads(
-        (Path(__file__).parents[1] / "protocols" / "ucp" / "fixtures" / "checkout.json").read_text()
+        (
+            Path(__file__).parents[1]
+            / "protocols"
+            / "ucp"
+            / "fixtures"
+            / "checkout.json"
+        ).read_text()
     )
     assert revision_of(fixture["checkout"]) == fixture["revision"]
