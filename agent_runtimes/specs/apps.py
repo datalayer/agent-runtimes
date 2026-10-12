@@ -44,8 +44,6 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -187,8 +185,6 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -337,8 +333,6 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -489,8 +483,6 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "context": ["customer-research:0.0.1"],
         "contents": [],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the summary by email",
@@ -671,8 +663,6 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The dataset under investigation"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -852,8 +842,6 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
         ],
@@ -977,8 +965,6 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -1125,8 +1111,6 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1296,8 +1280,6 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
                 ],
             },
         },
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Exchange an order",
@@ -1413,8 +1395,6 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
                 "only": ["*gmail*"],
             }
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Label and archive a message",
@@ -1605,8 +1585,6 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "The Models page: how each model is billed (standard or credits) and who hosts it",
         ],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1856,8 +1834,6 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -2028,8 +2004,6 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Ask the shop and read your orders",
@@ -2159,8 +2133,6 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "context": ["datalayer:0.0.1"],
         "contents": ["Sales pipeline export"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the report",
@@ -2419,8 +2391,6 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Price list"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2645,8 +2615,6 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Send the report by email",
@@ -2876,8 +2844,6 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3008,8 +2974,6 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The benchmark run: task results, traces, cost and latency"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3225,8 +3189,6 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Order history", "Supplier price lists", "Delivery records"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3429,8 +3391,6 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Product documentation", "Returns policy"],
         "connections": [],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3713,7 +3673,6 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
                 }
             ]
         },
-        "a2a": {"extensions": []},
         "rules": [
             {
                 "action": "Ask the airline and read your bookings",
@@ -3841,8 +3800,6 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "tavily:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
-        "pact": {"connections": []},
-        "a2a": {"extensions": []},
         "rules": [],
         "permissions": {
             "spaces": [],

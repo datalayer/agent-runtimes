@@ -42,12 +42,6 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Read the books',
@@ -209,12 +203,6 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -381,12 +369,6 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -550,12 +532,6 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   context: ['customer-research:0.0.1'],
   contents: [],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Send the summary by email',
@@ -771,12 +747,6 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The dataset under investigation'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -978,12 +948,6 @@ export const DECIDE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Ask a decision',
@@ -1129,12 +1093,6 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -1294,12 +1252,6 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -1489,12 +1441,6 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
       ],
     },
   },
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Exchange an order',
@@ -1618,12 +1564,6 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       only: ['*gmail*'],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Label and archive a message',
@@ -1824,12 +1764,6 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     'The Models page: how each model is billed (standard or credits) and who hosts it',
   ],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -2087,12 +2021,6 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Read the books',
@@ -2281,12 +2209,6 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
       operations: [],
     },
   },
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Ask the shop and read your orders',
@@ -2429,12 +2351,6 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   context: ['datalayer:0.0.1'],
   contents: ['Sales pipeline export'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Send the report',
@@ -2737,12 +2653,6 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Price list'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3017,12 +2927,6 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Send the report by email',
@@ -3302,12 +3206,6 @@ export const SALES_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3450,12 +3348,6 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The benchmark run: task results, traces, cost and latency'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3677,12 +3569,6 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Order history', 'Supplier price lists', 'Delivery records'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3894,12 +3780,6 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Product documentation', 'Returns policy'],
   connections: [],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],
@@ -4239,9 +4119,6 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
       },
     ],
   },
-  a2a: {
-    extensions: [],
-  },
   rules: [
     {
       action: 'Ask the airline and read your bookings',
@@ -4385,12 +4262,6 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
-  pact: {
-    connections: [],
-  },
-  a2a: {
-    extensions: [],
-  },
   rules: [],
   permissions: {
     spaces: [],

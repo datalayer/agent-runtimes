@@ -40,6 +40,8 @@ import type {
   AppCommandSpec,
   AppConnectionSpec,
   AppPapSpec,
+  AppPactSpec,
+  AppA2ASpec,
   AppCriterionSpec,
   AppCustomComponentSpec,
   AppDecisionSpec,
@@ -303,6 +305,8 @@ const KNOWN_KEYS = [
   'contents',
   'connections',
   'pap',
+  'pact',
+  'a2a',
   'rules',
   'permissions',
   'interface',
@@ -458,6 +462,64 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
           ),
         ).data,
     ).data;
+}
+
+/** PACT (AGENT_PROTOCOLS PI-01): the businesses it asks for each person. */
+function parsePact(data: Data): AppPactSpec {
+  return {
+    connections: records(data.connections).map(connection => ({
+      id: text(connection.id),
+      brand: text(connection.brand),
+      audience: text(connection.audience),
+      access: oneOf(connection.access, ['read', 'write'] as const, 'read'),
+      scopes: texts(connection.scopes),
+    })),
+  };
+}
+
+/** PACT as its document says it, nothing at its default. */
+function dumpPact(pact: AppPactSpec | undefined): Data {
+  if (!pact) return {};
+  return new Writer().list(
+    'connections',
+    pact.connections.map(
+      connection =>
+        new Writer()
+          .text('id', connection.id, '\u0000')
+          .text('brand', connection.brand, '\u0000')
+          .text('audience', connection.audience, '\u0000')
+          .value<string>('access', connection.access, 'read')
+          .list('scopes', connection.scopes).data,
+    ),
+  ).data;
+}
+
+/** A2A (AGENT_PROTOCOLS PR-02): the extensions its Agent Card advertises. */
+function parseA2A(data: Data): AppA2ASpec {
+  return {
+    extensions: records(data.extensions).map(extension => ({
+      uri: text(extension.uri),
+      description: text(extension.description),
+      required: flag(extension.required, false),
+      params: isData(extension.params) ? { ...extension.params } : {},
+    })),
+  };
+}
+
+/** A2A as its document says it, nothing at its default. */
+function dumpA2A(a2a: AppA2ASpec | undefined): Data {
+  if (!a2a) return {};
+  return new Writer().list(
+    'extensions',
+    a2a.extensions.map(
+      extension =>
+        new Writer()
+          .text('uri', extension.uri, '\u0000')
+          .text('description', extension.description)
+          .value('required', extension.required, false)
+          .part('params', extension.params).data,
+    ),
+  ).data;
 }
 
 function parseRule(data: Data): AppRuleSpec {
@@ -1109,6 +1171,12 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.pap)) {
     app.pap = parsePap(data.pap);
   }
+  if (isData(data.pact)) {
+    app.pact = parsePact(data.pact);
+  }
+  if (isData(data.a2a)) {
+    app.a2a = parseA2A(data.a2a);
+  }
   return { app, problems };
 }
 
@@ -1487,6 +1555,8 @@ export function dumpAppspec(app: AppSpec): Data {
       ),
     )
     .part('pap', dumpPap(app.pap))
+    .part('pact', dumpPact(app.pact))
+    .part('a2a', dumpA2A(app.a2a))
     .list(
       'rules',
       app.rules.map(rule => ({

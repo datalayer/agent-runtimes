@@ -411,6 +411,54 @@ describe('writing an Appspec', () => {
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
   });
+  it('reads and writes PACT businesses and A2A card extensions (AGENT_PROTOCOLS PI-01, PR-02)', () => {
+    const document = {
+      kind: 'chat',
+      pact: {
+        connections: [
+          {
+            id: 'air',
+            brand: 'air.example',
+            audience: 'https://provider.example/a2a',
+            scopes: ['bookings:read'],
+          },
+        ],
+      },
+      a2a: {
+        extensions: [
+          {
+            uri: 'https://shop.example/extensions/gift-wrap/v1',
+            description: 'Wraps an order as a gift.',
+            params: { papers: ['red', 'gold'] },
+          },
+          { uri: 'urn:example:loyalty', required: true },
+        ],
+      },
+    };
+    const { app, problems } = parseAppspec(document);
+    expect(problems).toEqual([]);
+    expect(app.pact?.connections[0]).toEqual({
+      ...document.pact.connections[0],
+      access: 'read',
+    });
+    expect(app.a2a?.extensions).toEqual([
+      { ...document.a2a.extensions[0], required: false },
+      {
+        uri: 'urn:example:loyalty',
+        description: '',
+        required: true,
+        params: {},
+      },
+    ]);
+    // Written back as read: nothing at its default.
+    const written = dumpAppspec(app);
+    expect(written.pact).toEqual(document.pact);
+    expect(written.a2a).toEqual(document.a2a);
+    // Without them, the application has none.
+    expect(parseAppspec({ kind: 'chat' }).app.a2a).toBeUndefined();
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('a2a');
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pact');
+  });
   it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
     const operations = [
       {

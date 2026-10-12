@@ -152,8 +152,16 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         # Personal Agent Protocol only when the application says something of it:
         # an Appspec that does not mention `pap` reads back with none (the TypeScript
         # reader's rule), so the catalogue leaves the defaults out too.
-        if "pap" in spec and spec["pap"] == type(app.pap)().model_dump(mode="json", by_alias=True):
+        if "pap" in spec and spec["pap"] == type(app.pap)().model_dump(
+            mode="json", by_alias=True
+        ):
             spec.pop("pap")
+        # PACT and A2A's extensions the same way (AGENT_PROTOCOLS PI-01, PR-02).
+        for block in ("pact", "a2a"):
+            if block in spec and spec[block] == type(getattr(app, block))().model_dump(
+                mode="json", by_alias=True
+            ):
+                spec.pop(block)
         for key in ("description", "instructions", "goal"):
             spec[key] = _flat(spec.get(key))
         spec["interface"]["welcome"] = _flat(spec["interface"].get("welcome"))
