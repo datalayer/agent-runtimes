@@ -140,6 +140,13 @@ in-flight requests finish. The same key signs in TypeScript: `vectors.json`'s
 `cross` request is signed in Python, reproduced header for header by
 `webBotAuth.unit.test.ts` and verified by the Python verifier.
 
+## Conformance
+
+`draft-ietf-webbotauth-httpsig-protocol-00`. `web_bot_auth/fixtures/vectors.json` holds the draft's Ed25519 vectors E.2.1 to E.2.3, reproduced byte for byte by `test_protocols_web_bot_auth.py` and `webBotAuth.unit.test.ts`, and a `cross` request signed in Python that TypeScript reproduces header for header.
+
+**TAP**, Visa's Trusted Agent Protocol, is an agent-recognition profile over these signatures. It is planned, once confirmed against Visa's own documentation; nothing of it is implemented.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
 ## What never leaves the host
 
 No private key reaches a header, a directory, a log line or the model: the

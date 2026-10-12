@@ -13,6 +13,24 @@ what a person consented to (PAP, PACT), how it buys (UCP, ACP — the
 collides with the Agent Client Protocol). The map is
 [poppy.md/compare](https://poppy.md/compare).
 
+## The map
+
+[poppy.md/compare](https://poppy.md/compare) reads an agent's visit to a
+business as four questions, top to bottom: which agent is this (identity),
+has the person let it act and how far (consent), how it talks and calls
+tools (transport), how it buys (commerce).
+
+| Layer | Protocol | Published by | In agent-runtimes | Libraries reused |
+| --- | --- | --- | --- | --- |
+| Transport | MCP, Model Context Protocol | Anthropic | client, Python ([MCP and A2A](./mcp-and-a2a#mcp)) | `mcp`, `fastmcp`, pydantic-ai |
+| Transport | A2A, Agent2Agent | Google, now the Linux Foundation | server (Python) and client (both) ([MCP and A2A](./mcp-and-a2a#a2a)) | `fasta2a`, `@a2a-js/sdk` |
+| Consent | PAP, Personal Agent Protocol | Sierra, Meta | both roles, through the PAP SDK ([Personal Agent Protocol](../integrations/personal-agent-protocol)) | `personal-agent-protocol`, `@datalayer/personal-agent-protocol` |
+| Consent | PACT, Personal Agent Consent & Trust | Decagon, Instinct | the personal agent, both languages; a local Provider ([PACT](./pact), [PAP and PACT](./pap-and-pact)) | PyJWT, `cryptography`, `jose` |
+| Identity | Web Bot Auth | IETF draft (Cloudflare and others) | signing, the key directory, verifying ([Web Bot Auth](./web-bot-auth)) | `http-sfv`, `cryptography`; Cloudflare's `web-bot-auth` |
+| Identity | TAP, Trusted Agent Protocol | Visa | planned, over Web Bot Auth | — |
+| Commerce | UCP, Universal Commerce Protocol | Google, with Shopify and retailers | the shopper, a test merchant ([UCP](./ucp)) | `ucp-sdk`, `@ucp-js/sdk` |
+| Commerce | ACP, Agentic Commerce Protocol | OpenAI, Stripe | the buyer, a test seller ([Agentic Commerce](./agentic-commerce)) | clients generated from its JSON Schema |
+
 ## Every protocol is a Reactor plugin
 
 In [Reactor](https://github.com/datalayer/reactor)'s terms:

@@ -91,6 +91,11 @@ and the same proposal refused a second time (*this proposal was used
 already*). Without `--yes` it asks you to approve. The TypeScript client
 (`ucp.unit.test.ts`) runs against an in-memory twin of the merchant.
 
+## Conformance
+
+UCP `2026-08-25`. `ucp/fixtures/checkout.json` (a checkout and its revision digest) is read by `test_protocols_ucp.py` and `ucp.unit.test.ts`: both languages compute the same digest. Every answer of the test merchant is validated by `ucp-sdk`; the TypeScript client validates with `@ucp-js/sdk`.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
 ## What never reaches a model
 
 The payment token goes from the host's `ucp.paymentInstruments` to the

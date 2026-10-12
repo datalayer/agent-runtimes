@@ -100,6 +100,11 @@ python examples/protocols/pap_and_pact/app.py
 (example EX-07) asks a PAP company and a PACT Brand one question and keeps
 one record: see [PAP and PACT](./pap-and-pact).
 
+## Conformance
+
+PACT 1.0. `pact/fixtures/card.json` (a Brand's card and how it is read) is read by `test_protocols_pact.py` and `pact.unit.test.ts`: both languages read the same interface, delegation, scopes and action classes. The Python personal agent is run against the local Provider; the TypeScript one against an in-memory Brand.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
 ## What never reaches a model
 
 The device code, the delegation token and the signing key stay with the

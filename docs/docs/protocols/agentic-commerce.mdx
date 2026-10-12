@@ -95,6 +95,11 @@ and the same proposal refused a second time. Without `--yes` it asks you to
 approve. The TypeScript client (`agenticCommerce.unit.test.ts`) runs against
 a seller answering with the shared fixture.
 
+## Conformance
+
+Agentic Commerce `2026-04-17`. `agentic_commerce/fixtures/session.json` (a session, the discovery document, the revision digest) is read by `test_protocols_agentic_commerce.py` and `agenticCommerce.unit.test.ts`; both validate with models generated from the same JSON Schema.
+All protocols side by side: [Conformance](./agent-protocols#conformance).
+
 ## What never reaches a model
 
 The payment token and the bearer go to the seller and nowhere else:
