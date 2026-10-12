@@ -328,7 +328,8 @@ agent-runtimes = "agent_runtimes.reactor_extension:plugin"
 
 # The agent protocols, each a Reactor plugin, delivered together as the
 # `agent-protocols` Reactor Extension (AGENT_PROTOCOLS §3.1): a host that
-# discovers extensions gets MCP, A2A and Web Bot Auth with their points.
+# discovers extensions gets MCP, A2A, Web Bot Auth, PACT, UCP and Agentic
+# Commerce, each with its points (PAP's plugins are the PAP SDK's own).
 [project.entry-points."datalayer.reactor.extensions"]
 agent-protocols = "agent_runtimes.protocols.extension:extension"
 
