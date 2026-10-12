@@ -284,6 +284,8 @@ def register_a2a_agent(
         # face by default, then what the card itself declares.
         from ..protocols import protocols_platform
         from ..protocols.a2a import CardContext, card_extensions
+        from ..protocols.web_bot_auth import WebBotAuthMiddleware
+        from ..protocols.web_bot_auth.plugin import nonce_store_of, resolver_of
 
         a2a_app = FastA2A(
             storage=a2a_storage,
@@ -325,6 +327,15 @@ def register_a2a_agent(
         _a2a_agents[agent_id] = registration
 
         served = gate(a2a_app) if gate is not None else a2a_app
+        # An agent that signs its requests (Web Bot Auth, AGENT_PROTOCOLS
+        # PR-23) is verified before anything else: a signature that does not
+        # hold is refused; a verified one is in `scope["state"]["web_bot_auth"]`;
+        # an unsigned request passes as `unverified`, for the gate to judge.
+        served = WebBotAuthMiddleware(
+            served,
+            resolver=resolver_of(protocols_platform()),
+            nonce_store=nonce_store_of(protocols_platform()),
+        )
 
         # Create mount for this agent
         mount = Mount(f"/{agent_id}", app=served)
