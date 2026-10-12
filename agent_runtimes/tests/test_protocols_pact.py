@@ -192,3 +192,14 @@ def test_the_card_fixture_both_languages_read():
         "profile": card.profile,
         "scopes": {s.id: s.action_class for s in card.delegation.scopes},
     } == fixture["reads"]
+
+
+@pytest.mark.asyncio
+async def test_polling_once_says_pending_then_granted():
+    provider, _, _, agent = _setup()
+    sign_in = await agent.request_sign_in(USER, ["bookings:read"])
+    assert await agent.poll_sign_in(USER, sign_in) is None
+    provider.approve(sign_in.user_code, "jane-4471", ["bookings:read"])
+    assert await agent.poll_sign_in(USER, sign_in) == ("bookings:read",)
+    with pytest.raises(PactError, match="no sign-in pending"):
+        await agent.poll_sign_in(USER, sign_in)

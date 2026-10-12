@@ -269,43 +269,48 @@ class PactPersonalAgent:
             reference=reference,
         )
 
-    async def finish_sign_in(
-        self, user: str, sign_in: SignIn, *, interval: float = 5.0, attempts: int = 120
-    ) -> tuple[str, ...]:
-        """Poll until the person approved (RFC 8628); the scopes they actually granted."""
+    async def poll_sign_in(
+        self, user: str, sign_in: SignIn
+    ) -> Optional[tuple[str, ...]]:
+        """Ask once whether the person approved (RFC 8628): the scopes they granted,
+        or ``None`` while they have not (``authorization_pending``, ``slow_down``)."""
         card = await self._card()
         assert card.delegation is not None
         device_code = self._pending.get(sign_in.reference)
         if device_code is None:
             raise PactError("no sign-in pending under this reference")
-        for _ in range(attempts):
-            answer = await self.http.post(
-                card.delegation.token_url,
-                headers={"Authorization": f"Bearer {await self._jwt(user)}"},
-                data={
-                    "grant_type": DEVICE_CODE_GRANT,
-                    "device_code": device_code,
-                    "client_id": self.issuer,
-                },
-            )
-            body = answer.json()
-            error = body.get("error")
-            if error == "authorization_pending":
-                await asyncio.sleep(interval)
-                continue
-            if error == "slow_down":
-                interval += 5
-                await asyncio.sleep(interval)
-                continue
-            if error:
-                self._pending.pop(sign_in.reference, None)
-                raise PactError(f"the sign-in ended: {error}")
-            granted = tuple(str(body.get("scope", "")).split())
-            await self.delegations.put(
-                card.interface_url, user, body["access_token"], granted
-            )
+        answer = await self.http.post(
+            card.delegation.token_url,
+            headers={"Authorization": f"Bearer {await self._jwt(user)}"},
+            data={
+                "grant_type": DEVICE_CODE_GRANT,
+                "device_code": device_code,
+                "client_id": self.issuer,
+            },
+        )
+        body = answer.json()
+        error = body.get("error")
+        if error in ("authorization_pending", "slow_down"):
+            return None
+        if error:
             self._pending.pop(sign_in.reference, None)
-            return granted
+            raise PactError(f"the sign-in ended: {error}")
+        granted = tuple(str(body.get("scope", "")).split())
+        await self.delegations.put(
+            card.interface_url, user, body["access_token"], granted
+        )
+        self._pending.pop(sign_in.reference, None)
+        return granted
+
+    async def finish_sign_in(
+        self, user: str, sign_in: SignIn, *, interval: float = 5.0, attempts: int = 120
+    ) -> tuple[str, ...]:
+        """Poll until the person approved (RFC 8628); the scopes they actually granted."""
+        for _ in range(attempts):
+            granted = await self.poll_sign_in(user, sign_in)
+            if granted is not None:
+                return granted
+            await asyncio.sleep(interval)
         raise PactError("the person did not sign in in time")
 
     async def disconnect(self, user: str) -> None:

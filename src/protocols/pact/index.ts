@@ -489,6 +489,49 @@ export class PactPersonalAgent {
     };
   }
 
+  /** Ask once whether the person approved: the scopes granted, or `undefined` while pending. */
+  async pollSignIn(
+    user: string,
+    signIn: SignIn,
+  ): Promise<string[] | undefined> {
+    const card = this.card!;
+    const deviceCode = this.pending.get(signIn.reference);
+    if (!deviceCode) {
+      throw new PactError('no sign-in pending under this reference');
+    }
+    const answer = await this.fetch(card.delegation!.tokenUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${await this.jwt(user)}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: DEVICE_CODE_GRANT,
+        device_code: deviceCode,
+        client_id: this.options.issuer,
+      }).toString(),
+    });
+    const body = await answer.json();
+    if (body.error === 'authorization_pending' || body.error === 'slow_down') {
+      return undefined;
+    }
+    if (body.error) {
+      this.pending.delete(signIn.reference);
+      throw new PactError(`the sign-in ended: ${body.error}`);
+    }
+    const granted = String(body.scope ?? '')
+      .split(' ')
+      .filter(Boolean);
+    await this.delegations().put(
+      card.interfaceUrl,
+      user,
+      body.access_token,
+      granted,
+    );
+    this.pending.delete(signIn.reference);
+    return granted;
+  }
+
   /** Poll until the person approved; the scopes they actually granted. */
   async finishSignIn(
     user: string,
@@ -496,47 +539,12 @@ export class PactPersonalAgent {
     intervalMs = 5000,
     attempts = 120,
   ): Promise<string[]> {
-    const card = this.card!;
-    const deviceCode = this.pending.get(signIn.reference);
-    if (!deviceCode) {
-      throw new PactError('no sign-in pending under this reference');
-    }
     for (let i = 0; i < attempts; i++) {
-      const answer = await this.fetch(card.delegation!.tokenUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${await this.jwt(user)}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: DEVICE_CODE_GRANT,
-          device_code: deviceCode,
-          client_id: this.options.issuer,
-        }).toString(),
-      });
-      const body = await answer.json();
-      if (
-        body.error === 'authorization_pending' ||
-        body.error === 'slow_down'
-      ) {
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-        continue;
+      const granted = await this.pollSignIn(user, signIn);
+      if (granted) {
+        return granted;
       }
-      if (body.error) {
-        this.pending.delete(signIn.reference);
-        throw new PactError(`the sign-in ended: ${body.error}`);
-      }
-      const granted = String(body.scope ?? '')
-        .split(' ')
-        .filter(Boolean);
-      await this.delegations().put(
-        card.interfaceUrl,
-        user,
-        body.access_token,
-        granted,
-      );
-      this.pending.delete(signIn.reference);
-      return granted;
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
     }
     throw new PactError('the person did not sign in in time');
   }
