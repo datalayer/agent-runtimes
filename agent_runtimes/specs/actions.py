@@ -671,6 +671,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "earthdata.search_earth_datasets": "do_it",
     },
     "event-response": {},
+    "exchange-desk": {},
     "inbox-triage": {
         "google-workspace.append_table_rows": "leave_to_me",
         "google-workspace.batch_modify_gmail_message_labels": "do_it",
@@ -845,6 +846,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
         "odoo-accounting.odoo_accounting_trial_balance": "do_it",
         "odoo-accounting.odoo_accounting_unreconcile_lines": "leave_to_me",
     },
+    "order-desk": {},
     "pipeline-report": {},
     "quote-calculator": {},
     "report-from-a-file": {},
@@ -872,6 +874,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "decide": {},
     "disaster-assessment": {},
     "event-response": {},
+    "exchange-desk": {},
     "inbox-triage": {
         "google-workspace.batch_modify_gmail_message_labels": [
             {
@@ -908,6 +911,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     },
     "model-choice": {},
     "month-end-close": {},
+    "order-desk": {},
     "pipeline-report": {},
     "quote-calculator": {},
     "report-from-a-file": {},

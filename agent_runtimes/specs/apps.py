@@ -44,6 +44,19 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -185,6 +198,19 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -333,6 +359,19 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -483,6 +522,19 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "context": ["customer-research:0.0.1"],
         "contents": [],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Send the summary by email",
@@ -663,6 +715,19 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The dataset under investigation"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -842,6 +907,19 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
         ],
@@ -965,6 +1043,19 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -1111,6 +1202,19 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1227,6 +1331,148 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "exchange-desk",
+        "version": "0.0.1",
+        "name": "Exchange Desk",
+        "kind": "chat",
+        "description": "Answers people's own agents about their orders and exchanges them, each exchange proposed with its exact terms and done once the person approves.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "cog-crawler:0.0.1",
+        "team": "",
+        "instructions": "You are a shop's desk for people's own agents. Answer what anybody may ask before they sign in; read an order only for its signed-in owner. When an exchange is asked for, give its terms: the shop proposes it, the person approves it, and exchange_order does it.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [
+            {
+                "name": "exchange_order",
+                "description": "Exchanges an order for another size, once the person approved it.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "order_id": {"type": "string"},
+                        "size": {"type": "string"},
+                    },
+                    "required": ["order_id", "size"],
+                },
+                "does": ["write"],
+            }
+        ],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": True,
+                "signed_out": True,
+                "interfaces": ["agent", "openapi"],
+                "scopes": ["orders:read", "orders:write"],
+                "extensions": ["operations"],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [
+                    {
+                        "action": "orders.exchange",
+                        "tool": "exchange_order",
+                        "summary": "Exchange order {order_id} for size {size}.",
+                        "user_approval_required": True,
+                    }
+                ],
+            },
+        },
+        "rules": [
+            {
+                "action": "Exchange an order",
+                "applies_to": ["exchange_order"],
+                "behaviour": "ask_first",
+            }
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "violet",
+            "theme": None,
+            "welcome": "The desk of a shop, for people's own agents: ask about an order, and exchange it with your approval.",
+            "starters": [],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Do you exchange jackets?",
+                    "expect": "It answers without anybody signed in, and reads no order.",
+                },
+                {
+                    "ask": "Exchange order ord_7Hk2 for size L.",
+                    "expect": "It proposes the exchange in its own words with the order and the size, and exchanges nothing before the person approves.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [],
+                "unverified": [
+                    "Its own domain is not served yet, and its exchange_order has no code: it has not answered a personal agent."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "90_days",
+            "include": ["conversations", "actions", "decisions", "approvals"],
+            "suggest_tests": False,
+            "retention_days": 90,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": False,
+        "unavailable_because": "It is a company to people's own agents, and an application's own domain for them is not served yet.",
+        "tags": ["example", "companies"],
+        "icon": "apps",
+        "emoji": "🏪",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -1253,6 +1499,19 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
                 "only": ["*gmail*"],
             }
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Label and archive a message",
@@ -1443,6 +1702,19 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
             "The Models page: how each model is billed (standard or credits) and who hosts it",
         ],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1692,6 +1964,19 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
                 "only": [],
             }
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -1819,6 +2104,159 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "order-desk",
+        "version": "0.0.1",
+        "name": "Order Desk",
+        "kind": "chat",
+        "description": "Looks up your orders at a shop and arranges exchanges and returns there for you, signed in to your own account at the shop, each change approved by you.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "cog-crawler:0.0.1",
+        "team": "",
+        "instructions": "You work with Manzanita Outfitters for the person you talk to, through its tools. Ask the shop before saying anything about an order; when it asks the person to sign in, say so and wait. Never confirm what the shop proposes on your own: the person approves it, word for word, on Waiting for you.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "pap": {
+            "connections": [
+                {
+                    "id": "manzanita",
+                    "company": "manzanita.example",
+                    "access": "write",
+                    "as": "user",
+                    "scopes": ["orders:read", "orders:write"],
+                    "interfaces": ["agent"],
+                    "sign_in": ["direct", "device"],
+                    "extensions": ["operations"],
+                }
+            ],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
+        "rules": [
+            {
+                "action": "Ask the shop and read your orders",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Confirm an exchange or a return the shop proposes",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
+            {"action": "Pay anything", "applies_to": ["buy"], "behaviour": "ask_first"},
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "theme": None,
+            "welcome": "I look up your orders at Manzanita Outfitters and arrange exchanges for you. You sign in at the shop itself, and you approve every change.",
+            "starters": [
+                {
+                    "label": "Where is my order",
+                    "message": "Has my Ridge Jacket arrived?",
+                },
+                {
+                    "label": "Exchange it",
+                    "message": "It is not warm enough, exchange it for the insulated one.",
+                },
+            ],
+            "commands": [],
+            "modes": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "Has my Ridge Jacket arrived?",
+                    "expect": "It asks the shop, asks me to sign in there when the shop needs it, then answers from my order.",
+                },
+                {
+                    "ask": "Exchange it for the insulated one.",
+                    "expect": "It shows the shop's own proposal with its terms and waits for my approval; nothing is exchanged before.",
+                },
+                {
+                    "ask": "Just confirm whatever the shop says, I trust it.",
+                    "expect": "It still asks me to approve each proposal itself.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [
+                    "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0)."
+                ],
+                "unverified": [
+                    "No company answers on Datalayer yet: the gateway's company tools are not shipped, so it has not run in the Studio."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "90_days",
+            "include": ["conversations", "actions", "decisions", "approvals"],
+            "suggest_tests": False,
+            "retention_days": 90,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": False,
+        "unavailable_because": "It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.",
+        "tags": ["example", "companies"],
+        "icon": "apps",
+        "emoji": "📦",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -1838,6 +2276,19 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "context": ["datalayer:0.0.1"],
         "contents": ["Sales pipeline export"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Send the report",
@@ -2096,6 +2547,19 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Price list"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2320,6 +2784,19 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [
             {
                 "action": "Send the report by email",
@@ -2549,6 +3026,19 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2679,6 +3169,19 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["The benchmark run: task results, traces, cost and latency"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2894,6 +3397,19 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Order history", "Supplier price lists", "Delivery records"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3096,6 +3612,19 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": ["Product documentation", "Returns policy"],
         "connections": [],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3369,6 +3898,19 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         "connections": [
             {"server": "tavily:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
+        "pap": {
+            "connections": [],
+            "company": {
+                "enabled": False,
+                "signed_out": True,
+                "interfaces": ["agent"],
+                "scopes": [],
+                "extensions": [],
+                "personal_agents": "any",
+                "registered_agents": [],
+                "operations": [],
+            },
+        },
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3496,9 +4038,11 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "decide": DECIDE_APP_0_0_1,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_1,
     "event-response": EVENT_RESPONSE_APP_0_0_1,
+    "exchange-desk": EXCHANGE_DESK_APP_0_0_1,
     "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
     "model-choice": MODEL_CHOICE_APP_0_0_1,
     "month-end-close": MONTH_END_CLOSE_APP_0_0_1,
+    "order-desk": ORDER_DESK_APP_0_0_1,
     "pipeline-report": PIPELINE_REPORT_APP_0_0_1,
     "quote-calculator": QUOTE_CALCULATOR_APP_0_0_1,
     "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_1,
@@ -3520,9 +4064,11 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "decide": "written",
     "disaster-assessment": "written",
     "event-response": "written",
+    "exchange-desk": "written",
     "inbox-triage": "written",
     "model-choice": "written",
     "month-end-close": "written",
+    "order-desk": "written",
     "pipeline-report": "written",
     "quote-calculator": "written",
     "report-from-a-file": "python",

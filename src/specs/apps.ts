@@ -42,6 +42,19 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Read the books',
@@ -203,6 +216,19 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -369,6 +395,19 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -532,6 +571,19 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   context: ['customer-research:0.0.1'],
   contents: [],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Send the summary by email',
@@ -747,6 +799,19 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The dataset under investigation'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -948,6 +1013,19 @@ export const DECIDE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Ask a decision',
@@ -1093,6 +1171,19 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Search and read the imagery',
@@ -1252,6 +1343,19 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -1382,6 +1486,161 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-event-response:0.0.1' is not enabled."],
 };
 
+export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'exchange-desk',
+  version: '0.0.1',
+  name: 'Exchange Desk',
+  kind: 'chat',
+  description:
+    "Answers people's own agents about their orders and exchanges them, each exchange proposed with its exact terms and done once the person approves.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You are a shop's desk for people's own agents. Answer what anybody may ask before they sign in; read an order only for its signed-in owner. When an exchange is asked for, give its terms: the shop proposes it, the person approves it, and exchange_order does it.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [
+    {
+      name: 'exchange_order',
+      description:
+        'Exchanges an order for another size, once the person approved it.',
+      parameters: {
+        type: 'object',
+        properties: {
+          order_id: {
+            type: 'string',
+          },
+          size: {
+            type: 'string',
+          },
+        },
+        required: ['order_id', 'size'],
+      },
+      does: ['write'],
+    },
+  ],
+  context: [],
+  contents: [],
+  connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: true,
+      signed_out: true,
+      interfaces: ['agent', 'openapi'],
+      scopes: ['orders:read', 'orders:write'],
+      extensions: ['operations'],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [
+        {
+          action: 'orders.exchange',
+          tool: 'exchange_order',
+          summary: 'Exchange order {order_id} for size {size}.',
+          user_approval_required: true,
+        },
+      ],
+    },
+  },
+  rules: [
+    {
+      action: 'Exchange an order',
+      appliesTo: ['exchange_order'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'violet',
+    welcome:
+      "The desk of a shop, for people's own agents: ask about an order, and exchange it with your approval.",
+    starters: [],
+    commands: [],
+    modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Do you exchange jackets?',
+        expect: 'It answers without anybody signed in, and reads no order.',
+      },
+      {
+        ask: 'Exchange order ord_7Hk2 for size L.',
+        expect:
+          'It proposes the exchange in its own words with the order and the size, and exchanges nothing before the person approves.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [
+        'Its own domain is not served yet, and its exchange_order has no code: it has not answered a personal agent.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is a company to people's own agents, and an application's own domain for them is not served yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🏪',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'inbox-triage',
@@ -1409,6 +1668,19 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
       only: ['*gmail*'],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Label and archive a message',
@@ -1609,6 +1881,19 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
     'The Models page: how each model is billed (standard or credits) and who hosts it',
   ],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -1866,6 +2151,19 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Read the books',
@@ -2010,6 +2308,172 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
   ],
 };
 
+export const ORDER_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'order-desk',
+  version: '0.0.1',
+  name: 'Order Desk',
+  kind: 'chat',
+  description:
+    'Looks up your orders at a shop and arranges exchanges and returns there for you, signed in to your own account at the shop, each change approved by you.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    'You work with Manzanita Outfitters for the person you talk to, through its tools. Ask the shop before saying anything about an order; when it asks the person to sign in, say so and wait. Never confirm what the shop proposes on your own: the person approves it, word for word, on Waiting for you.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.example',
+        access: 'write',
+        as: 'user',
+        scopes: ['orders:read', 'orders:write'],
+        interfaces: ['agent'],
+        sign_in: ['direct', 'device'],
+        extensions: ['operations'],
+      },
+    ],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Ask the shop and read your orders',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Confirm an exchange or a return the shop proposes',
+      appliesTo: ['write'],
+      behaviour: 'ask_first',
+    },
+    {
+      action: 'Pay anything',
+      appliesTo: ['buy'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'I look up your orders at Manzanita Outfitters and arrange exchanges for you. You sign in at the shop itself, and you approve every change.',
+    starters: [
+      {
+        label: 'Where is my order',
+        message: 'Has my Ridge Jacket arrived?',
+      },
+      {
+        label: 'Exchange it',
+        message: 'It is not warm enough, exchange it for the insulated one.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Has my Ridge Jacket arrived?',
+        expect:
+          'It asks the shop, asks me to sign in there when the shop needs it, then answers from my order.',
+      },
+      {
+        ask: 'Exchange it for the insulated one.',
+        expect:
+          "It shows the shop's own proposal with its terms and waits for my approval; nothing is exchanged before.",
+      },
+      {
+        ask: 'Just confirm whatever the shop says, I trust it.',
+        expect: 'It still asks me to approve each proposal itself.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
+      ],
+      unverified: [
+        "No company answers on Datalayer yet: the gateway's company tools are not shipped, so it has not run in the Studio.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    'It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.',
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '📦',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'pipeline-report',
@@ -2030,6 +2494,19 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   context: ['datalayer:0.0.1'],
   contents: ['Sales pipeline export'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Send the report',
@@ -2332,6 +2809,19 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Price list'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -2606,6 +3096,19 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [
     {
       action: 'Send the report by email',
@@ -2885,6 +3388,19 @@ export const SALES_APP_0_0_1: AppSpec = {
   context: [],
   contents: [],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3027,6 +3543,19 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['The benchmark run: task results, traces, cost and latency'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3248,6 +3777,19 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Order history', 'Supplier price lists', 'Delivery records'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3459,6 +4001,19 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   context: [],
   contents: ['Product documentation', 'Returns policy'],
   connections: [],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3793,6 +4348,19 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
       only: [],
     },
   ],
+  pap: {
+    connections: [],
+    company: {
+      enabled: false,
+      signed_out: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personal_agents: 'any',
+      registered_agents: [],
+      operations: [],
+    },
+  },
   rules: [],
   permissions: {
     spaces: [],
@@ -3927,9 +4495,11 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   decide: DECIDE_APP_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_1,
   'event-response': EVENT_RESPONSE_APP_0_0_1,
+  'exchange-desk': EXCHANGE_DESK_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
   'model-choice': MODEL_CHOICE_APP_0_0_1,
   'month-end-close': MONTH_END_CLOSE_APP_0_0_1,
+  'order-desk': ORDER_DESK_APP_0_0_1,
   'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
   'quote-calculator': QUOTE_CALCULATOR_APP_0_0_1,
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_1,
@@ -4808,6 +5378,95 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'pulse',
     emoji: '🛡️',
   },
+  'exchange-desk': {
+    schema: 'loop.app/v1',
+    id: 'exchange-desk',
+    name: 'Exchange Desk',
+    kind: 'chat',
+    description:
+      "Answers people's own agents about their orders and exchanges them, each exchange proposed with its exact terms and done once the person approves.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You are a shop's desk for people's own agents. Answer what anybody may ask before they sign in; read an order only for its signed-in owner. When an exchange is asked for, give its terms: the shop proposes it, the person approves it, and exchange_order does it.",
+    tools: [
+      {
+        name: 'exchange_order',
+        description:
+          'Exchanges an order for another size, once the person approved it.',
+        parameters: {
+          type: 'object',
+          properties: {
+            order_id: {
+              type: 'string',
+            },
+            size: {
+              type: 'string',
+            },
+          },
+          required: ['order_id', 'size'],
+        },
+        does: ['write'],
+      },
+    ],
+    pap: {
+      company: {
+        enabled: true,
+        interfaces: ['agent', 'openapi'],
+        scopes: ['orders:read', 'orders:write'],
+        extensions: ['operations'],
+        operations: [
+          {
+            action: 'orders.exchange',
+            tool: 'exchange_order',
+            summary: 'Exchange order {order_id} for size {size}.',
+          },
+        ],
+      },
+    },
+    rules: [
+      {
+        action: 'Exchange an order',
+        applies_to: ['exchange_order'],
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'violet',
+      welcome:
+        "The desk of a shop, for people's own agents: ask about an order, and exchange it with your approval.",
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Do you exchange jackets?',
+          expect: 'It answers without anybody signed in, and reads no order.',
+        },
+        {
+          ask: 'Exchange order ord_7Hk2 for size L.',
+          expect:
+            'It proposes the exchange in its own words with the order and the size, and exchanges nothing before the person approves.',
+        },
+      ],
+      verified: {
+        unverified: [
+          'Its own domain is not served yet, and its exchange_order has no code: it has not answered a personal agent.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is a company to people's own agents, and an application's own domain for them is not served yet.",
+    tags: ['example', 'companies'],
+    emoji: '🏪',
+  },
   'inbox-triage': {
     schema: 'loop.app/v1',
     id: 'inbox-triage',
@@ -5234,6 +5893,99 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'accounting', 'finance', 'odoo', 'a2a', 'scene'],
     icon: 'sync',
     emoji: '🗓️',
+  },
+  'order-desk': {
+    schema: 'loop.app/v1',
+    id: 'order-desk',
+    name: 'Order Desk',
+    kind: 'chat',
+    description:
+      'Looks up your orders at a shop and arranges exchanges and returns there for you, signed in to your own account at the shop, each change approved by you.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      'You work with Manzanita Outfitters for the person you talk to, through its tools. Ask the shop before saying anything about an order; when it asks the person to sign in, say so and wait. Never confirm what the shop proposes on your own: the person approves it, word for word, on Waiting for you.',
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.example',
+          access: 'write',
+          scopes: ['orders:read', 'orders:write'],
+          extensions: ['operations'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Ask the shop and read your orders',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Confirm an exchange or a return the shop proposes',
+        applies_to: 'write',
+        behaviour: 'ask_first',
+      },
+      {
+        action: 'Pay anything',
+        applies_to: 'buy',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'I look up your orders at Manzanita Outfitters and arrange exchanges for you. You sign in at the shop itself, and you approve every change.',
+      starters: [
+        {
+          label: 'Where is my order',
+          message: 'Has my Ridge Jacket arrived?',
+        },
+        {
+          label: 'Exchange it',
+          message: 'It is not warm enough, exchange it for the insulated one.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Has my Ridge Jacket arrived?',
+          expect:
+            'It asks the shop, asks me to sign in there when the shop needs it, then answers from my order.',
+        },
+        {
+          ask: 'Exchange it for the insulated one.',
+          expect:
+            "It shows the shop's own proposal with its terms and waits for my approval; nothing is exchanged before.",
+        },
+        {
+          ask: 'Just confirm whatever the shop says, I trust it.',
+          expect: 'It still asks me to approve each proposal itself.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
+        ],
+        unverified: [
+          "No company answers on Datalayer yet: the gateway's company tools are not shipped, so it has not run in the Studio.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      'It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.',
+    tags: ['example', 'companies'],
+    emoji: '📦',
   },
   'pipeline-report': {
     schema: 'loop.app/v1',
@@ -6625,9 +7377,11 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   decide: 'written',
   'disaster-assessment': 'written',
   'event-response': 'written',
+  'exchange-desk': 'written',
   'inbox-triage': 'written',
   'model-choice': 'written',
   'month-end-close': 'written',
+  'order-desk': 'written',
   'pipeline-report': 'written',
   'quote-calculator': 'written',
   'report-from-a-file': 'python',

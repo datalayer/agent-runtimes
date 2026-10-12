@@ -926,6 +926,194 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppPageOutput',
       type: 'object',
     },
+    AppPap: {
+      additionalProperties: false,
+      description:
+        'Personal Agent Protocol: the companies it works with, and whether it is one.',
+      properties: {
+        connections: {
+          description: 'Companies, as a personal agent',
+          items: {
+            $ref: '#/$defs/AppPapConnection',
+          },
+          title: 'Connections',
+          type: 'array',
+        },
+        company: {
+          $ref: '#/$defs/AppPapCompany',
+          description: 'As a company',
+        },
+      },
+      title: 'AppPap',
+      type: 'object',
+    },
+    AppPapCompany: {
+      additionalProperties: false,
+      description:
+        'The application is a company personal agents work with (PAP_DATALAYER S-01, U-04).',
+      properties: {
+        enabled: {
+          default: false,
+          description: 'Whether it publishes itself as a company at Ship',
+          title: 'Enabled',
+          type: 'boolean',
+        },
+        signed_out: {
+          default: true,
+          description: 'Whether a personal agent may ask before signing in',
+          title: 'Signed Out',
+          type: 'boolean',
+        },
+        interfaces: {
+          description: 'How personal agents reach it',
+          items: {
+            $ref: '#/$defs/PapInterface',
+          },
+          title: 'Interfaces',
+          type: 'array',
+        },
+        scopes: {
+          description: 'The scopes it offers',
+          items: {
+            type: 'string',
+          },
+          title: 'Scopes',
+          type: 'array',
+        },
+        extensions: {
+          description: 'Extensions it offers: `operations`',
+          items: {
+            type: 'string',
+          },
+          title: 'Extensions',
+          type: 'array',
+        },
+        personal_agents: {
+          $ref: '#/$defs/PapAgents',
+          default: 'any',
+          description: '`any`, or `registered` only',
+        },
+        registered_agents: {
+          description:
+            "The personal agents it accepts when `registered` only: each one's `client_id` URL",
+          items: {
+            type: 'string',
+          },
+          title: 'Registered Agents',
+          type: 'array',
+        },
+        operations: {
+          description:
+            'What it does for the person once they confirm (the `operations` extension)',
+          items: {
+            $ref: '#/$defs/AppPapOperation',
+          },
+          title: 'Operations',
+          type: 'array',
+        },
+      },
+      title: 'AppPapCompany',
+      type: 'object',
+    },
+    AppPapConnection: {
+      additionalProperties: false,
+      description:
+        'A company the application works with as a Personal Agent (PAP_DATALAYER S-01).\n\nThe company is named by its domain, the discovery input, and nothing else:\nits endpoints, issuer and metadata are what discovery verifies and are kept\nby the deployment, never here, and no credential is ever part of a spec.\n`access` and `as` mean what they mean for every connection.',
+      properties: {
+        id: {
+          description: 'Stable within the application: `orders`',
+          title: 'Id',
+          type: 'string',
+        },
+        company: {
+          description:
+            "The company's domain, as discovery takes it: `example.com`",
+          title: 'Company',
+          type: 'string',
+        },
+        access: {
+          $ref: '#/$defs/Access',
+          default: 'read',
+          description: 'How far: `read`, or `write`',
+        },
+        as: {
+          $ref: '#/$defs/ActsAs',
+          default: 'user',
+          description:
+            'In whose account: `user` (each person signs in to their own) or `owner`',
+        },
+        scopes: {
+          description: 'The fewest scopes the application needs',
+          items: {
+            type: 'string',
+          },
+          title: 'Scopes',
+          type: 'array',
+        },
+        interfaces: {
+          description: 'How it reaches the company',
+          items: {
+            $ref: '#/$defs/PapInterface',
+          },
+          title: 'Interfaces',
+          type: 'array',
+        },
+        sign_in: {
+          description: 'Sign-in modes the application accepts, preferred first',
+          items: {
+            $ref: '#/$defs/PapSignIn',
+          },
+          title: 'Sign In',
+          type: 'array',
+        },
+        extensions: {
+          description: 'Extensions it uses: `operations`',
+          items: {
+            type: 'string',
+          },
+          title: 'Extensions',
+          type: 'array',
+        },
+      },
+      required: ['id', 'company'],
+      title: 'AppPapConnection',
+      type: 'object',
+    },
+    AppPapOperation: {
+      additionalProperties: false,
+      description:
+        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (PAP_DATALAYER B-04, Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.",
+      properties: {
+        action: {
+          description:
+            "The action's name at this company, e.g. `orders.exchange`",
+          title: 'Action',
+          type: 'string',
+        },
+        tool: {
+          description:
+            "The application's tool that does it, called with the terms",
+          title: 'Tool',
+          type: 'string',
+        },
+        summary: {
+          description:
+            'What the person is shown, with `{term}` for each term, e.g. `Exchange order {order_id} for size {size}`; never written by the model',
+          title: 'Summary',
+          type: 'string',
+        },
+        user_approval_required: {
+          default: true,
+          description:
+            'Whether only the person may confirm it, never an approval in advance',
+          title: 'User Approval Required',
+          type: 'boolean',
+        },
+      },
+      required: ['action', 'tool', 'summary'],
+      title: 'AppPapOperation',
+      type: 'object',
+    },
     AppPermissions: {
       additionalProperties: false,
       description:
@@ -1922,6 +2110,26 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Layout',
       type: 'string',
     },
+    PapAgents: {
+      description: 'Which personal agents a company application accepts.',
+      enum: ['any', 'registered'],
+      title: 'PapAgents',
+      type: 'string',
+    },
+    PapInterface: {
+      description:
+        'How a Personal Agent Protocol company is reached (PAP §3.1).',
+      enum: ['agent', 'openapi', 'mcp', 'web'],
+      title: 'PapInterface',
+      type: 'string',
+    },
+    PapSignIn: {
+      description:
+        'How a person signs in at a company, in the order the application prefers.',
+      enum: ['direct', 'device', 'mediated'],
+      title: 'PapSignIn',
+      type: 'string',
+    },
     RecordItem: {
       description: 'What an application may keep of what it did.',
       enum: [
@@ -2111,6 +2319,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Connections',
       type: 'array',
     },
+    pap: {
+      $ref: '#/$defs/AppPap',
+      description:
+        'Personal Agent Protocol: companies it works with, or being one',
+    },
     rules: {
       description: 'When it acts alone, and when it asks',
       items: {
@@ -2225,8 +2438,9 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     avatar: {
       default: '',
       description:
-        'Its avatar, by name: a drawing of the set people choose theirs from on their profile. Its emoji stands for it when unsaid, and where only text goes',
-      pattern: '^\\s*([A-Z][A-Za-z0-9]{0,63})?\\s*$',
+        'Its avatar, as people keep theirs on their profile: `emoji:<emoji>`, or `@datalayer/icons-react:<Name>Icon` for a drawing of the set. Its emoji stands for it when unsaid, and where only text goes',
+      pattern:
+        '^\\s*(emoji:[^\\sA-Za-z0-9]{1,32}|@datalayer/icons-react:[A-Z][A-Za-z0-9]{0,62}Icon)?\\s*$',
       title: 'Avatar',
       type: 'string',
     },

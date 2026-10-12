@@ -761,6 +761,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'earthdata.search_earth_datasets': 'do_it',
   },
   'event-response': {},
+  'exchange-desk': {},
   'inbox-triage': {
     'google-workspace.append_table_rows': 'leave_to_me',
     'google-workspace.batch_modify_gmail_message_labels': 'do_it',
@@ -936,6 +937,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'odoo-accounting.odoo_accounting_trial_balance': 'do_it',
     'odoo-accounting.odoo_accounting_unreconcile_lines': 'leave_to_me',
   },
+  'order-desk': {},
   'pipeline-report': {},
   'quote-calculator': {},
   'report-from-a-file': {},
@@ -968,6 +970,7 @@ export const APP_ESCALATIONS: Record<
   decide: {},
   'disaster-assessment': {},
   'event-response': {},
+  'exchange-desk': {},
   'inbox-triage': {
     'google-workspace.batch_modify_gmail_message_labels': [
       {
@@ -1004,6 +1007,7 @@ export const APP_ESCALATIONS: Record<
   },
   'model-choice': {},
   'month-end-close': {},
+  'order-desk': {},
   'pipeline-report': {},
   'quote-calculator': {},
   'report-from-a-file': {},
