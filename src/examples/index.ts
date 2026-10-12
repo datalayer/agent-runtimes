@@ -51,6 +51,7 @@ export { default as PapMediatedSignInExample } from './PapMediatedSignInExample'
 export { default as PapConversationStreamingExample } from './PapConversationStreamingExample';
 export { default as PapConversationControlExample } from './PapConversationControlExample';
 export { default as PapOperationsExample } from './PapOperationsExample';
+export { default as PapSignInDisplayExample } from './PapSignInDisplayExample';
 export { default as ScenesExample } from './ScenesExample';
 export { default as AgentEvalsExample } from './AgentEvalsExample';
 export { default as AgentGuardrailsExample } from './AgentGuardrailsExample';

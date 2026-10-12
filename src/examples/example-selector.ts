@@ -413,6 +413,11 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     'Replay PAP Operations v1: exact approval of one revision, terms changed, at-most-once confirmation, and cancellation.',
   ),
   makeEntry(
+    'PapSignInDisplayExample',
+    () => import('./PapSignInDisplayExample'),
+    'The sign-in card as a display: a PapSignIn tool result drawn with resolveToolResult and ReactorDisplay, its link and code never in the model view.',
+  ),
+  makeEntry(
     'AgentNotificationsExample',
     () => import('./AgentNotificationsExample'),
     'Notifications and event routing example.',

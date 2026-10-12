@@ -155,6 +155,8 @@ const ANONYMOUS_EXAMPLES = new Set([
   'PapConversationStreamingExample',
   'PapConversationControlExample',
   'PapOperationsExample',
+  // The sign-in card drawn from a tool result's display: fixtures, no runtime.
+  'PapSignInDisplayExample',
   // The floating assistant: the character, its balloon and its motions need
   // no runtime; a conversation does, and says so when there is none.
   'AssistantExample',

@@ -8,9 +8,8 @@
  *
  * The traces are generated from the PAP Python SDK's demo worlds by
  * `examples/personal-agent-protocol/traces/generate.py`: real keys, proofs
- * and HTTP between the parties, recorded and redacted. The TypeScript SDK
- * does not implement these features yet, so this view calls no SDK function:
- * it shows what the user sees, what each party holds, and the sequence of
+ * and HTTP between the parties, recorded and redacted. This view calls no
+ * SDK function: it shows what the user sees, what each party holds, and the sequence of
  * exchanges between them, all synchronized on one step.
  */
 
@@ -656,7 +655,7 @@ export const PapTraceView: React.FC<{ trace: PapTrace; eyebrow?: string }> = ({
     <PapExamplePage
       eyebrow={eyebrow}
       title={trace.title}
-      description={`${trace.description} Replayed from a trace the PAP Python SDK's demo world generated (${trace.generator}); every token, code, proof and assertion is a placeholder. These features need the PAP release after 0.3.3.`}
+      description={`${trace.description} Replayed from a trace the PAP Python SDK's demo world generated (${trace.generator}); every token, code, proof and assertion is a placeholder.`}
       maxWidth={1240}
     >
       <Box
