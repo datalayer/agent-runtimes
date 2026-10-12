@@ -74,8 +74,31 @@ verifies personal-agent JWTs against registered JWKS, keeps contexts per
 simulated Brand sign-in where the person may untick scopes, issues delegation
 tokens, asks for more with a step-up, and signs receipts. The checks it makes
 (`verify_personal_agent_jwt`, `verify_delegation_token`, `verify_receipt`)
-are the ones a business application uses. `examples/protocols/pact/personal_agent.py`
-plays the whole journey.
+are the ones a business application uses.
+
+## Examples
+
+Both run locally, against Example Air, in one process with no network and
+no model.
+
+```bash
+python examples/protocols/pact/personal_agent.py
+```
+
+(example EX-06) prints the card (*Example Air Support: PACT delegated*, its
+two scopes with their action classes), an answer under the personal-agent
+JWT alone, the Brand's sign-in link and code, the one scope of two the
+person granted, an answer within it, a step-up for the other scope
+(`missing: ('bookings:change',)`), the change once granted, and *Receipts
+verified and kept: 2*. The TypeScript personal agent (`pact.unit.test.ts`)
+runs against an in-memory Brand.
+
+```bash
+python examples/protocols/pap_and_pact/app.py
+```
+
+(example EX-07) asks a PAP company and a PACT Brand one question and keeps
+one record: see [PAP and PACT](./pap-and-pact).
 
 ## What never reaches a model
 

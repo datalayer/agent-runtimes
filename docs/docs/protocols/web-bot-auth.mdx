@@ -125,10 +125,20 @@ fails the draft's vectors. The signature base is written here over
 
 ## Example
 
-`examples/protocols/web_bot_auth/signed_agent.py` runs an agent, its key
-directory and a shop in one process: the three headers and the signature
-base, a verified request, a replayed one refused, an unsigned one and a
-stranger's unverified, and a key rotation.
+Runs locally, in one process with no network (examples EX-01 and EX-02):
+
+```bash
+python examples/protocols/web_bot_auth/signed_agent.py
+```
+
+It runs an agent, its key directory and a shop, and prints the three headers
+(`Signature-Agent`, `Signature-Input`, `Signature`) and the signature base,
+then what the shop sees: a signed request `verified` (200), the same request
+replayed refused (401, *the nonce was seen before*), an unsigned one and a
+stranger's `unverified`, and after a key rotation both keys verified while
+in-flight requests finish. The same key signs in TypeScript: `vectors.json`'s
+`cross` request is signed in Python, reproduced header for header by
+`webBotAuth.unit.test.ts` and verified by the Python verifier.
 
 ## What never leaves the host
 

@@ -75,7 +75,25 @@ with those it activates.
 local seller (discovery, checkout sessions, the discount extension), holding
 an agent to `Authorization`, `API-Version` and `Idempotency-Key` (`409` on a
 reused key with another body); every answer is validated by the generated
-models. `examples/protocols/agentic_commerce/checkout.py` buys there.
+models.
+
+## Example
+
+Runs locally, against the test seller above, in one process with no network
+and no model (example EX-05):
+
+```bash
+python examples/protocols/agentic_commerce/checkout.py --yes
+```
+
+It prints the seller's discovery (`outfitters.example speaks the Agentic
+Commerce Protocol 2026-04-17`, the `discount` extension), a session
+`not_ready_for_payment` until the buyer's email is given, the `WELCOME10`
+discount applied (`ready_for_payment`), the exact purchase to approve (*Buy
+2 × Wool socks at outfitters.example for USD 29.16*), the order once bought,
+and the same proposal refused a second time. Without `--yes` it asks you to
+approve. The TypeScript client (`agenticCommerce.unit.test.ts`) runs against
+a seller answering with the shared fixture.
 
 ## What never reaches a model
 

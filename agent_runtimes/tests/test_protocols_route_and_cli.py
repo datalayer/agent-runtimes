@@ -46,6 +46,31 @@ def test_what_an_application_uses():
     assert protocols_used({}) == {}
 
 
+def test_what_an_application_uses_of_pact_and_a2a():
+    used = protocols_used(
+        {
+            "pact": {"connections": [{"id": "air", "brand": "air.example"}]},
+            "a2a": {"extensions": [{"uri": "https://shop.example/ext/gift/v1"}]},
+        }
+    )
+    assert used == {
+        "pact": "is a personal agent at air.example for the people it serves",
+        "a2a": "publishes 1 card extension(s): https://shop.example/ext/gift/v1",
+    }
+
+
+def test_the_command_says_pap_though_its_plugins_are_the_sdks(tmp_path: Path):
+    spec = tmp_path / "app.yaml"
+    spec.write_text(
+        "id: x\nname: X\nkind: chat\npap:\n  connections:\n"
+        "    - company: manzanita.example\n"
+    )
+    result = CliRunner().invoke(apps_cli, ["protocols", str(spec)])
+    assert result.exit_code == 0, result.output
+    assert "(pap)" in result.output
+    assert "works with manzanita.example" in result.output
+
+
 def test_the_command(tmp_path: Path):
     spec = tmp_path / "app.yaml"
     spec.write_text("id: x\nname: X\nkind: chat\nconnections:\n  - server: gmail\n")
