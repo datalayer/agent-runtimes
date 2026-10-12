@@ -170,6 +170,4 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
     assert TOOL_CLASSES == of("pap")
     assert TOOL_CLASSES["pap_confirm"] == ("write", "buy")
     assert {name: (cls,) for name, cls in UCP_CLASSES.items()} == of("ucp")
-    assert {name: (cls,) for name, cls in ACP_CLASSES.items()} == of(
-        "agentic-commerce"
-    )
+    assert {name: (cls,) for name, cls in ACP_CLASSES.items()} == of("agentic-commerce")

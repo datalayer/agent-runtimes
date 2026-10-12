@@ -238,8 +238,7 @@ class TestTheCard:
     ) -> None:
         """AGENT_PROTOCOLS PR-02: `a2a.extensions` of the Appspec, published after
         the runtime's own and read back by the A2A plugin's reader."""
-        from agentspecs.apps import AppSpec
-
+        from agent_runtimes.loop.apps.loading import load_app
         from agent_runtimes.protocols.a2a import find_extension
 
         gift = {
@@ -248,10 +247,16 @@ class TestTheCard:
             "params": {"papers": ["red", "gold"]},
         }
         accounting = APP_CATALOGUE["accounting"]
-        spec = AppSpec.model_validate(
+        # As a runtime loads it (`load_app`): the spec the application's route serves.
+        spec = load_app(
             {
-                **accounting.model_dump(by_alias=True),
-                "a2a": {"extensions": [gift, {"uri": "urn:example:loyalty", "required": True}]},
+                **accounting.model_dump(by_alias=True, exclude_defaults=True),
+                "a2a": {
+                    "extensions": [
+                        gift,
+                        {"uri": "urn:example:loyalty", "required": True},
+                    ]
+                },
             }
         )
         async with served(state, spec=spec) as (app, _), _client(app) as client:

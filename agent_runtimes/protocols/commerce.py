@@ -39,7 +39,9 @@ def operation_classes(protocol: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for name, classes in tools.items():
         if len(classes) != 1:
-            raise ValueError(f"{protocol} {name} is classed {classes!r}: one class each")
+            raise ValueError(
+                f"{protocol} {name} is classed {classes!r}: one class each"
+            )
         out[name] = classes[0]
     return out
 

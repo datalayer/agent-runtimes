@@ -2229,6 +2229,21 @@ class AppPapSpec(BaseModel):
     company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
 
 
+class AppA2AExtensionSpec(BaseModel):
+    """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
+
+    uri: str = Field(..., description="The extension's URI")
+    description: str = Field(default="")
+    required: bool = Field(default=False)
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AppA2ASpec(BaseModel):
+    """A2A: the extensions its Agent Card advertises, beside the runtime's own."""
+
+    extensions: List[AppA2AExtensionSpec] = Field(default_factory=list)
+
+
 class AppRuleSpec(BaseModel):
     """When an application acts alone, and when it asks."""
 
@@ -2904,6 +2919,7 @@ class AppSpec(BaseModel):
     )
     connections: List[AppConnectionSpec] = Field(default_factory=list)
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
+    a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)
     interface: AppInterfaceSpec = Field(default_factory=AppInterfaceSpec)
