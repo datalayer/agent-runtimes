@@ -955,12 +955,23 @@ export function documentShapeProblems(document: unknown): string[] {
   ]) {
     text(d[key], key);
   }
-  // A drawing is named as it is in the profile's sets, `AstronautIcon`.
-  for (const key of ['avatar', 'banner']) {
-    const name = typeof d[key] === 'string' ? (d[key] as string).trim() : '';
-    if (name && !/^[A-Z][A-Za-z0-9]{0,63}$/.test(name)) {
-      at(key, 'is named as its drawing is, `AstronautIcon`');
-    }
+  // An avatar is kept as a person's is (core's avatarChoice): `emoji:<emoji>`
+  // or `@datalayer/icons-react:<Name>Icon`; a banner by its drawing's name.
+  const avatar = typeof d.avatar === 'string' ? d.avatar.trim() : '';
+  if (
+    avatar &&
+    !/^(emoji:[^\sA-Za-z0-9]{1,32}|@datalayer\/icons-react:[A-Z][A-Za-z0-9]{0,62}Icon)$/u.test(
+      avatar,
+    )
+  ) {
+    at(
+      'avatar',
+      'is `emoji:<emoji>` or `@datalayer/icons-react:<Name>Icon`, as `emoji:👀`',
+    );
+  }
+  const banner = typeof d.banner === 'string' ? d.banner.trim() : '';
+  if (banner && !/^[A-Z][A-Za-z0-9]{0,63}$/.test(banner)) {
+    at('banner', 'is named as its drawing is, `SvgTutorialsHero`');
   }
   for (const key of [
     'skills',

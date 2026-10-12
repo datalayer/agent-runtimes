@@ -352,20 +352,26 @@ describe('the instant checks', () => {
   it('read an avatar and a banner chosen as a person chooses theirs, and refuse one misnamed', () => {
     const chosen = parseAppspec({
       ...BASE,
-      avatar: 'AstronautIcon',
+      avatar: '@datalayer/icons-react:AstronautIcon',
       banner: 'SvgTutorialsHero',
     }).app;
     expect([chosen.avatar, chosen.banner]).toEqual([
-      'AstronautIcon',
+      '@datalayer/icons-react:AstronautIcon',
       'SvgTutorialsHero',
     ]);
+    expect(checkAppspec({ ...BASE, avatar: 'emoji:🚀' }).problems).toEqual([]);
     const written = Object.keys(dumpAppspec(chosen));
     expect(written.slice(-2)).toEqual(['avatar', 'banner']);
     // Unchosen: nothing written, the emoji stands for it.
     expect(dumpAppspec(parseAppspec(BASE).app)).not.toHaveProperty('avatar');
+    for (const refused of ['AstronautIcon', 'an astronaut', 'emoji:mail']) {
+      expect(checkAppspec({ ...BASE, avatar: refused }).problems).toContain(
+        'avatar: is `emoji:<emoji>` or `@datalayer/icons-react:<Name>Icon`, as `emoji:👀`.',
+      );
+    }
     expect(
-      checkAppspec({ ...BASE, avatar: 'an astronaut' }).problems,
-    ).toContain('avatar: is named as its drawing is, `AstronautIcon`.');
+      checkAppspec({ ...BASE, banner: 'svg-terms-hero' }).problems,
+    ).toContain('banner: is named as its drawing is, `SvgTutorialsHero`.');
   });
 
   it('read the assistant embed mode and any character a plugin may contribute, and refuse an id of the wrong shape (D-07, T-24)', () => {
