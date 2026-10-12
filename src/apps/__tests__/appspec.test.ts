@@ -376,6 +376,22 @@ describe('writing an Appspec', () => {
       /add 'a2a' to `protocols`/,
     );
   });
+  it('reads and writes the UI its answers render in (AGENT_PROTOCOLS PS-04)', () => {
+    const { app, problems } = parseAppspec({ kind: 'chat', ui: ['a2ui'] });
+    expect(problems).toEqual([]);
+    expect(dumpAppspec(app).ui).toEqual(['a2ui']);
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('ui');
+    const said = (document: Record<string, unknown>) =>
+      parseAppspec({ kind: 'chat', ...document }).problems;
+    expect(said({ ui: ['nope'] })[0]).toMatch(/no UI named 'nope'/);
+    expect(said({ ui: ['a2ui', 'a2ui'] })).toEqual([
+      "It lists the UI 'a2ui' twice.",
+    ]);
+    expect(said({ ui: ['mcp-ui'] })[0]).toMatch(/is not enabled/);
+    expect(
+      said({ ui: ['mcp-ui'], enabled: false, unavailable_because: 'Later.' }),
+    ).toEqual([]);
+  });
   it('reads and writes the personal agents a company accepts (PAP_DATALAYER U-04)', () => {
     const agent = 'https://agents.example/agent.json';
     const company = {

@@ -2967,6 +2967,10 @@ class AppSpec(BaseModel):
         default_factory=list,
         description="The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS PS-02)",
     )
+    ui: List[str] = Field(
+        default_factory=list,
+        description="The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04)",
+    )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)

@@ -1204,6 +1204,8 @@ export interface AppSpec {
    * is listed, and a planned one only while it is not offered.
    */
   protocols: string[];
+  /** The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04). */
+  ui: string[];
   /** Personal Agent Protocol; absent, the application has none. */
   pap?: AppPapSpec;
   /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */

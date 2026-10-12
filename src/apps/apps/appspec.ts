@@ -69,6 +69,7 @@ import type {
 } from '../../types/agentspecs';
 import { BEHAVIOURS } from './rules';
 import { PROTOCOL_CATALOGUE } from '../../specs/protocols';
+import { UI_CATALOGUE } from '../../specs/ui';
 import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
@@ -239,6 +240,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     contents: [],
     connections: [],
     protocols: [],
+    ui: [],
     rules: [],
     permissions: {
       spaces: [],
@@ -307,6 +309,7 @@ const KNOWN_KEYS = [
   'contents',
   'connections',
   'protocols',
+  'ui',
   'pap',
   'pact',
   'a2a',
@@ -1090,6 +1093,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
     protocols: texts(data.protocols),
+    ui: texts(data.ui),
     rules: records(data.rules).map(parseRule),
     permissions: {
       spaces: records(permissions.spaces).map(grant => ({
@@ -1181,8 +1185,36 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.a2a)) {
     app.a2a = parseA2A(data.a2a);
   }
-  problems.push(...protocolsProblems(app));
+  problems.push(...protocolsProblems(app), ...uiProblems(app));
   return { app, problems };
+}
+
+/**
+ * What is wrong with the UI an application says its answers render in
+ * (AGENT_PROTOCOLS PS-04), as agentspecs says it: an id the catalogue does not
+ * know or said twice, one not enabled while it is offered.
+ */
+export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
+  const problems: string[] = [];
+  const seen: string[] = [];
+  for (const id of app.ui) {
+    if (seen.includes(id)) {
+      problems.push(`It lists the UI '${id}' twice.`);
+      continue;
+    }
+    seen.push(id);
+    const spec = UI_CATALOGUE[id];
+    if (!spec) {
+      problems.push(
+        `There is no UI named '${id}': one of ${Object.keys(UI_CATALOGUE).sort().join(', ')}.`,
+      );
+    } else if (app.enabled && !spec.enabled) {
+      problems.push(
+        `The UI ${spec.name} ('${id}') is not enabled: an application cannot render in it yet.`,
+      );
+    }
+  }
+  return problems;
 }
 
 /**
@@ -1606,6 +1638,7 @@ export function dumpAppspec(app: AppSpec): Data {
       ),
     )
     .list('protocols', app.protocols)
+    .list('ui', app.ui)
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
     .part('a2a', dumpA2A(app.a2a))

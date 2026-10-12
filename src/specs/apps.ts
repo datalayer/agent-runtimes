@@ -43,6 +43,7 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Read the books',
@@ -205,6 +206,7 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Search and read the imagery',
@@ -372,6 +374,7 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Search and read the imagery',
@@ -536,6 +539,7 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Send the summary by email',
@@ -752,6 +756,7 @@ export const DATA_QUALITY_APP_0_0_1: AppSpec = {
   contents: ['The dataset under investigation'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -954,6 +959,7 @@ export const DECIDE_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Ask a decision',
@@ -1100,6 +1106,7 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Search and read the imagery',
@@ -1260,6 +1267,7 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -1430,6 +1438,7 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: ['pap'],
+  ui: [],
   pap: {
     connections: [],
     company: {
@@ -1574,6 +1583,7 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Label and archive a message',
@@ -1775,6 +1785,7 @@ export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
   ],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -2033,6 +2044,7 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Read the books',
@@ -2198,6 +2210,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: ['pap'],
+  ui: [],
   pap: {
     connections: [
       {
@@ -2365,6 +2378,7 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   contents: ['Sales pipeline export'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Send the report',
@@ -2668,6 +2682,7 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   contents: ['Price list'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -2943,6 +2958,7 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [
     {
       action: 'Send the report by email',
@@ -3223,6 +3239,7 @@ export const SALES_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -3366,6 +3383,7 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   contents: ['The benchmark run: task results, traces, cost and latency'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -3588,6 +3606,7 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   contents: ['Order history', 'Supplier price lists', 'Delivery records'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -3800,6 +3819,7 @@ export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
   contents: ['Product documentation', 'Returns policy'],
   connections: [],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],
@@ -4129,6 +4149,7 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
   contents: [],
   connections: [],
   protocols: ['pact'],
+  ui: [],
   pact: {
     connections: [
       {
@@ -4284,6 +4305,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
     },
   ],
   protocols: [],
+  ui: [],
   rules: [],
   permissions: {
     spaces: [],

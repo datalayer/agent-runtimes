@@ -23,6 +23,9 @@ import {
 import { MCP_SERVER_LIBRARY } from '../../../specs/mcpServers';
 import { listChatModels } from '../../../specs/models';
 import { getSkillSpecs } from '../../../specs/skills';
+import { listProtocolSpecs } from '../../../specs/protocols';
+import { listUI } from '../../../specs/ui';
+import { ASSISTANT_CHARACTERS } from '../../../chat/assistant/characters';
 import {
   LoopCanvasPart,
   type CanvasPartContribution,
@@ -42,6 +45,9 @@ export const CANVAS_PART_SOURCES = [
   'rules',
   'tests',
   'events',
+  'protocols',
+  'ui',
+  'characters',
 ] as const;
 
 export type CanvasPartSource = (typeof CANVAS_PART_SOURCES)[number];
@@ -216,6 +222,39 @@ export const EVENT_PARTS: CanvasPartContribution[] = [
   },
 ];
 
+/** Each protocol of the catalogue (AGENT_PROTOCOLS PS-04): a planned one offered, not enabled. */
+export const PROTOCOL_PARTS: CanvasPartContribution[] = listProtocolSpecs().map(
+  protocol => ({
+    id: `protocol:${protocol.id}`,
+    kind: 'protocol',
+    label: protocol.name,
+    says: protocol.connects,
+    example: protocol.id,
+    enabled: protocol.status === 'shipped',
+  }),
+);
+
+/** Each UI of the catalogue its answers may render in (AGENT_PROTOCOLS PS-04). */
+export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
+  id: `ui:${ui.id}`,
+  kind: 'ui',
+  label: ui.name,
+  says: ui.description,
+  example: ui.id,
+  enabled: ui.enabled,
+}));
+
+/** Datalayer's characters for its floating assistant, dropped on the agent (AGENT_PROTOCOLS PS-05). */
+export const CHARACTER_PARTS: CanvasPartContribution[] =
+  ASSISTANT_CHARACTERS.map(character => ({
+    id: `character:${character.id}`,
+    kind: 'character',
+    label: character.name,
+    says: `Its floating assistant shows ${character.name}.`,
+    example: character.id,
+    enabled: true,
+  }));
+
 export const CANVAS_PART_PLUGINS: ReactorPlugin<
   Record<string, never>,
   unknown,
@@ -227,6 +266,9 @@ export const CANVAS_PART_PLUGINS: ReactorPlugin<
   partsPlugin('rules', 'Rules', RULE_PARTS),
   partsPlugin('tests', 'Tests', TEST_PARTS),
   partsPlugin('events', 'Events', EVENT_PARTS),
+  partsPlugin('protocols', 'Protocols', PROTOCOL_PARTS),
+  partsPlugin('ui', 'UI', UI_PARTS),
+  partsPlugin('characters', 'Characters', CHARACTER_PARTS),
 ];
 
 /** The toolbox's reactor, its named plugins disabled; a name no plugin has is refused. */

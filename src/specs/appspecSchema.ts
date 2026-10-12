@@ -2439,6 +2439,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Protocols',
       type: 'array',
     },
+    ui: {
+      description:
+        'The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04): each once, and one that is not enabled only while it is not offered',
+      items: {
+        type: 'string',
+      },
+      title: 'Ui',
+      type: 'array',
+    },
     pap: {
       $ref: '#/$defs/AppPap',
       description:

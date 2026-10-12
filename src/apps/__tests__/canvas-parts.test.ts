@@ -30,6 +30,8 @@ const LISTS: Record<string, readonly string[]> = {
   skill: ['skills'],
   test: ['tests', 'cases'],
   event: ['triggers'],
+  protocol: ['protocols'],
+  ui: ['ui'],
 };
 
 /** An empty application with a part placed, as the Canvas places it: appended to its list, or a model set. */
@@ -41,6 +43,10 @@ function withPart(part: CanvasPartContribution): Record<string, unknown> {
   };
   if (part.kind === 'model') {
     return { ...data, model: part.example };
+  }
+  if (part.kind === 'character') {
+    const face = (data.interface ?? {}) as Record<string, unknown>;
+    return { ...data, interface: { ...face, assistant: part.example } };
   }
   const [head, tail] = LISTS[part.kind];
   if (tail) {
@@ -75,8 +81,23 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       expect(ids).toContain(`skill:${skill.id}`);
     }
     expect(new Set(parts.map(part => part.kind))).toEqual(
-      new Set(['connection', 'skill', 'model', 'rule', 'test', 'event']),
+      new Set([
+        'connection',
+        'skill',
+        'model',
+        'rule',
+        'test',
+        'event',
+        'protocol',
+        'ui',
+        'character',
+      ]),
     );
+    // Every protocol and UI of the catalogue, a planned one offered but not enabled (PS-04).
+    expect(ids).toContain('protocol:pap');
+    expect(parts.find(part => part.id === 'protocol:ucp')?.enabled).toBe(false);
+    expect(ids).toContain('ui:a2ui');
+    expect(ids).toContain('character:paperclip');
     expect(CANVAS_PART_PLUGINS.map(plugin => plugin.name)).toEqual(
       CANVAS_PART_SOURCES.map(canvasPartsPluginName),
     );
@@ -120,9 +141,16 @@ describe('every part arrives with an example the Appspec takes as it is', () => 
       part.kind === 'event'
         ? { ...(dumpAppspec(emptyAppspec()) as object), kind: 'worker' }
         : dumpAppspec(emptyAppspec());
-    // Nothing new refused: an event even answers a worker's want of one.
-    expect(checkAppspec(empty).problems).toEqual(
-      expect.arrayContaining(checkAppspec(withPart(part)).problems),
+    const added = checkAppspec(withPart(part)).problems.filter(
+      problem => !checkAppspec(empty).problems.includes(problem),
     );
+    // Nothing new refused: an event even answers a worker's want of one. A
+    // part not enabled today is refused in its one sentence while offered.
+    expect(
+      added.filter(
+        problem =>
+          part.enabled || !/planned, not shipped|is not enabled/.test(problem),
+      ),
+    ).toEqual([]);
   });
 });

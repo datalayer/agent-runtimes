@@ -45,6 +45,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
             }
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -187,6 +188,7 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -336,6 +338,7 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -487,6 +490,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Send the summary by email",
@@ -668,6 +672,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["The dataset under investigation"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -848,6 +853,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
         ],
@@ -972,6 +978,7 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
             {"server": "earthdata:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -1119,6 +1126,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1269,6 +1277,7 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pap"],
+        "ui": [],
         "pap": {
             "connections": [],
             "company": {
@@ -1405,6 +1414,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
             }
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Label and archive a message",
@@ -1596,6 +1606,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         ],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1846,6 +1857,7 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
             }
         ],
         "protocols": [],
+        "ui": [],
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -1993,6 +2005,7 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pap"],
+        "ui": [],
         "pap": {
             "connections": [
                 {
@@ -2147,6 +2160,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["Sales pipeline export"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Send the report",
@@ -2406,6 +2420,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["Price list"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2631,6 +2646,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [
             {
                 "action": "Send the report by email",
@@ -2861,6 +2877,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2992,6 +3009,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["The benchmark run: task results, traces, cost and latency"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3208,6 +3226,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["Order history", "Supplier price lists", "Delivery records"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3411,6 +3430,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "contents": ["Product documentation", "Returns policy"],
         "connections": [],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3683,6 +3703,7 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
         "contents": [],
         "connections": [],
         "protocols": ["pact"],
+        "ui": [],
         "pact": {
             "connections": [
                 {
@@ -3822,6 +3843,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
             {"server": "tavily:0.0.1", "access": "read", "as": "owner", "only": []}
         ],
         "protocols": [],
+        "ui": [],
         "rules": [],
         "permissions": {
             "spaces": [],
