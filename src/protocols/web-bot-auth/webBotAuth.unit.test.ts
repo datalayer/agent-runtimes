@@ -111,6 +111,24 @@ describe('Web Bot Auth, the draft’s vectors', () => {
   });
 });
 
+describe('Web Bot Auth, one key, two languages', () => {
+  it('signs as the Python package signs, header for header', async () => {
+    const cross = vectors.cross;
+    const signed = await signRequest(
+      new Request(cross.url),
+      await localSigner(vectors.key),
+      {
+        agent: cross.agent,
+        label: cross.label,
+        created: new Date(cross.created * 1000),
+        expires: new Date(cross.expires * 1000),
+        nonce: cross.nonce,
+      },
+    );
+    expect(signed).toEqual(cross.headers);
+  });
+});
+
 describe('Web Bot Auth, end to end', () => {
   it('a signed fetch is verified; replay, tampering and unsigned are not', async () => {
     const { signer, publicJwk } = await generateLocalSigner();

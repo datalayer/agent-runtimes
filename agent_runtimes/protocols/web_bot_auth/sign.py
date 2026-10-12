@@ -99,7 +99,7 @@ async def sign_request(
     agent: str,
     discovery: str = "directory",
     label: str = "sig1",
-    components: Sequence[str] = ("@method", "@authority", "@path", "@query"),
+    components: Sequence[str] = ("@authority", "@method", "@path", "@query"),
     created: int | None = None,
     lifetime: int = 60,
     expires: int | None = None,
@@ -143,14 +143,23 @@ async def sign_request(
         )
     all_headers = dict(headers or {})
     digest = None
-    covered = list(components_of(components))
+    asked = list(components_of(components))
+    targets = [c for c in asked if c.name in ("@authority", "@target-uri")]
+    if not targets:
+        raise ValueError("a Web Bot Auth signature covers @authority or @target-uri")
+    # The order Cloudflare's library writes, so both languages sign one base:
+    # the target, the Signature-Agent member, then the rest, then the body.
+    agent_header = signature_agent_member(label, agent, discovery)
+    all_headers[SIGNATURE_AGENT] = agent_header
+    covered = [
+        targets[0],
+        Component(name="signature-agent", params=(("key", label),)),
+        *(c for c in asked if c is not targets[0]),
+    ]
     if body:
         digest = content_digest(body)
         all_headers["Content-Digest"] = digest
         covered.append(Component(name="content-digest"))
-    agent_header = signature_agent_member(label, agent, discovery)
-    all_headers[SIGNATURE_AGENT] = agent_header
-    covered.append(Component(name="signature-agent", params=(("key", label),)))
     params = SignatureParams(
         components=tuple(covered),
         params=(

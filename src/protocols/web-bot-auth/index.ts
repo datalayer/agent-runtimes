@@ -223,9 +223,9 @@ export async function signRequest(
     label,
     nonce: options.nonce ?? generateNonce(),
     signatureAgentKey: label,
-    additionalComponents: (options.components ?? ['@method', '@path']).filter(
-      name => name !== '@authority',
-    ),
+    additionalComponents: (
+      options.components ?? ['@method', '@path', '@query']
+    ).filter(name => name !== '@authority'),
   });
   return {
     'Signature-Agent': agentHeader,

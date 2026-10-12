@@ -397,3 +397,36 @@ def test_sync_client_is_refused():
     ) as client:
         with pytest.raises(RuntimeError, match="AsyncClient"):
             client.get("https://shop.test/")
+
+
+@pytest.mark.asyncio
+async def test_one_key_two_languages():
+    """EX-01, PR-51: the headers TypeScript signs (vitest checks it signs these) verify here."""
+    from agent_runtimes.protocols.web_bot_auth import PublicKey
+
+    cross = FIXTURES["cross"]
+    signed = await sign_request(
+        method=cross["method"],
+        url=cross["url"],
+        signer=LocalSigner.from_jwk(KEY),
+        agent=cross["agent"],
+        label=cross["label"],
+        created=cross["created"],
+        expires=cross["expires"],
+        nonce=cross["nonce"],
+    )
+    assert signed.as_dict() == cross["headers"]
+
+    class Directory:
+        async def keys(self, agent, now):
+            assert agent == cross["agent"]
+            return [PublicKey.from_jwk(PUBLIC)]
+
+    result = await verify_request(
+        method=cross["method"],
+        url=cross["url"],
+        headers=cross["headers"],
+        resolver=DirectoryResolver(discoveries={"directory": Directory()}),
+        now=cross["created"] + 10,
+    )
+    assert result.outcome == "verified", result.reason

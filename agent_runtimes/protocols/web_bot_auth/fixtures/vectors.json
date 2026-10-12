@@ -52,5 +52,21 @@
     "expires": 4889289600,
     "signatureInput": "binding=(\"@authority\";req \"content-digest\");created=1735689600;expires=4889289600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";tag=\"http-message-signatures-directory\"",
     "signature": "binding=:l6P8R67tm3kujAxbHWio7ll01qrEZ0dKD/WWlGhNYEmTnFZM8Wt0VQ9zqGfvo7T/UMkBxsigzChM1Gpz7gOVBg==:"
+  },
+  "cross": {
+    "description": "Signed by the Python package with its default components; the TypeScript package, given the same key, time and nonce, must produce the same three headers (Ed25519 is deterministic).",
+    "method": "GET",
+    "url": "https://shop.example/products?q=tea",
+    "agent": "https://agent.example",
+    "label": "sig1",
+    "created": 1735689600,
+    "expires": 1735689660,
+    "nonce": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+Pw==",
+    "headers": {
+      "Signature-Agent": "sig1=\"https://agent.example\"",
+      "Signature-Input": "sig1=(\"@authority\" \"signature-agent\";key=\"sig1\" \"@method\" \"@path\" \"@query\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"ed25519\";expires=1735689660;nonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+Pw==\";tag=\"web-bot-auth\"",
+      "Signature": "sig1=:+9dqLlLrqKKls2A2kPmlmRpvrQmYddY6nnCq0mBn6XeydfCBQKtZllPIjZ32616pnLiTUO+QrpJiFp7JDMQlAg==:"
+    },
+    "base": "\"@authority\": shop.example\n\"signature-agent\";key=\"sig1\": \"https://agent.example\"\n\"@method\": GET\n\"@path\": /products\n\"@query\": ?q=tea\n\"@signature-params\": (\"@authority\" \"signature-agent\";key=\"sig1\" \"@method\" \"@path\" \"@query\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"ed25519\";expires=1735689660;nonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+Pw==\";tag=\"web-bot-auth\""
   }
 }
