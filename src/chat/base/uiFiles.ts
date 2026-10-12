@@ -36,7 +36,8 @@ export function blobOfDataUrl(
     throw new Error(`${name} could not be read: it is not a data URL.`);
   }
   const mediaType = type || head.slice('data:'.length).split(';')[0];
-  let bytes: Uint8Array;
+  // Backed by an ArrayBuffer, as Blob takes it (a SharedArrayBuffer-backed view it refuses).
+  let bytes: Uint8Array<ArrayBuffer>;
   if (head.endsWith(';base64')) {
     const binary = atob(body);
     bytes = new Uint8Array(binary.length);
