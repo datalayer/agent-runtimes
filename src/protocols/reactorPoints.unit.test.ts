@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import protocolsPoints from '../../agent_runtimes/protocols/reactor-points.json';
 import a2aPoints from '../../agent_runtimes/protocols/a2a/reactor-points.json';
 import mcpPoints from '../../agent_runtimes/protocols/mcp/reactor-points.json';
+import ucpPoints from '../../agent_runtimes/protocols/ucp/reactor-points.json';
 import webBotAuthPoints from '../../agent_runtimes/protocols/web_bot_auth/reactor-points.json';
 import * as a2a from './a2a';
 import {
@@ -28,6 +29,7 @@ import {
 } from './agentProtocols';
 import * as core from './core';
 import * as mcp from './mcp';
+import * as ucp from './ucp';
 import * as webBotAuth from './web-bot-auth';
 
 type Entry = {
@@ -48,6 +50,7 @@ const FILES = [
     module: webBotAuth,
     plugin: 'agent-runtimes.protocols.web-bot-auth',
   },
+  { file: ucpPoints, module: ucp, plugin: 'agent-runtimes.protocols.ucp' },
 ];
 const POINTS = FILES.flatMap(({ file, module, plugin }) =>
   (file.points as Entry[]).map(entry => ({ entry, module, plugin })),
@@ -81,6 +84,7 @@ describe('the agent-protocols Extension', () => {
     expect(Object.keys(described).sort()).toEqual([
       'a2a',
       'mcp',
+      'ucp',
       'web_bot_auth',
     ]);
     for (const { file, plugin } of FILES.slice(1)) {

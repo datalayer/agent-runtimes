@@ -530,10 +530,7 @@ export const WebBotAuthPlugin = definePlugin({
       },
       { id: 'web_bot_auth', order: DEFAULT_ORDER },
     ),
-    contribution(WebBotAuthNonceStores, new InMemoryNonceStore(), {
-      id: 'memory',
-      order: DEFAULT_ORDER,
-    }),
+
     contribution(WebBotAuthDirectoryDiscoveries, directoryDiscovery(), {
       id: 'fetch',
       order: DEFAULT_ORDER,
@@ -543,6 +540,13 @@ export const WebBotAuthPlugin = definePlugin({
       order: DEFAULT_ORDER,
     }),
   ],
+  // One nonce store per reactor, not one per module: a store is state.
+  register: ctx => {
+    ctx.contribute(WebBotAuthNonceStores, new InMemoryNonceStore(), {
+      id: 'memory',
+      order: DEFAULT_ORDER,
+    });
+  },
 });
 
 /** The host's signer; throws when the host contributed none. */

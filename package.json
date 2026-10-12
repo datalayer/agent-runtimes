@@ -227,6 +227,7 @@
         "@tailwindcss/vite": "^4.1.13",
         "@tanstack/react-query": "^5.90.6",
         "@toon-format/toon": "^1.3.0",
+        "@ucp-js/sdk": "0.5.1",
         "@xyflow/react": "^12.10.0",
         "ai": "7.0.90",
         "ansi-to-html": "^0.7.2",

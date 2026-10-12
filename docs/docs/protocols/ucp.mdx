@@ -1,0 +1,82 @@
+---
+sidebar_position: 31
+title: UCP
+---
+
+# UCP: shopping, a purchase approved once
+
+Agent Runtimes speaks the [Universal Commerce Protocol](https://ucp.dev)
+**2026-08-25** as a shopper, in Python and TypeScript, over its REST binding.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.protocols.ucp` | `@datalayer/agent-runtimes/lib/protocols/ucp` |
+| Models | `ucp-sdk` 0.5.0 (generated against 2026-08-25) | `@ucp-js/sdk` 0.5.1 (the protocol's own, zod) |
+| Plugin | `agent-runtimes.protocols.ucp` | `UcpPlugin` |
+
+## A purchase is a proposal
+
+Nothing is bought in one call. A `ready_for_complete` checkout becomes an
+exact **proposal** — its lines, prices, totals and currency, and a
+**revision** (the SHA-256 of what is bought) — that the person approves.
+Only then is the checkout completed, once:
+
+```python
+client = UcpClient(business="https://store.example", agent_profile=PROFILE_URL)
+await client.discover()
+checkout = await client.create_checkout([{"id": "tea_sencha", "quantity": 2}])
+checkout = await client.update_checkout(checkout["id"], {"buyer": {"email": "ana@example.com"}})
+proposal = await client.propose_completion(checkout["id"])
+proposal.summary()  # 'Buy 2 × Sencha green tea, 100 g at store.example for USD 27.00'
+order = await client.complete(
+    proposal,
+    approver=approver_of(platform),
+    instruments=instruments_of(platform),
+    store=proposal_store_of(platform),
+)
+```
+
+`complete` is refused when the proposal was used already (it is spent before
+the person is asked, so a declined one is proposed again, never retried),
+when the person declines, when the checkout changed since it was proposed,
+or when it expired. The proposal's id is the `Idempotency-Key`, so a retry
+after a lost answer is the same request.
+
+Every request carries `UCP-Agent: profile="…"`, a `Request-Id`, and on a
+change an `Idempotency-Key`. A host that signs its agents' requests passes
+the Web Bot Auth `httpx` auth to the client's `httpx.AsyncClient`; UCP 2026-08-25
+accepts Web Bot Auth's `Signature-Agent` for RFC 9421 signatures.
+
+## The plugin and its points
+
+| Point | Default | What a host contributes |
+| --- | --- | --- |
+| `ucp.approver` | none: nothing is bought | how the person approves (on Datalayer, Tool Approvals and approvals in advance) |
+| `ucp.paymentInstruments` | none | the payment instrument, from custody: never seen by a model |
+| `ucp.proposalStore` | `memory` | a store shared by its processes |
+| `ucp.extension.fulfillment`, `ucp.extension.discount`, `ucp.extension.buyer_consent` | none | an implementation of that UCP capability extension |
+
+UCP's capability extensions are contribution points of the plugin;
+`negotiate_capabilities(profile, platform)` answers checkout and the
+extensions both the business offers and a contribution implements.
+
+## Action classes
+
+`search`, `propose_completion` and `get_checkout` are `read`; creating,
+updating and cancelling a checkout are `write`; `complete` is `buy`
+(`ACTION_CLASSES`), so a Rule decides each the way it decides any tool.
+
+## The test merchant
+
+`agent_runtimes.protocols.ucp.merchant.ExampleStore` is a local UCP business
+built from the specification's examples: its profile, catalog search and the
+checkout lifecycle, holding the platform to `UCP-Agent`, `Request-Id` and
+`Idempotency-Key` (`409` on a reused key with another body); every answer is
+validated by `ucp-sdk` before it is sent. `examples/protocols/ucp/shopping.py`
+shops there.
+
+## What never reaches a model
+
+The payment token goes from the host's `ucp.paymentInstruments` to the
+business and nowhere else: `checkout_summary` and `proposal.summary()` are
+what an agent sees, and the tests check that no token is in them.

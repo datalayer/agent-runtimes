@@ -56,7 +56,8 @@ listProtocols(reactor);
 | A2A | `agent-runtimes.protocols.a2a` | 1.0 | `a2a.extension.orchestration`, `a2a.extension.face` (Datalayer's), `a2a.extension.other` (any, by URI) |
 | Web Bot Auth | `agent-runtimes.protocols.web-bot-auth` | draft-ietf-webbotauth-httpsig-protocol-00 | `web_bot_auth.signer`, `web_bot_auth.nonceStore`, `web_bot_auth.extension.{directory,jwks_uri,cimd}` — [its page](./web-bot-auth) |
 | PAP | the PAP SDK's own plugins (`pap.*`) | 0.1 | see [Personal Agent Protocol](../integrations/personal-agent-protocol) |
-| PACT, UCP, ACP | planned | PACT 1.0, UCP 2026-08-25, ACP 2026-04-17 | — |
+| UCP | `agent-runtimes.protocols.ucp` | 2026-08-25 | `ucp.approver`, `ucp.paymentInstruments`, `ucp.proposalStore`, `ucp.extension.{fulfillment,discount,buyer_consent}` — [its page](./ucp) |
+| PACT, ACP | planned | PACT 1.0, ACP 2026-04-17 | — |
 
 Each protocol's points are listed in its `reactor-points.json` beside its
 Python package; a table-driven test in each language holds the plugin to
