@@ -159,6 +159,9 @@ pap:
       extensions: [operations]
 ```
 
+In Python, `app.company_connection("orders", "manzanita.example",
+scopes=["orders:read"], interfaces=["agent", "mcp"], sign_in=["device",
+"direct"])` writes the same block, checked by agentspecs at the call.
 No endpoint, issuer or credential is ever part of the spec. In the runtime
 (`agent_runtimes.loop.apps.pap_connections`) each company is one server of
 Datalayer's MCP gateway, named from its domain (`pap_manzanita_example`,
@@ -167,7 +170,8 @@ tools, so two companies' tools never collide. The token sent is the person's
 for `as: user`, the owner's for `as: owner`; the runtime holds no key or token
 of the company's.
 
-What each gateway tool does is the gateway's own table (`TOOL_CLASSES`), so
+What each gateway tool does is classed in agentspecs
+(`protocol-tools/pap.yaml`, read by the gateway and the runtime alike), so
 the application's Rules decide them as any other tool. A `read` connection is
 given only the tools that read (`pap_company`, `pap_ask`, `pap_sign_in`,
 `pap_sign_in_status`, `pap_read`, `pap_mcp_tools`); `pap_confirm`,
@@ -204,6 +208,9 @@ pap:
         user_approval_required: true
 ```
 
+In Python, `app.as_company(...)` writes the role and `@app.company_operation(
+"orders.exchange", summary=...)` over an `@app.tool` declares an operation
+done by that tool ([Python applications](../apps/python-applications#both-personal-agent-protocol-roles)).
 agentspecs validates the block (0.0.77 and later): a company admitting nobody
 signed out offers at least one scope, `registered_agents` are HTTPS
 `client_id` URLs named only with `personal_agents: registered`, operations
@@ -243,20 +250,33 @@ builds every one, rejects duplicate IDs and tools that take a host-only value,
 checks that a company's operations name its own tools, and runs every
 argument-free read tool once.
 
-| Example                                                         | Shows                                                    |
-| --------------------------------------------------------------- | -------------------------------------------------------- |
-| `company-discovery`, `agent-identity`                           | `PapPersonalAgentCapability`: verified public summaries  |
-| `session-assertion`, `session-lifecycle`, `browser-session`     | Sessions: assertions, nonce retry, renewal, browser join |
-| `direct-sign-in-boundary`, `direct-sign-in-lifecycle`           | Direct Sign-In: state, PKCE, upgrade, partial consent    |
-| `device-sign-in`, `mediated-sign-in`                            | Device and Mediated Sign-In                              |
-| `dpop-proof`, `dpop-transport`                                  | DPoP proofs and the transport that retries with nonces   |
-| `account-tokens`                                                | Refresh, rotation, narrowing, revocation                 |
-| `conversation-messages`, `-events`, `-streaming`, `-control`    | Conversations, long poll, SSE, handoff and close         |
-| `operations`                                                    | Operations v1 from the personal agent: exact approval    |
-| `user-with-a-company`, `two-companies`                          | Whole journeys between parties                           |
-| `sign-in-display`                                               | The sign-in card as a display; nothing for the model     |
-| `company-connection`                                            | `pap.connections`: gateway server, level, scopes         |
-| `company-role`                                                  | `pap.company`: propose, confirm, perform once            |
+Where each runs: **live** reaches the company or agent you name over HTTPS;
+**demo worlds** runs the SDK's demonstration companies (Manzanita, Ledgerly,
+Northwind) in one process; **in process** answers from a company written
+in the example itself (recorded answers over a local transport). None needs
+an account, and none reaches a Datalayer service.
+
+| Example | Shows | Runs on |
+| --- | --- | --- |
+| `company-discovery`, `agent-identity` | `PapPersonalAgentCapability`: verified public summaries | live |
+| `session-assertion`, `session-lifecycle`, `browser-session` | Sessions: assertions, nonce retry, renewal, browser join | in process |
+| `direct-sign-in-boundary`, `direct-sign-in-lifecycle` | Direct Sign-In: state, PKCE, upgrade, partial consent | in process |
+| `device-sign-in` | Device Sign-In: link, code, paced polling | in process |
+| `mediated-sign-in` | Mediated Sign-In through `pap.protectedInput` | demo worlds |
+| `dpop-proof`, `dpop-transport` | DPoP proofs and the transport that retries with nonces | in process |
+| `account-tokens` | Refresh, rotation, narrowing, revocation | demo worlds |
+| `conversation-messages`, `conversation-events` | Conversations: idempotent messages, long poll | in process |
+| `conversation-streaming`, `conversation-control` | SSE, handoff, Direct Conversation and close | demo worlds |
+| `operations` | Operations v1 from the personal agent: exact approval | demo worlds |
+| `user-with-a-company`, `two-companies` | Whole journeys between parties | demo worlds |
+| `sign-in-display` | The sign-in card as a display; nothing for the model | demo worlds |
+| `company-connection` | `pap.connections` with `app.company_connection`: gateway server, level, scopes | in process (no company reached) |
+| `company-role` | `pap.company` with `app.as_company` and `@app.company_operation`: propose, confirm, perform once | demo worlds (its identities) |
+
+In the product, the same connections run through Datalayer's MCP gateway
+(the `pap` toolset) and the same company role through Datalayer's company
+service; the Studio examples *Order Desk* and *Exchange Desk* are those two,
+built on the Canvas rather than in Python.
 
 The browser gallery has a view per feature under **Personal Agent Protocol**,
 including **PAP Sign-In Display**.
