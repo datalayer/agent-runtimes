@@ -7,6 +7,16 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.0
+
+On Reactor 1.3.0 and agentspecs 0.0.82. A page and a runtime of this release move together: an older page's `loop.action` and `data_url` are refused.
+
+- **Typed actions** (REACTOR_UI RU-5): `@app.action(name, payload=Model)` in Reactor's ActionRegistry, declared as `interface.actions` in the Appspec; an undeclared action, a bad payload or an unknown field refused (422), a forged token 403; a page's payload never reaches the model as text.
+- **No action POST** (RU-W): the session's ui channel is the WebSocket; page blocks send messages, a widget's page runs on `POST …/page`, API clients press on `POST …/press`.
+- **Files as refs** (RU-6): `reactor.ui.files` — uploads to `POST /agents/{agent}/files`, a run carrying a `data_url` refused, a file question answered by pressing its ref.
+- **The host bridge** (RU-7): the host page's functions are a host plugin's commands and a `host` agent-tools bundle, handed to agents on a runtime too.
+- **Agent protocols**: a runtime's protocols name their catalogue entry (PR-50); Signed requests and UCP checkout in the examples gallery (EX-10); A2A's paired fixture (PR-51); an application's own identity documented (DOC-06).
+
 ## 1.4.0
 
 The ui channel on Reactor 1.2.0 (`reactor.ui`): a page and a runtime of this release move together — an older page loses what a newer runtime shows, and the other way round.
