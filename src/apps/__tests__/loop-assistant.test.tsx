@@ -37,8 +37,6 @@ import {
   LoopChatTurn,
   LoopSlots,
   type ChatTurnSnapshot,
-  type LoopChatViewModes,
-  type LoopWorkspaceContext,
 } from '../core';
 import {
   ASSISTANT_AWAY_KEY,
@@ -105,10 +103,8 @@ const TurnPlugin = definePlugin({
 
 function Harness({
   plugins,
-  workspace,
 }: {
   plugins: Parameters<typeof buildReactorFromPlugins>[0];
-  workspace?: Partial<LoopWorkspaceContext>;
 }) {
   const reactor = React.useMemo(
     () => buildReactorFromPlugins(plugins),
@@ -117,25 +113,19 @@ function Harness({
   useReactor(reactor);
   return (
     <ThemeProvider>
-      <ReactorSlot
-        slot={LoopSlots.root}
-        props={workspace ? { workspace } : undefined}
-      />
+      <ReactorSlot slot={LoopSlots.root} />
     </ThemeProvider>
   );
 }
 
 const mounted: { root: ReturnType<typeof createRoot>; el: HTMLElement }[] = [];
 
-async function mount(
-  plugins: Parameters<typeof buildReactorFromPlugins>[0],
-  workspace?: Partial<LoopWorkspaceContext>,
-) {
+async function mount(plugins: Parameters<typeof buildReactorFromPlugins>[0]) {
   const el = document.createElement('div');
   document.body.appendChild(el);
   const root = createRoot(el);
   await act(async () => {
-    root.render(<Harness plugins={plugins} workspace={workspace} />);
+    root.render(<Harness plugins={plugins} />);
   });
   mounted.push({ root, el });
   return el;
@@ -470,67 +460,5 @@ describe("the Loop assistant's menu", () => {
         .querySelector('[data-assistant-balloon]')
         ?.getAttribute('data-assistant-balloon'),
     ).toBe('current');
-  });
-});
-
-describe("the chat's view, where the workspace's host keeps it", () => {
-  const views = (
-    value: LoopChatViewModes['value'],
-    onChange: LoopChatViewModes['onChange'] = () => {},
-  ): Partial<LoopWorkspaceContext> => ({
-    chatViewModes: { value, onChange, offered: ['assistant', 'sidebar'] },
-  });
-  /** The workspace's composer, its top `top` pixels from the window's top. */
-  const composerAt = (top: number) => {
-    const composer = document.createElement('div');
-    composer.setAttribute('data-chat-composer', '');
-    composer.getBoundingClientRect = () =>
-      ({ top, width: 600, height: 80 }) as DOMRect;
-    document.body.appendChild(composer);
-    return composer;
-  };
-  const plugins = [AssistantCharactersPlugin, TurnPlugin, LoopAssistantPlugin];
-  afterEach(() => {
-    document
-      .querySelectorAll('[data-chat-composer]')
-      .forEach(composer => composer.remove());
-  });
-
-  it('draws no character in the sidebar view, from the first paint', async () => {
-    composerAt(window.innerHeight - 100);
-    const el = await mount(plugins, views('sidebar'));
-    expect(el.querySelector('[data-assistant-figure]')).toBeNull();
-  });
-
-  it('waits for the composer, then stands above it', async () => {
-    const el = await mount(plugins, views('assistant'));
-    // No composer yet: nothing stands where the composer will come.
-    expect(el.querySelector('[data-assistant-figure]')).toBeNull();
-    composerAt(window.innerHeight - 100);
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 450));
-    });
-    expect(el.querySelector('[data-assistant-figure]')).not.toBeNull();
-    const stage = el.querySelector<HTMLElement>('[data-assistant-state]')!;
-    expect(getComputedStyle(stage).bottom).toBe('112px');
-  });
-
-  it('offers the views in its menu, the current one checked', async () => {
-    const picked = vi.fn();
-    composerAt(window.innerHeight - 100);
-    const el = await mount(plugins, views('assistant', picked));
-    await act(async () => {
-      el.querySelector('[data-assistant-figure]')!.dispatchEvent(
-        new MouseEvent('contextmenu', { bubbles: true, cancelable: true }),
-      );
-    });
-    const item = (id: string) =>
-      document.querySelector<HTMLElement>(`[data-assistant-menu-item="${id}"]`);
-    expect(item('view-assistant')).not.toBeNull();
-    expect(item('view-floating')).toBeNull();
-    await act(async () => {
-      item('view-sidebar')?.click();
-    });
-    expect(picked).toHaveBeenCalledWith('sidebar');
   });
 });

@@ -254,9 +254,8 @@ export type LoopWorkspaceContext = {
   chatHeaderActions?: ReactNode;
   /**
    * The chat's view, as the host keeps it: the chat's title bar offers the
-   * views with its view-mode toggle, and the floating assistant shows only
-   * in the `assistant` view. Unsaid, the title bar offers none and the
-   * assistant shows wherever its plugin is enabled.
+   * views with its view-mode toggle (`ChatViewModeToggle`). Unsaid, the
+   * title bar offers none.
    */
   chatViewModes?: LoopChatViewModes;
 };
