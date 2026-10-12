@@ -288,7 +288,35 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
         resolved.append((subfolder, spec))
 
     check_model_additionals(resolved, load_model_ids(specs_dir))
+    check_protocols(resolved, load_protocol_ids(specs_dir))
     return resolved
+
+
+def load_protocol_ids(specs_dir: Path) -> set[str]:
+    """Every id of the protocols catalogue (`agentspecs/protocols`, AGENT_PROTOCOLS PS-01)."""
+    ids: set[str] = set()
+    for yaml_file in sorted((specs_dir.parent / "protocols").glob("*.yaml")):
+        protocol = yaml.safe_load(yaml_file.read_text()) or {}
+        if protocol.get("id"):
+            ids.add(str(protocol["id"]))
+    return ids
+
+
+def check_protocols(specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]) -> None:
+    """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once (PS-02)."""
+    problems = []
+    for _, spec in specs:
+        said = spec.get("protocols")
+        if said is None:
+            continue
+        if not isinstance(said, list) or len(set(map(str, said))) != len(said):
+            problems.append(f"{spec.get('id')}: protocols is a list of protocol ids, each once")
+            continue
+        unknown = [str(p) for p in said if str(p) not in protocol_ids]
+        if unknown:
+            problems.append(f"{spec.get('id')}: protocols names what the catalogue does not know: {', '.join(unknown)}")
+    if problems:
+        raise SystemExit("\n".join(problems))
 
 
 def load_model_ids(specs_dir: Path) -> set[str]:
@@ -621,6 +649,7 @@ from agent_runtimes.types import (
     delegable={delegable_str},
     protocol={protocol_str},
     ui_plugin={ui_plugin_str},
+    protocols={_fmt_list([str(p) for p in spec.get("protocols") or []])},
     trigger={_fmt_py_literal(trigger_val)},
     model_configuration={_fmt_py_literal(model_cfg)},
     mcp_server_tools={_fmt_py_literal(mcp_srv_tools)},
@@ -1196,6 +1225,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     delegable: {delegable_ts},
     protocol: {protocol_ts},
     uiPlugin: {ui_plugin_ts},
+    protocols: {_fmt_ts_literal([str(p) for p in spec.get("protocols") or []])},
     trigger: {_fmt_ts_literal(trigger_val)},
     modelConfig: {_fmt_ts_literal(model_cfg)},
     mcpServerTools: {_fmt_ts_literal(mcp_srv_tools)},
@@ -1635,11 +1665,13 @@ export * from './memory';
 export * from './models';
 export * from './modelProviders';
 export * from './notifications';
+export * from './voices';
 export * from './outputs';
 export * from './skills';
 export * from './backendTools';
 export * from './triggers';
 export * from './uiPlugins';
+export * from './protocols';
 export * from './frames';
 export * from './cogs';
 export * from './guards';

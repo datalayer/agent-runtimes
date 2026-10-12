@@ -313,6 +313,38 @@ class UIPluginSpec(BaseModel):
     )
 
 
+class ProtocolPackagesSpec(BaseModel):
+    """The packages implementing a protocol, by language."""
+
+    python: List[str] = Field(default_factory=list, description="Python distributions")
+    typescript: List[str] = Field(default_factory=list, description="npm packages")
+
+
+class ProtocolSpec(BaseModel):
+    """An agent protocol Datalayer targets (`agentspecs/protocols`,
+    AGENT_PROTOCOLS PS-01). An agent spec's or an application's `protocols`
+    names the ones it speaks.
+    """
+
+    id: str = Field(..., description="What `protocols` lists (e.g. 'pap')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What it does")
+    publisher: str = Field(default="", description="Who publishes the specification")
+    layer: str = Field(..., description="transport, consent, identity, commerce or ui")
+    spec_url: str = Field(default="", description="The specification")
+    spec_version: str = Field(default="", description="The version implemented")
+    status: str = Field(..., description="shipped, or planned")
+    connects: str = Field(default="", description="What it connects an agent to")
+    packages: ProtocolPackagesSpec = Field(default_factory=ProtocolPackagesSpec)
+    protocol_tools: List[str] = Field(
+        default_factory=list, description="Its tools' action-class tables"
+    )
+    appspec_block: Optional[str] = Field(
+        default=None, description="The Appspec block it configures, if any"
+    )
+
+
 class FrameGuardSpec(BaseModel):
     """A check a Frame requires of the output of work done under it."""
 
@@ -1815,6 +1847,13 @@ class Agentspec(BaseModel):
         validation_alias=AliasChoices("uiPlugin", "ui_plugin"),
         serialization_alias="uiPlugin",
     )
+    protocols: List[str] = Field(
+        default_factory=list,
+        description=(
+            "The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS PS-02). "
+            "`protocol` above says how a page reaches it; this, what it speaks to the world."
+        ),
+    )
     trigger: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Trigger configuration (type, cron, description)",
@@ -2918,6 +2957,10 @@ class AppSpec(BaseModel):
         default_factory=list, description="The documents it answers from"
     )
     connections: List[AppConnectionSpec] = Field(default_factory=list)
+    protocols: List[str] = Field(
+        default_factory=list,
+        description="The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS PS-02)",
+    )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)

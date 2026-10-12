@@ -2430,6 +2430,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Connections',
       type: 'array',
     },
+    protocols: {
+      description:
+        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact` and `a2a` blocks are refused unless their protocol is listed, and a planned protocol only while it is not offered',
+      items: {
+        type: 'string',
+      },
+      title: 'Protocols',
+      type: 'array',
+    },
     pap: {
       $ref: '#/$defs/AppPap',
       description:

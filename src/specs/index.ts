@@ -26,6 +26,7 @@ export * from './skills';
 export * from './backendTools';
 export * from './triggers';
 export * from './uiPlugins';
+export * from './protocols';
 export * from './frames';
 export * from './cogs';
 export * from './guards';

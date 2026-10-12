@@ -791,6 +791,11 @@ class Application:
 
     def _pap(self) -> Dict[str, Any]:
         pap = self._document.setdefault("pap", {})
+        # Its `pap` block is read only with the protocol listed (AGENT_PROTOCOLS
+        # PS-02): a builder that writes the block says the application speaks it.
+        protocols = self._document.setdefault("protocols", [])
+        if "pap" not in protocols:
+            protocols.append("pap")
         self._spec = None
         return pap
 

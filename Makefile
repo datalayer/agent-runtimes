@@ -177,6 +177,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/frontend_tools.py \
 	agent_runtimes/specs/envvars.py \
 	agent_runtimes/specs/ui_plugins.py \
+	agent_runtimes/specs/protocols.py \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
 	agent_runtimes/specs/guards.py \
@@ -497,6 +498,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/ui-plugins \
 	  --python-output agent_runtimes/specs/ui_plugins.py \
 	  --typescript-output src/specs/uiPlugins.ts
+	$(call step,Generating protocol specifications)
+	python scripts/codegen/generate_protocols.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/protocols \
+	  --python-output agent_runtimes/specs/protocols.py \
+	  --typescript-output src/specs/protocols.ts
 	$(call step,Generating Frame specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/frames" ]; then \
 	  python scripts/codegen/generate_frames.py \

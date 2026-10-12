@@ -252,6 +252,7 @@ class TestTheCard:
         spec = load_app(
             {
                 **accounting.model_dump(by_alias=True, exclude_defaults=True),
+                "protocols": ["a2a"],
                 "a2a": {
                     "extensions": [
                         gift,

@@ -68,6 +68,7 @@ import type {
   AppUploadsSpec,
 } from '../../types/agentspecs';
 import { BEHAVIOURS } from './rules';
+import { PROTOCOL_CATALOGUE } from '../../specs/protocols';
 import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
@@ -237,6 +238,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     context: [],
     contents: [],
     connections: [],
+    protocols: [],
     rules: [],
     permissions: {
       spaces: [],
@@ -304,6 +306,7 @@ const KNOWN_KEYS = [
   'context',
   'contents',
   'connections',
+  'protocols',
   'pap',
   'pact',
   'a2a',
@@ -1086,6 +1089,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     context: texts(data.context),
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
+    protocols: texts(data.protocols),
     rules: records(data.rules).map(parseRule),
     permissions: {
       spaces: records(permissions.spaces).map(grant => ({
@@ -1177,7 +1181,54 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.a2a)) {
     app.a2a = parseA2A(data.a2a);
   }
+  problems.push(...protocolsProblems(app));
   return { app, problems };
+}
+
+/**
+ * What is wrong with the protocols an application says it speaks
+ * (AGENT_PROTOCOLS PS-02), as agentspecs says it: an id the catalogue does not
+ * know or said twice, a planned protocol while it is offered, and a `pap`,
+ * `pact` or `a2a` block configuring a protocol it does not list.
+ */
+export function protocolsProblems(
+  app: Pick<AppSpec, 'protocols' | 'enabled' | 'pap' | 'pact' | 'a2a'>,
+): string[] {
+  const problems: string[] = [];
+  const seen: string[] = [];
+  for (const id of app.protocols) {
+    if (seen.includes(id)) {
+      problems.push(`It lists the protocol '${id}' twice.`);
+      continue;
+    }
+    seen.push(id);
+    const spec = PROTOCOL_CATALOGUE[id];
+    if (!spec) {
+      problems.push(
+        `There is no protocol named '${id}': one of ${Object.keys(PROTOCOL_CATALOGUE).sort().join(', ')}.`,
+      );
+    } else if (app.enabled && spec.status === 'planned') {
+      problems.push(
+        `${spec.name} ('${id}') is planned, not shipped: an application cannot speak it yet.`,
+      );
+    }
+  }
+  const configured: Record<'pap' | 'pact' | 'a2a', boolean> = {
+    pap: Boolean(
+      app.pap && (app.pap.connections.length > 0 || app.pap.company.enabled),
+    ),
+    pact: Boolean(app.pact && app.pact.connections.length > 0),
+    a2a: Boolean(app.a2a && app.a2a.extensions.length > 0),
+  };
+  for (const spec of Object.values(PROTOCOL_CATALOGUE)) {
+    const block = spec.appspecBlock;
+    if (block && configured[block] && !app.protocols.includes(spec.id)) {
+      problems.push(
+        `Its \`${block}\` block configures ${spec.name}, which it does not list: add '${spec.id}' to \`protocols\`.`,
+      );
+    }
+  }
+  return problems;
 }
 
 // --- writing --------------------------------------------------------------------------
@@ -1554,6 +1605,7 @@ export function dumpAppspec(app: AppSpec): Data {
             .list('only', connection.only).data,
       ),
     )
+    .list('protocols', app.protocols)
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
     .part('a2a', dumpA2A(app.a2a))

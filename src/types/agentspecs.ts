@@ -137,6 +137,39 @@ export interface UIPluginSpec {
   components: ComponentSpec[];
 }
 
+/** The layer of an agent's visit a protocol answers (AGENT_PROTOCOLS §1). */
+export type ProtocolLayer =
+  'transport' | 'consent' | 'identity' | 'commerce' | 'ui';
+
+/**
+ * An agent protocol Datalayer targets (`agentspecs/protocols`, AGENT_PROTOCOLS
+ * PS-01). An agent spec's or an application's `protocols` names the ones it speaks.
+ */
+export interface ProtocolSpec {
+  /** What `protocols` lists (e.g. 'pap'). */
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** Who publishes the specification. */
+  publisher: string;
+  layer: ProtocolLayer;
+  /** The specification. */
+  specUrl: string;
+  /** The version implemented. */
+  specVersion: string;
+  /** Implemented by agent-runtimes today, or only planned: an application cannot ship a planned one. */
+  status: 'shipped' | 'planned';
+  /** What it connects an agent to. */
+  connects: string;
+  /** The packages implementing it, by language. */
+  packages: { python: string[]; typescript: string[] };
+  /** Its tools' action-class tables (`agentspecs/protocol-tools`). */
+  protocolTools: string[];
+  /** The Appspec block it configures, if any: refused unless `protocols` lists it. */
+  appspecBlock?: 'pap' | 'pact' | 'a2a';
+}
+
 /** A check a Frame requires of the output of work done under it. */
 export interface FrameGuardSpec {
   id: string;
@@ -1165,6 +1198,12 @@ export interface AppSpec {
   /** The documents and datasets it answers from. */
   contents: string[];
   connections: AppConnectionSpec[];
+  /**
+   * The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS
+   * PS-02): its `pap`, `pact` and `a2a` blocks are refused unless their protocol
+   * is listed, and a planned one only while it is not offered.
+   */
+  protocols: string[];
   /** Personal Agent Protocol; absent, the application has none. */
   pap?: AppPapSpec;
   /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */
@@ -1292,6 +1331,11 @@ export interface Agentspec {
   delegable?: AgentCapability[];
   /** Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai') */
   protocol?: string;
+  /**
+   * The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS
+   * PS-02). `protocol` says how a page reaches it; this, what it speaks to the world.
+   */
+  protocols?: string[];
   /** UI plugin (e.g., 'a2ui', 'mcp-apps'), one of the `UI_PLUGIN_CATALOGUE`. */
   uiPlugin?: string;
   /** Trigger configuration (type, cron, event source, prompt) */

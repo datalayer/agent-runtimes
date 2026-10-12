@@ -146,6 +146,8 @@ from .types import (
     TriggerField,
     TriggerSpec,
     UIPluginSpec,
+    ProtocolPackagesSpec,
+    ProtocolSpec,
 )
 
 __all__ = [
@@ -158,6 +160,8 @@ __all__ = [
     "ComponentBindingsSpec",
     "ComponentSpec",
     "UIPluginSpec",
+    "ProtocolPackagesSpec",
+    "ProtocolSpec",
     "CogSpec",
     "FrameGuardSpec",
     "FramePromptSpec",

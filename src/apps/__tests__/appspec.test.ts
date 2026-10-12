@@ -340,6 +340,42 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app)).not.toHaveProperty('setup');
     expect(dumpAppspec(app).record).toBeUndefined();
   });
+  it('reads and writes the protocols it speaks, refusing what agentspecs refuses (AGENT_PROTOCOLS PS-02)', () => {
+    const { app, problems } = parseAppspec({
+      kind: 'chat',
+      protocols: ['mcp', 'a2a'],
+    });
+    expect(problems).toEqual([]);
+    expect(app.protocols).toEqual(['mcp', 'a2a']);
+    expect(dumpAppspec(app).protocols).toEqual(['mcp', 'a2a']);
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('protocols');
+    const said = (document: Record<string, unknown>) =>
+      parseAppspec({ kind: 'chat', ...document }).problems;
+    expect(said({ protocols: ['smtp'] })[0]).toMatch(
+      /no protocol named 'smtp'/,
+    );
+    expect(said({ protocols: ['mcp', 'mcp'] })).toEqual([
+      "It lists the protocol 'mcp' twice.",
+    ]);
+    expect(said({ protocols: ['ucp'] })[0]).toMatch(/planned, not shipped/);
+    expect(
+      said({
+        protocols: ['ucp'],
+        enabled: false,
+        unavailable_because: 'Later.',
+      }),
+    ).toEqual([]);
+    expect(
+      said({
+        pap: { connections: [{ id: 'o', company: 'manzanita.example' }] },
+      }),
+    ).toEqual([
+      "Its `pap` block configures Personal Agent Protocol, which it does not list: add 'pap' to `protocols`.",
+    ]);
+    expect(said({ a2a: { extensions: [{ uri: 'urn:x' }] } })[0]).toMatch(
+      /add 'a2a' to `protocols`/,
+    );
+  });
   it('reads and writes the personal agents a company accepts (PAP_DATALAYER U-04)', () => {
     const agent = 'https://agents.example/agent.json';
     const company = {
@@ -349,7 +385,11 @@ describe('writing an Appspec', () => {
       personal_agents: 'registered',
       registered_agents: [agent],
     };
-    const { app, problems } = parseAppspec({ kind: 'chat', pap: { company } });
+    const { app, problems } = parseAppspec({
+      kind: 'chat',
+      protocols: ['pap'],
+      pap: { company },
+    });
     expect(problems).toEqual([]);
     expect(app.pap?.company.registeredAgents).toEqual([agent]);
     expect(app.pap?.company.interfaces).toEqual(['agent', 'mcp']);
@@ -358,6 +398,7 @@ describe('writing an Appspec', () => {
   it('reads and writes Personal Agent Protocol (PAP_DATALAYER S-01)', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
+      protocols: ['pap'],
       pap: {
         connections: [
           {
@@ -414,6 +455,7 @@ describe('writing an Appspec', () => {
   it('reads and writes PACT businesses and A2A card extensions (AGENT_PROTOCOLS PI-01, PR-02)', () => {
     const document = {
       kind: 'chat',
+      protocols: ['pact', 'a2a'],
       pact: {
         connections: [
           {
@@ -475,6 +517,7 @@ describe('writing an Appspec', () => {
     ];
     const source = {
       kind: 'chat',
+      protocols: ['pap'],
       pap: {
         company: { enabled: true, extensions: ['operations'], operations },
       },
