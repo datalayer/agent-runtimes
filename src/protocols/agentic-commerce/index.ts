@@ -27,6 +27,7 @@ import {
 import {
   InMemoryProposalStore,
   digest,
+  operationClasses,
   type CheckoutApprover,
   type CheckoutProposal,
   type ProposalStore,
@@ -49,15 +50,12 @@ export const DISCOVERY_PATH = '/.well-known/acp.json';
 export const AGENTIC_COMMERCE_PLUGIN =
   'agent-runtimes.protocols.agentic-commerce';
 
-/** Each operation's action class (F-10), for Rules (R-05). */
-export const AGENTIC_COMMERCE_ACTION_CLASSES = {
-  proposeCompletion: 'read',
-  getCheckout: 'read',
-  createCheckout: 'write',
-  updateCheckout: 'write',
-  cancelCheckout: 'write',
-  complete: 'buy',
-} as const;
+/**
+ * Each operation's action class (F-10), for Rules (R-05): agentspecs'
+ * `protocol-tools/agentic-commerce.yaml` (AGENT_PROTOCOLS PR-54).
+ */
+export const AGENTIC_COMMERCE_ACTION_CLASSES =
+  operationClasses('agentic-commerce');
 
 export class AgenticCommerceError extends Error {}
 

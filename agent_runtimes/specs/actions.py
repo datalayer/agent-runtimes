@@ -597,6 +597,59 @@ SERVER_ACTIONS: Dict[str, ServerActionsSpec] = {
     ),
 }
 
+#: What each agent protocol's tools do, by protocol id: the prefix its
+#: connections take (`pap:<domain>`) and each tool's classes (PR-54).
+PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
+    "agentic-commerce": {
+        "connection": "acp",
+        "tools": {
+            "propose_completion": ["read"],
+            "get_checkout": ["read"],
+            "create_checkout": ["write"],
+            "update_checkout": ["write"],
+            "cancel_checkout": ["write"],
+            "complete": ["buy"],
+        },
+    },
+    "pact": {
+        "connection": "pact",
+        "tools": {
+            "pact_brand": ["read"],
+            "pact_ask": ["read"],
+            "pact_sign_in": ["read"],
+            "pact_sign_in_status": ["read"],
+            "pact_ask_for_person": ["write"],
+            "pact_disconnect": ["write"],
+        },
+    },
+    "pap": {
+        "connection": "pap",
+        "tools": {
+            "pap_company": ["read"],
+            "pap_ask": ["read"],
+            "pap_sign_in": ["read"],
+            "pap_sign_in_status": ["read"],
+            "pap_read": ["read"],
+            "pap_mcp_tools": ["read"],
+            "pap_mcp_call": ["write"],
+            "pap_confirm": ["write", "buy"],
+            "pap_disconnect": ["write"],
+        },
+    },
+    "ucp": {
+        "connection": "ucp",
+        "tools": {
+            "search": ["read"],
+            "propose_completion": ["read"],
+            "get_checkout": ["read"],
+            "create_checkout": ["write"],
+            "update_checkout": ["write"],
+            "cancel_checkout": ["write"],
+            "complete": ["buy"],
+        },
+    },
+}
+
 #: What each application of the catalogue does about each classed tool of the
 #: servers it connects to, as agentspecs decides it: `do_it`, `if_asked`,
 #: `ask_first` or `leave_to_me`. What the rules engine has to reproduce.

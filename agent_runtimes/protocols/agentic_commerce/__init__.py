@@ -13,6 +13,7 @@ Action classes (F-10): ``propose_completion`` and ``get_checkout`` are
 ``complete`` is ``buy``.
 """
 
+from ..commerce import operation_classes
 from .client import (
     AGENTIC_COMMERCE_VERSION,
     DISCOVERY_PATH,
@@ -25,15 +26,9 @@ from .client import (
     session_summary,
 )
 
-#: Each operation's action class (F-10), for Rules (R-05).
-ACTION_CLASSES = {
-    "propose_completion": "read",
-    "get_checkout": "read",
-    "create_checkout": "write",
-    "update_checkout": "write",
-    "cancel_checkout": "write",
-    "complete": "buy",
-}
+#: Each operation's action class (F-10), for Rules (R-05): agentspecs'
+#: ``protocol-tools/agentic-commerce.yaml`` (AGENT_PROTOCOLS PR-54).
+ACTION_CLASSES = operation_classes("agentic-commerce")
 
 __all__ = [
     "ACTION_CLASSES",

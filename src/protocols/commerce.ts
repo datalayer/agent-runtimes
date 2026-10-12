@@ -14,7 +14,35 @@
  * @module protocols/commerce
  */
 
+import { PROTOCOL_TOOL_CLASSES } from '../specs/actions';
+import type { ActionClass } from '../types/agentspecs';
+
 type Json = Record<string, any>;
+
+/**
+ * Each operation's action class (F-10) for Rules (R-05), as agentspecs
+ * classes a protocol's tools (`protocol-tools/<protocol>.yaml`,
+ * AGENT_PROTOCOLS PR-54), named as the TypeScript client names them
+ * (`complete_checkout` → `completeCheckout`). A commerce operation does one
+ * thing: one with several classes, or none, throws rather than guess.
+ */
+export function operationClasses(
+  protocol: string,
+): Record<string, ActionClass> {
+  const out: Record<string, ActionClass> = {};
+  for (const [name, classes] of Object.entries(
+    PROTOCOL_TOOL_CLASSES[protocol].tools,
+  )) {
+    if (classes.length !== 1) {
+      throw new Error(
+        `${protocol} ${name} is classed ${classes}: one class each`,
+      );
+    }
+    out[name.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())] =
+      classes[0];
+  }
+  return out;
+}
 
 /** One exact purchase, proposed to a person before it is made. */
 export interface CheckoutProposal {

@@ -14,6 +14,7 @@ Tools and their action classes (F-10): ``search`` and ``propose`` are
 ``complete`` is ``buy``.
 """
 
+from ..commerce import operation_classes
 from .client import (
     CHECKOUT_CAPABILITY,
     PROFILE_PATH,
@@ -31,16 +32,9 @@ from .client import (
     revision_of,
 )
 
-#: Each operation's action class (F-10), for Rules (R-05).
-ACTION_CLASSES = {
-    "search": "read",
-    "propose_completion": "read",
-    "get_checkout": "read",
-    "create_checkout": "write",
-    "update_checkout": "write",
-    "cancel_checkout": "write",
-    "complete": "buy",
-}
+#: Each operation's action class (F-10), for Rules (R-05): agentspecs'
+#: ``protocol-tools/ucp.yaml`` (AGENT_PROTOCOLS PR-54).
+ACTION_CLASSES = operation_classes("ucp")
 
 __all__ = [
     "ACTION_CLASSES",

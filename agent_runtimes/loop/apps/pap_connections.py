@@ -15,8 +15,8 @@ of who talks to the application, as a connection `as: user` is.
 
 In the runtime a company is one gateway server, named from its domain
 (:func:`server_id`): two companies' tools never share a name, as each tool is
-prefixed with it. What each tool does to the world is the gateway's own table
-(:data:`TOOL_CLASSES`, the same as `extensions/pap/pap.py` there), so that
+prefixed with it. What each tool does to the world is agentspecs' table of the
+`pap` toolset (:data:`TOOL_CLASSES`, which the gateway reads too), so that
 the application's Rules decide them as any other tool: reading reads, a
 confirmation does what an operation can do.
 """
@@ -27,17 +27,13 @@ import re
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import quote
 
-#: What each tool of the gateway's `pap` toolset can do (its `TOOL_CLASSES`).
+from agent_runtimes.specs.actions import PROTOCOL_TOOL_CLASSES
+
+#: What each tool of the gateway's `pap` toolset can do: agentspecs'
+#: ``protocol-tools/pap.yaml`` (AGENT_PROTOCOLS PR-54), as the gateway reads it.
 TOOL_CLASSES: Dict[str, Tuple[str, ...]] = {
-    "pap_company": ("read",),
-    "pap_ask": ("read",),
-    "pap_sign_in": ("read",),
-    "pap_sign_in_status": ("read",),
-    "pap_read": ("read",),
-    "pap_mcp_tools": ("read",),
-    "pap_mcp_call": ("write",),
-    "pap_confirm": ("write", "buy"),
-    "pap_disconnect": ("write",),
+    name: tuple(classes)
+    for name, classes in PROTOCOL_TOOL_CLASSES["pap"]["tools"].items()
 }
 
 #: server id -> company domain, for every application this process runs.

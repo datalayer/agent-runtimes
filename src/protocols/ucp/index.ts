@@ -27,6 +27,7 @@ import { ExtendedCheckoutResponseSchema } from '@ucp-js/sdk';
 import {
   InMemoryProposalStore,
   digest,
+  operationClasses,
   type CheckoutApprover,
   type CheckoutProposal,
   type ProposalStore,
@@ -43,16 +44,11 @@ export const CHECKOUT_CAPABILITY = 'dev.ucp.shopping.checkout';
 export const PROFILE_PATH = '/.well-known/ucp';
 export const UCP_PLUGIN = 'agent-runtimes.protocols.ucp';
 
-/** Each operation's action class (F-10), for Rules (R-05). */
-export const UCP_ACTION_CLASSES = {
-  search: 'read',
-  proposeCompletion: 'read',
-  getCheckout: 'read',
-  createCheckout: 'write',
-  updateCheckout: 'write',
-  cancelCheckout: 'write',
-  complete: 'buy',
-} as const;
+/**
+ * Each operation's action class (F-10), for Rules (R-05): agentspecs'
+ * `protocol-tools/ucp.yaml` (AGENT_PROTOCOLS PR-54).
+ */
+export const UCP_ACTION_CLASSES = operationClasses('ucp');
 
 export {
   InMemoryProposalStore,

@@ -148,3 +148,28 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
     # What the Maker leaves to the person stays theirs.
     with pytest.raises(AppRuleBlockedError):
         await Harness(app()).call("pap_manzanita_example_pap_confirm", args)
+
+
+def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
+    """AGENT_PROTOCOLS PR-54: the runtime's table is agentspecs' `protocol-tools`,
+    generated — the gateway reads the same — and every commerce operation too."""
+    from agentspecs.actions import protocol_tool_classes, protocol_tool_names
+
+    from agent_runtimes.loop.apps.pap_connections import TOOL_CLASSES
+    from agent_runtimes.protocols.agentic_commerce import (
+        ACTION_CLASSES as ACP_CLASSES,
+    )
+    from agent_runtimes.protocols.ucp import ACTION_CLASSES as UCP_CLASSES
+
+    def of(protocol: str) -> dict:
+        return {
+            name: tuple(item.value for item in protocol_tool_classes(protocol, name))
+            for name in protocol_tool_names(protocol)
+        }
+
+    assert TOOL_CLASSES == of("pap")
+    assert TOOL_CLASSES["pap_confirm"] == ("write", "buy")
+    assert {name: (cls,) for name, cls in UCP_CLASSES.items()} == of("ucp")
+    assert {name: (cls,) for name, cls in ACP_CLASSES.items()} == of(
+        "agentic-commerce"
+    )

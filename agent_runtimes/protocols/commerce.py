@@ -26,6 +26,24 @@ def digest(what: Any) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+def operation_classes(protocol: str) -> dict[str, str]:
+    """Each operation's action class (F-10) for Rules (R-05), as agentspecs classes
+    a protocol's tools (``protocol-tools/<protocol>.yaml``, AGENT_PROTOCOLS PR-54).
+
+    A commerce operation does one thing: one with several classes, or none, is
+    refused here rather than guessed.
+    """
+    from agent_runtimes.specs.actions import PROTOCOL_TOOL_CLASSES
+
+    tools = PROTOCOL_TOOL_CLASSES[protocol]["tools"]
+    out: dict[str, str] = {}
+    for name, classes in tools.items():
+        if len(classes) != 1:
+            raise ValueError(f"{protocol} {name} is classed {classes!r}: one class each")
+        out[name] = classes[0]
+    return out
+
+
 def money(amount: int, currency: str) -> str:
     return f"{currency} {amount / 100:,.2f}"
 
@@ -88,4 +106,5 @@ __all__ = [
     "ProposalStore",
     "digest",
     "money",
+    "operation_classes",
 ]

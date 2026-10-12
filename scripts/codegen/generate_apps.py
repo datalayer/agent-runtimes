@@ -198,8 +198,24 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 if (signs := actions_module.server_tool_signs(server, name))
             },
         }
+    # The agent protocols' tools (AGENT_PROTOCOLS PR-54): by protocol, the
+    # connection prefix its connections take and what each tool can do.
+    protocols = {
+        identity: {
+            "connection": spec["connection"],
+            "tools": {
+                name: [
+                    item.value
+                    for item in actions_module.protocol_tool_classes(identity, name)
+                ]
+                for name in actions_module.protocol_tool_names(identity)
+            },
+        }
+        for identity, spec in sorted(actions_module.protocol_tool_specs().items())
+    }
     actions = {
         "classes": [item.value for item in actions_module.ActionClass],
+        "protocols": protocols,
         "tools": tools,
         "servers": servers,
         "behaviours": behaviours,
@@ -419,6 +435,10 @@ def generate_actions_python_code(actions: dict[str, Any]) -> str:
         [
             "}",
             "",
+            "#: What each agent protocol's tools do, by protocol id: the prefix its",
+            "#: connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+            f"PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {actions['protocols']!r}",
+            "",
             "#: What each application of the catalogue does about each classed tool of the",
             "#: servers it connects to, as agentspecs decides it: `do_it`, `if_asked`,",
             "#: `ask_first` or `leave_to_me`. What the rules engine has to reproduce.",
@@ -469,6 +489,15 @@ def generate_actions_typescript_code(actions: dict[str, Any]) -> str:
         "export const SERVER_ACTIONS: Record<string, ServerActionsSpec> = "
         + json.dumps(_drop_nulls(actions["servers"]), indent=2)
         + ";",
+        "",
+        "/**",
+        " * What each agent protocol's tools do, by protocol id: the prefix its",
+        " * connections take (`pap:<domain>`) and each tool's classes (PR-54).",
+        " */",
+        "export const PROTOCOL_TOOL_CLASSES: Record<",
+        "  string,",
+        "  { connection: string; tools: Record<string, ActionClass[]> }",
+        "> = " + json.dumps(actions["protocols"], indent=2) + ";",
         "",
         "/**",
         " * What each application of the catalogue does about each classed tool of the",
