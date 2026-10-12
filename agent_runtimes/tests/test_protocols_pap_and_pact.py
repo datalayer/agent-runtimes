@@ -16,7 +16,9 @@ from agent_runtimes.loop.apps.build import build
 from agent_runtimes.protocols.pact.client import InMemoryDelegationStore
 from agent_runtimes.protocols.pact.provider import ExampleAir
 
-EXAMPLE = Path(__file__).parents[2] / "examples" / "protocols" / "pap_and_pact" / "app.py"
+EXAMPLE = (
+    Path(__file__).parents[2] / "examples" / "protocols" / "pap_and_pact" / "app.py"
+)
 
 
 @pytest.fixture

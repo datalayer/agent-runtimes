@@ -105,7 +105,9 @@ class AtlasHost:
         self.record = record
 
     def provide_contributions(self, contributions: Any) -> None:
-        contributions.contribute(SIGNERS, self.signer, contribution_id="atlas", order=10)
+        contributions.contribute(
+            SIGNERS, self.signer, contribution_id="atlas", order=10
+        )
         contributions.contribute(
             RECEIPT_STORES, self.record, contribution_id="record", order=10
         )
@@ -215,14 +217,20 @@ async def _at_example_air(platform: Any, provider: ExampleAir) -> str:
         card = await agent.discover()
         record.brands[card.interface_url] = card.name
         record.write(
-            "PACT", card.name, "card read", profile=card.profile, binding="HTTP+JSON 1.0"
+            "PACT",
+            card.name,
+            "card read",
+            profile=card.profile,
+            binding="HTTP+JSON 1.0",
         )
         sign_in = await agent.request_sign_in(PACT_USER, ["bookings:read"])
         record.write("PACT", card.name, "sign-in asked", scopes=["bookings:read"])
         # Ada signs in on Example Air's own page and approves.
         provider.approve(sign_in.user_code, "jane-4471", ["bookings:read"])
         granted = await agent.finish_sign_in(PACT_USER, sign_in, interval=0)
-        record.write("PACT", card.name, "signed in", scopes=list(granted), where="its page")
+        record.write(
+            "PACT", card.name, "signed in", scopes=list(granted), where="its page"
+        )
         reply = await agent.send(PACT_USER, "When is my booking?")
         record.write("PACT", card.name, "answered", scopes_used=list(reply.scopes_used))
         return f"{card.name}: {reply.text}"
@@ -248,7 +256,9 @@ async def ask_both() -> dict[str, Any]:
     key = LocalSigner.generate("ecdsa-p256-sha256")
     provider = ExampleAir()
     # Registration of Atlas at the Provider, once (PACT §3.1).
-    provider.register(ISSUER, {"keys": [{**key.public_jwk, "alg": "ES256", "use": "sig"}]})
+    provider.register(
+        ISSUER, {"keys": [{**key.public_jwk, "alg": "ES256", "use": "sig"}]}
+    )
     platform = build_protocols_reactor(
         plugins=[(PluginManifest(name="atlas", version="1"), AtlasHost(key, record))]
     )

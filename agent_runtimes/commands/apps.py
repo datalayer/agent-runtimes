@@ -2126,12 +2126,20 @@ def protocols_used(spec: Dict[str, Any]) -> Dict[str, str]:
         used["pap"] = (used.get("pap", "") + "; " if "pap" in used else "") + (
             "is a company personal agents work with"
         )
-    brands = [c.get("brand", "") for c in (spec.get("pact") or {}).get("connections") or []]
+    brands = [
+        c.get("brand", "") for c in (spec.get("pact") or {}).get("connections") or []
+    ]
     if brands:
-        used["pact"] = f"is a personal agent at {', '.join(brands)} for the people it serves"
-    extensions = [e.get("uri", "") for e in (spec.get("a2a") or {}).get("extensions") or []]
+        used["pact"] = (
+            f"is a personal agent at {', '.join(brands)} for the people it serves"
+        )
+    extensions = [
+        e.get("uri", "") for e in (spec.get("a2a") or {}).get("extensions") or []
+    ]
     if extensions:
-        used["a2a"] = f"publishes {len(extensions)} card extension(s): {', '.join(extensions)}"
+        used["a2a"] = (
+            f"publishes {len(extensions)} card extension(s): {', '.join(extensions)}"
+        )
     return used
 
 
