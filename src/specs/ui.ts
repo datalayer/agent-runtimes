@@ -4,7 +4,7 @@
  */
 
 /**
- * UI Plugin Catalog.
+ * UI Catalog.
  *
  * How an agent's answer becomes an interface: the protocols a host renders.
  *
@@ -12,9 +12,9 @@
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
  */
 
-import type { ComponentSpec, UIPluginSpec } from '../types/agentspecs';
+import type { ComponentSpec, UISpec } from '../types/agentspecs';
 
-export const A2UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
+export const A2UI_UI_0_0_1: UISpec = {
   id: 'a2ui',
   version: '0.0.1',
   name: 'A2UI',
@@ -1093,7 +1093,7 @@ export const A2UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
   ],
 };
 
-export const MCP_APPS_UI_PLUGIN_0_0_1: UIPluginSpec = {
+export const MCP_APPS_UI_0_0_1: UISpec = {
   id: 'mcp-apps',
   version: '0.0.1',
   name: 'MCP Apps',
@@ -1105,7 +1105,7 @@ export const MCP_APPS_UI_PLUGIN_0_0_1: UIPluginSpec = {
   components: [],
 };
 
-export const MCP_UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
+export const MCP_UI_UI_0_0_1: UISpec = {
   id: 'mcp-ui',
   version: '0.0.1',
   name: 'MCP UI',
@@ -1117,25 +1117,25 @@ export const MCP_UI_UI_PLUGIN_0_0_1: UIPluginSpec = {
   components: [],
 };
 
-export const UI_PLUGIN_CATALOGUE: Record<string, UIPluginSpec> = {
-  a2ui: A2UI_UI_PLUGIN_0_0_1,
-  'mcp-apps': MCP_APPS_UI_PLUGIN_0_0_1,
-  'mcp-ui': MCP_UI_UI_PLUGIN_0_0_1,
+export const UI_CATALOGUE: Record<string, UISpec> = {
+  a2ui: A2UI_UI_0_0_1,
+  'mcp-apps': MCP_APPS_UI_0_0_1,
+  'mcp-ui': MCP_UI_UI_0_0_1,
 };
 
-/** The plugin an agent spec's `uiPlugin` names, or undefined. */
-export function getUIPlugin(pluginId: string): UIPluginSpec | undefined {
-  return UI_PLUGIN_CATALOGUE[pluginId];
+/** The UI an agent spec's `ui` names, or undefined. */
+export function getUI(pluginId: string): UISpec | undefined {
+  return UI_CATALOGUE[pluginId];
 }
 
-export function listUIPlugins(): UIPluginSpec[] {
-  return Object.values(UI_PLUGIN_CATALOGUE);
+export function listUI(): UISpec[] {
+  return Object.values(UI_CATALOGUE);
 }
 
-/** The visual components the enabled UI plugins render, by the name a surface gives them (LOOP C-13). */
+/** The visual components the enabled UI specs render, by the name a surface gives them (LOOP C-13). */
 export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> =
   Object.fromEntries(
-    Object.values(UI_PLUGIN_CATALOGUE)
+    Object.values(UI_CATALOGUE)
       .filter(plugin => plugin.enabled)
       .flatMap(plugin =>
         plugin.components.map(component => [component.id, component]),

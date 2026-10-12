@@ -22,7 +22,7 @@
 import { z } from 'zod/v3';
 import { ActionSchema, DataBindingSchema } from '@a2ui/web_core/v0_9';
 import type { ComponentSpec } from '../../../types/agentspecs';
-import { COMPONENT_CATALOGUE } from '../../../specs/uiPlugins';
+import { COMPONENT_CATALOGUE } from '../../../specs/ui';
 
 /** The components of Datalayer's own the catalog has, by id. */
 export const OWN_COMPONENT_IDS = Object.values(COMPONENT_CATALOGUE)

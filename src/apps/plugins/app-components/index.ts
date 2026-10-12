@@ -6,7 +6,7 @@
 /**
  * `app-components` — the components an application's developer wrote (LOOP
  * P-17), registered as that application's A2UI contributions: each a block
- * of its Canvas's palette (`loop.canvas.block`, as a UI plugin's components
+ * of its Canvas's palette (`loop.canvas.block`, as a UI's components
  * are) and a renderer of the catalog its page, its elements and its answers
  * are drawn with (`loop.a2ui.component`). One plugin per application, in its
  * workspace's preset only: the catalog grows for it, it does not open.
@@ -60,7 +60,7 @@ export function defineAppComponentsPlugin(
         LoopCanvasBlock,
         {
           id: component.name,
-          uiPlugin: `app:${app.id}`,
+          ui: `app:${app.id}`,
           component: customComponentEntry(component, app.version),
         },
         { id: component.name },

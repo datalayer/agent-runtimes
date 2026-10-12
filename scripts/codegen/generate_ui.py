@@ -3,18 +3,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 """
-Generate Python and TypeScript code from YAML UI-plugin specifications.
+Generate Python and TypeScript code from YAML UI specifications.
 
-A UI plugin is how an agent's answer becomes an interface rather than text —
+A UI spec is how an agent's answer becomes an interface rather than text —
 a protocol the host knows how to render (A2UI, MCP Apps, MCP UI). One YAML per
-plugin under ``agentspecs/ui-plugins``; an agent spec's ``ui_plugin`` names
-one. A plugin hosts the visual components it renders (LOOP C-13).
+plugin under ``agentspecs/ui``; an agent spec's ``ui`` names
+one. A UI spec hosts the visual components it renders (LOOP C-13).
 
 Usage:
-    python generate_ui_plugins.py \\
-      --specs-dir agentspecs/agentspecs/ui-plugins \\
-      --python-output agent_runtimes/specs/ui_plugins.py \\
-      --typescript-output src/specs/uiPlugins.ts
+    python generate_ui.py \\
+      --specs-dir agentspecs/agentspecs/ui \\
+      --python-output agent_runtimes/specs/ui.py \\
+      --typescript-output src/specs/ui.ts
 """
 
 import argparse
@@ -29,7 +29,7 @@ from versioning import ensure_spec_version, version_suffix
 
 
 def load_plugin_specs(specs_dir: Path) -> list[dict[str, Any]]:
-    """Load all UI-plugin YAML specifications from a directory."""
+    """Load all UI YAML specifications from a directory."""
     specs = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
@@ -44,7 +44,7 @@ def load_plugin_specs(specs_dir: Path) -> list[dict[str, Any]]:
 
 
 def _const_name(plugin_id: str) -> str:
-    return plugin_id.replace("-", "_").replace(".", "_").upper() + "_UI_PLUGIN"
+    return plugin_id.replace("-", "_").replace(".", "_").upper() + "_UI"
 
 
 def _py(value: str) -> str:
@@ -196,12 +196,12 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
 
 
 def generate_python_code(specs: list[dict[str, Any]]) -> str:
-    """Generate Python code from UI-plugin specifications."""
+    """Generate Python code from UI specifications."""
     lines = [
         "# Copyright (c) 2025-2026 Datalayer, Inc.",
         "# Distributed under the terms of the Modified BSD License.",
         '"""',
-        "UI Plugin Catalog.",
+        "UI Catalog.",
         "",
         "How an agent's answer becomes an interface: the protocols a host renders.",
         "",
@@ -211,10 +211,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union",
         "",
-        "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec",
+        "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UISpec",
         "",
         "# " + "=" * 76,
-        "# UI Plugin Definitions",
+        "# UI Definitions",
         "# " + "=" * 76,
         "",
     ]
@@ -222,7 +222,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         const = _const_name(spec["id"]) + version_suffix(spec["version"])
         lines.extend(
             [
-                f"{const} = UIPluginSpec(",
+                f"{const} = UISpec(",
                 f"    id={_py(spec['id'])},",
                 f"    version={_py(str(spec['version']))},",
                 f"    name={_py(spec['name'])},",
@@ -241,10 +241,10 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         [
             "",
             "# " + "=" * 76,
-            "# UI Plugin Catalog",
+            "# UI Catalog",
             "# " + "=" * 76,
             "",
-            "UI_PLUGIN_CATALOGUE: Dict[str, UIPluginSpec] = {",
+            "UI_CATALOGUE: Dict[str, UISpec] = {",
         ]
     )
     for spec in specs:
@@ -256,20 +256,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "}",
             "",
             "",
-            "def get_ui_plugin(plugin_id: str) -> UIPluginSpec | None:",
-            '    """The plugin an agent spec\'s `ui_plugin` names, or None."""',
-            "    return UI_PLUGIN_CATALOGUE.get(plugin_id)",
+            "def get_ui(plugin_id: str) -> UISpec | None:",
+            '    """The UI an agent spec\'s `ui` names, or None."""',
+            "    return UI_CATALOGUE.get(plugin_id)",
             "",
             "",
-            "def list_ui_plugins() -> list[UIPluginSpec]:",
-            "    return list(UI_PLUGIN_CATALOGUE.values())",
+            "def list_ui() -> list[UISpec]:",
+            "    return list(UI_CATALOGUE.values())",
             "",
             "",
-            "#: The visual components the enabled UI plugins render, by the name a",
+            "#: The visual components the enabled UI specs render, by the name a",
             "#: surface gives them (LOOP C-13).",
             "COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {",
             "    component.id: component",
-            "    for plugin in UI_PLUGIN_CATALOGUE.values()",
+            "    for plugin in UI_CATALOGUE.values()",
             "    if plugin.enabled",
             "    for component in plugin.components",
             "}",
@@ -290,7 +290,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
 
 
 def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
-    """Generate TypeScript code from UI-plugin specifications."""
+    """Generate TypeScript code from UI specifications."""
     lines = [
         "/*",
         " * Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -298,7 +298,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " */",
         "",
         "/**",
-        " * UI Plugin Catalog.",
+        " * UI Catalog.",
         " *",
         " * How an agent's answer becomes an interface: the protocols a host renders.",
         " *",
@@ -306,14 +306,14 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { ComponentSpec, UIPluginSpec } from '../types/agentspecs';",
+        "import type { ComponentSpec, UISpec } from '../types/agentspecs';",
         "",
     ]
     for spec in specs:
         const = _const_name(spec["id"]) + version_suffix(spec["version"])
         lines.extend(
             [
-                f"export const {const}: UIPluginSpec = {{",
+                f"export const {const}: UISpec = {{",
                 f"  id: {_ts(spec['id'])},",
                 f"  version: {_ts(str(spec['version']))},",
                 f"  name: {_ts(spec['name'])},",
@@ -326,7 +326,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 "",
             ]
         )
-    lines.append("export const UI_PLUGIN_CATALOGUE: Record<string, UIPluginSpec> = {")
+    lines.append("export const UI_CATALOGUE: Record<string, UISpec> = {")
     for spec in specs:
         lines.append(
             f"  {_ts(spec['id'])}: {_const_name(spec['id']) + version_suffix(spec['version'])},"
@@ -335,18 +335,18 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         [
             "};",
             "",
-            "/** The plugin an agent spec's `uiPlugin` names, or undefined. */",
-            "export function getUIPlugin(pluginId: string): UIPluginSpec | undefined {",
-            "  return UI_PLUGIN_CATALOGUE[pluginId];",
+            "/** The UI an agent spec's `ui` names, or undefined. */",
+            "export function getUI(pluginId: string): UISpec | undefined {",
+            "  return UI_CATALOGUE[pluginId];",
             "}",
             "",
-            "export function listUIPlugins(): UIPluginSpec[] {",
-            "  return Object.values(UI_PLUGIN_CATALOGUE);",
+            "export function listUI(): UISpec[] {",
+            "  return Object.values(UI_CATALOGUE);",
             "}",
             "",
-            "/** The visual components the enabled UI plugins render, by the name a surface gives them (LOOP C-13). */",
+            "/** The visual components the enabled UI specs render, by the name a surface gives them (LOOP C-13). */",
             "export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> = Object.fromEntries(",
-            "  Object.values(UI_PLUGIN_CATALOGUE)",
+            "  Object.values(UI_CATALOGUE)",
             "    .filter(plugin => plugin.enabled)",
             "    .flatMap(plugin => plugin.components.map(component => [component.id, component])),",
             ");",
@@ -367,13 +367,13 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate Python and TypeScript code from YAML UI-plugin specifications"
+        description="Generate Python and TypeScript code from YAML UI specifications"
     )
     parser.add_argument(
         "--specs-dir",
         type=Path,
         required=True,
-        help="Directory containing UI-plugin YAML files",
+        help="Directory containing UI YAML files",
     )
     parser.add_argument(
         "--python-output", type=Path, required=True, help="Output path for Python file"
@@ -392,7 +392,7 @@ def main():
     specs = load_plugin_specs(args.specs_dir)
     if not specs:
         print(
-            f"Warning: No UI-plugin specifications found in {args.specs_dir}",
+            f"Warning: No UI specifications found in {args.specs_dir}",
             file=sys.stderr,
         )
         return
@@ -402,7 +402,7 @@ def main():
     args.typescript_output.parent.mkdir(parents=True, exist_ok=True)
     args.typescript_output.write_text(generate_typescript_code(specs))
     print(f"Generated TypeScript code: {args.typescript_output}")
-    print(f"\n✓ Successfully generated code from {len(specs)} UI-plugin specs")
+    print(f"\n✓ Successfully generated code from {len(specs)} UI specs")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ import { checkApp, checkAppspec } from '../apps/checks';
 import { dumpAppspec } from '../apps/appspec';
 import { LoopCanvasBlock } from '../core';
 import { emptyAppspec } from '../apps/appspec';
-import { listComponents } from '../../specs/uiPlugins';
+import { listComponents } from '../../specs/ui';
 import type { AppSpec, ComponentSpec } from '../../types/agentspecs';
 
 const A2UI = canvasBlocksPluginName('a2ui');
@@ -48,7 +48,7 @@ const GaugePlugin = definePlugin({
   contributes: [
     contribution(
       LoopCanvasBlock,
-      { id: 'Gauge', uiPlugin: 'gauges', component: gauge },
+      { id: 'Gauge', ui: 'gauges', component: gauge },
       { id: 'Gauge' },
     ),
   ],
@@ -75,7 +75,7 @@ const withPage = (components: string[], placed: string[] = []): AppSpec => {
 };
 
 describe('the blocks of the Canvas', () => {
-  it('are one plugin per UI plugin of the catalogue that renders components', () => {
+  it('are one plugin per UI of the catalogue that renders components', () => {
     expect(CANVAS_BLOCK_PLUGINS.map(plugin => plugin.name)).toEqual([A2UI]);
   });
 
@@ -125,12 +125,12 @@ describe('an application using a block whose plugin is off', () => {
         canvasBlocksReactor([A2UI]),
       ),
     ).toEqual([
-      'The UI plugin “A2UI” is not enabled, and its page uses its blocks Table, Chart: they are off the Canvas until it is.',
+      'The UI “A2UI” is not enabled, and its page uses its blocks Table, Chart: they are off the Canvas until it is.',
     ]);
     expect(
       blockSetupNotes(withPage([], ['Chart']), canvasBlocksReactor([A2UI])),
     ).toEqual([
-      'The UI plugin “A2UI” is not enabled, and its page uses its block Chart: it is off the Canvas until it is.',
+      'The UI “A2UI” is not enabled, and its page uses its block Chart: it is off the Canvas until it is.',
     ]);
   });
 
@@ -142,14 +142,14 @@ describe('an application using a block whose plugin is off', () => {
 });
 
 describe('the plugins an organization has turned off', () => {
-  it('take the blocks of a UI plugin off its palette, by catalogue id', () => {
+  it('take the blocks of a UI off its palette, by catalogue id', () => {
     expect(canvasBlocksOf(canvasBlocksReactorOf(['a2ui']))).toEqual([]);
     expect(canvasBlocksOf(canvasBlocksReactorOf([])).length).toBe(
       listComponents().length,
     );
   });
 
-  it('take nothing off for a UI plugin with no blocks, or one the catalogue does not have', () => {
+  it('take nothing off for a UI with no blocks, or one the catalogue does not have', () => {
     expect(
       canvasBlocksOf(canvasBlocksReactorOf(['mcp-ui', 'no-such-plugin']))
         .length,
@@ -163,14 +163,14 @@ describe('the plugins an organization has turned off', () => {
     const app = withPage(['Table']);
     expect(pluginsOffSetupNotes(app, [])).toEqual([]);
     expect(pluginsOffSetupNotes(app, ['a2ui'])).toEqual([
-      'The UI plugin “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.',
+      'The UI “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.',
     ]);
   });
 
   it('are said by checkApp and checkAppspec, given them, and by nothing else', () => {
     const app = withPage(['Table']);
     const note =
-      'The UI plugin “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.';
+      'The UI “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.';
     expect(checkApp(app).setup).not.toContain(note);
     expect(checkApp(app, [], { pluginsOff: ['a2ui'] }).setup).toContain(note);
     expect(

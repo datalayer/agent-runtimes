@@ -187,7 +187,7 @@ describe('the instant checks', () => {
     expect(ruled.verdict).toBe(PASSES);
   });
 
-  it('refuse a component no UI plugin renders (C-13)', () => {
+  it('refuse a component no UI renders (C-13)', () => {
     expect(componentNamed('ChoicePicker')?.standard).toBe(true);
     expect(componentNamed('Table')?.properties).toBeDefined();
     const check = checkAppspec({

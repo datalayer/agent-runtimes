@@ -1,7 +1,7 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 """
-UI Plugin Catalog.
+UI Catalog.
 
 How an agent's answer becomes an interface: the protocols a host renders.
 
@@ -11,13 +11,13 @@ DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
 
 from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union
 
-from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UIPluginSpec
+from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UISpec
 
 # ============================================================================
-# UI Plugin Definitions
+# UI Definitions
 # ============================================================================
 
-A2UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
+A2UI_UI_0_0_1 = UISpec(
     id="a2ui",
     version="0.0.1",
     name="A2UI",
@@ -1047,7 +1047,7 @@ A2UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
     ],
 )
 
-MCP_APPS_UI_PLUGIN_0_0_1 = UIPluginSpec(
+MCP_APPS_UI_0_0_1 = UISpec(
     id="mcp-apps",
     version="0.0.1",
     name="MCP Apps",
@@ -1058,7 +1058,7 @@ MCP_APPS_UI_PLUGIN_0_0_1 = UIPluginSpec(
     components=[],
 )
 
-MCP_UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
+MCP_UI_UI_0_0_1 = UISpec(
     id="mcp-ui",
     version="0.0.1",
     name="MCP UI",
@@ -1071,30 +1071,30 @@ MCP_UI_UI_PLUGIN_0_0_1 = UIPluginSpec(
 
 
 # ============================================================================
-# UI Plugin Catalog
+# UI Catalog
 # ============================================================================
 
-UI_PLUGIN_CATALOGUE: Dict[str, UIPluginSpec] = {
-    "a2ui": A2UI_UI_PLUGIN_0_0_1,
-    "mcp-apps": MCP_APPS_UI_PLUGIN_0_0_1,
-    "mcp-ui": MCP_UI_UI_PLUGIN_0_0_1,
+UI_CATALOGUE: Dict[str, UISpec] = {
+    "a2ui": A2UI_UI_0_0_1,
+    "mcp-apps": MCP_APPS_UI_0_0_1,
+    "mcp-ui": MCP_UI_UI_0_0_1,
 }
 
 
-def get_ui_plugin(plugin_id: str) -> UIPluginSpec | None:
-    """The plugin an agent spec's `ui_plugin` names, or None."""
-    return UI_PLUGIN_CATALOGUE.get(plugin_id)
+def get_ui(plugin_id: str) -> UISpec | None:
+    """The UI an agent spec's `ui` names, or None."""
+    return UI_CATALOGUE.get(plugin_id)
 
 
-def list_ui_plugins() -> list[UIPluginSpec]:
-    return list(UI_PLUGIN_CATALOGUE.values())
+def list_ui() -> list[UISpec]:
+    return list(UI_CATALOGUE.values())
 
 
-#: The visual components the enabled UI plugins render, by the name a
+#: The visual components the enabled UI specs render, by the name a
 #: surface gives them (LOOP C-13).
 COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {
     component.id: component
-    for plugin in UI_PLUGIN_CATALOGUE.values()
+    for plugin in UI_CATALOGUE.values()
     if plugin.enabled
     for component in plugin.components
 }

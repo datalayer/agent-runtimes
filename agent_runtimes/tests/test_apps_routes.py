@@ -335,7 +335,7 @@ def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> Non
 
 
 TABLE_OFF = (
-    "The UI plugin “A2UI” is not enabled, and its page uses its block Table: "
+    "The UI “A2UI” is not enabled, and its page uses its block Table: "
     "it is off the Canvas until it is."
 )
 

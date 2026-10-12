@@ -4,8 +4,8 @@
  */
 
 /**
- * The Canvas's palette as a contribution point (LOOP C-12): each UI plugin of
- * the catalogue that renders components (`agentspecs/ui-plugins`, C-13) is a
+ * The Canvas's palette as a contribution point (LOOP C-12): each UI of
+ * the catalogue that renders components (`agentspecs/ui`, C-13) is a
  * Reactor plugin contributing its components to `loop.canvas.block`. The
  * palette lists what the enabled plugins contribute, and nothing else; a
  * plugin disabled takes its blocks off it, and an application that uses one
@@ -24,12 +24,8 @@ import {
   type ReactorPlatform,
   type ReactorPlugin,
 } from '@datalayer/reactor';
-import { listUIPlugins } from '../../../specs/uiPlugins';
-import type {
-  AppSpec,
-  ComponentSpec,
-  UIPluginSpec,
-} from '../../../types/agentspecs';
+import { listUI } from '../../../specs/ui';
+import type { AppSpec, ComponentSpec, UISpec } from '../../../types/agentspecs';
 import {
   LoopCanvasBlock,
   type CanvasBlockContribution,
@@ -42,23 +38,23 @@ type BlocksReader = {
   ) => ReadonlyArray<{ value: CanvasBlockContribution }>;
 };
 
-/** The name of the Reactor plugin that contributes a UI plugin's blocks. */
-export const canvasBlocksPluginName = (uiPlugin: string): string =>
-  `@datalayer/loop-plugin-ui-${uiPlugin}`;
+/** The name of the Reactor plugin that contributes a UI's blocks. */
+export const canvasBlocksPluginName = (ui: string): string =>
+  `@datalayer/loop-plugin-ui-${ui}`;
 
-/** A UI plugin of the catalogue as the Reactor plugin contributing its components as blocks. */
+/** A UI of the catalogue as the Reactor plugin contributing its components as blocks. */
 export function uiPluginBlocks(
-  uiPlugin: UIPluginSpec,
+  ui: UISpec,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   return definePlugin({
-    name: canvasBlocksPluginName(uiPlugin.id),
-    displayName: uiPlugin.name,
-    description: `The blocks of ${uiPlugin.name} on the Canvas: ${uiPlugin.components.map(component => component.name).join(', ')}.`,
+    name: canvasBlocksPluginName(ui.id),
+    displayName: ui.name,
+    description: `The blocks of ${ui.name} on the Canvas: ${ui.components.map(component => component.name).join(', ')}.`,
     octicon: 'apps',
-    contributes: uiPlugin.components.map(component =>
+    contributes: ui.components.map(component =>
       contribution(
         LoopCanvasBlock,
-        { id: component.id, uiPlugin: uiPlugin.id, component },
+        { id: component.id, ui: ui.id, component },
         { id: component.id },
       ),
     ),
@@ -66,15 +62,15 @@ export function uiPluginBlocks(
 }
 
 /**
- * The plugins of the catalogue's UI plugins that render components and may
+ * The plugins of the catalogue's UI specs that render components and may
  * be named today (`enabled` in the catalogue).
  */
 export const CANVAS_BLOCK_PLUGINS: ReactorPlugin<
   Record<string, never>,
   unknown,
   unknown
->[] = listUIPlugins()
-  .filter(uiPlugin => uiPlugin.enabled && uiPlugin.components.length > 0)
+>[] = listUI()
+  .filter(ui => ui.enabled && ui.components.length > 0)
   .map(uiPluginBlocks);
 
 /**
@@ -99,9 +95,9 @@ export function canvasBlocksReactor(
 }
 
 /**
- * The palette of an organization: the block plugins of the UI plugins it has
+ * The palette of an organization: the block plugins of the UI specs it has
  * turned off (`plugins_off` in IAM, catalogue ids such as 'a2ui') switched
- * off. A UI plugin of the catalogue that contributes no block takes nothing
+ * off. A UI of the catalogue that contributes no block takes nothing
  * off; an id the catalogue does not have is said by `unknownPluginsOff`.
  */
 export function canvasBlocksReactorOf(
@@ -115,14 +111,14 @@ export function canvasBlocksReactorOf(
   );
 }
 
-/** The ids an organization turns off that no UI plugin of the catalogue has. */
+/** The ids an organization turns off that no UI of the catalogue has. */
 export function unknownPluginsOff(pluginsOff: readonly string[]): string[] {
-  const known = new Set(listUIPlugins().map(uiPlugin => uiPlugin.id));
+  const known = new Set(listUI().map(ui => ui.id));
   return pluginsOff.filter(id => !known.has(id));
 }
 
 /**
- * What an application's page uses from a UI plugin its organization has
+ * What an application's page uses from a UI its organization has
  * turned off, as its setup notes say it (`blockSetupNotes`, on the palette of
  * `canvasBlocksReactorOf`).
  */
@@ -156,7 +152,7 @@ export function componentsUsedBy(app: Pick<AppSpec, 'interface'>): string[] {
 
 /**
  * What an application's page uses that no enabled plugin contributes, as its
- * setup notes say it: one sentence per UI plugin of the catalogue whose
+ * setup notes say it: one sentence per UI of the catalogue whose
  * blocks it uses while its plugin is off. A component the catalogue does not
  * have is not a note but a problem of the instant checks.
  */
@@ -167,20 +163,20 @@ export function blockSetupNotes(
   const contributed = new Set(
     reactor.getContributions(LoopCanvasBlock).map(entry => entry.value.id),
   );
-  const off = new Map<UIPluginSpec, string[]>();
+  const off = new Map<UISpec, string[]>();
   for (const name of componentsUsedBy(app)) {
     if (contributed.has(name)) {
       continue;
     }
-    for (const uiPlugin of listUIPlugins()) {
-      const component = uiPlugin.components.find(each => each.id === name);
+    for (const ui of listUI()) {
+      const component = ui.components.find(each => each.id === name);
       if (component) {
-        off.set(uiPlugin, [...(off.get(uiPlugin) ?? []), component.name]);
+        off.set(ui, [...(off.get(ui) ?? []), component.name]);
       }
     }
   }
   return [...off.entries()].map(
-    ([uiPlugin, names]) =>
-      `The UI plugin “${uiPlugin.name}” is not enabled, and its page uses its ${names.length === 1 ? 'block' : 'blocks'} ${names.join(', ')}: ${names.length === 1 ? 'it is' : 'they are'} off the Canvas until it is.`,
+    ([ui, names]) =>
+      `The UI “${ui.name}” is not enabled, and its page uses its ${names.length === 1 ? 'block' : 'blocks'} ${names.join(', ')}: ${names.length === 1 ? 'it is' : 'they are'} off the Canvas until it is.`,
   );
 }

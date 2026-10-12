@@ -27,7 +27,7 @@ import {
   fromFrame,
   integrityHolds,
 } from '../../components/a2ui';
-import { listComponents } from '../../specs/uiPlugins';
+import { listComponents } from '../../specs/ui';
 import { dumpAppspec, parseAppspec } from '../apps/appspec';
 import { checkAppspec } from '../apps/checks';
 import {

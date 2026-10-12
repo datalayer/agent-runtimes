@@ -34,7 +34,7 @@ import {
 import { appPageMessages } from '../plugins/app-page';
 import { catalogOfBlocks } from '../../components/a2ui';
 import { LoopCanvasBlock } from '../core';
-import { COMPONENT_CATALOGUE } from '../../specs/uiPlugins';
+import { COMPONENT_CATALOGUE } from '../../specs/ui';
 import { CANVAS_BLOCK_PLUGINS } from '../plugins/canvas-blocks';
 
 (
@@ -329,7 +329,7 @@ describe('what the page draws is what the Canvas can place (R-01b)', () => {
   });
 
   it('draws every block the catalogue’s plugins contribute', () => {
-    // One list: every component of the enabled UI plugins has its renderer.
+    // One list: every component of the enabled UI specs has its renderer.
     expect(() =>
       catalogOfBlocks(Object.keys(COMPONENT_CATALOGUE)),
     ).not.toThrow();
@@ -348,7 +348,7 @@ describe('what the page draws is what the Canvas can place (R-01b)', () => {
           LoopCanvasBlock,
           {
             id: 'Column',
-            uiPlugin: 'a2ui',
+            ui: 'a2ui',
             component: COMPONENT_CATALOGUE.Column,
           },
           { id: 'Column' },

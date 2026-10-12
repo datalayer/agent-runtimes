@@ -3,7 +3,7 @@
 
 """The plugins an organization has turned off, for the checks of an application (LOOP C-12).
 
-An organization keeps the UI plugins of the catalogue it has turned off in IAM
+An organization keeps the UI specs of the catalogue it has turned off in IAM
 (`GET /api/iam/v1/organizations/{uid}/plugins-off`, catalogue ids such as
 ``a2ui``). An application whose page uses a block of one of them says so in
 its setup notes, in the words of the Studio's Canvas (agent-runtimes'
@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
-from agent_runtimes.specs.ui_plugins import list_ui_plugins
+from agent_runtimes.specs.ui import list_ui
 
 
 @dataclass(frozen=True)
@@ -106,15 +106,15 @@ def components_used_by(interface: Any) -> List[str]:
 
 
 def unknown_plugins_off(plugins_off: Sequence[str]) -> List[str]:
-    """The ids turned off that no UI plugin of the catalogue has."""
-    known = {plugin.id for plugin in list_ui_plugins()}
+    """The ids turned off that no UI of the catalogue has."""
+    known = {plugin.id for plugin in list_ui()}
     return [plugin for plugin in plugins_off if plugin not in known]
 
 
 def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[str]:
-    """What an application's page uses from a UI plugin that is off, one sentence per plugin.
+    """What an application's page uses from a UI that is off, one sentence per plugin.
 
-    The sentence the Studio's Canvas says (`blockSetupNotes`). A UI plugin the
+    The sentence the Studio's Canvas says (`blockSetupNotes`). A UI the
     catalogue does not offer contributes no block, so it takes nothing off.
 
     Parameters
@@ -127,11 +127,11 @@ def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[
     Returns
     -------
     list of str
-        One note per UI plugin whose blocks its page uses.
+        One note per UI whose blocks its page uses.
     """
     off = [
         plugin
-        for plugin in list_ui_plugins()
+        for plugin in list_ui()
         if plugin.id in plugins_off and plugin.enabled and plugin.components
     ]
     notes: List[str] = []
@@ -147,7 +147,7 @@ def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[
             continue
         one = len(names) == 1
         notes.append(
-            f"The UI plugin “{plugin.name}” is not enabled, and its page uses its "
+            f"The UI “{plugin.name}” is not enabled, and its page uses its "
             f"{'block' if one else 'blocks'} {', '.join(names)}: "
             f"{'it is' if one else 'they are'} off the Canvas until it is."
         )

@@ -40,7 +40,7 @@ APP = {
 }
 
 TABLE_OFF = (
-    "The UI plugin “A2UI” is not enabled, and its page uses its block Table: "
+    "The UI “A2UI” is not enabled, and its page uses its block Table: "
     "it is off the Canvas until it is."
 )
 
@@ -119,7 +119,7 @@ class TestTheSetupNotes:
     def test_the_plugin_and_its_blocks_are_named(self) -> None:
         assert plugins_off_setup_notes(interface(["Table"]), ["a2ui"]) == [TABLE_OFF]
         assert plugins_off_setup_notes(interface(["Table"], ["Chart"]), ["a2ui"]) == [
-            "The UI plugin “A2UI” is not enabled, and its page uses its blocks Table, Chart: "
+            "The UI “A2UI” is not enabled, and its page uses its blocks Table, Chart: "
             "they are off the Canvas until it is."
         ]
 
@@ -186,4 +186,4 @@ class TestLoopAppsValidate:
 
 
 def test_the_module_reads_the_catalogue_of_this_package() -> None:
-    assert module.list_ui_plugins()[0].id == "a2ui"
+    assert module.list_ui()[0].id == "a2ui"

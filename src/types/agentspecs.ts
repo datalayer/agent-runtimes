@@ -118,10 +118,10 @@ export interface ComponentSpec {
 
 /**
  * How an agent's answer becomes an interface: a protocol the host renders
- * (`agentspecs/ui-plugins`). An agent spec's `uiPlugin` names one.
+ * (`agentspecs/ui`). An agent spec's `ui` names one.
  */
-export interface UIPluginSpec {
-  /** What an agent spec's `uiPlugin` names (e.g. 'a2ui'). */
+export interface UISpec {
+  /** What an agent spec's `ui` names (e.g. 'a2ui'). */
   id: string;
   version: string;
   name: string;
@@ -1336,8 +1336,8 @@ export interface Agentspec {
    * PS-02). `protocol` says how a page reaches it; this, what it speaks to the world.
    */
   protocols?: string[];
-  /** UI plugin (e.g., 'a2ui', 'mcp-apps'), one of the `UI_PLUGIN_CATALOGUE`. */
-  uiPlugin?: string;
+  /** The UI its answers render in (e.g., 'a2ui', 'mcp-apps'), one of the `UI_CATALOGUE`. */
+  ui?: string;
   /** Trigger configuration (type, cron, event source, prompt) */
   trigger?: AgentTriggerConfig;
   /** Model configuration (temperature, max_tokens) */

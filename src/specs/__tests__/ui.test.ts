@@ -4,32 +4,32 @@
  */
 
 /**
- * UI plugins: a catalogue of their own, and what an agent spec names.
+ * UI specs: a catalogue of their own, and what an agent spec names.
  */
 
 import { describe, expect, it } from 'vitest';
 import { listAgentspecs } from '../agents';
-import { UI_PLUGIN_CATALOGUE, getUIPlugin, listUIPlugins } from '../uiPlugins';
+import { UI_CATALOGUE, getUI, listUI } from '../ui';
 
-describe('the UI plugin catalogue', () => {
+describe('the UI catalogue', () => {
   it('lists every plugin, saying whether it is enabled', () => {
-    expect(Object.keys(UI_PLUGIN_CATALOGUE)).toEqual(
+    expect(Object.keys(UI_CATALOGUE)).toEqual(
       expect.arrayContaining(['a2ui', 'mcp-apps', 'mcp-ui']),
     );
-    for (const plugin of listUIPlugins()) {
+    for (const plugin of listUI()) {
       expect(plugin.name).toBeTruthy();
       expect(plugin.docsUrl).toMatch(/^https:\/\//);
       expect(typeof plugin.enabled).toBe('boolean');
     }
-    expect(getUIPlugin('a2ui')?.enabled).toBe(true);
-    expect(getUIPlugin('nope')).toBeUndefined();
+    expect(getUI('a2ui')?.enabled).toBe(true);
+    expect(getUI('nope')).toBeUndefined();
   });
 
-  it('is what an agent spec names, under uiPlugin', () => {
-    const named = listAgentspecs().filter(spec => spec.uiPlugin);
+  it('is what an agent spec names, under ui', () => {
+    const named = listAgentspecs().filter(spec => spec.ui);
     expect(named.length).toBeGreaterThan(0);
     for (const spec of named) {
-      expect(getUIPlugin(spec.uiPlugin as string)).toBeDefined();
+      expect(getUI(spec.ui as string)).toBeDefined();
     }
   });
 });

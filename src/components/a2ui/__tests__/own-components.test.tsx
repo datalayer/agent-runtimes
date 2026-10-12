@@ -20,7 +20,7 @@ import {
   InlineSurface,
   SURFACE_CATALOG_ID,
 } from '../../../apps/plugins/a2ui-surface/InlineSurface';
-import { COMPONENT_CATALOGUE } from '../../../specs/uiPlugins';
+import { COMPONENT_CATALOGUE } from '../../../specs/ui';
 import {
   OWN_COMPONENT_IDS,
   VISIBLE_WHEN,

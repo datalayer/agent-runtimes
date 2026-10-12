@@ -31,7 +31,7 @@ import { getCog } from '../../specs/cogs';
 import { getFrame } from '../../specs/frames';
 import { getGate } from '../../specs/gates';
 import { GUARD_CATALOGUE } from '../../specs/guards';
-import { getComponent } from '../../specs/uiPlugins';
+import { getComponent } from '../../specs/ui';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { getMemory } from '../../specs/memory';
 import { getModel } from '../../specs/models';
@@ -89,7 +89,7 @@ const idOf = (ref: string): string => {
 
 /**
  * The component a layout names (LOOP C-13), from the catalogs of the enabled
- * UI plugins, by the name a surface gives it.
+ * UI specs, by the name a surface gives it.
  */
 export const componentNamed = (name: string): ComponentSpec | undefined =>
   getComponent(name);

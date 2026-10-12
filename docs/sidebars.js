@@ -55,7 +55,7 @@ const sidebars = {
       type: 'category',
       label: 'Agentspecs',
       link: { type: 'doc', id: 'agentspecs/index' },
-      items: ['agentspecs/ui-plugins'],
+      items: ['agentspecs/ui'],
     },
   ],
 };

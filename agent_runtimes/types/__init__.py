@@ -145,7 +145,7 @@ from .types import (
     TrackSpec,
     TriggerField,
     TriggerSpec,
-    UIPluginSpec,
+    UISpec,
     ProtocolPackagesSpec,
     ProtocolSpec,
 )
@@ -159,7 +159,7 @@ __all__ = [
     "ModelProvider",
     "ComponentBindingsSpec",
     "ComponentSpec",
-    "UIPluginSpec",
+    "UISpec",
     "ProtocolPackagesSpec",
     "ProtocolSpec",
     "CogSpec",

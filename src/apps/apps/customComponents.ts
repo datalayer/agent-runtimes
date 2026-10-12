@@ -18,7 +18,7 @@
  * @module apps/apps/customComponents
  */
 
-import { getComponent } from '../../specs/uiPlugins';
+import { getComponent } from '../../specs/ui';
 import type {
   AppCustomComponentSpec,
   AppSpec,

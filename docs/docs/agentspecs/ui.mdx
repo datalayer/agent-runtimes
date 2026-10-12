@@ -1,10 +1,10 @@
 ---
-title: UI Plugins and Components
+title: UI and Components
 ---
 
-# UI Plugins and the catalog of visual components
+# UI specs and the catalog of visual components
 
-A **UI plugin** is how an agent's answer becomes an interface rather than text: a
+A **UI spec** is how an agent's answer becomes an interface rather than text: a
 protocol the host renders — A2UI today; MCP Apps and MCP UI are listed and not enabled.
 Each plugin hosts **the catalog of visual components** it renders (LOOP C-13): A2UI's
 18 standard v0.9 components (`Text`, `Row`, `Card`, `Button`, `ChoicePicker`…) and
@@ -13,10 +13,10 @@ Every one has a version and carries its properties as a JSON Schema of the catal
 own — a standard one's named, required and chosen as A2UI's are; Datalayer's own with
 what it can be bound to, the events it reports and a valid example.
 
-The plugins are specs of [Agentspecs](./index.mdx) (`agentspecs/ui-plugins/*.yaml`).
+The plugins are specs of [Agentspecs](./index.mdx) (`agentspecs/ui/*.yaml`).
 Their fields, every component and how an Appspec's surface names one are documented
-there: [UI Plugins](https://agentspecs.datalayer.tech/agents/ui-plugins) and
-[the catalog of visual components](https://agentspecs.datalayer.tech/agents/ui-plugins/components).
+there: [UI](https://agentspecs.datalayer.tech/agents/ui) and
+[the catalog of visual components](https://agentspecs.datalayer.tech/agents/ui/components).
 This page is about the lookups Agent Runtimes generates from them.
 
 ## The generated lookups
@@ -26,10 +26,10 @@ by hand:
 
 | | Python | TypeScript |
 |---|---|---|
-| Module | `agent_runtimes.specs.ui_plugins` | `src/specs/uiPlugins.ts` (`@datalayer/agent-runtimes/lib/specs/uiPlugins`, also re-exported from `@datalayer/agent-runtimes`) |
-| The plugins, by id | `UI_PLUGIN_CATALOGUE` | `UI_PLUGIN_CATALOGUE` |
-| One plugin | `get_ui_plugin(plugin_id)` | `getUIPlugin(pluginId)` |
-| Every plugin | `list_ui_plugins()` | `listUIPlugins()` |
+| Module | `agent_runtimes.specs.ui` | `src/specs/ui.ts` (`@datalayer/agent-runtimes/lib/specs/ui`, also re-exported from `@datalayer/agent-runtimes`) |
+| The plugins, by id | `UI_CATALOGUE` | `UI_CATALOGUE` |
+| One plugin | `get_ui(ui_id)` | `getUI(uiId)` |
+| Every plugin | `list_ui()` | `listUI()` |
 | The components, by the name a surface gives them | `COMPONENT_CATALOGUE` | `COMPONENT_CATALOGUE` |
 | One component, or none | `get_component(name)` → `ComponentSpec \| None` | `getComponent(name)` → `ComponentSpec \| undefined` |
 | Every component | `list_components()` | `listComponents()` |
@@ -56,7 +56,7 @@ A `ComponentSpec` says:
 | `example` | A configuration of it, valid against `properties`. |
 
 ```python
-from agent_runtimes.specs.ui_plugins import COMPONENT_CATALOGUE, get_component
+from agent_runtimes.specs.ui import COMPONENT_CATALOGUE, get_component
 
 table = get_component("Table")
 table.properties["required"]       # ['columns']
@@ -66,7 +66,7 @@ len(COMPONENT_CATALOGUE)           # 24
 ```
 
 ```ts
-import { getComponent, listComponents } from '@datalayer/agent-runtimes/lib/specs/uiPlugins';
+import { getComponent, listComponents } from '@datalayer/agent-runtimes/lib/specs/ui';
 
 const chart = getComponent('Chart');
 chart?.properties; // its JSON Schema: kind, x, y, title, series
@@ -92,14 +92,14 @@ listComponents().filter(c => !c.standard).map(c => c.id);
   the same kind (`interface.settings`), checked by `checkAppspec` as the form “settings”
   (a list of settings, their old shape, is refused) and by the runtime when a run or a
   settings change carries them (`refused_by`, the same sentence).
-- **Tests** hold the catalogue to the plugins (`agent_runtimes/tests/test_ui_plugin_components.py`):
+- **Tests** hold the catalogue to the plugins (`agent_runtimes/tests/test_ui_components.py`):
   the component catalog is A2UI's own, every component has a version and a schema,
   Datalayer's carry an example their schema meets, and an unknown name is `None`.
 
 ## Typed calls from Python
 
 The same generation writes every component as a typed call (LOOP C-15):
-`SurfaceComponents` in `agent_runtimes.specs.ui_plugins`, which an application reaches
+`SurfaceComponents` in `agent_runtimes.specs.ui`, which an application reaches
 as `app.ui`. One method per component, named for it in snake case (`Table` → `table`,
 `TextField` → `text_field`), whose keyword arguments are its properties, typed from its
 JSON Schema — an enumeration a `Literal`, a required property without a default — and,

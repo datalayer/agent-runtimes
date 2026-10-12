@@ -64,7 +64,7 @@ export interface LibraryAgentspec {
   welcomeDocument?: string | null;
   sandboxVariant?: string | null;
   protocol?: string | null;
-  uiPlugin?: string | null;
+  ui?: string | null;
   trigger?: Record<string, unknown> | null;
   modelConfig?: Record<string, unknown> | null;
   mcpServerTools?: Array<Record<string, unknown>> | null;

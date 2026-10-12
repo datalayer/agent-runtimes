@@ -108,7 +108,7 @@ from agent_runtimes.loop.apps.session import (
     UploadedFile,
     call,
 )
-from agent_runtimes.specs.ui_plugins import SurfaceComponents
+from agent_runtimes.specs.ui import SurfaceComponents
 from agent_runtimes.types import (
     AppCodeCheckSpec,
     AppCommandSpec,

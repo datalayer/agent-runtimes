@@ -287,14 +287,12 @@ class ComponentSpec(BaseModel):
     )
 
 
-class UIPluginSpec(BaseModel):
+class UISpec(BaseModel):
     """How an agent's answer becomes an interface: a protocol the host
-    renders (`agentspecs/ui-plugins`). An agent spec's `ui_plugin` names one.
+    renders (`agentspecs/ui`). An agent spec's `ui` names one.
     """
 
-    id: str = Field(
-        ..., description="What an agent spec's `ui_plugin` names (e.g. 'a2ui')"
-    )
+    id: str = Field(..., description="What an agent spec's `ui` names (e.g. 'a2ui')")
     version: str = Field(default="0.0.1", description="Specification version")
     name: str = Field(..., description="Display name")
     description: str = Field(
@@ -1689,6 +1687,16 @@ class Agentspec(BaseModel):
                 "an agent spec says `backend_tools`, not `tools`: the tools that run "
                 "on the runtime, as `frontend_tools` are those that run on the page"
             )
+        # `ui_plugin` is `ui` (AGENT_PROTOCOLS PS-03): an old spec is refused, not read.
+        old = [
+            key
+            for key in ("ui_plugin", "uiPlugin", "ui_extension", "uiExtension")
+            if isinstance(data, dict) and key in data
+        ]
+        if old:
+            raise ValueError(
+                f"an agent spec says `ui`, not `{old[0]}`: one of agentspecs/ui"
+            )
         return data
 
     @field_validator("model_additionals")
@@ -1841,11 +1849,9 @@ class Agentspec(BaseModel):
         default=None,
         description="Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai')",
     )
-    ui_plugin: Optional[str] = Field(
+    ui: Optional[str] = Field(
         default=None,
-        description="UI plugin (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui-plugins`.",
-        validation_alias=AliasChoices("uiPlugin", "ui_plugin"),
-        serialization_alias="uiPlugin",
+        description="The UI its answers render in (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui`.",
     )
     protocols: List[str] = Field(
         default_factory=list,

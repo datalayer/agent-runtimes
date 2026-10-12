@@ -29,7 +29,7 @@ from typing import (
 import jsonschema
 from reactor.ui import Display, audience, display_type
 
-from agent_runtimes.specs.ui_plugins import get_component
+from agent_runtimes.specs.ui import get_component
 from agent_runtimes.types import AppCustomComponentSpec, ComponentSpec
 
 #: What every node of a surface may say besides a component's own properties.

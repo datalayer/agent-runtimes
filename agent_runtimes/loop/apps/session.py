@@ -62,7 +62,7 @@ from agent_runtimes.loop.apps.guards import AppCheckBlockedError, AppChecksCapab
 from agent_runtimes.loop.apps.record import INCLUDED_BY, AppRecorder
 from agent_runtimes.loop.apps.rules import Decision
 from agent_runtimes.loop.apps.uploads import accepts
-from agent_runtimes.specs.ui_plugins import SurfaceComponents
+from agent_runtimes.specs.ui import SurfaceComponents
 from agent_runtimes.types import AppSpec
 
 # --- what the user sees ---------------------------------------------------------

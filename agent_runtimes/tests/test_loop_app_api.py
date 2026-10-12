@@ -309,7 +309,7 @@ def test_every_component_is_a_typed_call_writing_the_node_the_canvas_writes():
     import inspect
     import re
 
-    from agent_runtimes.specs.ui_plugins import SurfaceComponents, list_components
+    from agent_runtimes.specs.ui import SurfaceComponents, list_components
 
     for spec in list_components():
         name = re.sub(r"(?<!^)(?=[A-Z])", "_", spec.id).lower()
