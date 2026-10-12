@@ -89,7 +89,17 @@ then `ready_for_complete`; the exact purchase to approve (*Buy 2 × Sencha
 green tea, 100 g at store.example for USD 27.00*), the order once bought,
 and the same proposal refused a second time (*this proposal was used
 already*). Without `--yes` it asks you to approve. The TypeScript client
-(`ucp.unit.test.ts`) runs against an in-memory twin of the merchant.
+runs against an in-memory twin of the merchant (`ucp.unit.test.ts`) and
+against the Python merchant itself over HTTP: `merchant_server.py` serves
+Example Store on localhost and `ucpMerchant.integration.test.ts` shops there
+(discovery, search, a checkout, the purchase approved and bought once, the
+same proposal refused); `test_protocols_ucp_two_languages.py` runs both.
+
+```bash
+python examples/protocols/ucp/merchant_server.py --port 8812
+UCP_MERCHANT=http://127.0.0.1:8812 npx vitest run --project=integration \
+    src/protocols/ucp/ucpMerchant.integration.test.ts
+```
 
 ### In the browser
 

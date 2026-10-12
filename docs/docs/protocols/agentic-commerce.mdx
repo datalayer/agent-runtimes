@@ -92,8 +92,19 @@ Commerce Protocol 2026-04-17`, the `discount` extension), a session
 discount applied (`ready_for_payment`), the exact purchase to approve (*Buy
 2 × Wool socks at outfitters.example for USD 29.16*), the order once bought,
 and the same proposal refused a second time. Without `--yes` it asks you to
-approve. The TypeScript client (`agenticCommerce.unit.test.ts`) runs against
-a seller answering with the shared fixture.
+approve. The TypeScript client runs against a seller answering with the
+shared fixture (`agenticCommerce.unit.test.ts`) and against the Python seller
+itself over HTTP: `seller_server.py` serves Example Outfitters on localhost
+and `acpSeller.integration.test.ts` buys there (a session, the buyer's email,
+the purchase approved and completed once with a test token no summary shows,
+the same proposal refused); `test_protocols_agentic_commerce_two_languages.py`
+runs both.
+
+```bash
+python examples/protocols/agentic_commerce/seller_server.py --port 8813
+ACP_SELLER=http://127.0.0.1:8813 npx vitest run --project=integration \
+    src/protocols/agentic-commerce/acpSeller.integration.test.ts
+```
 
 ## Conformance
 

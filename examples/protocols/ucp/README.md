@@ -19,3 +19,11 @@ python examples/protocols/ucp/shopping.py --yes
 - completed once: the same proposal again is refused.
 
 Developer documentation: `docs/docs/protocols/ucp.mdx`.
+
+The TypeScript client against this store over HTTP:
+
+```bash
+python examples/protocols/ucp/merchant_server.py --port 8812
+UCP_MERCHANT=http://127.0.0.1:8812 npx vitest run --project=integration \
+    src/protocols/ucp/ucpMerchant.integration.test.ts
+```

@@ -18,3 +18,11 @@ python examples/protocols/agentic_commerce/checkout.py --yes
   completed once.
 
 Developer documentation: `docs/docs/protocols/agentic-commerce.mdx`.
+
+The TypeScript client against this seller over HTTP:
+
+```bash
+python examples/protocols/agentic_commerce/seller_server.py --port 8813
+ACP_SELLER=http://127.0.0.1:8813 npx vitest run --project=integration \
+    src/protocols/agentic-commerce/acpSeller.integration.test.ts
+```
