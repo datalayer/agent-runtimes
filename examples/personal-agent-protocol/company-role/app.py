@@ -28,49 +28,39 @@ from agent_runtimes.loop.apps.pap_company import (
 #: SDK's demo identity publishes it.
 ATLAS = AgentIdentity(domain="atlas.example", name="Atlas").client_id
 
-#: The Appspec: its `pap.company` block makes the application a company.
-SPEC: dict[str, Any] = {
-    "schema": "loop.app/v1",
-    "id": "pap-company-role",
-    "name": "PAP Company Role",
-    "description": (
+app = Application(
+    "pap-company-role",
+    "chat",
+    agent="example-blank:0.0.1",
+    name="PAP Company Role",
+    description=(
         "An application that is a company personal agents work with: an "
         "exchange is proposed, confirmed at its exact revision, done once."
     ),
-    "kind": "chat",
-    "agent": "example-blank:0.0.1",
-    "instructions": (
+    instructions=(
         "Use explain_company_role. A chat message is never a confirmation: "
         "only the person confirms an operation's exact terms."
     ),
-    "pap": {
-        "company": {
-            "enabled": True,
-            # A personal agent may ask before the person signs in.
-            "signed_out": True,
-            "interfaces": ["agent", "openapi", "mcp"],
-            "scopes": ["orders:read", "orders:write"],
-            "extensions": ["operations"],
-            "personal_agents": "registered",
-            "registered_agents": [ATLAS],
-            "operations": [
-                {
-                    "action": "orders.exchange",
-                    "tool": "exchange_order",
-                    "summary": "Exchange order {order_id} for size {size}",
-                    "user_approval_required": True,
-                }
-            ],
-        }
-    },
-}
+)
 
-app = Application.from_spec(SPEC)
+# The company role (`pap.company`, the typed builder of PAP_DATALAYER S-04).
+app.as_company(
+    # A personal agent may ask before the person signs in.
+    signed_out=True,
+    interfaces=["agent", "openapi", "mcp"],
+    scopes=["orders:read", "orders:write"],
+    extensions=["operations"],
+    personal_agents="registered",
+    registered_agents=[ATLAS],
+)
 
 #: What `exchange_order` did: the company's side effect, counted.
 EXCHANGED: list[dict[str, Any]] = []
 
 
+@app.company_operation(
+    "orders.exchange", summary="Exchange order {order_id} for size {size}"
+)
 @app.tool(does="write")
 async def exchange_order(order_id: str, size: str) -> dict[str, Any]:
     """Exchange an order for another size: the declared operation's tool."""
@@ -102,7 +92,7 @@ async def explain_company_role() -> dict[str, Any]:
     spec = app.spec
     # The whole block, as agentspecs validates it; the runtime keeps the
     # operations, Datalayer's company service the rest.
-    company = parse_app(dict(SPEC)).pap.company
+    company = parse_app(app.document).pap.company
     EXCHANGED.clear()
 
     # 1. A conversation turn asked by a personal agent: the model's call of the

@@ -787,6 +787,202 @@ class Application:
         self._declare("connections", connection)
         return connection
 
+    # --- the Personal Agent Protocol, both roles (PAP_DATALAYER S-04) ------------
+
+    def _pap(self) -> Dict[str, Any]:
+        pap = self._document.setdefault("pap", {})
+        self._spec = None
+        return pap
+
+    def company_connection(
+        self,
+        id: str,
+        company: str,
+        *,
+        access: str = "read",
+        acts_as: str = "user",
+        scopes: Sequence[str] = (),
+        interfaces: Sequence[str] = ("agent",),
+        sign_in: Sequence[str] = ("direct", "device"),
+        extensions: Sequence[str] = (),
+    ) -> Any:
+        """Work with a company as each person's agent, over the Personal Agent
+        Protocol (``pap.connections``): the gateway's ``pap`` toolset reaches it,
+        its tools named with the company, and nothing of the company's — no key,
+        no token — is ever held here.
+
+        Parameters
+        ----------
+        id : str
+            Stable within the application: ``orders``.
+        company : str
+            The company's domain, as discovery takes it: ``example.com``.
+        access : str
+            ``read``, or ``write`` to change things there too.
+        acts_as : str
+            In whose account: ``user`` (each person signs in to their own) or
+            ``owner``.
+        scopes : sequence of str
+            The fewest scopes it needs.
+        interfaces : sequence of str
+            How it reaches the company: ``agent``, ``openapi``, ``mcp``.
+        sign_in : sequence of str
+            The sign-in modes it accepts, preferred first: ``direct``,
+            ``device``, ``mediated``.
+        extensions : sequence of str
+            Extensions it uses: ``operations``.
+
+        Returns
+        -------
+        AppPapConnection
+            The connection, as the spec holds it (agentspecs' own model, so a
+            URL, a credential or an unknown field is refused here).
+        """
+        from agentspecs.apps import AppPapConnection
+
+        connection = AppPapConnection.model_validate(
+            {
+                "id": id,
+                "company": company,
+                "access": access,
+                "as": acts_as,
+                "scopes": list(scopes),
+                "interfaces": list(interfaces),
+                "sign_in": list(sign_in),
+                "extensions": list(extensions),
+            }
+        )
+        self._pap().setdefault("connections", []).append(
+            connection.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+        )
+        return connection
+
+    def as_company(
+        self,
+        *,
+        scopes: Sequence[str] = (),
+        signed_out: bool = True,
+        interfaces: Sequence[str] = ("agent",),
+        extensions: Sequence[str] = (),
+        personal_agents: str = "any",
+        registered_agents: Sequence[str] = (),
+    ) -> Any:
+        """Let people's personal agents work with this application, as a company
+        (``pap.company``): its agent answers them, its declared operations
+        (:meth:`company_operation`) are done by its own tools once the person
+        confirms. The protocol — Sessions, tokens, proofs — is Datalayer's
+        company service's; nothing of it reaches the application's code.
+
+        Parameters
+        ----------
+        scopes : sequence of str
+            The scopes it offers: ``orders:read``.
+        signed_out : bool
+            Whether a personal agent may ask before the person signs in.
+        interfaces : sequence of str
+            How personal agents reach it: ``agent``, ``openapi``, ``mcp``.
+        extensions : sequence of str
+            Extensions it offers: ``operations``.
+        personal_agents : str
+            ``any``, or ``registered`` only.
+        registered_agents : sequence of str
+            When ``registered``: each accepted agent's ``client_id`` URL.
+
+        Returns
+        -------
+        AppPapCompany
+            The company role, as the spec holds it.
+        """
+        from agentspecs.apps import AppPapCompany
+
+        pap = self._pap()
+        declared = list((pap.get("company") or {}).get("operations") or [])
+        company = AppPapCompany.model_validate(
+            {
+                "enabled": True,
+                "signed_out": signed_out,
+                "interfaces": list(interfaces),
+                "scopes": list(scopes),
+                "extensions": list(extensions),
+                "personal_agents": personal_agents,
+                "registered_agents": list(registered_agents),
+                "operations": declared,
+            }
+        )
+        pap["company"] = company.model_dump(
+            mode="json", by_alias=True, exclude_defaults=True
+        )
+        # `enabled` is the role itself: written even though it is not the default's.
+        pap["company"]["enabled"] = True
+        return company
+
+    def company_operation(
+        self,
+        action: str,
+        *,
+        summary: str,
+        user_approval_required: bool = True,
+    ) -> Callable[[Handler], Handler]:
+        """Declare what a personal agent may ask the company to do for the person,
+        done by one of the application's own tools once the person confirms its
+        exact terms (``pap.company.operations``, the ``operations`` extension)::
+
+            app.as_company(scopes=["orders:read", "orders:write"],
+                           extensions=["operations"])
+
+            @app.company_operation("orders.exchange",
+                                   summary="Exchange order {order_id} for size {size}.")
+            @app.tool(does="write")
+            def exchange_order(order_id: str, size: str) -> dict:
+                \"\"\"Exchanges an order for another size.\"\"\"
+
+        The tool is the handler: asked by a personal agent, its call is proposed,
+        never made, and made once with exactly the confirmed terms.
+
+        Parameters
+        ----------
+        action : str
+            The action's name at this company: ``orders.exchange``.
+        summary : str
+            What the person is shown, ``{term}`` for each term; never the model's.
+        user_approval_required : bool
+            Whether only the person may confirm it, never an approval in advance.
+
+        Returns
+        -------
+        callable
+            The decorator, over a function already given as a tool (``@app.tool``).
+        """
+        from agentspecs.apps import AppPapOperation
+
+        def decorate(function: Handler) -> Handler:
+            name = function.__name__
+            if self._tools.get(name) is not function:
+                raise ValueError(
+                    f"The operation {action!r} is done by one of {self.id}'s tools: "
+                    f"put @app.company_operation above @app.tool on {name!r}."
+                )
+            company = (self._document.get("pap") or {}).get("company") or {}
+            if not company.get("enabled"):
+                raise ValueError(
+                    f"{self.id} declares the operation {action!r} as a company: "
+                    "call app.as_company(...) first."
+                )
+            operation = AppPapOperation.model_validate(
+                {
+                    "action": action,
+                    "tool": name,
+                    "summary": summary,
+                    "user_approval_required": user_approval_required,
+                }
+            )
+            self._pap()["company"].setdefault("operations", []).append(
+                operation.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+            )
+            return function
+
+        return decorate
+
     def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
         """Place a component of the catalog on the application's surface (LOOP C-15).
 

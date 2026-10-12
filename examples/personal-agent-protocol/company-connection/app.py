@@ -19,48 +19,44 @@ from agent_runtimes.loop.apps.pap_connections import (
     server_id,
 )
 
-#: The Appspec: one company, reached through Datalayer's gateway, read only.
-SPEC: dict[str, Any] = {
-    "schema": "loop.app/v1",
-    "id": "pap-company-connection",
-    "name": "PAP Company Connection",
-    "description": (
+app = Application(
+    "pap-company-connection",
+    "chat",
+    agent="example-blank:0.0.1",
+    name="PAP Company Connection",
+    description=(
         "A company reached as a personal agent through Datalayer's gateway: "
         "its tools prefixed with its domain, given only what the connection's "
         "level gives, its sign-in asking only the scopes the connection names."
     ),
-    "kind": "chat",
-    "agent": "example-blank:0.0.1",
-    "instructions": (
+    instructions=(
         "Use explain_company_connection. Never ask the person for a password "
         "or a code in the conversation: a sign-in happens at the company."
     ),
-    "pap": {
-        "connections": [
-            {
-                "id": "orders",
-                "company": "manzanita.example",
-                "access": "read",
-                "as": "user",
-                # The fewest scopes the application needs. The gateway's
-                # sign-in asks only these, of what the company offers, and
-                # never a `:write` one on a `read` connection.
-                "scopes": ["orders:read"],
-                "interfaces": ["agent", "mcp"],
-                "sign_in": ["device", "direct"],
-            }
-        ]
-    },
-}
+)
 
-app = Application.from_spec(SPEC)
+# One company, reached through Datalayer's gateway, read only, in each
+# person's own account (`pap.connections`, the typed builder of PAP_DATALAYER
+# S-04: a URL, a credential or an unknown field is refused here).
+app.company_connection(
+    "orders",
+    "manzanita.example",
+    access="read",
+    acts_as="user",
+    # The fewest scopes the application needs. The gateway's sign-in asks only
+    # these, of what the company offers, and never a `:write` one on a `read`
+    # connection.
+    scopes=["orders:read"],
+    interfaces=["agent", "mcp"],
+    sign_in=["device", "direct"],
+)
 
 
 @app.tool(does="read")
 async def explain_company_connection() -> dict[str, Any]:
     """Show how the runtime reaches the company and which of its tools the model is given."""
 
-    [connection] = parse_app(dict(SPEC)).pap.connections
+    [connection] = parse_app(app.document).pap.connections
     spec = app.spec
     [sid] = remember(spec)
     rules = AppRulesCapability(app=spec)
