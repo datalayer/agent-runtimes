@@ -11,6 +11,7 @@ import httpx
 import pytest
 
 from agent_runtimes.protocols import build_protocols_reactor
+from agent_runtimes.protocols.egress import client_fetch
 from agent_runtimes.protocols.pact import (
     PactCardError,
     PactError,
@@ -52,6 +53,7 @@ def _setup(register: bool = True):
         delegations=delegation_store_of(platform),
         receipts=receipt_store_of(platform),
         http=http,
+        metadata=client_fetch(http),
     )
     return provider, signer, platform, agent
 

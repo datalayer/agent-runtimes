@@ -14,6 +14,7 @@ import pytest
 from reactor import PluginManifest
 
 from agent_runtimes.protocols import build_protocols_reactor
+from agent_runtimes.protocols.egress import client_fetch
 from agent_runtimes.protocols.ucp import (
     ACTION_CLASSES,
     CheckoutProposal,
@@ -83,7 +84,13 @@ def _client(store: ExampleStore) -> UcpClient:
     http = httpx.AsyncClient(
         transport=httpx.ASGITransport(app=store.app()), base_url=STORE
     )
-    return UcpClient(business=STORE, agent_profile=AGENT_PROFILE, http=http)
+    # A local test merchant: its profile read over the client the test trusts (PI-13).
+    return UcpClient(
+        business=STORE,
+        agent_profile=AGENT_PROFILE,
+        http=http,
+        metadata=client_fetch(http),
+    )
 
 
 async def _ready(client: UcpClient) -> dict[str, Any]:

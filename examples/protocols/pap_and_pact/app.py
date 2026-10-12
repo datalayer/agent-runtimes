@@ -46,6 +46,7 @@ from reactor import PluginManifest
 
 from agent_runtimes.loop.apps import Application
 from agent_runtimes.protocols import build_protocols_reactor
+from agent_runtimes.protocols.egress import client_fetch
 from agent_runtimes.protocols.pact import PactPersonalAgent
 from agent_runtimes.protocols.pact.plugin import (
     RECEIPT_STORES,
@@ -213,6 +214,7 @@ async def _at_example_air(platform: Any, provider: ExampleAir) -> str:
             delegations=delegation_store_of(platform),
             receipts=receipt_store_of(platform),
             http=http,
+            metadata=client_fetch(http),
         )
         card = await agent.discover()
         record.brands[card.interface_url] = card.name

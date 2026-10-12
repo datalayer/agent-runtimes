@@ -69,6 +69,16 @@ An agent declares in `capabilities.extensions` only the extensions
 contributed to these points (`declared_extensions`); the seller answers
 with those it activates.
 
+## Reading a seller's discovery
+
+`AgenticCommerceClient.discover()` reads `/.well-known/acp.json` through
+`agent_runtimes.protocols.egress.metadata_fetch`, the PAP SDK's resolving
+client: the name is resolved first and refused unless https with every
+address public, only that address is dialled, no redirect is followed, no
+proxy is used, and the document is bounded (256 KiB). A local test seller is
+read over the client you trust by saying so — `metadata=client_fetch(http)`
+(`test_protocols_metadata_egress.py`).
+
 ## The test seller and the example
 
 `agent_runtimes.protocols.agentic_commerce.merchant.ExampleOutfitters` is a

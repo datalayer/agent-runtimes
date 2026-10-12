@@ -20,12 +20,14 @@ an opaque reference, never returned to the agent or the model.
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Protocol, runtime_checkable
 
 import httpx
 
+from ..egress import MAX_METADATA_BYTES, Fetch, metadata_fetch
 from .card import PactCard, read_card
 from .tokens import sign_personal_agent_jwt, verify_receipt
 
@@ -132,19 +134,33 @@ class PactPersonalAgent:
     http: httpx.AsyncClient = field(
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
+    #: How the Brand's public metadata (its card, its OAuth metadata and keys)
+    #: is read: the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13), or
+    #: ``egress.client_fetch`` for a local test Provider.
+    metadata: Fetch = field(
+        default_factory=lambda: metadata_fetch(
+            accept="application/json", max_bytes=MAX_METADATA_BYTES
+        )
+    )
     card: Optional[PactCard] = None
     _pending: dict[str, str] = field(default_factory=dict, repr=False)
     _metadata: Optional[dict[str, Any]] = field(default=None, repr=False)
 
     async def discover(self) -> PactCard:
         """Read the Brand's card (no token)."""
-        answer = await self.http.get(self.card_url)
-        if answer.status_code == 404:
+        status, _, body = await self.metadata(self.card_url)
+        if status == 404:
             raise PactError("the Brand is unknown to its Provider")
-        if answer.status_code != 200:
-            raise PactError(f"the card answered {answer.status_code}")
-        self.card = read_card(answer.json())
+        if status != 200:
+            raise PactError(f"the card answered {status}")
+        self.card = read_card(json.loads(body))
         return self.card
+
+    async def _public(self, url: str) -> Any:
+        status, _, body = await self.metadata(url)
+        if status != 200:
+            raise PactError(f"{url} answered {status}")
+        return json.loads(body)
 
     async def _card(self) -> PactCard:
         return self.card or await self.discover()
@@ -236,10 +252,8 @@ class PactPersonalAgent:
         if card.delegation is None:
             raise PactError("the Brand offers no delegation")
         if self._metadata is None:
-            metadata = (await self.http.get(card.delegation.metadata_url)).json()
-            self._metadata = {
-                "jwks": (await self.http.get(metadata["jwks_uri"])).json()
-            }
+            metadata = await self._public(card.delegation.metadata_url)
+            self._metadata = {"jwks": await self._public(metadata["jwks_uri"])}
         return self._metadata["jwks"]
 
     async def request_sign_in(self, user: str, scopes: list[str]) -> SignIn:

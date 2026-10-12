@@ -57,6 +57,15 @@ Rules: `…:read`, `…:view`, `…:list`, `…:status`, `…:lookup` are `read`
 anything else is `write` — a Brand's word nobody classed is never taken for a
 reader.
 
+In Python, `PactPersonalAgent` reads the card, the delegation's OAuth
+metadata and its keys through `agent_runtimes.protocols.egress.metadata_fetch`,
+the PAP SDK's resolving client: the name is resolved first and refused
+unless https with every address public, only that address is dialled, no
+redirect is followed, no proxy is used, and each document is bounded. A local
+test Provider is read over the client you trust by saying so —
+`metadata=client_fetch(http)`, as the examples do
+(`test_protocols_metadata_egress.py`).
+
 ## The plugin and its points
 
 | Point | Default | What a host contributes |

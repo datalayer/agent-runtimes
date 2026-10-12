@@ -66,6 +66,18 @@ extensions both the business offers and a contribution implements.
 updating and cancelling a checkout are `write`; `complete` is `buy`
 (`ACTION_CLASSES`), so a Rule decides each the way it decides any tool.
 
+## Reading a business's profile
+
+`UcpClient.discover()` reads `/.well-known/ucp` through
+`agent_runtimes.protocols.egress.metadata_fetch`, the PAP SDK's resolving
+client (`create_resolving_client`, the one egress path Datalayer uses
+towards companies, businesses and key directories): the name is resolved
+first and refused unless https with every address public, only that address
+is dialled, no redirect is followed, no proxy is used, and the profile is
+bounded (256 KiB). That is the default; a local test merchant is read over
+the client you trust by saying so — `metadata=client_fetch(http)`, as the
+example and the tests do (`test_protocols_metadata_egress.py`).
+
 ## The test merchant
 
 `agent_runtimes.protocols.ucp.merchant.ExampleStore` is a local UCP business

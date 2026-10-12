@@ -21,6 +21,7 @@ an ``Idempotency-Key``.
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -35,6 +36,7 @@ from ..commerce import (
     ProposalStore,
     digest,
 )
+from ..egress import MAX_METADATA_BYTES, Fetch, metadata_fetch
 
 #: The version implemented (``API-Version``), as the specification dates it.
 AGENTIC_COMMERCE_VERSION = "2026-04-17"
@@ -140,18 +142,25 @@ class AgenticCommerceClient:
     http: httpx.AsyncClient = field(
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
+    #: How its public metadata is read: the PAP SDK's single egress path
+    #: (AGENT_PROTOCOLS PI-13), or ``egress.client_fetch`` for a local test one.
+    metadata: Fetch = field(
+        default_factory=lambda: metadata_fetch(
+            accept="application/json", max_bytes=MAX_METADATA_BYTES
+        )
+    )
     discovery: Optional[SellerDiscovery] = None
 
     async def discover(self) -> SellerDiscovery:
         """Read and check the seller's discovery document: the version, REST, checkout."""
         from .models import DiscoveryResponse
 
-        answer = await self.http.get(f"{self.seller.rstrip('/')}{DISCOVERY_PATH}")
-        if answer.status_code != 200:
-            raise AgenticCommerceError(
-                f"{DISCOVERY_PATH} answered {answer.status_code}"
-            )
-        document = answer.json()
+        status, _, body = await self.metadata(
+            f"{self.seller.rstrip('/')}{DISCOVERY_PATH}"
+        )
+        if status != 200:
+            raise AgenticCommerceError(f"{DISCOVERY_PATH} answered {status}")
+        document = json.loads(body)
         DiscoveryResponse.model_validate(document)
         protocol = document["protocol"]
         if (

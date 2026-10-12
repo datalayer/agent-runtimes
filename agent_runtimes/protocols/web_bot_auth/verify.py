@@ -28,6 +28,7 @@ from urllib.parse import urlsplit
 
 import http_sfv
 
+from ..egress import Fetch, Fetched, metadata_fetch
 from .directory import verify_directory_response
 from .keys import PublicKey
 from .sign import DIRECTORY_MEDIA_TYPE, DIRECTORY_PATH, TAG
@@ -42,9 +43,6 @@ from .signature import (
 #: The three outcomes of the draft.
 Outcome = Literal["verified", "invalid", "unverified"]
 
-#: What a fetch answers: status, headers, body.
-Fetched = tuple[int, Mapping[str, str], bytes]
-Fetch = Callable[[str], Awaitable[Fetched]]
 
 #: The directory a fetch may bring back, at most.
 MAX_DIRECTORY_BYTES = 64 * 1024
@@ -127,28 +125,15 @@ def resolving_fetch(
 ) -> Fetch:
     """A directory fetch on the PAP SDK's single egress path (AGENT_PROTOCOLS PI-13).
 
-    ``create_resolving_client`` (personal-agent-protocol 0.14.0 and later):
-    the host is resolved before the request and refused unless HTTPS with
-    every address public (``unsafe_address``, nothing sent), only the
-    approved address is dialled, no redirect is followed, no proxy from the
-    environment is used, and the body is bounded. A name pointing inside —
-    which the URL check alone cannot see — is refused the same way.
+    :func:`agent_runtimes.protocols.egress.metadata_fetch`, answering the
+    directory's media type and bounded to a directory's size.
     """
-
-    async def fetch(url: str) -> Fetched:
-        from personal_agent_protocol import create_resolving_client
-        from personal_agent_protocol.reactor import resolve_addresses
-
-        async with create_resolving_client(
-            resolver=resolver or resolve_addresses,
-            transport=transport,
-            timeout=5.0,
-            max_response_bytes=MAX_DIRECTORY_BYTES,
-        ) as client:
-            response = await client.get(url, headers={"Accept": DIRECTORY_MEDIA_TYPE})
-            return response.status_code, dict(response.headers), response.content
-
-    return fetch
+    return metadata_fetch(
+        accept=DIRECTORY_MEDIA_TYPE,
+        max_bytes=MAX_DIRECTORY_BYTES,
+        resolver=resolver,
+        transport=transport,
+    )
 
 
 #: The default fetch of the ``directory`` and ``jwks_uri`` discoveries.

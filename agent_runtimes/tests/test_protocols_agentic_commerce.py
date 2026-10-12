@@ -39,6 +39,7 @@ from agent_runtimes.protocols.agentic_commerce.plugin import (
     proposal_store_of,
 )
 from agent_runtimes.protocols.commerce import CheckoutProposal
+from agent_runtimes.protocols.egress import client_fetch
 
 SELLER = "https://outfitters.example"
 TOKEN = "spt_test_shared_payment_token"
@@ -108,6 +109,8 @@ def _client(seller: ExampleOutfitters, platform) -> AgenticCommerceClient:
         credentials=credentials_of(platform),
         extensions=declared_extensions(platform),
         http=http,
+        # A local test seller: its discovery read over the client the test trusts (PI-13).
+        metadata=client_fetch(http),
     )
 
 

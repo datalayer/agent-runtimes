@@ -23,6 +23,7 @@ import httpx
 from reactor import PluginManifest
 
 from agent_runtimes.protocols import build_protocols_reactor
+from agent_runtimes.protocols.egress import client_fetch
 from agent_runtimes.protocols.ucp import (
     CheckoutProposal,
     UcpClient,
@@ -95,7 +96,12 @@ async def main(yes: bool) -> None:
         transport=httpx.ASGITransport(app=store.app()), base_url=STORE
     )
     client = UcpClient(
-        business=STORE, agent_profile="https://agent.example/.well-known/ucp", http=http
+        business=STORE,
+        agent_profile="https://agent.example/.well-known/ucp",
+        http=http,
+        # The local test store, read over the client this example trusts; a real
+        # business's profile is read on the single egress path (the default).
+        metadata=client_fetch(http),
     )
 
     profile = await client.discover()

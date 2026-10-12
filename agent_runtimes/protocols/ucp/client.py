@@ -35,6 +35,7 @@ from ..commerce import (
     ProposalStore,
     digest,
 )
+from ..egress import MAX_METADATA_BYTES, Fetch, metadata_fetch
 
 #: The UCP version implemented, as the specification dates it.
 UCP_VERSION = "2026-08-25"
@@ -122,6 +123,13 @@ class UcpClient:
     http: httpx.AsyncClient = field(
         default_factory=lambda: httpx.AsyncClient(timeout=15.0)
     )
+    #: How its public metadata is read: the PAP SDK's single egress path
+    #: (AGENT_PROTOCOLS PI-13), or ``egress.client_fetch`` for a local test one.
+    metadata: Fetch = field(
+        default_factory=lambda: metadata_fetch(
+            accept="application/json", max_bytes=MAX_METADATA_BYTES
+        )
+    )
     profile: Optional[BusinessProfile] = None
 
     def _headers(self, idempotency_key: Optional[str] = None) -> dict[str, str]:
@@ -138,10 +146,12 @@ class UcpClient:
         """Read and check the business's profile: version, shopping over REST, checkout."""
         from ucp_sdk.models.schemas.profile import BusinessSchema
 
-        answer = await self.http.get(f"{self.business.rstrip('/')}{PROFILE_PATH}")
-        if answer.status_code != 200:
-            raise UcpError(f"{PROFILE_PATH} answered {answer.status_code}")
-        document = answer.json()
+        status, _, body = await self.metadata(
+            f"{self.business.rstrip('/')}{PROFILE_PATH}"
+        )
+        if status != 200:
+            raise UcpError(f"{PROFILE_PATH} answered {status}")
+        document = json.loads(body)
         BusinessSchema.model_validate(document)
         ucp = document["ucp"]
         supported = {ucp["version"], *ucp.get("supported_versions", {}).keys()}

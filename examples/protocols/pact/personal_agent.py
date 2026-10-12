@@ -21,6 +21,7 @@ import httpx
 from reactor import PluginManifest
 
 from agent_runtimes.protocols import build_protocols_reactor
+from agent_runtimes.protocols.egress import client_fetch
 from agent_runtimes.protocols.pact import PactPersonalAgent, StepUp
 from agent_runtimes.protocols.pact.plugin import (
     SIGNERS,
@@ -55,6 +56,9 @@ async def main() -> None:
     platform = build_protocols_reactor(
         plugins=[(PluginManifest(name="host", version="1"), Host(key))]
     )
+    http = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=provider.app()), base_url=provider.base
+    )
     agent = PactPersonalAgent(
         card_url=f"{provider.interface_url}/.well-known/agent-card.json",
         issuer=ISSUER,
@@ -62,9 +66,10 @@ async def main() -> None:
         signer=signer_of(platform),
         delegations=delegation_store_of(platform),
         receipts=receipt_store_of(platform),
-        http=httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=provider.app()), base_url=provider.base
-        ),
+        http=http,
+        # The local Provider, read over the client this example trusts; a real
+        # Brand's card is read on the single egress path (the default).
+        metadata=client_fetch(http),
     )
     card = await agent.discover()
     print(f"{card.name}: PACT {card.profile}, scopes:")

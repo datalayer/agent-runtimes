@@ -46,6 +46,7 @@ from agent_runtimes.protocols.agentic_commerce.plugin import (
     proposal_store_of,
 )
 from agent_runtimes.protocols.commerce import CheckoutProposal
+from agent_runtimes.protocols.egress import client_fetch
 
 SELLER = "https://outfitters.example"
 
@@ -105,13 +106,17 @@ async def main(yes: bool) -> None:
     platform = build_protocols_reactor(
         plugins=[(PluginManifest(name="host", version="1"), Host(yes))]
     )
+    http = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=seller.app()), base_url=SELLER
+    )
     client = AgenticCommerceClient(
         seller=SELLER,
         credentials=credentials_of(platform),
         extensions=declared_extensions(platform),
-        http=httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=seller.app()), base_url=SELLER
-        ),
+        http=http,
+        # The local test seller, read over the client this example trusts; a real
+        # seller's discovery is read on the single egress path (the default).
+        metadata=client_fetch(http),
     )
     found = await client.discover()
     print(
