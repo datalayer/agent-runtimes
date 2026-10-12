@@ -142,12 +142,33 @@ async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> N
     # person with the company's own terms, once (PAP_DATALAYER R-04, R-05).
     harness = Harness(spec)
     args = {"operation_ref": "op_1", "revision": 1}
-    assert await harness.call("pap_manzanita_example_pap_confirm", args) == args
+    # *Ask me first* reaches the gateway, whatever the model sent: no approval
+    # in advance stands in for the person there.
+    sent = {**args, "ask_the_person": False}
+    assert await harness.call("pap_manzanita_example_pap_confirm", sent) == {
+        **args,
+        "ask_the_person": True,
+    }
     assert harness.asked == []
     assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
-    # What the Maker leaves to the person stays theirs.
-    with pytest.raises(AppRuleBlockedError):
+    # *Do it if I asked*: the gateway asks unless an approval in advance covers the terms.
+    if_asked = spec.model_copy(
+        update={"rules": [spec.rules[0].model_copy(update={"behaviour": "if_asked"})]}
+    )
+    pap_connections.remember_agent("agent-5", if_asked)
+    harness = Harness(if_asked)
+    assert await harness.call(
+        "pap_manzanita_example_pap_confirm", {**args, "ask_the_person": True}
+    ) == {**args, "ask_the_person": False}
+    assert (
+        harness.recorded[-1].decision.because
+        == "the_gateway_asks_unless_approved_in_advance"
+    )
+    # What the Maker leaves to the person stays theirs, at the company.
+    with pytest.raises(AppRuleBlockedError) as refused:
         await Harness(app()).call("pap_manzanita_example_pap_confirm", args)
+    assert "nothing was confirmed" in str(refused.value)
+    assert "https://manzanita.example" in str(refused.value)
 
 
 def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:

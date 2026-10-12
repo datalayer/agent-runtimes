@@ -100,6 +100,7 @@ from agent_runtimes.loop.apps.pap_connections import (
 from agent_runtimes.loop.apps.pap_connections import (
     connection_actions as company_actions,
 )
+from agent_runtimes.loop.apps.pap_connections import domain_of, pap_tool
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -169,8 +170,19 @@ Notify = Callable[[str, str], Awaitable[None]]
 Record = Callable[["Enforced"], None]
 
 
-#: Why a company's confirmation is not asked here: the gateway asks it (PAP R-04).
+#: Why a company's confirmation is not asked here: the gateway asks it (PAP R-04),
+#: the person always (*Ask me first*), or unless an approval in advance covers
+#: its terms (*Do it if I asked*).
 GATEWAY_ASKS = "the_gateway_asks_the_person"
+GATEWAY_ASKS_UNLESS_APPROVED = "the_gateway_asks_unless_approved_in_advance"
+#: Why a company's confirmation is refused: the Maker left it to the person, at the company.
+LEFT_AT_THE_COMPANY = "left_to_the_person_at_the_company"
+
+
+def _company_confirm(tool_name: str) -> Optional[str]:
+    """The company's domain when the tool confirms what it proposed; else None."""
+    found = pap_tool(tool_name)
+    return domain_of(found[0]) if found and found[1] == "pap_confirm" else None
 
 
 class AppRuleBlockedError(GuardrailBlockedError):
@@ -183,6 +195,12 @@ class AppRuleBlockedError(GuardrailBlockedError):
 
 def sentence_of(decision: Decision) -> str:
     """A decision as a sentence, its own reasons included."""
+    if decision.because == LEFT_AT_THE_COMPANY:
+        domain = _company_confirm(decision.tool) or "the company"
+        return (
+            f"Confirming what {domain} proposes is left to you: nothing was confirmed. "
+            f"You can confirm it yourself at https://{domain}."
+        )
     if decision.because == NO_SHELL:
         return (
             f"`{decision.tool}` runs code on the application's computer, "
@@ -377,15 +395,20 @@ class AppRulesCapability(AbstractCapability[Any]):
             # A company's tool, through the gateway's `pap` toolset: what it
             # does is the gateway's own table (PAP_DATALAYER R-02).
             decided = decision_for(self.app, tool_name, classes=list(company))
-            if tool_name.endswith("_pap_confirm") and decided.behaviour in (
+            if _company_confirm(tool_name) is not None and decided.behaviour in (
                 ASK_FIRST,
                 IF_ASKED,
             ):
                 # The gateway asks the person itself, with the company's own
-                # terms, unless an approval in advance covers them (R-04):
-                # asked here too, they would be asked twice, the first time
-                # without the terms. *Leave it to me* still refuses.
-                decided = replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
+                # terms (R-04): asked here too, they would be asked twice, the
+                # first time without the terms. *Ask me first* always, *Do it if
+                # I asked* unless an approval in advance covers the terms
+                # (`ask_the_person`, set in `before_tool_execute`).
+                because = GATEWAY_ASKS if decided.behaviour == ASK_FIRST else GATEWAY_ASKS_UNLESS_APPROVED
+                decided = replace(decided, behaviour=DO_IT, because=because)
+            elif _company_confirm(tool_name) is not None and decided.behaviour == LEAVE_TO_ME:
+                # *Leave it to me* never confirms: the person is pointed to the company.
+                decided = replace(decided, because=LEFT_AT_THE_COMPANY)
             return Enforced(tool_name, decided)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
@@ -634,6 +657,10 @@ class AppRulesCapability(AbstractCapability[Any]):
     ) -> dict[str, Any]:
         enforced = self.decide(call.tool_name, args)
         decision = enforced.decision
+        if _company_confirm(call.tool_name) is not None:
+            # The Rule's *Ask me first* reaches the gateway, whatever the model
+            # sent (R-04): there, no approval in advance stands in for the person.
+            args = {**args, "ask_the_person": decision.because == GATEWAY_ASKS}
         # Asked by a personal agent through the company service (PAP_DATALAYER
         # B-04): a declared operation is proposed rather than made, and made
         # only in the turn its confirmation was redeemed for, with the confirmed
