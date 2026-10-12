@@ -399,7 +399,9 @@ class PapPersonalAgentCapability:
         endpoint = link.company.document.agent.protocols[0].endpoint
         token = await self._session(link)
         client = ConversationClient(transport=self._transport())
-        message = Message(id=generate_message_id(reactor), sender="human", text=text)
+        # The agent's own words (PAP-7.8-01): what it is given to say is not
+        # known to be the person's, so it is never sent as theirs (P-08).
+        message = Message(id=generate_message_id(reactor), sender="agent", text=text)
         if link.conversation_id is None:
             page = await client.start(
                 endpoint, message, token=token, wait=10, **self._who(link)

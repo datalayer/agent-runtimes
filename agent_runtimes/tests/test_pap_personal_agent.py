@@ -210,3 +210,22 @@ async def test_public_metadata_only_without_a_host() -> None:
     await capability.aclose()
     with pytest.raises(ValueError):
         PapPersonalAgentCapability(client_id="https://atlas.example/agent.json")
+
+
+@pytest.mark.asyncio
+async def test_what_it_says_is_sent_as_the_agents_words(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PAP-7.8-01 (PAP_DATALAYER P-08): never as the person's own words."""
+    from personal_agent_protocol.demo.manzanita import ManzanitaAgent
+
+    senders: list[str] = []
+    respond = ManzanitaAgent.respond
+
+    async def spy(self: Any, turn: Any) -> Any:
+        senders.append(turn.sender)
+        return await respond(self, turn)
+
+    monkeypatch.setattr(ManzanitaAgent, "respond", spy)
+    await _journey(Surface(True), tmp_path)
+    assert senders and set(senders) == {"agent"}
