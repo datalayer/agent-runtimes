@@ -7,6 +7,15 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.3
+
+On personal-agent-protocol 0.16.0.
+
+- **Security** (AGENT_PROTOCOLS PI-13): merchant profiles, seller discovery and PACT cards — `/.well-known/ucp`, `/.well-known/acp.json`, a Brand's card, its OAuth metadata and keys — read through the PAP SDK's single egress path (`protocols.egress.metadata_fetch`: resolved first, every address public, only that address dialled, no redirect, no proxy, bounded). A local test counterpart is read over the caller's client only when said (`client_fetch`).
+- **PAP words are the agent's** (PAP_DATALAYER P-08): `PapPersonalAgentCapability.ask` sends what it is given as the agent's own words (`sender: agent`, PAP-7.8-01); they went as the person's.
+- **What the code decides, marked** (PAP_DATALAYER U-06): `loop apps build` marks a company the application works with, its company role and each operation it declares, at its line, for the Studio to show them read-only.
+- **The PAP gallery's traces** (PR-05) recorded again on SDK 0.16.0, each naming the release that recorded it.
+
 ## 1.5.2
 
 On personal-agent-protocol 0.15.0.
