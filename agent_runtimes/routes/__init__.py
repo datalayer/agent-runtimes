@@ -65,6 +65,7 @@ from .mcp_proxy import router as mcp_proxy_router
 from .mcp_ui import register_mcp_ui_agent, unregister_mcp_ui_agent
 from .mcp_ui import router as mcp_ui_router
 from .notifications import router as notifications_router
+from .protocols import router as protocols_router
 from .sandbox import router as sandbox_router
 from .tool_approvals import legacy_router as tool_approvals_legacy_router
 from .tool_approvals import router as tool_approvals_router
@@ -103,6 +104,7 @@ __all__ = [
     "identity_router",
     "app_plugins_router",
     "apps_router",
+    "protocols_router",
     "loop_router",
     "mcp_proxy_router",
     "mcp_auth_router",

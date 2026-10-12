@@ -2111,6 +2111,61 @@ def _spec_text(path: Path) -> str:
     return build(path).text if is_python(path) else path.read_text()
 
 
+def protocols_used(spec: Dict[str, Any]) -> Dict[str, str]:
+    """What an application's spec makes it speak, by protocol id, in a sentence each."""
+    used: Dict[str, str] = {}
+    connections = spec.get("connections") or []
+    if connections:
+        names = ", ".join(str(c.get("server", "")) for c in connections)
+        used["mcp"] = f"reaches {len(connections)} connection(s): {names}"
+    pap = spec.get("pap") or {}
+    companies = [c.get("company", "") for c in pap.get("connections") or []]
+    if companies:
+        used["pap"] = f"works with {', '.join(companies)} for the people it serves"
+    if (pap.get("company") or {}).get("enabled"):
+        used["pap"] = (used.get("pap", "") + "; " if "pap" in used else "") + (
+            "is a company personal agents work with"
+        )
+    return used
+
+
+@app.command(name="protocols")
+def apps_protocols(
+    path: Optional[Path] = typer.Argument(
+        None,
+        exists=True,
+        dir_okay=False,
+        help="An Appspec or an app.py: also say which protocols it uses.",
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Print them as JSON."),
+) -> None:
+    """The agent protocols this runtime speaks, each with its version (AGENT_PROTOCOLS PR-50, EX-08)."""
+    from dataclasses import asdict as _asdict
+
+    import yaml
+
+    from agent_runtimes.protocols import build_protocols_reactor, list_protocols
+
+    protocols = list_protocols(build_protocols_reactor())
+    used = protocols_used(yaml.safe_load(_spec_text(path)) or {}) if path else {}
+    if as_json:
+        console.print_json(
+            data={
+                "protocols": [_asdict(p) for p in protocols],
+                **({"uses": used} if path else {}),
+            }
+        )
+        return
+    for protocol in protocols:
+        mark = "[green]●[/green]" if protocol.id in used else "·"
+        console.print(
+            f"{mark} [bold]{protocol.name}[/bold] ({protocol.id}) {protocol.version} — "
+            f"{protocol.layer}, {', '.join(protocol.roles)}, {protocol.status}"
+        )
+        if protocol.id in used:
+            console.print(f"    it {used[protocol.id]}")
+
+
 @app.command(name="push")
 def apps_push(
     path: Path = typer.Argument(

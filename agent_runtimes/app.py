@@ -72,6 +72,7 @@ from .routes import (
     mcp_router,
     mcp_ui_router,
     notifications_router,
+    protocols_router,
     sandbox_router,
     set_a2a_app,
     start_a2a_task_managers,
@@ -1565,6 +1566,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     app.include_router(agui_router, prefix=config.api_prefix)
     app.include_router(mcp_ui_router, prefix=config.api_prefix)
     app.include_router(a2a_protocol_router, prefix=config.api_prefix)
+    app.include_router(protocols_router, prefix=config.api_prefix)
     app.include_router(a2ui_router, prefix=config.api_prefix)
     if triggers_webhook_router is not None:
         app.include_router(triggers_webhook_router, prefix=config.api_prefix)
