@@ -7,6 +7,15 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.2
+
+On personal-agent-protocol 0.15.0.
+
+- **PAP for a local runtime** (AGENT_PROTOCOLS PR-03, PR-04): `PapPersonalAgentCapability` asks, signs in (Device Sign-In) and confirms through the host's PAP reactor — a confirmation sent only after the person approves on `pap.approvalSurface`; `PapCompanyCapability` publishes an application's `pap.company` and answers personal agents over its A2A route, each operation carried out once through a one-use ticket (`pap.company.operationTickets`). Examples `local-personal-agent`, `local-company`. PAP is a plugin of the `agent-protocols` Extension in both languages.
+- **Security** (PI-13): Web Bot Auth key directories fetched through the PAP SDK's resolving client — a hostname resolving inside the network is refused, not only a private address written in the URL.
+- **UCP and ACP across languages** (EX-04, EX-05): the TypeScript clients at the Python test merchants over HTTP.
+- **The workspace's chat views by props** (`chatViewModes` on `LoopWorkspace`): the floating view is the chat's own assistant mode.
+
 ## 1.5.1
 
 - **PACT businesses reached by the runtime** (AGENT_PROTOCOLS PI-20): the runtime's `AppSpec` keeps an application's `pact` block (it was silently dropped); each business is reached through the gateway's `pact` toolset in the person's name, its tools decided by the Rules. `app.business_connection(...)` in the Python surface (PI-01).
