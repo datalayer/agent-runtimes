@@ -76,11 +76,8 @@ function base64url(bytes: Uint8Array): string {
 export function jwkThumbprint(jwk: JsonWebKey): Promise<string> {
   return jwkToKeyID(
     jwk,
-    async (data: Uint8Array) =>
-      new Uint8Array(
-        await crypto.subtle.digest('SHA-256', data as BufferSource),
-      ),
-    (hash: Uint8Array) => base64url(hash),
+    (data: BufferSource) => crypto.subtle.digest('SHA-256', data),
+    (hash: ArrayBuffer) => base64url(new Uint8Array(hash)),
   );
 }
 
@@ -135,9 +132,12 @@ export async function localSigner(privateJwk: JsonWebKey): Promise<HttpSigner> {
 }
 
 /** A fresh Ed25519 key: its signer and its public JWK. Tests and examples only. */
+/** A public JWK as a key directory lists it: its `kid` is its thumbprint. */
+export type PublicJwk = JsonWebKey & { kid: string };
+
 export async function generateLocalSigner(): Promise<{
   signer: HttpSigner;
-  publicJwk: JsonWebKey;
+  publicJwk: PublicJwk;
 }> {
   const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
     'sign',
@@ -225,7 +225,7 @@ export async function signRequest(
     signatureAgentKey: label,
     additionalComponents: (options.components ?? ['@method', '@path']).filter(
       name => name !== '@authority',
-    ) as never,
+    ),
   });
   return {
     'Signature-Agent': agentHeader,
@@ -253,7 +253,7 @@ export function signedFetch(
 
 /** The directory's body: public keys only, each `kid` its thumbprint. */
 export async function directoryBody(keys: JsonWebKey[]): Promise<string> {
-  const out = [];
+  const out: PublicJwk[] = [];
   for (const jwk of keys) {
     if ('d' in jwk && jwk.d) {
       throw new Error('a key directory publishes public keys only');
