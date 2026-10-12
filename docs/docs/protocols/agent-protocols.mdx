@@ -52,8 +52,8 @@ listProtocols(reactor);
 
 | Protocol | Plugin | Version implemented | Points |
 | --- | --- | --- | --- |
-| MCP | `agent-runtimes.protocols.mcp` | Python `mcp` 2.1: 2026-07-28; TypeScript SDK 1.32: 2025-11-25 | none yet: its optional capabilities and extensions become `mcp.extension.*` when the client and server read them from contributions |
-| A2A | `agent-runtimes.protocols.a2a` | 1.0 | `a2a.extension.orchestration`, `a2a.extension.face` (Datalayer's), `a2a.extension.other` (any, by URI) |
+| MCP | `agent-runtimes.protocols.mcp` | Python `mcp` 2.1: 2026-07-28; TypeScript SDK 1.32: 2025-11-25 | none yet: its optional capabilities and extensions become `mcp.extension.*` when the client and server read them from contributions — [what is implemented](./mcp-and-a2a#mcp) |
+| A2A | `agent-runtimes.protocols.a2a` | 1.0 | `a2a.extension.orchestration`, `a2a.extension.face` (Datalayer's), `a2a.extension.other` (any, by URI) — [what is implemented](./mcp-and-a2a#a2a) |
 | Web Bot Auth | `agent-runtimes.protocols.web-bot-auth` | draft-ietf-webbotauth-httpsig-protocol-00 | `web_bot_auth.signer`, `web_bot_auth.nonceStore`, `web_bot_auth.extension.{directory,jwks_uri,cimd}` — [its page](./web-bot-auth) |
 | PAP | the PAP SDK's own plugins (`pap.*`) | 0.1 | see [Personal Agent Protocol](../integrations/personal-agent-protocol) |
 | UCP | `agent-runtimes.protocols.ucp` | 2026-08-25 | `ucp.approver`, `ucp.paymentInstruments`, `ucp.proposalStore`, `ucp.extension.{fulfillment,discount,buyer_consent}` — [its page](./ucp) |
@@ -79,6 +79,7 @@ two packages cannot drift apart:
 | PACT 1.0 | `pact/fixtures/card.json`: a Brand's card and how it is read | `test_protocols_pact.py` (against the local Provider) | `pact.unit.test.ts` | the device code and the delegation token |
 | PAP and PACT in one task | — | `test_protocols_pap_and_pact.py` (the PAP SDK's demo world and the local Provider) | — | both user codes and the delegation token, and any compact JWT |
 | A2A 1.0 extensions | — | `test_protocols_a2a_extensions.py`, `test_protocols_a2a_signed_requests.py` | `a2aExtensions.unit.test.ts` | — |
+| Every protocol's journey | — | `test_protocols_secrets.py`: every logger at DEBUG and every URL requested | — | the payment tokens, the seller's bearer, the device code and the delegation token, the private key: in no log line and no URL (MCP's and A2A's: `test_credentials_never_shown.py`, `test_delegated_credential.py`) |
 | Every plugin | its `reactor-points.json` | `test_protocols_reactor_points.py` | `reactorPoints.unit.test.ts` | — |
 
 ## Examples
