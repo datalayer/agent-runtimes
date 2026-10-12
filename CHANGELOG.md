@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.1
+
+- **PACT businesses reached by the runtime** (AGENT_PROTOCOLS PI-20): the runtime's `AppSpec` keeps an application's `pact` block (it was silently dropped); each business is reached through the gateway's `pact` toolset in the person's name, its tools decided by the Rules. `app.business_connection(...)` in the Python surface (PI-01).
+- **PACT across languages** (EX-06): the TypeScript personal agent at the Python Provider (Example Air) over HTTP — card, sign-in for one scope, step-up, a change, both receipts verified.
+- **The Datalayer target's agent is created on AG-UI**, the transport the workspace chat speaks (it was created on Vercel AI, and the chat's requests 404'd).
+
 ## 1.5.0
 
 On Reactor 1.3.0 and agentspecs 0.0.82. A page and a runtime of this release move together: an older page's `loop.action` and `data_url` are refused.
