@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.3.112
+
+- **Agent protocols as Reactor plugins** (AGENT_PROTOCOLS §3.1): the `agent-protocols` Reactor Extension delivers one plugin each for MCP, A2A, Web Bot Auth, UCP, ACP and PACT, in Python and TypeScript; each protocol's extensions are contribution points of its plugin (`<protocol>.extension.*`), held by its `reactor-points.json` and table-driven tests. Web Bot Auth signs and verifies (the draft's vectors byte for byte) and every A2A route refuses a bad or replayed signature; UCP and ACP checkouts become exact proposals spent once; PACT's personal-agent side with a local provider. Examples under `examples/protocols/`, docs under *Protocols*.
+- **Personal Agent Protocol in the Studio**: the sign-in card as a display (`DisplayMCPToolset`), the company role's MCP server and registered agents (agentspecs 0.0.77), and the Order Desk and Exchange Desk examples.
+- **Avatars kept prefixed** (agentspecs 0.0.78, now required): an Appspec's avatar is `emoji:…` or `@datalayer/icons-react:…`, checked in TypeScript too.
+- The applications catalogue writes PAP keys in TypeScript's names and leaves a default `pap` block out.
+
 ## 1.3.110
 
 - The examples' catalogue from agentspecs 0.0.76, now required (STUDIO E-01): *Report from a File* reports a cell's text as data, *Support Desk*'s sample documentation speaks to its customers — the four switched-on examples *Ready* on Datalayer.
