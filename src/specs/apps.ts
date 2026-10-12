@@ -2316,7 +2316,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
         "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
       ],
       unverified: [
-        "No company answers on Datalayer yet: the gateway's company tools are not shipped, so it has not run in the Studio.",
+        'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
       ],
     },
   },
@@ -5918,7 +5918,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
         ],
         unverified: [
-          "No company answers on Datalayer yet: the gateway's company tools are not shipped, so it has not run in the Studio.",
+          'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
         ],
       },
     },
