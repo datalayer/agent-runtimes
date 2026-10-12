@@ -3786,7 +3786,7 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is agent-runtimes' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its tests (agent-runtimes 1.3.112)."
+                    "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (release 1.3.112)."
                 ],
                 "unverified": [
                     "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed."
