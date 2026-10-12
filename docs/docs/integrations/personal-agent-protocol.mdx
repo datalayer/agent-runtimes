@@ -186,6 +186,61 @@ asked whatever the company offers. This narrowing is the gateway's (Datalayer
 services); the runtime passes the connection, and the `company-connection`
 example shows the declared scopes and the tools a `read` level gives.
 
+### A personal agent, step by step
+
+```mermaid
+sequenceDiagram
+    participant P as Person
+    participant R as Runtime (application)
+    participant G as Datalayer MCP gateway (pap toolset)
+    participant I as Datalayer IAM (custody)
+    participant C as Company
+    R->>G: pap_company / pap_ask (token: the person's or the owner's)
+    G->>I: sign the request (Web Bot Auth, the application's key)
+    G->>C: discovery, Session, message (signed)
+    C-->>G: replies; sign-in needed
+    G-->>R: pap_sign_in: a display for the page, no link or code for the model
+    R-->>P: Sign in at the company: its page, a code, or Datalayer's page
+    P->>C: signs in at the company (never in the conversation)
+    G->>I: keep the Account Token, record the consent
+    C-->>G: an operation proposed (exact terms, revision 1)
+    R->>G: pap_confirm(operation, revision 1)
+    G-->>P: Waiting for you: the company's words and terms
+    P->>G: approves revision 1
+    G->>C: confirm revision 1, once
+    C-->>R: what it came to (PapOutcome)
+```
+
+**Signing in, three ways.** `pap_sign_in` prefers *Direct* (the company's
+page, then back), then *Device* (the company's page and a code), then
+*Mediated*: the person types what the company asks on Datalayer's own page
+(`/pap/sign-in?ticket=…`), and the gateway hands it to the company once
+through the SDK's `pap.protectedInput` — never the model, never a tool's
+arguments. The result carries the SDK's `PapSignIn` display for the page
+([the sign-in card as a display](#the-sign-in-card-as-a-display)); the model
+reads where, how and until when.
+
+**Confirming, and why the gateway asks the person itself.** `pap_confirm` is
+classed `write` (or `buy` when a term moves money), so the application's
+Rules decide it at the tool call like any other tool. A company may require
+the person's own approval of an operation: then the Rule does not count —
+an approval in advance, *Do it if I asked* and *Do it* alike — and the
+gateway asks the person on *Waiting for you* for that exact revision,
+confirming once it is approved. Only the person's decision on that revision
+lets it through, so a model or a Maker's rule can never confirm what the
+company reserved for them. While the person decides, the result carries the
+SDK's `PapConfirm` display; once confirmed, its `PapOutcome`.
+
+**The company's own MCP server.** With `interfaces: [mcp]`, `pap_mcp_tools`
+lists the company's MCP tools and `pap_mcp_call` calls one with a Bearer
+token bound to that server alone (its resource), never reusable elsewhere;
+what matters comes back as an operation to confirm, never done by the call.
+
+**Signed requests.** Everything the toolset sends a company carries a Web Bot
+Auth signature made by IAM with the application's own key, its public keys at
+`<IAM>/api/iam/v1/agents/<application>/web-bot-auth/jwks.json`
+([Identity](../identity/index.mdx)).
+
 ## Being a company: `pap.company`
 
 An application can itself be a company personal agents work with:
@@ -238,6 +293,27 @@ company service's record, never by the model or by the message. The
 `approve()` showing that an approval of revision 1 does not confirm revision 2,
 then the confirmed call allowed once. The `operations` example shows the
 personal agent's side of the same exchange over HTTP.
+
+### A company, step by step
+
+```mermaid
+sequenceDiagram
+    participant A as A person's own agent
+    participant S as Datalayer company service (<slug>.apps.datalayer.ai)
+    participant D as The application (deployment, over A2A)
+    participant P as Person (signed in to Datalayer)
+    A->>S: discovery, Session, sign-in (Device or Direct)
+    P->>S: approves the agent on Datalayer's own page (code or consent)
+    A->>S: a message
+    S->>D: the message (metadata.pap), with a token for the agent's client_id
+    D-->>S: answer; exchange_order proposed, not made (pap_operation)
+    S-->>A: the operation, exact terms, revision 1
+    A->>S: confirm revision 1 (the person approved it)
+    S->>D: a one-use ticket for revision 1
+    D->>D: exchange_order, exactly those terms, once (pap_performed)
+    D-->>S: made, failed with nothing changed, or in progress
+    S-->>A: the operation's result
+```
 
 ## Examples
 

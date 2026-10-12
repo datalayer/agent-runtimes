@@ -221,6 +221,7 @@ What an application declares is its Appspec. Each call adds to it:
 | `app.company_connection(id, company, *, access="read", acts_as="user", scopes=(), interfaces=("agent",), sign_in=("direct", "device"), extensions=())` | A company it works with as each person's agent, over the Personal Agent Protocol (`pap.connections`): reached through Datalayer's gateway, its tools named with the company. `company` is a domain, never a URL; a credential or an unknown field is refused at the call. See [Both PAP roles](#both-personal-agent-protocol-roles). |
 | `app.as_company(*, scopes=(), signed_out=True, interfaces=("agent",), extensions=(), personal_agents="any", registered_agents=())` | The application is itself a company personal agents work with (`pap.company`). |
 | `@app.company_operation(action, *, summary, user_approval_required=True)` | Over an `@app.tool`: what a personal agent may ask the company to do, proposed with its terms and done by that tool once the person confirms them (`pap.company.operations`). |
+| `app.business_connection(id, brand, *, audience, access="read", scopes=())` | A business's own agent it asks for each person, over PACT 1.0 (`pact.connections`): `brand` its domain, `audience` what its Provider assigned the application, `read` asking as the application alone and `write` also for each person who signed in there, `scopes` the business's permissions it may ask a person for. Lists `pact` among its protocols. See [A business over PACT](#a-business-over-pact). |
 | `app.command(name, description, *, prompt="")` | A slash command in the composer (LOOP P-19): typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
 | `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer: `options` are two at least, each `{id, label, description?, instructions?, model?}`. The option the person picks goes with every run: `session.modes[id]` says it, and `session.agent` is told its `instructions` and runs on its `model`. |
 | `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui-plugins#typed-calls-from-python). |
@@ -254,6 +255,30 @@ The handlers are the application's agent and its own tools; no protocol
 secret reaches them — Sessions, tokens and proofs are Datalayer's gateway's
 and company service's. The examples `personal-agent-protocol/company-connection`
 and `personal-agent-protocol/company-role` are written with these calls.
+
+#### A business over PACT
+
+A personal agent at a business that answers over PACT (Decagon's and
+Instinct's Personal Agent Consent & Trust) is one call; it writes the `pact`
+block *Add a business* writes in the Studio, and lists `pact` in `protocols`:
+
+```python
+app = Application("travel-desk", "chat", agent="example-blank:0.0.1")
+
+app.business_connection(
+    "example-air", "air.example",
+    audience="https://provider.example/a2a",   # what its Provider assigned it
+    access="write",                             # also for each person signed in there
+    scopes=["bookings:read", "bookings:change"],
+)
+```
+
+A URL for the brand, a second connection to the same business or with the
+same id, and an unknown level are refused at the call, and nothing is kept.
+The gateway's `pact` toolset reaches the business, signs the personal-agent
+JWT with the application's own key and holds each person's delegation; the
+application never sees either. [PACT](../protocols/pact.mdx) is the protocol's
+page; [PAP and PACT](../protocols/pap-and-pact.mdx) compares the two.
 
 #### The nine inputs
 

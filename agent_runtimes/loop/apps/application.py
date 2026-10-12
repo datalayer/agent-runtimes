@@ -1043,6 +1043,62 @@ class Application:
 
         return decorate
 
+    # --- PACT: a business's agent, asked for each person (AGENT_PROTOCOLS PI-01) ---
+
+    def business_connection(
+        self,
+        id: str,
+        brand: str,
+        *,
+        audience: str,
+        access: str = "read",
+        scopes: Sequence[str] = (),
+    ) -> Any:
+        """Ask a business's own agent for each person, over PACT 1.0
+        (``pact.connections``): the gateway's ``pact`` toolset reaches its Agent
+        Card at ``https://<brand>/.well-known/agent-card.json``, signs the
+        personal-agent JWT with the application's key, and holds each person's
+        delegation; nothing of the business's — no key, no token — is held here.
+        Writing it lists ``pact`` among the protocols the application speaks.
+
+        Parameters
+        ----------
+        id : str
+            Stable within the application: ``support``.
+        brand : str
+            The business's domain: ``example.com``.
+        audience : str
+            The audience its Provider assigned the application when it was
+            registered there (PACT §3.1), as ``https://…``.
+        access : str
+            ``read`` asks as the application alone; ``write`` also asks for
+            each person who signed in there, with their delegation.
+        scopes : sequence of str
+            The business's scopes it may ask each person for: ``orders:read``.
+
+        Returns
+        -------
+        AppPactConnection
+            The connection, as the spec holds it (agentspecs' own model, so a
+            URL for the brand, a credential or an unknown field is refused, and
+            a second connection to the same business too).
+        """
+        from agentspecs.apps import AppPact, AppPactConnection
+
+        connection = AppPactConnection.model_validate(
+            {"id": id, "brand": brand, "audience": audience, "access": access, "scopes": list(scopes)}
+        )
+        pact = self._document.get("pact") or {}
+        connections = [*(pact.get("connections") or []), connection.model_dump(mode="json", exclude_defaults=True)]
+        # One business once, one id once: agentspecs' block says so before it is kept.
+        AppPact.model_validate({"connections": connections})
+        self._document["pact"] = {**pact, "connections": connections}
+        protocols = self._document.setdefault("protocols", [])
+        if "pact" not in protocols:
+            protocols.append("pact")
+        self._spec = None
+        return connection
+
     def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
         """Place a component of the catalog on the application's surface (LOOP C-15).
 
