@@ -38,9 +38,14 @@ def test_the_block_is_travel_desks() -> None:
 
 def test_a_second_business_keeps_the_first_and_lists_pact_once() -> None:
     app = _travel_desk()
-    app.business_connection("rail", "rail.example", audience="https://provider.example/a2a")
+    app.business_connection(
+        "rail", "rail.example", audience="https://provider.example/a2a"
+    )
     built = parse_app(app.document)
-    assert [connection.brand for connection in built.pact.connections] == ["air.example", "rail.example"]
+    assert [connection.brand for connection in built.pact.connections] == [
+        "air.example",
+        "rail.example",
+    ]
     assert built.pact.connections[1].access.value == "read"
     assert built.protocols == ["pact"]
 
@@ -59,7 +64,10 @@ def test_what_is_refused_is_never_kept(brand: str, kwargs: dict, says: str) -> N
     before = app.document
     with pytest.raises(ValidationError, match=says):
         app.business_connection(
-            kwargs.pop("id", "second"), brand, audience="https://provider.example/a2a", **kwargs
+            kwargs.pop("id", "second"),
+            brand,
+            audience="https://provider.example/a2a",
+            **kwargs,
         )
     assert app.document == before
 

@@ -169,6 +169,7 @@ def action_payload(
             f"{name!r} was pressed with what it does not take — {said}."
         ) from None
 
+
 #: The moments an application reacts to with one handler each.
 EVENTS = (
     "start",
@@ -1086,10 +1087,19 @@ class Application:
         from agentspecs.apps import AppPact, AppPactConnection
 
         connection = AppPactConnection.model_validate(
-            {"id": id, "brand": brand, "audience": audience, "access": access, "scopes": list(scopes)}
+            {
+                "id": id,
+                "brand": brand,
+                "audience": audience,
+                "access": access,
+                "scopes": list(scopes),
+            }
         )
         pact = self._document.get("pact") or {}
-        connections = [*(pact.get("connections") or []), connection.model_dump(mode="json", exclude_defaults=True)]
+        connections = [
+            *(pact.get("connections") or []),
+            connection.model_dump(mode="json", exclude_defaults=True),
+        ]
         # One business once, one id once: agentspecs' block says so before it is kept.
         AppPact.model_validate({"connections": connections})
         self._document["pact"] = {**pact, "connections": connections}
