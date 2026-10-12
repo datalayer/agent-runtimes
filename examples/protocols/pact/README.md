@@ -19,4 +19,12 @@ python examples/protocols/pact/personal_agent.py
   person grants it, the change is made;
 - every reply under delegation carries a signed receipt, verified and kept.
 
+The TypeScript personal agent at the same Brand, over HTTP:
+
+```bash
+python examples/protocols/pact/provider_server.py --port 8811
+PACT_PROVIDER=http://127.0.0.1:8811 npx vitest run --project=integration \
+  src/protocols/pact/pactProvider.integration.test.ts
+```
+
 Developer documentation: `docs/docs/protocols/pact.mdx`.
