@@ -50,7 +50,29 @@ describe('the Datalayer target', () => {
   it('defaults to the tutor', () => {
     // The front door of the notebook team, and the agent a person landing on
     // a Datalayer runtime should meet first.
-    expect(read('DatalayerAgentBridge.tsx')).toContain("'jupyter-tutor'");
+    expect(read('plugin.ts')).toContain(
+      "DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor'",
+    );
+    expect(read('DatalayerAgentBridge.tsx')).toContain(
+      'agentsConfig?.datalayerAgentSpecId ?? DEFAULT_DATALAYER_AGENTSPEC',
+    );
+  });
+
+  it('creates its agent on the transport the chat speaks, AG-UI', () => {
+    // The chat addresses a server agent at `/api/v1/ag-ui/<agent>/`: an
+    // agent created on the runtime's default, Vercel AI, answered every
+    // message with a 404 (2026-10-12). An application may still name its own.
+    const bridge = read('DatalayerAgentBridge.tsx');
+    expect(bridge).toContain(
+      "createPayload?.transport === 'vercel-ai' ? 'vercel-ai' : 'ag-ui'",
+    );
+    expect(bridge).not.toContain('...(protocol ? { protocol } : {})');
+    // The default spec is exported beside the plugin, not from the bridge,
+    // so that a host can name what runs without loading the bridge.
+    expect(read('plugin.ts')).toContain(
+      "export const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor'",
+    );
+    expect(read('index.ts')).not.toContain("from './DatalayerAgentBridge'");
   });
 
   it('does not allocate a runtime for a target nobody picked', () => {

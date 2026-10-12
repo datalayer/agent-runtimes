@@ -12,6 +12,7 @@
 export {
   AGENTS_PLUGIN_NAME,
   AgentsPlugin,
+  DEFAULT_DATALAYER_AGENTSPEC,
   type AgentsConfig,
   type AgentsOutput,
 } from './plugin';

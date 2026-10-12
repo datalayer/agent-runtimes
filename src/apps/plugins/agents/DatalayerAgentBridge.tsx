@@ -34,17 +34,12 @@ import { ensureVisitorAgent } from '../../apps/visitorToken';
 import { AGENTSPECS } from '../../../specs/agents/agents';
 import { IDLE_SANDBOX_TARGET_SIGNAL } from '../../core';
 import { appLaunchOf } from './appLaunch';
-import { AGENTS_PLUGIN_NAME, type AgentsConfig } from './plugin';
+import {
+  AGENTS_PLUGIN_NAME,
+  DEFAULT_DATALAYER_AGENTSPEC,
+  type AgentsConfig,
+} from './plugin';
 import { useOptionalSandboxService } from './useSandboxService';
-
-/**
- * The tutor.
- *
- * The front door of the notebook team, and the agent a person landing on a
- * Datalayer runtime should meet first. A host that wants another names it in
- * this plugin's config.
- */
-const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor';
 
 export function DatalayerAgentBridge(): JSX.Element | null {
   const reactor = useReactorPlatform();
@@ -143,15 +138,18 @@ export function DatalayerAgentBridge(): JSX.Element | null {
   // An application names its own agent and transport; a bare spec, the spec's.
   const agentName =
     typeof createPayload?.name === 'string' ? createPayload.name : agentSpecId;
-  const protocol =
-    createPayload?.transport === 'ag-ui' ||
-    createPayload?.transport === 'vercel-ai'
-      ? (createPayload.transport as 'ag-ui' | 'vercel-ai')
-      : undefined;
+  /*
+   * AG-UI unless the application names another: the workspace's chat speaks
+   * AG-UI to an agent on a server (`/api/v1/ag-ui/<agent>/`). Left unsaid, a
+   * bare spec's agent was created with the runtime's default, Vercel AI, and
+   * every message the workspace sent it on Datalayer was a 404 (2026-10-12).
+   */
+  const protocol: 'ag-ui' | 'vercel-ai' =
+    createPayload?.transport === 'vercel-ai' ? 'vercel-ai' : 'ag-ui';
   const agentConfig = useMemo(
     () => ({
       name: agentName,
-      ...(protocol ? { protocol } : {}),
+      protocol,
       agentSpecId,
       model: AGENTSPECS[agentSpecId]?.model,
       description: AGENTSPECS[agentSpecId]?.description,

@@ -52,6 +52,17 @@ import {
   targetHasAgent,
 } from './switchable';
 
+/**
+ * The tutor.
+ *
+ * The front door of the notebook team, and the agent a person landing on a
+ * Datalayer runtime should meet first. A host that wants another names it in
+ * this plugin's config. Here, beside the plugin rather than in the bridge, so
+ * that a host describing the agent its workspace runs on Datalayer can name
+ * it without loading the bridge's runtime stack.
+ */
+export const DEFAULT_DATALAYER_AGENTSPEC = 'jupyter-tutor';
+
 export const AGENTS_PLUGIN_NAME = '@datalayer/loop-plugin-agents';
 
 export type AgentsConfig = {
