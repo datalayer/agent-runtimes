@@ -21,6 +21,7 @@ import { A2APlugin } from './a2a';
 import { AgenticCommercePlugin } from './agentic-commerce';
 import { ProtocolsCorePlugin } from './core';
 import { McpPlugin } from './mcp';
+import { PactPlugin } from './pact';
 import { UcpPlugin } from './ucp';
 import { WebBotAuthPlugin } from './web-bot-auth';
 
@@ -31,7 +32,7 @@ export const AgentProtocolsExtension = defineExtension({
   version: '1.0.0',
   displayName: 'Agent protocols',
   description:
-    'MCP, A2A, Web Bot Auth, UCP and the Agentic Commerce Protocol, each a plugin; their extensions its contribution points.',
+    'MCP, A2A, Web Bot Auth, UCP, the Agentic Commerce Protocol and PACT, each a plugin; their extensions its contribution points.',
   plugins: [
     ProtocolsCorePlugin,
     McpPlugin,
@@ -39,6 +40,7 @@ export const AgentProtocolsExtension = defineExtension({
     WebBotAuthPlugin,
     UcpPlugin,
     AgenticCommercePlugin,
+    PactPlugin,
   ],
 });
 

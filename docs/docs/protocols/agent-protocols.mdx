@@ -58,7 +58,7 @@ listProtocols(reactor);
 | PAP | the PAP SDK's own plugins (`pap.*`) | 0.1 | see [Personal Agent Protocol](../integrations/personal-agent-protocol) |
 | UCP | `agent-runtimes.protocols.ucp` | 2026-08-25 | `ucp.approver`, `ucp.paymentInstruments`, `ucp.proposalStore`, `ucp.extension.{fulfillment,discount,buyer_consent}` — [its page](./ucp) |
 | Agentic Commerce (ACP) | `agent-runtimes.protocols.agentic-commerce` | 2026-04-17 | `agentic_commerce.approver`, `.paymentData`, `.credentials`, `.proposalStore`, `agentic_commerce.extension.{discount,other}` — [its page](./agentic-commerce) |
-| PACT | planned | PACT 1.0 | — |
+| PACT | `agent-runtimes.protocols.pact` | 1.0 | `pact.signer`, `pact.delegationStore`, `pact.receiptStore`, `pact.extension.delegated` — [its page](./pact) |
 
 Each protocol's points are listed in its `reactor-points.json` beside its
 Python package; a table-driven test in each language holds the plugin to

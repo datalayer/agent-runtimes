@@ -1,0 +1,90 @@
+{
+  "description": "Example Air's Agent Card (the local Provider of agent_runtimes.protocols.pact.provider) and what PACT 1.0 reads of it: both languages read the same (AGENT_PROTOCOLS PR-11, PR-51).",
+  "card": {
+    "name": "Example Air Support",
+    "supportedInterfaces": [
+      {
+        "url": "https://provider.example/a2a/example-air",
+        "protocolBinding": "HTTP+JSON",
+        "protocolVersion": "1.0"
+      }
+    ],
+    "provider": {
+      "organization": "Example Provider",
+      "url": "https://provider.example"
+    },
+    "version": "0.1.0",
+    "capabilities": {
+      "streaming": false,
+      "pushNotifications": false,
+      "extendedAgentCard": false
+    },
+    "securitySchemes": {
+      "paJwt": {
+        "httpAuthSecurityScheme": {
+          "scheme": "Bearer",
+          "bearerFormat": "JWT"
+        }
+      },
+      "userDelegation": {
+        "oauth2SecurityScheme": {
+          "flows": {
+            "deviceCode": {
+              "deviceAuthorizationUrl": "https://provider.example/a2a/example-air/oauth/device_authorization",
+              "tokenUrl": "https://provider.example/a2a/example-air/oauth/token",
+              "scopes": {
+                "bookings:read": "See your bookings and their status",
+                "bookings:change": "Change the date of a booking"
+              }
+            }
+          },
+          "oauth2MetadataUrl": "https://provider.example/a2a/example-air/oauth/.well-known/oauth-authorization-server"
+        }
+      }
+    },
+    "securityRequirements": [
+      {
+        "schemes": {
+          "paJwt": {
+            "list": []
+          }
+        }
+      },
+      {
+        "schemes": {
+          "paJwt": {
+            "list": []
+          },
+          "userDelegation": {
+            "list": []
+          }
+        }
+      }
+    ],
+    "defaultInputModes": [
+      "text/plain"
+    ],
+    "defaultOutputModes": [
+      "text/plain"
+    ],
+    "skills": [
+      {
+        "id": "bookings",
+        "name": "Bookings",
+        "description": "Bookings and changes.",
+        "tags": [
+          "bookings"
+        ]
+      }
+    ]
+  },
+  "reads": {
+    "interfaceUrl": "https://provider.example/a2a/example-air",
+    "identityScheme": "paJwt",
+    "profile": "delegated",
+    "scopes": {
+      "bookings:read": "read",
+      "bookings:change": "write"
+    }
+  }
+}

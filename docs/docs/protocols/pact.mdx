@@ -1,0 +1,85 @@
+---
+sidebar_position: 33
+title: PACT
+---
+
+# PACT: a personal agent at a business
+
+[PACT](https://github.com/openpactprotocol/openpactprotocol) (Personal Agent
+Consent & Trust, by Decagon and Instinct) lets a person's own agent talk to a
+business's agent over A2A, proving which agent it is and, when the person
+allows, acting on their account at the business within the scopes they
+approved. Agent Runtimes implements **PACT 1.0** (`docs/spec.md` at
+`838c6bd`, 2026-10-06; reviewed 2026-10-12) on the personal-agent side, in
+Python and TypeScript, and a local Provider for tests and examples.
+
+| | Python | TypeScript |
+| --- | --- | --- |
+| Package | `agent_runtimes.protocols.pact` | `@datalayer/agent-runtimes/lib/protocols/pact` |
+| JWTs | PyJWT (verification); the JWT is signed by the host's signer | `jose` (receipts); same signer |
+| Plugin | `agent-runtimes.protocols.pact` | `PactPlugin` |
+
+## The two profiles
+
+- **Identity** (§2–4, §6): every request but the card carries a
+  personal-agent JWT — ES256, `iss` the platform, `sub` a stable opaque id
+  for the person (never an address), `aud` the Provider's audience, valid
+  120 seconds — signed by the host's key through `pact.signer`. The
+  conversation goes on in its `contextId`; resending a `messageId` is a safe
+  retry.
+- **Delegated** (§5), when the Brand's card offers it: the agent asks for
+  scopes on the card only; the person signs in **at the Brand** (RFC 8628
+  device code: the Brand's link and code, never a login of the agent's) and
+  approves some of them; the agent reads back what was granted, sends the
+  delegation token in `X-A2A-User-Delegation`, meets a step-up
+  (`TASK_STATE_AUTH_REQUIRED`, `pact.missingScopes`) by asking again, and
+  verifies every reply's signed receipt before keeping it.
+
+```python
+agent = PactPersonalAgent(card_url=CARD, issuer=ISSUER, audience=AUDIENCE,
+                          signer=signer_of(platform),
+                          delegations=delegation_store_of(platform),
+                          receipts=receipt_store_of(platform))
+sign_in = await agent.request_sign_in("user-7f3a", ["bookings:read"])
+# show sign_in.verification_uri and sign_in.user_code to the person
+granted = await agent.finish_sign_in("user-7f3a", sign_in)
+reply = await agent.send("user-7f3a", "When is my booking?")
+```
+
+## The card, read
+
+`read_card` / `readCard` take the interface by binding and version
+(`HTTP+JSON`, `1.0`), require the personal-agent JWT alone in one security
+requirement, and read the delegation from the `oauth2SecurityScheme`'s
+`deviceCode` flow: its URLs, its RFC 8414 metadata and its scopes. PACT's
+scopes are not A2A card extensions. Each scope gets an action class for
+Rules: `…:read`, `…:view`, `…:list`, `…:status`, `…:lookup` are `read`;
+anything else is `write` — a Brand's word nobody classed is never taken for a
+reader.
+
+## The plugin and its points
+
+| Point | Default | What a host contributes |
+| --- | --- | --- |
+| `pact.signer` | none | its ES256 signer (the key stays with it) |
+| `pact.delegationStore` | `memory` | custody for delegation tokens |
+| `pact.receiptStore` | `memory` | the record receipts are kept in |
+| `pact.extension.delegated` | `device-code` | the Delegated profile; without it, Identity alone |
+
+## The local Provider
+
+`agent_runtimes.protocols.pact.provider.ExampleAir` serves one Brand's card,
+verifies personal-agent JWTs against registered JWKS, keeps contexts per
+(agent, user), answers retries from what it said, runs the device code with a
+simulated Brand sign-in where the person may untick scopes, issues delegation
+tokens, asks for more with a step-up, and signs receipts. The checks it makes
+(`verify_personal_agent_jwt`, `verify_delegation_token`, `verify_receipt`)
+are the ones a business application uses. `examples/protocols/pact/personal_agent.py`
+plays the whole journey.
+
+## What never reaches a model
+
+The device code, the delegation token and the signing key stay with the
+host: a `SignIn` shows the Brand's link and code only, replies carry the
+Brand's words and the scopes it used, and the tests check that no token is in
+them.

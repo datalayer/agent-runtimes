@@ -21,6 +21,7 @@ import protocolsPoints from '../../agent_runtimes/protocols/reactor-points.json'
 import agenticCommercePoints from '../../agent_runtimes/protocols/agentic_commerce/reactor-points.json';
 import a2aPoints from '../../agent_runtimes/protocols/a2a/reactor-points.json';
 import mcpPoints from '../../agent_runtimes/protocols/mcp/reactor-points.json';
+import pactPoints from '../../agent_runtimes/protocols/pact/reactor-points.json';
 import ucpPoints from '../../agent_runtimes/protocols/ucp/reactor-points.json';
 import webBotAuthPoints from '../../agent_runtimes/protocols/web_bot_auth/reactor-points.json';
 import * as a2a from './a2a';
@@ -31,6 +32,7 @@ import {
 } from './agentProtocols';
 import * as core from './core';
 import * as mcp from './mcp';
+import * as pact from './pact';
 import * as ucp from './ucp';
 import * as webBotAuth from './web-bot-auth';
 
@@ -58,6 +60,7 @@ const FILES = [
     module: agenticCommerce,
     plugin: 'agent-runtimes.protocols.agentic-commerce',
   },
+  { file: pactPoints, module: pact, plugin: 'agent-runtimes.protocols.pact' },
 ];
 const POINTS = FILES.flatMap(({ file, module, plugin }) =>
   (file.points as Entry[]).map(entry => ({ entry, module, plugin })),
@@ -92,6 +95,7 @@ describe('the agent-protocols Extension', () => {
       'a2a',
       'agentic_commerce',
       'mcp',
+      'pact',
       'ucp',
       'web_bot_auth',
     ]);

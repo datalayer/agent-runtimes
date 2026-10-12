@@ -66,6 +66,8 @@ dependencies = [
     # UCP's own Pydantic models, generated against the 2026-08-25 schemas
     # (AGENT_PROTOCOLS PR-30): 0.5.x is that version.
     "ucp-sdk>=0.5.0,<0.6",
+    # PACT's JWTs and receipts are verified with it (AGENT_PROTOCOLS PR-12).
+    "PyJWT[crypto]>=2.10",
     # A component placed from Python (`Application.component`) is checked
     # against its JSON Schema, as its properties form checks it.
     "jsonschema>=4.18",
