@@ -1254,6 +1254,67 @@ DEBUG:agent_codemode.composition.executor:Injecting identity env vars: ['GITHUB_
 DEBUG:agent_codemode.composition.executor:execute() called with code length=256
 ```
 
+## An application's own identity
+
+Everything above is about acting with a *person's* credentials. An
+application deployed on Datalayer also has an identity of its own, which other
+companies' servers read when it reaches them through the agent protocols
+([Agent protocols](../protocols/agent-protocols)). Its keys are kept by
+Datalayer's IAM in Vault transit: no runtime, gateway or model ever holds one.
+
+### Its stable `client_id`
+
+When an application is shipped, ai-agents names its identity at IAM
+(`POST /api/iam/v1/pap/agents/<app>`, the service scope
+`pap-agents:register`). From then on two public documents answer, cached five
+minutes:
+
+| Address | What it is |
+| --- | --- |
+| `<IAM>/api/iam/v1/pap/agents/<app>/agent.json` | its client metadata (PAP §4.1); this URL is its `client_id` |
+| `<IAM>/api/iam/v1/pap/agents/<app>/jwks.json` | its client key's public versions (ES256, Vault transit), every live one |
+
+The same key signs its PACT personal-agent JWT (issuer
+`<IAM>/api/iam/v1/pap/agents/<app>`, `sub` per person, `exp` at most 300
+seconds; [PACT](../protocols/pact)). Its owner rotates it (a new version signs
+from then on; `jwks.json` lists every version still live) or
+withdraws it through ai-agents (`POST /api/ai-agents/v1/pap/agents/<app>/rotate`,
+`…/withdraw`); deleting the application erases it.
+
+### Signed outbound requests
+
+Every request the MCP gateway sends for an application to another company's
+server — the `pap` and `pact` toolsets' calls — carries a Web Bot Auth
+signature (`Signature`, `Signature-Input`, `Signature-Agent`;
+[Web Bot Auth](../protocols/web-bot-auth)). The gateway builds the signature
+base; IAM signs it with the application's own `ed25519` key in Vault transit
+(`POST /api/iam/v1/agents/<app>/web-bot-auth/sign`, the gateway's scope
+`web-bot-auth:sign`, only a base tagged `web-bot-auth` under the current key);
+the key is created on first use. Requests to IAM, to Datalayer's own services
+(`*.svc`) or over plain http are not signed.
+
+In code outside Datalayer the signer is a contribution of the Web Bot Auth
+plugin (`web_bot_auth.signer`): a callable that signs bytes, never a key in
+the runtime.
+
+### Its key directory
+
+The request names where its keys are:
+
+```text
+Signature-Agent: sig1="<IAM>/api/iam/v1/agents/<app>/web-bot-auth/jwks.json";type=jwks_uri
+```
+
+a JWK Set, public, reading it creates nothing (`404 No such agent` for an
+application that never signed). Datalayer uses the draft's `jwks_uri` form
+because one origin serves many applications; an agent that owns its origin
+publishes the draft's well-known directory instead
+(`/.well-known/http-message-signatures-directory`, signed as its Appendix B
+says: `directory_body`, `sign_directory_response`). A website checks a
+request with `verify_request` / `verifyRequest` and a nonce store, as
+[Web Bot Auth](../protocols/web-bot-auth#verifying-as-a-website) shows;
+operators check one from outside as the clouder IAM page says.
+
 ## Emerging Standards
 
 ### OpenID Connect for Agents (OIDC-A)
