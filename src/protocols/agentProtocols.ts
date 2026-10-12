@@ -18,6 +18,7 @@ import {
   type ReactorPlatform,
 } from '@datalayer/reactor';
 import { A2APlugin } from './a2a';
+import { AgenticCommercePlugin } from './agentic-commerce';
 import { ProtocolsCorePlugin } from './core';
 import { McpPlugin } from './mcp';
 import { UcpPlugin } from './ucp';
@@ -30,13 +31,14 @@ export const AgentProtocolsExtension = defineExtension({
   version: '1.0.0',
   displayName: 'Agent protocols',
   description:
-    'MCP, A2A, Web Bot Auth and UCP, each a plugin; their extensions its contribution points.',
+    'MCP, A2A, Web Bot Auth, UCP and the Agentic Commerce Protocol, each a plugin; their extensions its contribution points.',
   plugins: [
     ProtocolsCorePlugin,
     McpPlugin,
     A2APlugin,
     WebBotAuthPlugin,
     UcpPlugin,
+    AgenticCommercePlugin,
   ],
 });
 

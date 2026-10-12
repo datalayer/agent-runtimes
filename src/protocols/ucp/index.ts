@@ -25,6 +25,13 @@ import {
 } from '@datalayer/reactor';
 import { ExtendedCheckoutResponseSchema } from '@ucp-js/sdk';
 import {
+  InMemoryProposalStore,
+  digest,
+  type CheckoutApprover,
+  type CheckoutProposal,
+  type ProposalStore,
+} from '../commerce';
+import {
   DEFAULT_ORDER,
   ProtocolDescriptions,
   firstContribution,
@@ -47,58 +54,24 @@ export const UCP_ACTION_CLASSES = {
   complete: 'buy',
 } as const;
 
+export {
+  InMemoryProposalStore,
+  proposalSummary,
+  type CheckoutApprover,
+  type CheckoutProposal,
+  type ProposalStore,
+} from '../commerce';
+
 export class UcpError extends Error {}
 
 type Json = Record<string, any>;
 
-/** One exact purchase, proposed to a person before it is made. */
-export interface CheckoutProposal {
-  id: string;
-  merchant: string;
-  checkoutId: string;
-  /** SHA-256 of what is bought: lines, prices, quantities, totals, currency. */
-  revision: string;
-  currency: string;
-  total: number;
-  lines: Array<{ title: string; quantity: number; price: number }>;
-  expiresAt?: string;
-}
-
-/** A proposal in words, for the person and the model: never a credential. */
-export function proposalSummary(proposal: CheckoutProposal): string {
-  const items = proposal.lines
-    .map(line => `${line.quantity} × ${line.title}`)
-    .join(', ');
-  const amount = (proposal.total / 100).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `Buy ${items} at ${proposal.merchant} for ${proposal.currency} ${amount}`;
-}
-
-export interface CheckoutApprover {
-  approve(proposal: CheckoutProposal): Promise<boolean>;
-}
 export interface PaymentInstruments {
   instrument(proposal: CheckoutProposal, handlers: Json): Promise<Json>;
-}
-export interface ProposalStore {
-  take(proposalId: string): Promise<boolean>;
 }
 export interface UcpExtension {
   capability: string;
   version: string;
-}
-
-export class InMemoryProposalStore implements ProposalStore {
-  private taken = new Set<string>();
-  async take(proposalId: string) {
-    if (this.taken.has(proposalId)) {
-      return false;
-    }
-    this.taken.add(proposalId);
-    return true;
-  }
 }
 
 export const UcpApprovers =
@@ -178,46 +151,21 @@ export function negotiateCapabilities(
   return active;
 }
 
-async function sha256(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(text),
-  );
-  return [...new Uint8Array(digest)]
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonical).join(',')}]`;
-  }
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${canonical((value as Json)[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value ?? null);
-}
-
 /** The revision of what a checkout buys; the same digest as Python's `revision_of`. */
 export function revisionOf(checkout: Json): Promise<string> {
-  return sha256(
-    canonical({
-      id: checkout.id,
-      currency: checkout.currency,
-      line_items: (checkout.line_items ?? []).map((line: Json) => ({
-        item: line.item?.id ?? null,
-        price: line.item?.price ?? null,
-        quantity: line.quantity,
-      })),
-      totals: (checkout.totals ?? []).map((total: Json) => ({
-        type: total.type,
-        amount: total.amount,
-      })),
-    }),
-  );
+  return digest({
+    id: checkout.id,
+    currency: checkout.currency,
+    line_items: (checkout.line_items ?? []).map((line: Json) => ({
+      item: line.item?.id ?? null,
+      price: line.item?.price ?? null,
+      quantity: line.quantity,
+    })),
+    totals: (checkout.totals ?? []).map((total: Json) => ({
+      type: total.type,
+      amount: total.amount,
+    })),
+  });
 }
 
 function readCheckout(body: Json): Json {

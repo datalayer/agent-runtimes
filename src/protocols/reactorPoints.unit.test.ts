@@ -18,11 +18,13 @@ import {
 } from '@datalayer/reactor';
 import { describe, expect, it } from 'vitest';
 import protocolsPoints from '../../agent_runtimes/protocols/reactor-points.json';
+import agenticCommercePoints from '../../agent_runtimes/protocols/agentic_commerce/reactor-points.json';
 import a2aPoints from '../../agent_runtimes/protocols/a2a/reactor-points.json';
 import mcpPoints from '../../agent_runtimes/protocols/mcp/reactor-points.json';
 import ucpPoints from '../../agent_runtimes/protocols/ucp/reactor-points.json';
 import webBotAuthPoints from '../../agent_runtimes/protocols/web_bot_auth/reactor-points.json';
 import * as a2a from './a2a';
+import * as agenticCommerce from './agentic-commerce';
 import {
   AgentProtocolsExtension,
   buildProtocolsReactor,
@@ -51,6 +53,11 @@ const FILES = [
     plugin: 'agent-runtimes.protocols.web-bot-auth',
   },
   { file: ucpPoints, module: ucp, plugin: 'agent-runtimes.protocols.ucp' },
+  {
+    file: agenticCommercePoints,
+    module: agenticCommerce,
+    plugin: 'agent-runtimes.protocols.agentic-commerce',
+  },
 ];
 const POINTS = FILES.flatMap(({ file, module, plugin }) =>
   (file.points as Entry[]).map(entry => ({ entry, module, plugin })),
@@ -83,6 +90,7 @@ describe('the agent-protocols Extension', () => {
     );
     expect(Object.keys(described).sort()).toEqual([
       'a2a',
+      'agentic_commerce',
       'mcp',
       'ucp',
       'web_bot_auth',

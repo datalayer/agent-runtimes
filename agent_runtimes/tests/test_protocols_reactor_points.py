@@ -58,7 +58,14 @@ def _platform() -> PluginPlatform:
 
 def test_one_file_per_protocol_plugin():
     names = {path.parent.name for path in FILES}
-    assert {"protocols", "mcp", "a2a", "web_bot_auth", "ucp"} <= names
+    assert {
+        "protocols",
+        "mcp",
+        "a2a",
+        "web_bot_auth",
+        "ucp",
+        "agentic_commerce",
+    } <= names
 
 
 def test_the_extension_delivers_every_plugin_and_decides_nothing():
@@ -129,7 +136,7 @@ def test_point_default_replacement_removal(protocol, entry):
 def test_each_plugin_describes_its_protocol():
     platform = _platform()
     described = {d.id: d for d in list_protocols(platform)}
-    assert set(described) == {"a2a", "mcp", "ucp", "web_bot_auth"}
+    assert set(described) == {"a2a", "agentic_commerce", "mcp", "ucp", "web_bot_auth"}
     for name, data in INVENTORY.items():
         if name == "protocols":
             continue

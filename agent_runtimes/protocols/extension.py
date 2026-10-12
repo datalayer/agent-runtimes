@@ -21,6 +21,7 @@ def extension() -> ReactorExtension:
     """The entry point (``datalayer.reactor.extensions``)."""
     from . import core_plugin
     from .a2a.plugin import plugin as a2a
+    from .agentic_commerce.plugin import plugin as agentic_commerce
     from .mcp import plugin as mcp
     from .ucp.plugin import plugin as ucp
     from .web_bot_auth.plugin import plugin as web_bot_auth
@@ -30,10 +31,17 @@ def extension() -> ReactorExtension:
             name=EXTENSION,
             version="1.0.0",
             display_name="Agent protocols",
-            description="MCP, A2A, Web Bot Auth and UCP, each a plugin; their extensions its contribution points.",
+            description="MCP, A2A, Web Bot Auth, UCP and the Agentic Commerce Protocol, each a plugin; their extensions its contribution points.",
             octicon="plug",
         ),
-        plugins=[core_plugin(), mcp(), a2a(), web_bot_auth(), ucp()],
+        plugins=[
+            core_plugin(),
+            mcp(),
+            a2a(),
+            web_bot_auth(),
+            ucp(),
+            agentic_commerce(),
+        ],
     )
 
 

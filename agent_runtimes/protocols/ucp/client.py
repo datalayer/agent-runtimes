@@ -19,7 +19,6 @@ that signs its agents' requests passes an ``httpx`` auth (Web Bot Auth,
 
 from __future__ import annotations
 
-import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -28,6 +27,14 @@ from typing import Any, Mapping, Optional, Protocol, runtime_checkable
 from urllib.parse import urlsplit
 
 import httpx
+
+from ..commerce import (
+    CheckoutApprover,
+    CheckoutProposal,
+    InMemoryProposalStore,
+    ProposalStore,
+    digest,
+)
 
 #: The UCP version implemented, as the specification dates it.
 UCP_VERSION = "2026-08-25"
@@ -54,37 +61,6 @@ class BusinessProfile:
     document: Mapping[str, Any]
 
 
-@dataclass(frozen=True)
-class CheckoutProposal:
-    """One exact purchase, proposed to a person before it is made.
-
-    ``revision`` is the SHA-256 of what is bought — the line items, their
-    quantities and prices, the totals and the currency — so a checkout that
-    changed after the person approved is not completed under that approval.
-    """
-
-    id: str
-    merchant: str
-    checkout_id: str
-    revision: str
-    currency: str
-    total: int
-    lines: tuple[tuple[str, int, int], ...]
-    expires_at: Optional[str] = None
-
-    def summary(self) -> str:
-        """In words, for the person and the model: never a credential."""
-        items = ", ".join(f"{quantity} × {title}" for title, quantity, _ in self.lines)
-        return f"Buy {items} at {self.merchant} for {_money(self.total, self.currency)}"
-
-
-@runtime_checkable
-class CheckoutApprover(Protocol):
-    """Asks the person (``ucp.approver``): ``True`` only when they approved this exact proposal."""
-
-    async def approve(self, proposal: CheckoutProposal) -> bool: ...
-
-
 @runtime_checkable
 class PaymentInstruments(Protocol):
     """Gives the payment instrument for an approved proposal (``ucp.paymentInstruments``).
@@ -95,30 +71,6 @@ class PaymentInstruments(Protocol):
     async def instrument(
         self, proposal: CheckoutProposal, handlers: Mapping[str, Any]
     ) -> Mapping[str, Any]: ...
-
-
-@runtime_checkable
-class ProposalStore(Protocol):
-    """Spends a proposal once (``ucp.proposalStore``)."""
-
-    async def take(self, proposal_id: str) -> bool: ...
-
-
-class InMemoryProposalStore:
-    """Spends proposals within one process."""
-
-    def __init__(self) -> None:
-        self._taken: set[str] = set()
-
-    async def take(self, proposal_id: str) -> bool:
-        if proposal_id in self._taken:
-            return False
-        self._taken.add(proposal_id)
-        return True
-
-
-def _money(amount: int, currency: str) -> str:
-    return f"{currency} {amount / 100:,.2f}"
 
 
 def _total(checkout: Mapping[str, Any]) -> int:
@@ -146,8 +98,7 @@ def revision_of(checkout: Mapping[str, Any]) -> str:
             for total in checkout.get("totals", [])
         ],
     }
-    canonical = json.dumps(what, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return digest(what)
 
 
 def _checkout(body: Mapping[str, Any]) -> dict[str, Any]:

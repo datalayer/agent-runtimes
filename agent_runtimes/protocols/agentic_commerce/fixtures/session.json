@@ -1,0 +1,110 @@
+{
+  "description": "A ready_for_payment session of the test seller, its discovery document, and its revision: both languages compute the same digest (AGENT_PROTOCOLS PR-51).",
+  "version": "2026-04-17",
+  "discovery": {
+    "protocol": {
+      "name": "acp",
+      "version": "2026-04-17",
+      "supported_versions": [
+        "2026-04-17"
+      ]
+    },
+    "api_base_url": "https://outfitters.example/acp",
+    "transports": [
+      "rest"
+    ],
+    "capabilities": {
+      "services": [
+        "checkout"
+      ],
+      "extensions": [
+        {
+          "name": "discount"
+        }
+      ],
+      "supported_currencies": [
+        "usd"
+      ]
+    }
+  },
+  "session": {
+    "id": "cs_fixture",
+    "capabilities": {
+      "payment": {
+        "handlers": [
+          {
+            "id": "test_spt_handler",
+            "name": "dev.acp.tokenized.card",
+            "version": "2026-04-17",
+            "spec": "https://acp.dev/handlers/tokenized.card",
+            "requires_delegate_payment": true,
+            "requires_pci_compliance": false,
+            "psp": "test",
+            "config_schema": "https://acp.dev/schemas/tokenized.card/config.json",
+            "instrument_schemas": [
+              "https://acp.dev/schemas/tokenized.card/instrument.json"
+            ],
+            "config": {}
+          }
+        ]
+      }
+    },
+    "status": "ready_for_payment",
+    "currency": "usd",
+    "line_items": [
+      {
+        "id": "li_1",
+        "item": {
+          "id": "jacket",
+          "name": "Rain jacket",
+          "unit_amount": 12900
+        },
+        "quantity": 1,
+        "name": "Rain jacket",
+        "totals": [
+          {
+            "type": "subtotal",
+            "display_text": "Subtotal",
+            "amount": 12900
+          },
+          {
+            "type": "total",
+            "display_text": "Total",
+            "amount": 12900
+          }
+        ]
+      }
+    ],
+    "fulfillment_options": [],
+    "totals": [
+      {
+        "type": "subtotal",
+        "display_text": "Subtotal",
+        "amount": 12900
+      },
+      {
+        "type": "tax",
+        "display_text": "Tax",
+        "amount": 1032
+      },
+      {
+        "type": "total",
+        "display_text": "Total",
+        "amount": 13932
+      }
+    ],
+    "messages": [],
+    "links": [
+      {
+        "type": "terms_of_use",
+        "url": "https://outfitters.example/terms"
+      }
+    ],
+    "expires_at": "2099-01-01T00:00:00+00:00",
+    "buyer": {
+      "email": "ana@example.com"
+    }
+  },
+  "revision": "0aaed8100813f9c6eb673261f39db0b451b97d4cd7f6000daf8fa7c69f85d9e3",
+  "summary": "Buy 1 × Rain jacket at outfitters.example for USD 139.32"
+}
