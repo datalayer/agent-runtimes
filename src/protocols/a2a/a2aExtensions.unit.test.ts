@@ -7,6 +7,7 @@
 
 import { contribution, definePlugin } from '@datalayer/reactor';
 import { describe, expect, it } from 'vitest';
+import fixture from '../../../agent_runtimes/protocols/a2a/fixtures/extensions.json';
 import { buildProtocolsReactor } from '../agentProtocols';
 import {
   A2AOrchestrationExtensions,
@@ -157,5 +158,22 @@ describe('A2A card extensions', () => {
     expect(
       negotiateExtensions(CARD, buildProtocolsReactor([withLoyalty])),
     ).toEqual([FACE_URI, LOYALTY]);
+  });
+});
+
+describe('the paired fixture (PR-51, EX-09)', () => {
+  it('reads as test_protocols_a2a_extensions.py reads it', () => {
+    expect(extensionsOf(fixture.card)).toEqual(fixture.extensions);
+    expect(findExtension(fixture.card, fixture.find.uri)?.uri).toBe(
+      fixture.find.uri,
+    );
+    expect(findExtension(fixture.card, fixture.find.absent)).toBeUndefined();
+    for (const { supported, missing } of fixture.unsupported) {
+      expect(unsupportedRequired(fixture.card, supported)).toEqual(missing);
+    }
+    for (const refused of fixture.refused) {
+      expect(() => extensionsOf(refused)).toThrow();
+    }
+    expect(extensionsOf(fixture.none)).toEqual([]);
   });
 });

@@ -5,7 +5,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import pytest
 from reactor import PluginManifest
@@ -164,3 +166,29 @@ def test_publishing_refuses_a_uri_twice():
     }
     with pytest.raises(ValueError, match="published twice"):
         merge_extensions(builtin, [{"uri": FACE_URI}])
+
+
+# --- the paired fixture (PR-51, EX-09): `a2aExtensions.unit.test.ts` reads it too ---
+
+_FIXTURE = json.loads(
+    (
+        Path(__file__).parents[1] / "protocols" / "a2a" / "fixtures" / "extensions.json"
+    ).read_text()
+)
+
+
+def test_the_paired_fixture_reads_the_same_in_python():
+    card = _FIXTURE["card"]
+    assert [
+        {**asdict(extension), "params": dict(extension.params)}
+        for extension in extensions_of(card)
+    ] == _FIXTURE["extensions"]
+    found = find_extension(card, _FIXTURE["find"]["uri"])
+    assert found is not None and found.uri == _FIXTURE["find"]["uri"]
+    assert find_extension(card, _FIXTURE["find"]["absent"]) is None
+    for case in _FIXTURE["unsupported"]:
+        assert unsupported_required(card, case["supported"]) == case["missing"]
+    for refused in _FIXTURE["refused"]:
+        with pytest.raises(ValueError):
+            extensions_of(refused)
+    assert extensions_of(_FIXTURE["none"]) == []

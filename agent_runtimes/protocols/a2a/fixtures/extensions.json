@@ -1,0 +1,30 @@
+{
+  "description": "An A2A Agent Card's extensions (capabilities.extensions) and what both languages read of it: extensions_of / extensionsOf, find_extension / findExtension, unsupported_required / unsupportedRequired; and cards both refuse (AGENT_PROTOCOLS PR-02, PR-51, EX-09).",
+  "card": {
+    "name": "Example Shop",
+    "capabilities": {
+      "extensions": [
+        {"uri": "https://datalayer.ai/extensions/face/v1", "params": {"emoji": "🛍"}},
+        {"uri": "https://example.com/ext/loyalty/v1", "description": "Points for each order.", "required": true, "params": {"program": "shop-points"}},
+        {"uri": "urn:example:gift-wrap"}
+      ]
+    }
+  },
+  "extensions": [
+    {"uri": "https://datalayer.ai/extensions/face/v1", "description": "", "required": false, "params": {"emoji": "🛍"}},
+    {"uri": "https://example.com/ext/loyalty/v1", "description": "Points for each order.", "required": true, "params": {"program": "shop-points"}},
+    {"uri": "urn:example:gift-wrap", "description": "", "required": false, "params": {}}
+  ],
+  "find": {"uri": "https://example.com/ext/loyalty/v1", "absent": "https://example.com/ext/none/v1"},
+  "unsupported": [
+    {"supported": [], "missing": ["https://example.com/ext/loyalty/v1"]},
+    {"supported": ["https://example.com/ext/loyalty/v1"], "missing": []}
+  ],
+  "refused": [
+    {"capabilities": {"extensions": {"uri": "https://example.com/ext/loyalty/v1"}}},
+    {"capabilities": {"extensions": [{"description": "no uri"}]}},
+    {"capabilities": {"extensions": [{"uri": "https://example.com/a"}, {"uri": "https://example.com/a"}]}},
+    {"capabilities": {"extensions": [{"uri": "not a uri"}]}}
+  ],
+  "none": {"name": "Plain", "capabilities": {}}
+}
