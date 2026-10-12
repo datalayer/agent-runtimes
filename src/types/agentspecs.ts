@@ -695,6 +695,20 @@ export interface AppCommandSpec {
   prompt: string;
 }
 
+/**
+ * An action of its code a person presses (REACTOR_UI RU-5): `@app.action`,
+ * typed — the JSON Schema of its payload, written from the pydantic model its
+ * code declares; none when it takes nothing. The runtime offers it with a
+ * token and refuses a press of anything else, or with anything else.
+ */
+export interface AppActionSpec {
+  name: string;
+  /** What it does, in a sentence. */
+  description?: string;
+  /** The JSON Schema of its payload, an object; none when it takes nothing. */
+  payload?: Record<string, unknown>;
+}
+
 /** One position of a mode switch (LOOP P-19). */
 export interface AppModeOptionSpec {
   id: string;
@@ -882,6 +896,11 @@ export interface AppInterfaceSpec {
   commands: AppCommandSpec[];
   /** Mode switches in the composer, the option picked going with every run (P-19). */
   modes: AppModeSpec[];
+  /**
+   * The actions of its code a person presses, typed (REACTOR_UI RU-5):
+   * written by its code (`@app.action`); absent from a spec without code.
+   */
+  actions?: AppActionSpec[];
   /**
    * Several assistants in one application (P-20): two at least, or none.
    * Absent from a spec made before profiles.

@@ -40,7 +40,14 @@ def _kept(store: list[Any], item: Any, result: _T) -> _T:
 
 
 APP_PY = """\
+from pydantic import BaseModel
+
 from agent_runtimes.loop.apps import Application, Session
+
+
+class Saved(BaseModel):
+    a: int
+
 
 app = Application(id="interview", kind="chat", agent="cog-crawler:0.0.1")
 app.starter("Onboarding", "Interview me about my onboarding.")
@@ -59,9 +66,9 @@ async def reply(session: Session, text: str) -> None:
     await session.send(f"{VERSION} heard {text} ({session.state['turns']})")
 
 
-@app.action("save")
-def save(session: Session, payload: dict) -> None:
-    session.state["saved"] = payload
+@app.action("save", payload=Saved)
+def save(session: Session, payload: Saved) -> None:
+    session.state["saved"] = payload.model_dump()
 
 VERSION = "v1"
 """
@@ -88,12 +95,16 @@ def test_build_writes_the_spec_the_file_amounts_to_with_its_code_marked(
         read_code_marks(built.text)
         == built.marks
         == [
-            CodeMark("start", "opening", "app.py:8"),
-            CodeMark("message", "reply", "app.py:14"),
-            CodeMark("action save", "save", "app.py:20"),
+            CodeMark("start", "opening", "app.py:15"),
+            CodeMark("message", "reply", "app.py:21"),
+            CodeMark("action save", "save", "app.py:27"),
         ]
     )
-    assert "# loop:code message: reply (app.py:14)" in built.text.splitlines()
+    assert "# loop:code message: reply (app.py:21)" in built.text.splitlines()
+    # Its action typed, the model's schema in the spec (REACTOR_UI RU-5).
+    [action] = document["interface"]["actions"]
+    assert action["name"] == "save"
+    assert action["payload"]["required"] == ["a"]
 
 
 def test_the_command_prints_it_or_writes_it(tmp_path: Path) -> None:

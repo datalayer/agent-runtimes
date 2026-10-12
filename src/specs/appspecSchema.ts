@@ -103,6 +103,43 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppA2AExtension',
       type: 'object',
     },
+    AppAction: {
+      additionalProperties: false,
+      description:
+        'An action of its code a person presses (`@app.action`, REACTOR_UI RU-5).\n\nWhat its payload is, typed: the JSON Schema of an object, written from the\npydantic model its code declares (`@app.action(name, payload=Model)`); an\naction declaring none takes nothing. The runtime offers it only where a\ndisplay showed it, or to the session that runs it, each press with a\ntoken; a press of an action not declared here is refused, and its payload\nis checked against this schema before its code runs.',
+      properties: {
+        name: {
+          description: 'Its name, as its button presses it',
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+          title: 'Name',
+          type: 'string',
+        },
+        description: {
+          default: '',
+          description: 'What it does, in a sentence',
+          title: 'Description',
+          type: 'string',
+        },
+        payload: {
+          anyOf: [
+            {
+              additionalProperties: true,
+              type: 'object',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'The JSON Schema of what it is pressed with, an object; none when it takes nothing (a press with anything is then refused)',
+          title: 'Payload',
+        },
+      },
+      required: ['name'],
+      title: 'AppAction',
+      type: 'object',
+    },
     AppChecks: {
       additionalProperties: false,
       description:
@@ -585,6 +622,15 @@ export const APPSPEC_SCHEMA: JsonSchema = {
             $ref: '#/$defs/AppMode',
           },
           title: 'Modes',
+          type: 'array',
+        },
+        actions: {
+          description:
+            'The actions of its code a person presses (`@app.action`, REACTOR_UI RU-5), each with the JSON Schema of its payload: what its buttons offer, with a token, and nothing else',
+          items: {
+            $ref: '#/$defs/AppAction',
+          },
+          title: 'Actions',
           type: 'array',
         },
         profiles: {

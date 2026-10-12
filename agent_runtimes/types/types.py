@@ -2585,6 +2585,18 @@ class AppPageSpec(BaseModel):
     )
 
 
+class AppActionSpec(BaseModel):
+    """An action of an application's code a person presses (`@app.action`,
+    REACTOR_UI RU-5): its name, and the JSON Schema of its payload."""
+
+    name: str = Field(..., description="Its name, as its button presses it")
+    description: str = Field(default="", description="What it does, in a sentence")
+    payload: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="The JSON Schema of what it is pressed with; none when it takes nothing",
+    )
+
+
 class AppInterfaceSpec(BaseModel):
     """What the user of an application sees."""
 
@@ -2597,6 +2609,10 @@ class AppInterfaceSpec(BaseModel):
     )
     modes: List[AppModeSpec] = Field(
         default_factory=list, description="Mode switches in the composer"
+    )
+    actions: List[AppActionSpec] = Field(
+        default_factory=list,
+        description="The actions of its code a person presses, typed (REACTOR_UI RU-5)",
     )
     profiles: List[AppProfileSpec] = Field(
         default_factory=list,

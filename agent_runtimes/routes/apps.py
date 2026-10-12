@@ -933,17 +933,11 @@ class SessionMessageRequest(BaseModel):
     )
 
 
-class SessionActionRequest(BaseModel):
-    """A page block's action, and the files given with it."""
+class SessionPageRequest(BaseModel):
+    """A widget's page run on its inputs (LOOP P-05)."""
 
-    name: str = Field(
-        ..., min_length=1, description="The action, as its block names it"
-    )
-    payload: Dict[str, Any] = Field(default_factory=dict)
-    text: str = Field("", description="What the page says the action asks, in words")
-    files: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="Files given with it, as File upload gives them: {name, type, size, data_url}",
+    inputs: Dict[str, Any] = Field(
+        default_factory=dict, description="Its inputs, by name, as its form holds them"
     )
 
 
@@ -1422,28 +1416,52 @@ async def session_message(
         raise _refused(refused) from None
 
 
-@router.post("/sessions/{uid}/actions")
-async def session_action(uid: str, body: SessionActionRequest, request: Request) -> Any:
-    """A page block's action, with the files given with it.
-
-    A press of what a display offered is never sent here: it goes up the
-    session's ui socket (REACTOR_UI RU-W). A page block's action, which has
-    no token yet, moves there with its typed actions (RU-5).
+@router.post("/sessions/{uid}/press")
+async def session_press(uid: str, request: Request) -> Any:
+    """A press of what the session offered (REACTOR_UI RU-5), for a client of
+    the session API: Reactor's ``UiAction`` — the action, the display that
+    offered it (``app`` for what its code declares, `describe`'s
+    ``actions``), its token and its typed payload — checked before anything
+    runs (403 not offered, 422 an action its code does not declare or a
+    payload it does not take), then run as a turn. A page presses up the ui
+    socket instead, its run naming the press.
     """
-    from agent_runtimes.loop.apps.sessions import SessionRefused, given_files
+    from pydantic import ValidationError
+    from reactor.ui import UiAction, UiActionError
 
-    live, bearer = await _held(uid, request)
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
     try:
-        return _stream(
-            live.action(
-                body.name,
-                payload=body.payload,
-                text=body.text,
-                files=given_files(body.files),
-                bearer=bearer,
-                head=live.session_event(),
-            )
-        )
+        press = UiAction.model_validate(await request.json())
+    except (ValueError, ValidationError) as wrong:
+        raise HTTPException(
+            status_code=422, detail=f"A press is Reactor's UiAction: {wrong}"
+        ) from None
+    try:
+        checked = live.check_press(press)
+    except UiActionError as refused:
+        raise HTTPException(
+            status_code=refused.status_code, detail=str(refused)
+        ) from None
+    try:
+        return _stream(live.pressed(checked, head=live.session_event()))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.post("/sessions/{uid}/page")
+async def session_page(uid: str, body: SessionPageRequest, request: Request) -> Any:
+    """A widget's page run on its inputs (LOOP P-05): checked against its form
+    — refused with 422 and the sentence — then its code's ``@app.page``, its
+    outputs a ``CUSTOM`` event named ``loop.page``. Not a turn of the
+    conversation: nothing is said in it.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        return _stream(live.run_page(body.inputs, head=live.session_event()))
     except SessionRefused as refused:
         raise _refused(refused) from None
 
@@ -1636,7 +1654,7 @@ async def session_agui(agent: str, request: Request) -> Any:
     What the chat of an application's page sends: an AG-UI run whose thread
     is the session — opened at its first run — and whose
     ``forwardedProps.loop`` carries what the page did besides the message
-    (its settings, a block's action, the files given).
+    (its settings, the files given, a press checked on the ui socket).
     """
     from agent_runtimes.context.identities import set_request_user_jwt
     from agent_runtimes.loop.apps.sessions import (

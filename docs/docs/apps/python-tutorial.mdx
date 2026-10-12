@@ -102,20 +102,27 @@ async def reply(session: Session, text: str) -> None:
   [Steps](./python-applications#steps)).
 
 ```python
-@app.action("save")
-async def save(session: Session, payload: dict) -> None:
+class Insight(BaseModel):
+    insight: str = Field(..., min_length=1)
+    quote: str = Field(..., min_length=1)
+
+@app.action("save", payload=Insight)
+async def save(session: Session, saved: Insight) -> None:
     ...
     await session.record(insight, summary="An insight", kind="feedback")
 
 @app.action("finish")
-async def finish(session: Session, payload: dict) -> None:
+async def finish(session: Session) -> None:
     ...
     await session.record(result, summary="The interview's result")
     await session.send(answer.text)
 ```
 
-`@app.action(name)` is what a button named so does — on the page, or in what
-an answer shows. `session.record` writes to the application's record, kept
+`@app.action(name, payload=Model)` is what a button named so does — in what
+an answer shows, or pressed with the token its session offers. It is typed:
+the model's JSON Schema is written in the Appspec (`interface.actions`), a
+press is checked against it before the handler runs and the handler is given
+the model; an action without a model takes nothing (REACTOR_UI RU-5). `session.record` writes to the application's record, kept
 as its spec's `record.include` says.
 
 ### Try it

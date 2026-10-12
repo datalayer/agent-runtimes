@@ -23,13 +23,12 @@ from agent_runtimes.loop.apps import (
     sessions,
 )
 from agent_runtimes.loop.apps.callers import Caller
-from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.loading import AppNotRunnable
 from agent_runtimes.loop.apps.pages import (
     LOOP_PAGE,
-    PAGE_ACTION,
     field_of,
     page_signature,
+    page_values,
 )
 from agent_runtimes.loop.apps.plugins import reaction_of
 from agent_runtimes.loop.apps.record import AppRecorder
@@ -249,12 +248,12 @@ async def test_inputs_its_form_refuses_are_refused_in_a_sentence() -> None:
             ValueError, match=sentence.replace("[", r"\[").replace("]", r"\]")
         ):
             await host.page(session, inputs)
-        refused = form_values_refused(application.spec, PAGE_ACTION, {"inputs": inputs})
-        assert refused is not None and sentence in refused
-    assert form_values_refused(application.spec, PAGE_ACTION, {"inputs": "x"}) == (
-        'A page\'s inputs are values by name: {"inputs": {...}}.'
-    )
-    assert form_values_refused(application.spec, PAGE_ACTION, {"inputs": {}}) is None
+        with pytest.raises(ValueError) as refused:
+            page_values(application.spec, inputs)
+        assert sentence in str(refused.value)
+    with pytest.raises(ValueError, match="A page's inputs are values by name"):
+        page_values(application.spec, "x")
+    assert "seats" in page_values(application.spec, {})
 
 
 async def test_outputs_it_cannot_show_are_refused_in_a_sentence() -> None:
@@ -379,11 +378,11 @@ def live_of(application: Optional[Application], spec: Any = None) -> Any:
     return live
 
 
-async def test_over_the_session_api_the_page_action_answers_a_loop_page_event() -> None:
+async def test_over_the_session_api_its_page_run_answers_a_loop_page_event() -> None:
     live = live_of(quote_app())
     chunks = [
         chunk
-        async for chunk in live.action(PAGE_ACTION, payload={"inputs": {"seats": 2}})
+        async for chunk in live.run_page({"seats": 2})
     ]
     events = _events(chunks)
     assert [event["type"] for event in events] == [
@@ -402,7 +401,7 @@ async def test_over_the_session_api_the_page_action_answers_a_loop_page_event() 
     # Nothing is said in the conversation.
     assert live.messages == []
     with pytest.raises(sessions.SessionRefused) as refused:
-        live.action(PAGE_ACTION, payload={"inputs": {"seats": 0}})
+        live.run_page({"seats": 0})
     assert refused.value.status == 422
     assert "seats: 0 is less than the minimum of 1" in refused.value.reason
 
@@ -411,7 +410,7 @@ async def test_a_page_without_its_code_is_refused() -> None:
     spec = quote_app().spec
     live = live_of(None, spec)
     with pytest.raises(sessions.SessionRefused) as refused:
-        live.action(PAGE_ACTION, payload={"inputs": {}})
+        live.run_page({})
     assert refused.value.status == 422
     assert "has no page of its code (@app.page) here" in refused.value.reason
 

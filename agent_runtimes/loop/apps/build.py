@@ -280,6 +280,12 @@ def build(path: Union[str, Path]) -> Built:
             [f"{file.name} does not load: {type(error).__name__}: {error}"]
         ) from None
     application.spec  # noqa: B018 - refused here, with its reasons
+    # What its tests press, its code declares, with what it takes (REACTOR_UI RU-5).
+    from agentspecs.apps import parse_app, press_problems
+
+    problems = press_problems(parse_app(application.document))
+    if problems:
+        raise AppNotRunnable(problems)
     return Built(
         application=application,
         document=_written(application.document),

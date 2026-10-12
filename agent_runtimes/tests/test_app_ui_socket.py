@@ -19,6 +19,7 @@ import json
 from typing import Any, Dict, List, Tuple
 
 import pytest
+from pydantic import BaseModel
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
@@ -30,6 +31,13 @@ from agent_runtimes.tests.test_app_sessions import (  # noqa: F401 - fixtures
     remote,
     runtime,
 )
+
+
+class Row(BaseModel):
+    """What the button presses with: the row it was on (REACTOR_UI RU-5)."""
+
+    row: int = 0
+
 
 SOCKET = "/api/v1/apps/ui"
 PROTOCOL = "reactor.ui.v1"
@@ -44,9 +52,9 @@ def held(uid: str) -> Tuple[sessions.LiveSession, List[Any]]:
     application = Application(id="notes-assistant", agent="example-simple")
     pressed: List[Any] = []
 
-    @application.action("again")
-    async def again(session: Any, payload: dict) -> None:
-        pressed.append(payload)
+    @application.action("again", payload=Row)
+    async def again(session: Any, payload: Row) -> None:
+        pressed.append(payload.model_dump())
         await session.send("Again.")
 
     live = sessions.LiveSession(

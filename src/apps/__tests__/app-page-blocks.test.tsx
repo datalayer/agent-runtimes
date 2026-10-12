@@ -173,7 +173,7 @@ describe('a Chat block on a chat application’s page', () => {
     });
     // The chat's own send: the conversation the page shows, not a second one.
     expect(send).toHaveBeenCalledWith('And last month’s?', {
-      loop: { action: { name: 'send', payload: {} }, settings: {} },
+      loop: { settings: {} },
     });
     expect(send).toHaveBeenCalledTimes(1);
 
@@ -237,7 +237,8 @@ describe('a File upload on a widget’s page', () => {
     expect(send).toHaveBeenCalledTimes(1);
     const [said, forwarded] = send.mock.calls[0];
     expect(said).toBe('Report: Summary');
-    expect(forwarded.loop.action).toEqual({ name: 'run', payload: {} });
+    // A block sends a message, never an action of its own (REACTOR_UI RU-5).
+    expect(forwarded.loop.action).toBeUndefined();
     expect(forwarded.loop.settings).toEqual({
       report: 'Summary',
       question: '',
@@ -286,9 +287,9 @@ describe('a File upload on a widget’s page', () => {
     await act(async () => new Promise(resolve => setTimeout(resolve, 20)));
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][1].loop).toMatchObject({
-      action: { name: 'upload', payload: {} },
       files: [{ name: 'tiny.csv', type: 'text/csv' }],
     });
+    expect(send.mock.calls[0][1].loop.action).toBeUndefined();
   });
 });
 

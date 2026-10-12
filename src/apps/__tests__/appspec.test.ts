@@ -44,6 +44,24 @@ describe('reading an Appspec', () => {
     }
   });
 
+  it('reads the actions its code declares, typed (REACTOR_UI RU-5)', () => {
+    const { app } = parseAppspec(APP_SOURCES['customer-interview']);
+    const [save, finish] = app.interface.actions ?? [];
+    expect(save.name).toBe('save');
+    expect(save.payload?.required).toEqual(['insight', 'quote']);
+    expect(finish).toEqual({
+      name: 'finish',
+      description: 'End the interview, and record its result.',
+    });
+    expect(dumpAppspec(app).interface).toMatchObject({
+      actions: [{ name: 'save', payload: save.payload }, { name: 'finish' }],
+    });
+    // An application without code declares none, and none is written.
+    const plain = parseAppspec({ id: 'a', name: 'A', kind: 'chat' }).app;
+    expect(plain.interface.actions).toEqual([]);
+    expect(dumpAppspec(plain).interface ?? {}).not.toHaveProperty('actions');
+  });
+
   it('gives a kind its layout, and a retention its days', () => {
     const { app } = parseAppspec({ id: 'w', name: 'W', kind: 'worker' });
     expect(app.interface.layout).toBe('split');

@@ -8,8 +8,8 @@
  *
  * The page opens a session of the application's agent on its runtime
  * (`POST /api/v1/apps/sessions`), then, each time an input changes, sends
- * them all as the session's `page` action (`POST …/sessions/{uid}/actions`,
- * `{name: "page", payload: {inputs}}`). The runtime checks them against the
+ * them all to its page (`POST …/sessions/{uid}/page`, `{inputs}`) — not an
+ * action of its code (REACTOR_UI RU-5). The runtime checks them against the
  * page's form — refused with 422 and a sentence — runs its code's
  * `@app.page` on them, and answers its outputs as a `CUSTOM` event named
  * `loop.page`, `{inputs, outputs}`, which the page shows in place. Nothing is
@@ -137,8 +137,8 @@ export async function runPageIn(
   try {
     const stream = await posted(
       context,
-      `${base(context)}/${encodeURIComponent(uid)}/actions`,
-      { name: 'page', payload: { inputs } },
+      `${base(context)}/${encodeURIComponent(uid)}/page`,
+      { inputs },
     );
     return pageTurnOf(stream);
   } catch (error) {

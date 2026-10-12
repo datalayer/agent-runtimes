@@ -79,6 +79,7 @@ and no network:
 ```python title="interview.py"
 import asyncio
 
+from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.models.test import TestModel
 
@@ -113,9 +114,13 @@ async def reply(session: Session, text: str) -> None:
     await session.send(answer.text)
 
 
-@app.action("save")
-async def save(session: Session, payload: dict) -> None:
-    session.state["kept"] = await session.record(payload, summary="An insight")
+class Insight(BaseModel):
+    insight: str
+
+
+@app.action("save", payload=Insight)
+async def save(session: Session, insight: Insight) -> None:
+    session.state["kept"] = await session.record(insight.model_dump(), summary="An insight")
     keep = await session.ask(ChoiceQuestion("Keep interviewing?", ("Yes", "No")))
     session.state["done"] = keep == "No"
 
@@ -312,7 +317,7 @@ session always first:
 | --- | --- | --- |
 | `@app.start` | `(session)` | A session starts. |
 | `@app.message` | `(session, text)` | The person writes. Without a handler, the application's agent answers, streamed. |
-| `@app.action(name)` | `(session, payload)` | The person presses the button of that name. The values a `Form` sends with it are checked against its schema first: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). |
+| `@app.action(name, payload=Model)` | `(session, payload)`, or `(session)` without a model | The person presses the button of that name (REACTOR_UI RU-5). **Typed**: `payload` is the pydantic model of what it is pressed with, its JSON Schema written in the Appspec (`interface.actions`); what a press carries — a `Form`'s values, a row — is checked against it first, a field it does not name refused too: refused, the handler is not called (`ValueError`, or 422 from the [Session API](./session-api)). The handler is given the model; an action declaring none takes nothing. Only a button its code showed, or the session it runs in, offers it, with a token; a press of an action it does not declare is refused, and what a press carries is never said to the model. `description=` says what it does (its docstring's first paragraph otherwise). |
 | `@app.file` | `(session, files, text)` | The person sends files with a message without being asked (LOOP P-21): the `UploadedFile`s, and the words sent with them. Which kinds and sizes may be sent is the Appspec's `interface.uploads`; the runtime refuses the rest before this runs. Without a handler, the words go to `message` and the files wait for what the code asks. See [What a person sends](#what-a-person-sends). |
 | `@app.settings` | `(session, settings)` | The person changes settings; given all of them, checked. A change made on the page goes with the next message, and this runs before that message's handler (LOOP P-20). |
 | `@app.window` | `(session, data)` | The page the application sits in posts a message (LOOP P-25): `element.postWindowMessage(data)`, on your own server. See [Window messages](#window-messages). |
@@ -834,9 +839,10 @@ await session.send(
   download and the rest of the catalog.
 - `data` — what a property bound to a path reads (a Table's `rows`, a
   Chart's `points`): the answer's own data.
-- A Button's action (`action={"event": {"name": "again"}}`) is sent to the
-  application when it is pressed, by name, with what it read: its
-  `@app.action("again")` reacts, as to a button of its page. A form's
+- A Button's action (`action={"event": {"name": "again"}}`) is offered with
+  a token and sent to the application when it is pressed, with what it read
+  — checked against the model its `@app.action("again")` declares, which
+  reacts (REACTOR_UI RU-5). A form's
   submission on any other surface stays the agent's next message.
 - `send`, `stream` and `update` take both; `update` keeps what the message
   showed unless told, and `show=[]` takes it away.

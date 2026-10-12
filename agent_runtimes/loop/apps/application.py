@@ -47,9 +47,11 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
 )
 
+from pydantic import BaseModel, ConfigDict, ValidationError
 from reactor import (
     Command,
     ContributionPoint,
@@ -67,7 +69,6 @@ from agent_runtimes.loop.apps.composer import (
     ReactorCommandRun,
     command_called,
 )
-from agent_runtimes.loop.apps.forms import form_values_refused
 from agent_runtimes.loop.apps.frameworks import (
     CodeAgent,
     code_agent_of,
@@ -110,6 +111,7 @@ from agent_runtimes.loop.apps.session import (
 )
 from agent_runtimes.specs.ui import SurfaceComponents
 from agent_runtimes.types import (
+    AppActionSpec,
     AppCodeCheckSpec,
     AppCommandSpec,
     AppConnectionSpec,
@@ -127,6 +129,45 @@ from agent_runtimes.types import (
 
 #: A handler: a plain function, sync or async, given the session first.
 Handler = Callable[..., Any]
+
+
+class NoPayload(BaseModel):
+    """What an action that declares no payload is pressed with: nothing
+    (REACTOR_UI RU-5) — a press with anything is refused."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+def action_payload(
+    name: str, model: Type[BaseModel], payload: Mapping[str, Any]
+) -> BaseModel:
+    """A press's payload as the model its action declares, or the refusal in a
+    sentence (`ValueError`): each field and why (REACTOR_UI RU-5).
+    """
+    # Only what its model names: a field it does not take is refused, never dropped.
+    taken = {
+        key
+        for name, field in model.model_fields.items()
+        for key in (name, field.alias)
+        if key
+    }
+    unknown = sorted(set(payload) - taken)
+    if unknown:
+        raise ValueError(
+            f"{name!r} was pressed with what it does not take — "
+            + "; ".join(f"{key}: not one of its fields" for key in unknown)
+            + "."
+        )
+    try:
+        return model.model_validate(dict(payload))
+    except ValidationError as wrong:
+        said = "; ".join(
+            f"{'.'.join(str(part) for part in error['loc']) or 'it'}: {error['msg']}"
+            for error in wrong.errors()
+        )
+        raise ValueError(
+            f"{name!r} was pressed with what it does not take — {said}."
+        ) from None
 
 #: The moments an application reacts to with one handler each.
 EVENTS = (
@@ -255,6 +296,7 @@ class Application:
         self._spec: Optional[AppSpec] = None
         self._handlers: Dict[str, Handler] = {}
         self._actions: Dict[str, Handler] = {}
+        self._action_payloads: Dict[str, Type[BaseModel]] = {}
         self._schedules: Dict[str, Handler] = {}
         self._schedule_crons: Dict[str, str] = {}
         self._schedule_positions: Dict[str, int] = {}
@@ -1404,13 +1446,40 @@ class Application:
         """React to the person signing out: ``handler(session)``, then the session ends."""
         return self._on("logout", handler)
 
-    def action(self, name: str) -> Callable[[Handler], Handler]:
-        """React to a button: ``handler(session, payload)``.
+    def action(
+        self,
+        name: str,
+        *,
+        payload: Optional[Type[BaseModel]] = None,
+        description: str = "",
+    ) -> Callable[[Handler], Handler]:
+        """React to a button: ``handler(session, payload)``, or
+        ``handler(session)`` for an action that takes nothing.
+
+        Typed (REACTOR_UI RU-5): ``payload`` is the pydantic model of what it
+        is pressed with, its JSON Schema written in the Appspec
+        (``interface.actions``); a press is checked against it before the
+        handler runs, which is given the model. Without one, the action takes
+        nothing, and a press with anything is refused. Only a button a
+        display of its code showed — or the session it runs in — offers it,
+        with a token; a press of an action it does not declare is refused::
+
+            class Insight(BaseModel):
+                insight: str
+                quote: str
+
+            @app.action("save", payload=Insight)
+            async def save(session: Session, insight: Insight) -> None:
+                ...
 
         Parameters
         ----------
         name : str
-            The action's name, as the button sends it.
+            The action's name, as the button presses it.
+        payload : type of BaseModel, optional
+            What it is pressed with; nothing when unsaid.
+        description : str
+            What it does, in a sentence; the handler's docstring when unsaid.
 
         Returns
         -------
@@ -1423,11 +1492,40 @@ class Application:
                 f"{PAGE_ACTION!r} is the action that runs its page (@app.page): "
                 "name the button's action otherwise."
             )
+        if payload is not None and not (
+            isinstance(payload, type) and issubclass(payload, BaseModel)
+        ):
+            raise TypeError(
+                f"The payload of {name!r} is a pydantic model, not {payload!r}."
+            )
 
         def decorate(handler: Handler) -> Handler:
             if name in self._actions:
                 raise ValueError(f"{self.id} already has an action {name!r}.")
+            said = description or (inspect.getdoc(handler) or "").split("\n\n")[0]
+            # Its code is what the Appspec says of it: a spec it was attached
+            # to (an Appspec built before) is said again, as the code types it.
+            interface = self._document.get("interface") or {}
+            if any(
+                declared.get("name") == name
+                for declared in interface.get("actions") or []
+            ):
+                interface["actions"] = [
+                    declared
+                    for declared in interface["actions"]
+                    if declared.get("name") != name
+                ]
+            self._declare(
+                "actions",
+                AppActionSpec(
+                    name=name,
+                    description=" ".join(said.split()),
+                    payload=payload.model_json_schema() if payload else None,
+                ),
+                under="interface",
+            )
             self._actions[name] = handler
+            self._action_payloads[name] = payload or NoPayload
             return handler
 
         return decorate
@@ -1763,6 +1861,12 @@ class Application:
     def actions(self) -> Dict[str, Handler]:
         """The application's actions, by name; a copy."""
         return dict(self._actions)
+
+    @property
+    def action_payloads(self) -> Dict[str, Type[BaseModel]]:
+        """What each action is pressed with, its pydantic model, by name
+        (`NoPayload` for one that takes nothing); a copy."""
+        return dict(self._action_payloads)
 
     @property
     def schedules(self) -> Dict[str, Handler]:
@@ -2371,21 +2475,32 @@ class AppHost:
         await self._react(session, self._reaction("message") or _answer, text)
 
     async def action(
-        self, session: Session, name: str, payload: Optional[Mapping[str, Any]] = None
+        self,
+        session: Session,
+        name: str,
+        payload: Union[BaseModel, Mapping[str, Any], None] = None,
     ) -> None:
         """The user pressed a button: run the action of that name.
 
-        A form's values sent with it are checked against its schema first
-        (C-16): refused, the handler is not called.
+        What it was pressed with is checked against the model its code
+        declares (REACTOR_UI RU-5) — refused, the handler is not called — and
+        given to the handler as that model; an action that takes nothing is
+        given nothing.
         """
         self._open(session)
         handler = self._reaction("action", name)
         if handler is None:
             raise KeyError(f"{self.app.id} has no action {name!r}.")
-        refused = form_values_refused(self.app.spec, name, payload or {})
-        if refused:
-            raise ValueError(refused)
-        await self._react(session, handler, dict(payload or {}))
+        model = self.app.action_payloads[name]
+        typed = (
+            payload
+            if isinstance(payload, model)
+            else action_payload(name, model, payload or {})
+        )
+        if model is NoPayload:
+            await self._react(session, handler)
+            return
+        await self._react(session, handler, typed)
 
     async def files(
         self, session: Session, files: Sequence[UploadedFile], text: str = ""

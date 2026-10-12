@@ -205,13 +205,14 @@ def test_an_application_that_names_no_uploads_takes_no_file_with_a_message(
     )
 
 
-def test_a_block_s_action_is_held_to_what_its_page_asks_for(
+def test_a_file_given_on_its_page_is_held_to_what_its_page_asks_for(
     runtime: Runtime,
     local: TestClient,  # noqa: F811 - the fixture
 ) -> None:
+    """A page's block sends its files with a message (REACTOR_UI RU-5): held to
+    what its File upload asks for, said first."""
     runtime.make("report-from-a-file", REPORT, {"app_uid": "app-3"})
     run = composed("thread-0104", "Report: Full", [file("a.png", "image/png")])
-    run["forwardedProps"]["loop"]["action"] = {"name": "run", "payload": {}}
     refused = local.post("/api/v1/apps/agents/report-from-a-file/ag-ui/", json=run)
     assert (refused.status_code, refused.json()["detail"]) == (
         422,

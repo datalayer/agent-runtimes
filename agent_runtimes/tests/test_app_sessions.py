@@ -532,7 +532,6 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
                 "context": [],
                 "forwardedProps": {
                     "loop": {
-                        "action": {"name": "upload", "payload": {}},
                         "files": [
                             {
                                 "name": "../report.pdf",
@@ -564,66 +563,75 @@ def test_a_file_of_any_kind_is_put_in_the_sandbox_of_an_application_with_a_shell
     ]
 
 
+def _page_run(
+    thread: str, run: str, text: str, files: List[Dict[str, Any]], **loop: Any
+) -> Dict[str, Any]:
+    """An AG-UI run as a page's block sends it: its message, its files."""
+    return {
+        "threadId": thread,
+        "runId": run,
+        "messages": [{"id": f"m-{run}", "role": "user", "content": text}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {"loop": {"files": files, **loop}},
+    }
+
+
 def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_refused(
     runtime: Runtime, local: TestClient
 ) -> None:
     model = runtime.make("notes-assistant", ASSISTANT, {"app_uid": "app-1"})
-    list(
-        events_of(
-            local.post(
-                "/api/v1/apps/sessions",
-                json={"agent": "notes-assistant", "session": "session-0003"},
-            )
-        )
-    )
+    url = "/api/v1/apps/agents/notes-assistant/ag-ui/"
     csv = b"a,b\n1,2\n"
     events = events_of(
         local.post(
-            "/api/v1/apps/sessions/session-0003/actions",
-            json={
-                "name": "upload",
-                "text": "Summarise it.",
-                "files": [
+            url,
+            json=_page_run(
+                "session-0003",
+                "run-1",
+                "Summarise it.",
+                [
                     {
                         "name": "t.csv",
                         "type": "text/csv",
                         "data_url": data_url(csv, "text/csv"),
                     }
                 ],
-            },
+            ),
         )
     )
     assert "RUN_ERROR" not in types_of(events)
     assert model.prompts[-1].endswith("The file t.csv (text/csv):\n```\na,b\n1,2\n```")
-    # A Table's select: what the block gave, said to an agent with no handler.
-    chose = events_of(
-        local.post(
-            "/api/v1/apps/sessions/session-0003/actions",
-            json={"name": "select", "payload": {"row": {"region": "north"}}},
-        )
+    # A block's action is never a run's (REACTOR_UI RU-5): nothing it gave
+    # is said to the model.
+    chose = local.post(
+        url,
+        json=_page_run(
+            "session-0003",
+            "run-2",
+            "Chosen.",
+            [],
+            action={"name": "select", "payload": {"row": {"region": "north"}}},
+        ),
     )
-    assert "RUN_ERROR" not in types_of(chose)
-    assert model.prompts[-1] == 'On the page, select: {"row": {"region": "north"}}'
-    assert (
-        local.post(
-            "/api/v1/apps/sessions/session-0003/actions", json={"name": "submit"}
-        ).json()["detail"]
-        == "“submit” gave Notes Assistant nothing to run on: no message, no file."
-    )
+    assert chose.status_code == 422
+    assert chose.json()["detail"].startswith("A run carries no action")
+    assert all("north" not in prompt for prompt in model.prompts)
     refused = events_of(
         local.post(
-            "/api/v1/apps/sessions/session-0003/actions",
-            json={
-                "name": "upload",
-                "text": "And this?",
-                "files": [
+            url,
+            json=_page_run(
+                "session-0003",
+                "run-3",
+                "And this?",
+                [
                     {
                         "name": "x.zip",
                         "type": "application/zip",
                         "data_url": data_url(b"PK\x00", "application/zip"),
                     }
                 ],
-            },
+            ),
         )
     )
     [error] = [e for e in refused if e["type"] == "RUN_ERROR"]
@@ -632,11 +640,13 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
     )
     assert (
         local.post(
-            "/api/v1/apps/sessions/session-0003/actions",
-            json={
-                "name": "upload",
-                "files": [{"name": "x", "data_url": "not a data url"}],
-            },
+            url,
+            json=_page_run(
+                "session-0003",
+                "run-4",
+                "This.",
+                [{"name": "x", "data_url": "not a data url"}],
+            ),
         ).json()["detail"]
         == "x could not be read: it is not a data URL."
     )
@@ -1114,7 +1124,8 @@ def test_report_from_a_file_takes_its_file_from_the_page(
     runtime: Runtime, local: TestClient
 ) -> None:
     """The Python example asks for its file with `session.ask`: a file given on
-    the page answers it — with the action, or after it asked."""
+    the page answers it — with its run, or after it asked. A page's block
+    sends a message with its files (REACTOR_UI RU-5), as its page does."""
     model = runtime.make("report-from-a-file", REPORT, {"app_uid": "app-3"})
     csv = b"region,amount\nnorth,10\nsouth,20\n"
     file = {
@@ -1133,14 +1144,11 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         )
     )
     assert started[0]["value"]["python"] is True
+    url = "/api/v1/apps/agents/report-from-a-file/ag-ui/"
     events = events_of(
-        local.post(
-            "/api/v1/apps/sessions/session-0007/actions",
-            json={"name": "run", "text": "Report: Full", "files": [file]},
-        )
+        local.post(url, json=_page_run("session-0007", "run-1", "Report: Full", [file]))
     )
     assert types_of(events) == [
-        "CUSTOM:loop.session",
         "RUN_STARTED",
         "STEP_STARTED",
         "STEP_FINISHED",
@@ -1154,12 +1162,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
 
     # Run without a file: it asks, the stream ends on the question, and the
     # file given next answers it.
-    asked = events_of(
-        local.post(
-            "/api/v1/apps/sessions/session-0007/actions",
-            json={"name": "run", "text": "Again"},
-        )
-    )
+    asked = events_of(local.post(url, json=_page_run("session-0007", "run-2", "Again", [])))
     # The run ends on the question, its result saying what it asks; the
     # question is a display on the ui socket (REACTOR_UI RU-4).
     assert asked[-1]["type"] == "RUN_FINISHED"
@@ -1186,12 +1189,9 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "Report from a File is waiting for an answer: Which file? (a file: .csv)"
     )
     went_on = events_of(
-        local.post(
-            "/api/v1/apps/sessions/session-0007/actions",
-            json={"name": "upload", "files": [file]},
-        )
+        local.post(url, json=_page_run("session-0007", "run-3", "Sent.", [file]))
     )
-    assert types_of(went_on)[1] == "RUN_STARTED"
+    assert types_of(went_on)[0] == "RUN_STARTED"
     assert answer_of(went_on) == "Heard 2: Again"
     assert local.get("/api/v1/apps/sessions/session-0007").json()["state"] == "open"
 
@@ -1202,10 +1202,7 @@ def test_report_from_a_file_takes_its_file_from_the_page(
         "type": "application/pdf",
         "data_url": data_url(b"%PDF", "application/pdf"),
     }
-    refused = local.post(
-        "/api/v1/apps/sessions/session-0007/actions",
-        json={"name": "run", "files": [pdf]},
-    )
+    refused = local.post(url, json=_page_run("session-0007", "run-4", "Run.", [pdf]))
     assert (refused.status_code, refused.json()["detail"]) == (
         422,
         "a.pdf is not a kind of file Report from a File's page asks for: it asks for .csv.",
@@ -1230,7 +1227,6 @@ def test_report_from_a_file_over_ag_ui_as_its_page_runs_it(
                 "context": [],
                 "forwardedProps": {
                     "loop": {
-                        "action": {"name": "run", "payload": {}},
                         "settings": {"report": "Summary", "question": ""},
                         "files": [
                             {
@@ -1557,17 +1553,20 @@ def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
     assert [path for path, _ in sent] == [
         "/api/v1/apps/sessions",
         *["/api/v1/apps/sessions/test-run-1-case-1/messages"] * 3,
-        *["/api/v1/apps/sessions/test-run-1-case-1/actions"] * 2,
+        *["/api/v1/apps/sessions/test-run-1-case-1/press"] * 2,
     ]
     assert sent[0][1] == {
         "agent": "customer-interview",
         "session": "test-run-1-case-1",
         "opener": "",
     }
-    assert sent[4][1] == {
-        "name": "save",
+    # Pressed as the session offered it (REACTOR_UI RU-5): its token, typed.
+    assert {key: sent[4][1][key] for key in ("action", "display_id", "payload")} == {
+        "action": "save",
+        "display_id": "app",
         "payload": {"insight": "Setup", "quote": "It took a week."},
     }
+    assert sent[4][1]["token"]
     said = played["output"]["text"].splitlines()
     assert "The person chooses: Yes" in said
     assert (

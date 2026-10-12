@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from agent_runtimes.loop.apps import (
@@ -150,8 +151,11 @@ async def test_start_then_message_then_action():
     def reply(session: Session, text: str) -> None:  # sync handlers too
         seen.append((text, session.state["goal"]))
 
-    @app.action("save")
-    async def save(session: Session, payload: dict) -> None:
+    class Saved(BaseModel):
+        k: int
+
+    @app.action("save", payload=Saved)
+    async def save(session: Session, payload: Saved) -> None:
         seen.append(payload)
 
     host, channel, _ = hosted(app)
@@ -161,7 +165,7 @@ async def test_start_then_message_then_action():
     assert session.state == {"goal": "why people leave"}
     await host.message(session, "hello")
     await host.action(session, "save", {"k": 1})
-    assert seen == [("hello", "why people leave"), {"k": 1}]
+    assert seen == [("hello", "why people leave"), Saved(k=1)]
     with pytest.raises(KeyError, match="no action 'delete'"):
         await host.action(session, "delete")
 
@@ -395,37 +399,69 @@ def quote_app() -> Application:
     return app
 
 
-def test_a_forms_values_are_checked_again_when_they_arrive():
-    """LOOP C-16: the runtime checks what a form sends against its schema."""
-    from agent_runtimes.loop.apps.forms import form_values_refused
-
-    spec = quote_app().spec
-    assert form_values_refused(spec, "price", {"values": {"seats": 3}}) is None
-    assert form_values_refused(spec, "price", {"values": {"seats": 0}}) == (
-        "“The quote” was sent what its fields refuse: seats: 0 is less than the minimum of 1."
-    )
-    assert "'seats' is a required property" in str(
-        form_values_refused(spec, "price", {"values": {}})
-    )
-    # Another action, or no values carried: not the form's to check.
-    assert form_values_refused(spec, "send", {"values": {"seats": 0}}) is None
-    assert form_values_refused(spec, "price", {}) is None
+class Seats(BaseModel):
+    seats: int = Field(ge=1)
 
 
-async def test_a_refused_forms_action_never_reaches_its_handler():
+class Quote(BaseModel):
+    """What the quote's form sends."""
+
+    values: Seats
+
+
+def test_an_action_is_typed_in_its_appspec():
+    """REACTOR_UI RU-5: ``@app.action(name, payload=Model)`` writes the
+    model's JSON Schema in the Appspec; an action without one takes nothing."""
+    app = quote_app()
+
+    @app.action("price", payload=Quote)
+    async def price(session: Session, quote: Quote) -> None:
+        """Price the quote."""
+
+    @app.action("clear")
+    async def clear(session: Session) -> None: ...
+
+    actions = app.spec.interface.actions
+    assert [(a.name, a.description) for a in actions] == [
+        ("price", "Price the quote."),
+        ("clear", ""),
+    ]
+    assert actions[0].payload == Quote.model_json_schema()
+    assert actions[1].payload is None
+    assert app.document["interface"]["actions"][0]["payload"]["required"] == ["values"]
+    with pytest.raises(TypeError, match="is a pydantic model"):
+        app.action("bad", payload=dict)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="already has an action 'price'"):
+        app.action("price")(price)
+
+
+async def test_a_press_its_model_refuses_never_reaches_its_handler():
+    """REACTOR_UI RU-5: the payload is checked against its model, each field
+    and why; the handler is given the model, an action taking nothing nothing."""
     app = quote_app()
     seen: list = []
 
-    @app.action("price")
-    async def price(session: Session, payload: dict) -> None:
-        seen.append(payload)
+    @app.action("price", payload=Quote)
+    async def price(session: Session, quote: Quote) -> None:
+        seen.append(quote)
+
+    @app.action("clear")
+    async def clear(session: Session) -> None:
+        seen.append("cleared")
 
     host, _, _ = hosted(app)
     session = await host.open()
-    with pytest.raises(ValueError, match="seats: 0 is less than the minimum of 1"):
+    with pytest.raises(
+        ValueError,
+        match="'price' was pressed with what it does not take — values.seats: "
+        "Input should be greater than or equal to 1",
+    ):
         await host.action(session, "price", {"values": {"seats": 0}})
+    with pytest.raises(ValueError, match="clear' was pressed with what it does not take"):
+        await host.action(session, "clear", {"secret": "x"})
     await host.action(session, "price", {"values": {"seats": 2}})
-    assert seen == [{"values": {"seats": 2}}]
+    await host.action(session, "clear")
+    assert seen == [Quote(values=Seats(seats=2)), "cleared"]
 
 
 # --- P-03: the session --------------------------------------------------------------
@@ -942,7 +978,7 @@ async def test_an_application_is_its_plugin_each_reaction_a_contribution():
         await session.send(f"Heard {text}.")
 
     @app.action("save")
-    def save(session: Session, payload: dict) -> None: ...
+    def save(session: Session) -> None: ...
 
     platform = PluginPlatform()
     host, channel, _ = hosted(app)

@@ -468,7 +468,10 @@ what the person says (`say`), the option of a choice they pick (`choose`)
 and the action of its code they press (`press`, with its `payload`), in
 order. Here, each is played in the application's session: what it asks is
 answered by the next turn that says or chooses, a press runs its
-`@app.action` with the payload, the other turns are its messages. The judge
+`@app.action` with the payload — the action the session offered under that
+name, with its token, the payload checked against its model (REACTOR_UI
+RU-5); one it does not offer fails the test — the other turns are its
+messages. The judge
 reads the whole conversation — each turn and what it answered — and its
 record, which says what its code kept (`session.record`: an insight, a
 result). On Datalayer, the Evals engine plays it on one session of the

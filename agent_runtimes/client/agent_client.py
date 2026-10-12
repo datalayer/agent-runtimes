@@ -771,6 +771,28 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
     return f"The person presses {turn['what']}" + (f" with {given}" if given else "")
 
 
+def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
+    """The actions a session offers, by name, as its ``loop.session`` event
+    says them (REACTOR_UI RU-5): each with the display that offers it and its
+    token."""
+    offers: dict[str, dict[str, Any]] = {}
+    for line in lines:
+        if not line.startswith("data:"):
+            continue
+        try:
+            event = json.loads(line[len("data:") :].strip())
+        except ValueError:
+            continue
+        if (
+            isinstance(event, dict)
+            and event.get("type") == "CUSTOM"
+            and event.get("name") == "loop.session"
+        ):
+            for offer in (event.get("value") or {}).get("actions") or []:
+                offers[str(offer["name"])] = offer
+    return offers
+
+
 def run_cloud_app_conversation(
     *,
     ingress: str,
@@ -785,9 +807,10 @@ def run_cloud_app_conversation(
     (``/api/v1/apps/sessions``, named ``session`` — the record it is kept
     under), then each turn sent once the one before was answered — a message
     for what the person says, the option's words for a choice they pick (as
-    the chat answers a choice), an action by name with its payload for what
-    they press (``/sessions/{uid}/actions``, the ``loop.action`` the page
-    sends). ``agent`` is the application's agent on the runtime, made on
+    the chat answers a choice), and for what they press the action the
+    session offered under that name, its token and its payload
+    (``/sessions/{uid}/press``, REACTOR_UI RU-5) — an action it did not offer
+    is a failure. ``agent`` is the application's agent on the runtime, made on
     AG-UI, which the session API runs on.
 
     Answers ``status`` ``completed`` with the whole conversation in words
@@ -808,6 +831,9 @@ def run_cloud_app_conversation(
     }
     lines: list[str] = []
     said: list[dict[str, Any]] = []
+    # What the session offers of its code's actions, with their tokens: each
+    # stream starts with what the session is (``loop.session``).
+    offered: dict[str, dict[str, Any]] = {}
 
     def failed(kind: str, message: str, detail: str, url: str) -> dict[str, Any]:
         return {
@@ -843,7 +869,9 @@ def run_cloud_app_conversation(
                     url,
                 )
             response.encoding = "utf-8"
-            _, result = session_result(response.iter_lines(decode_unicode=True))
+            streamed = list(response.iter_lines(decode_unicode=True))
+            _, result = session_result(streamed)
+            offered.update(_session_offers(streamed))
         answer = str((result.get("output") or {}).get("text") or "").strip()
         if words:
             lines.append(words)
@@ -872,10 +900,23 @@ def run_cloud_app_conversation(
     )
     if stopped is not None:
         return stopped
-    for turn in played:
+    for number, turn in enumerate(played):
         if turn["does"] == "press":
-            url = f"{base}/{session}/actions"
-            body: dict[str, Any] = {"name": turn["what"], "payload": turn["payload"]}
+            url = f"{base}/{session}/press"
+            offer = offered.get(turn["what"])
+            if offer is None:
+                message = (
+                    f"The session offered no action {turn['what']!r}: it offers "
+                    f"{', '.join(sorted(offered)) or 'none'}."
+                )
+                return failed("press_not_offered", message, message, url)
+            body: dict[str, Any] = {
+                "action": turn["what"],
+                "display_id": offer["display_id"],
+                "token": offer["token"],
+                "payload": turn["payload"],
+                "idempotency_id": f"{session}-{number}",
+            }
         else:
             url = f"{base}/{session}/messages"
             body = {"text": turn["what"]}

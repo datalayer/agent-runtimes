@@ -21,12 +21,19 @@ import json
 from typing import Any, Dict, List
 
 import pytest
+from pydantic import BaseModel
 from reactor.ui import UiAction, UiActionError
 
 from agent_runtimes.loop.apps import AppHost, Application, sessions
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import ANSWER_DISPLAY_TYPE, AnswerShows
 from agent_runtimes.loop.apps.record import AppRecorder
+
+
+class Row(BaseModel):
+    """What the button presses with: the row it was on (REACTOR_UI RU-5)."""
+
+    row: int = 0
 
 
 async def _ignore(body: Dict[str, Any]) -> None:
@@ -37,9 +44,9 @@ async def hosted(uid: str) -> tuple[sessions.LiveSession, List[Any]]:
     application = Application(id="notes-assistant", agent="example-simple")
     pressed: List[Any] = []
 
-    @application.action("again")
-    async def again(session: Any, payload: dict) -> None:
-        pressed.append(payload)
+    @application.action("again", payload=Row)
+    async def again(session: Any, payload: Row) -> None:
+        pressed.append(payload.model_dump())
         await session.send("Again.")
 
     live = sessions.LiveSession(

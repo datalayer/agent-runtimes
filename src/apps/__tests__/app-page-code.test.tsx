@@ -286,7 +286,7 @@ describe('over the session API', () => {
     });
   });
 
-  it('opens a session, then sends its inputs as the page action', async () => {
+  it('opens a session, then sends its inputs to its page', async () => {
     const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body));
       if (url.endsWith('/api/v1/apps/sessions')) {
@@ -295,8 +295,8 @@ describe('over the session API', () => {
           sse({ type: 'CUSTOM', name: 'loop.session', value: { uid: 's-1' } }),
         );
       }
-      expect(url).toBe('http://runtime/api/v1/apps/sessions/s-1/actions');
-      if (body.payload.inputs.seats === 0) {
+      expect(url).toBe('http://runtime/api/v1/apps/sessions/s-1/page');
+      if (body.inputs.seats === 0) {
         return new Response(
           JSON.stringify({
             detail:
@@ -305,7 +305,7 @@ describe('over the session API', () => {
           { status: 422 },
         );
       }
-      expect(body).toEqual({ name: 'page', payload: { inputs: { seats: 2 } } });
+      expect(body).toEqual({ inputs: { seats: 2 } });
       return new Response(
         sse({
           type: 'CUSTOM',
@@ -359,7 +359,7 @@ describe('the page drawn', () => {
             sse({ type: 'CUSTOM', name: 'loop.session', value: { uid: 'p' } }),
           );
         }
-        const inputs = JSON.parse(String(init?.body)).payload.inputs;
+        const inputs = JSON.parse(String(init?.body)).inputs;
         ran.push(inputs);
         return new Response(
           sse({

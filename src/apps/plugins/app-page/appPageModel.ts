@@ -632,13 +632,14 @@ function formValuesOf(
 }
 
 /**
- * What the page did besides its message, for the session API: the action of
- * the block pressed, the files given with it, the settings it holds. Sent
- * with the chat's own run (AG-UI's `forwardedProps.loop`), so that what it
- * answers streams in the conversation (LOOP R-04).
+ * What the page did besides its message, for the session API: the files
+ * given with it, the settings it holds. Sent with the chat's own run (AG-UI's
+ * `forwardedProps.loop`), so that what it answers streams in the
+ * conversation (LOOP R-04). A block sends a message, never an action of its
+ * own: an action of the application's code is pressed with the token its
+ * session offered, up the ui socket (REACTOR_UI RU-5).
  */
 export type AppPageLoop = {
-  action: { name: string; payload: Record<string, unknown> };
   files?: GivenFile[];
   settings?: Record<string, unknown>;
 };
@@ -693,13 +694,7 @@ export function appPageAction(
   const message = typeof given === 'string' ? given.trim() : '';
   const inputs = paths.inputs ? inputsInWords(app, read('/inputs')) : '';
   const settings = paths.inputs ? settingsOf(app, read('/inputs')) : undefined;
-  const payload = Object.fromEntries(
-    Object.entries(event.context ?? {}).filter(
-      ([key]) => key !== 'message' && key !== 'files',
-    ),
-  );
   const loop = (files?: GivenFile[]): AppPageLoop => ({
-    action: { name: event.name, payload },
     ...(files && files.length > 0 ? { files } : {}),
     ...(settings ? { settings } : {}),
   });

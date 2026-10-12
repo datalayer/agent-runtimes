@@ -302,10 +302,10 @@ describe('what a button does', () => {
       { name: 'send' },
       data({ '/draft': ' Hello ', '/inputs': inputs }),
     );
-    // What the page did goes with it to the session (R-04): the button,
-    // and the settings as the session takes them.
+    // What the page did goes with it to the session (R-04): the settings
+    // as the session takes them — a message, never an action of its own
+    // (REACTOR_UI RU-5).
     const loop = {
-      action: { name: 'send', payload: {} },
       settings: { product: 'Desktop', short: true },
     };
     expect(first).toEqual({
@@ -343,7 +343,6 @@ describe('what a button does', () => {
       inputs: 'Seats: 50\nPlan: Team\nTerm: Annual',
       clear: [],
       loop: {
-        action: { name: 'run', payload: {} },
         settings: settingsOf(quote, {
           seats: 50,
           plan: ['Team'],
@@ -386,7 +385,6 @@ describe('what a button does', () => {
       inputs: 'Report: Summary',
       clear: [],
       loop: {
-        action: { name: 'run', payload: {} },
         files,
         settings: { report: 'Summary', question: '' },
       },
@@ -398,13 +396,7 @@ describe('what a button does', () => {
         { name: 'upload', context: { files } },
         data({ '/inputs': inputs }),
       ),
-    ).toEqual({
-      ...run,
-      loop: {
-        ...(run as { loop: object }).loop,
-        action: { name: 'upload', payload: {} },
-      },
-    });
+    ).toEqual(run);
     expect(
       appPageAction(report, { name: 'upload' }, data({ '/files': files })),
     ).toMatchObject({ loop: { files } });

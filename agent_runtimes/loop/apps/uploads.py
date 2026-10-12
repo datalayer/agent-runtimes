@@ -158,6 +158,20 @@ def page_refused(app: AppSpec, files: Sequence[Any]) -> Optional[str]:
     return None
 
 
+def given_refused(app: AppSpec, files: Sequence[Any]) -> Optional[str]:
+    """Why files given with a run are refused, in a sentence; None when its
+    page's File upload asks for each of them, or ``interface.uploads`` takes
+    them (LOOP P-21).
+
+    A page's block sends its files with a message, as the composer does
+    (REACTOR_UI RU-5): what its page asks for is said first.
+    """
+    refused = page_refused(app, files)
+    if refused is None or unasked_refused(app, files) is None:
+        return None
+    return refused
+
+
 #: What a model is given whole, when the application has no computer to read it in.
 SEEN_KINDS: Tuple[str, ...] = ("image/*", "audio/*", "application/pdf")
 

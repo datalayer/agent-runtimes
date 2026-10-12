@@ -37,6 +37,7 @@ import type {
   AppAssistantCharacter,
   AppEmbedMode,
   AppHostUser,
+  AppActionSpec,
   AppCommandSpec,
   AppConnectionSpec,
   AppPapSpec,
@@ -252,6 +253,7 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
       starters: [],
       commands: [],
       modes: [],
+      actions: [],
       profiles: [],
       language: DEFAULT_LANGUAGE,
       translations: {},
@@ -540,6 +542,18 @@ function parseRule(data: Data): AppRuleSpec {
 }
 
 /** A slash command (LOOP P-19); a wrong one is said by the checks. */
+/** An action of its code, typed (REACTOR_UI RU-5): its payload's schema kept as written. */
+function parseAction(data: Data): AppActionSpec {
+  const action: AppActionSpec = { name: text(data.name) };
+  if (text(data.description)) {
+    action.description = text(data.description);
+  }
+  if (isData(data.payload)) {
+    action.payload = JSON.parse(JSON.stringify(data.payload)) as Data;
+  }
+  return action;
+}
+
 function parseCommand(data: Data): AppCommandSpec {
   return {
     name: text(data.name),
@@ -843,6 +857,7 @@ function parseInterface(data: Data, kind: AppKind): AppInterfaceSpec {
     starters: records(data.starters).map(parseStarter),
     commands: records(data.commands).map(parseCommand),
     modes: records(data.modes).map(parseMode),
+    actions: records(data.actions).map(parseAction),
     profiles: records(data.profiles).map(parseProfile),
     language: text(data.language, DEFAULT_LANGUAGE),
     translations: mapValues(recordsBy(data.translations), parseTranslation),
@@ -1447,6 +1462,18 @@ function dumpInterface(spec: AppInterfaceSpec, kind: AppKind): Data {
           );
         if (mode.default) {
           written.data.default = mode.default;
+        }
+        return written.data;
+      }),
+    )
+    .list(
+      'actions',
+      (spec.actions ?? []).map(action => {
+        const written = new Writer()
+          .text('name', action.name, '\u0000')
+          .text('description', action.description ?? '');
+        if (action.payload) {
+          written.data.payload = { ...action.payload };
         }
         return written.data;
       }),

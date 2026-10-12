@@ -214,13 +214,13 @@ describe('commands and modes in the composer', () => {
     // What a page sends with its own message goes over it, `loop` key by key.
     expect(
       runForwardedProps([runProps.value as never], {
-        loop: { action: { name: 'save', payload: {} } },
+        loop: { settings: { tone: 'Warm' } },
         voice: { said: true },
       }),
     ).toEqual({
       loop: {
         modes: { depth: 'thorough' },
-        action: { name: 'save', payload: {} },
+        settings: { tone: 'Warm' },
       },
       voice: { said: true },
     });

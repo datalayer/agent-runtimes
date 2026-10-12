@@ -3,7 +3,7 @@
 
 """The session API: an application's sessions over the wire (LOOP R-04).
 
-The lifecycle of §10 — start, message, action, settings change, stop and
+The lifecycle of §10 — start, message, press, settings change, stop and
 resume — for the sessions of an application whose agent runs on this
 runtime, each streamed as the AG-UI events the chat already reads. The routes
 are `agent_runtimes.routes.apps`'; this module is what they drive.
@@ -25,12 +25,18 @@ What answers depends on how the application was written:
   streams, its steps and what it asks are AG-UI events, and ``session.agent``
   is the agent the runtime made, with its tools and its rules.
 
-A file given with an action is the session's: an application with a shell
+A file given with a run is the session's: an application with a shell
 has it put in its sandbox, where its agent reads it in code, whatever its
 type and size; one without a shell is given a text file in the message, and
 refused anything else, in a sentence. A file asked by an application's code
-(``session.ask(FileQuestion(...))``) is answered by a file given with an
-action — before or after it is asked.
+(``session.ask(FileQuestion(...))``) is answered by a file given — before or
+after it is asked.
+
+The actions of its code are typed (REACTOR_UI RU-5): each declared with the
+model of its payload (``interface.actions``), pressable only with a token
+this session minted — on a display its code showed, or on the application's
+own (`APP_DISPLAY`, `LiveSession.offered`) — checked before its code runs,
+and never said to the model.
 
 What the code shows besides its text — what its answers show, its steps,
 its elements, its messages' authors, its window messages — is said as
@@ -42,8 +48,9 @@ When the code asks the person something, the stream ends on the question —
 the question in words, its display on the ui socket (an ``ask`` op offering
 ``reactor.answer``, REACTOR_UI RU-4), and ``RUN_FINISHED`` whose result is
 ``{asking}`` — and the session
-waits: a message answers text or a choice, an action's file a file, a
-settings change a form; the rest of the turn is streamed on that answer's
+waits: a press of what it offered answers it (a message, text or a choice,
+from a client of the session API; a settings change, a form), a file given
+a file; the rest of the turn is streamed on that answer's
 request.
 """
 
@@ -74,7 +81,7 @@ from typing import (
     Tuple,
 )
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from reactor.ui import (
     ANSWER_ACTION,
     ActionRegistry,
@@ -87,6 +94,7 @@ from reactor.ui import (
     ShowOp,
     UiAction,
     UiActionBusy,
+    UiActionPayloadInvalid,
     UiActionRefused,
     UiOp,
     UnknownUiAction,
@@ -102,9 +110,9 @@ from agent_runtimes.loop.apps.agent import AppAgent
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import AnswerShows, answer_actions
 from agent_runtimes.loop.apps.composer import mode_choice, profile_choice, run_effect
-from agent_runtimes.loop.apps.forms import field_title, form_fields, form_values_refused
+from agent_runtimes.loop.apps.forms import field_title, form_fields
 from agent_runtimes.loop.apps.host_user import HostUser, reads_user, signed_host_context
-from agent_runtimes.loop.apps.pages import LOOP_PAGE, PAGE_ACTION
+from agent_runtimes.loop.apps.pages import LOOP_PAGE, page_values
 from agent_runtimes.loop.apps.record import AppRecorder, agent_recorder
 from agent_runtimes.loop.apps.session import (
     ChoiceQuestion,
@@ -130,10 +138,9 @@ from agent_runtimes.loop.apps.session import (
     shown_step,
 )
 from agent_runtimes.loop.apps.uploads import (
+    given_refused,
     media_part,
-    page_refused,
     seen_whole,
-    unasked_refused,
 )
 from agent_runtimes.types import AppSpec
 
@@ -193,7 +200,7 @@ def _file_name(name: str) -> str:
 
 
 def given_files(raw: Any) -> List[UploadedFile]:
-    """The files an action gives, as File upload hands them: ``{name, type, data_url}``.
+    """The files a run gives, as File upload hands them: ``{name, type, data_url}``.
 
     Raises
     ------
@@ -471,14 +478,11 @@ def code_of(app: AppSpec, agent_id: str = "") -> Any:
     return _CODE[key]
 
 
-class AnswerPress(BaseModel):
-    """What a button of an answer sends with its action: what it read.
-
-    Its fields are the application's own until its actions are typed
-    (REACTOR_UI RU-5).
-    """
-
-    model_config = ConfigDict(extra="allow")
+#: The display a session offers its code's actions on (REACTOR_UI RU-5): the
+#: application itself, its actions declared in its Appspec — what a page's
+#: block or a client of the session API presses with their tokens, as a
+#: button of a display its code showed presses what that display offered.
+APP_DISPLAY = "app"
 
 
 #: The longest input or output of a step the chat is sent, in characters.
@@ -712,6 +716,8 @@ class LiveSession:
             "settings": dict(self.settings),
             "profile": self.profile or None,
             "asking": question_of(self._question) if self._question else None,
+            # What its code does, offered with this session's tokens (RU-5).
+            "actions": self.offered(),
             "files": [dict(item) for item in self.files],
             "python": self.written_in_python,
             "turns": sum(1 for m in self.messages if m.get("role") == "user"),
@@ -1042,10 +1048,9 @@ class LiveSession:
                     f"{self.app.name} has no code here: nothing offers an action."
                 )
             registry = ActionRegistry(secrets.token_bytes(32))
-            for name in self.host.app.actions:
-                registry.register(
-                    name, AnswerPress, self._run_pressed, plugin=self.app.id
-                )
+            # Each typed by the model its code declares (REACTOR_UI RU-5).
+            for name, model in self.host.app.action_payloads.items():
+                registry.register(name, model, self._run_pressed, plugin=self.app.id)
             # What answers what its code asks (REACTOR_UI RU-4): taken by the
             # run that names the press, never dispatched.
             registry.register(
@@ -1058,10 +1063,55 @@ class LiveSession:
         """An answer is the waiting question's, taken by `_answered`."""
         raise RuntimeError("An answer is taken by the run that names it.")
 
-    async def _run_pressed(self, payload: AnswerPress, context: Any) -> None:
-        """A press the registry let through: the code's `@app.action`."""
+    async def _run_pressed(self, payload: BaseModel, context: Any) -> None:
+        """A press the registry let through, its payload its model: the code's
+        `@app.action`."""
         assert self.session is not None
-        await self.host.action(self.session, context.action, payload.model_dump())
+        await self.host.action(self.session, context.action, payload)
+
+    def offered(self) -> List[Dict[str, Any]]:
+        """What the session offers of its code's actions (REACTOR_UI RU-5): each
+        action its Appspec declares, on the application's own display, with
+        the token this session minted — what a page's block or a client of
+        the session API presses. None for an application without code.
+        """
+        if self.host is None:
+            return []
+        registry = self._actions()
+        return [
+            {
+                "display_id": APP_DISPLAY,
+                **registry.offer(self.uid, APP_DISPLAY, name).model_dump(
+                    exclude_none=True
+                ),
+            }
+            for name in self.host.app.actions
+        ]
+
+    def check_press(self, press: UiAction) -> UiAction:
+        """A press checked before anything runs (REACTOR_UI RU-2, RU-5): offered
+        to this session on that display (403), an action its code declares
+        (422), with what it takes (422, each field and why). An answer is
+        checked against its question when the run takes it.
+        """
+        from agent_runtimes.loop.apps.application import action_payload
+
+        if self.host is None:
+            raise UnknownUiAction(
+                f"{self.app.name} has no code here: it offers nothing to press."
+            )
+        registry = self._actions()
+        registry.authorize(self.opened_by, self.uid, press)
+        if press.action != ANSWER_ACTION:
+            try:
+                action_payload(
+                    press.action,
+                    self.host.app.action_payloads[press.action],
+                    press.payload,
+                )
+            except ValueError as wrong:
+                raise UiActionPayloadInvalid(str(wrong)) from None
+        return press
 
     def _answer_shows(
         self,
@@ -1105,13 +1155,9 @@ class LiveSession:
         (403 not offered, 422 unknown) — and kept for the run that runs it,
         which names it (``forwardedProps.loop.press``). Nothing runs here.
         """
-        if self.host is None:
-            raise UnknownUiAction(
-                f"{self.app.name} has no code here: it showed nothing to press."
-            )
         if not self.answers_to(caller):
             raise UiActionRefused(f"Session {self.uid} is not yours to press in.")
-        self._actions().authorize(self.opened_by, self.uid, press)
+        self.check_press(press)
         key = press.idempotency_id or secrets.token_urlsafe(12)
         if key not in self._presses and len(self._presses) >= MAX_PRESSES:
             raise UiActionBusy(
@@ -1408,44 +1454,26 @@ class LiveSession:
             lambda: self.host.files(session, given, said),
         )
 
-    async def _action_code(
-        self,
-        name: str,
-        payload: Mapping[str, Any],
-        text: str,
-        given: List[UploadedFile],
-        press: Optional[UiAction] = None,
-    ) -> None:
-        """A block's action, for the code: its handler, else a message.
+    async def _press_code(self, press: UiAction, given: List[UploadedFile]) -> None:
+        """A press of what was offered, for the code: its `@app.action`, run
+        through the registry that offered it (REACTOR_UI RU-2, RU-5), which
+        answers a retry of the same press once.
 
-        The files given answer what the code asks for a file, now or later in
-        the session; a handler also has them in its payload, under ``files``.
+        The files given with it answer what the code asks for a file, now or
+        later in the session.
         """
         self._keep(given)
         self._unasked.extend(given)
-        if name == PAGE_ACTION:
-            # Its page, run on its inputs (LOOP P-05).
-            if self.session is None:
-                await self._open_code()
-            assert self.session is not None
-            await self.host.page(self.session, payload.get("inputs") or {})
-            return
-        if press is not None:
-            # A button of a display: run through the registry that offered it
-            # (REACTOR_UI RU-2), which answers a retry of the same press once.
-            if self.session is None:
-                await self._open_code()
-            await self._actions().dispatch(self.opened_by, self.uid, press)
-            return
-        handler = self.host.app.actions.get(name)
-        if handler is None:
-            await self._message_code(text.strip() or name)
-            return
+        if self.session is None:
+            await self._open_code()
+        await self._actions().dispatch(self.opened_by, self.uid, press)
+
+    async def _page_code(self, inputs: Mapping[str, Any]) -> None:
+        """Its page, run on its inputs (LOOP P-05)."""
         if self.session is None:
             await self._open_code()
         assert self.session is not None
-        body = {**dict(payload), **({"files": given} if given else {})}
-        await self.host.action(self.session, name, body)
+        await self.host.page(self.session, inputs)
 
     def _answered(
         self, press: UiAction, *, run_id: str = "", head: str = ""
@@ -1511,78 +1539,58 @@ class LiveSession:
 
         return self._start_turn(work, wraps_run=False, head=head)
 
-    def action(
+    def pressed(
         self,
-        name: str,
+        press: UiAction,
         *,
-        payload: Optional[Mapping[str, Any]] = None,
-        text: str = "",
         files: Optional[List[UploadedFile]] = None,
-        bearer: str = "",
         run_id: str = "",
         head: str = "",
-        press: Optional[UiAction] = None,
     ) -> AsyncIterator[str]:
-        """A page block's action: its code's handler, else a turn of its agent.
-
-        ``press`` is a button of a display its code showed, already checked
-        (`pressed`): it runs the action it offered, and nothing else.
+        """A press, checked (`check_press`), run as a turn: an answer to the
+        question waiting (``reactor.answer``), else the `@app.action` it
+        pressed with its typed payload (REACTOR_UI RU-5). Nothing pressed is
+        ever said to the model.
 
         Files given with it are the session's: they answer what the code asks
-        for a file, or are put in the sandbox of an agent with a shell (a text
-        file goes in the message of one without).
+        for a file.
         """
-        given = list(files or [])
+        if press.action == ANSWER_ACTION:
+            return self._answered(press, run_id=run_id, head=head)
         if self.state == "waiting":
-            return self._answer_waiting(
-                text=text, files=given, run_id=run_id, head=head
-            )
-        # What its page asks for, by kind and size (LOOP P-21): checked again here.
-        refused = page_refused(self.app, given)
+            raise SessionRefused(409, self._waiting_for())
+        given = list(files or [])
+        refused = given_refused(self.app, given)
         if refused:
             raise SessionRefused(422, refused)
-        # A form's values are checked again here, against its schema (C-16).
-        refused = form_values_refused(self.app, name, payload or {})
-        if refused:
-            raise SessionRefused(422, refused)
-        if name == PAGE_ACTION and (
-            self.host is None or self.host.app.handler("page") is None
-        ):
+        return self._start_turn(
+            lambda: self._press_code(press, given),
+            run_id=run_id,
+            wraps_run=True,
+            head=head,
+        )
+
+    def run_page(
+        self, inputs: Mapping[str, Any], *, head: str = ""
+    ) -> AsyncIterator[str]:
+        """Its page run on its inputs (LOOP P-05): checked against its form
+        first — refused with the sentence — then its ``@app.page``, its
+        outputs a ``loop.page`` event. Not a turn of the conversation.
+        """
+        if self.host is None or self.host.app.handler("page") is None:
             raise SessionRefused(
                 422,
                 f"{self.app.name} has no page of its code (@app.page) here: nothing runs it.",
             )
-        if self.host is not None:
-            return self._start_turn(
-                lambda: self._action_code(name, payload or {}, text, given, press),
-                run_id=run_id,
-                wraps_run=True,
-                head=head,
-            )
-        # What the block gave — a row chosen, a form's values — said to the
-        # agent, which has no handler of its own.
-        done = (
-            f"On the page, {name}: {json.dumps(dict(payload), ensure_ascii=False, default=str)}"
-            if payload
-            else ""
+        if self.state == "waiting":
+            raise SessionRefused(409, self._waiting_for())
+        try:
+            page_values(self.app, inputs)
+        except ValueError as wrong:
+            raise SessionRefused(422, str(wrong)) from None
+        return self._start_turn(
+            lambda: self._page_code(inputs), wraps_run=True, head=head
         )
-        if not (text.strip() or done or given):
-            raise SessionRefused(
-                422,
-                f"“{name}” gave {self.app.name} nothing to run on: no message, no file.",
-            )
-
-        async def work() -> None:
-            """The turn."""
-            words, parts = await asyncio.to_thread(self._files_for_agent, given)
-            said = "\n\n".join(
-                part
-                for part in (text.strip(), done, self._settings_in_words(), words)
-                if part
-            )
-            await self._run_agent(self._with_turn(said, parts), bearer=bearer)
-
-        return self._start_turn(work, run_id=run_id, wraps_run=False, head=head)
 
     def _keep(self, given: List[UploadedFile], path: str = "") -> None:
         """Say the files given among the session's."""
@@ -1960,8 +1968,9 @@ class LiveSession:
 
         ``forwardedProps.loop`` says what the page did besides the message: the
         settings it holds (``settings``), the option of each mode the person is
-        in (``modes``, LOOP P-19), the action of a block (``action``:
-        ``{name, payload}``) and the files given with it (``files``).
+        in (``modes``, LOOP P-19), the files given (``files``), and a press
+        checked on the ui socket (``press``, REACTOR_UI RU-W) — never an
+        action of its own (RU-5).
 
         The modes' instructions are told to the agent for this run, and the
         model one of them names is run on: through the code's ``session.agent``
@@ -2004,72 +2013,51 @@ class LiveSession:
         if self.session is not None:
             self.session._update_modes(self.modes)
         files = given_files(loop.get("files"))
-        action = loop.get("action")
-        if action is not None and not isinstance(action, Mapping):
-            raise SessionRefused(422, "The action sent is not {name, payload}.")
-        if action is not None and "display_id" in action:
-            # A display's button is pressed on the ui socket, never here.
+        if "action" in loop:
+            # A page's block says a message, its files and its settings; a
+            # button presses what was offered, up the ui socket (REACTOR_UI RU-5).
             raise SessionRefused(
                 422,
-                "A press of a display goes up the ui socket (REACTOR_UI RU-W): "
-                "the run names it with forwardedProps.loop.press.",
+                "A run carries no action: a page's block sends a message, and a "
+                "button presses what was offered up the ui socket, the run naming "
+                "it with forwardedProps.loop.press.",
             )
-        # A button of a display the code showed, checked on the socket
-        # (REACTOR_UI RU-2, RU-W): the run says which, and nothing else.
-        press: Optional[UiAction] = None
         if "press" in loop:
-            if action is not None:
-                raise SessionRefused(422, "A run names a press or an action, not both.")
-            press = self._take_press(loop.get("press"))
-            if press.action == ANSWER_ACTION:
-                return self._answered(press, run_id=run_id)
-            action = {"name": press.action, "payload": dict(press.payload)}
+            # Checked on the socket (REACTOR_UI RU-W): the run says which, and
+            # nothing else.
+            return self.pressed(
+                self._take_press(loop.get("press")), files=files, run_id=run_id
+            )
         if self.state == "waiting":
             # The chat answers by pressing what the question offered; only a
             # file, attached, answers a file (until REACTOR_UI RU-6).
             if not (isinstance(self._question, FileQuestion) and files):
                 raise SessionRefused(409, self._waiting_for())
             return self._answer_waiting(files=files, run_id=run_id)
-        if action is None:
-            # Files sent without being asked: what its Appspec takes (P-21).
-            refused = unasked_refused(self.app, files)
-            if refused:
-                raise SessionRefused(422, refused)
+        # Files given: what its Appspec takes, or its page's File upload asks for (P-21).
+        refused = given_refused(self.app, files)
+        if refused:
+            raise SessionRefused(422, refused)
         if self.host is not None:
-            if action is None:
-                if files:
-                    return self._start_turn(
-                        lambda: self._settings_then(
-                            changed, lambda: self._files_code(text, files)
-                        ),
-                        run_id=run_id,
-                        wraps_run=True,
-                    )
-                if not text:
-                    raise SessionRefused(422, "Nothing to send: write a message first.")
+            if files:
                 return self._start_turn(
                     lambda: self._settings_then(
-                        changed, lambda: self._message_code(text)
+                        changed, lambda: self._files_code(text, files)
                     ),
                     run_id=run_id,
                     wraps_run=True,
                 )
-            return self.action(
-                str((action or {}).get("name") or "run"),
-                payload=(action or {}).get("payload") or {},
-                text=text,
-                files=files,
+            if not text:
+                raise SessionRefused(422, "Nothing to send: write a message first.")
+            return self._start_turn(
+                lambda: self._settings_then(changed, lambda: self._message_code(text)),
                 run_id=run_id,
-                press=press,
+                wraps_run=True,
             )
         if files and not text:
             raise SessionRefused(
                 422, "A file was given with no message to run it with."
             )
-        if action is not None:
-            refused = page_refused(self.app, files)
-            if refused:
-                raise SessionRefused(422, refused)
         # A spec: the chat's conversation is the session's, the files given
         # are put where its agent reads them, and the run is its agent's.
         forwarded = body.get("forwardedProps")
