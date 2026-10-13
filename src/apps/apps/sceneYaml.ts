@@ -44,6 +44,7 @@ export const emptySceneSpec = (): SceneSpec => ({
   schema: SCENE_SCHEMA,
   id: '',
   version: '0.0.1',
+  kind: 'team',
   name: '',
   description: '',
   tags: [],
@@ -70,6 +71,9 @@ export const emptySceneSpec = (): SceneSpec => ({
   },
   deployment: { account: '', page: '', addresses: {} },
   setup: [],
+  actors: [],
+  lines: [],
+  live: '',
 });
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

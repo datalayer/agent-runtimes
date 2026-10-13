@@ -1289,7 +1289,10 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
  * `pact` or `a2a` block configuring a protocol it does not list.
  */
 export function protocolsProblems(
-  app: Pick<AppSpec, 'protocols' | 'enabled' | 'pap' | 'pact' | 'a2a'>,
+  app: Pick<
+    AppSpec,
+    'protocols' | 'enabled' | 'pap' | 'pact' | 'a2a' | 'commerce'
+  >,
 ): string[] {
   const problems: string[] = [];
   const seen: string[] = [];
