@@ -27,6 +27,9 @@
  * The build fails when what a page fetches before it can draw an application
  * — the module and the chunks it imports statically — is larger, gzipped,
  * than `INITIAL_GZIP_BUDGET`, and prints the size of every file it wrote.
+ * It fails, too, when a file it wrote holds a secret (`embedSecrets`), and
+ * nothing of the environment it is built in enters it (`envPrefix`): a host
+ * configures the element by its attributes.
  *
  * The app's build, as `vite.config.ts` sets it up (its plugins, its
  * dependency fixes), with one entry instead of the HTML pages.
@@ -43,6 +46,7 @@ import {
   type UserConfig,
 } from 'vite';
 import base from './vite.config';
+import { secretsIn } from './src/apps/embed/embeddedSecrets';
 
 /** The script a host writes. */
 const EMBED_SCRIPT_FILE = 'datalayer-app.js';
@@ -96,6 +100,35 @@ function embedLoader(): Plugin {
         fileName: EMBED_SCRIPT_FILE,
         source: code,
       });
+    },
+  };
+}
+
+/**
+ * No file of the embed holds a secret (PAP_DATALAYER B-02): the PAP SDK's
+ * emitted-bundle test, run on what the build wrote. Says the kind and the
+ * file, never what matched.
+ */
+function embedSecrets(): Plugin {
+  return {
+    name: 'datalayer-app-secrets',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const found = Object.values(bundle).flatMap(file => {
+        const text =
+          file.type === 'chunk'
+            ? file.code
+            : typeof file.source === 'string'
+              ? file.source
+              : Buffer.from(file.source).toString('utf8');
+        return secretsIn(text).map(kind => `${kind} in ${file.fileName}`);
+      });
+      if (found.length) {
+        this.error(
+          `The embed would ship ${found.join(', ')}: anybody's page loads it. ` +
+            'Remove the secret from the code or the environment it is built in.',
+        );
+      }
     },
   };
 }
@@ -286,6 +319,10 @@ export default defineConfig(async env => {
     // Nothing is copied from `public/`.
     publicDir: false,
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+    // Nothing of the environment it is built in: `import.meta.env` read whole
+    // (`env?.VITE_…`) would carry every `VITE_` variable, keys included, to
+    // anybody's page (found 2026-10-13). No variable carries this prefix.
+    envPrefix: 'DATALAYER_EMBED_',
     build: {
       outDir: 'dist-embed',
       emptyOutDir: true,
@@ -311,6 +348,7 @@ export default defineConfig(async env => {
           ),
       ),
     embedLoader(),
+    embedSecrets(),
     embedSizes(),
   ];
   const rollupOptions = (config.build!.rollupOptions ??= {});
