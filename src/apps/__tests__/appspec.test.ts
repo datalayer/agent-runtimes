@@ -543,7 +543,7 @@ describe('writing an Appspec', () => {
       access: 'read',
     });
     // No business said: none (AGENT_PROTOCOLS PR-13).
-    expect(app.pact?.business.enabled).toBe(false);
+    expect(app.pact?.business?.enabled).toBe(false);
     expect(app.a2a?.extensions).toEqual([
       { ...document.a2a.extensions[0], required: false },
       {

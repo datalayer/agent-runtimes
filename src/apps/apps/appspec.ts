@@ -574,7 +574,12 @@ function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
 /** PACT as its document says it, nothing at its default. */
 function dumpPact(pact: AppPactSpec | undefined): Data {
   if (!pact) return {};
-  const business = pact.business;
+  const business = pact.business ?? {
+    enabled: false,
+    brand: '',
+    scopes: {},
+    registeredAgents: [],
+  };
   return new Writer()
     .list(
       'connections',
@@ -1383,7 +1388,7 @@ export function protocolsProblems(
     ),
     pact: Boolean(
       app.pact &&
-      (app.pact.connections.length > 0 || app.pact.business.enabled),
+      (app.pact.connections.length > 0 || app.pact.business?.enabled),
     ),
     a2a: Boolean(app.a2a && app.a2a.extensions.length > 0),
   };

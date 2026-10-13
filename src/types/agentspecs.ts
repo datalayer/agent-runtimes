@@ -624,8 +624,8 @@ export interface AppPactBusinessSpec {
 /** PACT: the businesses it asks for each person, and whether it answers as one. */
 export interface AppPactSpec {
   connections: AppPactConnectionSpec[];
-  /** As a business (PR-13): `enabled` false, it is none. */
-  business: AppPactBusinessSpec;
+  /** As a business (PR-13): absent or not `enabled`, it is none. Read, it is always said. */
+  business?: AppPactBusinessSpec;
 }
 
 /** The most one purchase may cost at a merchant (AGENT_PROTOCOLS PI-22). */
