@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.4
+
+On agentspecs 0.0.83.
+
+- **Sign in at a company, every way** (AGENT_PROTOCOLS PI-56): the chat's sign-in card draws Mediated Sign-In — Datalayer's own page, what the company asks typed there and never in the chat — and a PACT business's `pact_sign_in` as a PAP company's Device Sign-In; the page and its code travel only in the `PapSignIn` display, so the model reads neither. In the Preview, the hosted page, the embed and the run page.
+- **`pap_handoff`** (PAP_DATALAYER P-08) in the action specs, classed with `pap_ask`.
+
 ## 1.5.3
 
 On personal-agent-protocol 0.16.0.
