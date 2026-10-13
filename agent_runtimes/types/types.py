@@ -2270,6 +2270,10 @@ class AppPapSpec(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    profile: Optional[str] = Field(
+        default=None,
+        description="The Personal Agent Protocol profile it is written for: `draft-01` (PAP_DATALAYER S-03)",
+    )
     connections: List[Dict[str, Any]] = Field(default_factory=list)
     company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
 

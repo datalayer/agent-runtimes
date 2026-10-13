@@ -5,6 +5,7 @@ with. Its Appspec says so in `pap.company` (agentspecs 0.0.77):
 
 ```yaml
 pap:
+  profile: draft-01
   company:
     enabled: true
     signed_out: true # a personal agent may ask before signing in

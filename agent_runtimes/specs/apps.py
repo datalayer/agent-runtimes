@@ -200,6 +200,7 @@ BOOKKEEPING_DESK_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "northwind",
@@ -1490,6 +1491,7 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [],
             "company": {
                 "enabled": True,
@@ -1818,6 +1820,7 @@ LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",
@@ -2381,6 +2384,7 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",
@@ -2543,6 +2547,7 @@ ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",
@@ -3416,6 +3421,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",
@@ -3929,6 +3935,7 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",
@@ -4238,6 +4245,7 @@ SIGN_IN_DESK_APP_0_0_1 = AppSpec.model_validate(
         "protocols": ["pap"],
         "ui": [],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {
                     "id": "manzanita",

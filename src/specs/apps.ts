@@ -217,6 +217,7 @@ export const BOOKKEEPING_DESK_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'northwind',
@@ -1671,6 +1672,7 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [],
     company: {
       enabled: true,
@@ -2018,6 +2020,7 @@ export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -2614,6 +2617,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -2789,6 +2793,7 @@ export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -3822,6 +3827,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -4370,6 +4376,7 @@ export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -4713,6 +4720,7 @@ export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
   protocols: ['pap'],
   ui: [],
   pap: {
+    profile: 'draft-01',
     connections: [
       {
         id: 'manzanita',
@@ -5885,6 +5893,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     ],
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'northwind',
@@ -6795,6 +6804,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     ],
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       company: {
         enabled: true,
         interfaces: ['agent', 'openapi'],
@@ -7010,6 +7020,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       "You relay the person's questions to Manzanita Outfitters' own agent, through its tools, and show what the shop writes as it arrives, as the shop's words. Never finish the shop's sentences for it.",
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',
@@ -7384,6 +7395,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'You work with Manzanita Outfitters for the person you talk to, through its tools. Ask the shop before saying anything about an order; when it asks the person to sign in, say so and wait. Never confirm what the shop proposes on your own: the person approves it, word for word, on Waiting for you.',
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',
@@ -7484,6 +7496,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       "You read the person's orders at Manzanita Outfitters, through its tools, and change nothing. When the shop asks the person to sign in, say so and wait. If they ask to stop, tell them Disconnect under In your name ends the sign-in.",
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',
@@ -8250,6 +8263,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',
@@ -8576,6 +8590,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       "You talk with Manzanita Outfitters' own agent for the person, through its tools, in one conversation. When they ask for a person at the shop, ask the shop for one of its people and say who answers. Every message to the shop goes out in their name: send it only once they agreed.",
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',
@@ -8781,6 +8796,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'You help the person at Manzanita Outfitters, through its tools. When the shop needs them signed in, show its protected form and wait. Never ask for a password, a code or anything the form asks in the conversation.',
     protocols: ['pap'],
     pap: {
+      profile: 'draft-01',
       connections: [
         {
           id: 'manzanita',

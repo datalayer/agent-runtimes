@@ -250,6 +250,7 @@ def test_its_companies_are_asked_for_with_its_spaces(
         **DESK,
         "protocols": ["pap"],
         "pap": {
+            "profile": "draft-01",
             "connections": [
                 {"id": "orders", "company": "manzanita.example", "scopes": ["orders:read"]}
             ]

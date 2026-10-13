@@ -41,6 +41,7 @@ import type {
   AppCommandSpec,
   AppConnectionSpec,
   AppPapSpec,
+  PapProfile,
   AppPactSpec,
   AppCommerceSpec,
   AppA2ASpec,
@@ -363,6 +364,26 @@ function parseConnection(data: Data): AppConnectionSpec {
   };
 }
 
+/** The Personal Agent Protocol profiles Datalayer speaks, as agentspecs' `PAP_PROFILES` (PAP_DATALAYER S-03). */
+export const PAP_PROFILES: readonly PapProfile[] = ['draft-01'];
+
+/** The profile a `pap` block is written for when the Studio or a builder starts one. */
+export const PAP_PROFILE: PapProfile = PAP_PROFILES[PAP_PROFILES.length - 1];
+
+/**
+ * What is wrong with a `pap` block's profile, in agentspecs' sentence
+ * (`pap_profile_problem`); `undefined` when it is one Datalayer speaks.
+ */
+export function papProfileProblem(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') {
+    return `Its \`pap\` block names no Personal Agent Protocol profile: add \`profile: ${PAP_PROFILE}\`.`;
+  }
+  if (!PAP_PROFILES.includes(value as PapProfile)) {
+    return `This application asks for Personal Agent Protocol profile “${String(value)}”; Datalayer speaks ${PAP_PROFILES.join(' or ')}.`;
+  }
+  return undefined;
+}
+
 const PAP_INTERFACES = ['agent', 'openapi', 'mcp', 'web'] as const;
 const PAP_SIGN_IN = ['direct', 'device', 'mediated'] as const;
 const PAP_DEFAULT_INTERFACES = ['agent'] as const;
@@ -385,6 +406,7 @@ const enumsOf = <T extends string>(
 function parsePap(data: Data): AppPapSpec {
   const company = isData(data.company) ? data.company : {};
   return {
+    profile: data.profile as PapProfile,
     connections: records(data.connections).map(connection => ({
       id: text(connection.id),
       company: text(connection.company),
@@ -429,6 +451,7 @@ function parsePap(data: Data): AppPapSpec {
 function dumpPap(pap: AppPapSpec | undefined): Data {
   if (!pap) return {};
   return new Writer()
+    .text('profile', pap.profile, '\u0000')
     .list(
       'connections',
       pap.connections.map(
@@ -1238,8 +1261,15 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.decision)) {
     app.decision = parseDecision(data.decision);
   }
-  if (isData(data.pap)) {
-    app.pap = parsePap(data.pap);
+  // A `pap` block names a profile Datalayer speaks, or it is refused and not
+  // read (PAP_DATALAYER S-03); a block saying nothing is no block.
+  if (isData(data.pap) && Object.keys(data.pap).length > 0) {
+    const problem = papProfileProblem(data.pap.profile);
+    if (problem) {
+      problems.push(problem);
+    } else {
+      app.pap = parsePap(data.pap);
+    }
   }
   if (isData(data.pact)) {
     app.pact = parsePact(data.pact);

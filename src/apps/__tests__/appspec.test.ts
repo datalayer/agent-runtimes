@@ -19,6 +19,7 @@ import {
   APPSPEC_KEY_ORDER,
   APP_SCHEMA,
   DEFAULT_EMOJI,
+  PAP_PROFILES,
   dumpAppspec,
   emptyAppspec,
   parseAppspec,
@@ -385,7 +386,10 @@ describe('writing an Appspec', () => {
     ).toEqual([]);
     expect(
       said({
-        pap: { connections: [{ id: 'o', company: 'manzanita.example' }] },
+        pap: {
+          profile: 'draft-01',
+          connections: [{ id: 'o', company: 'manzanita.example' }],
+        },
       }),
     ).toEqual([
       "Its `pap` block configures Personal Agent Protocol, which it does not list: add 'pap' to `protocols`.",
@@ -422,18 +426,19 @@ describe('writing an Appspec', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['pap'],
-      pap: { company },
+      pap: { profile: 'draft-01', company },
     });
     expect(problems).toEqual([]);
     expect(app.pap?.company.registeredAgents).toEqual([agent]);
     expect(app.pap?.company.interfaces).toEqual(['agent', 'mcp']);
-    expect(dumpAppspec(app).pap).toEqual({ company });
+    expect(dumpAppspec(app).pap).toEqual({ profile: 'draft-01', company });
   });
   it('reads and writes Personal Agent Protocol (PAP_DATALAYER S-01)', () => {
     const { app, problems } = parseAppspec({
       kind: 'chat',
       protocols: ['pap'],
       pap: {
+        profile: 'draft-01',
         connections: [
           {
             id: 'orders',
@@ -447,6 +452,7 @@ describe('writing an Appspec', () => {
     });
     expect(problems).toEqual([]);
     expect(app.pap).toEqual({
+      profile: 'draft-01',
       connections: [
         {
           id: 'orders',
@@ -470,8 +476,9 @@ describe('writing an Appspec', () => {
         operations: [],
       },
     });
-    // Nothing at its default is written.
+    // Nothing at its default is written; the profile always is.
     expect(dumpAppspec(app).pap).toEqual({
+      profile: 'draft-01',
       connections: [
         {
           id: 'orders',
@@ -485,6 +492,24 @@ describe('writing an Appspec', () => {
     // Without it, the application has none.
     expect(parseAppspec({ kind: 'chat' }).app.pap).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pap');
+  });
+  it('refuses a Personal Agent Protocol profile it does not speak, in a sentence (PAP_DATALAYER S-03)', () => {
+    const connections = [{ id: 'orders', company: 'manzanita.example' }];
+    const read = (pap: Record<string, unknown>) =>
+      parseAppspec({ kind: 'chat', protocols: ['pap'], pap });
+    expect(PAP_PROFILES).toEqual(['draft-01']);
+    expect(read({ profile: 'draft-01', connections }).problems).toEqual([]);
+    const unknown = read({ profile: 'draft-02', connections });
+    expect(unknown.problems).toEqual([
+      'This application asks for Personal Agent Protocol profile “draft-02”; Datalayer speaks draft-01.',
+    ]);
+    expect(unknown.app.pap).toBeUndefined();
+    expect(read({ connections }).problems).toEqual([
+      'Its `pap` block names no Personal Agent Protocol profile: add `profile: draft-01`.',
+    ]);
+    // A block saying nothing is no block.
+    expect(read({}).problems).toEqual([]);
+    expect(read({}).app.pap).toBeUndefined();
   });
   it('reads and writes PACT businesses and A2A card extensions (AGENT_PROTOCOLS PI-01, PR-02)', () => {
     const document = {
@@ -584,6 +609,7 @@ describe('writing an Appspec', () => {
       kind: 'chat',
       protocols: ['pap'],
       pap: {
+        profile: 'draft-01',
         company: { enabled: true, extensions: ['operations'], operations },
       },
     };

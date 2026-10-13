@@ -5,6 +5,7 @@ An application works with a company **as a personal agent** by naming it in
 
 ```yaml
 pap:
+  profile: draft-01 # the Personal Agent Protocol profile it is written for
   connections:
     - id: orders
       company: manzanita.example # the domain, as discovery takes it

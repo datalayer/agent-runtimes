@@ -565,8 +565,16 @@ export interface AppPapOperationSpec {
   userApprovalRequired: boolean;
 }
 
+/**
+ * A Personal Agent Protocol profile Datalayer speaks: a draft the PAP SDK
+ * implements (`draft-01` is its `PROTOCOL_PROFILE` 0.1; PAP_DATALAYER S-03).
+ */
+export type PapProfile = 'draft-01';
+
 /** Personal Agent Protocol: the companies it works with, and whether it is one. */
 export interface AppPapSpec {
+  /** The profile its `pap` block is written for: one Datalayer speaks, or the block is refused. */
+  profile: PapProfile;
   connections: AppPapConnectionSpec[];
   company: AppPapCompanySpec;
 }

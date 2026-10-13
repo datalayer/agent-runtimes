@@ -59,8 +59,11 @@ def _exchange_desk() -> Application:
 
 
 def test_the_personal_agent_role_is_order_desks_block() -> None:
-    built = parse_app(_order_desk().document).pap
+    document = _order_desk().document
+    built = parse_app(document).pap
     assert built == APP_CATALOGUE["order-desk"].pap
+    # The block names the profile it is written for, first (PAP_DATALAYER S-03).
+    assert list(document["pap"])[0] == "profile" and built.profile == "draft-01"
 
 
 def test_the_company_role_is_exchange_desks_block() -> None:

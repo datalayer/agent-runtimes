@@ -1147,8 +1147,23 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPap: {
       additionalProperties: false,
       description:
-        'Personal Agent Protocol: the companies it works with, and whether it is one.',
+        'Personal Agent Protocol: the companies it works with, and whether it is one.\n\nA `pap` block names the profile it is written for (PAP_DATALAYER S-03): one\nDatalayer speaks, or it is refused in a sentence. An application without the\nblock has none.',
       properties: {
+        profile: {
+          anyOf: [
+            {
+              const: 'draft-01',
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'The Personal Agent Protocol profile it is written for: `draft-01`',
+          title: 'Profile',
+        },
         connections: {
           description: 'Companies, as a personal agent',
           items: {

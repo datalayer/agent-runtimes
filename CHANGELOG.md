@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+Needs agentspecs released with `pap.profile` (agentspecs e706a8f).
+
+- **A `pap` block names its profile** (PAP_DATALAYER S-03): `AppPapSpec.profile` (`PapProfile`, `'draft-01'`), read and written first by the TypeScript reader and writer (`PAP_PROFILES`, `PAP_PROFILE`, `papProfileProblem`: an unknown profile, or a block naming none, refused in agentspecs' sentence and not read); `app.company_connection` and `app.as_company` write it; the catalogue regenerated.
+
 ## 1.5.7
 
 On agentspecs 0.0.85.

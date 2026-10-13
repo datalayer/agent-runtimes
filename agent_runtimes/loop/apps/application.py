@@ -867,7 +867,10 @@ class Application:
         )
 
     def _pap(self) -> Dict[str, Any]:
-        pap = self._document.setdefault("pap", {})
+        from agentspecs.apps import PAP_PROFILES
+
+        # A `pap` block names the profile it is written for (PAP_DATALAYER S-03).
+        pap = self._document.setdefault("pap", {"profile": PAP_PROFILES[-1]})
         # Its `pap` block is read only with the protocol listed (AGENT_PROTOCOLS
         # PS-02): a builder that writes the block says the application speaks it.
         protocols = self._document.setdefault("protocols", [])

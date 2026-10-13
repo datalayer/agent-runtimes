@@ -197,6 +197,7 @@ Appspec:
 
 ```yaml
 pap:
+  profile: draft-01                # the Personal Agent Protocol profile it is written for
   connections:
     - id: orders
       company: manzanita.example   # the domain discovery takes; nothing else
@@ -296,6 +297,7 @@ An application can itself be a company personal agents work with:
 
 ```yaml
 pap:
+  profile: draft-01
   company:
     enabled: true                  # publish it as a company at Ship
     signed_out: true               # personal agents may ask before sign-in
