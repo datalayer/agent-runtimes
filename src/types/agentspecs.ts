@@ -550,15 +550,49 @@ export interface AppPapCompanySpec {
 }
 
 /**
+ * One bound of a standing permission (PAP_DATALAYER R-07): a term of the other
+ * company's operations, by its dotted path, bounded by a term of this one —
+ * its maximum, or the one value allowed (one of the two).
+ */
+export interface AppPapStandingLimitSpec {
+  path: string;
+  maximum?: string;
+  allowed?: string;
+}
+
+/**
+ * What an operation gives instead of calling a tool (PAP_DATALAYER R-07, the
+ * Ledgerly pattern): once the person confirms it, the application may confirm,
+ * at one of its own company connections and in their account there, what stays
+ * within these bounds — recorded as the approval in advance they would give in
+ * Datalayer.
+ */
+export interface AppPapStandingSpec {
+  /** The id of one of its own company connections (`as: user`, `write`). */
+  connection: string;
+  /** What confirming there does. */
+  action: 'write' | 'buy';
+  /** Every term bounded, 1 to 20. */
+  limits: AppPapStandingLimitSpec[];
+  /** The term of this operation giving how many times, at most. */
+  uses: string;
+  /** The term of this operation giving for how many days, at most 90. */
+  days: string;
+}
+
+/**
  * Something a personal agent may ask the application to do for the person,
  * done only once they confirm its exact terms (PAP_DATALAYER B-04): the call
- * of `tool` is proposed instead of made, its arguments the terms.
+ * of `tool` is proposed instead of made, its arguments the terms — or, for one
+ * that `allows`, a standing permission given (R-07).
  */
 export interface AppPapOperationSpec {
   /** The action's name at this company: `orders.exchange`. */
   action: string;
-  /** The application's tool that does it, called with the terms. */
+  /** The application's tool that does it, called with the terms; `''` for one that `allows`. */
   tool: string;
+  /** Instead of a tool: the standing permission confirming it gives (R-07). */
+  allows?: AppPapStandingSpec;
   /** What the person is shown, `{term}` for each term; never the model's. */
   summary: string;
   /** Whether only the person may confirm it, never an approval in advance. */

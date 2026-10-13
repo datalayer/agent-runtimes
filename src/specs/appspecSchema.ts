@@ -1379,7 +1379,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPapOperation: {
       additionalProperties: false,
       description:
-        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (PAP_DATALAYER B-04, Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.",
+        "Something a personal agent may ask the application to do for the person,\ndone only once they confirm its exact terms (PAP_DATALAYER B-04, Operations v1).\n\nAsked by a personal agent, the application's agent does not call `tool`:\nthe call is proposed, its arguments the terms, and the person confirms\nthat revision before the tool runs, with those arguments and only once.\nAn operation that `allows` instead gives a standing permission once the\nperson confirms it (R-07): it calls no tool, and is asked for through the\napplication's API or its server for agents.",
       properties: {
         action: {
           description:
@@ -1388,10 +1388,31 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'string',
         },
         tool: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
           description:
             "The application's tool that does it, called with the terms",
           title: 'Tool',
-          type: 'string',
+        },
+        allows: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppPapStanding',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'Instead of a tool: the standing permission confirming it gives (R-07)',
         },
         summary: {
           description:
@@ -1407,8 +1428,90 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           type: 'boolean',
         },
       },
-      required: ['action', 'tool', 'summary'],
+      required: ['action', 'summary'],
       title: 'AppPapOperation',
+      type: 'object',
+    },
+    AppPapStanding: {
+      additionalProperties: false,
+      description:
+        "An operation whose effect is a standing permission (PAP_DATALAYER R-07, the Ledgerly pattern).\n\nConfirmed by the person, it is recorded as the approval in advance they\nwould give in Datalayer: this application may confirm, at the company of\none of its own connections and in the person's account there, operations\nof that class whose terms stay within these limits, so many times, for so\nmany days — and the person reads it back and withdraws it there.",
+      properties: {
+        connection: {
+          description:
+            'The id of its own company connection the permission is used at',
+          title: 'Connection',
+          type: 'string',
+        },
+        action: {
+          $ref: '#/$defs/PapStandingAction',
+          description: 'What confirming there does: `write`, or `buy`',
+        },
+        limits: {
+          description: 'Every term bounded, 1 to 20',
+          items: {
+            $ref: '#/$defs/AppPapStandingLimit',
+          },
+          title: 'Limits',
+          type: 'array',
+        },
+        uses: {
+          description:
+            'The term of this operation giving how many times, at most',
+          title: 'Uses',
+          type: 'string',
+        },
+        days: {
+          description:
+            'The term of this operation giving for how many days, at most 90',
+          title: 'Days',
+          type: 'string',
+        },
+      },
+      required: ['connection', 'action', 'limits', 'uses', 'days'],
+      title: 'AppPapStanding',
+      type: 'object',
+    },
+    AppPapStandingLimit: {
+      additionalProperties: false,
+      description:
+        "One bound of a standing permission: a term of the other company's operations,\nbounded by a term of this one — its maximum, or the one value allowed.",
+      properties: {
+        path: {
+          description:
+            "The other company's term, by its dotted path: `amount.amount`, `payee`",
+          title: 'Path',
+          type: 'string',
+        },
+        maximum: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'The term of this operation giving its maximum',
+          title: 'Maximum',
+        },
+        allowed: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'The term of this operation giving the value allowed',
+          title: 'Allowed',
+        },
+      },
+      required: ['path'],
+      title: 'AppPapStandingLimit',
       type: 'object',
     },
     AppPermissions: {
@@ -2452,6 +2555,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'How a person signs in at a company, in the order the application prefers.',
       enum: ['direct', 'device', 'mediated'],
       title: 'PapSignIn',
+      type: 'string',
+    },
+    PapStandingAction: {
+      description:
+        "What a standing permission lets the application confirm at another company (R-02's classes).",
+      enum: ['write', 'buy'],
+      title: 'PapStandingAction',
       type: 'string',
     },
     RecordItem: {

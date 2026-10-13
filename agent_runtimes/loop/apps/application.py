@@ -1003,6 +1003,79 @@ class Application:
         self._pap_mark("pap company-role", "as_company")
         return company
 
+    def company_standing_permission(
+        self,
+        action: str,
+        *,
+        summary: str,
+        connection: str,
+        does: str,
+        limits: List[Dict[str, str]],
+        uses: str,
+        days: str,
+    ) -> None:
+        """Declare an operation that gives a standing permission once the person
+        confirms it (``pap.company.operations[].allows``, PAP_DATALAYER R-07, the
+        Ledgerly pattern): this application may then confirm, at one of its own
+        companies and in the person's account there, what stays within the bounds::
+
+            app.company_connection("bank", "northwind.example", access="write",
+                                   scopes=["payments:write"])
+            app.as_company(scopes=["books:write"], extensions=["operations"])
+            app.company_standing_permission(
+                "payments.allow",
+                summary="Let it pay {payee} without asking, up to {maximum} each, "
+                "at most {uses} payments, for {days} days.",
+                connection="bank", does="buy",
+                limits=[{"path": "payee", "allowed": "payee"},
+                        {"path": "amount.amount", "maximum": "maximum"}],
+                uses="uses", days="days")
+
+        It calls no tool: confirmed by the person, it is recorded as the approval
+        in advance they would give in Datalayer.
+
+        Parameters
+        ----------
+        action : str
+            The action's name at this company: ``payments.allow``.
+        summary : str
+            What the person is shown, every bound a ``{term}`` of it.
+        connection : str
+            The id of one of its own company connections, in each person's account.
+        does : str
+            What confirming there does: ``write`` or ``buy``.
+        limits : list of dict
+            Each a ``path`` of the other company's terms and the term of this
+            operation giving its ``maximum`` or the value ``allowed``.
+        uses, days : str
+            The terms giving how many times and for how many days (at most 90).
+        """
+        from agentspecs.apps import AppPapOperation
+
+        company = (self._document.get("pap") or {}).get("company") or {}
+        if not company.get("enabled"):
+            raise ValueError(
+                f"{self.id} declares the operation {action!r} as a company: "
+                "call app.as_company(...) first."
+            )
+        operation = AppPapOperation.model_validate(
+            {
+                "action": action,
+                "allows": {
+                    "connection": connection,
+                    "action": does,
+                    "limits": limits,
+                    "uses": uses,
+                    "days": days,
+                },
+                "summary": summary,
+            }
+        )
+        self._pap()["company"].setdefault("operations", []).append(
+            operation.model_dump(mode="json", by_alias=True, exclude_defaults=True)
+        )
+        self._pap_mark(f"pap operation {action}", "company_standing_permission")
+
     def company_operation(
         self,
         action: str,

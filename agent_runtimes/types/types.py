@@ -2244,8 +2244,16 @@ class AppPapOperationSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     action: str = Field(..., description="The action's name at this company")
-    tool: str = Field(
-        ..., description="The application's tool that does it, called with the terms"
+    tool: Optional[str] = Field(
+        default=None,
+        description="The application's tool that does it, called with the terms",
+    )
+    allows: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Instead of a tool: the standing permission confirming it gives "
+            "(PAP_DATALAYER R-07), as agentspecs checks it"
+        ),
     )
     summary: str = Field(
         ..., description="What the person is shown, `{term}` for each term"

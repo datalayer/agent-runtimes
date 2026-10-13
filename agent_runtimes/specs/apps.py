@@ -1505,6 +1505,7 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
                     {
                         "action": "orders.exchange",
                         "tool": "exchange_order",
+                        "allows": None,
                         "summary": "Exchange order {order_id} for size {size}.",
                         "user_approval_required": True,
                     }

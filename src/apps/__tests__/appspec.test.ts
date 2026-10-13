@@ -679,4 +679,56 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(app).pap).toEqual(source.pap);
     expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
   });
+  it('reads and writes an operation that gives a standing permission (PAP_DATALAYER R-07)', () => {
+    const allows = {
+      connection: 'bank',
+      action: 'buy',
+      limits: [
+        { path: 'payee', allowed: 'payee' },
+        { path: 'amount.amount', maximum: 'maximum' },
+      ],
+      uses: 'uses',
+      days: 'days',
+    };
+    const source = {
+      kind: 'chat',
+      protocols: ['pap'],
+      pap: {
+        profile: 'draft-01',
+        connections: [
+          {
+            id: 'bank',
+            company: 'northwind.example',
+            access: 'write',
+            scopes: ['payments:write'],
+          },
+        ],
+        company: {
+          enabled: true,
+          extensions: ['operations'],
+          operations: [
+            {
+              action: 'payments.allow',
+              allows,
+              summary:
+                'Let it pay {payee} up to {maximum}, {uses} times, for {days} days',
+            },
+          ],
+        },
+      },
+    };
+    const { app, problems } = parseAppspec(source);
+    expect(problems).toEqual([]);
+    expect(app.pap?.company.operations[0]).toEqual({
+      action: 'payments.allow',
+      tool: '',
+      allows,
+      summary:
+        'Let it pay {payee} up to {maximum}, {uses} times, for {days} days',
+      userApprovalRequired: true,
+    });
+    // Written back as read: no tool, the permission whole.
+    expect(dumpAppspec(app).pap).toEqual(source.pap);
+    expect(parseAppspec(dumpAppspec(app)).app.pap).toEqual(app.pap);
+  });
 });

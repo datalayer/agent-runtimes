@@ -41,6 +41,7 @@ import type {
   AppCommandSpec,
   AppConnectionSpec,
   AppPapSpec,
+  AppPapStandingSpec,
   PapProfile,
   AppPactSpec,
   AppCommerceSpec,
@@ -440,10 +441,47 @@ function parsePap(data: Data): AppPapSpec {
       operations: records(company.operations).map(operation => ({
         action: text(operation.action),
         tool: text(operation.tool),
+        ...(isData(operation.allows)
+          ? { allows: parsePapStanding(operation.allows) }
+          : {}),
         summary: text(operation.summary),
         userApprovalRequired: flag(operation.user_approval_required, true),
       })),
     },
+  };
+}
+
+/** A standing permission an operation gives (PAP_DATALAYER R-07), as agentspecs reads it. */
+function parsePapStanding(data: Data): AppPapStandingSpec {
+  return {
+    connection: text(data.connection),
+    action: oneOf(data.action, ['write', 'buy'] as const, 'buy'),
+    limits: records(data.limits).map(limit => ({
+      path: text(limit.path),
+      ...(typeof limit.maximum === 'string'
+        ? { maximum: text(limit.maximum) }
+        : {}),
+      ...(typeof limit.allowed === 'string'
+        ? { allowed: text(limit.allowed) }
+        : {}),
+    })),
+    uses: text(data.uses),
+    days: text(data.days),
+  };
+}
+
+/** A standing permission as its document says it: every field, none has a default. */
+function dumpPapStanding(standing: AppPapStandingSpec): Data {
+  return {
+    connection: standing.connection,
+    action: standing.action,
+    limits: standing.limits.map(limit => ({
+      path: limit.path,
+      ...(limit.maximum !== undefined ? { maximum: limit.maximum } : {}),
+      ...(limit.allowed !== undefined ? { allowed: limit.allowed } : {}),
+    })),
+    uses: standing.uses,
+    days: standing.days,
   };
 }
 
@@ -485,7 +523,14 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
             operation =>
               new Writer()
                 .text('action', operation.action, '\u0000')
-                .text('tool', operation.tool, '\u0000')
+                // An operation that allows a standing permission calls no tool (R-07).
+                .text('tool', operation.tool, operation.allows ? '' : '\u0000')
+                .present(
+                  'allows',
+                  operation.allows
+                    ? dumpPapStanding(operation.allows)
+                    : undefined,
+                )
                 .text('summary', operation.summary, '\u0000')
                 .value(
                   'user_approval_required',

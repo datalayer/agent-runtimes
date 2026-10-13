@@ -380,6 +380,14 @@ class PapCompanyCapability:
                 "A local company offers the agent interface only (its A2A route); "
                 f"the Appspec asks for {', '.join(sorted(interfaces))}"
             )
+        giving = [o.action for o in company.operations if o.allows is not None]
+        if giving:
+            # Recorded as the person's approval in advance, which only Datalayer
+            # keeps (PAP_DATALAYER R-07): a company in this process has nowhere to.
+            raise ValueError(
+                f"A local company gives no standing permission: {giving[0]} is given "
+                "only by the application shipped on Datalayer"
+            )
         self.company = company
         self.application = application
         self.accounts = accounts

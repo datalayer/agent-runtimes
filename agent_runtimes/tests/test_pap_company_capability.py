@@ -273,3 +273,33 @@ def test_a_local_company_offers_its_agent_only() -> None:
             accounts=Accounts(),
             http_client=httpx.AsyncClient(),
         )
+
+
+def test_a_local_company_gives_no_standing_permission() -> None:
+    """PAP_DATALAYER R-07: a standing permission is the person's approval in advance, which only
+    Datalayer keeps; a company in this process refuses an Appspec that would give one."""
+    from agentspecs.apps import AppPapStanding
+
+    allows = AppPapStanding(
+        connection="bank",
+        action="buy",
+        limits=[{"path": "amount.amount", "maximum": "maximum"}],
+        uses="uses",
+        days="days",
+    )
+    giving = AppPapOperation(
+        action="payments.allow",
+        allows=allows,
+        summary="Pay up to {maximum}, {uses} times, for {days} days",
+    )
+    with pytest.raises(ValueError, match="gives no standing permission: payments.allow"):
+        PapCompanyCapability(
+            name="X",
+            domain=DOMAIN,
+            company=COMPANY.model_copy(update={"operations": [giving]}),
+            application=A2AApplication(
+                "https://runtime.local/a2a", http_client=httpx.AsyncClient()
+            ),
+            accounts=Accounts(),
+            http_client=httpx.AsyncClient(),
+        )
