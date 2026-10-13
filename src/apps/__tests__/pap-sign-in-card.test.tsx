@@ -12,7 +12,7 @@
 
 // @vitest-environment jsdom
 import * as React from 'react';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PapSignInCard } from '../plugins/pap-sign-in/PapSignInCard';
 import {
@@ -101,6 +101,57 @@ describe('the sign-in card', () => {
     expect(
       view.getByText(PAP_SIGN_IN_WORDS.returned.signed_in('manzanita.example')),
     ).toBeTruthy();
+    page.close();
+  });
+
+  it('hears one return: a card told of a denial leaves the next sign-in’s return to its own card', async () => {
+    const sent: string[] = [];
+    const card = (ticket: string) => (
+      <PapSignInCard
+        context={contextOf('pap_manzanita_example_pap_sign_in', {
+          status: 'waiting_for_the_person',
+          mode: 'direct',
+          open: `https://prod1.datalayer.run/api/iam/v1/pap/start?ticket=${ticket}`,
+          company: 'manzanita.example',
+        })}
+        send={message => {
+          sent.push(message);
+          return true;
+        }}
+      />
+    );
+    const first = render(card('t_1'));
+    const page = new BroadcastChannel(PAP_SIGN_IN_CHANNEL);
+    await act(async () => {
+      page.postMessage({ company: 'manzanita.example', outcome: 'denied' });
+    });
+    await waitFor(() =>
+      expect(
+        within(first.container).getByText(
+          PAP_SIGN_IN_WORDS.returned.denied('manzanita.example'),
+        ),
+      ).toBeTruthy(),
+    );
+    // The person asks again: a second card, then they sign in.
+    const second = render(card('t_2'));
+    await act(async () => {
+      page.postMessage({ company: 'manzanita.example', outcome: 'signed_in' });
+    });
+    await waitFor(() =>
+      expect(sent).toEqual([
+        PAP_SIGN_IN_WORDS.checkMessage('manzanita.example'),
+      ]),
+    );
+    expect(
+      within(second.container).getByText(
+        PAP_SIGN_IN_WORDS.returned.signed_in('manzanita.example'),
+      ),
+    ).toBeTruthy();
+    expect(
+      within(first.container).queryByText(
+        PAP_SIGN_IN_WORDS.returned.signed_in('manzanita.example'),
+      ),
+    ).toBeNull();
     page.close();
   });
 

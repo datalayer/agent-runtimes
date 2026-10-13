@@ -61,6 +61,10 @@ export function PapSignInCard({
       const outcome = signInReturnOf(event.data, company);
       if (outcome) {
         setReturned(outcome);
+        // One return per card: a card that heard its sign-in come back (a denial
+        // too) leaves the next one at that company to the card that started it,
+        // never sending twice into a run under way (found on :3063, 13 October 2026).
+        channel.close();
       }
     };
     return () => channel.close();
