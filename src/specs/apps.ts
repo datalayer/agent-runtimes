@@ -1580,7 +1580,7 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
         "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
       ],
       unverified: [
-        "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+        "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed in agent-runtimes, to release), so the answer for the person was not right yet.",
       ],
     },
   },
@@ -1612,7 +1612,7 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; the pair has not been run live yet.',
+    'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; run live as a pair, the business was not yet told who signed in.',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏃',
@@ -1892,7 +1892,7 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
       live: [],
       recorded: [],
       unverified: [
-        'Its own domain is not served yet, and its exchange_order has no code: it has not answered a personal agent.',
+        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes, to release), and its exchange_order has no code, so no exchange was proposed or done.',
       ],
     },
   },
@@ -1924,7 +1924,7 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    "It is a company to people's own agents, and an application's own domain for them is not served yet.",
+    'Its exchange_order has no code yet, so it cannot exchange an order for a person.',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏪',
@@ -1945,7 +1945,7 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
   agent: 'cog-crawler:0.0.1',
   team: '',
   instructions:
-    "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the name and address they signed in with — only when the request says they let their agent see it; otherwise say they need to sign in first. Never more than the request carries.",
+    "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the Datalayer account they signed in with, as the request names it — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries.",
   model: '',
   skills: [],
   backendTools: [],
@@ -2043,7 +2043,7 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
         'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
       ],
       unverified: [
-        "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+        "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed in agent-runtimes, to release), so its answer for the person was not right yet.",
       ],
     },
   },
@@ -2075,7 +2075,7 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; the pair has not been run live yet.',
+    'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; run live as a pair, it was not yet told who signed in.',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏨',
@@ -2419,7 +2419,7 @@ export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
         "The journey is the Personal Agent Protocol SDK's recorded journey conversation-streaming (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In, the person's order answered, and the conversation picked up from a new session with nothing said twice; but Datalayer reads the shop's replies a page at a time, each once it is written whole, so none was seen arriving as it was written.",
       ],
     },
   },
@@ -2451,7 +2451,7 @@ export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    "Datalayer reads a shop's replies once each is written whole, so an answer arriving as the shop writes it cannot be shown yet.",
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '💬',
@@ -3019,7 +3019,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [
-        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview's runtime reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
       ],
       recorded: [
         "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
@@ -3190,12 +3190,14 @@ export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect).",
+      ],
       recorded: [
         "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        "A model's turns in the Studio's Preview were not watched in that drill.",
       ],
     },
   },
@@ -3225,9 +3227,8 @@ export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🔖',
@@ -4238,7 +4239,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
         "The journey is the Personal Agent Protocol SDK's recorded journey operations (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        'Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in with orders:read and orders:write, an exchange the shop proposed in the conversation was approved on Waiting for you, done once and refused the second time; but the test company proposes returns and repairs only through its API, which this application does not use, so neither was shown.',
       ],
     },
   },
@@ -4270,7 +4271,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    'The test company Manzanita proposes returns and repairs only through its API, and this application asks it through its agent, so neither can be shown live yet.',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '↩️',
@@ -4777,7 +4778,7 @@ export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
         "The journey is the Personal Agent Protocol SDK's recorded journey conversation-control (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In and the person's order answered, but asking for one of the shop's people came back to its agent: nobody works at the test company to take the conversation.",
       ],
     },
   },
@@ -4809,7 +4810,7 @@ export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    "Nobody works at the test company Manzanita to take a conversation, so asking for one of the shop's people cannot be shown live yet.",
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🛎️',
@@ -4947,7 +4948,7 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [
-        "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview's runtime reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument.",
+        "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument.",
       ],
       recorded: [
         "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
@@ -5116,12 +5117,14 @@ export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: Mediated Sign-In opened Datalayer's protected page, where the person typed the email and password the company asks, then the one-time code it sent; signed in with orders:read, nothing typed reaching the conversation, and their Ridge Jacket order answered for them.",
+      ],
       recorded: [
         "The journey is the Personal Agent Protocol SDK's recorded journey mediated-sign-in (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        "A model's turns in the Studio's Preview were not watched in that drill.",
       ],
     },
   },
@@ -5151,9 +5154,8 @@ export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🔐',
@@ -5261,7 +5263,7 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [
-        "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview's runtime reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
+        "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
       ],
       recorded: [
         "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
@@ -5963,7 +5965,7 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [
-        "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview's runtime reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified).",
+        "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified).",
       ],
       recorded: [
         "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112).",
@@ -7202,7 +7204,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
         ],
         unverified: [
-          "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+          "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed in agent-runtimes, to release), so the answer for the person was not right yet.",
         ],
       },
     },
@@ -7215,7 +7217,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; the pair has not been run live yet.',
+      'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; run live as a pair, the business was not yet told who signed in.',
     tags: ['example', 'companies'],
     emoji: '🏃',
   },
@@ -7380,7 +7382,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         unverified: [
-          'Its own domain is not served yet, and its exchange_order has no code: it has not answered a personal agent.',
+          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes, to release), and its exchange_order has no code, so no exchange was proposed or done.',
         ],
       },
     },
@@ -7393,7 +7395,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      "It is a company to people's own agents, and an application's own domain for them is not served yet.",
+      'Its exchange_order has no code yet, so it cannot exchange an order for a person.',
     tags: ['example', 'companies'],
     emoji: '🏪',
   },
@@ -7407,7 +7409,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'cog-crawler:0.0.1',
     instructions:
-      "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the name and address they signed in with — only when the request says they let their agent see it; otherwise say they need to sign in first. Never more than the request carries.",
+      "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the Datalayer account they signed in with, as the request names it — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries.",
     protocols: ['pact'],
     pact: {
       business: {
@@ -7465,7 +7467,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
         ],
         unverified: [
-          "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+          "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed in agent-runtimes, to release), so its answer for the person was not right yet.",
         ],
       },
     },
@@ -7478,7 +7480,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; the pair has not been run live yet.',
+      'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; run live as a pair, it was not yet told who signed in.',
     tags: ['example', 'companies'],
     emoji: '🏨',
   },
@@ -7703,7 +7705,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey is the Personal Agent Protocol SDK's recorded journey conversation-streaming (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In, the person's order answered, and the conversation picked up from a new session with nothing said twice; but Datalayer reads the shop's replies a page at a time, each once it is written whole, so none was seen arriving as it was written.",
         ],
       },
     },
@@ -7716,7 +7718,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+      "Datalayer reads a shop's replies once each is written whole, so an answer arriving as the shop writes it cannot be shown yet.",
     tags: ['example', 'companies'],
     emoji: '💬',
   },
@@ -8082,7 +8084,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         live: [
-          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview's runtime reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
         ],
         recorded: [
           "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
@@ -8176,11 +8178,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect).",
+        ],
         recorded: [
           "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+          "A model's turns in the Studio's Preview were not watched in that drill.",
         ],
       },
     },
@@ -8191,9 +8196,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
     tags: ['example', 'companies'],
     emoji: '🔖',
   },
@@ -8957,7 +8959,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey is the Personal Agent Protocol SDK's recorded journey operations (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+          'Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in with orders:read and orders:write, an exchange the shop proposed in the conversation was approved on Waiting for you, done once and refused the second time; but the test company proposes returns and repairs only through its API, which this application does not use, so neither was shown.',
         ],
       },
     },
@@ -8970,7 +8972,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+      'The test company Manzanita proposes returns and repairs only through its API, and this application asks it through its agent, so neither can be shown live yet.',
     tags: ['example', 'companies'],
     emoji: '↩️',
   },
@@ -9273,7 +9275,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey is the Personal Agent Protocol SDK's recorded journey conversation-control (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In and the person's order answered, but asking for one of the shop's people came back to its agent: nobody works at the test company to take the conversation.",
         ],
       },
     },
@@ -9286,7 +9288,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+      "Nobody works at the test company Manzanita to take a conversation, so asking for one of the shop's people cannot be shown live yet.",
     tags: ['example', 'companies'],
     emoji: '🛎️',
   },
@@ -9382,7 +9384,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         live: [
-          "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview's runtime reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument.",
+          "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument.",
         ],
         recorded: [
           "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
@@ -9474,11 +9476,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: Mediated Sign-In opened Datalayer's protected page, where the person typed the email and password the company asks, then the one-time code it sent; signed in with orders:read, nothing typed reaching the conversation, and their Ridge Jacket order answered for them.",
+        ],
         recorded: [
           "The journey is the Personal Agent Protocol SDK's recorded journey mediated-sign-in (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+          "A model's turns in the Studio's Preview were not watched in that drill.",
         ],
       },
     },
@@ -9489,9 +9494,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
     tags: ['example', 'companies'],
     emoji: '🔐',
   },
@@ -9557,7 +9559,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         live: [
-          "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview's runtime reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
+          "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
         ],
         recorded: [
           "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
@@ -10038,7 +10040,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         live: [
-          "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview's runtime reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified).",
+          "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified).",
         ],
         recorded: [
           "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112).",
