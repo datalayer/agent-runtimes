@@ -562,7 +562,12 @@ def test_ls_lists_the_catalogue_with_faces_members_and_setup(
         in result.output
     )
     listed = json.loads(runner.invoke(scenes_command.app, ["ls", "--json"]).output)
-    assert [scene["id"] for scene in listed] == sorted(scenes.SCENE_CATALOGUE)
+    # The teams staged live: a scripted scene is played as written on its page (PAP_DATALAYER X-02).
+    assert [scene["id"] for scene in listed] == sorted(
+        scene_id
+        for scene_id, scene in scenes.SCENE_CATALOGUE.items()
+        if scene.kind.value != "scripted"
+    )
     assert listed[-1]["entry"] == "sales" and listed[-1]["state"] == "Not verified yet"
 
 

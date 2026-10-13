@@ -128,6 +128,36 @@ export const SCENE_SCHEMA: JsonSchema = {
       title: 'RehearsalBeat',
       type: 'object',
     },
+    SceneActor: {
+      additionalProperties: false,
+      description:
+        'Somebody on a scripted scene: a person, an application, a company — never a team member.',
+      properties: {
+        id: {
+          description: 'Its id, as the lines name it',
+          title: 'Id',
+          type: 'string',
+        },
+        name: {
+          description: 'The name the audience sees',
+          title: 'Name',
+          type: 'string',
+        },
+        face: {
+          description: 'One emoji, drawn before the name',
+          title: 'Face',
+          type: 'string',
+        },
+        is: {
+          description: 'What it is, in a few words',
+          title: 'Is',
+          type: 'string',
+        },
+      },
+      required: ['id', 'name', 'face', 'is'],
+      title: 'SceneActor',
+      type: 'object',
+    },
     SceneAudience: {
       additionalProperties: false,
       description: 'Who may watch and ask, and what an ask may cost.',
@@ -255,6 +285,48 @@ export const SCENE_SCHEMA: JsonSchema = {
       required: ['decision'],
       title: 'SceneBranch',
       type: 'object',
+    },
+    SceneCard: {
+      additionalProperties: false,
+      description:
+        'What the audience reads on a line: rows and sentences, never a credential.',
+      properties: {
+        kind: {
+          $ref: '#/$defs/SceneCardKind',
+        },
+        title: {
+          title: 'Title',
+          type: 'string',
+        },
+        rows: {
+          description: 'Its rows: each a label and a value',
+          items: {
+            items: {
+              type: 'string',
+            },
+            type: 'array',
+          },
+          title: 'Rows',
+          type: 'array',
+        },
+        lines: {
+          description: 'Its sentences',
+          items: {
+            type: 'string',
+          },
+          title: 'Lines',
+          type: 'array',
+        },
+      },
+      required: ['kind', 'title'],
+      title: 'SceneCard',
+      type: 'object',
+    },
+    SceneCardKind: {
+      description: 'What a card of a scripted line is.',
+      enum: ['found', 'sign-in', 'approval', 'done', 'record'],
+      title: 'SceneCardKind',
+      type: 'string',
     },
     SceneCastMember: {
       additionalProperties: false,
@@ -387,6 +459,70 @@ export const SCENE_SCHEMA: JsonSchema = {
         },
       },
       title: 'SceneDeployment',
+      type: 'object',
+    },
+    SceneKind: {
+      description:
+        'What a scene plays: a team, live (`team`), or lines written out (`scripted`).',
+      enum: ['team', 'scripted'],
+      title: 'SceneKind',
+      type: 'string',
+    },
+    SceneLine: {
+      additionalProperties: false,
+      description:
+        'One line of a scripted scene: who acts, to whom, what they say or do.',
+      properties: {
+        from: {
+          description: "Who acts: an actor's id",
+          title: 'From',
+          type: 'string',
+        },
+        to: {
+          default: '',
+          description: 'To whom, when somebody is addressed',
+          title: 'To',
+          type: 'string',
+        },
+        says: {
+          description:
+            'What they say or do, in a sentence; in quotes when it is said',
+          title: 'Says',
+          type: 'string',
+        },
+        card: {
+          anyOf: [
+            {
+              $ref: '#/$defs/SceneCard',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: 'What the audience reads',
+        },
+        how: {
+          default: '',
+          description: "What happened underneath, in a visitor's words",
+          title: 'How',
+          type: 'string',
+        },
+        turn: {
+          anyOf: [
+            {
+              $ref: '#/$defs/SceneTurn',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description: "The audience's turn: the scene waits",
+        },
+      },
+      required: ['from', 'says'],
+      title: 'SceneLine',
       type: 'object',
     },
     SceneMove: {
@@ -710,6 +846,34 @@ export const SCENE_SCHEMA: JsonSchema = {
       title: 'SceneTranscript',
       type: 'object',
     },
+    SceneTurn: {
+      additionalProperties: false,
+      description:
+        "The audience's turn on a scripted line: the scene waits for them.",
+      properties: {
+        yes: {
+          description: 'What saying yes is called',
+          title: 'Yes',
+          type: 'string',
+        },
+        no: {
+          default: '',
+          description:
+            'What saying no is called; none when there is nothing to refuse',
+          title: 'No',
+          type: 'string',
+        },
+        declined: {
+          default: '',
+          description: 'What happens once they said no: the scene ends there',
+          title: 'Declined',
+          type: 'string',
+        },
+      },
+      required: ['yes'],
+      title: 'SceneTurn',
+      type: 'object',
+    },
     StagePosition: {
       additionalProperties: false,
       description:
@@ -792,7 +956,8 @@ export const SCENE_SCHEMA: JsonSchema = {
     },
   },
   additionalProperties: false,
-  description: 'Specification for a scene: a team, staged.',
+  description:
+    'Specification for a scene: a team, staged — or, `kind: scripted`, lines written out.',
   properties: {
     schema: {
       description: 'The version of the spec itself',
@@ -840,6 +1005,12 @@ export const SCENE_SCHEMA: JsonSchema = {
       description: 'Its face: one emoji, drawn before its name',
       title: 'Emoji',
       type: 'string',
+    },
+    kind: {
+      $ref: '#/$defs/SceneKind',
+      default: 'team',
+      description:
+        '`team`: a team staged, live; `scripted`: lines written out, played as written, with no team or cast',
     },
     team: {
       default: '',
@@ -889,6 +1060,29 @@ export const SCENE_SCHEMA: JsonSchema = {
     deployment: {
       $ref: '#/$defs/SceneDeployment',
       description: 'Where it plays',
+    },
+    actors: {
+      description: "A scripted scene's actors",
+      items: {
+        $ref: '#/$defs/SceneActor',
+      },
+      title: 'Actors',
+      type: 'array',
+    },
+    lines: {
+      description: "A scripted scene's lines, in order",
+      items: {
+        $ref: '#/$defs/SceneLine',
+      },
+      title: 'Lines',
+      type: 'array',
+    },
+    live: {
+      default: '',
+      description:
+        'A scripted scene: what of it runs on Datalayer today, said honestly',
+      title: 'Live',
+      type: 'string',
     },
   },
   required: ['id', 'name'],

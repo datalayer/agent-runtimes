@@ -200,14 +200,18 @@ describe('the Scenes example', () => {
     const { ScenesExample } = await import('../ScenesExample');
     const { container } = render(<ScenesExample />);
     const tabs = [...container.querySelectorAll('[data-scene-tab]')];
+    // The teams staged live: a scripted scene is played as written on its page (PAP_DATALAYER X-02).
+    const staged = listSceneSpecs().filter(scene => scene.kind === 'team');
     expect(tabs.map(tab => tab.getAttribute('data-scene-tab'))).toEqual(
-      Object.keys(SCENE_CATALOGUE),
+      Object.keys(SCENE_CATALOGUE).filter(
+        id => SCENE_CATALOGUE[id].kind === 'team',
+      ),
     );
-    for (const scene of listSceneSpecs()) {
+    for (const scene of staged) {
       const tab = container.querySelector(`[data-scene-tab="${scene.id}"]`);
       expect(tab?.textContent).toBe(`${scene.emoji} ${scene.name}`);
     }
-    const first = listSceneSpecs()[0];
+    const first = staged[0];
     const box = container.querySelector('[data-scene-example]');
     expect(box?.getAttribute('data-scene-example')).toBe(first.id);
     expect(container.querySelector('[data-scene-assumes]')?.textContent).toBe(

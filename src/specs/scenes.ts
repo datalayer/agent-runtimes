@@ -25,6 +25,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
   tags: ['example', 'scene', 'earthdata', 'agriculture', 'a2a'],
   icon: 'globe',
   emoji: '🛰️',
+  kind: 'team',
   team: 'crop-monitoring:0.0.1',
   entry: 'crop-monitoring',
   cast: [
@@ -300,6 +301,9 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
         'DATALAYER_DEMO_SCENE_CROP_MONITORING_CROP_MONITORING_A2A_URL',
     },
   },
+  actors: [],
+  lines: [],
+  live: '',
   setup: ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
   played: {
     at: '2026-10-09T17:40:33+00:00',
@@ -346,6 +350,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
   tags: ['example', 'scene', 'earthdata', 'disaster', 'insurance', 'a2a'],
   icon: 'alert',
   emoji: '🚨',
+  kind: 'team',
   team: 'disaster-assessment:0.0.1',
   entry: 'event-response',
   cast: [
@@ -735,6 +740,9 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
         'DATALAYER_DEMO_SCENE_DISASTER_ASSESSMENT_CHANGE_DETECTION_A2A_URL',
     },
   },
+  actors: [],
+  lines: [],
+  live: '',
   setup: [
     "The agent 'worker-event-response:0.0.1' is not enabled.",
     "The agent 'worker-disaster-assessment:0.0.1' is not enabled.",
@@ -785,6 +793,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   tags: ['example', 'scene', 'odoo', 'finance', 'a2a'],
   icon: 'calendar',
   emoji: '📒',
+  kind: 'team',
   team: 'month-end-close:0.0.1',
   entry: 'month-end-close',
   cast: [
@@ -1056,6 +1065,9 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
         'DATALAYER_DEMO_SCENE_MONTH_END_CLOSE_MONTH_END_CLOSE_A2A_URL',
     },
   },
+  actors: [],
+  lines: [],
+  live: '',
   setup: [
     "The agent 'worker-month-end-close:0.0.1' is not enabled.",
     "The MCP server 'odoo-accounting:0.0.1' is not enabled.",
@@ -1095,6 +1107,692 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   },
 };
 
+export const PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'pap-a-person-and-a-company',
+  version: '0.0.1',
+  name: 'A Person and a Company',
+  description:
+    'Ada’s agent asks a shop about her order, and she signs in at the shop itself.',
+  tags: ['stage', 'pap', 'slice-1'],
+  icon: 'people',
+  emoji: '🧥',
+  kind: 'scripted',
+  team: '',
+  entry: '',
+  cast: [],
+  setting: {
+    systems: [],
+    period: '',
+    language: '',
+    assumes: '',
+  },
+  script: [],
+  stage: {
+    positions: {},
+    opensFirst: '',
+    transcript: {
+      tools: true,
+      narration: true,
+    },
+    inspectors: [],
+    restsAfter: '',
+    pace: 'steady',
+  },
+  audience: {
+    who: 'signed-in',
+    ceilingPerAsk: 0.0,
+    asksADay: 0,
+  },
+  rehearsal: {
+    beats: [],
+    within: '',
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [],
+    },
+  },
+  deployment: {
+    account: '',
+    page: '',
+    addresses: {},
+  },
+  actors: [
+    {
+      id: 'ada',
+      name: 'Ada',
+      face: '🧑',
+      is: 'the person',
+    },
+    {
+      id: 'agent',
+      name: 'Her agent',
+      face: '🤖',
+      is: 'an application on Datalayer, working for Ada',
+    },
+    {
+      id: 'manzanita',
+      name: 'Manzanita Outfitters',
+      face: '🧥',
+      is: 'a company, at manzanita.example',
+    },
+  ],
+  lines: [
+    {
+      from: 'ada',
+      to: 'agent',
+      says: '“Has my Ridge Jacket from Manzanita arrived?”',
+      how: '',
+    },
+    {
+      from: 'agent',
+      to: '',
+      says: 'Finds Manzanita Outfitters by its domain and checks it is who it says.',
+      card: {
+        kind: 'found',
+        title: 'Manzanita Outfitters',
+        rows: [
+          ['Its domain', 'manzanita.example'],
+          ['Signs its sign-ins as', 'manzanita.example'],
+          ['How a person signs in', 'With a code, or in a protected form'],
+          ['It offers', 'See your orders · Exchange and return items'],
+        ],
+        lines: [],
+      },
+      how: 'The agent reads the page every company publishes for personal agents and checks that the domain and who signs its sign-ins belong together.',
+    },
+    {
+      from: 'agent',
+      to: 'manzanita',
+      says: 'Asks, before anybody signed in: “Where is Ada’s Ridge Jacket order?”',
+      how: 'A conversation starts with the company’s own agent; nobody is signed in yet, so it answers only what anybody may ask.',
+    },
+    {
+      from: 'manzanita',
+      to: 'agent',
+      says: '“I can look that up once you sign in to your Manzanita account.”',
+      how: 'The company asks for a sign-in and names what it needs: See your orders.',
+    },
+    {
+      from: 'agent',
+      to: 'ada',
+      says: 'Asks Ada to sign in at Manzanita, on Manzanita’s own page.',
+      card: {
+        kind: 'sign-in',
+        title: 'Sign in at Manzanita Outfitters',
+        rows: [],
+        lines: [
+          'Your agent asks to see your orders.',
+          'You sign in on manzanita.example: your agent never sees your password.',
+          'You can keep fewer permissions than it asks for.',
+        ],
+      },
+      how: '',
+      turn: {
+        yes: 'Sign in at Manzanita',
+        no: '',
+        declined: '',
+      },
+    },
+    {
+      from: 'ada',
+      to: 'manzanita',
+      says: 'Signs in on Manzanita’s page and allows “See your orders”.',
+      how: 'The company gives the agent a sign-in of its own, for Ada and for this agent only; Datalayer keeps it, out of the agent’s reach.',
+    },
+    {
+      from: 'manzanita',
+      to: 'agent',
+      says: '“Your order ord_7Hk2: Ridge Jacket, size M, delivered.”',
+      how: '',
+    },
+    {
+      from: 'agent',
+      to: 'ada',
+      says: '“Yes: your Ridge Jacket, size M, was delivered.”',
+      how: '',
+    },
+    {
+      from: 'agent',
+      to: '',
+      says: 'Keeps a record of what it did, for Ada and for whoever built it.',
+      card: {
+        kind: 'record',
+        title: 'Activity',
+        rows: [
+          ['Signed in at', 'Manzanita Outfitters, for Ada'],
+          ['Allowed', 'See your orders'],
+          ['Read', 'Order ord_7Hk2'],
+        ],
+        lines: [],
+      },
+      how: 'Ada sees it under In your name, and ends it there with Disconnect.',
+    },
+  ],
+  live: 'Connecting an application to a company is built in the Studio (its Connections card); signing in at a company through Datalayer waits for the services to be shipped.',
+  setup: [],
+};
+
+export const PAP_APPROVE_ONCE_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'pap-approve-once',
+  version: '0.0.1',
+  name: 'A Change, Approved Once',
+  description:
+    'The shop proposes an exchange; Ada approves its exact terms, and it is done once.',
+  tags: ['stage', 'pap', 'slice-2'],
+  icon: 'people',
+  emoji: '🔁',
+  kind: 'scripted',
+  team: '',
+  entry: '',
+  cast: [],
+  setting: {
+    systems: [],
+    period: '',
+    language: '',
+    assumes: '',
+  },
+  script: [],
+  stage: {
+    positions: {},
+    opensFirst: '',
+    transcript: {
+      tools: true,
+      narration: true,
+    },
+    inspectors: [],
+    restsAfter: '',
+    pace: 'steady',
+  },
+  audience: {
+    who: 'signed-in',
+    ceilingPerAsk: 0.0,
+    asksADay: 0,
+  },
+  rehearsal: {
+    beats: [],
+    within: '',
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [],
+    },
+  },
+  deployment: {
+    account: '',
+    page: '',
+    addresses: {},
+  },
+  actors: [
+    {
+      id: 'ada',
+      name: 'Ada',
+      face: '🧑',
+      is: 'the person',
+    },
+    {
+      id: 'agent',
+      name: 'Her agent',
+      face: '🤖',
+      is: 'an application on Datalayer, working for Ada',
+    },
+    {
+      id: 'manzanita',
+      name: 'Manzanita Outfitters',
+      face: '🧥',
+      is: 'a company, at manzanita.example',
+    },
+  ],
+  lines: [
+    {
+      from: 'ada',
+      to: 'agent',
+      says: '“It is not warm enough: exchange it for the insulated one.”',
+      how: '',
+    },
+    {
+      from: 'agent',
+      to: 'manzanita',
+      says: 'Asks for the exchange, signed in as Ada.',
+      how: '',
+    },
+    {
+      from: 'manzanita',
+      to: 'agent',
+      says: '“The insulated Ridge Jacket is in stock. Here is the exchange.”',
+      how: 'The company does not do it yet: it proposes it, with its exact terms and a version.',
+    },
+    {
+      from: 'agent',
+      to: 'ada',
+      says: 'Its rule says Ask me first: it waits for Ada.',
+      card: {
+        kind: 'approval',
+        title: 'Manzanita Outfitters asks you to confirm',
+        rows: [
+          ['Order', 'ord_7Hk2'],
+          ['Price difference', 'USD 70.00'],
+          ['Version', '1'],
+        ],
+        lines: [
+          'Exchange the Ridge Jacket (M) from order ord_7Hk2 for the insulated Ridge Jacket (M), USD 70.00 more.',
+        ],
+      },
+      how: 'The summary is the company’s own sentence, never the model’s; approving version 1 never approves a version 2.',
+      turn: {
+        yes: 'Approve',
+        no: 'Decline',
+        declined:
+          'Ada declined: her agent tells Manzanita no, and nothing is exchanged.',
+      },
+    },
+    {
+      from: 'agent',
+      to: 'manzanita',
+      says: 'Confirms version 1, exactly as Ada approved it.',
+      how: 'Datalayer writes down that it confirms before it does: asked again, it reads the outcome back instead of sending it twice.',
+    },
+    {
+      from: 'manzanita',
+      to: 'agent',
+      says: '“Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.”',
+      how: '',
+    },
+    {
+      from: 'agent',
+      to: 'ada',
+      says: 'Tells Ada what the company says it did, in its words.',
+      card: {
+        kind: 'done',
+        title: 'Done, once',
+        rows: [],
+        lines: [
+          'Exchanged the Ridge Jacket (M) for the insulated Ridge Jacket (M). USD 70.00 charged to the card ending 4242; a return label was emailed.',
+        ],
+      },
+      how: '',
+    },
+  ],
+  live: 'The approval card on Waiting for you is built in the Studio; a company’s exchange approved through Datalayer waits for the services to be shipped.',
+  setup: [],
+};
+
+export const PAP_TWO_COMPANIES_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'pap-two-companies',
+  version: '0.0.1',
+  name: 'Two Companies Together',
+  description:
+    'An accounting firm pays a bill at Ada’s bank, and every payment is Ada’s approval.',
+  tags: ['stage', 'pap', 'slice-4'],
+  icon: 'people',
+  emoji: '🏦',
+  kind: 'scripted',
+  team: '',
+  entry: '',
+  cast: [],
+  setting: {
+    systems: [],
+    period: '',
+    language: '',
+    assumes: '',
+  },
+  script: [],
+  stage: {
+    positions: {},
+    opensFirst: '',
+    transcript: {
+      tools: true,
+      narration: true,
+    },
+    inspectors: [],
+    restsAfter: '',
+    pace: 'steady',
+  },
+  audience: {
+    who: 'signed-in',
+    ceilingPerAsk: 0.0,
+    asksADay: 0,
+  },
+  rehearsal: {
+    beats: [],
+    within: '',
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [],
+    },
+  },
+  deployment: {
+    account: '',
+    page: '',
+    addresses: {},
+  },
+  actors: [
+    {
+      id: 'ada',
+      name: 'Ada',
+      face: '🧑',
+      is: 'the person',
+    },
+    {
+      id: 'atlas',
+      name: 'Atlas',
+      face: '🤖',
+      is: 'Ada’s agent',
+    },
+    {
+      id: 'ledgerly',
+      name: 'Ledgerly',
+      face: '📒',
+      is: 'an accounting firm: a company to Ada, an agent at her bank',
+    },
+    {
+      id: 'northwind',
+      name: 'Northwind Bank',
+      face: '🏦',
+      is: 'Ada’s bank',
+    },
+  ],
+  lines: [
+    {
+      from: 'ada',
+      to: 'atlas',
+      says: '“Ask Ledgerly to pay invoice INV-0042.”',
+      how: '',
+    },
+    {
+      from: 'atlas',
+      to: 'ledgerly',
+      says: 'Asks Ledgerly, signed in as Ada.',
+      how: 'To Atlas, Ledgerly is a company like any other.',
+    },
+    {
+      from: 'ledgerly',
+      to: 'ada',
+      says: 'Needs Ada’s Northwind account first: Ada approves Ledgerly on Northwind’s own page.',
+      card: {
+        kind: 'sign-in',
+        title: 'Let Ledgerly connect to your Northwind account',
+        rows: [],
+        lines: [
+          'On northwind.example, with a code Ledgerly shows you: Ledgerly never sees your bank password.',
+        ],
+      },
+      how: 'To Northwind, Ledgerly is a personal agent acting for Ada, with an identity of its own.',
+      turn: {
+        yes: 'Approve at Northwind',
+        no: '',
+        declined: '',
+      },
+    },
+    {
+      from: 'northwind',
+      to: 'ledgerly',
+      says: '“Ready to pay INV-0042.”',
+      how: 'The bank proposes the payment; it does not make it yet.',
+    },
+    {
+      from: 'ledgerly',
+      to: 'ada',
+      says: 'Passes the bank’s proposal on, quoting it as written.',
+      card: {
+        kind: 'approval',
+        title: 'Ledgerly asks you to confirm',
+        rows: [
+          ['Amount', 'EUR 1250.00'],
+          ['To', 'Acme GmbH'],
+          ['Invoice', 'INV-0042'],
+        ],
+        lines: [
+          'At Northwind Bank: Pay EUR 1250.00 to Acme GmbH for INV-0042 from the current account DE89 3704 0044 0532 0130 00, today. Payments cannot be recalled once sent.',
+        ],
+      },
+      how: '',
+      turn: {
+        yes: 'Approve',
+        no: 'Decline',
+        declined:
+          'Ada declined: Ledgerly tells the bank no, and nothing is paid.',
+      },
+    },
+    {
+      from: 'ledgerly',
+      to: 'northwind',
+      says: 'Confirms at the bank the exact version Ada approved, as approved by Ada.',
+      how: '',
+    },
+    {
+      from: 'northwind',
+      to: 'ledgerly',
+      says: '“Sent EUR 1250.00 to Acme GmbH for INV-0042 from DE89 3704 0044 0532 0130 00. Bank reference NW-0001.”',
+      how: '',
+    },
+    {
+      from: 'ada',
+      to: 'atlas',
+      says: '“Allow Ledgerly to pay Acme without asking, within limits.”',
+      how: '',
+    },
+    {
+      from: 'ledgerly',
+      to: 'ada',
+      says: 'Even a permission given in advance is something Ada approves.',
+      card: {
+        kind: 'approval',
+        title: 'Ledgerly asks you to confirm',
+        rows: [
+          ['Up to', 'EUR 2000.00 each'],
+          ['At most', '5 payments'],
+          ['For', '30 days'],
+        ],
+        lines: [
+          'Let Ledgerly pay Acme GmbH from your Northwind account without asking, up to EUR 2000.00 each, at most 5 payments, for 30 days.',
+        ],
+      },
+      how: '',
+      turn: {
+        yes: 'Approve',
+        no: 'Decline',
+        declined: 'Ada declined: Ledgerly asks her again for every payment.',
+      },
+    },
+    {
+      from: 'ledgerly',
+      to: 'ada',
+      says: 'INV-0043, EUR 980.00, is within the limits: Ledgerly pays it and tells Ada what was done.',
+      how: 'Approved in advance: the bank is told it was, never that Ada approved this one.',
+    },
+    {
+      from: 'ledgerly',
+      to: 'ada',
+      says: 'INV-0044, EUR 3400.00, is beyond them: Ledgerly asks Ada again.',
+      card: {
+        kind: 'done',
+        title: 'Within limits, done; beyond them, asked',
+        rows: [],
+        lines: [
+          'INV-0043 paid under your permission (1 of 5 used).',
+          'INV-0044 waits for your approval.',
+        ],
+      },
+      how: '',
+    },
+  ],
+  live: 'Two companies working together is the open-source SDK’s demonstration; on Datalayer it waits for both roles to be shipped.',
+  setup: [],
+};
+
+export const PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1: SceneSpec = {
+  schema: 'loop.scene/v1',
+  id: 'pap-your-application-a-company',
+  version: '0.0.1',
+  name: 'Your Application, a Company',
+  description:
+    'An application built in the Studio answers people’s own agents as a company does.',
+  tags: ['stage', 'pap', 'slice-3'],
+  icon: 'people',
+  emoji: '🏪',
+  kind: 'scripted',
+  team: '',
+  entry: '',
+  cast: [],
+  setting: {
+    systems: [],
+    period: '',
+    language: '',
+    assumes: '',
+  },
+  script: [],
+  stage: {
+    positions: {},
+    opensFirst: '',
+    transcript: {
+      tools: true,
+      narration: true,
+    },
+    inspectors: [],
+    restsAfter: '',
+    pace: 'steady',
+  },
+  audience: {
+    who: 'signed-in',
+    ceilingPerAsk: 0.0,
+    asksADay: 0,
+  },
+  rehearsal: {
+    beats: [],
+    within: '',
+    verified: {
+      live: [],
+      recorded: [],
+      unverified: [],
+    },
+  },
+  deployment: {
+    account: '',
+    page: '',
+    addresses: {},
+  },
+  actors: [
+    {
+      id: 'maker',
+      name: 'Maker',
+      face: '🛠️',
+      is: 'who builds the application',
+    },
+    {
+      id: 'app',
+      name: 'Exchange desk',
+      face: '🏪',
+      is: 'an application on Datalayer',
+    },
+    {
+      id: 'visitor-agent',
+      name: 'Sam’s agent',
+      face: '🤖',
+      is: 'somebody’s personal agent',
+    },
+    {
+      id: 'sam',
+      name: 'Sam',
+      face: '🧑',
+      is: 'a customer',
+    },
+  ],
+  lines: [
+    {
+      from: 'maker',
+      to: 'app',
+      says: 'Turns on Lets personal agents work with it, offers orders:read and orders:write, and names what it does once a person confirms: orders.exchange.',
+      card: {
+        kind: 'found',
+        title: 'What becomes public at Ship',
+        rows: [],
+        lines: [
+          'Its own domain, exchange-desk.apps.datalayer.ai, with the page personal agents read first.',
+          'How personal agents reach it: its agent, its API and its server for agents.',
+          'What changes something is proposed to the person and done only with their approval.',
+        ],
+      },
+      how: '',
+    },
+    {
+      from: 'visitor-agent',
+      to: 'app',
+      says: 'Finds Exchange desk by its domain and asks, before Sam signed in: “Do you exchange jackets?”',
+      how: 'The application answers what anybody may ask, as its Maker allowed.',
+    },
+    {
+      from: 'app',
+      to: 'visitor-agent',
+      says: '“Yes. Sign in to see your orders.”',
+      how: '',
+    },
+    {
+      from: 'visitor-agent',
+      to: 'sam',
+      says: 'Asks Sam to sign in at Exchange desk, with his Datalayer account.',
+      card: {
+        kind: 'sign-in',
+        title: 'Sign in at Exchange desk',
+        rows: [],
+        lines: [
+          'With your Datalayer account, on Datalayer’s page: the agent never sees your password.',
+        ],
+      },
+      how: '',
+      turn: {
+        yes: 'Sign in with Datalayer',
+        no: '',
+        declined: '',
+      },
+    },
+    {
+      from: 'app',
+      to: 'visitor-agent',
+      says: 'Proposes the exchange in the Maker’s own words: “Exchange order ord_7Hk2 for size L.”',
+      card: {
+        kind: 'approval',
+        title: 'Exchange desk asks you to confirm',
+        rows: [
+          ['Order', 'ord_7Hk2'],
+          ['Size', 'L'],
+          ['Version', '1'],
+        ],
+        lines: ['Exchange order ord_7Hk2 for size L.'],
+      },
+      how: 'The model gives the terms; the sentence is the Maker’s, written once in the Studio.',
+      turn: {
+        yes: 'Approve',
+        no: 'Decline',
+        declined: 'Sam declined: Exchange desk does nothing.',
+      },
+    },
+    {
+      from: 'app',
+      to: '',
+      says: 'Does it once, with its own code, with exactly the terms Sam approved.',
+      card: {
+        kind: 'record',
+        title: 'Activity of Exchange desk',
+        rows: [
+          ['Personal agent', 'Sam’s agent'],
+          ['Proposed', 'orders.exchange, version 1'],
+          ['Approved by', 'Sam'],
+          ['Done', 'Once'],
+        ],
+        lines: [],
+      },
+      how: '',
+    },
+  ],
+  live: 'The Studio’s card to make an application a company is built; its own domain and the company answering on Datalayer wait for the services to be shipped.',
+  setup: [],
+};
+
 export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   schema: 'loop.scene/v1',
   id: 'sales-and-accounting',
@@ -1105,6 +1803,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   tags: ['example', 'scene', 'odoo', 'finance', 'a2a'],
   icon: 'people',
   emoji: '🤝',
+  kind: 'team',
   team: 'sales-and-accounting:0.0.1',
   entry: 'sales',
   cast: [
@@ -1441,6 +2140,9 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
       accounting: 'DATALAYER_DEMO_TEAM_ACCOUNTING_A2A_URL',
     },
   },
+  actors: [],
+  lines: [],
+  live: '',
   setup: [
     "The agent 'worker-sales-pipeline-board-report:0.0.1' is not enabled.",
     "The agent 'worker-accountant:0.0.1' is not enabled.",
@@ -1485,6 +2187,10 @@ export const SCENE_CATALOGUE: Record<string, SceneSpec> = {
   'crop-monitoring': CROP_MONITORING_SCENE_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_SCENE_0_0_1,
   'month-end-close': MONTH_END_CLOSE_SCENE_0_0_1,
+  'pap-a-person-and-a-company': PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1,
+  'pap-approve-once': PAP_APPROVE_ONCE_SCENE_0_0_1,
+  'pap-two-companies': PAP_TWO_COMPANIES_SCENE_0_0_1,
+  'pap-your-application-a-company': PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1,
   'sales-and-accounting': SALES_AND_ACCOUNTING_SCENE_0_0_1,
 };
 

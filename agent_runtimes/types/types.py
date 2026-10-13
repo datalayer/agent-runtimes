@@ -2287,6 +2287,21 @@ class AppPactSpec(BaseModel):
     connections: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class AppCommerceSpec(BaseModel):
+    """UCP and ACP: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01, PI-20).
+
+    Each merchant names its protocol (`ucp` or `acp`), its domain
+    (`merchant`), a level and, to buy, the most one purchase may cost
+    (`limit`); never a credential. Test merchants only, every purchase asked
+    of the person (decided 2026-10-13): the gateway's `ucp` and `acp`
+    toolsets reach each one.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    merchants: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class AppA2AExtensionSpec(BaseModel):
     """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
 
@@ -3002,6 +3017,7 @@ class AppSpec(BaseModel):
     )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     pact: AppPactSpec = Field(default_factory=AppPactSpec)
+    commerce: AppCommerceSpec = Field(default_factory=AppCommerceSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)
@@ -3707,8 +3723,49 @@ class SceneDeploymentSpec(BaseModel):
     )
 
 
+class SceneActorSpec(BaseModel):
+    """Somebody on a scripted scene (PAP_DATALAYER X-02): a name, a face, what it is."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str
+    name: str
+    face: str
+    is_: str = Field(..., alias="is")
+
+
+class SceneCardSpec(BaseModel):
+    """What the audience reads on a scripted line: rows and sentences."""
+
+    kind: str
+    title: str
+    rows: List[List[str]] = Field(default_factory=list)
+    lines: List[str] = Field(default_factory=list)
+
+
+class SceneTurnSpec(BaseModel):
+    """The audience's turn on a scripted line."""
+
+    yes: str
+    no: str = ""
+    declined: str = ""
+
+
+class SceneLineSpec(BaseModel):
+    """One line of a scripted scene."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: str = Field(..., alias="from")
+    to: str = ""
+    says: str
+    card: Optional[SceneCardSpec] = None
+    how: str = ""
+    turn: Optional[SceneTurnSpec] = None
+
+
 class SceneSpec(BaseModel):
-    """A scene (`agentspecs/scenes`): a team, staged.
+    """A scene (`agentspecs/scenes`): a team, staged — or, scripted, lines written out.
 
     The team says who is on stage; the scene says what happens there. In the
     generated catalogue the cast is resolved — every member of the team, its
@@ -3730,6 +3787,10 @@ class SceneSpec(BaseModel):
     emoji: str = Field(
         default="👀", description="Its face: one emoji, drawn before its name"
     )
+    kind: str = Field(
+        default="team",
+        description="`team`: a team staged; `scripted`: actors and lines written out (PAP_DATALAYER X-02)",
+    )
     team: str = Field(default="", description="The team it stages, `id:version`")
     entry: str = Field(default="", description="The member the audience talks to")
     cast: List[SceneCastMemberSpec] = Field(default_factory=list)
@@ -3747,3 +3808,6 @@ class SceneSpec(BaseModel):
         default=None,
         description="The last rehearsal played on Datalayer, what *Live* is read from",
     )
+    actors: List[SceneActorSpec] = Field(default_factory=list, description="A scripted scene's actors")
+    lines: List[SceneLineSpec] = Field(default_factory=list, description="A scripted scene's lines")
+    live: str = Field(default="", description="A scripted scene: what of it runs on Datalayer today")

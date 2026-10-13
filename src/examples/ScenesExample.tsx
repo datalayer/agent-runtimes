@@ -519,7 +519,11 @@ function Scene({ scene }: { scene: SceneSpec }): JSX.Element {
 }
 
 function Scenes(): JSX.Element {
-  const scenes = useMemo(() => listSceneSpecs(), []);
+  // A scripted scene is played as written on its page (PAP_DATALAYER X-02): here, the teams staged live.
+  const scenes = useMemo(
+    () => listSceneSpecs().filter(scene => scene.kind === 'team'),
+    [],
+  );
   const [selected, setSelected] = useState(scenes[0]?.id ?? '');
   const scene = scenes.find(one => one.id === selected) ?? scenes[0];
   return (

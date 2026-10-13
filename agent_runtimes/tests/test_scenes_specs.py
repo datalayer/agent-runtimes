@@ -28,8 +28,17 @@ HOME_SCENES = {
 }
 
 
+#: The Personal Agent Protocol's Stages, scripted (PAP_DATALAYER X-02).
+PAP_STAGES = (
+    "pap-a-person-and-a-company",
+    "pap-approve-once",
+    "pap-your-application-a-company",
+    "pap-two-companies",
+)
+
+
 def test_the_catalogue_holds_the_four_scenes_with_their_faces() -> None:
-    assert set(SCENE_CATALOGUE) == set(HOME_SCENES)
+    assert set(SCENE_CATALOGUE) == set(HOME_SCENES) | set(PAP_STAGES)
     faces = [scene.emoji for scene in SCENE_CATALOGUE.values()]
     assert len(set(faces)) == len(faces) and "👀" not in faces
     for scene in SCENE_CATALOGUE.values():
@@ -71,8 +80,18 @@ def test_the_cast_arrives_resolved_from_the_team() -> None:
         )
 
 
+def test_the_pap_stages_arrive_scripted_with_their_actors_and_lines() -> None:
+    for scene_id in PAP_STAGES:
+        scene = SCENE_CATALOGUE[scene_id]
+        assert scene.kind == "scripted" and not scene.team and not scene.cast, scene_id
+        assert scene.actors and scene.lines and scene.live, scene_id
+        ids = {actor.id for actor in scene.actors}
+        assert all(line.from_ in ids for line in scene.lines), scene_id
+        assert any(line.turn for line in scene.lines), scene_id
+
+
 def test_each_beat_says_its_cue_its_moves_and_what_it_shows() -> None:
-    for scene in SCENE_CATALOGUE.values():
+    for scene in (scene for scene in SCENE_CATALOGUE.values() if scene.kind == "team"):
         assert len(scene.script) == 4, scene.id
         for beat in scene.script:
             assert beat.cue.say and beat.moves and beat.expect and beat.shows, (

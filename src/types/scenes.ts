@@ -244,11 +244,61 @@ export interface SceneDeploymentSpec {
 }
 
 /** Specification for a scene: a team, staged. */
+/** Somebody on a scripted scene: a person, an application, a company (PAP_DATALAYER X-02). */
+export interface SceneActorSpec {
+  id: string;
+  /** The name the audience sees. */
+  name: string;
+  /** One emoji, drawn before the name. */
+  face: string;
+  /** What it is, in a few words. */
+  is: string;
+}
+
+/** What the audience reads on a scripted line: rows and sentences, never a credential. */
+export interface SceneCardSpec {
+  kind: 'found' | 'sign-in' | 'approval' | 'done' | 'record';
+  title: string;
+  /** Its rows: each a label and a value. */
+  rows: [string, string][];
+  /** Its sentences. */
+  lines: string[];
+}
+
+/** The audience's turn on a scripted line: the scene waits for them. */
+export interface SceneTurnSpec {
+  /** What saying yes is called. */
+  yes: string;
+  /** What saying no is called; empty when there is nothing to refuse. */
+  no: string;
+  /** What happens once they said no: the scene ends there. */
+  declined: string;
+}
+
+/** One line of a scripted scene. */
+export interface SceneLineSpec {
+  /** Who acts: an actor's id. */
+  from: string;
+  /** To whom; empty when nobody is addressed. */
+  to: string;
+  /** What they say or do, in a sentence; in quotes when it is said. */
+  says: string;
+  card?: SceneCardSpec;
+  /** What happened underneath, in a visitor's words; empty when nothing is said. */
+  how: string;
+  turn?: SceneTurnSpec;
+}
+
 export interface SceneSpec {
   /** The version of the spec itself: `loop.scene/v1`. */
   schema: string;
   id: string;
   version: string;
+  /**
+   * `team`: a team staged, live; `scripted`: actors and lines written out,
+   * played as written, with no team, cast or script (PAP_DATALAYER X-02).
+   */
+  kind: 'team' | 'scripted';
   /** The tab's name. */
   name: string;
   description: string;
@@ -272,4 +322,10 @@ export interface SceneSpec {
   setup: string[];
   /** The last rehearsal played on Datalayer, what *Live* is read from; none when never played. */
   played?: ScenePlayedSpec;
+  /** A scripted scene's actors; empty on one that stages a team. */
+  actors: SceneActorSpec[];
+  /** A scripted scene's lines, in order; empty on one that stages a team. */
+  lines: SceneLineSpec[];
+  /** A scripted scene: what of it runs on Datalayer today; empty on one that stages a team. */
+  live: string;
 }

@@ -88,10 +88,17 @@ def load_specs(specs_dir: Path) -> list[dict[str, Any]]:
     for identity in sorted(scenes):
         scene = scenes[identity]
         spec = scene.model_dump(mode="json", by_alias=True)
-        spec["entry"] = scene.entry_of()
-        spec["cast"] = [
-            member.model_dump(mode="json", by_alias=True) for member in scene.cast_of()
-        ]
+        # A scripted scene stages no team (PAP_DATALAYER X-02): no entry, no cast.
+        scripted = spec.get("kind") == "scripted"
+        spec["entry"] = "" if scripted else scene.entry_of()
+        spec["cast"] = (
+            []
+            if scripted
+            else [
+                member.model_dump(mode="json", by_alias=True)
+                for member in scene.cast_of()
+            ]
+        )
         for beat, data in zip(scene.script, spec["script"]):
             data["shows"] = [kind.value for kind in beat.shown]
         spec["setup"] = scenes_module.scene_setup(scene)
