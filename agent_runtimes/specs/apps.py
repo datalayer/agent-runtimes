@@ -1711,7 +1711,7 @@ EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
                     "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Not drilled since."
+                    "Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Drilled a third time the same evening: signed in, asked to exchange, its agent said it had no exchange_order tool — a company's turn over A2A was not offered the tools of its code (fixed in agent-runtimes, not released)."
                 ],
             },
         },
@@ -1733,7 +1733,7 @@ EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "Its exchange_order is written against the hosted Manzanita and has not been drilled live yet.",
+        "unavailable_because": "Its exchange_order is not offered to a personal agent's turn until the runtime that offers it the tools of its code is released.",
         "tags": ["example", "companies", "python"],
         "icon": "apps",
         "emoji": "🏪",
@@ -3814,12 +3814,14 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
                 },
             ],
             "verified": {
-                "live": [],
+                "live": [
+                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita, as its Preview reaches the gateway's pap toolset (gateway 0.0.81): signed in by Device Sign-In with orders:read and orders:write; a return asked through the shop's API with pap_propose came back as the shop's operation (Return the Ridge Jacket (M) from order ord_7Hk2 for a refund of USD 180.00), approved by the person on Waiting for you, done once — the test shop's return fails as written, its label emailed and no money moved, which it said — and already confirmed the second time; a repair proposed the same way (a zip repair, free)."
+                ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey operations (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in with orders:read and orders:write, an exchange the shop proposed in the conversation was approved on Waiting for you, done once and refused the second time; but the test company proposes returns and repairs only through its API, which this application does not use, so neither was shown."
+                    "A model's turns in the Studio's Preview were not watched in that drill."
                 ],
             },
         },
@@ -3840,8 +3842,8 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
-        "enabled": False,
-        "unavailable_because": "It asks the test company Manzanita for returns and repairs through its API, which Datalayer's gateway does not reach yet, so neither can be shown live yet.",
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "↩️",
@@ -4325,12 +4327,14 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
                 },
             ],
             "verified": {
-                "live": [],
+                "live": [
+                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita (counterparts 0.0.6), as its Preview reaches the gateway's pap toolset: asked signed out, signed in by Device Sign-In with orders:read, the person's latest order answered; asked for one of the shop's people, the conversation went to Marta, of Manzanita's staff (responder human), who answered in it."
+                ],
                 "recorded": [
                     "The journey is the Personal Agent Protocol SDK's recorded journey conversation-control (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026 against the hosted Manzanita: signed in by Device Sign-In and the person's order answered, but asking for one of the shop's people came back to its agent: nobody works at the test company to take the conversation."
+                    "A model's turns in the Studio's Preview were not watched in that drill; Marta is a scripted member of the test shop's staff."
                 ],
             },
         },
@@ -4351,8 +4355,8 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
-        "enabled": False,
-        "unavailable_because": "The test company Manzanita's staff, who take a conversation handed to them, are not on duty at the hosted shop yet, so asking for one of its people cannot be shown live yet.",
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "🛎️",
