@@ -1,0 +1,36 @@
+{
+  "profile": "Visa Trusted Agent Protocol, agent-recognition signature (AGENT_PROTOCOLS PR-24)",
+  "status": "draft",
+  "sources": [
+    "https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications",
+    "https://github.com/visa/trusted-agent-protocol"
+  ],
+  "note": "Visa publishes no test vector: these were computed on 2026-10-13 by agent_runtimes.protocols.web_bot_auth.tap from Visa's Merchant Specifications (covered @authority and @path; created, keyid, alg=\"Ed25519\", expires, nonce, tag; at most 8 minutes), under the Ed25519 test key of RFC 9421 Appendix B.1.4 (vectors.json's), the keyid its JWK thumbprint, the URLs and created of Visa's samples. Ed25519 is deterministic: both languages must reproduce each base and signature byte for byte. Replaced by Visa's own once it publishes them.",
+  "keyid": "poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U",
+  "vectors": [
+    {
+      "intent": "browse",
+      "method": "GET",
+      "url": "https://www.example.com/example-product",
+      "label": "sig2",
+      "created": 1735689600,
+      "expires": 1735690080,
+      "nonce": "e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==",
+      "base": "\"@authority\": www.example.com\n\"@path\": /example-product\n\"@signature-params\": (\"@authority\" \"@path\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"Ed25519\";expires=1735690080;nonce=\"e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==\";tag=\"agent-browser-auth\"",
+      "signatureInput": "sig2=(\"@authority\" \"@path\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"Ed25519\";expires=1735690080;nonce=\"e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==\";tag=\"agent-browser-auth\"",
+      "signature": "sig2=:hBiS5l4k8Cj96xWR8WgWSGyKCradTZJEFmdpYqEBQDUuDLtbNjv97dsJSZmvVhBSAirlEhdfedk69emXbX7XBg==:"
+    },
+    {
+      "intent": "pay",
+      "method": "POST",
+      "url": "https://www.example.com/checkout",
+      "label": "sig2",
+      "created": 1735689600,
+      "expires": 1735690080,
+      "nonce": "e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==",
+      "base": "\"@authority\": www.example.com\n\"@path\": /checkout\n\"@signature-params\": (\"@authority\" \"@path\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"Ed25519\";expires=1735690080;nonce=\"e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==\";tag=\"agent-payer-auth\"",
+      "signatureInput": "sig2=(\"@authority\" \"@path\");created=1735689600;keyid=\"poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U\";alg=\"Ed25519\";expires=1735690080;nonce=\"e8N7S2MFd/qrd6T2R3tdfAuuANngKI7LFtKYI/vowzk4lAZYadIX6wW25MwG7DCT9RUKAJ0qVkU0mEeLElW1qg==\";tag=\"agent-payer-auth\"",
+      "signature": "sig2=:vCWEfEpXV9Fwrz/OaOeGt0t9OjSBre1XpfTupuNZd3L1i1W+D7FBJadEV/azgcD0RZR+jJAc8xXp6enbORiXDQ==:"
+    }
+  ]
+}

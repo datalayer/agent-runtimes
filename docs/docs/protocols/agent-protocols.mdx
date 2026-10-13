@@ -27,7 +27,7 @@ tools (transport), how it buys (commerce).
 | Consent | PAP, Personal Agent Protocol | Sierra, Meta | both roles, through the PAP SDK ([Personal Agent Protocol](../integrations/personal-agent-protocol)) | `personal-agent-protocol`, `@datalayer/personal-agent-protocol` |
 | Consent | PACT, Personal Agent Consent & Trust | Decagon, Instinct | the personal agent, both languages; a local Provider ([PACT](./pact), [PAP and PACT](./pap-and-pact)) | PyJWT, `cryptography`, `jose` |
 | Identity | Web Bot Auth | IETF draft (Cloudflare and others) | signing, the key directory, verifying ([Web Bot Auth](./web-bot-auth)) | `http-sfv`, `cryptography`; Cloudflare's `web-bot-auth` |
-| Identity | TAP, Trusted Agent Protocol | Visa | planned, over Web Bot Auth | — |
+| Identity | TAP, Trusted Agent Protocol | Visa | a draft profile over Web Bot Auth, from Visa's public documentation, not confirmed by Visa ([TAP](./web-bot-auth#tap-a-draft-profile)) | Cloudflare's `http-message-sig` |
 | Commerce | UCP, Universal Commerce Protocol | Google, with Shopify and retailers | the shopper, a test merchant ([UCP](./ucp)) | `ucp-sdk`, `@ucp-js/sdk` |
 | Commerce | ACP, Agentic Commerce Protocol | OpenAI, Stripe | the buyer, a test seller ([Agentic Commerce](./agentic-commerce)) | clients generated from its JSON Schema |
 
@@ -92,6 +92,7 @@ two packages cannot drift apart:
 | Protocol | Shared fixture | Python | TypeScript | Secrets never seen by a model |
 | --- | --- | --- | --- | --- |
 | Web Bot Auth | `web_bot_auth/fixtures/vectors.json`: the draft's Ed25519 vectors E.2.1, E.2.2, E.2.3, reproduced byte for byte | `test_protocols_web_bot_auth.py` | `webBotAuth.unit.test.ts` | the private key: never in a header, the directory or a repr |
+| TAP (draft) | `web_bot_auth/fixtures/tap.json`: a browsing and a paying request under the RFC 9421 Ed25519 test key, computed here (Visa publishes none) | `test_protocols_web_bot_auth_tap.py` | `tap.unit.test.ts` (Cloudflare's `http-message-sig`) | — |
 | UCP 2026-08-25 | `ucp/fixtures/checkout.json`: a checkout and its revision digest | `test_protocols_ucp.py` (against the test merchant) | `ucp.unit.test.ts` | the payment token |
 | Agentic Commerce 2026-04-17 | `agentic_commerce/fixtures/session.json`: a session, the discovery document, the revision digest | `test_protocols_agentic_commerce.py` (against the test seller) | `agenticCommerce.unit.test.ts` | the payment token and the seller bearer |
 | PACT 1.0 | `pact/fixtures/card.json`: a Brand's card and how it is read | `test_protocols_pact.py` (against the local Provider) | `pact.unit.test.ts` | the device code and the delegation token |
