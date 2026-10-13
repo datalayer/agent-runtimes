@@ -25,12 +25,13 @@ of its own), and the session's record in ai-agents.
 
 **A Preview is held to the same grants** (LOOP R-25, decided 2026-10-06):
 though it runs as the person trying it, it reaches only the Spaces its
-application is granted. As its session opens, and on each of its requests,
-the runtime asks ai-agents with the person's token for a token of theirs
-narrowed to the Spaces the Appspec it runs grants
-(`POST /apps/{app_uid}/preview-token`, minted by IAM) — none when it grants
-none — keeps it here beside the principals' and asks again before it runs
-out, the same way (`ensure_preview_token`). Its runs carry that token in
+application is granted, and the companies it works with (PAP_DATALAYER
+P-01). As its session opens, and on each of its requests, the runtime asks
+ai-agents with the person's token for a token of theirs narrowed to what the
+Appspec it runs grants (`preview_grants`: its `permissions` and its `pap`
+connections; `POST /apps/{app_uid}/preview-token`, minted by IAM) — nothing
+when it grants nothing — keeps it here beside the principals' and asks again
+before it runs out, the same way (`ensure_preview_token`). Its runs carry that token in
 place of the person's (`sessions.LiveSession.forward`); its model calls do
 not change.
 """
@@ -56,6 +57,7 @@ __all__ = [
     "gateway_toolsets_of_the_run",
     "give_principal_token",
     "holds_principal_token",
+    "preview_grants",
     "preview_key",
     "preview_token",
     "preview_token_refusal",
@@ -405,28 +407,47 @@ async def gateway_toolsets_of_the_run(
 # --- a Preview, held to its application's Space grants (LOOP R-25) ----------
 
 
-def preview_key(app_uid: str, person_uid: str, permissions: Mapping[str, Any]) -> str:
-    """Where a Preview's token is held: by application, the person trying it,
-    and the Spaces its Appspec grants now — a list changed is a token asked
-    again, never one narrowed to the list before.
+def preview_grants(app: Any) -> dict[str, Any]:
+    """What an Appspec grants a Preview of it, as ai-agents is asked to narrow its token to.
+
+    Its ``permissions`` (the Spaces, LOOP R-25) and its ``pap`` connections
+    (the companies it works with, PAP_DATALAYER P-01): a Preview whose token
+    named no company had every call of the gateway's `pap` toolset refused.
     """
+    pap = app.pap.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return {
+        "permissions": app.permissions.model_dump(mode="json"),
+        "pap": {"connections": pap.get("connections") or []},
+    }
+
+
+def preview_key(app_uid: str, person_uid: str, grants: Mapping[str, Any]) -> str:
+    """Where a Preview's token is held: by application, the person trying it,
+    and what its Appspec grants now (`preview_grants`) — a list changed is a
+    token asked again, never one narrowed to the list before.
+    """
+    permissions = grants.get("permissions") or {}
     spaces = sorted(
         (str(grant.get("space") or ""), str(grant.get("access") or "read"))
         for grant in permissions.get("spaces") or []
     )
-    digest = hashlib.sha256(json.dumps(spaces).encode("utf-8")).hexdigest()[:16]
+    companies = sorted(
+        json.dumps(connection, sort_keys=True)
+        for connection in (grants.get("pap") or {}).get("connections") or []
+    )
+    digest = hashlib.sha256(json.dumps([spaces, companies]).encode("utf-8")).hexdigest()[:16]
     return f"preview:{app_uid}:{person_uid}:{digest}"
 
 
 def preview_token_refusal(
-    app_uid: str, person_uid: str, permissions: Mapping[str, Any]
+    app_uid: str, person_uid: str, grants: Mapping[str, Any]
 ) -> Optional[str]:
     """Why a Preview of an application cannot reach anything now, or ``None`` when it can."""
-    held = _HELD.get(preview_key(app_uid, person_uid, permissions))
+    held = _HELD.get(preview_key(app_uid, person_uid, grants))
     if not held:
         return (
-            f"The Preview of {app_uid} holds no token narrowed to the Spaces its "
-            "application is granted: it reaches nothing."
+            f"The Preview of {app_uid} holds no token narrowed to the Spaces and the "
+            "companies its application is granted: it reaches nothing."
         )
     if held["expires_at"] <= time.time():
         return (
@@ -437,16 +458,16 @@ def preview_token_refusal(
 
 
 def preview_token(
-    app_uid: str, person_uid: str, permissions: Mapping[str, Any]
+    app_uid: str, person_uid: str, grants: Mapping[str, Any]
 ) -> Optional[str]:
     """A Preview's token, or ``None`` when it has none it may use."""
-    if preview_token_refusal(app_uid, person_uid, permissions):
+    if preview_token_refusal(app_uid, person_uid, grants):
         return None
-    return str(_HELD[preview_key(app_uid, person_uid, permissions)]["token"])
+    return str(_HELD[preview_key(app_uid, person_uid, grants)]["token"])
 
 
 async def _ask_ai_agents_for_a_preview(
-    app_uid: str, permissions: Mapping[str, Any], bearer: str
+    app_uid: str, grants: Mapping[str, Any], bearer: str
 ) -> dict[str, Any]:
     import httpx
     from datalayer_core.utils.urls import DatalayerURLs
@@ -460,7 +481,7 @@ async def _ask_ai_agents_for_a_preview(
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(
                 f"{url.rstrip('/')}/api/ai-agents/v1/apps/{app_uid}/preview-token",
-                json={"permissions": dict(permissions)},
+                json=dict(grants),
                 headers={"Authorization": f"Bearer {bearer}"},
             )
     except httpx.HTTPError as error:
@@ -496,16 +517,17 @@ def use_preview_asker(
 async def ensure_preview_token(
     app_uid: str,
     person_uid: str,
-    permissions: Mapping[str, Any],
+    grants: Mapping[str, Any],
     bearer: Optional[str],
 ) -> str:
     """
     The token a Preview runs with, asked for when none is held or it runs out (LOOP R-25).
 
-    The person's own, narrowed by ai-agents and IAM to the Spaces the Appspec
-    the Preview runs grants (``permissions.spaces``) — none when it grants
-    none — asked for with the person's token, as a deployment's principal's
-    is with its opener's, and kept in memory.
+    The person's own, narrowed by ai-agents and IAM to what the Appspec the
+    Preview runs grants (``permissions.spaces``, and the companies of its
+    ``pap.connections`` in the person's name: PAP_DATALAYER P-01) — nothing
+    when it grants nothing — asked for with the person's token, as a
+    deployment's principal's is with its opener's, and kept in memory.
 
     Parameters
     ----------
@@ -513,8 +535,8 @@ async def ensure_preview_token(
         The application tried, as Datalayer knows it.
     person_uid : str
         Who is trying it.
-    permissions : Mapping[str, Any]
-        The ``permissions`` of the Appspec the Preview runs.
+    grants : Mapping[str, Any]
+        What the Appspec the Preview runs grants (`preview_grants`).
     bearer : str | None
         The person's token, from the request.
 
@@ -533,19 +555,20 @@ async def ensure_preview_token(
             "A Preview reaches the Spaces its application is granted on Datalayer, "
             "and this one is not there: save it first."
         )
-    key = preview_key(app_uid, person_uid, permissions)
+    key = preview_key(app_uid, person_uid, grants)
     answer = await _ensure_held(
         key,
         bearer,
-        lambda asking: _preview_asker["ask"](app_uid, permissions, asking),
-        lambda: preview_token_refusal(app_uid, person_uid, permissions),
+        lambda asking: _preview_asker["ask"](app_uid, grants, asking),
+        lambda: preview_token_refusal(app_uid, person_uid, grants),
         f"the Preview of {app_uid}",
     )
     if answer:
         logger.info(
-            "The Preview of %s for %s reaches %d Space(s).",
+            "The Preview of %s for %s reaches %d Space(s) and %d company(ies).",
             app_uid,
             person_uid,
             len(answer.get("spaces") or []),
+            len(answer.get("companies") or []),
         )
     return str(_HELD[key]["token"])

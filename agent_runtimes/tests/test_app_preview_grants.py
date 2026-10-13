@@ -75,9 +75,10 @@ class AiAgents:
         self.refuse = ""
 
     async def __call__(
-        self, app_uid: str, permissions: Mapping[str, Any], bearer: str
+        self, app_uid: str, grants: Mapping[str, Any], bearer: str
     ) -> Dict[str, Any]:
-        self.asked.append((app_uid, dict(permissions), bearer))
+        self.asked.append((app_uid, dict(grants), bearer))
+        permissions = grants.get("permissions") or {}
         if self.refuse:
             raise PrincipalTokenMissing(self.refuse)
         token = f"narrowed-{len(self.asked)}-{bearer}"
@@ -205,8 +206,11 @@ def test_a_previews_run_carries_the_narrowed_token_and_an_ungranted_space_is_ref
         (
             "app-1",
             {
-                "spaces": [{"space": "support", "access": "write"}],
-                "computer": {"browse": False, "files": False, "shell": False},
+                "permissions": {
+                    "spaces": [{"space": "support", "access": "write"}],
+                    "computer": {"browse": False, "files": False, "shell": False},
+                },
+                "pap": {"connections": []},
             },
             "ada",
         )
@@ -230,9 +234,39 @@ def test_no_grant_reaches_no_space(
             json={"agent": "support-desk", "app_uid": "app-1", "opener": "Look"},
         )
     )
-    assert ai_agents.asked[0][1]["spaces"] == []
+    assert ai_agents.asked[0][1]["permissions"]["spaces"] == []
+    assert ai_agents.asked[0][1]["pap"] == {"connections": []}
     assert carried == ["narrowed-1-ada", "narrowed-1-ada"]
     assert answer_of(started).count("403") == 2
+
+
+def test_its_companies_are_asked_for_with_its_spaces(
+    runtime: Any, remote: TestClient, ai_agents: AiAgents
+) -> None:
+    """PAP_DATALAYER P-01, found in a Preview on r1: its token named no company, so
+    the gateway refused every call of its `pap` toolset. The Preview asks for the
+    companies its Appspec works with beside its Spaces."""
+    shop = {
+        **DESK,
+        "protocols": ["pap"],
+        "pap": {
+            "connections": [
+                {"id": "orders", "company": "manzanita.example", "scopes": ["orders:read"]}
+            ]
+        },
+    }
+    _make("support-desk", shop, {"app_uid": "app-1"}, ai_agents)
+    events_of(
+        remote.post(
+            "/api/v1/apps/sessions",
+            headers=as_("ada"),
+            json={"agent": "support-desk", "app_uid": "app-1", "opener": "Look"},
+        )
+    )
+    asked = ai_agents.asked[0][1]
+    assert asked["permissions"]["spaces"] == [{"space": "support", "access": "write"}]
+    # As the Appspec says it: ai-agents compiles it as a deployment's grant is, in the person's name.
+    assert asked["pap"]["connections"] == shop["pap"]["connections"]
 
 
 def test_without_its_token_a_preview_runs_nothing(
@@ -265,7 +299,7 @@ def test_an_application_not_on_datalayer_is_not_previewed_with_a_persons_token(
 
 
 def test_it_is_kept_and_asked_again_before_it_runs_out(ai_agents: AiAgents) -> None:
-    permissions = {"spaces": [{"space": "support", "access": "read"}]}
+    permissions = {"permissions": {"spaces": [{"space": "support", "access": "read"}]}}
     first = asyncio.run(ensure_preview_token("app-1", "ada", permissions, "ada-1"))
     assert (
         asyncio.run(ensure_preview_token("app-1", "ada", permissions, "ada-2")) == first
@@ -279,9 +313,21 @@ def test_it_is_kept_and_asked_again_before_it_runs_out(ai_agents: AiAgents) -> N
     # Nobody else's: held by person.
     assert preview_token("app-1", "bob", permissions) is None
     # A list changed is a token asked again, never the one narrowed to the list before.
-    wider = {"spaces": [*permissions["spaces"], {"space": "finance", "access": "read"}]}
+    wider = {
+        "permissions": {
+            "spaces": [*permissions["permissions"]["spaces"], {"space": "finance", "access": "read"}]
+        }
+    }
     assert asyncio.run(ensure_preview_token("app-1", "ada", wider, "ada-4")) != renewed
     assert ai_agents.asked[-1][1] == wider
+    # A company added is a token asked again too, naming it (PAP_DATALAYER P-01).
+    company = {
+        **permissions,
+        "pap": {"connections": [{"id": "orders", "company": "manzanita.example"}]},
+    }
+    assert preview_key("app-1", "ada", company) != preview_key("app-1", "ada", permissions)
+    assert asyncio.run(ensure_preview_token("app-1", "ada", company, "ada-5")) != renewed
+    assert ai_agents.asked[-1][1] == company
     # Expired, with no token to ask again with: nothing.
     principal._HELD[preview_key("app-1", "ada", permissions)]["expires_at"] = (
         time.time() - 1

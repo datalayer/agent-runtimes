@@ -999,10 +999,10 @@ async def _acts_as(
     token is asked for again with the caller's token when it runs out, as
     every request of the session may.
 
-    A Preview runs as the person, held to its application's Space grants
-    (R-25): the token its runs carry is theirs, narrowed to the Spaces the
-    Appspec it runs grants, asked for and renewed the same way; without one
-    it runs nothing.
+    A Preview runs as the person, held to its application's grants (R-25):
+    the token its runs carry is theirs, narrowed to the Spaces and the
+    companies the Appspec it runs grants (PAP_DATALAYER P-01), asked for and
+    renewed the same way; without one it runs nothing.
     """
     from agent_runtimes.loop.apps.opening import NotLetIn, ensure_may_open
     from agent_runtimes.loop.apps.principal import (
@@ -1010,6 +1010,7 @@ async def _acts_as(
         deployment_of,
         ensure_preview_token,
         ensure_principal_token,
+        preview_grants,
         principal_uid_of,
     )
     from agent_runtimes.loop.apps.sessions import SessionRefused
@@ -1062,7 +1063,7 @@ async def _acts_as(
                 await ensure_preview_token(
                     str(instance.get("app_uid") or ""),
                     caller.uid,
-                    app.permissions.model_dump(mode="json"),
+                    preview_grants(app),
                     bearer or None,
                 )
             except PrincipalTokenMissing as missing:

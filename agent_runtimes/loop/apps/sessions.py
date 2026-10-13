@@ -1842,24 +1842,26 @@ class LiveSession:
 
     def run_token(self, bearer: str) -> str:
         """The token a run of the session carries: the request's, but in a
-        Preview a person opened (LOOP R-25) theirs narrowed to the Spaces its
-        application is granted, held for it (`principal.ensure_preview_token`)
-        — and without one the run is refused, never run with theirs.
+        Preview a person opened (LOOP R-25) theirs narrowed to the Spaces and
+        the companies its application is granted, held for it
+        (`principal.ensure_preview_token`) — and without one the run is
+        refused, never run with theirs.
         """
         person = str(self.acts_as.get("uid") or "")
         if self.acts_as.get("kind") != "person" or not person:
             return bearer
         from agent_runtimes.loop.apps.principal import (
+            preview_grants,
             preview_token,
             preview_token_refusal,
         )
 
         app_uid = str(self.instance.get("app_uid") or "")
-        permissions = self.app.permissions.model_dump(mode="json")
-        token = preview_token(app_uid, person, permissions)
+        grants = preview_grants(self.app)
+        token = preview_token(app_uid, person, grants)
         if token is None:
             raise SessionRefused(
-                403, str(preview_token_refusal(app_uid, person, permissions))
+                403, str(preview_token_refusal(app_uid, person, grants))
             )
         return token
 

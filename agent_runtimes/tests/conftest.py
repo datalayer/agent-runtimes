@@ -138,11 +138,11 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
     from agent_runtimes.loop.apps import principal
 
     async def answer(
-        app_uid: str, permissions: Mapping[str, Any], bearer: str
+        app_uid: str, grants: Mapping[str, Any], bearer: str
     ) -> Dict[str, Any]:
         spaces = [
             {"space": grant.get("space"), "access": grant.get("access")}
-            for grant in permissions.get("spaces") or []
+            for grant in (grants.get("permissions") or {}).get("spaces") or []
         ]
         return {
             "access_token": f"preview:{app_uid}:{bearer}",
