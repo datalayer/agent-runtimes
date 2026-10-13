@@ -77,7 +77,7 @@ class Caller:
     ``at:<slug>`` for an application at its address (R-30).
     """
 
-    kind: str  # "person" | "embed" | "visitor" | "host" | "local"
+    kind: str  # "person" | "principal" | "embed" | "visitor" | "host" | "local"
     uid: str = ""
     app_uid: str = ""
     #: For an embed: the visit its token was issued for — the host's, kept
@@ -254,11 +254,17 @@ class CallerVerifier:
                     "This runtime does not know where IAM is, so it cannot verify a token.",
                 )
             status = await self._ask(f"{iam}/api/iam/v1/whoami", token)
-            caller = Caller(
-                kind="person",
-                uid=str(claims.get("sub") or claims.get("uid") or ""),
-                name=person_name(claims),
-            )
+            agent = str(claims.get("agent_uid") or "")
+            if agent and agent == str(claims.get("sub") or ""):
+                # A principal's own token — an application's, as a deployment
+                # acts (LOOP I-03) — is nobody's: never let through as a person.
+                caller = Caller(kind="principal", uid=agent, app_uid=str(claims.get("app_uid") or ""))
+            else:
+                caller = Caller(
+                    kind="person",
+                    uid=str(claims.get("sub") or claims.get("uid") or ""),
+                    name=person_name(claims),
+                )
         if status in (401, 403, 404):
             raise CallerRefused(401, "The platform does not accept this token.")
         if status != 200:

@@ -520,6 +520,18 @@ class A2AGate:
         except CallerRefused as refused:
             return refused.status, refused.reason
         claims = _unverified_claims(token)
+        if caller.kind == "principal":
+            # The deployment's own principal, as ai-agents sends it a company's
+            # turn (PAP_DATALAYER B-04): only the principal this runtime acts as,
+            # for the same deployment grant; any other principal is refused.
+            from agent_runtimes.loop.apps.principal import is_held_principal  # noqa: PLC0415
+
+            if is_held_principal(claims):
+                return None
+            return 403, (
+                f"{self.app_id} answers its own deployment's principal, and this "
+                "token is another's."
+            )
         # The task a grant's token names is its `task_id` claim: what IAM
         # mints (oauth_provider, since 2026-09-26) and what the gateway reads
         # (datalayer_common.auth.GRANT_CLAIMS). Read as `task_uid`, no real

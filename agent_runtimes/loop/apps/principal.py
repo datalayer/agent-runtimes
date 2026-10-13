@@ -57,6 +57,7 @@ __all__ = [
     "gateway_toolsets_of_the_run",
     "give_principal_token",
     "holds_principal_token",
+    "is_held_principal",
     "preview_grants",
     "preview_key",
     "preview_token",
@@ -128,6 +129,25 @@ def principal_token_refusal(deployment_uid: str) -> Optional[str]:
 def principal_uid_of(deployment_uid: str) -> str:
     """The uid of the principal a deployment's agent acts as, or ``""`` when it holds none."""
     return str((_HELD.get(deployment_uid) or {}).get("principal_uid") or "")
+
+
+def is_held_principal(claims: Mapping[str, Any]) -> bool:
+    """Whether a token's claims are those of a principal this runtime acts as, for the
+    same deployment: its `agent_uid` and the deployment's live grant (`task_grant_uid`)
+    those of a token held here. What ai-agents sends a kept deployment's agent a
+    company's turn with (PAP_DATALAYER B-04) — never a person's, never another's."""
+    from agent_runtimes.loop.apps.callers import _unverified_claims  # noqa: PLC0415
+
+    agent = str(claims.get("agent_uid") or "")
+    grant = str(claims.get("task_grant_uid") or "")
+    if not agent or not grant:
+        return False
+    for held in _HELD.values():
+        if held.get("principal_uid") != agent or held["expires_at"] <= time.time():
+            continue
+        if str(_unverified_claims(str(held["token"])).get("task_grant_uid") or "") == grant:
+            return True
+    return False
 
 
 def principal_token(deployment_uid: str) -> Optional[str]:

@@ -67,6 +67,19 @@ def test_a_person_is_whom_iam_accepts_and_is_asked_once() -> None:
     assert platform.asked == ["http://iam/api/iam/v1/whoami"]
 
 
+def test_a_principals_own_token_is_a_principal_never_a_person() -> None:
+    """A deployment's principal (LOOP I-03) is verified at IAM as anybody, and is
+    then a principal: a route for a person refuses it (PAP_DATALAYER B-04)."""
+    platform = Platform()
+    verifier = CallerVerifier(fetch=platform)
+    caller = asyncio.run(verifier.verify(token(sub="01P", agent_uid="01P", app_uid="01APP")))
+    assert (caller.kind, caller.uid, caller.app_uid) == ("principal", "01P", "01APP")
+    assert platform.asked == ["http://iam/api/iam/v1/whoami"]
+    # A person's token acting through an agent stays the person's.
+    through = asyncio.run(verifier.verify(token(sub="u1", agent_uid="01P")))
+    assert (through.kind, through.uid) == ("person", "u1")
+
+
 def test_an_embed_token_is_whom_spacer_accepts_for_its_application() -> None:
     platform = Platform()
     verifier = CallerVerifier(fetch=platform)

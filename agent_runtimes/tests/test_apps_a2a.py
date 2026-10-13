@@ -439,6 +439,44 @@ class TestWhoIsAnswered:
             )
 
     @pytest.mark.asyncio
+    async def test_its_own_deployments_principal_is_answered_and_no_other(
+        self, state: Any, monkeypatch: Any
+    ) -> None:
+        """PAP_DATALAYER B-04, found on r1: ai-agents sends a company application's
+        agent each turn with the deployment's principal token, and the gate refused it
+        (IAM's whoami answered 500 for a principal, then no task grant for this route).
+        The principal this runtime acts as, for the same deployment grant, is answered,
+        its run acting with that token; another principal, or another grant, is not."""
+        from agent_runtimes.loop.apps import principal as principals
+
+        def principal_token(agent: str, grant: str) -> str:
+            return _token(sub=agent, agent_uid=agent, app_uid="01APP", task_grant_uid=grant)
+
+        async def verify(token: str, app_uid: str = "") -> Caller:
+            claims = jwt.decode(token, options={"verify_signature": False})
+            return Caller(kind="principal", uid=claims["agent_uid"], app_uid="01APP")
+
+        monkeypatch.setattr(VERIFIER, "verify", verify)
+        monkeypatch.setattr(principals, "_HELD", {})
+        principals.give_principal_token(
+            "dep-1", principal_token("01PRINCIPAL", "grant-dep-1"), expires_in=3600, principal_uid="01PRINCIPAL"
+        )
+        turn = principal_token("01PRINCIPAL", "grant-dep-1")
+        async with served(state) as (app, agent), _client(app, REMOTE) as client:
+            for other in (principal_token("01OTHER", "grant-dep-1"), principal_token("01PRINCIPAL", "grant-old")):
+                refused = await client.post(
+                    "/", json=_stream_request("Open invoices?"), headers={"Authorization": f"Bearer {other}"}
+                )
+                assert refused.status_code == 403 and "its own deployment's principal" in refused.json()["detail"]
+            assert agent.contexts == []
+            response = await client.post(
+                "/", json=_stream_request("Open invoices?"), headers={"Authorization": f"Bearer {turn}"}
+            )
+            assert response.status_code == 200
+            assert _events(response.text)[-1]["result"]["statusUpdate"]["status"]["state"] == "TASK_STATE_COMPLETED"
+            assert agent.contexts[0].metadata["user_token"] == turn
+
+    @pytest.mark.asyncio
     async def test_the_card_is_read_by_anyone(self, state: Any) -> None:
         async with served(state) as (app, _), _client(app, REMOTE) as client:
             assert (await client.get("/.well-known/agent-card.json")).status_code == 200
