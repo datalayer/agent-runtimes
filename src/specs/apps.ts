@@ -3193,7 +3193,7 @@ export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [
-        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect).",
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the clone (Can read cannot disconnect).",
       ],
       recorded: [
         "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
@@ -8189,7 +8189,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         live: [
-          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the copy (Can read cannot disconnect).",
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview reaches the gateway's pap toolset: a question answered signed out, the person signed in by Device Sign-In with the code entered at its /device page, granting orders:read alone, and their latest order answered for them; the sign-in erased with the clone (Can read cannot disconnect).",
         ],
         recorded: [
           "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
