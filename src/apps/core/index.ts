@@ -876,7 +876,45 @@ export type LoopChatExtrasValue = {
    * every snapshot the chat receives, `undefined` included.
    */
   onUsage?: (snapshot: ContextSnapshotData | undefined) => void;
+  /**
+   * What the person types goes somewhere else than the agent, live.
+   *
+   * While set, the composer's placeholder is `says` and sending hands the
+   * words to `send`, never to the model or the runtime: a person talking with
+   * a company themselves in a Direct Conversation (PAP_DATALAYER P-08), their
+   * own words sent as theirs. A refusal `send` throws is said under the
+   * composer and the words stay where they were typed. Unset, the composer
+   * talks to the agent again.
+   */
+  sendInstead?: {
+    /** Where the words go, in the person's words, in place of the placeholder. */
+    says: string;
+    send: (text: string) => Promise<void>;
+  };
 };
+
+/**
+ * The words sent where the extras say instead of to the agent
+ * (`sendInstead`): `null` when they go to the agent as usual; else whether
+ * they were taken, and the refusal in a sentence when they were not.
+ */
+export async function sendInstead(
+  extras: Pick<LoopChatExtrasValue, 'sendInstead'>,
+  message: string,
+): Promise<{ sent: true } | { sent: false; refused: string } | null> {
+  if (!extras.sendInstead) {
+    return null;
+  }
+  try {
+    await extras.sendInstead.send(message);
+    return { sent: true };
+  } catch (error) {
+    return {
+      sent: false,
+      refused: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 
 export type ChatExtrasContribution = {
   /** Stable id, for the registry and the graph. */

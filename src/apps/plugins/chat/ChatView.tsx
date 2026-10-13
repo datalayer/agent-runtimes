@@ -124,6 +124,7 @@ import {
   LoopAgentBlueprint,
   LoopAgentGate,
   LoopChatComposer,
+  sendInstead,
   LoopChatExtras,
   LoopChatHeader,
   LoopChatLayout,
@@ -693,11 +694,26 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
        * place "the first prompt" means the same thing regardless of which one
        * a person or a host used.
        */
+      setTransient(null);
+      /*
+       * Words that go elsewhere than the agent (`sendInstead`, PAP_DATALAYER
+       * P-08): a Direct Conversation with a company, the person's own words
+       * sent as theirs. Neither a command nor a turn, and never the model's;
+       * refused, the words stay where they were typed and the reason is said.
+       */
+      const elsewhere = await sendInstead(chatExtrasRef.current, message);
+      if (elsewhere) {
+        if (elsewhere.sent) {
+          setDraft('');
+        } else {
+          setTransient(elsewhere.refused);
+        }
+        return;
+      }
       if (!firstPromptFired.current) {
         firstPromptFired.current = true;
         inputPromptConfig?.firstPromptHook?.();
       }
-      setTransient(null);
       // The turn begins where the message goes out (`sendNow`): a command
       // the workspace runs is not one.
       const outcome = await workspace.submit(message);
@@ -1946,8 +1962,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     // send button into a stop — the person keeps a way out.
     isLoading: busy,
     onStop: () => workspace.viewControls.stop?.(),
-    // The reason where the typing would go, read before the person types.
-    placeholder: disabledReason ?? placeholder,
+    // The reason where the typing would go, read before the person types;
+    // where it goes when it goes elsewhere than the agent (P-08).
+    placeholder: disabledReason ?? chatExtras.sendInstead?.says ?? placeholder,
     typingSuggestions: suggestions.map(item => item.text),
     // The same openers behind the composer's suggestions control.
     suggestions: chatSuggestions,
