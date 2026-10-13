@@ -73,6 +73,7 @@ from typing import (
 
 from pydantic_ai import RunContext
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.exceptions import SkipToolExecution
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDefinition
 
@@ -435,9 +436,7 @@ class AppRulesCapability(AbstractCapability[Any]):
                 # gateway with the exact checkout (decided 2026-10-13): asked here
                 # too, it would be asked twice, the first time without what is bought.
                 decided = replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
-            return Enforced(
-                tool_name, decided, inputs=self._company_inputs(tool_name)
-            )
+            return Enforced(tool_name, decided, inputs=self._company_inputs(tool_name))
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
         if tool_name.startswith(HOST_TOOL_PREFIX):
@@ -728,9 +727,11 @@ class AppRulesCapability(AbstractCapability[Any]):
                 )
             proposed = propose(self.app, call.tool_name, args)
             if proposed:
-                raise AppRuleBlockedError(
-                    replace(decision, behaviour=LEAVE_TO_ME), proposed
-                )
+                # The tool does not run, and the run goes on: the sentence is
+                # its result, the model tells the person (found on r1,
+                # 13 October 2026: raised, it failed Exchange Desk's whole
+                # turn, so nothing proposed reached the person).
+                raise SkipToolExecution(proposed)
         # A visitor without an account only reads, and nobody is asked for
         # them: whatever the rules say, anything else is not done (LOOP R-30).
         refusal = visitor_refusal(call.tool_name, decision.classes, decision.behaviour)

@@ -13,6 +13,16 @@ confirmed terms, once. Outside such a turn the rules decide as always.
 """
 
 import pytest
+from pydantic_ai import Agent
+from pydantic_ai.exceptions import SkipToolExecution
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelResponse,
+    TextPart,
+    ToolCallPart,
+    ToolReturnPart,
+)
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
 from agent_runtimes.loop.apps.pap_company import (
@@ -67,8 +77,13 @@ def turn():  # type: ignore[no-untyped-def]
 @pytest.mark.asyncio
 async def test_a_declared_operation_is_proposed_not_made(turn: PapTurn) -> None:
     harness = Harness(company())
-    with pytest.raises(AppRuleBlockedError, match="Proposed to the person, not done"):
+    with pytest.raises(SkipToolExecution) as skipped:
         await harness.call(SEND, TERMS)
+    # The sentence is the tool's result: the run goes on and the model tells the person.
+    assert skipped.value.result == (
+        "Proposed to the person, not done: Send Your exchange to marta@example.com. "
+        "It is done only once they confirm these exact terms; tell them so."
+    )
     # Nobody was asked and nothing ran: the person confirms at the company.
     assert harness.asked == []
     assert turn.proposals == [
@@ -82,6 +97,43 @@ async def test_a_declared_operation_is_proposed_not_made(turn: PapTurn) -> None:
     assert artifact["parts"][0]["data"] == {"pap_operation": turn.proposals[0]}
     # Reading is done as always.
     assert await harness.call(SEARCH, {"query": "is:unread"}) == {"query": "is:unread"}
+
+
+@pytest.mark.asyncio
+async def test_a_proposal_does_not_end_the_turn(turn: PapTurn) -> None:
+    # Found on r1, 13 October 2026: Exchange Desk's exchange_order, proposed in
+    # a personal agent's turn over A2A, raised out of the run, which failed
+    # whole (*The application could not answer just now*), nothing proposed.
+    ran: list[dict] = []
+    returned: list[ToolReturnPart] = []
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        returns = [
+            part
+            for message in messages
+            for part in message.parts
+            if isinstance(part, ToolReturnPart)
+        ]
+        if not returns:
+            return ModelResponse(parts=[ToolCallPart(SEND, TERMS)])
+        returned.extend(returns)
+        return ModelResponse(parts=[TextPart("Proposed: confirm it to have it sent.")])
+
+    agent = Agent(FunctionModel(model), capabilities=[Harness(company()).capability])
+
+    @agent.tool_plain(name=SEND)
+    def send(to: str, subject: str) -> str:
+        ran.append({"to": to, "subject": subject})
+        return "sent"
+
+    result = await agent.run("Send Marta her exchange.")
+    assert result.output == "Proposed: confirm it to have it sent."
+    assert ran == []
+    [said] = returned
+    assert str(said.content).startswith(
+        "Proposed to the person, not done: Send Your exchange"
+    )
+    assert [proposal["action"] for proposal in turn.proposals] == ["mail.send"]
 
 
 @pytest.mark.asyncio
@@ -269,7 +321,9 @@ async def test_a_run_over_a2a_is_offered_the_tools_of_the_applications_code(
         return ["mcp"]
 
     monkeypatch.setattr(principal, "gateway_toolsets_of_the_run", gateway)
-    monkeypatch.setattr(models, "app_instance_of", lambda agent_id: {"app_uid": "app-desk"})
+    monkeypatch.setattr(
+        models, "app_instance_of", lambda agent_id: {"app_uid": "app-desk"}
+    )
     adapter = PydanticAIAdapter.__new__(PydanticAIAdapter)
     adapter._agent_id = "a2a-desk"
     adapter._get_runtime_toolsets_async = runtime_toolsets  # type: ignore[method-assign]
