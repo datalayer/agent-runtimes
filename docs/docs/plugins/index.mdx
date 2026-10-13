@@ -66,7 +66,13 @@ company's page) and `code` are for the page alone; the model reads only where
 to sign in, how, and until when. The plugin
 `@datalayer/loop-plugin-pap-sign-in` (`src/apps/plugins/pap-sign-in`) contributes
 its renderer and binds the tool, so an older result without the display is
-drawn by the same card:
+drawn by the same card. The card draws the display's three modes: `direct`
+(the company's page), `device` (its page and a code, with a QR) and
+`mediated` (Datalayer's own page, where the person types what the company
+asks, never in the chat, with `sent_to` when the company sent a code). The
+gateway's `pact` toolset answers `pact_sign_in` with the same display, a
+`device` sign-in at the business, and the plugin binds that tool too
+(`/(^|[_.:\-/])pa(?:p|ct)_sign_in$/` in the plugin itself):
 
 ```ts
 import { contribution, definePlugin } from '@datalayer/reactor';

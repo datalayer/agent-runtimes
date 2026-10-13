@@ -32,6 +32,9 @@ describe('pap_sign_in in the chat', () => {
     expect(isPapSignInTool('pap.pap_sign_in')).toBe(true);
     expect(isPapSignInTool('pap_sign_in_status')).toBe(false);
     expect(isPapSignInTool('notpap_sign_in')).toBe(false);
+    // A business's, over PACT (PI-56), as the runtime prefixes it.
+    expect(isPapSignInTool('pact_air_example_pact_sign_in')).toBe(true);
+    expect(isPapSignInTool('pact_sign_in_status')).toBe(false);
   });
 
   it('reads a device sign-in: the page, its domain, the code, until when', () => {
@@ -70,9 +73,58 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
+  it('reads a mediated sign-in: Datalayer’s page, where a code was sent, nothing typed here', () => {
+    const mediated = {
+      status: 'waiting_for_the_person',
+      mode: 'mediated',
+      open: 'https://datalayer.app/pap/sign-in?ticket=t_1',
+      sent_to: 'j***@example.com',
+    };
+    expect(readPapSignIn(mediated)).toEqual({
+      mode: 'mediated',
+      open: 'https://datalayer.app/pap/sign-in?ticket=t_1',
+      host: 'datalayer.app',
+      sentTo: 'j***@example.com',
+    });
+    // A code is never read for it, nor where one was sent for another mode.
+    expect(readPapSignIn({ ...mediated, sent_to: '' })).not.toHaveProperty(
+      'sentTo',
+    );
+    expect(
+      readPapSignIn({ ...DEVICE, sent_to: 'j***@example.com' }),
+    ).not.toHaveProperty('sentTo');
+    expect(
+      readPapSignIn({ ...mediated, open: 'http://datalayer.app/pap/sign-in' }),
+    ).toEqual({
+      refused: PAP_SIGN_IN_WORDS.refused,
+    });
+    expect(PAP_SIGN_IN_WORDS.mediatedTitle('datalayer.app')).toBe(
+      'Sign in through datalayer.app',
+    );
+  });
+
+  it('reads a business’s sign-in over PACT as a device sign-in (PI-56)', () => {
+    expect(
+      readPapSignIn({
+        status: 'waiting_for_the_person',
+        mode: 'device',
+        open: 'https://air.example/login?return_to=consent&user_code=AB12-CD34',
+        code: 'AB12-CD34',
+        expires_at: '2026-10-13T12:10:00+00:00',
+        asked: ['bookings:read'],
+      }),
+    ).toEqual({
+      mode: 'device',
+      open: 'https://air.example/login?return_to=consent&user_code=AB12-CD34',
+      host: 'air.example',
+      code: 'AB12-CD34',
+      expiresAt: '2026-10-13T12:10:00+00:00',
+    });
+  });
+
   it('leaves any other answer to the chat’s own row', () => {
     expect(readPapSignIn({ status: 'unavailable', reason: 'no' })).toBeNull();
-    expect(readPapSignIn({ ...DEVICE, mode: 'mediated' })).toBeNull();
+    expect(readPapSignIn({ ...DEVICE, mode: 'email' })).toBeNull();
     expect(readPapSignIn({ ...DEVICE, code: '' })).toBeNull();
     expect(readPapSignIn('not json')).toBeNull();
     expect(readPapSignIn(undefined)).toBeNull();

@@ -7,7 +7,9 @@
  * *Sign in at a company*, in the chat (AGENT_PROTOCOLS PI-56): where the
  * gateway's `pap_sign_in` answers, the company's page as a button opening a
  * new tab, the code large and copyable with a code to scan for Device
- * Sign-In, until when, and *I have signed in: check again* — sent as the
+ * Sign-In, Datalayer's own page for Mediated Sign-In (where the person types
+ * what the company asks, never in the chat) with where a code was sent,
+ * until when, and *I have signed in: check again* — sent as the
  * person's next message — when the chat can send one, otherwise a line
  * asking them to say so. What it reads is `signIn`'s.
  *
@@ -56,10 +58,14 @@ export function PapSignInCard({
       setCopied(false);
     }
   };
+  const title =
+    read.mode === 'mediated'
+      ? PAP_SIGN_IN_WORDS.mediatedTitle(read.host)
+      : PAP_SIGN_IN_WORDS.title(read.host);
   return (
     <Box
       as="section"
-      aria-label={PAP_SIGN_IN_WORDS.title(read.host)}
+      aria-label={title}
       my={2}
       p={3}
       border="1px solid"
@@ -69,13 +75,20 @@ export function PapSignInCard({
       maxWidth={480}
     >
       <Heading as="h4" sx={{ fontSize: 2, mb: 1 }}>
-        {PAP_SIGN_IN_WORDS.title(read.host)}
+        {title}
       </Heading>
       <Text as="p" sx={{ mt: 0, mb: 2, color: 'fg.muted', fontSize: 1 }}>
         {read.mode === 'device'
           ? PAP_SIGN_IN_WORDS.device
-          : PAP_SIGN_IN_WORDS.direct}
+          : read.mode === 'mediated'
+            ? PAP_SIGN_IN_WORDS.mediated
+            : PAP_SIGN_IN_WORDS.direct}
       </Text>
+      {read.sentTo ? (
+        <Text as="p" sx={{ mt: 0, mb: 2, fontSize: 1 }}>
+          {PAP_SIGN_IN_WORDS.sentTo(read.sentTo)}
+        </Text>
+      ) : null}
       {read.code ? (
         <Box display="flex" gap={3} alignItems="center" flexWrap="wrap" mb={2}>
           <Box>
