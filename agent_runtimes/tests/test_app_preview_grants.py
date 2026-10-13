@@ -211,6 +211,8 @@ def test_a_previews_run_carries_the_narrowed_token_and_an_ungranted_space_is_ref
                     "computer": {"browse": False, "files": False, "shell": False},
                 },
                 "pap": {"connections": []},
+                "pact": {"connections": []},
+                "commerce": {"merchants": []},
             },
             "ada",
         )
@@ -252,8 +254,12 @@ def test_its_companies_are_asked_for_with_its_spaces(
         "pap": {
             "profile": "draft-01",
             "connections": [
-                {"id": "orders", "company": "manzanita.example", "scopes": ["orders:read"]}
-            ]
+                {
+                    "id": "orders",
+                    "company": "manzanita.example",
+                    "scopes": ["orders:read"],
+                }
+            ],
         },
     }
     _make("support-desk", shop, {"app_uid": "app-1"}, ai_agents)
@@ -268,6 +274,67 @@ def test_its_companies_are_asked_for_with_its_spaces(
     assert asked["permissions"]["spaces"] == [{"space": "support", "access": "write"}]
     # As the Appspec says it: ai-agents compiles it as a deployment's grant is, in the person's name.
     assert asked["pap"]["connections"] == shop["pap"]["connections"]
+
+
+def test_its_businesses_and_merchants_are_asked_for_too(
+    runtime: Any, remote: TestClient, ai_agents: AiAgents
+) -> None:
+    """AGENT_PROTOCOLS PI-42: a Preview of an application that asks a business over PACT or
+    buys at a test merchant names them as its token is asked for, as its deployment's grant
+    does; without them, every call of the gateway's `pact`, `ucp` and `acp` toolsets was refused."""
+    desk = {
+        **DESK,
+        "protocols": ["pact", "ucp"],
+        "pact": {
+            "connections": [
+                {
+                    "id": "air",
+                    "brand": "air.examples.datalayer.run",
+                    "audience": "https://air.examples.datalayer.run/a2a",
+                    "access": "write",
+                    "scopes": ["bookings:read"],
+                }
+            ]
+        },
+        "commerce": {
+            "merchants": [
+                {
+                    "id": "store",
+                    "protocol": "ucp",
+                    "merchant": "store.examples.datalayer.run",
+                    "access": "write",
+                    "limit": {"amount": "50", "currency": "USD"},
+                }
+            ]
+        },
+    }
+    _make("support-desk", desk, {"app_uid": "app-1"}, ai_agents)
+    events_of(
+        remote.post(
+            "/api/v1/apps/sessions",
+            headers=as_("ada"),
+            json={"agent": "support-desk", "app_uid": "app-1", "opener": "Look"},
+        )
+    )
+    asked = ai_agents.asked[0][1]
+    assert [c["brand"] for c in asked["pact"]["connections"]] == [
+        "air.examples.datalayer.run"
+    ]
+    assert (
+        asked["pact"]["connections"][0]["audience"]
+        == "https://air.examples.datalayer.run/a2a"
+    )
+    [merchant] = asked["commerce"]["merchants"]
+    assert (merchant["protocol"], merchant["merchant"], merchant["limit"]) == (
+        "ucp",
+        "store.examples.datalayer.run",
+        {"amount": "50", "currency": "USD"},
+    )
+    # A business added is a token asked again, never the one narrowed to the list before.
+    plain = {"permissions": {"spaces": []}}
+    assert preview_key("app-1", "ada", {**plain, "pact": asked["pact"]}) != preview_key(
+        "app-1", "ada", plain
+    )
 
 
 def test_without_its_token_a_preview_runs_nothing(
@@ -316,7 +383,10 @@ def test_it_is_kept_and_asked_again_before_it_runs_out(ai_agents: AiAgents) -> N
     # A list changed is a token asked again, never the one narrowed to the list before.
     wider = {
         "permissions": {
-            "spaces": [*permissions["permissions"]["spaces"], {"space": "finance", "access": "read"}]
+            "spaces": [
+                *permissions["permissions"]["spaces"],
+                {"space": "finance", "access": "read"},
+            ]
         }
     }
     assert asyncio.run(ensure_preview_token("app-1", "ada", wider, "ada-4")) != renewed
@@ -326,8 +396,12 @@ def test_it_is_kept_and_asked_again_before_it_runs_out(ai_agents: AiAgents) -> N
         **permissions,
         "pap": {"connections": [{"id": "orders", "company": "manzanita.example"}]},
     }
-    assert preview_key("app-1", "ada", company) != preview_key("app-1", "ada", permissions)
-    assert asyncio.run(ensure_preview_token("app-1", "ada", company, "ada-5")) != renewed
+    assert preview_key("app-1", "ada", company) != preview_key(
+        "app-1", "ada", permissions
+    )
+    assert (
+        asyncio.run(ensure_preview_token("app-1", "ada", company, "ada-5")) != renewed
+    )
     assert ai_agents.asked[-1][1] == company
     # Expired, with no token to ask again with: nothing.
     principal._HELD[preview_key("app-1", "ada", permissions)]["expires_at"] = (

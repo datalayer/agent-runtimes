@@ -29,7 +29,8 @@ application is granted, and the companies it works with (PAP_DATALAYER
 P-01). As its session opens, and on each of its requests, the runtime asks
 ai-agents with the person's token for a token of theirs narrowed to what the
 Appspec it runs grants (`preview_grants`: its `permissions` and its `pap`
-connections; `POST /apps/{app_uid}/preview-token`, minted by IAM) — nothing
+connections, its `pact` businesses and `commerce` merchants; `POST
+/apps/{app_uid}/preview-token`, minted by IAM) — nothing
 when it grants nothing — keeps it here beside the principals' and asks again
 before it runs out, the same way (`ensure_preview_token`). Its runs carry that token in
 place of the person's (`sessions.LiveSession.forward`); its model calls do
@@ -145,7 +146,10 @@ def is_held_principal(claims: Mapping[str, Any]) -> bool:
     for held in _HELD.values():
         if held.get("principal_uid") != agent or held["expires_at"] <= time.time():
             continue
-        if str(_unverified_claims(str(held["token"])).get("task_grant_uid") or "") == grant:
+        if (
+            str(_unverified_claims(str(held["token"])).get("task_grant_uid") or "")
+            == grant
+        ):
             return True
     return False
 
@@ -433,11 +437,19 @@ def preview_grants(app: Any) -> dict[str, Any]:
     Its ``permissions`` (the Spaces, LOOP R-25) and its ``pap`` connections
     (the companies it works with, PAP_DATALAYER P-01): a Preview whose token
     named no company had every call of the gateway's `pap` toolset refused.
+    And its ``pact`` connections and ``commerce`` merchants (the businesses
+    and the test merchants it asks for the person, AGENT_PROTOCOLS PI-42):
+    without them, a Preview of *Travel Desk* or *Shopping Desk* had every
+    call of the gateway's `pact`, `ucp` and `acp` toolsets refused.
     """
     pap = app.pap.model_dump(mode="json", by_alias=True, exclude_none=True)
+    pact = app.pact.model_dump(mode="json", by_alias=True, exclude_none=True)
+    commerce = app.commerce.model_dump(mode="json", by_alias=True, exclude_none=True)
     return {
         "permissions": app.permissions.model_dump(mode="json"),
         "pap": {"connections": pap.get("connections") or []},
+        "pact": {"connections": pact.get("connections") or []},
+        "commerce": {"merchants": commerce.get("merchants") or []},
     }
 
 
@@ -455,7 +467,17 @@ def preview_key(app_uid: str, person_uid: str, grants: Mapping[str, Any]) -> str
         json.dumps(connection, sort_keys=True)
         for connection in (grants.get("pap") or {}).get("connections") or []
     )
-    digest = hashlib.sha256(json.dumps([spaces, companies]).encode("utf-8")).hexdigest()[:16]
+    # The businesses and merchants it asks for the person (AGENT_PROTOCOLS PI-42).
+    others = sorted(
+        json.dumps(connection, sort_keys=True)
+        for connection in [
+            *((grants.get("pact") or {}).get("connections") or []),
+            *((grants.get("commerce") or {}).get("merchants") or []),
+        ]
+    )
+    digest = hashlib.sha256(
+        json.dumps([spaces, companies, *([others] if others else [])]).encode("utf-8")
+    ).hexdigest()[:16]
     return f"preview:{app_uid}:{person_uid}:{digest}"
 
 
