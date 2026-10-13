@@ -3259,12 +3259,12 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SHOPPING_ASSISTANT_APP_0_0_1 = AppSpec.model_validate(
+SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
-        "id": "shopping-assistant",
+        "id": "shopping-desk",
         "version": "0.0.1",
-        "name": "Shopping Assistant",
+        "name": "Shopping Desk",
         "kind": "chat",
         "description": "Finds what you want at the shop, fills your basket and buys it only once you approve the exact purchase, up to a limit you know.",
         "owner": "Datalayer <info@datalayer.io>",
@@ -4179,7 +4179,7 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_1,
     "sales": SALES_APP_0_0_1,
     "ship-or-fix": SHIP_OR_FIX_APP_0_0_1,
-    "shopping-assistant": SHOPPING_ASSISTANT_APP_0_0_1,
+    "shopping-desk": SHOPPING_DESK_APP_0_0_1,
     "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_1,
     "support-desk": SUPPORT_DESK_APP_0_0_1,
     "travel-desk": TRAVEL_DESK_APP_0_0_1,
@@ -4207,7 +4207,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "report-from-a-file": "python",
     "sales": "written",
     "ship-or-fix": "written",
-    "shopping-assistant": "written",
+    "shopping-desk": "written",
     "supplier-comparison": "written",
     "support-desk": "canvas",
     "travel-desk": "written",

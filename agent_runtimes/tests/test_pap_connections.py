@@ -256,8 +256,8 @@ def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
 
 
 def shop() -> AppSpec:
-    """Shopping Assistant: a person's agent at Example Store over UCP (AGENT_PROTOCOLS PI-20)."""
-    spec = APP_CATALOGUE["shopping-assistant"].model_copy(deep=True)
+    """Shopping Desk: a person's agent at Example Store over UCP (AGENT_PROTOCOLS PI-20)."""
+    spec = APP_CATALOGUE["shopping-desk"].model_copy(deep=True)
     spec.commerce.merchants.append(
         {"id": "outfitters", "protocol": "acp", "merchant": "outfitters.example"}
     )
