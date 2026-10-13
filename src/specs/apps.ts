@@ -1580,7 +1580,7 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
         "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
       ],
       unverified: [
-        "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed in agent-runtimes, to release), so the answer for the person was not right yet.",
+        "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed since), so the answer for the person was not right yet.",
       ],
     },
   },
@@ -1891,10 +1891,10 @@ export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
     verified: {
       live: [],
       recorded: [
-        "Its exchange_order runs in process in agent-runtimes' tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
+        "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
       ],
       unverified: [
-        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes 1.5.11), and its exchange_order had no code yet. Not drilled since.',
+        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed since), and its exchange_order had no code yet. Not drilled since.',
       ],
     },
   },
@@ -2045,7 +2045,7 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
         'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
       ],
       unverified: [
-        "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed in agent-runtimes, to release), so its answer for the person was not right yet.",
+        "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed since), so its answer for the person was not right yet.",
       ],
     },
   },
@@ -5268,7 +5268,7 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
         "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
       ],
       recorded: [
-        "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
+        "Example Verifier's checks are the counterparts service's own tests (a request signed with Datalayer's open-source signer verified, an unsigned or tampered one answered the page anyone gets).",
       ],
       unverified: [
         "A model's turns in the Studio's Preview were not watched in that drill.",
@@ -7208,7 +7208,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
         ],
         unverified: [
-          "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed in agent-runtimes, to release), so the answer for the person was not right yet.",
+          "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed since), so the answer for the person was not right yet.",
         ],
       },
     },
@@ -7388,10 +7388,10 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       ],
       verified: {
         recorded: [
-          "Its exchange_order runs in process in agent-runtimes' tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
+          "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
         ],
         unverified: [
-          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes 1.5.11), and its exchange_order had no code yet. Not drilled since.',
+          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed since), and its exchange_order had no code yet. Not drilled since.',
         ],
       },
     },
@@ -7476,7 +7476,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
         ],
         unverified: [
-          "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed in agent-runtimes, to release), so its answer for the person was not right yet.",
+          "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed since), so its answer for the person was not right yet.",
         ],
       },
     },
@@ -9577,7 +9577,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
         ],
         recorded: [
-          "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
+          "Example Verifier's checks are the counterparts service's own tests (a request signed with Datalayer's open-source signer verified, an unsigned or tampered one answered the page anyone gets).",
         ],
         unverified: [
           "A model's turns in the Studio's Preview were not watched in that drill.",
