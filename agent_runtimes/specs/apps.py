@@ -1711,7 +1711,7 @@ EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
                     "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done."
                 ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Drilled a third time the same evening: signed in, asked to exchange, its agent said it had no exchange_order tool — a company's turn over A2A was not offered the tools of its code (fixed in agent-runtimes, not released)."
+                    "Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Drilled a third time the same evening: signed in, asked to exchange, it said it could not — asked by a person's own agent, it was not given its exchange_order (fixed, not yet released)."
                 ],
             },
         },
@@ -1733,7 +1733,7 @@ EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "Its exchange_order is not offered to a personal agent's turn until the runtime that offers it the tools of its code is released.",
+        "unavailable_because": "Asked by a person's own agent, it is not given its exchange_order until a fix is released.",
         "tags": ["example", "companies", "python"],
         "icon": "apps",
         "emoji": "🏪",
