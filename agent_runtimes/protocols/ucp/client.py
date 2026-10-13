@@ -113,6 +113,17 @@ def _checkout(body: Mapping[str, Any]) -> dict[str, Any]:
     return dict(body)
 
 
+def _order(body: Mapping[str, Any]) -> dict[str, Any]:
+    """An order as ``ucp-sdk`` reads it; an error envelope raises."""
+    from ucp_sdk.models.schemas.shopping.order import Order
+
+    if body.get("ucp", {}).get("status") == "error":
+        messages = "; ".join(m.get("content", "") for m in body.get("messages", []))
+        raise UcpError(f"the business refused: {messages}")
+    Order.model_validate(body)
+    return dict(body)
+
+
 @dataclass
 class UcpClient:
     """A platform's client of one business."""
@@ -252,6 +263,10 @@ class UcpClient:
             )
         )
 
+    async def get_order(self, order_id: str) -> dict[str, Any]:
+        """After the sale: an order the business placed, its lines and how far each is fulfilled (``read``)."""
+        return _order(await self._call("GET", f"/orders/{order_id}"))
+
     async def propose_completion(self, checkout_id: str) -> CheckoutProposal:
         """The exact purchase a ``ready_for_complete`` checkout would make (``read``)."""
         checkout = await self.get_checkout(checkout_id)
@@ -353,6 +368,31 @@ def checkout_summary(checkout: Mapping[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def order_summary(order: Mapping[str, Any]) -> dict[str, Any]:
+    """What an agent may see of an order: its lines, how far each is fulfilled, its totals and link."""
+    return {
+        "id": order["id"],
+        "checkout_id": order["checkout_id"],
+        "permalink_url": order["permalink_url"],
+        "currency": order["currency"],
+        "lines": [
+            {
+                "title": line["item"].get("title") or line["item"]["id"],
+                "quantity": line["quantity"]["total"],
+                "fulfilled": line["quantity"]["fulfilled"],
+                "status": line["status"],
+            }
+            for line in order.get("line_items", [])
+        ],
+        "totals": {t["type"]: t["amount"] for t in order.get("totals", [])},
+        "events": [
+            event.get("type", "")
+            for event in (order.get("fulfillment") or {}).get("events") or []
+        ],
+        "messages": [m.get("content", "") for m in order.get("messages") or []],
+    }
+
+
 __all__ = [
     "CHECKOUT_CAPABILITY",
     "BusinessProfile",
@@ -367,5 +407,6 @@ __all__ = [
     "UcpClient",
     "UcpError",
     "checkout_summary",
+    "order_summary",
     "revision_of",
 ]

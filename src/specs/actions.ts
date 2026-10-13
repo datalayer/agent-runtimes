@@ -737,6 +737,7 @@ export const PROTOCOL_TOOL_CLASSES: Record<
       ucp_update_checkout: ['write'],
       ucp_cancel_checkout: ['write'],
       ucp_complete: ['buy'],
+      ucp_get_order: ['read'],
     },
   },
 };

@@ -21,6 +21,7 @@ from agent_runtimes.protocols.ucp import (
     UcpClient,
     UcpError,
     checkout_summary,
+    order_summary,
 )
 from agent_runtimes.protocols.ucp.merchant import TEST_HANDLER_ID, ExampleStore
 from agent_runtimes.protocols.ucp.plugin import (
@@ -145,6 +146,40 @@ async def test_a_purchase_is_proposed_approved_and_made_once():
             store=proposal_store_of(platform),
         )
     assert len(store.orders) == 1
+
+
+@pytest.mark.asyncio
+async def test_after_the_sale_the_order_is_read_and_a_stranger_is_refused():
+    """PR-31: an order the merchant placed, read back (``read``); an unknown one refused."""
+    store = ExampleStore()
+    client = _client(store)
+    platform = build_protocols_reactor(
+        plugins=[(PluginManifest(name="host", version="1"), Host(Person()))]
+    )
+    checkout = await _ready(client)
+    proposal = await client.propose_completion(checkout["id"])
+    done = await client.complete(
+        proposal,
+        approver=approver_of(platform),
+        instruments=instruments_of(platform),
+        store=proposal_store_of(platform),
+    )
+    order = await client.get_order(done["order"]["id"])
+    assert (order["id"], order["checkout_id"]) == (done["order"]["id"], checkout["id"])
+    summary = order_summary(order)
+    assert summary["lines"] == [
+        {
+            "title": "Sencha green tea, 100 g",
+            "quantity": 2,
+            "fulfilled": 0,
+            "status": "processing",
+        }
+    ]
+    assert summary["totals"]["total"] == 2700 and summary["currency"] == "USD"
+    assert TOKEN not in json.dumps(order)
+    with pytest.raises(UcpError, match="answered 404"):
+        await client.get_order("ord_nobody")
+    assert ACTION_CLASSES["get_order"] == "read"
 
 
 @pytest.mark.asyncio

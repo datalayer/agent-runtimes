@@ -9,9 +9,9 @@ proposal store and capability extensions are contribution points
 (:mod:`.plugin`); and a local test merchant (:mod:`.merchant`). A purchase is
 an exact, revisioned proposal, approved by the person, completed once.
 
-Tools and their action classes (F-10): ``search`` and ``propose`` are
-``read``; ``create``, ``update`` and ``cancel`` a checkout are ``write``;
-``complete`` is ``buy``.
+Tools and their action classes (F-10): ``search``, ``propose`` and, after
+the sale, ``get_order`` are ``read``; ``create``, ``update`` and ``cancel`` a
+checkout are ``write``; ``complete`` is ``buy``.
 """
 
 from ..commerce import operation_classes
@@ -29,6 +29,7 @@ from .client import (
     UcpClient,
     UcpError,
     checkout_summary,
+    order_summary,
     revision_of,
 )
 
@@ -51,5 +52,6 @@ __all__ = [
     "UcpClient",
     "UcpError",
     "checkout_summary",
+    "order_summary",
     "revision_of",
 ]

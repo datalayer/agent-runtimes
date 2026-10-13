@@ -14,6 +14,7 @@ import { contribution, definePlugin } from '@datalayer/reactor';
 import { describe, expect, it } from 'vitest';
 import fixture from '../../../agent_runtimes/protocols/ucp/fixtures/checkout.json';
 import { buildProtocolsReactor } from '../agentProtocols';
+import { exampleStore } from './merchant';
 import {
   UCP_ACTION_CLASSES,
   UcpApprovers,
@@ -21,6 +22,7 @@ import {
   UcpClient,
   checkoutSummary,
   negotiateCapabilities,
+  orderSummary,
   proposalSummary,
   revisionOf,
   type CheckoutProposal,
@@ -215,6 +217,36 @@ describe('UCP', () => {
     expect(merchant.orders).toHaveLength(1);
     expect(JSON.stringify(checkoutSummary(done))).not.toContain(TOKEN);
     expect(UCP_ACTION_CLASSES.complete).toBe('buy');
+  });
+
+  it('reads an order after the sale, and refuses one it never placed (PR-31)', async () => {
+    const merchant = exampleStore(STORE);
+    const client = new UcpClient(
+      STORE,
+      'https://agent.example/.well-known/ucp',
+      merchant.fetch,
+    );
+    const reactor = buildProtocolsReactor([host().plugin]);
+    const checkout = await ready(client);
+    const done = await client.complete(
+      await client.proposeCompletion(checkout.id),
+      reactor,
+    );
+    const order = await client.getOrder(done.order.id);
+    expect([order.id, order.checkout_id]).toEqual([done.order.id, checkout.id]);
+    const summary = orderSummary(order);
+    expect(summary.lines).toEqual([
+      {
+        title: 'Sencha green tea, 100 g',
+        quantity: 2,
+        fulfilled: 0,
+        status: 'processing',
+      },
+    ]);
+    expect([summary.totals.total, summary.currency]).toEqual([2700, 'USD']);
+    expect(JSON.stringify(order)).not.toContain(TOKEN);
+    await expect(client.getOrder('ord_nobody')).rejects.toThrow('answered 404');
+    expect(UCP_ACTION_CLASSES.getOrder).toBe('read');
   });
 
   it('buys nothing without an approver, an approval, or with a changed checkout', async () => {

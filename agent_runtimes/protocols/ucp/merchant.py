@@ -7,7 +7,8 @@ A Starlette application of the REST binding of UCP ``2026-08-25``, shaped
 after the specification's own examples: its profile at ``/.well-known/ucp``,
 ``/catalog/search``, and the checkout lifecycle (``incomplete`` until the
 buyer's email is given, then ``ready_for_complete``; ``completed`` with an
-order; ``canceled``). It checks what a business checks of a platform:
+order; ``canceled``), and after the sale its orders (``/orders/{id}``, each
+line ``processing`` until shipped). It checks what a business checks of a platform:
 ``UCP-Agent`` as a Dictionary with ``profile``, ``Request-Id``, an
 ``Idempotency-Key`` on every change (the same key and body answer the first
 result, another body ``409``). Every answer it gives is validated by
@@ -114,6 +115,8 @@ class ExampleStore:
         self.base = base
         self.checkouts: dict[str, dict[str, Any]] = {}
         self.orders: list[dict[str, Any]] = []
+        #: Each order placed, by id: what was bought, as the order answers it.
+        self.placed: dict[str, dict[str, Any]] = {}
         self._replies: dict[str, tuple[str, int, dict[str, Any]]] = {}
 
     def _check_agent(self, request: Request) -> JSONResponse | None:
@@ -295,7 +298,41 @@ class ExampleStore:
         checkout["status"] = "completed"
         checkout["order"] = order
         self.orders.append({"order": order["id"], "checkout": checkout["id"]})
-        return 200, self._render(checkout)
+        rendered = self._render(checkout)
+        self.placed[order["id"]] = {
+            "checkout_id": checkout["id"],
+            "permalink_url": order["permalink_url"],
+            "line_items": rendered["line_items"],
+            "totals": rendered["totals"],
+            "currency": rendered["currency"],
+        }
+        return 200, rendered
+
+    def _render_order(self, order_id: str) -> dict[str, Any]:
+        from ucp_sdk.models.schemas.shopping.order import Order
+
+        placed = self.placed[order_id]
+        rendered = {
+            "ucp": {"version": UCP_VERSION, "status": "success"},
+            "id": order_id,
+            "checkout_id": placed["checkout_id"],
+            "permalink_url": placed["permalink_url"],
+            "line_items": [
+                {
+                    "id": line["id"],
+                    "item": line["item"],
+                    "quantity": {"total": line["quantity"], "fulfilled": 0},
+                    "totals": line["totals"],
+                    "status": "processing",
+                }
+                for line in placed["line_items"]
+            ],
+            "fulfillment": {"events": []},
+            "currency": placed["currency"],
+            "totals": placed["totals"],
+        }
+        Order.model_validate(rendered)
+        return rendered
 
     def _cancel(
         self, body: dict[str, Any], request: Request
@@ -353,6 +390,14 @@ class ExampleStore:
                 return _refuse(404, "not_found", "No such checkout")
             return JSONResponse(self._render(checkout))
 
+        async def order(request: Request) -> JSONResponse:
+            refused = self._check_agent(request)
+            if refused:
+                return refused
+            if request.path_params["id"] not in self.placed:
+                return _refuse(404, "not_found", "No such order")
+            return JSONResponse(self._render_order(request.path_params["id"]))
+
         async def create(request: Request) -> JSONResponse:
             return await self._idempotent(request, self._create)
 
@@ -383,6 +428,7 @@ class ExampleStore:
                     cancel,
                     methods=["POST"],
                 ),
+                Route(f"{prefix}/orders/{{id}}", order, methods=["GET"]),
             ]
         )
 

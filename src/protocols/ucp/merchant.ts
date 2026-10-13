@@ -92,6 +92,8 @@ export function exampleStore(base = 'https://store.example'): {
     { seen: string; status: number; body: Json }
   >();
   const orders: Array<{ order: string; checkout: string }> = [];
+  // Each order placed, by id: what was bought, as the order answers it.
+  const placed = new Map<string, Json>();
 
   const render = (checkout: Checkout): Json => {
     let subtotal = 0;
@@ -176,7 +178,13 @@ export function exampleStore(base = 'https://store.example'): {
       checkouts.set(checkout.id, checkout);
       return { status: 201, body: render(checkout) };
     }
-    const [, , id, action] = path.split('/');
+    const [, collection, id, action] = path.split('/');
+    if (collection === 'orders') {
+      const order = method === 'GET' && !action ? placed.get(id) : undefined;
+      return order
+        ? { status: 200, body: order }
+        : { status: 404, body: { messages: [{ content: 'No such order' }] } };
+    }
     const checkout = checkouts.get(id);
     if (!checkout) {
       return { status: 404, body: { messages: [{ content: 'No checkout' }] } };
@@ -228,7 +236,24 @@ export function exampleStore(base = 'https://store.example'): {
       checkout.status = 'completed';
       checkout.order = order;
       orders.push({ order: order.id, checkout: checkout.id });
-      return { status: 200, body: render(checkout) };
+      const rendered = render(checkout);
+      placed.set(order.id, {
+        ucp: { version: UCP_VERSION, status: 'success' },
+        id: order.id,
+        checkout_id: checkout.id,
+        permalink_url: order.permalink_url,
+        line_items: rendered.line_items.map((line: Json) => ({
+          id: line.id,
+          item: line.item,
+          quantity: { total: line.quantity, fulfilled: 0 },
+          totals: line.totals,
+          status: 'processing',
+        })),
+        fulfillment: { events: [] },
+        currency: rendered.currency,
+        totals: rendered.totals,
+      });
+      return { status: 200, body: rendered };
     }
     if (method === 'POST' && action === 'cancel') {
       if (checkout.status !== 'completed') {

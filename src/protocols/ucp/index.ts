@@ -23,7 +23,7 @@ import {
   definePlugin,
   type ReactorPlatformView,
 } from '@datalayer/reactor';
-import { ExtendedCheckoutResponseSchema } from '@ucp-js/sdk';
+import { ExtendedCheckoutResponseSchema, OrderSchema } from '@ucp-js/sdk';
 import {
   InMemoryProposalStore,
   digest,
@@ -193,6 +193,36 @@ export function checkoutSummary(checkout: Json): Json {
   };
 }
 
+function readOrder(body: Json): Json {
+  if (body?.ucp?.status === 'error') {
+    const said = (body.messages ?? []).map((m: Json) => m.content).join('; ');
+    throw new UcpError(`the business refused: ${said}`);
+  }
+  OrderSchema.parse(body);
+  return body;
+}
+
+/** What an agent may see of an order: its lines, how far each is fulfilled, its totals and link. */
+export function orderSummary(order: Json): Json {
+  return {
+    id: order.id,
+    checkoutId: order.checkout_id,
+    permalinkUrl: order.permalink_url,
+    currency: order.currency,
+    lines: (order.line_items ?? []).map((line: Json) => ({
+      title: line.item?.title ?? line.item?.id,
+      quantity: line.quantity?.total,
+      fulfilled: line.quantity?.fulfilled,
+      status: line.status,
+    })),
+    totals: Object.fromEntries(
+      (order.totals ?? []).map((t: Json) => [t.type, t.amount]),
+    ),
+    events: (order.fulfillment?.events ?? []).map((event: Json) => event.type),
+    messages: (order.messages ?? []).map((m: Json) => m.content),
+  };
+}
+
 /** A platform's client of one business, over the REST binding. */
 export class UcpClient {
   private endpoint?: string;
@@ -322,6 +352,11 @@ export class UcpClient {
         crypto.randomUUID(),
       ),
     );
+  }
+
+  /** After the sale: an order the business placed, its lines and how far each is fulfilled (`read`). */
+  async getOrder(id: string): Promise<Json> {
+    return readOrder(await this.call('GET', `/orders/${id}`));
   }
 
   /** The exact purchase a `ready_for_complete` checkout would make. */

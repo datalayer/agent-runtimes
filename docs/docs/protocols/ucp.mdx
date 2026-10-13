@@ -62,11 +62,20 @@ extensions both the business offers and a contribution implements.
 
 ## Action classes
 
-`search` and `get_checkout` are `read` (and `propose_completion`, which only
-reads); creating, updating and cancelling a checkout are `write`; `complete`
-is `buy` (`ACTION_CLASSES`, agentspecs' `protocol-tools/ucp.yaml` without
+`search`, `get_checkout` and, after the sale, `get_order` are `read` (and
+`propose_completion`, which only reads); creating, updating and cancelling a
+checkout are `write`; `complete` is `buy` (`ACTION_CLASSES`, agentspecs' `protocol-tools/ucp.yaml` without
 the gateway tools' `ucp_` prefix), so a Rule decides each the way it decides
 any tool.
+
+## After the sale
+
+`get_order(order_id)` (TypeScript `getOrder`) reads an order the business
+placed (`GET /orders/{id}`), validated by `ucp-sdk`'s `Order` (`@ucp-js/sdk`'s
+`OrderSchema`): its lines, how many of each are fulfilled and their status,
+its totals and its link. `order_summary` (`orderSummary`) is what an agent
+may see of it. The test merchant, Example Store, answers each order it placed,
+every line `processing`.
 
 ## In an application
 
