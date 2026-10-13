@@ -17,13 +17,19 @@
  */
 
 import type { JSX } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Flash, Heading, Text } from '@primer/react';
 import { CopyIcon, LinkExternalIcon } from '@primer/octicons-react';
 import { Box } from '@datalayer/primer-addons';
 import QRCode from 'react-qr-code';
 import type { ToolCallRenderContext } from '../../../types/chat';
-import { PAP_SIGN_IN_WORDS, readPapSignIn } from './signIn';
+import {
+  PAP_SIGN_IN_CHANNEL,
+  PAP_SIGN_IN_WORDS,
+  readPapSignIn,
+  signInReturnOf,
+  type PapSignInReturn,
+} from './signIn';
 
 export type PapSignInCardProps = {
   context: ToolCallRenderContext;
@@ -37,8 +43,33 @@ export function PapSignInCard({
 }: PapSignInCardProps): JSX.Element {
   const [copied, setCopied] = useState(false);
   const [sent, setSent] = useState(false);
+  const [returned, setReturned] = useState<PapSignInReturn | null>(null);
   const read =
     context.status === 'complete' ? readPapSignIn(context.result) : null;
+  // A Direct Sign-In: Datalayer's `/pap/signed-in`, in the tab the company sent the person
+  // back to, says how it came back (PAP_DATALAYER P-04); the conversation goes on here.
+  const company =
+    read && !('refused' in read) && read.mode === 'direct'
+      ? (read.company ?? '')
+      : '';
+  useEffect(() => {
+    if (!company || typeof BroadcastChannel === 'undefined') {
+      return;
+    }
+    const channel = new BroadcastChannel(PAP_SIGN_IN_CHANNEL);
+    channel.onmessage = (event: MessageEvent) => {
+      const outcome = signInReturnOf(event.data, company);
+      if (outcome) {
+        setReturned(outcome);
+      }
+    };
+    return () => channel.close();
+  }, [company]);
+  useEffect(() => {
+    if (returned === 'signed_in' && send && !sent) {
+      setSent(send(PAP_SIGN_IN_WORDS.checkMessage(company)));
+    }
+  }, [returned, send, sent, company]);
   if (!read) {
     // Running, or another answer: the chat's own row says it.
     return <>{context.defaultUI}</>;
@@ -58,10 +89,12 @@ export function PapSignInCard({
       setCopied(false);
     }
   };
+  // Who the person signs in at: the company itself for a Direct Sign-In (P-04), the page's host otherwise.
+  const named = read.company ?? read.host;
   const title =
     read.mode === 'mediated'
       ? PAP_SIGN_IN_WORDS.mediatedTitle(read.host)
-      : PAP_SIGN_IN_WORDS.title(read.host);
+      : PAP_SIGN_IN_WORDS.title(named);
   return (
     <Box
       as="section"
@@ -133,19 +166,22 @@ export function PapSignInCard({
           variant="primary"
           trailingVisual={LinkExternalIcon}
         >
-          {PAP_SIGN_IN_WORDS.open(read.host)}
+          {PAP_SIGN_IN_WORDS.open(named)}
         </Button>
         {send ? (
           <Button
             disabled={sent}
-            onClick={() =>
-              setSent(send(PAP_SIGN_IN_WORDS.checkMessage(read.host)))
-            }
+            onClick={() => setSent(send(PAP_SIGN_IN_WORDS.checkMessage(named)))}
           >
             {PAP_SIGN_IN_WORDS.checkAgain}
           </Button>
         ) : null}
       </Box>
+      {returned ? (
+        <Text as="p" role="status" sx={{ mt: 2, mb: 0, fontSize: 1 }}>
+          {PAP_SIGN_IN_WORDS.returned[returned](named)}
+        </Text>
+      ) : null}
       {read.expiresAt ? (
         <Text as="p" sx={{ mt: 2, mb: 0, fontSize: 0, color: 'fg.muted' }}>
           {PAP_SIGN_IN_WORDS.until(read.expiresAt)}

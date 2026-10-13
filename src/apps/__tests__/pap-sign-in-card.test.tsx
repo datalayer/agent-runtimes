@@ -12,10 +12,13 @@
 
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PapSignInCard } from '../plugins/pap-sign-in/PapSignInCard';
-import { PAP_SIGN_IN_WORDS } from '../plugins/pap-sign-in/signIn';
+import {
+  PAP_SIGN_IN_CHANNEL,
+  PAP_SIGN_IN_WORDS,
+} from '../plugins/pap-sign-in/signIn';
 import type { ToolCallRenderContext } from '../../types/chat';
 
 afterEach(() => {
@@ -59,6 +62,46 @@ describe('the sign-in card', () => {
     expect(open.getAttribute('target')).toBe('_blank');
     expect(view.queryByText(PAP_SIGN_IN_WORDS.code)).toBeNull();
     expect(view.container.querySelector('svg[title]')).toBeNull();
+  });
+
+  it('names the company of a bound direct sign-in, and goes on by itself once the person is back (PAP_DATALAYER P-04)', async () => {
+    const sent: string[] = [];
+    const view = render(
+      <PapSignInCard
+        context={contextOf('pap_manzanita_example_pap_sign_in', {
+          status: 'waiting_for_the_person',
+          mode: 'direct',
+          open: 'https://prod1.datalayer.run/api/iam/v1/pap/start?ticket=t_1',
+          company: 'manzanita.example',
+        })}
+        send={message => {
+          sent.push(message);
+          return true;
+        }}
+      />,
+    );
+    // Where the person signs in is the company, though the link is Datalayer's.
+    expect(view.getByRole('heading').textContent).toBe(
+      PAP_SIGN_IN_WORDS.title('manzanita.example'),
+    );
+    expect(view.getByRole('link').getAttribute('href')).toBe(
+      'https://prod1.datalayer.run/api/iam/v1/pap/start?ticket=t_1',
+    );
+    // Another company's return is not this card's.
+    const page = new BroadcastChannel(PAP_SIGN_IN_CHANNEL);
+    await act(async () => {
+      page.postMessage({ company: 'northwind.example', outcome: 'signed_in' });
+      page.postMessage({ company: 'manzanita.example', outcome: 'signed_in' });
+    });
+    await waitFor(() =>
+      expect(sent).toEqual([
+        PAP_SIGN_IN_WORDS.checkMessage('manzanita.example'),
+      ]),
+    );
+    expect(
+      view.getByText(PAP_SIGN_IN_WORDS.returned.signed_in('manzanita.example')),
+    ).toBeTruthy();
+    page.close();
   });
 
   it('draws a business’s sign-in over PACT as a device sign-in at the business', () => {

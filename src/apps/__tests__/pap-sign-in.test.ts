@@ -15,6 +15,7 @@ import {
   isPapSignInTool,
   readPapSignIn,
   safeSignInUrl,
+  signInReturnOf,
 } from '../plugins/pap-sign-in/signIn';
 
 const DEVICE = {
@@ -71,6 +72,57 @@ describe('pap_sign_in in the chat', () => {
       open: 'https://manzanita.example/authorize?x=1',
       host: 'manzanita.example',
     });
+  });
+
+  it('reads a bound direct sign-in: Datalayer’s start link, and the company it signs in at (PAP_DATALAYER P-04)', () => {
+    expect(
+      readPapSignIn({
+        status: 'waiting_for_the_person',
+        mode: 'direct',
+        open: 'https://prod1.datalayer.run/api/iam/v1/pap/start?ticket=t',
+        company: 'manzanita.example',
+      }),
+    ).toEqual({
+      mode: 'direct',
+      open: 'https://prod1.datalayer.run/api/iam/v1/pap/start?ticket=t',
+      host: 'prod1.datalayer.run',
+      company: 'manzanita.example',
+    });
+    // A company that is not a domain is not named.
+    expect(
+      readPapSignIn({
+        status: 'waiting_for_the_person',
+        mode: 'direct',
+        open: 'https://a.example/authorize',
+        company: 'Not <a> domain',
+      }),
+    ).toEqual({
+      mode: 'direct',
+      open: 'https://a.example/authorize',
+      host: 'a.example',
+    });
+  });
+
+  it('hears how a sign-in came back for its own company only', () => {
+    expect(
+      signInReturnOf(
+        { company: 'manzanita.example', outcome: 'denied' },
+        'manzanita.example',
+      ),
+    ).toBe('denied');
+    expect(
+      signInReturnOf(
+        { company: 'northwind.example', outcome: 'signed_in' },
+        'manzanita.example',
+      ),
+    ).toBeNull();
+    expect(
+      signInReturnOf(
+        { company: 'manzanita.example', outcome: 'done' },
+        'manzanita.example',
+      ),
+    ).toBeNull();
+    expect(signInReturnOf('signed_in', 'manzanita.example')).toBeNull();
   });
 
   it('reads a mediated sign-in: Datalayer’s page, where a code was sent, nothing typed here', () => {
