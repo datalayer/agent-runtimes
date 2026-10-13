@@ -239,3 +239,45 @@ def test_a_turn_asked_of_its_company_says_who_asks_for_whom_and_what_was_granted
         f"[Asked over PAP by the personal agent {ISSUER}, as itself: "
         "no person signed in here, so it holds no permission for anyone.]"
     )
+
+
+@pytest.mark.asyncio
+async def test_a_run_over_a2a_is_offered_the_tools_of_the_applications_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Found on r1, 13 October 2026: a personal agent asked Exchange Desk, shipped
+    # with its app.py, to exchange an order, and its agent answered that it had
+    # no exchange_order tool — a company's turn comes over A2A, outside a
+    # session, and only a session added the tools of its code.
+    from pathlib import Path
+
+    import agentspecs
+
+    from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+    from agent_runtimes.loop.apps import principal, sessions
+    from agent_runtimes.loop.apps.application import load_application_source
+    from agent_runtimes.models import models
+
+    source = Path(agentspecs.__file__).parent / "apps" / "exchange-desk" / "app.py"
+    application = load_application_source(source.read_text(), "app.py")
+    assert sessions.agent_code_toolset("a2a-desk") is None
+
+    async def gateway(agent_id, toolsets, user_token):  # type: ignore[no-untyped-def]
+        return list(toolsets)
+
+    async def runtime_toolsets():  # type: ignore[no-untyped-def]
+        return ["mcp"]
+
+    monkeypatch.setattr(principal, "gateway_toolsets_of_the_run", gateway)
+    monkeypatch.setattr(models, "app_instance_of", lambda agent_id: {"app_uid": "app-desk"})
+    adapter = PydanticAIAdapter.__new__(PydanticAIAdapter)
+    adapter._agent_id = "a2a-desk"
+    adapter._get_runtime_toolsets_async = runtime_toolsets  # type: ignore[method-assign]
+    sessions.serve_agent_code("a2a-desk", application)
+    try:
+        mcp, own = await adapter._toolsets_of_the_run("persons-token")
+        assert mcp == "mcp" and set(own.tools) == {"exchange_order"}
+    finally:
+        sessions.serve_agent_code("a2a-desk", None)
+    # Without code, its runs are offered what they were.
+    assert await adapter._toolsets_of_the_run("persons-token") == ["mcp"]

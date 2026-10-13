@@ -448,6 +448,23 @@ def serve_agent_code(agent_id: str, application: Any) -> None:
         _AGENT_CODE[agent_id] = application
 
 
+def agent_code_toolset(agent_id: str) -> Any:
+    """The tools the code an agent was given defines (`serve_agent_code`), as one
+    toolset, for its runs outside a session — a company's or a business's turn
+    over A2A, which its agent answers alone; a session adds them itself
+    (`AppHost`). ``None`` when it was given no code, or code with no tools.
+
+    Found on r1, 13 October 2026: *Exchange Desk*'s ``exchange_order`` was never
+    offered to a personal agent's turn, so nothing could be proposed.
+    """
+    application = _AGENT_CODE.get(agent_id)
+    if application is None:
+        return None
+    from agent_runtimes.loop.apps.own import own_toolset
+
+    return own_toolset(application.spec, dict(application.tools))
+
+
 def code_of(app: AppSpec, agent_id: str = "") -> Any:
     """The `Application` an application's code defines, when it is written in Python.
 
