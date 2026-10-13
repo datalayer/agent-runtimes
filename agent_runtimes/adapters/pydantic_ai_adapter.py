@@ -529,6 +529,30 @@ class PydanticAIAdapter(BaseAgent):
             )
         return toolset
 
+    async def _toolsets_of_the_run(self, user_token: str | None) -> list[Any]:
+        """The toolsets of one run, the Datalayer MCP gateway reached as whom the run is.
+
+        An application's run reaches it as its AG-UI runs do
+        (`gateway_toolsets_of_the_run`): a deployment as its principal, with
+        the companies it works with — over A2A too, where a company's turn
+        reaches its kept deployment (PAP_DATALAYER B-04: found on r1, its
+        agent answered without the company's tools it was given). Any other
+        run with an identity of its own reaches it with that identity, never
+        with the process's key (O1-17).
+        """
+        toolsets = await self._get_runtime_toolsets_async()
+        from ..models.models import app_instance_of
+
+        if str((app_instance_of(self._agent_id) or {}).get("app_uid") or "").strip():
+            from ..loop.apps.principal import gateway_toolsets_of_the_run
+
+            return await gateway_toolsets_of_the_run(self._agent_id, toolsets, user_token)
+        if user_token:
+            from ..mcp.datalayer_gateway import toolsets_for_the_run
+
+            return toolsets_for_the_run(toolsets, user_token)
+        return toolsets
+
     def _get_runtime_toolsets(self) -> list[Any]:
         """
         Get the list of toolsets to use at run time (sync, no waiting).
@@ -758,15 +782,7 @@ class PydanticAIAdapter(BaseAgent):
 
         try:
             # Dynamically get toolsets at run time to reflect current MCP server state
-            runtime_toolsets = await self._get_runtime_toolsets_async()
-            if user_token_override:
-                from ..mcp.datalayer_gateway import toolsets_for_the_run
-
-                # A run with an identity of its own reaches the Datalayer MCP
-                # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(
-                    runtime_toolsets, user_token_override
-                )
+            runtime_toolsets = await self._toolsets_of_the_run(user_token_override)
             # Always pass toolsets to override any default toolsets on the agent.
             # Even an empty list should be passed to ensure no tools are available.
             run_kwargs_base: dict[str, Any] = {
@@ -960,15 +976,7 @@ class PydanticAIAdapter(BaseAgent):
                         "PydanticAIAdapter: Temporarily set end_strategy to exhaustive for stream"
                     )
 
-            runtime_toolsets = await self._get_runtime_toolsets_async()
-            if user_token_override:
-                from ..mcp.datalayer_gateway import toolsets_for_the_run
-
-                # A run with an identity of its own reaches the Datalayer MCP
-                # gateway with it, never with the process's key (O1-17).
-                runtime_toolsets = toolsets_for_the_run(
-                    runtime_toolsets, user_token_override
-                )
+            runtime_toolsets = await self._toolsets_of_the_run(user_token_override)
             logger.debug(
                 f"PydanticAIAdapter: Using {len(runtime_toolsets)} runtime toolsets for stream"
             )

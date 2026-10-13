@@ -283,3 +283,60 @@ class TestTheAdapterBuildsTheRunsToolset:
         await self._adapter(monkeypatch, agent).run("go", AgentContext(session_id="s1"))
         [process] = agent.calls[0]["toolsets"]
         assert process.id == "datalayer" and not isinstance(process, MCPToolset)
+
+
+class TestAnApplicationsRunOverA2AReachesItsCompanies:
+    """PAP_DATALAYER B-04, found on r1: a company's turn reached its kept deployment over
+    A2A, and its agent answered that it had no tool to ask the company it works with — the
+    adapter, which runs every A2A task, reached the gateway with the run's token alone and
+    without the application's companies, which only the AG-UI and Vercel runs were given."""
+
+    @pytest.mark.asyncio
+    async def test_a_deployments_turn_gets_its_company_reached_as_its_principal(
+        self, monkeypatch: Any
+    ) -> None:
+        from agent_runtimes.adapters.base import AgentContext
+        from agent_runtimes.adapters.pydantic_ai_adapter import PydanticAIAdapter
+        from agent_runtimes.loop.apps import pap_connections, principal
+        from agent_runtimes.models.models import remember_app_instance
+        from agent_runtimes.tests.test_pydantic_ai_adapter_model_budget import _Agent
+
+        seen: list[dict[str, str]] = []
+
+        def client(headers: Any = None, **kwargs: Any) -> httpx.AsyncClient:
+            seen.append(dict(headers or {}))
+            return httpx.AsyncClient()
+
+        monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
+        agent = _Agent(raises=RuntimeError("stopped once its toolsets were seen"))
+        adapter = PydanticAIAdapter(agent, name="kept", agent_id="agent-kept")
+
+        async def process_toolsets() -> list[Any]:
+            return []
+
+        monkeypatch.setattr(adapter, "_get_runtime_toolsets_async", process_toolsets)
+        app = SimpleNamespace(
+            pap=SimpleNamespace(
+                connections=[{"id": "shop", "company": "manzanita.example", "access": "write", "as": "owner"}]
+            ),
+            pact=None,
+            commerce=None,
+        )
+        remember_app_instance("agent-kept", {"app_uid": "01APP", "deployment_uid": "dep-kept"})
+        pap_connections.remember_agent("agent-kept", app)
+        principal.give_principal_token("dep-kept", "principal-token", expires_in=3600)
+        try:
+            [
+                event
+                async for event in adapter.stream(
+                    "Has my jacket arrived?",
+                    AgentContext(session_id="s1", metadata={"user_token": "company-turn-token"}),
+                )
+            ]
+        finally:
+            remember_app_instance("agent-kept", None)
+            pap_connections.forget()
+            principal.forget_principal_token("dep-kept")
+        [company] = agent.calls[0]["toolsets"]
+        assert company.wrapped.id == "pap_manzanita_example" and company.prefix == "pap_manzanita_example"
+        assert seen == [{"Authorization": "Bearer principal-token"}]
