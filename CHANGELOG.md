@@ -7,9 +7,9 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## Unreleased
+## 1.5.8
 
-Needs agentspecs released with `pap.profile` (agentspecs e706a8f) and `pact.business` (agentspecs e718f88).
+On agentspecs 0.0.86.
 
 - **An application answers as a PACT business** (AGENT_PROTOCOLS PR-13, PI-32): `PactBrand`, the Provider's side of one Brand with what a host decides handed in (an ES256 signer and its published keys, `IssuerKeys` for the registered personal agents, a `BrandStore`, a `BrandAgent`, the page where the person signs in) — its card, the personal-agent JWT verified against a registered issuer's keys only, the device code, the delegation token, the step-up and a signed receipt per reply under a delegation; `ExampleAir` is one `PactBrand` in memory; the Appspec's `pact.business` in the Python and TypeScript types (`AppPactBusinessSpec`, `AppPactRegisteredAgentSpec`), `app.as_business` — [PACT](https://agent-runtimes.datalayer.tech/protocols/pact#answering-as-a-business).
 - **A Preview reaches its businesses and test merchants** (AGENT_PROTOCOLS PI-42): `preview_grants` sends the Appspec's `pact` connections and `commerce` merchants with its Spaces and companies (needs ai-agents and IAM with services 52a5144e).
