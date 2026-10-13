@@ -877,8 +877,8 @@ class FrameworkAgent:
             said = str(failure) or type(failure).__name__
             await run.end_all(said)
             await run.end("", error=said)
-            self.recorder.add(
-                "output", f"Stopped: {said[:300]}", {"error": type(failure).__name__}
+            self.recorder.ended(
+                "stopped", f"Stopped: {said[:300]}", {"error": type(failure).__name__}
             )
             await self.recorder.flush(self.session.id)
             if run.refused is not None and failure is not error:
@@ -897,7 +897,7 @@ class FrameworkAgent:
             )
         if self.recorder.kept("turn"):
             self.recorder.turned(prompt, answer)
-        self.recorder.add("output", answer[:300], {"length": len(answer)})
+        self.recorder.ended("answered", answer[:300], {"length": len(answer)})
         await run.end("", output=answer[:300])
 
     def _pieces(

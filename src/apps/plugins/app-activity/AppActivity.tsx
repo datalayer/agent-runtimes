@@ -24,6 +24,7 @@ import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { LoopChatTurn, type ChatTurnSnapshot } from '../../core';
 import {
   RECORD_KIND_WORDS,
+  entrySaid,
   listSessions,
   readSession,
   sessionSentence,
@@ -119,7 +120,7 @@ function Session({
               <Label sx={{ mr: 2 }}>
                 {RECORD_KIND_WORDS[entry.kind] ?? entry.kind}
               </Label>
-              {entry.summary}
+              {entrySaid(entry)}
             </Box>
           ))}
         </Box>

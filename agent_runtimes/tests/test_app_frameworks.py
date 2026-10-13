@@ -54,7 +54,13 @@ def installed(module: str) -> bool:
         return False
 
 
-def hosted(app: Application) -> Tuple[AppHost, MemoryChannel, List[Dict[str, Any]]]:
+#: What `hosted` keeps of a session's record unless told otherwise.
+KEPT = ["actions", "decisions", "outputs", "conversations", "approvals"]
+
+
+def hosted(
+    app: Application, include: List[str] = KEPT
+) -> Tuple[AppHost, MemoryChannel, List[Dict[str, Any]]]:
     sent: List[Dict[str, Any]] = []
 
     async def send(body: Dict[str, Any]) -> None:
@@ -62,19 +68,7 @@ def hosted(app: Application) -> Tuple[AppHost, MemoryChannel, List[Dict[str, Any
 
     channel = MemoryChannel()
     spec = app.spec.model_copy(
-        update={
-            "record": app.spec.record.model_copy(
-                update={
-                    "include": [
-                        "actions",
-                        "decisions",
-                        "outputs",
-                        "conversations",
-                        "approvals",
-                    ]
-                }
-            )
-        }
+        update={"record": app.spec.record.model_copy(update={"include": list(include)})}
     )
     host = AppHost(app, channel, recorder=AppRecorder(app=spec, send=send))
     return host, channel, sent
@@ -123,6 +117,29 @@ def test_a_plain_function_answers_streamed_and_is_a_step() -> None:
         assert ended[0].input == "hello"
         kinds = [entry["kind"] for entry in entries(sent)]
         assert kinds.count("turn") == 2 and kinds.count("step") == 2
+
+    asyncio.run(scenario())
+
+
+def test_a_framework_turns_end_is_kept_without_its_answer_when_outputs_are_not() -> (
+    None
+):
+    """PAP_DATALAYER R-01, decided 2026-10-13: every run's end is kept, so
+    Activity never reads the session *In progress* once it answered."""
+    app = Application(id="echo", kind="chat", agent=AGENT)
+
+    @app.agent
+    async def answer(text: str, history: list) -> Any:
+        yield f"You said {text}."
+
+    async def scenario() -> None:
+        host, _channel, sent = hosted(app, include=[])
+        session = await host.open()
+        await host.message(session, "hello")
+        [end] = [entry for entry in entries(sent) if entry["kind"] == "output"]
+        assert end["summary"] == ""
+        assert sorted(end["payload"]) == ["ended_at", "status"]
+        assert end["payload"]["status"] == "answered"
 
     asyncio.run(scenario())
 

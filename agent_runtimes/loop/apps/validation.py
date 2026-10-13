@@ -273,8 +273,11 @@ def _line(text: str) -> str:
 
 
 #: The keys of an ``output`` entry the runtime writes of a turn (its length,
-#: how it stopped, what it showed): one without them is what its code kept.
-RUNTIME_OUTPUT_KEYS = frozenset({"length", "error", "schedule", "shows"})
+#: how it stopped, what it showed, how and when it ended): one without them is
+#: what its code kept.
+RUNTIME_OUTPUT_KEYS = frozenset(
+    {"length", "error", "schedule", "shows", "status", "ended_at", "trace_id"}
+)
 
 
 def what_it_did(entries: Sequence[Dict[str, Any]]) -> List[str]:

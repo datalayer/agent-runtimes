@@ -348,8 +348,9 @@ export function transcriptOfRecord(
         });
       }
       answered = true;
-    } else if (entry.kind === 'output' && !answered) {
-      // A record kept without its conversations: the answer's summary.
+    } else if (entry.kind === 'output' && !answered && entry.summary) {
+      // A record kept without its conversations: the answer's summary —
+      // none when it keeps no outputs either, only how the run ended.
       pending.push({
         key: `${entry.uid}:said`,
         at,

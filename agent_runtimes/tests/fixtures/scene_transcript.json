@@ -367,6 +367,19 @@
         "summary": "Three customers owe 12,400 EUR.",
         "payload": {},
         "createdAt": "2026-10-07T12:00:05Z"
+      },
+      {
+        "uid": "e1",
+        "sessionUid": "s1",
+        "deploymentUid": "d1",
+        "version": 1,
+        "kind": "output",
+        "summary": "",
+        "payload": {
+          "status": "answered",
+          "ended_at": "2026-10-07T12:00:05Z"
+        },
+        "createdAt": "2026-10-07T12:00:05Z"
       }
     ],
     "lines": [
@@ -383,6 +396,15 @@
       "lines": [
         "Accounting → Odoo: odoo_accounting_aged_balance",
         "Accounting: Three customers owe 12,400 EUR."
+      ]
+    },
+    "without_outputs": {
+      "entries": [
+        1,
+        3
+      ],
+      "lines": [
+        "Accounting → Odoo: odoo_accounting_aged_balance"
       ]
     }
   }

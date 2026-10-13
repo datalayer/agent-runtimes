@@ -81,12 +81,34 @@ export function entryOf(raw: Record<string, unknown>): RecordEntry {
   };
 }
 
+/**
+ * How a run ended, in the `output` entry every run ends with, kept whatever
+ * the application's `record.include` says (PAP_DATALAYER R-01): its words
+ * only when it keeps `outputs`.
+ */
+export const RUN_END_WORDS: Record<string, string> = {
+  answered: 'Answered',
+  stopped: 'Stopped',
+  gone: 'Its client went before the answer',
+};
+
+/** How the run an entry ends ended: `answered`, `stopped`, `gone`; `''` for any other entry. */
+export function runEndOf(entry: RecordEntry): string {
+  const status = entry.kind === 'output' ? entry.payload.status : undefined;
+  return typeof status === 'string' && status in RUN_END_WORDS ? status : '';
+}
+
+/** An entry in words: its summary, or how its run ended when its words are not kept. */
+export function entrySaid(entry: RecordEntry): string {
+  return entry.summary || RUN_END_WORDS[runEndOf(entry)] || '';
+}
+
 /** A session in a sentence: how many calls, what stopped it, how it ended. */
 export function sessionSentence(entries: readonly RecordEntry[]): string {
   const calls = entries.filter(entry => entry.kind === 'tool_call').length;
   const checks = entries.filter(entry => entry.kind === 'check');
-  const outputs = entries.filter(entry => entry.kind === 'output');
-  const last = outputs[outputs.length - 1];
+  const ends = entries.map(runEndOf).filter(Boolean);
+  const answers = ends.filter(end => end === 'answered').length;
   const parts: string[] = [
     calls === 0
       ? 'No tool called'
@@ -97,10 +119,10 @@ export function sessionSentence(entries: readonly RecordEntry[]): string {
       `${checks.length} step${checks.length === 1 ? '' : 's'} a check did not let pass`,
     );
   }
-  if (last?.summary.startsWith('Stopped:')) {
+  if (ends[ends.length - 1] === 'stopped') {
     parts.push('stopped');
-  } else if (outputs.length) {
-    parts.push(`${outputs.length} answer${outputs.length === 1 ? '' : 's'}`);
+  } else if (answers) {
+    parts.push(`${answers} answer${answers === 1 ? '' : 's'}`);
   }
   return `${parts.join(', ')}.`;
 }

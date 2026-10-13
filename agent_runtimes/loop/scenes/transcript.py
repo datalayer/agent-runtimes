@@ -441,8 +441,9 @@ def transcript_of_record(
                     )
                 )
             answered = True
-        elif kind == "output" and not answered:
-            # A record kept without its conversations: the answer's summary.
+        elif kind == "output" and not answered and entry.get("summary"):
+            # A record kept without its conversations: the answer's summary —
+            # none when it keeps no outputs either, only how the run ended.
             pending.append(
                 TranscriptLine(
                     key=f"{uid}:said",

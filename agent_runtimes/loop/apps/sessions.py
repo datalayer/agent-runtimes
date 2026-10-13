@@ -1348,8 +1348,8 @@ class LiveSession:
         except BaseException as error:
             said = str(error) or type(error).__name__
             recorder.start(self.uid)
-            recorder.add(
-                "output",
+            recorder.ended(
+                "stopped",
                 f"Stopped: {said[:300]}",
                 {"error": type(error).__name__, "schedule": name},
             )
@@ -1362,7 +1362,9 @@ class LiveSession:
         recorder.start(self.uid)
         if recorder.kept("turn"):
             recorder.turned(asked, answer)
-        recorder.add("output", answer[:300], {"length": len(answer), "schedule": name})
+        recorder.ended(
+            "answered", answer[:300], {"length": len(answer), "schedule": name}
+        )
         await recorder.flush(self.uid)
 
     def _woken_schedule(self, woken_by: Optional[Mapping[str, Any]]) -> Optional[str]:

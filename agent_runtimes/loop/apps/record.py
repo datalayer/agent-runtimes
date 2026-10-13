@@ -58,6 +58,7 @@ import logging
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import (
     Any,
     AsyncIterable,
@@ -109,6 +110,11 @@ INCLUDED_BY = {
 #: (what Activity reads as in progress, LOOP R-15), and what its channels were
 #: sent (LOOP R-37).
 ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread"})
+
+#: How a run ended, in the `output` entry that ends it (`AppRecorder.ended`):
+#: it answered, it stopped (a rule, a check, an error), or its client went
+#: before the answer.
+RUN_ENDS = ("answered", "stopped", "gone")
 
 #: What a person's answer is said as, in an approval entry (LOOP R-07).
 ANSWERS = {
@@ -212,6 +218,16 @@ def kept_of(app: AppSpec) -> Any:
 def keep_days_of(app: AppSpec) -> int:
     """How many days the record is kept: `record.keep_for`, or its Track's retention."""
     return int(kept_of(app).days)
+
+
+def _trace_id() -> str:
+    """The current run's trace ID, the correlation ID its calls carry to the
+    gateway (PAP_DATALAYER A-05); ``""`` without a trace, never one made up."""
+    from agent_runtimes.mcp.tracing import trace_headers
+    from agent_runtimes.orchestration.adapter import trace_id_of
+
+    trace_id = trace_id_of(trace_headers().get("traceparent"))
+    return trace_id if trace_id and trace_id.strip("0") else ""
 
 
 def _short(value: Any, limit: int = 500) -> str:
@@ -366,8 +382,15 @@ class AppRecorder:
     def add(
         self, kind: str, summary: str, payload: Optional[Dict[str, Any]] = None
     ) -> None:
+        if not self.kept(kind):
+            return
+        self._append(kind, summary, payload)
+
+    def _append(
+        self, kind: str, summary: str, payload: Optional[Dict[str, Any]] = None
+    ) -> None:
         session = _SESSION.get()
-        if not session or not self.kept(kind):
+        if not session:
             return
         # Nothing kept holds a credential, whoever wrote the entry (LOOP R-19).
         self._pending.setdefault(session, []).append(
@@ -722,11 +745,8 @@ class AppRecorder:
             detail["rule"] = getattr(decision, "rule", "")
             # The correlation ID its call carries to the gateway (A-05), so the Activity shows the
             # gateway's rows of it beside this decision; none without a trace, never one made up.
-            from agent_runtimes.mcp.tracing import trace_headers
-            from agent_runtimes.orchestration.adapter import trace_id_of
-
-            trace_id = trace_id_of(trace_headers().get("traceparent"))
-            if trace_id and trace_id.strip("0"):
+            trace_id = _trace_id()
+            if trace_id:
                 detail["trace_id"] = trace_id
         # Done without asking because the person approved it in advance (U-25).
         approved = getattr(enforced, "approved", None)
@@ -764,6 +784,32 @@ class AppRecorder:
         _SESSION.set(session)
         self.add("run", f"{self.app.name} is working", {})
         send_later(session, self.flush(session))
+
+    def ended(
+        self, status: str, summary: str, payload: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Say that the current run ended (LOOP R-15; PAP_DATALAYER R-01).
+
+        An ``output`` entry, kept whatever ``record.include`` says: a session
+        whose latest run has no end reads *in progress* in Activity, and never
+        *Completed*. Its ``status`` (one of `RUN_ENDS`), when it ended and the
+        run's trace ID are always kept; what it answered — ``summary`` and
+        ``payload`` — only under ``outputs``, which stay opt-in.
+        """
+        if status not in RUN_ENDS:
+            raise ValueError(f"A run ends {', '.join(RUN_ENDS)}; not {status!r}.")
+        end: Dict[str, Any] = {
+            "status": status,
+            "ended_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+        trace_id = _trace_id()
+        if trace_id:
+            end["trace_id"] = trace_id
+        if self.kept("output"):
+            self._append("output", summary, {**(payload or {}), **end})
+        elif self.kept("run"):
+            # As a run's start is kept: never of a visitor's conversation (R-30).
+            self._append("output", "", end)
 
     def approvals_unread(self, why: str) -> None:
         """What the person approved in advance could not be read: they are asked."""
@@ -864,6 +910,7 @@ class AppRecordCapability(AbstractCapability[Any]):
     async def _close(
         self,
         ctx: RunContext[Any],
+        status: str,
         summary: str,
         payload: Dict[str, Any],
         answered: Optional[str] = None,
@@ -871,7 +918,8 @@ class AppRecordCapability(AbstractCapability[Any]):
         """Add the run's last entries and send its session, once.
 
         A run that answered keeps its turn, what was asked and what it
-        answered; one that stopped keeps how it stopped.
+        answered; one that stopped keeps how it stopped; every run keeps its
+        end (`AppRecorder.ended`).
         """
         session = self._sessions.pop(self._key(ctx), None)
         self._answers.pop(self._key(ctx), None)
@@ -881,7 +929,7 @@ class AppRecordCapability(AbstractCapability[Any]):
         _SESSION.set(session)
         if answered is not None and self.recorder.kept("turn"):
             self.recorder.turned(self._asked(ctx), answered, spoken)
-        self.recorder.add("output", summary, payload)
+        self.recorder.ended(status, summary, payload)
         await self.recorder.flush(session)
 
     async def wrap_run_event_stream(
@@ -933,6 +981,7 @@ class AppRecordCapability(AbstractCapability[Any]):
                     self._sessions[key],
                     self._close(
                         ctx,
+                        "answered" if final else "gone",
                         _short(answer, 300),
                         {"length": len(answer)},
                         # A client gone before the answer leaves no turn.
@@ -949,14 +998,21 @@ class AppRecordCapability(AbstractCapability[Any]):
     async def after_run(self, ctx: RunContext[Any], *, result: Any) -> Any:
         output = getattr(result, "output", "")
         await self._close(
-            ctx, _short(output, 300), {"length": len(str(output))}, answered=str(output)
+            ctx,
+            "answered",
+            _short(output, 300),
+            {"length": len(str(output))},
+            answered=str(output),
         )
         return result
 
     async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
         # A run a rule or a check stopped is recorded too: that is when it matters.
         await self._close(
-            ctx, f"Stopped: {_short(error, 300)}", {"error": type(error).__name__}
+            ctx,
+            "stopped",
+            f"Stopped: {_short(error, 300)}",
+            {"error": type(error).__name__},
         )
         raise error
 
@@ -968,6 +1024,7 @@ __all__ = [
     "AppRecorder",
     "COMMENT_LIMIT",
     "INCLUDED_BY",
+    "RUN_ENDS",
     "RecordNotSent",
     "TURN_LIMIT",
     "agent_recorder",

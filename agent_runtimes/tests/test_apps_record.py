@@ -147,7 +147,56 @@ async def test_a_session_nobody_opened_says_what_woke_it():
 async def test_only_what_the_application_keeps_is_kept():
     agent, sent = recorded(app([]), ("search", {"q": "news"}), "Here is the news.")
     await agent.run("news?")
-    assert [entry["kind"] for entry in sent[0]["entries"]] == ["session", "run"]
+    assert [entry["kind"] for entry in sent[0]["entries"]] == [
+        "session",
+        "run",
+        "output",
+    ]
+
+
+async def test_a_runs_end_is_kept_without_its_words_when_outputs_are_not():
+    """PAP_DATALAYER R-01, decided 2026-10-13: a session whose run has no end
+    reads *In progress* and never *Completed*; its end is kept whatever
+    `include` says — how and when it ended, never what it answered."""
+    agent, sent = recorded(app([]), "Here is the news.")
+    await agent.run("news?")
+    end = sent[0]["entries"][-1]
+    assert end["kind"] == "output"
+    assert end["summary"] == ""
+    assert sorted(end["payload"]) == ["ended_at", "status"]
+    assert end["payload"]["status"] == "answered"
+    assert "news" not in str(end)
+
+
+async def test_a_stopped_runs_end_is_kept_without_its_error_when_outputs_are_not():
+    agent, sent = recorded(app([]), ("search", {"q": AWS}), "done")
+    with pytest.raises(AppCheckBlockedError):
+        await agent.run("search my key")
+    end = sent[0]["entries"][-1]
+    assert (end["kind"], end["summary"]) == ("output", "")
+    assert sorted(end["payload"]) == ["ended_at", "status"]
+    assert end["payload"]["status"] == "stopped"
+
+
+async def test_a_runs_end_says_how_it_ended_beside_its_output():
+    agent, sent = recorded(app(["outputs"]), "Here is the news.")
+    await agent.run("news?")
+    end = sent[0]["entries"][-1]
+    assert end["summary"] == "Here is the news."
+    assert end["payload"]["status"] == "answered"
+    assert end["payload"]["length"] == len("Here is the news.")
+    assert end["payload"]["ended_at"].endswith("Z")
+
+
+async def test_a_runs_end_carries_its_trace_id(monkeypatch):
+    trace = "4bf92f3577b34da6a3ce929d0e0e4736"
+    monkeypatch.setattr(
+        "agent_runtimes.mcp.tracing.trace_headers",
+        lambda: {"traceparent": f"00-{trace}-00f067aa0ba902b7-01"},
+    )
+    agent, sent = recorded(app([]), "Here is the news.")
+    await agent.run("news?")
+    assert sent[0]["entries"][-1]["payload"]["trace_id"] == trace
 
 
 async def test_a_stopped_run_is_recorded_with_its_check():

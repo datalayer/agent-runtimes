@@ -43,6 +43,7 @@ type Fixture = {
     lines: string[];
     first_at: string;
     without_conversations: { entries: number[]; lines: string[] };
+    without_outputs: { entries: number[]; lines: string[] };
   };
 };
 
@@ -86,6 +87,13 @@ describe('the transcript fixture, shared with the Python twin', () => {
     );
     expect(transcriptOfRecord(entries, record.member).map(lineText)).toEqual(
       record.without_conversations.lines,
+    );
+    // Kept without its outputs either: the run's end says no words (PAP_DATALAYER R-01).
+    const bare = record.without_outputs.entries.map(
+      index => record.entries[index],
+    );
+    expect(transcriptOfRecord(bare, record.member).map(lineText)).toEqual(
+      record.without_outputs.lines,
     );
   });
 });

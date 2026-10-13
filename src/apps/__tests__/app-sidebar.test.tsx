@@ -23,7 +23,12 @@ import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import { appPreset } from '../apps/AppRenderer';
 import { coverOf, BEHAVIOUR_WORDS } from '../apps/rules';
-import { entryOf, sessionSentence } from '../apps/records';
+import {
+  RUN_END_WORDS,
+  entryOf,
+  entrySaid,
+  sessionSentence,
+} from '../apps/records';
 import { SAVE_TOOL, SAVE_WORDS, draftOfApproval } from '../apps/saved';
 import { LoopSlots } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';
@@ -278,6 +283,7 @@ describe('the activity feed', () => {
                   session_uid: 's1',
                   kind: 'output',
                   summary: 'Three sources',
+                  payload: { status: 'answered' },
                 },
                 // A run's start is a mark, not a step (R-15).
                 {
@@ -334,10 +340,36 @@ describe('in words', () => {
     const entries = [
       { uid: '1', kind: 'tool_call' },
       { uid: '2', kind: 'check' },
-      { uid: '3', kind: 'output', summary: 'Stopped: by you' },
+      {
+        uid: '3',
+        kind: 'output',
+        summary: 'Stopped: by you',
+        payload: { status: 'stopped' },
+      },
     ].map(entryOf);
     expect(sessionSentence(entries)).toBe(
       '1 tool call, 1 step a check did not let pass, stopped.',
     );
+  });
+
+  it('says how each run ended when its words are not kept (PAP_DATALAYER R-01)', () => {
+    const ends = [
+      { uid: '1', kind: 'output', payload: { status: 'answered' } },
+      { uid: '2', kind: 'output', payload: { status: 'answered' } },
+    ].map(entryOf);
+    expect(sessionSentence(ends)).toBe('No tool called, 2 answers.');
+    expect(entrySaid(ends[0])).toBe(RUN_END_WORDS.answered);
+    const stopped = entryOf({
+      uid: '3',
+      kind: 'output',
+      payload: { status: 'stopped' },
+    });
+    expect(sessionSentence([...ends, stopped])).toBe(
+      'No tool called, stopped.',
+    );
+    // What its code kept is no run's end, nor an answer.
+    const kept = entryOf({ uid: '4', kind: 'output', summary: 'An insight' });
+    expect(sessionSentence([kept])).toBe('No tool called.');
+    expect(entrySaid(kept)).toBe('An insight');
   });
 });
