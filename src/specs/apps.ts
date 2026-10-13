@@ -1575,13 +1575,13 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled as a pair on r1 on 13 October 2026, its clone and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt.",
+      ],
       recorded: [
         "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
       ],
-      unverified: [
-        "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed since), so the answer for the person was not right yet.",
-      ],
+      unverified: [],
     },
   },
   record: {
@@ -1610,9 +1610,8 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; run live as a pair, the business was not yet told who signed in.',
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏃',
@@ -1786,7 +1785,7 @@ export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
   agent: 'cog-crawler:0.0.1',
   team: '',
   instructions:
-    "You are a shop's desk for people's own agents. Answer what anybody may ask before they sign in; read an order only for its signed-in owner. When an exchange is asked for, give its terms: the shop proposes it, the person approves it, and exchange_order does it.",
+    "You are the desk of the shop Manzanita Outfitters for people's own agents. Answer what anybody may ask before they sign in, and say nothing of an order you were not told. When a person signed in asks to exchange an order for another size, call exchange_order with that order and size at once: the call is shown to them with its exact terms and done only once they approve; the shop checks the order as it is done and says when it cannot be. Never exchange for somebody who has not signed in.",
   model: '',
   skills: [],
   backendTools: [],
@@ -1894,7 +1893,7 @@ export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
         "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
       ],
       unverified: [
-        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed since), and its exchange_order had no code yet. Not drilled since.',
+        'Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Not drilled since.',
       ],
     },
   },
@@ -2040,13 +2039,13 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's clone as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt.",
+      ],
       recorded: [
         'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
       ],
-      unverified: [
-        "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed since), so its answer for the person was not right yet.",
-      ],
+      unverified: [],
     },
   },
   record: {
@@ -2075,9 +2074,8 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; run live as a pair, it was not yet told who signed in.',
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏨',
@@ -7204,11 +7202,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled as a pair on r1 on 13 October 2026, its clone and Guest Desk's joined as the Studio joins them, the business shipped at its own domain: asked as itself, the business named nobody; once the person signed in at the business by device code and granted profile:read, asked for them, it named the person by their Datalayer account, with a verified receipt.",
+        ],
         recorded: [
           "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
-        ],
-        unverified: [
-          "Drilled as a pair on r1 on 13 October 2026: its clone asked Guest Desk's shipped clone as itself and, once the person signed in at the business by device code and granted profile:read, for them, the business's receipt verified; but the business was not told who had signed in (fixed since), so the answer for the person was not right yet.",
         ],
       },
     },
@@ -7219,9 +7217,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; run live as a pair, the business was not yet told who signed in.',
     tags: ['example', 'companies'],
     emoji: '🏃',
   },
@@ -7324,7 +7319,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'cog-crawler:0.0.1',
     instructions:
-      "You are a shop's desk for people's own agents. Answer what anybody may ask before they sign in; read an order only for its signed-in owner. When an exchange is asked for, give its terms: the shop proposes it, the person approves it, and exchange_order does it.",
+      "You are the desk of the shop Manzanita Outfitters for people's own agents. Answer what anybody may ask before they sign in, and say nothing of an order you were not told. When a person signed in asks to exchange an order for another size, call exchange_order with that order and size at once: the call is shown to them with its exact terms and done only once they approve; the shop checks the order as it is done and says when it cannot be. Never exchange for somebody who has not signed in.",
     tools: [
       {
         name: 'exchange_order',
@@ -7391,7 +7386,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "Its exchange_order runs in process in Datalayer's own tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
         ],
         unverified: [
-          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed since), and its exchange_order had no code yet. Not drilled since.',
+          'Drilled on r1 on 13 October 2026, twice: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write. The second time it knew who had signed in, but asked to exchange, it looked for the order first and proposed nothing; it now proposes the exchange at once, and Manzanita checks the order when it is done. Not drilled since.',
         ],
       },
     },
@@ -7472,11 +7467,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand; asked by Errand Runner's clone as itself, it named nobody; once the person signed in by device code and granted profile:read, it named them by their Datalayer account, with a verified receipt.",
+        ],
         recorded: [
           'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
-        ],
-        unverified: [
-          "Drilled as a pair on r1 on 13 October 2026: two clones joined as the Studio joins them, the business shipped at its own domain with the cloning account as its Brand, Errand Runner's clone answered alone and, once the person signed in by device code and granted profile:read, for them with a verified receipt; but the business was not told who had signed in (fixed since), so its answer for the person was not right yet.",
         ],
       },
     },
@@ -7487,9 +7482,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; run live as a pair, it was not yet told who signed in.',
     tags: ['example', 'companies'],
     emoji: '🏨',
   },
