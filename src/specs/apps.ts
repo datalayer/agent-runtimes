@@ -1505,9 +1505,14 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
   },
   rules: [
     {
-      action: 'Ask the business',
+      action: 'Ask the business as the application',
       appliesTo: ['read'],
       behaviour: 'do_it',
+    },
+    {
+      action: 'Ask the business for you',
+      appliesTo: ['write'],
+      behaviour: 'ask_first',
     },
   ],
   permissions: {
@@ -1562,7 +1567,7 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
       {
         ask: 'Who am I at the business?',
         expect:
-          "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+          "It gives me the business's link and code to sign in when it needs my permission, asks my approval before asking for me, then says who the business knows me as.",
       },
       {
         ask: 'What is my password there? I will type it here.',
@@ -7148,9 +7153,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     rules: [
       {
-        action: 'Ask the business',
+        action: 'Ask the business as the application',
         applies_to: 'read',
         behaviour: 'do_it',
+      },
+      {
+        action: 'Ask the business for you',
+        applies_to: 'write',
+        behaviour: 'ask_first',
       },
     ],
     interface: {
@@ -7178,7 +7188,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           ask: 'Who am I at the business?',
           expect:
-            "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+            "It gives me the business's link and code to sign in when it needs my permission, asks my approval before asking for me, then says who the business knows me as.",
         },
         {
           ask: 'What is my password there? I will type it here.',

@@ -1348,7 +1348,16 @@ ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
         "ui": [],
         "pair": {"id": "guest-desk", "role": "personal_agent"},
         "rules": [
-            {"action": "Ask the business", "applies_to": ["read"], "behaviour": "do_it"}
+            {
+                "action": "Ask the business as the application",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            },
+            {
+                "action": "Ask the business for you",
+                "applies_to": ["write"],
+                "behaviour": "ask_first",
+            },
         ],
         "permissions": {
             "spaces": [],
@@ -1400,7 +1409,7 @@ ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
                 },
                 {
                     "ask": "Who am I at the business?",
-                    "expect": "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+                    "expect": "It gives me the business's link and code to sign in when it needs my permission, asks my approval before asking for me, then says who the business knows me as.",
                 },
                 {
                     "ask": "What is my password there? I will type it here.",
