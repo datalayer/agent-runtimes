@@ -3270,7 +3270,7 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "cog-crawler:0.0.1",
         "team": "",
-        "instructions": "You shop at Example Store for the person you talk to, through its tools. Search its catalogue and fill a checkout with what they asked for. Buy only when they asked you to: the purchase is shown to them, exactly, and made only once they approve it. Never ask for a card number or any payment detail.",
+        "instructions": "You shop at Example Store and Example Outfitters for the person you talk to, through their tools. Search its catalogue and fill a checkout with what they asked for. Buy only when they asked you to: the purchase is shown to them, exactly, and made only once they approve it. Never ask for a card number or any payment detail.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -3278,7 +3278,7 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
         "context": [],
         "contents": [],
         "connections": [],
-        "protocols": ["ucp"],
+        "protocols": ["ucp", "acp"],
         "ui": [],
         "commerce": {
             "merchants": [
@@ -3288,7 +3288,14 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
                     "merchant": "store.example",
                     "access": "write",
                     "limit": {"amount": "50", "currency": "USD"},
-                }
+                },
+                {
+                    "id": "example-outfitters",
+                    "protocol": "acp",
+                    "merchant": "outfitters.example",
+                    "access": "write",
+                    "limit": {"amount": "150", "currency": "USD"},
+                },
             ]
         },
         "rules": [
@@ -3316,10 +3323,14 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
             "layout": "chat",
             "accent": "sky",
             "theme": None,
-            "welcome": "I shop at Example Store for you. I fill your basket, and I buy only once you approve exactly what I would buy, up to USD 50 a purchase.",
+            "welcome": "I shop at Example Store and Example Outfitters for you. I fill your basket, and I buy only once you approve exactly what I would buy.",
             "starters": [
                 {"label": "Find tea", "message": "What green teas do they have?"},
                 {"label": "Buy it", "message": "Buy one Sencha green tea for me."},
+                {
+                    "label": "A jacket",
+                    "message": "Buy me a rain jacket at Example Outfitters.",
+                },
             ],
             "commands": [],
             "modes": [],
@@ -3365,10 +3376,11 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests."
+                    "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
+                    "The checkout at Example Outfitters is the developers' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests.",
                 ],
                 "unverified": [
-                    "No shop answers UCP on Datalayer yet: the gateway's ucp toolset is built, not deployed."
+                    "No shop answers UCP or ACP on Datalayer yet: the gateway's ucp and acp toolsets are built, not deployed."
                 ],
             },
         },
@@ -3390,7 +3402,7 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "It buys at a shop for you over UCP, and the services that reach a shop for you are not shipped yet.",
+        "unavailable_because": "It buys at shops for you over UCP and ACP, and the services that reach a shop for you are not shipped yet.",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "🛍️",
