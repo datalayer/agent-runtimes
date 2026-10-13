@@ -205,3 +205,180 @@ async def test_polling_once_says_pending_then_granted():
     assert await agent.poll_sign_in(USER, sign_in) == ("bookings:read",)
     with pytest.raises(PactError, match="no sign-in pending"):
         await agent.poll_sign_in(USER, sign_in)
+
+
+# --- a Brand a host answers for (PR-13: an application as a PACT business) ---------------
+
+
+class _Says:
+    """A Brand's agent that says what it was asked, and for whom."""
+
+    def __init__(self) -> None:
+        self.turns: list = []
+
+    async def answer(self, turn):  # type: ignore[no-untyped-def]
+        from agent_runtimes.protocols.pact.provider import BrandAnswer
+
+        self.turns.append(turn)
+        if "change" in turn.text and "trips:change" not in turn.scopes:
+            return BrandAnswer("I need your permission.", missing=("trips:change",))
+        return BrandAnswer(
+            f"Answered for {turn.person or 'nobody'}.",
+            scopes_used=turn.scopes,
+            actions=({"tool": "answer"},),
+        )
+
+
+def _brand(scopes: dict[str, str] | None = None):  # type: ignore[no-untyped-def]
+    from agent_runtimes.protocols.pact.provider import (
+        InMemoryBrandStore,
+        PactBrand,
+        RegisteredIssuers,
+    )
+
+    # The Provider's key elsewhere (Vault transit in Datalayer): only its signer and its keys here.
+    key = LocalSigner.generate("ecdsa-p256-sha256")
+    published = {"keys": [{**key.public_jwk, "alg": "ES256", "use": "sig"}]}
+
+    async def jwks():  # type: ignore[no-untyped-def]
+        return published
+
+    signer = LocalSigner.generate("ecdsa-p256-sha256")
+    issuers = RegisteredIssuers(
+        {ISSUER: {"keys": [{**signer.public_jwk, "alg": "ES256", "use": "sig"}]}}
+    )
+    said = _Says()
+    brand = PactBrand(
+        base="https://desk.apps.example",
+        brand_id="desk",
+        name="Trip Desk",
+        provider=("Datalayer", "https://datalayer.ai"),
+        scopes=scopes
+        if scopes is not None
+        else {"trips:read": "See your trips", "trips:change": "Change a trip"},
+        audience="https://desk.apps.example/a2a/desk",
+        signer=key,
+        jwks=jwks,
+        issuers=issuers,
+        store=InMemoryBrandStore(),
+        agent=said,
+        verification_uri="https://studio.example/pact/device?slug=desk",
+        description="Trip Desk, answering for Ada Lovelace.",
+    )
+    platform = build_protocols_reactor()
+    http = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=brand.app()), base_url=brand.base
+    )
+
+    def agent_with(issuer: str, key_of_agent):  # type: ignore[no-untyped-def]
+        return PactPersonalAgent(
+            card_url=f"{brand.interface_url}/.well-known/agent-card.json",
+            issuer=issuer,
+            audience=brand.audience,
+            signer=key_of_agent,
+            delegations=delegation_store_of(platform),
+            receipts=receipt_store_of(platform),
+            http=http,
+            metadata=client_fetch(http),
+        )
+
+    return brand, said, platform, agent_with(ISSUER, signer), agent_with
+
+
+@pytest.mark.asyncio
+async def test_a_brand_names_its_provider_and_accepts_its_registered_issuers_only():
+    brand, said, _, agent, agent_with = _brand()
+    card = read_card(brand.card())
+    assert card.interface_url == "https://desk.apps.example/a2a/desk"
+    assert brand.card()["provider"] == {
+        "organization": "Datalayer",
+        "url": "https://datalayer.ai",
+    }
+    assert brand.card()["description"] == "Trip Desk, answering for Ada Lovelace."
+    assert [scope.id for scope in card.delegation.scopes] == [
+        "trips:read",
+        "trips:change",
+    ]
+    reply = await agent.send(USER, "Hello")
+    assert isinstance(reply, Reply) and reply.text == "Answered for nobody."
+    [turn] = said.turns
+    assert (turn.issuer, turn.subject, turn.person, turn.scopes) == (
+        ISSUER,
+        USER,
+        None,
+        (),
+    )
+    # An issuer nobody registered is refused before its agent is asked.
+    stranger = agent_with(
+        "https://stranger.example", LocalSigner.generate("ecdsa-p256-sha256")
+    )
+    with pytest.raises(PactError):
+        await stranger.send(USER, "Hello")
+    assert len(said.turns) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_brand_delegates_through_its_page_and_signs_each_receipt():
+    brand, said, platform, agent, _ = _brand()
+    sign_in = await agent.request_sign_in(USER, ["trips:read", "trips:change"])
+    assert sign_in.verification_uri.startswith(
+        "https://studio.example/pact/device?slug=desk&user_code="
+    )
+    # What the page shows before the person decides; then they grant one of the two.
+    assert await brand.asked(sign_in.user_code) == {
+        "personal_agent": ISSUER,
+        "scopes": [
+            {"id": "trips:read", "description": "See your trips"},
+            {"id": "trips:change", "description": "Change a trip"},
+        ],
+    }
+    assert await brand.approve(sign_in.user_code, "ada", ["trips:read"]) == (
+        "trips:read",
+    )
+    with pytest.raises(KeyError):
+        await brand.approve(sign_in.user_code, "ada", ["trips:read"])
+    with pytest.raises(KeyError):
+        await brand.approve("NOPE-0000", "ada", ["trips:read"])
+    assert await agent.finish_sign_in(USER, sign_in, interval=0) == ("trips:read",)
+    reply = await agent.send(USER, "Where am I going?")
+    assert isinstance(reply, Reply) and reply.text == "Answered for ada."
+    assert said.turns[-1].scopes == ("trips:read",) and said.turns[-1].grant_id
+    step = await agent.send(USER, "Please change it", context_id=reply.context_id)
+    assert isinstance(step, StepUp) and step.missing == ("trips:change",)
+    assert (
+        step.verification_uri
+        == "https://studio.example/pact/device?slug=desk&scopes=trips:change"
+    )
+    # Every answer under the delegation carries a receipt its Provider's key signs (verified by the agent).
+    [(_, user, claims)] = receipt_store_of(platform).receipts
+    assert user == USER and claims["user"] == "ada" and claims["pa"] == ISSUER
+    assert claims["brand"] == brand.interface_url and claims["scopesUsed"] == [
+        "trips:read"
+    ]
+
+
+def test_a_brand_with_no_scopes_answers_personal_agents_alone():
+    brand, *_ = _brand(scopes={})
+    card = read_card(brand.card())
+    assert card.delegation is None and card.profile == "identity"
+    assert "userDelegation" not in brand.card()["securitySchemes"]
+
+
+def test_a_brand_signs_es256_only():
+    from agent_runtimes.protocols.pact.provider import PactBrand
+
+    with pytest.raises(ValueError, match="ES256"):
+        PactBrand(
+            base="https://x.example",
+            brand_id="x",
+            name="X",
+            provider=("D", "https://d.example"),
+            scopes={},
+            audience="a",
+            signer=LocalSigner.generate("ed25519"),
+            jwks=None,  # type: ignore[arg-type]
+            issuers=None,
+            store=None,
+            agent=None,
+            verification_uri="https://d.example/v",  # type: ignore[arg-type]
+        )

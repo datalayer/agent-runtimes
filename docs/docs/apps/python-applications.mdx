@@ -222,6 +222,7 @@ What an application declares is its Appspec. Each call adds to it:
 | `app.as_company(*, scopes=(), signed_out=True, interfaces=("agent",), extensions=(), personal_agents="any", registered_agents=())` | The application is itself a company personal agents work with (`pap.company`). |
 | `@app.company_operation(action, *, summary, user_approval_required=True)` | Over an `@app.tool`: what a personal agent may ask the company to do, proposed with its terms and done by that tool once the person confirms them (`pap.company.operations`). |
 | `app.business_connection(id, brand, *, audience, access="read", scopes=())` | A business's own agent it asks for each person, over PACT 1.0 (`pact.connections`): `brand` its domain, `audience` what its Provider assigned the application, `read` asking as the application alone and `write` also for each person who signed in there, `scopes` the business's permissions it may ask a person for. Lists `pact` among its protocols. See [A business over PACT](#a-business-over-pact). |
+| `app.as_business(*, registered_agents, scopes=None, brand="")` | The application answers people's personal agents as a PACT 1.0 business (`pact.business`): the personal agents it accepts, each `{issuer, jwks_uri}`; the scopes a person may delegate, `{scope: what they read}`; the Brand on its card. Lists `pact` among its protocols. |
 | `app.command(name, description, *, prompt="")` | A slash command in the composer (LOOP P-19): typing `/` lists it, picking it sends `prompt`, `{input}` the words typed after it. Without a prompt, used as a decorator, its code answers it — see below. |
 | `app.mode(id, label, options, *, default=None)` | A mode switch beside the composer: `options` are two at least, each `{id, label, description?, instructions?, model?}`. The option the person picks goes with every run: `session.modes[id]` says it, and `session.agent` is told its `instructions` and runs on its `model`. |
 | `app.ui.<component>(id, **properties)` | A component of the catalog on its surface, typed: `app.ui.table("runs", columns=["model"], rows={"path": "/runs"})`. One method per component (`table`, `chart`, `form`, `text_field`…), its properties typed from the catalog's JSON Schema and checked against it; `app.component(id, "Table", **properties)` is the same, untyped. See [typed calls](../agentspecs/ui-plugins#typed-calls-from-python). |
@@ -266,8 +267,8 @@ block *Add a business* writes in the Studio, and lists `pact` in `protocols`:
 app = Application("travel-desk", "chat", agent="example-blank:0.0.1")
 
 app.business_connection(
-    "example-air", "air.example",
-    audience="https://provider.example/a2a",   # what its Provider assigned it
+    "example-air", "air.examples.datalayer.run",
+    audience="https://air.examples.datalayer.run/a2a",   # what its Provider assigned it
     access="write",                             # also for each person signed in there
     scopes=["bookings:read", "bookings:change"],
 )
@@ -279,6 +280,22 @@ The gateway's `pact` toolset reaches the business, signs the personal-agent
 JWT with the application's own key and holds each person's delegation; the
 application never sees either. [PACT](../protocols/pact.mdx) is the protocol's
 page; [PAP and PACT](../protocols/pap-and-pact.mdx) compares the two.
+
+The application can also answer people's personal agents as a PACT business
+(`pact.business`): published at its deployment's own address when it ships,
+its card naming Datalayer as the Provider and `brand` (its owner when empty)
+as the Brand, accepting only the personal agents registered here:
+
+```python
+app.as_business(
+    registered_agents=[{
+        "issuer": "https://agent.example/pact",
+        "jwks_uri": "https://agent.example/pact/jwks.json",
+    }],
+    scopes={"bookings:read": "See your bookings"},  # what a person may let one do
+    brand="Example Air",
+)
+```
 
 #### The nine inputs
 

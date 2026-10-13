@@ -94,9 +94,38 @@ says each does (`protocol-tools/pact.yaml`): `pact_brand`, `pact_ask`,
 PAP companies are reached the same way (`pap_<domain>`,
 `agent_runtimes.loop.apps.pap_connections`).
 
+## Answering as a business
+
+`agent_runtimes.protocols.pact.provider.PactBrand` is the Provider's side of
+one Brand: its card (with the device-code delegation when it offers scopes),
+its A2A HTTP+JSON interface, its RFC 8414 metadata and keys, the device code,
+the delegation token, the step-up, and a signed receipt on every reply under
+a delegation. Everything a host decides is handed to it:
+
+```python
+brand = PactBrand(
+    base="https://desk.example", brand_id="desk", name="Trip Desk",
+    provider=("Datalayer", "https://datalayer.ai"),
+    scopes={"trips:read": "See your trips"},
+    audience="https://desk.example/a2a/desk",
+    signer=signer,            # ES256, the Provider's key (an HttpSigner)
+    jwks=published_keys,      # its public keys, what the metadata names
+    issuers=registered,       # IssuerKeys: the personal agents it accepts (§3.1)
+    store=store,              # BrandStore: grants, contexts, replies
+    agent=desk,               # BrandAgent: answers a BrandTurn with a BrandAnswer
+    verification_uri="https://desk.example/device",  # where the person signs in
+)
+await brand.approve(user_code, "ada", ["trips:read"])  # the person, at that page
+```
+
+A personal-agent JWT is verified against the keys of a registered issuer only;
+any other is refused before the Brand's agent is asked. Datalayer hosts an
+application as a business this way (the Appspec's `pact.business`).
+
 ## The local Provider
 
-`agent_runtimes.protocols.pact.provider.ExampleAir` serves one Brand's card,
+`agent_runtimes.protocols.pact.provider.ExampleAir` is one `PactBrand` with
+everything in memory: it serves one Brand's card,
 verifies personal-agent JWTs against registered JWKS, keeps contexts per
 (agent, user), answers retries from what it said, runs the device code with a
 simulated Brand sign-in where the person may untick scopes, issues delegation

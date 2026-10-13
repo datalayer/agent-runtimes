@@ -2278,8 +2278,31 @@ class AppPapSpec(BaseModel):
     company: AppPapCompanySpec = Field(default_factory=AppPapCompanySpec)
 
 
+class AppPactRegisteredAgentSpec(BaseModel):
+    """A personal agent a PACT business accepts (PACT 1.0 §3.1): its issuer and its keys."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    issuer: str
+    jwks_uri: str
+
+
+class AppPactBusinessSpec(BaseModel):
+    """The application as a PACT business (AGENT_PROTOCOLS PR-13, PI-32): Datalayer
+    the Provider, its owner the Brand (`brand` when said), the scopes a person
+    may delegate and the personal agents its Maker registered."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    enabled: bool = Field(default=False)
+    brand: str = Field(default="")
+    scopes: Dict[str, str] = Field(default_factory=dict)
+    registered_agents: List[AppPactRegisteredAgentSpec] = Field(default_factory=list)
+
+
 class AppPactSpec(BaseModel):
-    """PACT 1.0: the businesses it works with as a person's agent (AGENT_PROTOCOLS PI-01, PI-20).
+    """PACT 1.0: the businesses it works with as a person's agent (AGENT_PROTOCOLS PI-01, PI-20),
+    and whether it answers as one (PR-13).
 
     Each connection names a Brand's domain (`brand`), the audience its Provider
     assigned, a level and the scopes it may ask each person for; never a
@@ -2289,6 +2312,7 @@ class AppPactSpec(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     connections: List[Dict[str, Any]] = Field(default_factory=list)
+    business: AppPactBusinessSpec = Field(default_factory=AppPactBusinessSpec)
 
 
 class AppCommerceSpec(BaseModel):

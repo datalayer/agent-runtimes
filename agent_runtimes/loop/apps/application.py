@@ -1139,6 +1139,61 @@ class Application:
         self._spec = None
         return connection
 
+    def as_business(
+        self,
+        *,
+        registered_agents: Sequence[Mapping[str, str]],
+        scopes: Optional[Mapping[str, str]] = None,
+        brand: str = "",
+    ) -> Any:
+        """Answer people's personal agents as a PACT 1.0 business
+        (``pact.business``, AGENT_PROTOCOLS PR-13): published at the
+        deployment's own address when it ships, its card naming Datalayer as the
+        Provider and ``brand`` (the application's owner when empty) as the
+        Brand. Only the personal agents registered here are accepted, each
+        proving itself with a JWT its keys sign; with ``scopes``, a person signs
+        in with their Datalayer account to let one act for them, and every
+        answer under that permission carries a receipt Datalayer signs. Writing
+        it lists ``pact`` among the protocols the application speaks.
+
+        Parameters
+        ----------
+        registered_agents : sequence of mapping
+            The personal agents it accepts: each ``{"issuer": …, "jwks_uri": …}``,
+            HTTPS URLs.
+        scopes : mapping of str to str, optional
+            What a person may let a personal agent do, as they read it:
+            ``{"bookings:read": "See your bookings"}``.
+        brand : str
+            The Brand's name on its card.
+
+        Returns
+        -------
+        AppPactBusiness
+            The business role, as the spec holds it.
+        """
+        from agentspecs.apps import AppPact, AppPactBusiness
+
+        business = AppPactBusiness.model_validate(
+            {
+                "enabled": True,
+                "brand": brand,
+                "scopes": dict(scopes or {}),
+                "registered_agents": [dict(agent) for agent in registered_agents],
+            }
+        )
+        pact = self._document.get("pact") or {}
+        written = business.model_dump(mode="json", exclude_defaults=True)
+        # `enabled` is the role itself: written even though it is not the default's.
+        written["enabled"] = True
+        AppPact.model_validate({**pact, "business": written})
+        self._document["pact"] = {**pact, "business": written}
+        protocols = self._document.setdefault("protocols", [])
+        if "pact" not in protocols:
+            protocols.append("pact")
+        self._spec = None
+        return business
+
     def component(self, id: str, component: str, **properties: Any) -> Dict[str, Any]:
         """Place a component of the catalog on the application's surface (LOOP C-15).
 

@@ -597,9 +597,35 @@ export interface AppPactConnectionSpec {
   scopes: string[];
 }
 
-/** PACT: the businesses it asks for each person. */
+/** A personal agent a PACT business accepts (PACT 1.0 §3.1): its issuer and its keys. */
+export interface AppPactRegisteredAgentSpec {
+  /** The personal agent's `iss`, an HTTPS URL. */
+  issuer: string;
+  /** Where its public keys are (a JWKS), an HTTPS URL. */
+  jwksUri: string;
+}
+
+/**
+ * The application as a PACT business (AGENT_PROTOCOLS PR-13, PI-32): its card
+ * names Datalayer as the Provider and its owner as the Brand; it accepts the
+ * personal agents its Maker registered, and a person delegates the scopes it
+ * offers through their Datalayer sign-in.
+ */
+export interface AppPactBusinessSpec {
+  /** Whether it is published as a business at Ship. */
+  enabled: boolean;
+  /** The Brand's name on its card: the application's `owner` when empty. */
+  brand: string;
+  /** What a person may let a personal agent do, `{scope: what the person is shown}`. */
+  scopes: Record<string, string>;
+  registeredAgents: AppPactRegisteredAgentSpec[];
+}
+
+/** PACT: the businesses it asks for each person, and whether it answers as one. */
 export interface AppPactSpec {
   connections: AppPactConnectionSpec[];
+  /** As a business (PR-13): `enabled` false, it is none. */
+  business: AppPactBusinessSpec;
 }
 
 /** The most one purchase may cost at a merchant (AGENT_PROTOCOLS PI-22). */

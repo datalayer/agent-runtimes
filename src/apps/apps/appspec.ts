@@ -497,8 +497,15 @@ function dumpPap(pap: AppPapSpec | undefined): Data {
     ).data;
 }
 
-/** PACT (AGENT_PROTOCOLS PI-01): the businesses it asks for each person. */
+/** PACT (AGENT_PROTOCOLS PI-01): the businesses it asks for each person, and as one (PR-13). */
 function parsePact(data: Data): AppPactSpec {
+  const business: Data = isData(data.business) ? data.business : {};
+  const scopes: Record<string, string> = {};
+  if (isData(business.scopes)) {
+    for (const [scope, said] of Object.entries(business.scopes)) {
+      scopes[scope] = text(said);
+    }
+  }
   return {
     connections: records(data.connections).map(connection => ({
       id: text(connection.id),
@@ -507,6 +514,15 @@ function parsePact(data: Data): AppPactSpec {
       access: oneOf(connection.access, ['read', 'write'] as const, 'read'),
       scopes: texts(connection.scopes),
     })),
+    business: {
+      enabled: flag(business.enabled, false),
+      brand: text(business.brand),
+      scopes,
+      registeredAgents: records(business.registered_agents).map(agent => ({
+        issuer: text(agent.issuer),
+        jwksUri: text(agent.jwks_uri),
+      })),
+    },
   };
 }
 
@@ -558,18 +574,36 @@ function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
 /** PACT as its document says it, nothing at its default. */
 function dumpPact(pact: AppPactSpec | undefined): Data {
   if (!pact) return {};
-  return new Writer().list(
-    'connections',
-    pact.connections.map(
-      connection =>
-        new Writer()
-          .text('id', connection.id, '\u0000')
-          .text('brand', connection.brand, '\u0000')
-          .text('audience', connection.audience, '\u0000')
-          .value<string>('access', connection.access, 'read')
-          .list('scopes', connection.scopes).data,
-    ),
-  ).data;
+  const business = pact.business;
+  return new Writer()
+    .list(
+      'connections',
+      pact.connections.map(
+        connection =>
+          new Writer()
+            .text('id', connection.id, '\u0000')
+            .text('brand', connection.brand, '\u0000')
+            .text('audience', connection.audience, '\u0000')
+            .value<string>('access', connection.access, 'read')
+            .list('scopes', connection.scopes).data,
+      ),
+    )
+    .part(
+      'business',
+      new Writer()
+        .value('enabled', business.enabled, false)
+        .text('brand', business.brand)
+        .part('scopes', { ...business.scopes })
+        .list(
+          'registered_agents',
+          business.registeredAgents.map(
+            agent =>
+              new Writer()
+                .text('issuer', agent.issuer, '\u0000')
+                .text('jwks_uri', agent.jwksUri, '\u0000').data,
+          ),
+        ).data,
+    ).data;
 }
 
 /** A2A (AGENT_PROTOCOLS PR-02): the extensions its Agent Card advertises. */
@@ -1347,7 +1381,10 @@ export function protocolsProblems(
     pap: Boolean(
       app.pap && (app.pap.connections.length > 0 || app.pap.company.enabled),
     ),
-    pact: Boolean(app.pact && app.pact.connections.length > 0),
+    pact: Boolean(
+      app.pact &&
+      (app.pact.connections.length > 0 || app.pact.business.enabled),
+    ),
     a2a: Boolean(app.a2a && app.a2a.extensions.length > 0),
   };
   for (const spec of Object.values(PROTOCOL_CATALOGUE)) {

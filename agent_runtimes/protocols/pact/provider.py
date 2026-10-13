@@ -1,27 +1,37 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""A local PACT 1.0 Provider with one Brand, *Example Air* (AGENT_PROTOCOLS PR-13, EX-06).
+"""A PACT 1.0 Provider's side of a Brand (AGENT_PROTOCOLS PR-13, EX-06).
 
-Both profiles: *Identity* (§2–4: the card, the personal-agent JWT verified
-against the agent's registered JWKS, one ``contextId`` per (agent, user,
-Brand), idempotent retries by ``messageId``) and *Delegated* (§5: RFC 8628
-device code, the Brand's own sign-in simulated by :meth:`ExampleAir.approve`
-— the person unticks what they do not grant —, the delegation token, a
-step-up when a turn needs a scope the token lacks, and a signed receipt on
-every reply under delegation). The verification is
-:mod:`agent_runtimes.protocols.pact.tokens`, which a Loop application acting
-as a business uses the same way. For tests and examples only.
+:class:`PactBrand` is a Brand answered by its Provider, both profiles:
+*Identity* (§2–4: the card, the personal-agent JWT verified against the keys
+of a registered issuer, one ``contextId`` per (agent, user, Brand),
+idempotent retries by ``messageId``) and *Delegated* (§5: RFC 8628 device
+code, the person's own sign-in at the Brand's page granting what they choose
+— :meth:`PactBrand.approve` —, the delegation token, a step-up when a turn
+needs a scope the token lacks, and a signed receipt on every reply under
+delegation). What a host decides is passed in, never assumed: the key that
+signs (an :class:`~agent_runtimes.protocols.web_bot_auth.HttpSigner`, ES256),
+which issuers it accepts (:class:`IssuerKeys`), where its grants, contexts and
+replies are kept (:class:`BrandStore`), and the Brand's own agent
+(:class:`BrandAgent`). Datalayer hosts an application as a business this way
+(ai-agents, ``pact.business``).
+
+:class:`ExampleAir` is one Brand of it with everything in memory, for tests
+and examples only. The verification is
+:mod:`agent_runtimes.protocols.pact.tokens`.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import secrets
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, Mapping, Optional, Protocol
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -75,45 +85,197 @@ class _Grant:
     brand_user: str | None = None
     issued: bool = False
 
-
-@dataclass
-class ExampleAir:
-    """The Provider's state for its one Brand."""
-
-    base: str = "https://provider.example"
-    audience: str = "https://provider.example/a2a"
-    #: Registered personal agents: issuer → JWKS (§3.1).
-    agents: dict[str, dict[str, Any]] = field(default_factory=dict)
-    contexts: dict[str, tuple[str, str, str | None]] = field(default_factory=dict)
-    replies: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
-    grants: dict[str, _Grant] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        from cryptography.hazmat.primitives.asymmetric import ec
-
-        from ..web_bot_auth.keys import public_jwk
-
-        self._key = ec.generate_private_key(ec.SECP256R1())
-        self.public_jwk = {
-            **public_jwk(self._key.public_key()),
-            "alg": "ES256",
-            "use": "sig",
+    def record(self) -> dict[str, Any]:
+        return {
+            "user_code": self.user_code,
+            "client_id": self.client_id,
+            "scopes": list(self.scopes),
+            "approved": None if self.approved is None else list(self.approved),
+            "brand_user": self.brand_user,
+            "issued": self.issued,
         }
+
+    @classmethod
+    def of(cls, record: Mapping[str, Any]) -> "_Grant":
+        approved = record.get("approved")
+        return cls(
+            user_code=str(record["user_code"]),
+            client_id=str(record["client_id"]),
+            scopes=tuple(record.get("scopes") or ()),
+            approved=None if approved is None else tuple(approved),
+            brand_user=record.get("brand_user"),
+            issued=bool(record.get("issued")),
+        )
+
+
+# --- what a host passes in ------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BrandTurn:
+    """One message a personal agent sent the Brand: who sent it, for whom, under what."""
+
+    text: str
+    #: The personal agent (its JWT's ``iss``) and the person there (its ``sub``).
+    issuer: str
+    subject: str
+    context_id: str
+    #: Under a delegation: the person's account at the Brand and the scopes they granted.
+    person: Optional[str] = None
+    scopes: tuple[str, ...] = ()
+    grant_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class BrandAnswer:
+    """What the Brand's agent says, the scopes it used and its actions (for the receipt),
+    and the scopes it lacks (a step-up, §5.5)."""
+
+    text: str
+    scopes_used: tuple[str, ...] = ()
+    actions: tuple[Mapping[str, Any], ...] = ()
+    missing: tuple[str, ...] = ()
+
+
+class BrandAgent(Protocol):
+    """The Brand's own agent."""
+
+    async def answer(self, turn: BrandTurn) -> BrandAnswer: ...
+
+
+class IssuerKeys(Protocol):
+    """The personal agents a Brand accepts (§3.1): an issuer's public keys, or None."""
+
+    async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]: ...
+
+
+class BrandStore(Protocol):
+    """Where a Brand keeps its device grants, its contexts and its replies (JSON records)."""
+
+    async def get(self, kind: str, key: str) -> Optional[dict[str, Any]]: ...
+
+    async def put(
+        self, kind: str, key: str, value: dict[str, Any], *, seconds: int
+    ) -> None: ...
+
+
+class InMemoryBrandStore:
+    """A :class:`BrandStore` in this process: tests and examples."""
+
+    def __init__(self) -> None:
+        self.records: dict[tuple[str, str], dict[str, Any]] = {}
+
+    async def get(self, kind: str, key: str) -> Optional[dict[str, Any]]:
+        found = self.records.get((kind, key))
+        return None if found is None else json.loads(json.dumps(found))
+
+    async def put(
+        self, kind: str, key: str, value: dict[str, Any], *, seconds: int
+    ) -> None:
+        self.records[(kind, key)] = json.loads(json.dumps(value))
+
+
+class RegisteredIssuers:
+    """An :class:`IssuerKeys` from a table: issuer → JWKS (the registration of §3.1)."""
+
+    def __init__(self, agents: Optional[dict[str, Mapping[str, Any]]] = None) -> None:
+        self.agents: dict[str, Mapping[str, Any]] = dict(agents or {})
+
+    async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]:
+        return self.agents.get(issuer)
+
+
+#: How long a device grant waits for the person, a context and a reply are kept.
+DEVICE_SECONDS = 600
+CONTEXT_SECONDS = 30 * 24 * 3600
+TOKEN_SECONDS = 3600
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+class PactBrand:
+    """A Brand answered by its Provider, at ``{base}/a2a/{brand_id}``.
+
+    Everything a host decides is passed in: ``signer`` (ES256, the Provider's
+    key: its delegation tokens and receipts), ``jwks`` (its public keys, what
+    the OAuth metadata names), ``issuers`` (the registered personal agents),
+    ``store`` and ``agent``; ``verification_uri`` is the page where a person
+    signs in at the Brand and enters the code.
+    """
+
+    def __init__(
+        self,
+        *,
+        base: str,
+        brand_id: str,
+        name: str,
+        provider: tuple[str, str],
+        scopes: Mapping[str, str],
+        audience: str,
+        signer: Any,
+        jwks: Callable[[], Awaitable[Mapping[str, Any]]],
+        issuers: IssuerKeys,
+        store: BrandStore,
+        agent: BrandAgent,
+        verification_uri: str,
+        description: str = "",
+        skills: tuple[Mapping[str, Any], ...] = (),
+    ) -> None:
+        if getattr(signer, "algorithm", "") != "ecdsa-p256-sha256":
+            raise ValueError(
+                "a Brand's tokens and receipts are signed ES256 (a P-256 key)"
+            )
+        self.base = base.rstrip("/")
+        self.brand_id = brand_id
+        self.name = name
+        self.provider = provider
+        self.scopes = dict(scopes)
+        self.audience = audience
+        self.signer = signer
+        self._jwks = jwks
+        self.issuers = issuers
+        self.store = store
+        self.agent = agent
+        self.verification_uri = verification_uri
+        self.description = description
+        self.skills = tuple(skills)
 
     @property
     def interface_url(self) -> str:
-        return f"{self.base}/a2a/{BRAND_ID}"
+        return f"{self.base}/a2a/{self.brand_id}"
 
     @property
     def oauth(self) -> str:
         return f"{self.interface_url}/oauth"
 
-    def register(self, issuer: str, jwks: dict[str, Any]) -> None:
-        self.agents[issuer] = jwks
-
     def card(self) -> dict[str, Any]:
-        return {
-            "name": "Example Air Support",
+        """Its A2A Agent Card (§2.1, §5.1): the JWT alone, or with the device-code delegation."""
+        schemes: dict[str, Any] = {
+            "paJwt": {
+                "httpAuthSecurityScheme": {"scheme": "Bearer", "bearerFormat": "JWT"}
+            }
+        }
+        requirements: list[dict[str, Any]] = [{"schemes": {"paJwt": {"list": []}}}]
+        if self.scopes:
+            schemes["userDelegation"] = {
+                "oauth2SecurityScheme": {
+                    "flows": {
+                        "deviceCode": {
+                            "deviceAuthorizationUrl": f"{self.oauth}/device_authorization",
+                            "tokenUrl": f"{self.oauth}/token",
+                            "scopes": dict(self.scopes),
+                        }
+                    },
+                    "oauth2MetadataUrl": f"{self.oauth}/.well-known/oauth-authorization-server",
+                }
+            }
+            requirements.append(
+                {"schemes": {"paJwt": {"list": []}, "userDelegation": {"list": []}}}
+            )
+        card: dict[str, Any] = {
+            "name": self.name,
             "supportedInterfaces": [
                 {
                     "url": self.interface_url,
@@ -121,60 +283,33 @@ class ExampleAir:
                     "protocolVersion": "1.0",
                 }
             ],
-            "provider": {"organization": "Example Provider", "url": self.base},
+            "provider": {"organization": self.provider[0], "url": self.provider[1]},
             "version": "0.1.0",
             "capabilities": {
                 "streaming": False,
                 "pushNotifications": False,
                 "extendedAgentCard": False,
             },
-            "securitySchemes": {
-                "paJwt": {
-                    "httpAuthSecurityScheme": {
-                        "scheme": "Bearer",
-                        "bearerFormat": "JWT",
-                    }
-                },
-                "userDelegation": {
-                    "oauth2SecurityScheme": {
-                        "flows": {
-                            "deviceCode": {
-                                "deviceAuthorizationUrl": f"{self.oauth}/device_authorization",
-                                "tokenUrl": f"{self.oauth}/token",
-                                "scopes": SCOPES,
-                            }
-                        },
-                        "oauth2MetadataUrl": f"{self.oauth}/.well-known/oauth-authorization-server",
-                    }
-                },
-            },
-            "securityRequirements": [
-                {"schemes": {"paJwt": {"list": []}}},
-                {"schemes": {"paJwt": {"list": []}, "userDelegation": {"list": []}}},
-            ],
+            "securitySchemes": schemes,
+            "securityRequirements": requirements,
             "defaultInputModes": ["text/plain"],
             "defaultOutputModes": ["text/plain"],
-            "skills": [
-                {
-                    "id": "bookings",
-                    "name": "Bookings",
-                    "description": "Bookings and changes.",
-                    "tags": ["bookings"],
-                }
-            ],
+            "skills": [dict(skill) for skill in self.skills],
         }
+        if self.description:
+            card["description"] = self.description
+        return card
 
-    def _sign(self, claims: dict[str, Any]) -> str:
-        import jwt
-
-        return jwt.encode(
-            claims,
-            self._key,
-            algorithm="ES256",
-            headers={"kid": self.public_jwk["kid"]},
+    async def _sign(self, header: dict[str, Any], payload: bytes) -> str:
+        signing_input = (
+            _b64url(json.dumps(header, separators=(",", ":")).encode())
+            + "."
+            + _b64url(payload)
         )
+        signature = await self.signer.sign(signing_input.encode())
+        return f"{signing_input}.{_b64url(signature)}"
 
-    def _personal_agent(self, request: Request) -> dict[str, Any] | None:
+    async def _personal_agent(self, request: Request) -> dict[str, Any] | None:
         header = request.headers.get("authorization", "")
         if not header.startswith("Bearer "):
             return None
@@ -185,7 +320,9 @@ class ExampleAir:
             issuer = jwt.decode(token, options={"verify_signature": False}).get("iss")
         except jwt.PyJWTError:
             return None
-        jwks = self.agents.get(issuer)
+        if not isinstance(issuer, str):
+            return None
+        jwks = await self.issuers.jwks_of(issuer)
         if jwks is None:
             return None
         try:
@@ -195,45 +332,54 @@ class ExampleAir:
         except PermissionError:
             return None
 
-    def approve(self, user_code: str, brand_user: str, scopes: list[str]) -> None:
-        """The person signed in at the Brand and approved ``scopes`` (maybe fewer than asked)."""
-        grant = next(g for g in self.grants.values() if g.user_code == user_code)
+    async def approve(
+        self, user_code: str, brand_user: str, scopes: list[str]
+    ) -> tuple[str, ...]:
+        """The person signed in at the Brand and approved ``scopes`` (maybe fewer than asked):
+        what they granted. :class:`KeyError` for a code unknown, used or expired."""
+        device_code = (await self.store.get("pact_code", user_code) or {}).get(
+            "device_code"
+        )
+        record = await self.store.get("pact_grant", str(device_code or ""))
+        if record is None:
+            raise KeyError(user_code)
+        grant = _Grant.of(record)
+        if grant.approved is not None or grant.issued:
+            raise KeyError(user_code)
         grant.approved = tuple(scope for scope in grant.scopes if scope in scopes)
         grant.brand_user = brand_user
+        await self.store.put(
+            "pact_grant", str(device_code), grant.record(), seconds=DEVICE_SECONDS
+        )
+        return grant.approved
 
-    def _answer(
-        self, text: str, scopes: tuple[str, ...]
-    ) -> tuple[str, list[str], list[dict[str, str]], list[str]]:
-        """The Brand's agent: what it says, the scopes it used, its actions, and what it lacks."""
-        lowered = text.lower()
-        if "change" in lowered:
-            if "bookings:change" not in scopes:
-                return (
-                    "I need permission to change a booking.",
-                    [],
-                    [],
-                    ["bookings:change"],
-                )
-            return (
-                "Booking AB123 now flies on 2026-11-09.",
-                ["bookings:read", "bookings:change"],
-                [
-                    {"tool": "lookup_booking"},
-                    {"tool": "change_booking", "argsHash": "sha256:9f"},
-                ],
-                [],
-            )
-        if "booking" in lowered and "bookings:read" in scopes:
-            return (
-                "Your booking AB123 flies on 2026-11-02.",
-                ["bookings:read"],
-                [{"tool": "lookup_booking"}],
-                [],
-            )
-        return "Happy to help. What is your booking reference?", [], [], []
+    async def asked(self, user_code: str) -> dict[str, Any]:
+        """What a code's sign-in asks, for the page where the person decides: the personal
+        agent and each scope with what it lets it do. :class:`KeyError` when unknown or used."""
+        device_code = (await self.store.get("pact_code", user_code) or {}).get(
+            "device_code"
+        )
+        record = await self.store.get("pact_grant", str(device_code or ""))
+        if record is None:
+            raise KeyError(user_code)
+        grant = _Grant.of(record)
+        if grant.approved is not None or grant.issued:
+            raise KeyError(user_code)
+        return {
+            "personal_agent": grant.client_id,
+            "scopes": [
+                {"id": scope, "description": self.scopes.get(scope, "")}
+                for scope in grant.scopes
+            ],
+        }
+
+    def step_up_uri(self, missing: tuple[str, ...]) -> str:
+        """Where the person grants what a turn lacks (§5.5)."""
+        joiner = "&" if "?" in self.verification_uri else "?"
+        return f"{self.verification_uri}{joiner}scopes={'+'.join(missing)}"
 
     async def _send(self, request: Request) -> Response:
-        identity = self._personal_agent(request)
+        identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
         delegation = None
@@ -245,7 +391,7 @@ class ExampleAir:
                     issuer=self.oauth,
                     interface_url=self.interface_url,
                     client_id=identity["iss"],
-                    jwks={"keys": [self.public_jwk]},
+                    jwks=await self._jwks(),
                 )
             except PermissionError:
                 return _unauthorized("invalid_token")
@@ -257,37 +403,64 @@ class ExampleAir:
             return _a2a_error(400, "INVALID_PARAMS", "a user message with text")
         if message.get("taskId"):
             return _a2a_error(404, "TASK_NOT_FOUND", "no such task")
-        who = (identity["iss"], identity["sub"])
+        if not isinstance(message.get("messageId"), str) or not message["messageId"]:
+            return _a2a_error(400, "INVALID_PARAMS", "a messageId")
+        who = [identity["iss"], identity["sub"]]
         context_id = message.get("contextId")
         if context_id:
-            owner = self.contexts.get(context_id)
-            if owner is None or owner[:2] != who:
+            owner = await self.store.get("pact_context", str(context_id))
+            if owner is None or owner["who"] != who:
                 return _a2a_error(400, "INVALID_PARAMS", "Unknown contextId")
-            if delegation and owner[2] not in (None, delegation["sub"]):
+            if delegation and owner.get("person") not in (None, delegation["sub"]):
                 return _a2a_error(400, "INVALID_PARAMS", "Unknown contextId")
+            person = owner.get("person")
         else:
             context_id = str(uuid.uuid4())
-            self.contexts[context_id] = (*who, None)
+            person = None
         if delegation:
-            self.contexts[context_id] = (*who, delegation["sub"])
-        key = (context_id, message["messageId"])
-        if key in self.replies:
-            return JSONResponse(self.replies[key], media_type="application/a2a+json")
+            person = delegation["sub"]
+        await self.store.put(
+            "pact_context",
+            context_id,
+            {"who": who, "person": person},
+            seconds=CONTEXT_SECONDS,
+        )
+        key = hashlib.sha256(
+            f"{context_id}\x1f{message['messageId']}".encode()
+        ).hexdigest()
+        kept = await self.store.get("pact_reply", key)
+        if kept is not None:
+            return JSONResponse(kept, media_type="application/a2a+json")
         text = " ".join(part.get("text", "") for part in message["parts"])
         scopes = tuple(delegation["scope"].split()) if delegation else ()
-        said, used, actions, missing = self._answer(text, scopes)
-        if missing:
-            reply = {
+        answer = await self.agent.answer(
+            BrandTurn(
+                text=text,
+                issuer=identity["iss"],
+                subject=identity["sub"],
+                context_id=context_id,
+                person=delegation["sub"] if delegation else None,
+                scopes=scopes,
+                grant_id=delegation["grant_id"] if delegation else None,
+            )
+        )
+        if answer.missing:
+            reply: dict[str, Any] = {
                 "task": {
                     "id": f"t-{uuid.uuid4().hex[:8]}",
                     "contextId": context_id,
                     "status": {
                         "state": "TASK_STATE_AUTH_REQUIRED",
-                        "message": {"role": "ROLE_AGENT", "parts": [{"text": said}]},
+                        "message": {
+                            "role": "ROLE_AGENT",
+                            "parts": [{"text": answer.text}],
+                        },
                     },
                     "metadata": {
-                        "pact.missingScopes": missing,
-                        "pact.verificationUriComplete": f"https://air.example/login?scopes={'+'.join(missing)}",
+                        "pact.missingScopes": list(answer.missing),
+                        "pact.verificationUriComplete": self.step_up_uri(
+                            answer.missing
+                        ),
                     },
                 }
             }
@@ -296,7 +469,7 @@ class ExampleAir:
             "messageId": f"r-{uuid.uuid4().hex[:8]}",
             "contextId": context_id,
             "role": "ROLE_AGENT",
-            "parts": [{"text": said}],
+            "parts": [{"text": answer.text}],
         }
         if delegation:
             claims = {
@@ -304,56 +477,62 @@ class ExampleAir:
                 "user": delegation["sub"],
                 "pa": identity["iss"],
                 "brand": self.interface_url,
-                "scopesUsed": used,
-                "actions": actions,
+                "scopesUsed": list(answer.scopes_used),
+                "actions": [dict(action) for action in answer.actions],
                 "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
-            import jwt
-
-            jws = jwt.api_jws.encode(
+            jws = await self._sign(
+                {"alg": "ES256", "kid": self.signer.keyid},
                 json.dumps(claims, separators=(",", ":")).encode(),
-                self._key,
-                algorithm="ES256",
-                headers={"kid": self.public_jwk["kid"]},
             )
             out["metadata"] = {"pact.receipt": {"jws": jws, "claims": claims}}
         reply = {"message": out}
-        self.replies[key] = reply
+        await self.store.put("pact_reply", key, reply, seconds=CONTEXT_SECONDS)
         return JSONResponse(reply, media_type="application/a2a+json")
 
     async def _device_authorization(self, request: Request) -> Response:
-        identity = self._personal_agent(request)
+        identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
         form = await request.form()
         if form.get("client_id") != identity["iss"]:
             return JSONResponse({"error": "invalid_client"}, status_code=400)
         scopes = tuple(str(form.get("scope", "")).split())
-        if not scopes or any(scope not in SCOPES for scope in scopes):
+        if not scopes or any(scope not in self.scopes for scope in scopes):
             return JSONResponse({"error": "invalid_scope"}, status_code=400)
         device_code = f"dc_{secrets.token_urlsafe(16)}"
         user_code = f"{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}"
-        self.grants[device_code] = _Grant(
-            user_code=user_code, client_id=identity["iss"], scopes=scopes
+        await self.store.put(
+            "pact_grant",
+            device_code,
+            _Grant(
+                user_code=user_code, client_id=identity["iss"], scopes=scopes
+            ).record(),
+            seconds=DEVICE_SECONDS,
         )
-        login = "https://air.example/login?return_to=consent"
+        await self.store.put(
+            "pact_code", user_code, {"device_code": device_code}, seconds=DEVICE_SECONDS
+        )
+        joiner = "&" if "?" in self.verification_uri else "?"
         return JSONResponse(
             {
                 "device_code": device_code,
                 "user_code": user_code,
-                "verification_uri": login,
-                "verification_uri_complete": f"{login}&user_code={user_code}",
-                "expires_in": 600,
+                "verification_uri": self.verification_uri,
+                "verification_uri_complete": f"{self.verification_uri}{joiner}user_code={user_code}",
+                "expires_in": DEVICE_SECONDS,
                 "interval": 1,
             }
         )
 
     async def _token(self, request: Request) -> Response:
-        identity = self._personal_agent(request)
+        identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
         form = await request.form()
-        grant = self.grants.get(str(form.get("device_code")))
+        device_code = str(form.get("device_code"))
+        record = await self.store.get("pact_grant", device_code)
+        grant = None if record is None else _Grant.of(record)
         if grant is None or grant.client_id != identity["iss"] or grant.issued:
             return JSONResponse({"error": "expired_token"}, status_code=400)
         if grant.approved is None:
@@ -361,50 +540,57 @@ class ExampleAir:
         if not grant.approved:
             return JSONResponse({"error": "access_denied"}, status_code=400)
         grant.issued = True
+        await self.store.put(
+            "pact_grant", device_code, grant.record(), seconds=DEVICE_SECONDS
+        )
         now = int(time.time())
-        token = self._sign(
-            {
-                "iss": self.oauth,
-                "aud": self.interface_url,
-                "sub": grant.brand_user,
-                "client_id": grant.client_id,
-                "scope": " ".join(grant.approved),
-                "grant_id": f"a2agrant_{uuid.uuid4().hex[:10]}",
-                "iat": now,
-                "exp": now + 3600,
-            }
+        token = await self._sign(
+            {"alg": "ES256", "kid": self.signer.keyid, "typ": "JWT"},
+            json.dumps(
+                {
+                    "iss": self.oauth,
+                    "aud": self.interface_url,
+                    "sub": grant.brand_user,
+                    "client_id": grant.client_id,
+                    "scope": " ".join(grant.approved),
+                    "grant_id": f"a2agrant_{uuid.uuid4().hex[:10]}",
+                    "iat": now,
+                    "exp": now + TOKEN_SECONDS,
+                },
+                separators=(",", ":"),
+            ).encode(),
         )
         return JSONResponse(
             {
                 "token_type": "Bearer",
                 "access_token": token,
-                "expires_in": 3600,
+                "expires_in": TOKEN_SECONDS,
                 "scope": " ".join(grant.approved),
             }
         )
+
+    def metadata(self) -> dict[str, Any]:
+        """Its RFC 8414 authorization server metadata."""
+        return {
+            "issuer": self.oauth,
+            "device_authorization_endpoint": f"{self.oauth}/device_authorization",
+            "token_endpoint": f"{self.oauth}/token",
+            "jwks_uri": f"{self.oauth}/jwks.json",
+            "grant_types_supported": ["urn:ietf:params:oauth:grant-type:device_code"],
+            "scopes_supported": list(self.scopes),
+        }
 
     def app(self) -> Starlette:
         async def card(request: Request) -> Response:
             return JSONResponse(self.card())
 
         async def metadata(request: Request) -> Response:
-            return JSONResponse(
-                {
-                    "issuer": self.oauth,
-                    "device_authorization_endpoint": f"{self.oauth}/device_authorization",
-                    "token_endpoint": f"{self.oauth}/token",
-                    "jwks_uri": f"{self.oauth}/jwks.json",
-                    "grant_types_supported": [
-                        "urn:ietf:params:oauth:grant-type:device_code"
-                    ],
-                    "scopes_supported": list(SCOPES),
-                }
-            )
+            return JSONResponse(self.metadata())
 
         async def jwks(request: Request) -> Response:
-            return JSONResponse({"keys": [self.public_jwk]})
+            return JSONResponse(dict(await self._jwks()))
 
-        root = f"/a2a/{BRAND_ID}"
+        root = f"/a2a/{self.brand_id}"
         return Starlette(
             routes=[
                 Route(f"{root}/.well-known/agent-card.json", card),
@@ -421,4 +607,124 @@ class ExampleAir:
         )
 
 
-__all__ = ["BRAND_ID", "ExampleAir", "SCOPES"]
+# --- Example Air: one Brand, in memory ----------------------------------------------
+
+
+class _ExampleAirAgent:
+    """Example Air's agent: bookings read and changed, as the person allowed."""
+
+    async def answer(self, turn: BrandTurn) -> BrandAnswer:
+        lowered = turn.text.lower()
+        if "change" in lowered:
+            if "bookings:change" not in turn.scopes:
+                return BrandAnswer(
+                    "I need permission to change a booking.",
+                    missing=("bookings:change",),
+                )
+            return BrandAnswer(
+                "Booking AB123 now flies on 2026-11-09.",
+                scopes_used=("bookings:read", "bookings:change"),
+                actions=(
+                    {"tool": "lookup_booking"},
+                    {"tool": "change_booking", "argsHash": "sha256:9f"},
+                ),
+            )
+        if "booking" in lowered and "bookings:read" in turn.scopes:
+            return BrandAnswer(
+                "Your booking AB123 flies on 2026-11-02.",
+                scopes_used=("bookings:read",),
+                actions=({"tool": "lookup_booking"},),
+            )
+        return BrandAnswer("Happy to help. What is your booking reference?")
+
+
+class ExampleAir(PactBrand):
+    """*Example Air*: a Provider with one Brand, everything in memory (tests and examples)."""
+
+    def __init__(
+        self,
+        base: str = "https://provider.example",
+        audience: str = "https://provider.example/a2a",
+    ) -> None:
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        from ..web_bot_auth.keys import LocalSigner
+
+        signer = LocalSigner(ec.generate_private_key(ec.SECP256R1()))
+        self.public_jwk = {**signer.public_jwk, "alg": "ES256", "use": "sig"}
+        self._registered = RegisteredIssuers()
+        self._memory = InMemoryBrandStore()
+
+        async def jwks() -> Mapping[str, Any]:
+            return {"keys": [self.public_jwk]}
+
+        super().__init__(
+            base=base,
+            brand_id=BRAND_ID,
+            name="Example Air Support",
+            provider=("Example Provider", base.rstrip("/")),
+            scopes=SCOPES,
+            audience=audience,
+            signer=signer,
+            jwks=jwks,
+            issuers=self._registered,
+            store=self._memory,
+            agent=_ExampleAirAgent(),
+            verification_uri="https://air.example/login?return_to=consent",
+            skills=(
+                {
+                    "id": "bookings",
+                    "name": "Bookings",
+                    "description": "Bookings and changes.",
+                    "tags": ["bookings"],
+                },
+            ),
+        )
+
+    @property
+    def agents(self) -> dict[str, Mapping[str, Any]]:
+        """Registered personal agents: issuer → JWKS (§3.1)."""
+        return self._registered.agents
+
+    @property
+    def grants(self) -> dict[str, _Grant]:
+        """The device grants, by device code (read only)."""
+        return {
+            key: _Grant.of(value)
+            for (kind, key), value in self._memory.records.items()
+            if kind == "pact_grant"
+        }
+
+    def register(self, issuer: str, jwks: dict[str, Any]) -> None:
+        self._registered.agents[issuer] = jwks
+
+    def approve(self, user_code: str, brand_user: str, scopes: list[str]) -> None:  # type: ignore[override]
+        """The person signed in at the Brand and approved ``scopes`` (maybe fewer than asked).
+
+        :class:`StopIteration` for a code it never gave."""
+        found = self._memory.records.get(("pact_code", user_code))
+        if found is None:
+            raise StopIteration(user_code)
+        key = ("pact_grant", found["device_code"])
+        grant = _Grant.of(self._memory.records[key])
+        grant.approved = tuple(scope for scope in grant.scopes if scope in scopes)
+        grant.brand_user = brand_user
+        self._memory.records[key] = grant.record()
+
+    def step_up_uri(self, missing: tuple[str, ...]) -> str:
+        return f"https://air.example/login?scopes={'+'.join(missing)}"
+
+
+__all__ = [
+    "BRAND_ID",
+    "BrandAgent",
+    "BrandAnswer",
+    "BrandStore",
+    "BrandTurn",
+    "ExampleAir",
+    "InMemoryBrandStore",
+    "IssuerKeys",
+    "PactBrand",
+    "RegisteredIssuers",
+    "SCOPES",
+]

@@ -542,6 +542,8 @@ describe('writing an Appspec', () => {
       ...document.pact.connections[0],
       access: 'read',
     });
+    // No business said: none (AGENT_PROTOCOLS PR-13).
+    expect(app.pact?.business.enabled).toBe(false);
     expect(app.a2a?.extensions).toEqual([
       { ...document.a2a.extensions[0], required: false },
       {
@@ -559,6 +561,50 @@ describe('writing an Appspec', () => {
     expect(parseAppspec({ kind: 'chat' }).app.a2a).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('a2a');
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pact');
+  });
+  it('reads and writes the application as a PACT business (AGENT_PROTOCOLS PR-13, PI-32)', () => {
+    const document = {
+      kind: 'chat',
+      protocols: ['pact'],
+      pact: {
+        business: {
+          enabled: true,
+          brand: 'Example Air',
+          scopes: {
+            'bookings:read': 'See your bookings',
+            'bookings:change': 'Change a booking',
+          },
+          registered_agents: [
+            {
+              issuer: 'https://agent.example/pact',
+              jwks_uri: 'https://agent.example/pact/jwks.json',
+            },
+          ],
+        },
+      },
+    };
+    const { app, problems } = parseAppspec(document);
+    expect(problems).toEqual([]);
+    expect(app.pact?.connections).toEqual([]);
+    expect(app.pact?.business).toEqual({
+      enabled: true,
+      brand: 'Example Air',
+      scopes: document.pact.business.scopes,
+      registeredAgents: [
+        {
+          issuer: 'https://agent.example/pact',
+          jwksUri: 'https://agent.example/pact/jwks.json',
+        },
+      ],
+    });
+    // Written back as read: nothing at its default.
+    expect(dumpAppspec(app).pact).toEqual(document.pact);
+    // A business configures PACT: refused unless `pact` is listed.
+    expect(
+      parseAppspec({ ...document, protocols: [] }).problems.join(' '),
+    ).toMatch(/`pact` block configures/);
+    // An application without the block is no business.
+    expect(parseAppspec({ kind: 'chat' }).app.pact).toBeUndefined();
   });
   it('reads and writes the merchants it shops at, each listed protocol (AGENT_PROTOCOLS PI-01)', () => {
     const document = {

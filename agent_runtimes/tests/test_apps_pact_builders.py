@@ -21,8 +21,8 @@ def _travel_desk() -> Application:
     app = Application("travel-desk-py", "chat", agent="example-blank:0.0.1")
     app.business_connection(
         "example-air",
-        "air.example",
-        audience="https://provider.example/a2a",
+        "air.examples.datalayer.run",
+        audience="https://air.examples.datalayer.run/a2a",
         access="write",
         scopes=["bookings:read", "bookings:change"],
     )
@@ -43,7 +43,7 @@ def test_a_second_business_keeps_the_first_and_lists_pact_once() -> None:
     )
     built = parse_app(app.document)
     assert [connection.brand for connection in built.pact.connections] == [
-        "air.example",
+        "air.examples.datalayer.run",
         "rail.example",
     ]
     assert built.pact.connections[1].access.value == "read"
@@ -55,7 +55,7 @@ def test_a_second_business_keeps_the_first_and_lists_pact_once() -> None:
     [
         ("https://air.example", {}, "not a business's domain"),
         ("rail.example", {"id": "example-air"}, "same id"),
-        ("air.example", {"id": "other"}, "same business twice"),
+        ("air.examples.datalayer.run", {"id": "other"}, "same business twice"),
         ("rail.example", {"access": "delete"}, "access"),
     ],
 )
@@ -77,3 +77,32 @@ def test_no_audience_no_connection() -> None:
     with pytest.raises(TypeError):
         app.business_connection("air", "air.example")  # type: ignore[call-arg]
     assert "pact" not in app.document
+
+
+def test_as_business_writes_the_business_and_lists_pact() -> None:
+    """AGENT_PROTOCOLS PR-13 (decided 2026-10-13): the application as a PACT business."""
+    app = Application("air-desk", "chat", agent="example-blank:0.0.1")
+    agent = {
+        "issuer": "https://agent.example/pact",
+        "jwks_uri": "https://agent.example/pact/jwks.json",
+    }
+    app.as_business(
+        registered_agents=[agent],
+        scopes={"bookings:read": "See your bookings"},
+        brand="Example Air",
+    )
+    assert app.document["pact"] == {
+        "business": {
+            "enabled": True,
+            "brand": "Example Air",
+            "scopes": {"bookings:read": "See your bookings"},
+            "registered_agents": [agent],
+        }
+    }
+    built = parse_app(app.document)
+    assert built.pact.business.enabled and built.protocols == ["pact"]
+    # Nobody registered: refused, nothing kept.
+    other = Application("nobody", "chat", agent="example-blank:0.0.1")
+    with pytest.raises(ValidationError, match="name at least one"):
+        other.as_business(registered_agents=[])
+    assert "pact" not in other.document

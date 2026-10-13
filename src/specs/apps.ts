@@ -2621,7 +2621,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
     connections: [
       {
         id: 'manzanita',
-        company: 'manzanita.example',
+        company: 'manzanita.examples.datalayer.run',
         access: 'write',
         as: 'user',
         scopes: ['orders:read', 'orders:write'],
@@ -2729,7 +2729,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
         "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
+        'It has not run in the Studio against the hosted Manzanita (manzanita.examples.datalayer.run) from this example yet.',
       ],
     },
   },
@@ -4549,7 +4549,7 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
       {
         id: 'example-store',
         protocol: 'ucp',
-        merchant: 'store.example',
+        merchant: 'store.examples.datalayer.run',
         access: 'write',
         limit: {
           amount: '50',
@@ -4559,7 +4559,7 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
       {
         id: 'example-outfitters',
         protocol: 'acp',
-        merchant: 'outfitters.example',
+        merchant: 'outfitters.examples.datalayer.run',
         access: 'write',
         limit: {
           amount: '150',
@@ -4656,7 +4656,7 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
         "The checkout at Example Outfitters is the developers' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests.",
       ],
       unverified: [
-        "No shop answers UCP or ACP on Datalayer yet: the gateway's ucp and acp toolsets are built, not deployed.",
+        'It has not run in the Studio against the hosted Example Store and Example Outfitters (store.examples.datalayer.run, outfitters.examples.datalayer.run) from this example yet.',
       ],
     },
   },
@@ -5435,12 +5435,18 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
     connections: [
       {
         id: 'example-air',
-        brand: 'air.example',
-        audience: 'https://provider.example/a2a',
+        brand: 'air.examples.datalayer.run',
+        audience: 'https://air.examples.datalayer.run/a2a',
         access: 'write',
         scopes: ['bookings:read', 'bookings:change'],
       },
     ],
+    business: {
+      enabled: false,
+      brand: '',
+      scopes: {},
+      registeredAgents: [],
+    },
   },
   rules: [
     {
@@ -5519,7 +5525,7 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
         "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112).",
       ],
       unverified: [
-        "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed.",
+        'It has not run in the Studio against the hosted Example Air (air.examples.datalayer.run) from this example yet; the hosted Example Air keeps registrations in memory, so an application is registered there again after each restart.',
       ],
     },
   },
@@ -7399,7 +7405,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       connections: [
         {
           id: 'manzanita',
-          company: 'manzanita.example',
+          company: 'manzanita.examples.datalayer.run',
           access: 'write',
           scopes: ['orders:read', 'orders:write'],
           extensions: ['operations'],
@@ -7466,7 +7472,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
+          'It has not run in the Studio against the hosted Manzanita (manzanita.examples.datalayer.run) from this example yet.',
         ],
       },
     },
@@ -8687,7 +8693,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           id: 'example-store',
           protocol: 'ucp',
-          merchant: 'store.example',
+          merchant: 'store.examples.datalayer.run',
           access: 'write',
           limit: {
             amount: '50',
@@ -8697,7 +8703,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         {
           id: 'example-outfitters',
           protocol: 'acp',
-          merchant: 'outfitters.example',
+          merchant: 'outfitters.examples.datalayer.run',
           access: 'write',
           limit: {
             amount: '150',
@@ -8766,7 +8772,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The checkout at Example Outfitters is the developers' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests.",
         ],
         unverified: [
-          "No shop answers UCP or ACP on Datalayer yet: the gateway's ucp and acp toolsets are built, not deployed.",
+          'It has not run in the Studio against the hosted Example Store and Example Outfitters (store.examples.datalayer.run, outfitters.examples.datalayer.run) from this example yet.',
         ],
       },
     },
@@ -9283,8 +9289,8 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       connections: [
         {
           id: 'example-air',
-          brand: 'air.example',
-          audience: 'https://provider.example/a2a',
+          brand: 'air.examples.datalayer.run',
+          audience: 'https://air.examples.datalayer.run/a2a',
           access: 'write',
           scopes: ['bookings:read', 'bookings:change'],
         },
@@ -9339,7 +9345,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112).",
         ],
         unverified: [
-          "No airline answers PACT on Datalayer yet: the gateway's pact toolset is built, not deployed.",
+          'It has not run in the Studio against the hosted Example Air (air.examples.datalayer.run) from this example yet; the hosted Example Air keeps registrations in memory, so an application is registered there again after each restart.',
         ],
       },
     },

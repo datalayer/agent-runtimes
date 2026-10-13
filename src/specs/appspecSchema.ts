@@ -998,7 +998,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     AppPact: {
       additionalProperties: false,
       description:
-        'PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01).',
+        'PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01), and\nwhether it answers as one (PR-13).',
       properties: {
         connections: {
           description: 'Businesses, over PACT',
@@ -1008,8 +1008,52 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           title: 'Connections',
           type: 'array',
         },
+        business: {
+          $ref: '#/$defs/AppPactBusiness',
+          description: 'As a business',
+        },
       },
       title: 'AppPact',
+      type: 'object',
+    },
+    AppPactBusiness: {
+      additionalProperties: false,
+      description:
+        "The application answers as a PACT business (AGENT_PROTOCOLS PR-13, PI-32; decided 2026-10-13).\n\nPublished at its deployment's own address: its A2A Agent Card names\nDatalayer as the Provider and the application's owner as the Brand; its\nA2A interface verifies each personal-agent JWT against a registered\nissuer's keys (§3.1); with `scopes`, a person delegates to a personal agent\nthrough the Provider's device-code sign-in — their Datalayer sign-in — and\nevery answer under their delegation carries a signed receipt (§5).",
+      properties: {
+        enabled: {
+          default: false,
+          description: 'Whether it is published as a business at Ship',
+          title: 'Enabled',
+          type: 'boolean',
+        },
+        brand: {
+          default: '',
+          description:
+            "The Brand's name on its card: the application's `owner` when unsaid",
+          title: 'Brand',
+          type: 'string',
+        },
+        scopes: {
+          additionalProperties: {
+            type: 'string',
+          },
+          description:
+            'What a person may let a personal agent do, `{scope: what the person is shown}`: `bookings:read: See your bookings`; none, it answers personal agents alone',
+          title: 'Scopes',
+          type: 'object',
+        },
+        registered_agents: {
+          description:
+            'The personal agents it accepts, each its issuer and its keys',
+          items: {
+            $ref: '#/$defs/AppPactRegisteredAgent',
+          },
+          title: 'Registered Agents',
+          type: 'array',
+        },
+      },
+      title: 'AppPactBusiness',
       type: 'object',
     },
     AppPactConnection: {
@@ -1050,6 +1094,26 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       },
       required: ['id', 'brand', 'audience'],
       title: 'AppPactConnection',
+      type: 'object',
+    },
+    AppPactRegisteredAgent: {
+      additionalProperties: false,
+      description:
+        'A personal agent the business accepts (PACT 1.0 §3.1): its issuer, and where its keys are.\n\nRegistered by the Maker, as `pap.company.registered_agents` (AGENT_PROTOCOLS PR-13,\ndecided 2026-10-13): a personal-agent JWT is verified against the keys of a registered\nissuer only, and any other is refused.',
+      properties: {
+        issuer: {
+          description: "The personal agent's `iss`, an HTTPS URL",
+          title: 'Issuer',
+          type: 'string',
+        },
+        jwks_uri: {
+          description: 'Where its public keys are (a JWKS), an HTTPS URL',
+          title: 'Jwks Uri',
+          type: 'string',
+        },
+      },
+      required: ['issuer', 'jwks_uri'],
+      title: 'AppPactRegisteredAgent',
       type: 'object',
     },
     AppPage: {
