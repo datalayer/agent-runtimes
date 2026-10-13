@@ -718,8 +718,8 @@ export const PROTOCOL_TOOL_CLASSES: Record<
     connection: 'pap',
     tools: {
       pap_company: ['read'],
-      pap_ask: ['read'],
-      pap_handoff: ['read'],
+      pap_ask: ['send'],
+      pap_handoff: ['send'],
       pap_sign_in: ['read'],
       pap_sign_in_status: ['read'],
       pap_read: ['read'],

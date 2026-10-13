@@ -104,14 +104,17 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
     assert await harness.call(ask, {"message": "Where is my order?"}) == {
         "message": "Where is my order?"
     }
-    assert harness.recorded[-1].decision.classes == ("read",)
+    # A message to the company goes out in the person's name: `send` (R-02, decided 13 October 2026).
+    assert harness.recorded[-1].decision.classes == ("send",)
     assert pap_connections.classes_of("pap_manzanita_example_pap_confirm") == (
         "write",
         "buy",
     )
     # A connection that reads gives only what reads.
     capability = harness.capability
-    assert capability.given("pap_ledgerly_example_pap_ask") is True
+    assert capability.given("pap_ledgerly_example_pap_read") is True
+    # Sending is not reading: a connection that only reads does not converse (U-15's rule).
+    assert capability.given("pap_ledgerly_example_pap_ask") is False
     assert capability.given("pap_ledgerly_example_pap_confirm") is False
     assert capability.given("pap_manzanita_example_pap_confirm") is True
     assert pap_connections.classes_of("pap_unknown_example_pap_ask") is None

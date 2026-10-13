@@ -2074,9 +2074,14 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
         },
         "rules": [
             {
-                "action": "Ask the shop and read your orders",
+                "action": "Read your orders at the shop",
                 "applies_to": ["read"],
                 "behaviour": "do_it",
+            },
+            {
+                "action": "Send the shop a message for you",
+                "applies_to": ["send"],
+                "behaviour": "ask_first",
             },
             {
                 "action": "Confirm an exchange or a return the shop proposes",
