@@ -305,7 +305,7 @@ BOOKKEEPING_DESK_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace two-companies (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey two-companies (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
@@ -1920,7 +1920,7 @@ LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace conversation-streaming (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey conversation-streaming (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
@@ -2486,7 +2486,7 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "live": [],
                 "recorded": [
                     "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
-                    "The journey is the Personal Agent Protocol SDK's recorded trace user-with-a-company (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+                    "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
                 ],
                 "unverified": [
                     "No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one."
@@ -2639,7 +2639,7 @@ ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace account-tokens (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey account-tokens (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
@@ -3521,7 +3521,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace operations (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey operations (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
@@ -4028,7 +4028,7 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace conversation-control (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey conversation-control (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
@@ -4334,7 +4334,7 @@ SIGN_IN_DESK_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded trace mediated-sign-in (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey mediated-sign-in (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
