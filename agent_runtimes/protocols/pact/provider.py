@@ -200,8 +200,8 @@ class PactBrand:
 
     Everything a host decides is passed in: ``signer`` (ES256, the Provider's
     key: its delegation tokens and receipts), ``jwks`` (its public keys, what
-    the OAuth metadata names), ``issuers`` (the registered personal agents),
-    ``store`` and ``agent``; ``verification_uri`` is the page where a person
+    the OAuth metadata names; the last one is the key it signs with now),
+    ``issuers`` (the registered personal agents), ``store`` and ``agent``; ``verification_uri`` is the page where a person
     signs in at the Brand and enters the code.
     """
 
@@ -299,6 +299,13 @@ class PactBrand:
         if self.description:
             card["description"] = self.description
         return card
+
+    async def _keyid(self) -> str:
+        """The key it signs with now: the last of its published keys (a rotation overlaps)."""
+        keys = list((await self._jwks()).get("keys") or [])
+        if not keys or not keys[-1].get("kid"):
+            raise RuntimeError("the Brand publishes no key to sign with")
+        return str(keys[-1]["kid"])
 
     async def _sign(self, header: dict[str, Any], payload: bytes) -> str:
         signing_input = (
@@ -482,7 +489,7 @@ class PactBrand:
                 "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
             jws = await self._sign(
-                {"alg": "ES256", "kid": self.signer.keyid},
+                {"alg": "ES256", "kid": await self._keyid()},
                 json.dumps(claims, separators=(",", ":")).encode(),
             )
             out["metadata"] = {"pact.receipt": {"jws": jws, "claims": claims}}
@@ -545,7 +552,7 @@ class PactBrand:
         )
         now = int(time.time())
         token = await self._sign(
-            {"alg": "ES256", "kid": self.signer.keyid, "typ": "JWT"},
+            {"alg": "ES256", "kid": await self._keyid(), "typ": "JWT"},
             json.dumps(
                 {
                     "iss": self.oauth,
