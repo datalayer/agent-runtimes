@@ -4186,13 +4186,15 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
                 },
             ],
             "verified": {
-                "live": [],
+                "live": [
+                    "Drilled on r1 on 13 October 2026 against the hosted test merchants, as its Preview's runtime reaches the gateway's ucp and acp toolsets: at Example Store (store.examples.datalayer.run) a search, a checkout filled, the exact purchase asked of the person, approved on Waiting for you, bought once and refused a second time, its order read; at Example Outfitters (outfitters.examples.datalayer.run) the same checkout over ACP. Test merchants only: paid with a test instrument."
+                ],
                 "recorded": [
                     "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
                     "The checkout at Example Outfitters is the developers' ACP example (examples/protocols/agentic_commerce/checkout.py), run in its own tests.",
                 ],
                 "unverified": [
-                    "It has not run in the Studio against the hosted Example Store and Example Outfitters (store.examples.datalayer.run, outfitters.examples.datalayer.run) from this example yet."
+                    "A model's turns in the Studio's Preview were not watched in that drill (no dev server ran)."
                 ],
             },
         },
@@ -4213,8 +4215,8 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
-        "enabled": False,
-        "unavailable_because": "It buys at shops for you over UCP and ACP, and the services that reach a shop for you are not shipped yet.",
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "🛍️",
@@ -4965,12 +4967,15 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
                 },
             ],
             "verified": {
-                "live": [],
+                "live": [
+                    "Drilled on r1 on 13 October 2026 against the hosted Example Air (air.examples.datalayer.run), as its Preview's runtime reaches the gateway's pact toolset: its card read, asked as the application alone, the person's sign-in by device code approved at the Brand, then asked for the person and answered from the booking (bookings:read used, its receipt verified)."
+                ],
                 "recorded": [
                     "The journey is the developers' PACT example (examples/protocols/pact/personal_agent.py) against its local Provider, Example Air, run in its own tests (version 1.3.112)."
                 ],
                 "unverified": [
-                    "It has not run in the Studio against the hosted Example Air (air.examples.datalayer.run) from this example yet; the hosted Example Air keeps registrations in memory, so an application is registered there again after each restart."
+                    "The hosted Example Air keeps registrations in memory: an application is registered there (POST /example/register, its issuer and keys) again after each restart.",
+                    "A model's turns in the Studio's Preview were not watched in that drill (no dev server ran); the step-up to bookings:change was not drilled live.",
                 ],
             },
         },
@@ -4991,8 +4996,8 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
         "notifications": [],
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
-        "enabled": False,
-        "unavailable_because": "It asks an airline for you over PACT, and the services that reach a business for you are not shipped yet.",
+        "enabled": True,
+        "unavailable_because": "",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "✈️",
