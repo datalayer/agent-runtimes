@@ -2351,6 +2351,17 @@ class AppSignedFetchSpec(BaseModel):
     sites: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class AppPairSpec(BaseModel):
+    """One of a pair of examples, a PACT business and the personal agent that asks it
+    (AGENT_PROTOCOLS PR-13; decided 2026-10-13): when a person has copied both, the
+    Studio registers the personal agent's copy with the business's copy."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = Field(..., description="The pair's id, the same on both of its applications")
+    role: Literal["business", "personal_agent"] = Field(..., description="Which side of the pair it is")
+
+
 class AppA2AExtensionSpec(BaseModel):
     """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
 
@@ -3068,6 +3079,7 @@ class AppSpec(BaseModel):
     pact: AppPactSpec = Field(default_factory=AppPactSpec)
     commerce: AppCommerceSpec = Field(default_factory=AppCommerceSpec)
     signed_fetch: AppSignedFetchSpec = Field(default_factory=AppSignedFetchSpec)
+    pair: Optional[AppPairSpec] = None
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)

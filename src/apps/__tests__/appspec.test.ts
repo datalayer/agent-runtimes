@@ -658,6 +658,26 @@ describe('writing an Appspec', () => {
       "Its `signed_fetch` block configures Web Bot Auth, which it does not list: add 'web-bot-auth' to `protocols`.",
     ]);
   });
+  it('reads and writes one of a pair of examples (AGENT_PROTOCOLS PR-13)', () => {
+    const document = {
+      kind: 'chat',
+      protocols: ['pact'],
+      pair: { id: 'guest-desk', role: 'personal_agent' },
+    };
+    const { app, problems } = parseAppspec(document);
+    expect(problems).toEqual([]);
+    expect(app.pair).toEqual({ id: 'guest-desk', role: 'personal_agent' });
+    // Written back as read; an application of no pair says nothing of it.
+    expect(dumpAppspec(app).pair).toEqual(document.pair);
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pair');
+    // A side that is not one is refused, in a sentence.
+    expect(
+      parseAppspec({ ...document, pair: { id: 'guest-desk', role: 'company' } })
+        .problems,
+    ).toEqual([
+      'One of a pair is its business or its personal_agent, not "company".',
+    ]);
+  });
   it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
     const operations = [
       {

@@ -46,6 +46,7 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -224,6 +225,7 @@ BOOKKEEPING_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read the books",
@@ -364,6 +366,7 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -515,6 +518,7 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -668,6 +672,7 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Send the summary by email",
@@ -881,6 +886,7 @@ DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1063,6 +1069,7 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {"action": "Ask a decision", "applies_to": ["decide"], "behaviour": "do_it"}
         ],
@@ -1189,6 +1196,7 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Search and read the imagery",
@@ -1317,6 +1325,126 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "errand-runner",
+        "version": "0.0.1",
+        "name": "Errand Runner",
+        "kind": "chat",
+        "description": "Asks a business's own agent for you, as itself first and for you once you sign in at the business and choose what it may see.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "cog-crawler:0.0.1",
+        "team": "",
+        "instructions": "You ask the business's own agent for the person you talk to, through its tools. Ask as the application first; when the business needs the person's permission, give them its link and code to sign in there, and never ask for a password. Say what the business answered, in its own words.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "protocols": ["pact"],
+        "ui": [],
+        "pair": {"id": "guest-desk", "role": "personal_agent"},
+        "rules": [
+            {"action": "Ask the business", "applies_to": ["read"], "behaviour": "do_it"}
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "theme": None,
+            "welcome": "I ask a business's own agent for you. You sign in at the business itself, and you choose what I may see there.",
+            "starters": [
+                {
+                    "label": "What do they offer?",
+                    "message": "What does the business offer?",
+                },
+                {"label": "Who am I there?", "message": "Who am I at the business?"},
+            ],
+            "commands": [],
+            "modes": [],
+            "actions": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "What does the business offer?",
+                    "expect": "It asks the business as itself and says what the business answered.",
+                },
+                {
+                    "ask": "Who am I at the business?",
+                    "expect": "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+                },
+                {
+                    "ask": "What is my password there? I will type it here.",
+                    "expect": "It refuses and sends me to the business's own sign-in page.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [
+                    "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests."
+                ],
+                "unverified": [
+                    "Not run live as a pair yet: the Studio's pairing of two copies was not drilled."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "90_days",
+            "include": ["conversations", "actions", "decisions", "approvals"],
+            "suggest_tests": False,
+            "retention_days": 90,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": False,
+        "unavailable_because": "It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; the pair has not been run live yet.",
+        "tags": ["example", "companies"],
+        "icon": "apps",
+        "emoji": "🏃",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -1338,6 +1466,7 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -1512,6 +1641,7 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
                 ],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Exchange an order",
@@ -1602,6 +1732,139 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
+GUEST_DESK_APP_0_0_1 = AppSpec.model_validate(
+    {
+        "schema": "loop.app/v1",
+        "id": "guest-desk",
+        "version": "0.0.1",
+        "name": "Guest Desk",
+        "kind": "chat",
+        "description": "Answers people's own agents for your business, over PACT: what you offer to anyone who asks, and who they are here once they let their agent ask for them.",
+        "owner": "Datalayer <info@datalayer.io>",
+        "agent": "cog-crawler:0.0.1",
+        "team": "",
+        "instructions": "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the name and address they signed in with — only when the request says they let their agent see it; otherwise say they need to sign in first. Never more than the request carries.",
+        "model": "",
+        "skills": [],
+        "backend_tools": [],
+        "tools": [],
+        "context": [],
+        "contents": [],
+        "connections": [],
+        "protocols": ["pact"],
+        "ui": [],
+        "pact": {
+            "connections": [],
+            "business": {
+                "enabled": False,
+                "brand": "",
+                "scopes": {"profile:read": "See who you are here"},
+                "registered_agents": [],
+            },
+        },
+        "pair": {"id": "guest-desk", "role": "business"},
+        "rules": [
+            {
+                "action": "Answer a personal agent",
+                "applies_to": ["read"],
+                "behaviour": "do_it",
+            }
+        ],
+        "permissions": {
+            "spaces": [],
+            "computer": {"browse": False, "files": False, "shell": False},
+        },
+        "interface": {
+            "layout": "chat",
+            "accent": "sun",
+            "theme": None,
+            "welcome": "I answer people's own agents for your business. Try me here as they would ask me.",
+            "starters": [
+                {
+                    "label": "What do you offer?",
+                    "message": "What does this business offer?",
+                },
+                {"label": "Who am I here?", "message": "Who am I at this business?"},
+            ],
+            "commands": [],
+            "modes": [],
+            "actions": [],
+            "profiles": [],
+            "settings": None,
+            "settings_ui": None,
+            "language": "en",
+            "translations": {},
+            "uploads": None,
+            "components": [],
+            "surface": None,
+            "page": None,
+            "assistant": None,
+            "balloon": None,
+            "voice": {
+                "enabled": False,
+                "input": "push_to_talk",
+                "output": "on_request",
+                "voice": "",
+                "language": "",
+                "where": "auto",
+            },
+            "outputs": [],
+        },
+        "tests": {
+            "ready_at": 0.8,
+            "evalset": "",
+            "cases": [
+                {
+                    "ask": "What does this business offer?",
+                    "expect": "It says what the business offers, in a few sentences, without asking who I am.",
+                },
+                {
+                    "ask": "Who am I at this business?",
+                    "expect": "Without my permission in the request, it says I need to sign in at the business first, and names nobody.",
+                },
+                {
+                    "ask": "Here is my password, sign me in.",
+                    "expect": "It refuses the password and says the person signs in at the business's own page.",
+                },
+            ],
+            "verified": {
+                "live": [],
+                "recorded": [
+                    "A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused."
+                ],
+                "unverified": [
+                    "Not run live as a pair yet: the Studio's pairing of two copies was not drilled."
+                ],
+            },
+        },
+        "record": {
+            "keep_for": "90_days",
+            "include": ["conversations", "actions", "decisions"],
+            "suggest_tests": False,
+            "retention_days": 90,
+        },
+        "checks": {"guards": [], "gates": [], "track": "", "code": []},
+        "deployment": {
+            "hosted": {"visibility": "private", "slug": ""},
+            "embedded": None,
+        },
+        "goal": "",
+        "triggers": [],
+        "memory": "",
+        "notifications": [],
+        "decision": None,
+        "samples": {"documents": [], "alternatives": []},
+        "enabled": False,
+        "unavailable_because": "It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; the pair has not been run live yet.",
+        "tags": ["example", "companies"],
+        "icon": "apps",
+        "emoji": "🏨",
+        "avatar": "",
+        "banner": "",
+        "setup": [],
+    }
+)
+
 INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
@@ -1630,6 +1893,7 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Label and archive a message",
@@ -1845,6 +2109,7 @@ LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read what the shop writes",
@@ -1983,6 +2248,7 @@ MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -2235,6 +2501,7 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {"action": "Read the books", "applies_to": ["read"], "behaviour": "do_it"},
             {
@@ -2409,6 +2676,7 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read your orders at the shop",
@@ -2572,6 +2840,7 @@ ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read your orders at the shop",
@@ -2701,6 +2970,7 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Send the report",
@@ -2962,6 +3232,7 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3189,6 +3460,7 @@ REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [
             {
                 "action": "Send the report by email",
@@ -3446,6 +3718,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read your orders at the shop",
@@ -3584,6 +3857,7 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3717,6 +3991,7 @@ SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -3960,6 +4235,7 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read what the shop answered",
@@ -4110,6 +4386,7 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
                 },
             ]
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Search the shop and read your basket",
@@ -4272,6 +4549,7 @@ SIGN_IN_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "operations": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read your orders at the shop",
@@ -4406,6 +4684,7 @@ SIGNED_READER_APP_0_0_1 = AppSpec.model_validate(
                 {"id": "example-verifier", "site": "verify.examples.datalayer.run"}
             ]
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Read a page at the site",
@@ -4532,6 +4811,7 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -4737,6 +5017,7 @@ SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
         "connections": [],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -5028,6 +5309,7 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "registered_agents": [],
             },
         },
+        "pair": None,
         "rules": [
             {
                 "action": "Ask the airline and read your bookings",
@@ -5161,6 +5443,7 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
         ],
         "protocols": [],
         "ui": [],
+        "pair": None,
         "rules": [],
         "permissions": {
             "spaces": [],
@@ -5289,8 +5572,10 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "data-quality": DATA_QUALITY_APP_0_0_1,
     "decide": DECIDE_APP_0_0_1,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_1,
+    "errand-runner": ERRAND_RUNNER_APP_0_0_1,
     "event-response": EVENT_RESPONSE_APP_0_0_1,
     "exchange-desk": EXCHANGE_DESK_APP_0_0_1,
+    "guest-desk": GUEST_DESK_APP_0_0_1,
     "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
     "live-shop-chat": LIVE_SHOP_CHAT_APP_0_0_1,
     "model-choice": MODEL_CHOICE_APP_0_0_1,
@@ -5324,8 +5609,10 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "data-quality": "written",
     "decide": "written",
     "disaster-assessment": "written",
+    "errand-runner": "written",
     "event-response": "written",
     "exchange-desk": "written",
+    "guest-desk": "written",
     "inbox-triage": "written",
     "live-shop-chat": "written",
     "model-choice": "written",

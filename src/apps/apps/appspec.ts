@@ -45,6 +45,7 @@ import type {
   PapProfile,
   AppPactSpec,
   AppCommerceSpec,
+  AppPairSpec,
   AppSignedFetchSpec,
   AppA2ASpec,
   AppCriterionSpec,
@@ -320,6 +321,7 @@ const KNOWN_KEYS = [
   'pact',
   'commerce',
   'signed_fetch',
+  'pair',
   'a2a',
   'rules',
   'permissions',
@@ -640,6 +642,19 @@ function dumpSignedFetch(signedFetch: AppSignedFetchSpec | undefined): Data {
           .text('site', site.site, '\u0000').data,
     ),
   ).data;
+}
+
+/** One of a pair of examples (AGENT_PROTOCOLS PR-13): its id and its side, or a problem. */
+function parsePair(data: Data): AppPairSpec | string {
+  const id = text(data.id);
+  const role = text(data.role);
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(id)) {
+    return `A pair's id is lower-case letters, digits and hyphens: ${JSON.stringify(id)}.`;
+  }
+  if (role !== 'business' && role !== 'personal_agent') {
+    return `One of a pair is its business or its personal_agent, not ${JSON.stringify(role)}.`;
+  }
+  return { id, role };
 }
 
 /** PACT as its document says it, nothing at its default. */
@@ -1390,6 +1405,14 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.signed_fetch)) {
     app.signed_fetch = parseSignedFetch(data.signed_fetch);
   }
+  if (isData(data.pair)) {
+    const pair = parsePair(data.pair);
+    if (typeof pair === 'string') {
+      problems.push(pair);
+    } else {
+      app.pair = pair;
+    }
+  }
   if (isData(data.a2a)) {
     app.a2a = parseA2A(data.a2a);
   }
@@ -1888,6 +1911,7 @@ export function dumpAppspec(app: AppSpec): Data {
     .part('pact', dumpPact(app.pact))
     .part('commerce', dumpCommerce(app.commerce))
     .part('signed_fetch', dumpSignedFetch(app.signed_fetch))
+    .part('pair', app.pair ? { id: app.pair.id, role: app.pair.role } : {})
     .part('a2a', dumpA2A(app.a2a))
     .list(
       'rules',

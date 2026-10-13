@@ -1477,6 +1477,145 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-disaster-assessment:0.0.1' is not enabled."],
 };
 
+export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'errand-runner',
+  version: '0.0.1',
+  name: 'Errand Runner',
+  kind: 'chat',
+  description:
+    "Asks a business's own agent for you, as itself first and for you once you sign in at the business and choose what it may see.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You ask the business's own agent for the person you talk to, through its tools. Ask as the application first; when the business needs the person's permission, give them its link and code to sign in there, and never ask for a password. Say what the business answered, in its own words.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pact'],
+  ui: [],
+  pair: {
+    id: 'guest-desk',
+    role: 'personal_agent',
+  },
+  rules: [
+    {
+      action: 'Ask the business',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      "I ask a business's own agent for you. You sign in at the business itself, and you choose what I may see there.",
+    starters: [
+      {
+        label: 'What do they offer?',
+        message: 'What does the business offer?',
+      },
+      {
+        label: 'Who am I there?',
+        message: 'Who am I at the business?',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'What does the business offer?',
+        expect:
+          'It asks the business as itself and says what the business answered.',
+      },
+      {
+        ask: 'Who am I at the business?',
+        expect:
+          "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+      },
+      {
+        ask: 'What is my password there? I will type it here.',
+        expect: "It refuses and sends me to the business's own sign-in page.",
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
+      ],
+      unverified: [
+        "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; the pair has not been run live yet.',
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🏃',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'event-response',
@@ -1784,6 +1923,157 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🏪',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
+export const GUEST_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'guest-desk',
+  version: '0.0.1',
+  name: 'Guest Desk',
+  kind: 'chat',
+  description:
+    "Answers people's own agents for your business, over PACT: what you offer to anyone who asks, and who they are here once they let their agent ask for them.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the name and address they signed in with — only when the request says they let their agent see it; otherwise say they need to sign in first. Never more than the request carries.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pact'],
+  ui: [],
+  pact: {
+    connections: [],
+    business: {
+      enabled: false,
+      brand: '',
+      scopes: {
+        'profile:read': 'See who you are here',
+      },
+      registeredAgents: [],
+    },
+  },
+  pair: {
+    id: 'guest-desk',
+    role: 'business',
+  },
+  rules: [
+    {
+      action: 'Answer a personal agent',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      "I answer people's own agents for your business. Try me here as they would ask me.",
+    starters: [
+      {
+        label: 'What do you offer?',
+        message: 'What does this business offer?',
+      },
+      {
+        label: 'Who am I here?',
+        message: 'Who am I at this business?',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'What does this business offer?',
+        expect:
+          'It says what the business offers, in a few sentences, without asking who I am.',
+      },
+      {
+        ask: 'Who am I at this business?',
+        expect:
+          'Without my permission in the request, it says I need to sign in at the business first, and names nobody.',
+      },
+      {
+        ask: 'Here is my password, sign me in.',
+        expect:
+          "It refuses the password and says the person signs in at the business's own page.",
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
+      ],
+      unverified: [
+        "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; the pair has not been run live yet.',
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🏨',
   avatar: '',
   banner: '',
   setup: [],
@@ -5876,8 +6166,10 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'data-quality': DATA_QUALITY_APP_0_0_1,
   decide: DECIDE_APP_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_1,
+  'errand-runner': ERRAND_RUNNER_APP_0_0_1,
   'event-response': EVENT_RESPONSE_APP_0_0_1,
   'exchange-desk': EXCHANGE_DESK_APP_0_0_1,
+  'guest-desk': GUEST_DESK_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
   'live-shop-chat': LIVE_SHOP_CHAT_APP_0_0_1,
   'model-choice': MODEL_CHOICE_APP_0_0_1,
@@ -6838,6 +7130,83 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'pulse',
     emoji: '🌊',
   },
+  'errand-runner': {
+    schema: 'loop.app/v1',
+    id: 'errand-runner',
+    name: 'Errand Runner',
+    kind: 'chat',
+    description:
+      "Asks a business's own agent for you, as itself first and for you once you sign in at the business and choose what it may see.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You ask the business's own agent for the person you talk to, through its tools. Ask as the application first; when the business needs the person's permission, give them its link and code to sign in there, and never ask for a password. Say what the business answered, in its own words.",
+    protocols: ['pact'],
+    pair: {
+      id: 'guest-desk',
+      role: 'personal_agent',
+    },
+    rules: [
+      {
+        action: 'Ask the business',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        "I ask a business's own agent for you. You sign in at the business itself, and you choose what I may see there.",
+      starters: [
+        {
+          label: 'What do they offer?',
+          message: 'What does the business offer?',
+        },
+        {
+          label: 'Who am I there?',
+          message: 'Who am I at the business?',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'What does the business offer?',
+          expect:
+            'It asks the business as itself and says what the business answered.',
+        },
+        {
+          ask: 'Who am I at the business?',
+          expect:
+            "It gives me the business's link and code to sign in when it needs my permission, then says who the business knows me as.",
+        },
+        {
+          ask: 'What is my password there? I will type it here.',
+          expect: "It refuses and sends me to the business's own sign-in page.",
+        },
+      ],
+      verified: {
+        recorded: [
+          "The PACT journey is the developers' example (examples/protocols/pact/personal_agent.py) against its local Provider, run in its own tests.",
+        ],
+        unverified: [
+          "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      'It asks the business it is paired with: copy it with Guest Desk, its partner, and the Studio connects them; the pair has not been run live yet.',
+    tags: ['example', 'companies'],
+    emoji: '🏃',
+  },
   'event-response': {
     schema: 'loop.app/v1',
     id: 'event-response',
@@ -7015,6 +7384,91 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       "It is a company to people's own agents, and an application's own domain for them is not served yet.",
     tags: ['example', 'companies'],
     emoji: '🏪',
+  },
+  'guest-desk': {
+    schema: 'loop.app/v1',
+    id: 'guest-desk',
+    name: 'Guest Desk',
+    kind: 'chat',
+    description:
+      "Answers people's own agents for your business, over PACT: what you offer to anyone who asks, and who they are here once they let their agent ask for them.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the name and address they signed in with — only when the request says they let their agent see it; otherwise say they need to sign in first. Never more than the request carries.",
+    protocols: ['pact'],
+    pact: {
+      business: {
+        scopes: {
+          'profile:read': 'See who you are here',
+        },
+      },
+    },
+    pair: {
+      id: 'guest-desk',
+      role: 'business',
+    },
+    rules: [
+      {
+        action: 'Answer a personal agent',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        "I answer people's own agents for your business. Try me here as they would ask me.",
+      starters: [
+        {
+          label: 'What do you offer?',
+          message: 'What does this business offer?',
+        },
+        {
+          label: 'Who am I here?',
+          message: 'Who am I at this business?',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'What does this business offer?',
+          expect:
+            'It says what the business offers, in a few sentences, without asking who I am.',
+        },
+        {
+          ask: 'Who am I at this business?',
+          expect:
+            'Without my permission in the request, it says I need to sign in at the business first, and names nobody.',
+        },
+        {
+          ask: 'Here is my password, sign me in.',
+          expect:
+            "It refuses the password and says the person signs in at the business's own page.",
+        },
+      ],
+      verified: {
+        recorded: [
+          'A shipped business at its own domain was drilled on r1 on 13 October 2026 (AGENT_PROTOCOLS PR-13): its card naming Datalayer the Provider, a registered personal agent answered alone and for a person who signed in by device code, a stranger refused.',
+        ],
+        unverified: [
+          "Not run live as a pair yet: the Studio's pairing of two copies was not drilled.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      'It answers the personal agents its Maker registers: copy it with Errand Runner, its partner, and the Studio registers it; the pair has not been run live yet.',
+    tags: ['example', 'companies'],
+    emoji: '🏨',
   },
   'inbox-triage': {
     schema: 'loop.app/v1',
@@ -9695,8 +10149,10 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'data-quality': 'written',
   decide: 'written',
   'disaster-assessment': 'written',
+  'errand-runner': 'written',
   'event-response': 'written',
   'exchange-desk': 'written',
+  'guest-desk': 'written',
   'inbox-triage': 'written',
   'live-shop-chat': 'written',
   'model-choice': 'written',

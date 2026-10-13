@@ -1208,6 +1208,25 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppPageOutput',
       type: 'object',
     },
+    AppPair: {
+      additionalProperties: false,
+      description:
+        "One of a pair of examples, a PACT business and the personal agent that asks it\n(AGENT_PROTOCOLS PR-13, E-02; decided 2026-10-13).\n\nA personal agent's issuer is its own application's, known only once a copy\nexists: when a person has copied both of a pair, the Studio registers the\npersonal agent's copy with the business's copy (`pact.business.registered_agents`)\nand points the personal agent at the business's own domain.",
+      properties: {
+        id: {
+          description: "The pair's id, the same on both of its applications",
+          title: 'Id',
+          type: 'string',
+        },
+        role: {
+          $ref: '#/$defs/PairRole',
+          description: '`business`, or `personal_agent`: the one that asks it',
+        },
+      },
+      required: ['id', 'role'],
+      title: 'AppPair',
+      type: 'object',
+    },
     AppPap: {
       additionalProperties: false,
       description:
@@ -2576,6 +2595,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'Layout',
       type: 'string',
     },
+    PairRole: {
+      description:
+        'Which side of a pair of examples an application is (AGENT_PROTOCOLS PR-13).',
+      enum: ['business', 'personal_agent'],
+      title: 'PairRole',
+      type: 'string',
+    },
     PapAgents: {
       description: 'Which personal agents a company application accepts.',
       enum: ['any', 'registered'],
@@ -2827,6 +2853,19 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       $ref: '#/$defs/AppSignedFetch',
       description:
         'Web Bot Auth: the sites it reads pages of, GET only, each request signed with its key',
+    },
+    pair: {
+      anyOf: [
+        {
+          $ref: '#/$defs/AppPair',
+        },
+        {
+          type: 'null',
+        },
+      ],
+      default: null,
+      description:
+        'One of a pair of examples: a PACT business, or the personal agent that asks it',
     },
     a2a: {
       $ref: '#/$defs/AppA2A',

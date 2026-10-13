@@ -122,6 +122,14 @@ A personal-agent JWT is verified against the keys of a registered issuer only;
 any other is refused before the Brand's agent is asked. Datalayer hosts an
 application as a business this way (the Appspec's `pact.business`).
 
+The catalogue pairs a business with the personal agent that asks it (the
+Appspec's `pair`: *Guest Desk* and *Errand Runner*). A Datalayer personal
+agent's issuer is its own application's, so it is known only once a copy
+exists: when a person has copied both, the Studio writes the personal agent's
+copy into the business's copy's `registered_agents` (its issuer,
+`<IAM>/api/iam/v1/pap/agents/<uid>`, and its keys at `…/jwks.json`), turns the
+business on, and points the personal agent at the business's own domain.
+
 ## The local Provider
 
 `agent_runtimes.protocols.pact.provider.ExampleAir` is one `PactBrand` with

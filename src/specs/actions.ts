@@ -825,8 +825,10 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
     'earthdata.search_earth_datagranules': 'do_it',
     'earthdata.search_earth_datasets': 'do_it',
   },
+  'errand-runner': {},
   'event-response': {},
   'exchange-desk': {},
+  'guest-desk': {},
   'inbox-triage': {
     'google-workspace.append_table_rows': 'leave_to_me',
     'google-workspace.batch_modify_gmail_message_labels': 'do_it',
@@ -1043,8 +1045,10 @@ export const APP_ESCALATIONS: Record<
   'data-quality': {},
   decide: {},
   'disaster-assessment': {},
+  'errand-runner': {},
   'event-response': {},
   'exchange-desk': {},
+  'guest-desk': {},
   'inbox-triage': {
     'google-workspace.batch_modify_gmail_message_labels': [
       {

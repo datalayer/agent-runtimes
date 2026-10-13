@@ -711,6 +711,19 @@ export interface AppSignedFetchSpec {
 }
 
 /**
+ * One of a pair of examples, a PACT business and the personal agent that
+ * asks it (AGENT_PROTOCOLS PR-13; decided 2026-10-13): when a person has
+ * copied both, the Studio registers the personal agent's copy with the
+ * business's copy and points the personal agent there.
+ */
+export interface AppPairSpec {
+  /** The pair's id, the same on both of its applications. */
+  id: string;
+  /** Which side of the pair it is. */
+  role: 'business' | 'personal_agent';
+}
+
+/**
  * An A2A extension the application's Agent Card advertises, beside the
  * runtime's own (AGENT_PROTOCOLS PR-02). Its params are public: never a
  * credential.
@@ -1349,6 +1362,8 @@ export interface AppSpec {
   commerce?: AppCommerceSpec;
   /** Signed fetch: the sites it reads pages of, each request signed (AGENT_PROTOCOLS EX-11). */
   signed_fetch?: AppSignedFetchSpec;
+  /** One of a pair of examples: a PACT business, or the personal agent that asks it (PR-13). */
+  pair?: AppPairSpec;
   /** A2A: the extensions its Agent Card advertises (AGENT_PROTOCOLS PR-02). */
   a2a?: AppA2ASpec;
   rules: AppRuleSpec[];

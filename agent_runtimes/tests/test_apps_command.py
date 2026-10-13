@@ -135,6 +135,11 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         # A personal agent at an airline over PACT, shopping at test merchants (AGENT_PROTOCOLS EX-13, EX-12).
         "travel-desk",
         "shopping-desk",
+        # A PACT business and the personal agent that asks it, a pair (AGENT_PROTOCOLS PR-13).
+        "guest-desk",
+        "errand-runner",
+        # Reading a page at a site that checks its signature (AGENT_PROTOCOLS EX-11).
+        "signed-reader",
         # The Personal Agent Protocol's recorded journeys as applications (AGENT_PROTOCOLS PR-05).
         "order-tracker",
         "shop-concierge",
