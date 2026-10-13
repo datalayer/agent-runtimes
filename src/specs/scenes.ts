@@ -2428,25 +2428,25 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
     {
       from: 'ada',
       to: 'agent',
-      says: '“Buy one Sencha green tea for me.”',
+      says: '“Buy me a stoneware mug.”',
       how: '',
     },
     {
       from: 'agent',
       to: 'store',
-      says: 'Searches the shop for green tea.',
+      says: 'Searches the shop for a mug.',
       how: 'The application reads the page every shop publishes for agents, then its catalogue; reading changes nothing, so its rule lets it do it.',
     },
     {
       from: 'store',
       to: 'agent',
-      says: '“Sencha green tea, 100 g: USD 12.50.”',
+      says: '“Stoneware mug: USD 24.00.”',
       how: '',
     },
     {
       from: 'agent',
       to: 'store',
-      says: 'Fills a checkout with one Sencha green tea, for Ada.',
+      says: 'Fills a checkout with one stoneware mug, for Ada.',
       how: 'A checkout the shop can cancel; nothing is bought yet.',
     },
     {
@@ -2464,14 +2464,12 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
         title: 'Shopping Desk asks you to approve a purchase',
         rows: [
           ['Shop', 'Example Store'],
-          ['What', 'Sencha green tea, 100 g × 1'],
-          ['Tax', 'USD 1.00'],
-          ['Total', 'USD 13.50'],
+          ['What', 'Stoneware mug × 1'],
+          ['Tax', 'USD 1.92'],
+          ['Total', 'USD 25.92'],
           ['The most one purchase may cost', 'USD 50.00'],
         ],
-        lines: [
-          'Buy 1 Sencha green tea, 100 g at Example Store for USD 13.50.',
-        ],
+        lines: ['Buy 1 Stoneware mug at Example Store for USD 25.92.'],
       },
       how: 'The purchase is the shop’s own checkout, read again before it is shown; approving this one never approves a changed basket.',
       turn: {
@@ -2501,7 +2499,7 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
         kind: 'done',
         title: 'Bought, once',
         rows: [],
-        lines: ['1 Sencha green tea, 100 g, USD 13.50, at Example Store.'],
+        lines: ['1 Stoneware mug, USD 25.92, at Example Store.'],
       },
       how: '',
     },
@@ -2514,7 +2512,7 @@ export const UCP_A_PURCHASE_APPROVED_SCENE_0_0_1: SceneSpec = {
         title: 'Activity',
         rows: [
           ['Bought at', 'Example Store, for Ada'],
-          ['Amount', 'USD 13.50'],
+          ['Amount', 'USD 25.92'],
           ['Approved by', 'Ada, once'],
         ],
         lines: [],
