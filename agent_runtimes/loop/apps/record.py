@@ -715,6 +715,11 @@ class AppRecorder:
         }
         if refused:
             detail["refused"] = refused
+        # What a company's tool was decided on (PAP_DATALAYER R-01).
+        inputs = getattr(enforced, "inputs", None)
+        if inputs:
+            detail["inputs"] = dict(inputs)
+            detail["rule"] = getattr(decision, "rule", "")
         # Done without asking because the person approved it in advance (U-25).
         approved = getattr(enforced, "approved", None)
         if approved is not None:

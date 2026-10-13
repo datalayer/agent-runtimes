@@ -121,6 +121,51 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
 
 
 @pytest.mark.asyncio
+async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """R-01: the Rules evaluator decides a company's tool, and the record keeps the inputs the
+    runtime holds — the company, its protocol, the connection's level and in whose account it
+    acts, whether that level gives the tool — beside what it does, the Rule and the narrowest
+    reason. Never an argument of the call."""
+    from agent_runtimes.loop.apps.record import AppRecorder
+
+    spec = app()
+    pap_connections.remember_agent("agent-r01", spec)
+    harness = Harness(spec)
+    await harness.call("pap_manzanita_example_pap_ask", {"message": "Where is my order?"})
+    enforced = harness.recorded[-1]
+    assert dict(enforced.inputs) == {
+        "server": "pap_manzanita_example",
+        "tool": "pap_ask",
+        "protocol": "pap",
+        "company": "manzanita.example",
+        "connected": True,
+        "access": "write",
+        "as": "user",
+        "given": True,
+    }
+    recorder = AppRecorder(app=spec, app_uid="app-r01")
+    added: list[tuple] = []
+    monkeypatch.setattr(recorder, "add", lambda *entry: added.append(entry))
+    recorder.decided(enforced)
+    kind, _summary, detail = added[0]
+    assert kind == "decision" and detail["inputs"] == dict(enforced.inputs)
+    assert (detail["behaviour"], detail["because"], detail["classes"]) == (
+        enforced.decision.behaviour,
+        enforced.decision.because,
+        ["send"],
+    )
+    assert "rule" in detail and "Where is my order?" not in repr(detail)
+
+    # A connection that only reads: what it was decided on says the level does not give a send
+    # (the agent is never offered the tool: `prepare_tools`).
+    await harness.call("pap_ledgerly_example_pap_ask", {"message": "Close the month"})
+    ledgerly = harness.recorded[-1]
+    assert (ledgerly.inputs["access"], ledgerly.inputs["given"]) == ("read", False)
+    # A tool of no company the runtime knows has nothing to say it on.
+    assert harness.capability._company_inputs("tavily_search") == {}
+
+
+@pytest.mark.asyncio
 async def test_a_confirmation_is_asked_once_by_the_gateway_with_the_terms() -> None:
     spec = app().model_copy(
         update={

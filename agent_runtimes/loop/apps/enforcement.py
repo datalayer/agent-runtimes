@@ -101,6 +101,8 @@ from agent_runtimes.loop.apps.pap_connections import (
     connection_actions as company_actions,
 )
 from agent_runtimes.loop.apps.pap_connections import (
+    acts_as,
+    connections_of,
     domain_of,
     is_purchase,
     pap_tool,
@@ -243,6 +245,14 @@ class Enforced:
     """Why the call is refused though nobody is asked — the tool runs only to
     say so in its own sentence, writing nothing (a Space not granted, R-25);
     the record says *refused*, never the behaviour that let the tool run."""
+
+    inputs: Mapping[str, Any] = field(default_factory=dict)
+    """For a company's tool, what the decision was taken on (PAP_DATALAYER
+    R-01): the company and its protocol, the connection's level and in whose
+    account it acts, whether that level and its named tools give the tool;
+    with `decision`, what the call does, the Rule and the narrowest reason.
+    The gateway records the rest — the interface, the company's grant, the
+    deployment's state — on its own rows of the same call."""
 
 
 def _id_of(ref: str) -> str:
@@ -425,7 +435,9 @@ class AppRulesCapability(AbstractCapability[Any]):
                 # gateway with the exact checkout (decided 2026-10-13): asked here
                 # too, it would be asked twice, the first time without what is bought.
                 decided = replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
-            return Enforced(tool_name, decided)
+            return Enforced(
+                tool_name, decided, inputs=self._company_inputs(tool_name)
+            )
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))
         if tool_name.startswith(HOST_TOOL_PREFIX):
@@ -533,6 +545,27 @@ class AppRulesCapability(AbstractCapability[Any]):
         return Enforced(tool_name, _strictest(parts), parts)
 
     # --- what it is given --------------------------------------------------------
+
+    def _company_inputs(self, tool_name: str) -> Dict[str, Any]:
+        """What a company's tool is decided on, of what the runtime holds (R-01)."""
+        found = pap_tool(tool_name)
+        if found is None:
+            return {}
+        sid, tool = found
+        connection = connections_of(self.app).get(sid)
+        if connection is None:
+            # Named for a company its application does not work with: nothing to say it on.
+            return {"server": sid, "tool": tool, "connected": False}
+        return {
+            "server": sid,
+            "tool": tool,
+            "protocol": connection["protocol"],
+            "company": connection["company"],
+            "connected": True,
+            "access": str(connection.get("access") or "read"),
+            "as": acts_as(connection),
+            "given": self.given(tool_name),
+        }
 
     def given(self, tool_name: str) -> bool:
         """Whether the agent is given a tool, by its runtime name (LOOP U-15).
