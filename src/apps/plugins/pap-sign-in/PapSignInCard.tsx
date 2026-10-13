@@ -117,6 +117,11 @@ export function PapSignInCard({
             ? PAP_SIGN_IN_WORDS.mediated
             : PAP_SIGN_IN_WORDS.direct}
       </Text>
+      {read.needs ? (
+        <Text as="p" sx={{ mt: 0, mb: 2, fontSize: 1 }}>
+          {PAP_SIGN_IN_WORDS.needs(read.needs)}
+        </Text>
+      ) : null}
       {read.sentTo ? (
         <Text as="p" sx={{ mt: 0, mb: 2, fontSize: 1 }}>
           {PAP_SIGN_IN_WORDS.sentTo(read.sentTo)}

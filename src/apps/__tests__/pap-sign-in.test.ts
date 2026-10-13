@@ -48,6 +48,21 @@ describe('pap_sign_in in the chat', () => {
     });
   });
 
+  it('names what the company said it needs, scope tokens only (PAP_DATALAYER P-02)', () => {
+    const asked = readPapSignIn({
+      ...DEVICE,
+      needs: ['orders:read', 'orders:write', 'not a scope', 7],
+    });
+    expect(asked && 'needs' in asked ? asked.needs : null).toEqual([
+      'orders:read',
+      'orders:write',
+    ]);
+    expect(PAP_SIGN_IN_WORDS.needs(['orders:read', 'orders:write'])).toBe(
+      'It needs: orders:read, orders:write.',
+    );
+    expect(readPapSignIn({ ...DEVICE, needs: [] })).not.toHaveProperty('needs');
+  });
+
   it('reads it as JSON, as MCP text content, or as structured content', () => {
     const expected = readPapSignIn(DEVICE);
     expect(readPapSignIn(JSON.stringify(DEVICE))).toEqual(expected);

@@ -37,6 +37,11 @@ export type PapSignInWaiting = {
   sentTo?: string;
   /** Until when, ISO 8601. */
   expiresAt?: string;
+  /**
+   * What the company said it needs (its `authorization` event's scope,
+   * PAP_DATALAYER P-02): what the person is asked to allow there.
+   */
+  needs?: string[];
 };
 
 /** What the card says. */
@@ -50,6 +55,7 @@ export const PAP_SIGN_IN_WORDS = {
   mediated:
     'Open this page: it names the company and asks what the company needs. Type it there, never in this conversation.',
   sentTo: (to: string): string => `The company sent a code to ${to}.`,
+  needs: (scopes: string[]): string => `It needs: ${scopes.join(', ')}.`,
   open: (host: string): string => `Open ${host}`,
   code: 'Your code',
   copy: 'Copy the code',
@@ -82,6 +88,9 @@ export const PAP_SIGN_IN_CHANNEL = 'datalayer-pap-sign-in';
 
 /** How a Direct Sign-In came back. */
 export type PapSignInReturn = keyof typeof PAP_SIGN_IN_WORDS.returned;
+
+/** One OAuth scope token (RFC 6749 §3.3). */
+const SCOPE = /^[\x21\x23-\x5B\x5D-\x7E]{1,128}$/;
 
 const DOMAIN =
   /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -187,6 +196,13 @@ export function readPapSignIn(
     typeof data.company === 'string' && DOMAIN.test(data.company)
       ? data.company
       : '';
+  // What the company said it needs: scope tokens only, anything else not shown.
+  const needs = Array.isArray(data.needs)
+    ? data.needs.filter(
+        (scope): scope is string =>
+          typeof scope === 'string' && SCOPE.test(scope),
+      )
+    : [];
   return {
     mode: data.mode,
     open: url.toString(),
@@ -201,5 +217,6 @@ export function readPapSignIn(
     ...(typeof data.expires_at === 'string' && data.expires_at
       ? { expiresAt: data.expires_at }
       : {}),
+    ...(needs.length > 0 ? { needs } : {}),
   };
 }
