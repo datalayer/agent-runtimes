@@ -2047,6 +2047,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   };
   const ComposerComponent = composerEntries[0]?.value.Component;
   const HeaderComponent = headerEntries[0]?.value.Component;
+  const headerShown = !config?.hideHeader && !!HeaderComponent;
   const prompt = ComposerComponent ? (
     <ComposerComponent workspace={workspace} composer={composerProps} />
   ) : null;
@@ -2357,7 +2358,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                 props through `renderHeader`. No contribution — or a host
                 that set `hideHeader` — means no bar.
               */
-              showHeader={!config?.hideHeader && !!HeaderComponent}
+              showHeader={headerShown}
               // The `+` and the bin in the title bar, when the host asked for
               // them; the header draws whatever `ChatBase` assembles here.
               headerButtons={{
@@ -2534,6 +2535,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
             />
           )}
         </Box>
+        {/* With no title bar (an application's chat), what plugins put in it
+            is still mounted, out of sight: some hold the chat's `send` there
+            for their cards — *I have signed in: check again*, a surface's
+            submit — and without it those cards could never send. */}
+        {!headerShown && chatHeaderItems.length > 0 ? (
+          <Box hidden>
+            <ReactorSlot slot={LoopSlots.chatHeader} props={{ workspace }} />
+          </Box>
+        ) : null}
         {besideChat && !promptHidden ? prompt : null}
       </Box>
     </>
