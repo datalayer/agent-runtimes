@@ -13,6 +13,16 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.9
+
+On agentspecs 0.0.87.
+
+- **A company's turn reaches its tools over A2A** (PAP_DATALAYER B-04): an application's run over A2A goes through the gateway's toolsets as its AG-UI and Vercel runs do; a kept deployment's agent had no company tools before.
+- **Standing permissions through an operation** (R-07): an operation may give a standing permission (`allows`), read and written in both languages, with a Python builder; a local company refuses it.
+- **A TypeScript MCP client** (AGENT_PROTOCOLS PR-51, EX-09) on `@modelcontextprotocol/sdk`, and MCP's conformance fixtures read by both languages.
+- **TAP** (PR-24): a draft profile over Web Bot Auth, from Visa's public documentation, *arriving* until Visa confirms.
+- **Travel Desk and Shopping Desk switched on** (PI-42), drilled live against the hosted counterparts.
+
 ## 1.5.8
 
 On agentspecs 0.0.86.
