@@ -15,6 +15,14 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.12
+
+On agentspecs 0.0.90.
+
+- **`pap_propose`** (PAP_DATALAYER R-07) in the action specs, classed send.
+- **A PACT business is told who the person is** (AGENT_PROTOCOLS PR-13): under `profile:read`, their handle and display name; never their email without its own grant.
+- **Examples** (PI-42, PR-13, STUDIO E-04): Returns Desk at Manzanita's API, Exchange Desk in Python, Guest Desk and Errand Runner on; what was tried said in a Maker's words.
+
 ## 1.5.11
 
 On agentspecs 0.0.89.
