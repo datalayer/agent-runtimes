@@ -73,6 +73,50 @@ def pap_turn_of(meta: Any) -> Optional[PapTurn]:
     return PapTurn(ticket=ticket if isinstance(ticket, str) else "")
 
 
+#: Where ai-agents marks a message its PACT business is asked for (AGENT_PROTOCOLS PR-13).
+PACT_META_KEY = "pact"
+
+
+def pact_turn_said(meta: Any) -> str:
+    """What the application is told of a turn asked of its PACT business, or ``""``.
+
+    ai-agents marks the message ``metadata.pact``: the personal agent asking
+    (its issuer), the person it asks for (their Datalayer account, once they
+    signed in at the business) and the permissions that person granted. The
+    application is told so before the request, in a line of its own; it
+    decides what to answer under its own instructions (found on r1, 13
+    October 2026: never told, *Guest Desk* answered a signed-in person that
+    nobody had signed in).
+
+    Never from a visitor's message: the gate marks a visitor's run, and a
+    visitor does not say for whom a business is asked. Only a caller holding
+    a key granted to the route marks it — the deployment's own principal, as
+    ai-agents asks it.
+    """
+    from agent_runtimes.loop.apps.visitors import visitor_of_a2a
+
+    if visitor_of_a2a(meta):
+        return ""
+    ours = meta.get(PACT_META_KEY) if isinstance(meta, Mapping) else None
+    if not isinstance(ours, Mapping):
+        return ""
+    agent = ours.get("personal_agent")
+    if not isinstance(agent, str) or not agent:
+        return ""
+    person = ours.get("person")
+    if not isinstance(person, str) or not person:
+        return (
+            f"[Asked over PACT by the personal agent {agent}, as itself: "
+            "no person signed in here, so it holds no permission for anyone.]"
+        )
+    scopes = [scope for scope in ours.get("scopes") or [] if isinstance(scope, str)]
+    granted = ", ".join(scopes) if scopes else "nothing"
+    return (
+        f"[Asked over PACT by the personal agent {agent} for a person signed in "
+        f"with Datalayer, their account {person}, who granted it: {granted}.]"
+    )
+
+
 def enter_pap_turn(turn: Optional[PapTurn]) -> Token[Optional[PapTurn]]:
     return _PAP_TURN.set(turn)
 

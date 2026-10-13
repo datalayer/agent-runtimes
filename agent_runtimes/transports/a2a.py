@@ -572,6 +572,13 @@ class A2AWorker(_FastA2AWorker):
             # What the person confirmed, as the company service recorded it:
             # the run makes that call, with those terms, and nothing else.
             prompt = perform_prompt(await redeem(company_turn, credential or ""))
+        from ..loop.apps.pap_company import pact_turn_said
+
+        # Asked of its PACT business: which personal agent asks, for whom and
+        # with what the person granted, as ai-agents marked it (PR-13).
+        asked_for = pact_turn_said(meta)
+        if asked_for:
+            prompt = f"{asked_for}\n\n{prompt}"
         # The execution this run is for, whose checkpoints it keeps, and the
         # checkpoint it resumes from when it was paused (O2-05).
         execution_id = execution_of(meta)
