@@ -18,9 +18,9 @@ from agent_runtimes.loop.apps.enforcement import AppRuleBlockedError
 from agent_runtimes.loop.apps.pap_company import (
     PapTurn,
     Performing,
+    asked_for_said,
     enter_pap_turn,
     leave_pap_turn,
-    pact_turn_said,
     pap_artifacts,
     pap_turn_of,
     summary_of,
@@ -148,19 +148,22 @@ def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_g
             "scopes": ["profile:read"],
         }
     }
-    assert pact_turn_said(for_person) == (
+    assert asked_for_said(for_person) == (
         f"[Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
         "their account 01ADA, who granted it: profile:read.]"
     )
     alone = {"pact": {"personal_agent": ISSUER, "person": None, "scopes": []}}
-    assert pact_turn_said(alone) == (
+    assert asked_for_said(alone) == (
         f"[Asked over PACT by the personal agent {ISSUER}, as itself: "
         "no person signed in here, so it holds no permission for anyone.]"
     )
     # Nothing said for a message that is not a business's turn, or names no personal agent.
-    assert pact_turn_said({"pap": {}}) == ""
-    assert pact_turn_said({"pact": {"person": "01ADA"}}) == ""
-    assert pact_turn_said(None) == ""
+    assert (
+        asked_for_said({"pap": {"perform": {"ticket": "t-9"}, "account": "acc-1"}})
+        == ""
+    )
+    assert asked_for_said({"pact": {"person": "01ADA"}}) == ""
+    assert asked_for_said(None) == ""
 
 
 def test_a_visitor_never_says_for_whom_a_business_is_asked() -> None:
@@ -175,12 +178,34 @@ def test_a_visitor_never_says_for_whom_a_business_is_asked() -> None:
         },
         DELEGATION_META_KEY: {A2A_VISITOR_FIELD: "visitor-1"},
     }
-    assert pact_turn_said(forged) == ""
+    assert asked_for_said(forged) == ""
 
 
 def test_the_runtime_tells_the_application_before_the_request() -> None:
     from pathlib import Path
 
     transport = (Path(__file__).parent.parent / "transports" / "a2a.py").read_text()
-    assert "asked_for = pact_turn_said(meta)" in transport
+    assert "asked_for = asked_for_said(meta)" in transport
     assert 'prompt = f"{asked_for}\\n\\n{prompt}"' in transport
+
+
+def test_a_turn_asked_of_its_company_says_who_asks_for_whom_and_what_was_granted() -> (
+    None
+):
+    # Found on r1, 13 October 2026: never told, Exchange Desk asked a signed-in person to sign in.
+    signed_in = {
+        "pap": {
+            "account": "acc-1",
+            "client_id": ISSUER,
+            "scopes": ["orders:read", "orders:write"],
+        }
+    }
+    assert asked_for_said(signed_in) == (
+        f"[Asked over PAP by the personal agent {ISSUER} for a person signed in here, "
+        "their account acc-1, who granted it: orders:read, orders:write.]"
+    )
+    signed_out = {"pap": {"account": None, "client_id": ISSUER}}
+    assert asked_for_said(signed_out) == (
+        f"[Asked over PAP by the personal agent {ISSUER}, as itself: "
+        "no person signed in here, so it holds no permission for anyone.]"
+    )

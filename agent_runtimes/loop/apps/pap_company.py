@@ -77,44 +77,53 @@ def pap_turn_of(meta: Any) -> Optional[PapTurn]:
 PACT_META_KEY = "pact"
 
 
-def pact_turn_said(meta: Any) -> str:
-    """What the application is told of a turn asked of its PACT business, or ``""``.
+def asked_for_said(meta: Any) -> str:
+    """What the application is told of a turn a personal agent asked, or ``""``.
 
-    ai-agents marks the message ``metadata.pact``: the personal agent asking
-    (its issuer), the person it asks for (their Datalayer account, once they
-    signed in at the business) and the permissions that person granted. The
-    application is told so before the request, in a line of its own; it
-    decides what to answer under its own instructions (found on r1, 13
-    October 2026: never told, *Guest Desk* answered a signed-in person that
-    nobody had signed in).
+    ai-agents marks the message it sends for its company (``metadata.pap``:
+    the personal agent's client id, the person's account there once they
+    signed in, what they granted) or for its PACT business (``metadata.pact``:
+    the personal agent's issuer, the person's Datalayer account once they
+    signed in, what they granted). The application is told so before the
+    request, in a line of its own, and decides what to answer under its own
+    instructions — found on r1, 13 October 2026: never told, *Guest Desk*
+    answered a person who had signed in and granted ``profile:read`` that
+    nobody had, and *Exchange Desk* asked a signed-in person to sign in.
+    A perform turn says nothing here: its prompt is the confirmed operation.
 
     Never from a visitor's message: the gate marks a visitor's run, and a
-    visitor does not say for whom a business is asked. Only a caller holding
-    a key granted to the route marks it — the deployment's own principal, as
-    ai-agents asks it.
+    visitor does not say for whom a company or a business is asked. Only a
+    caller holding a key granted to the route marks it — the deployment's
+    own principal, as ai-agents asks it.
     """
     from agent_runtimes.loop.apps.visitors import visitor_of_a2a
 
-    if visitor_of_a2a(meta):
+    if visitor_of_a2a(meta) or not isinstance(meta, Mapping):
         return ""
-    ours = meta.get(PACT_META_KEY) if isinstance(meta, Mapping) else None
-    if not isinstance(ours, Mapping):
-        return ""
-    agent = ours.get("personal_agent")
-    if not isinstance(agent, str) or not agent:
-        return ""
-    person = ours.get("person")
-    if not isinstance(person, str) or not person:
+    for key, protocol, agent_field, person_field in (
+        (PAP_META_KEY, "PAP", "client_id", "account"),
+        (PACT_META_KEY, "PACT", "personal_agent", "person"),
+    ):
+        ours = meta.get(key)
+        if not isinstance(ours, Mapping) or "perform" in ours:
+            continue
+        agent = ours.get(agent_field)
+        if not isinstance(agent, str) or not agent:
+            continue
+        person = ours.get(person_field)
+        if not isinstance(person, str) or not person:
+            return (
+                f"[Asked over {protocol} by the personal agent {agent}, as itself: "
+                "no person signed in here, so it holds no permission for anyone.]"
+            )
+        scopes = [scope for scope in ours.get("scopes") or [] if isinstance(scope, str)]
+        granted = ", ".join(scopes) if scopes else "nothing"
+        where = "with Datalayer" if key == PACT_META_KEY else "here"
         return (
-            f"[Asked over PACT by the personal agent {agent}, as itself: "
-            "no person signed in here, so it holds no permission for anyone.]"
+            f"[Asked over {protocol} by the personal agent {agent} for a person signed in "
+            f"{where}, their account {person}, who granted it: {granted}.]"
         )
-    scopes = [scope for scope in ours.get("scopes") or [] if isinstance(scope, str)]
-    granted = ", ".join(scopes) if scopes else "nothing"
-    return (
-        f"[Asked over PACT by the personal agent {agent} for a person signed in "
-        f"with Datalayer, their account {person}, who granted it: {granted}.]"
-    )
+    return ""
 
 
 def enter_pap_turn(turn: Optional[PapTurn]) -> Token[Optional[PapTurn]]:
