@@ -224,7 +224,7 @@ What each gateway tool does is classed in agentspecs
 (`protocol-tools/pap.yaml`, read by the gateway and the runtime alike), so
 the application's Rules decide them as any other tool. A `read` connection is
 given only the tools that read (`pap_company`, `pap_ask`, `pap_sign_in`,
-`pap_sign_in_status`, `pap_read`, `pap_mcp_tools`); `pap_confirm`,
+`pap_sign_in_status`, `pap_read`, `pap_propose`, `pap_mcp_tools`); `pap_confirm`,
 `pap_mcp_call` and `pap_disconnect` need `access: write`.
 
 **Scopes narrow the sign-in.** When the gateway starts a sign-in for an
@@ -280,6 +280,13 @@ confirming once it is approved. Only the person's decision on that revision
 lets it through, so a model or a Maker's rule can never confirm what the
 company reserved for them. While the person decides, the result carries the
 SDK's `PapConfirm` display; once confirmed, its `PapOutcome`.
+
+**A change asked through the company's API.** With `interfaces: [openapi]`,
+`pap_propose` sends a `POST` to one of the API's paths (`/orders/ord_7Hk2/gift-wrap`)
+in the person's name; what the company answers `202` is an operation it
+proposes, kept to confirm with `pap_confirm`, never done by the call. It is
+classed `send`, as `pap_ask` is, and an approval in advance the person gave
+covers the confirmation when the company does not reserve it to them.
 
 **The company's own MCP server.** With `interfaces: [mcp]`, `pap_mcp_tools`
 lists the company's MCP tools and `pap_mcp_call` calls one with a Bearer

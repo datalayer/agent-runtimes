@@ -722,6 +722,7 @@ export const PROTOCOL_TOOL_CLASSES: Record<
       pap_sign_in: ['read'],
       pap_sign_in_status: ['read'],
       pap_read: ['read'],
+      pap_propose: ['send'],
       pap_mcp_tools: ['read'],
       pap_mcp_call: ['write'],
       pap_confirm: ['write', 'buy'],
