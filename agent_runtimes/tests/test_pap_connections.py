@@ -155,6 +155,21 @@ async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(mo
         ["send"],
     )
     assert "rule" in detail and "Where is my order?" not in repr(detail)
+    # No trace: no correlation ID, never one made up.
+    assert "trace_id" not in detail
+
+    # Under a trace, the correlation ID its call carries to the gateway (A-05): the Activity shows
+    # the gateway's rows of the call beside the decision by it.
+    from agent_runtimes.mcp import tracing
+
+    monkeypatch.setattr(
+        tracing,
+        "trace_headers",
+        lambda: {"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+    )
+    added.clear()
+    recorder.decided(enforced)
+    assert added[0][2]["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
 
     # A connection that only reads: what it was decided on says the level does not give a send
     # (the agent is never offered the tool: `prepare_tools`).

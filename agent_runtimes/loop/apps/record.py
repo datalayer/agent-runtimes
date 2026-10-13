@@ -720,6 +720,14 @@ class AppRecorder:
         if inputs:
             detail["inputs"] = dict(inputs)
             detail["rule"] = getattr(decision, "rule", "")
+            # The correlation ID its call carries to the gateway (A-05), so the Activity shows the
+            # gateway's rows of it beside this decision; none without a trace, never one made up.
+            from agent_runtimes.mcp.tracing import trace_headers
+            from agent_runtimes.orchestration.adapter import trace_id_of
+
+            trace_id = trace_id_of(trace_headers().get("traceparent"))
+            if trace_id and trace_id.strip("0"):
+                detail["trace_id"] = trace_id
         # Done without asking because the person approved it in advance (U-25).
         approved = getattr(enforced, "approved", None)
         if approved is not None:
