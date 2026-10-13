@@ -166,6 +166,36 @@ def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_g
     assert asked_for_said(None) == ""
 
 
+def test_under_profile_read_a_business_is_told_the_persons_handle_and_name() -> None:
+    # Decided 2026-10-13 (AGENT_PROTOCOLS PR-13): profile:read tells a PACT business the
+    # person's handle and display name, as ai-agents sends them; never without that grant.
+    profile = {"handle": "ada", "name": "Ada Lovelace"}
+    granted = {
+        "pact": {
+            "personal_agent": ISSUER,
+            "person": "01ADA",
+            "scopes": ["profile:read"],
+            "profile": profile,
+        }
+    }
+    assert asked_for_said(granted) == (
+        f"[Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
+        "their account 01ADA (@ada, Ada Lovelace), who granted it: profile:read.]"
+    )
+    not_granted = {"pact": {**granted["pact"], "scopes": ["trips:read"]}}
+    assert "@ada" not in asked_for_said(not_granted)
+    # A company's turn names the person by its own account alone.
+    company = {
+        "pap": {
+            "account": "acc-1",
+            "client_id": ISSUER,
+            "scopes": ["profile:read"],
+            "profile": profile,
+        }
+    }
+    assert "@ada" not in asked_for_said(company)
+
+
 def test_a_visitor_never_says_for_whom_a_business_is_asked() -> None:
     from agent_runtimes.guardrails.model_budget import DELEGATION_META_KEY
     from agent_runtimes.loop.apps.visitors import A2A_VISITOR_FIELD

@@ -77,6 +77,22 @@ def pap_turn_of(meta: Any) -> Optional[PapTurn]:
 PACT_META_KEY = "pact"
 
 
+#: The scope under which a PACT business is told who the person is (decided 2026-10-13).
+PACT_PROFILE_SCOPE = "profile:read"
+
+
+def _profile_said(ours: Mapping[str, Any], scopes: list[str]) -> str:
+    """The person's handle and display name, as ai-agents sends them to a PACT business under
+    ``profile:read`` (decided 2026-10-13), or ``""`` — never without that grant, never their email."""
+    profile = ours.get("profile")
+    if not isinstance(profile, Mapping) or PACT_PROFILE_SCOPE not in scopes:
+        return ""
+    handle, name = profile.get("handle"), profile.get("name")
+    if not isinstance(handle, str) or not handle:
+        return ""
+    return f" (@{handle}, {name})" if isinstance(name, str) and name else f" (@{handle})"
+
+
 def asked_for_said(meta: Any) -> str:
     """What the application is told of a turn a personal agent asked, or ``""``.
 
@@ -84,7 +100,8 @@ def asked_for_said(meta: Any) -> str:
     the personal agent's client id, the person's account there once they
     signed in, what they granted) or for its PACT business (``metadata.pact``:
     the personal agent's issuer, the person's Datalayer account once they
-    signed in, what they granted). The application is told so before the
+    signed in, what they granted, and under ``profile:read`` their handle and
+    display name). The application is told so before the
     request, in a line of its own, and decides what to answer under its own
     instructions — found on r1, 13 October 2026: never told, *Guest Desk*
     answered a person who had signed in and granted ``profile:read`` that
@@ -119,9 +136,10 @@ def asked_for_said(meta: Any) -> str:
         scopes = [scope for scope in ours.get("scopes") or [] if isinstance(scope, str)]
         granted = ", ".join(scopes) if scopes else "nothing"
         where = "with Datalayer" if key == PACT_META_KEY else "here"
+        who = _profile_said(ours, scopes) if key == PACT_META_KEY else ""
         return (
             f"[Asked over {protocol} by the personal agent {agent} for a person signed in "
-            f"{where}, their account {person}, who granted it: {granted}.]"
+            f"{where}, their account {person}{who}, who granted it: {granted}.]"
         )
     return ""
 
