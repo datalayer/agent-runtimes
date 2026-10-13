@@ -26,7 +26,7 @@ def _order_desk() -> Application:
     app = Application("order-desk-py", "chat", agent="example-blank:0.0.1")
     app.company_connection(
         "manzanita",
-        "manzanita.example",
+        "manzanita.examples.datalayer.run",
         access="write",
         acts_as="user",
         scopes=["orders:read", "orders:write"],
@@ -207,7 +207,7 @@ def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(
         assert lines[line - 1].startswith(says), (moment, lines[line - 1])
     # Built in a test, too: the builder's caller is the line.
     assert _order_desk().pap_marks[0][:2] == (
-        "pap company manzanita.example",
+        "pap company manzanita.examples.datalayer.run",
         "company_connection",
     )
 

@@ -207,18 +207,18 @@ def business() -> AppSpec:
 
 def test_a_pact_business_is_the_gateways_pact_toolset_in_the_persons_name() -> None:
     spec = business()
-    assert [c["brand"] for c in spec.pact.connections] == ["air.example"]
+    assert [c["brand"] for c in spec.pact.connections] == ["air.examples.datalayer.run"]
     pap_connections.remember_agent("agent-6", spec)
     companies = pap_connections.companies_of_agent("agent-6")
-    assert companies == (("pact_air_example", "user"),)
-    assert pap_connections.protocol_of("pact_air_example") == "pact"
-    assert pap_connections.domain_of("pact_air_example") == "air.example"
+    assert companies == (("pact_air_examples_datalayer_run", "user"),)
+    assert pap_connections.protocol_of("pact_air_examples_datalayer_run") == "pact"
+    assert pap_connections.domain_of("pact_air_examples_datalayer_run") == "air.examples.datalayer.run"
     (built,) = toolsets_for_the_run(
         [], "principal-token", users_token="person-token", companies=companies
     )
-    assert built.prefix == "pact_air_example"
+    assert built.prefix == "pact_air_examples_datalayer_run"
     transport = built.wrapped.client.transport
-    assert transport.url.endswith("/mcp?only=pact&pact-brand=air.example")
+    assert transport.url.endswith("/mcp?only=pact&pact-brand=air.examples.datalayer.run")
     assert (
         transport.httpx_client_factory().headers["authorization"]
         == "Bearer person-token"
@@ -230,21 +230,21 @@ async def test_the_rules_decide_a_businesss_pact_tools_by_what_they_do() -> None
     spec = business()
     pap_connections.remember_agent("agent-7", spec)
     harness = Harness(spec)
-    ask = "pact_air_example_pact_ask"
+    ask = "pact_air_examples_datalayer_run_pact_ask"
     assert await harness.call(ask, {"message": "When is my flight?"}) == {
         "message": "When is my flight?"
     }
     assert harness.recorded[-1].decision.classes == ("read",)
-    assert pap_connections.classes_of("pact_air_example_pact_ask_for_person") == (
+    assert pap_connections.classes_of("pact_air_examples_datalayer_run_pact_ask_for_person") == (
         "write",
     )
     # A PAP tool's name under a PACT server is no tool of it.
-    assert pap_connections.classes_of("pact_air_example_pap_confirm") is None
+    assert pap_connections.classes_of("pact_air_examples_datalayer_run_pap_confirm") is None
     # The level of its connection decides what is given.
     access = spec.pact.connections[0].get("access") or "read"
-    given = harness.capability.given("pact_air_example_pact_ask_for_person")
+    given = harness.capability.given("pact_air_examples_datalayer_run_pact_ask_for_person")
     assert given is (access == "write")
-    assert harness.capability.given("pact_air_example_pact_ask") is True
+    assert harness.capability.given("pact_air_examples_datalayer_run_pact_ask") is True
 
 
 def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
@@ -271,16 +271,16 @@ def test_a_merchant_is_the_gateways_commerce_toolset_in_the_persons_name() -> No
     pap_connections.remember_agent("agent-8", shop())
     companies = pap_connections.companies_of_agent("agent-8")
     assert companies == (
-        ("acp_outfitters_example", "user"),
-        ("ucp_store_example", "user"),
+        ("acp_outfitters_examples_datalayer_run", "user"),
+        ("ucp_store_examples_datalayer_run", "user"),
     )
-    assert pap_connections.protocol_of("ucp_store_example") == "ucp"
+    assert pap_connections.protocol_of("ucp_store_examples_datalayer_run") == "ucp"
     built = toolsets_for_the_run(
         [], "principal-token", users_token="person-token", companies=companies
     )
     urls = sorted(each.wrapped.client.transport.url for each in built)
-    assert urls[0].endswith("/mcp?only=acp&acp-merchant=outfitters.example")
-    assert urls[1].endswith("/mcp?only=ucp&ucp-merchant=store.example")
+    assert urls[0].endswith("/mcp?only=acp&acp-merchant=outfitters.examples.datalayer.run")
+    assert urls[1].endswith("/mcp?only=ucp&ucp-merchant=store.examples.datalayer.run")
 
 
 @pytest.mark.asyncio
@@ -290,9 +290,9 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
     that only reads buys nothing."""
     spec = shop()
     pap_connections.remember_agent("agent-9", spec)
-    assert pap_connections.classes_of("ucp_store_example_ucp_complete") == ("buy",)
-    assert pap_connections.is_purchase("ucp_store_example_ucp_complete")
-    assert not pap_connections.is_purchase("ucp_store_example_ucp_search")
+    assert pap_connections.classes_of("ucp_store_examples_datalayer_run_ucp_complete") == ("buy",)
+    assert pap_connections.is_purchase("ucp_store_examples_datalayer_run_ucp_complete")
+    assert not pap_connections.is_purchase("ucp_store_examples_datalayer_run_ucp_search")
     for behaviour in ("do_it", "ask_first", "if_asked"):
         decided = spec.model_copy(
             update={
@@ -305,10 +305,10 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
         pap_connections.remember_agent("agent-9", decided)
         harness = Harness(decided)
         args = {"checkout_id": "chk_1"}
-        assert await harness.call("ucp_store_example_ucp_complete", args) == args
+        assert await harness.call("ucp_store_examples_datalayer_run_ucp_complete", args) == args
         assert harness.asked == []
         assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
     harness = Harness(spec)
-    assert harness.capability.given("ucp_store_example_ucp_complete") is True
-    assert harness.capability.given("acp_outfitters_example_acp_complete") is False
-    assert harness.capability.given("acp_outfitters_example_acp_get_checkout") is True
+    assert harness.capability.given("ucp_store_examples_datalayer_run_ucp_complete") is True
+    assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_complete") is False
+    assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_get_checkout") is True
