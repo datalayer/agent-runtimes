@@ -62,9 +62,31 @@ extensions both the business offers and a contribution implements.
 
 ## Action classes
 
-`search`, `propose_completion` and `get_checkout` are `read`; creating,
-updating and cancelling a checkout are `write`; `complete` is `buy`
-(`ACTION_CLASSES`), so a Rule decides each the way it decides any tool.
+`search` and `get_checkout` are `read` (and `propose_completion`, which only
+reads); creating, updating and cancelling a checkout are `write`; `complete`
+is `buy` (`ACTION_CLASSES`, agentspecs' `protocol-tools/ucp.yaml` without
+the gateway tools' `ucp_` prefix), so a Rule decides each the way it decides
+any tool.
+
+## In an application
+
+An application lists `ucp` in `protocols` and names each merchant in its
+`commerce` block (`commerce.merchants[]`: `protocol: ucp`, the merchant's
+domain, a level and, to buy, the most one purchase may cost, `limit`). For
+now Datalayer shops at **test merchants only**, with no real payment
+(decided 2026-10-13). On Datalayer the runtime holds nothing of it: each
+merchant is one server, `ucp_<domain>` (`ucp_store_example`), which is the
+MCP gateway's `ucp` toolset (`/mcp?only=ucp&ucp-merchant=<domain>`)
+reached in the person's name; its tools are named with it
+(`ucp_store_example_ucp_complete`).
+
+The application's Rules decide those tools by what agentspecs says each does
+(`protocol-tools/ucp.yaml`): reading reads, filling a checkout writes,
+`ucp_complete` buys. A purchase is always asked of the person, by the
+gateway, with the exact checkout — whatever the rule on buying says, the
+runtime lets the call reach the gateway rather than ask twice — and made at
+most once; *Leave it to me* buys nothing. A connection that reads gives only
+what reads.
 
 ## Reading a business's profile
 

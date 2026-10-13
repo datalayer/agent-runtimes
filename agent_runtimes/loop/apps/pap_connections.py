@@ -18,6 +18,12 @@ reached the same way, through the gateway's `pact` toolset
 (``/mcp?only=pact&pact-brand=<domain>``), in the person's name: the gateway
 signs the application's personal-agent JWT and holds the person's delegation.
 
+A merchant over UCP or ACP (each `commerce.merchants[]`, AGENT_PROTOCOLS
+PI-20) is reached through the gateway's `ucp` or `acp` toolset
+(``/mcp?only=ucp&ucp-merchant=<domain>``), in the person's name: the
+gateway shops at test merchants only and asks the person before every
+purchase (decided 2026-10-13).
+
 In the runtime a company is one gateway server, named from its protocol and
 domain (:func:`server_id`): two companies' tools never share a name, as each
 tool is prefixed with it. What each tool does to the world is agentspecs'
@@ -43,6 +49,16 @@ TOOL_CLASSES_BY_PROTOCOL: Dict[str, Dict[str, Tuple[str, ...]]] = {
     }
     for protocol in ("pap", "pact")
 }
+# A merchant's tools, by its protocol (`ucp`, `acp`): agentspecs' tables name the toolsets' tools.
+TOOL_CLASSES_BY_PROTOCOL.update(
+    {
+        protocol: {
+            name: tuple(classes)
+            for name, classes in PROTOCOL_TOOL_CLASSES[table]["tools"].items()
+        }
+        for protocol, table in (("ucp", "ucp"), ("acp", "agentic-commerce"))
+    }
+)
 TOOL_CLASSES: Dict[str, Tuple[str, ...]] = TOOL_CLASSES_BY_PROTOCOL["pap"]
 
 #: Each protocol's block, the key of its counterpart's domain there, and the
@@ -50,7 +66,12 @@ TOOL_CLASSES: Dict[str, Tuple[str, ...]] = TOOL_CLASSES_BY_PROTOCOL["pap"]
 _BLOCKS: Dict[str, Tuple[str, str]] = {
     "pap": ("company", "pap-company"),
     "pact": ("brand", "pact-brand"),
+    "ucp": ("merchant", "ucp-merchant"),
+    "acp": ("merchant", "acp-merchant"),
 }
+
+#: A merchant's tool that buys: the gateway asks the person before it, always (decided 2026-10-13).
+PURCHASE_TOOLS = frozenset({"ucp_complete", "acp_complete"})
 
 #: server id -> (protocol, company domain), for every application this process runs.
 _DOMAINS: Dict[str, Tuple[str, str]] = {}
@@ -64,14 +85,18 @@ def server_id(domain: str, protocol: str = "pap") -> str:
 
 
 def connections_of(app: Any) -> Dict[str, Dict[str, Any]]:
-    """An application's companies (PAP) and businesses (PACT), by server id.
+    """An application's companies (PAP), businesses (PACT) and merchants (UCP, ACP), by server id.
 
     Each carries `protocol` and `company` (its domain), whichever block it is from.
     """
     found: Dict[str, Dict[str, Any]] = {}
+    commerce = getattr(getattr(app, "commerce", None), "merchants", None) or []
     for protocol, (key, _) in _BLOCKS.items():
-        block = getattr(app, protocol, None)
-        for connection in getattr(block, "connections", None) or []:
+        if protocol in ("ucp", "acp"):
+            listed = [m for m in commerce if (m or {}).get("protocol") == protocol]
+        else:
+            listed = getattr(getattr(app, protocol, None), "connections", None) or []
+        for connection in listed:
             domain = str((connection or {}).get(key) or "").strip().lower()
             if domain:
                 found[server_id(domain, protocol)] = {
@@ -96,7 +121,7 @@ def domain_of(sid: str) -> Optional[str]:
 
 
 def protocol_of(sid: str) -> Optional[str]:
-    """`pap` or `pact` for a company's server, None for any other."""
+    """`pap`, `pact`, `ucp` or `acp` for a company's server, None for any other."""
     known = _DOMAINS.get(sid)
     return known[0] if known else None
 
@@ -144,6 +169,12 @@ def connection_actions(app: Any, tool_name: str) -> Optional[set[str]]:
         return None
     access = str(connection.get("access") or "read")
     return {"read", "write"} if access == "write" else {"read"}
+
+
+def is_purchase(tool_name: str) -> bool:
+    """Whether a tool buys at a merchant: always asked of the person, at the gateway."""
+    found = pap_tool(tool_name)
+    return found is not None and found[1] in PURCHASE_TOOLS
 
 
 def acts_as(connection: Dict[str, Any]) -> str:

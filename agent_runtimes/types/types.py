@@ -2287,6 +2287,21 @@ class AppPactSpec(BaseModel):
     connections: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class AppCommerceSpec(BaseModel):
+    """UCP and ACP: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01, PI-20).
+
+    Each merchant names its protocol (`ucp` or `acp`), its domain
+    (`merchant`), a level and, to buy, the most one purchase may cost
+    (`limit`); never a credential. Test merchants only, every purchase asked
+    of the person (decided 2026-10-13): the gateway's `ucp` and `acp`
+    toolsets reach each one.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    merchants: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class AppA2AExtensionSpec(BaseModel):
     """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
 
@@ -3002,6 +3017,7 @@ class AppSpec(BaseModel):
     )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     pact: AppPactSpec = Field(default_factory=AppPactSpec)
+    commerce: AppCommerceSpec = Field(default_factory=AppCommerceSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)

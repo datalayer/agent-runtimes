@@ -603,12 +603,11 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
     "agentic-commerce": {
         "connection": "acp",
         "tools": {
-            "propose_completion": ["read"],
-            "get_checkout": ["read"],
-            "create_checkout": ["write"],
-            "update_checkout": ["write"],
-            "cancel_checkout": ["write"],
-            "complete": ["buy"],
+            "acp_get_checkout": ["read"],
+            "acp_create_checkout": ["write"],
+            "acp_update_checkout": ["write"],
+            "acp_cancel_checkout": ["write"],
+            "acp_complete": ["buy"],
         },
     },
     "pact": {
@@ -640,13 +639,12 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
     "ucp": {
         "connection": "ucp",
         "tools": {
-            "search": ["read"],
-            "propose_completion": ["read"],
-            "get_checkout": ["read"],
-            "create_checkout": ["write"],
-            "update_checkout": ["write"],
-            "cancel_checkout": ["write"],
-            "complete": ["buy"],
+            "ucp_search": ["read"],
+            "ucp_get_checkout": ["read"],
+            "ucp_create_checkout": ["write"],
+            "ucp_update_checkout": ["write"],
+            "ucp_cancel_checkout": ["write"],
+            "ucp_complete": ["buy"],
         },
     },
 }
@@ -906,6 +904,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "report-from-a-file": {},
     "sales": {},
     "ship-or-fix": {},
+    "shopping-assistant": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},
@@ -972,6 +971,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "report-from-a-file": {},
     "sales": {},
     "ship-or-fix": {},
+    "shopping-assistant": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},

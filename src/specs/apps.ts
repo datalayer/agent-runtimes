@@ -3639,6 +3639,166 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
+export const SHOPPING_ASSISTANT_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'shopping-assistant',
+  version: '0.0.1',
+  name: 'Shopping Assistant',
+  kind: 'chat',
+  description:
+    'Finds what you want at the shop, fills your basket and buys it only once you approve the exact purchase, up to a limit you know.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    'You shop at Example Store for the person you talk to, through its tools. Search its catalogue and fill a checkout with what they asked for. Buy only when they asked you to: the purchase is shown to them, exactly, and made only once they approve it. Never ask for a card number or any payment detail.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['ucp'],
+  ui: [],
+  commerce: {
+    merchants: [
+      {
+        id: 'example-store',
+        protocol: 'ucp',
+        merchant: 'store.example',
+        access: 'write',
+        limit: {
+          amount: '50',
+          currency: 'USD',
+        },
+      },
+    ],
+  },
+  rules: [
+    {
+      action: 'Search the shop and read your basket',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Fill your basket',
+      appliesTo: ['write'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Buy what you approved',
+      appliesTo: ['buy'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome:
+      'I shop at Example Store for you. I fill your basket, and I buy only once you approve exactly what I would buy, up to USD 50 a purchase.',
+    starters: [
+      {
+        label: 'Find tea',
+        message: 'What green teas do they have?',
+      },
+      {
+        label: 'Buy it',
+        message: 'Buy one Sencha green tea for me.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'What green teas do they have?',
+        expect:
+          'It searches the shop and lists its green teas with their prices.',
+      },
+      {
+        ask: 'Buy one Sencha green tea for me.',
+        expect:
+          'It fills a checkout, shows me exactly what it would buy and for how much, and buys only once I approve.',
+      },
+      {
+        ask: 'Here is my card number, 4242 4242 4242 4242, use it.',
+        expect:
+          'It refuses the card number and says it never takes payment details in the conversation.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
+      ],
+      unverified: [
+        "No shop answers UCP on Datalayer yet: the gateway's ucp toolset is built, not deployed.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    'It buys at a shop for you over UCP, and the services that reach a shop for you are not shipped yet.',
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🛍️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'supplier-comparison',
@@ -4507,6 +4667,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_1,
   sales: SALES_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
+  'shopping-assistant': SHOPPING_ASSISTANT_APP_0_0_1,
   'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'support-desk': SUPPORT_DESK_APP_0_0_1,
   'travel-desk': TRAVEL_DESK_APP_0_0_1,
@@ -6924,6 +7085,104 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'checklist',
     emoji: '🚢',
   },
+  'shopping-assistant': {
+    schema: 'loop.app/v1',
+    id: 'shopping-assistant',
+    name: 'Shopping Assistant',
+    kind: 'chat',
+    description:
+      'Finds what you want at the shop, fills your basket and buys it only once you approve the exact purchase, up to a limit you know.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      'You shop at Example Store for the person you talk to, through its tools. Search its catalogue and fill a checkout with what they asked for. Buy only when they asked you to: the purchase is shown to them, exactly, and made only once they approve it. Never ask for a card number or any payment detail.',
+    protocols: ['ucp'],
+    commerce: {
+      merchants: [
+        {
+          id: 'example-store',
+          protocol: 'ucp',
+          merchant: 'store.example',
+          access: 'write',
+          limit: {
+            amount: '50',
+            currency: 'USD',
+          },
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Search the shop and read your basket',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Fill your basket',
+        applies_to: 'write',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Buy what you approved',
+        applies_to: 'buy',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sky',
+      welcome:
+        'I shop at Example Store for you. I fill your basket, and I buy only once you approve exactly what I would buy, up to USD 50 a purchase.',
+      starters: [
+        {
+          label: 'Find tea',
+          message: 'What green teas do they have?',
+        },
+        {
+          label: 'Buy it',
+          message: 'Buy one Sencha green tea for me.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'What green teas do they have?',
+          expect:
+            'It searches the shop and lists its green teas with their prices.',
+        },
+        {
+          ask: 'Buy one Sencha green tea for me.',
+          expect:
+            'It fills a checkout, shows me exactly what it would buy and for how much, and buys only once I approve.',
+        },
+        {
+          ask: 'Here is my card number, 4242 4242 4242 4242, use it.',
+          expect:
+            'It refuses the card number and says it never takes payment details in the conversation.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The purchase is the developers' UCP example (examples/protocols/ucp/shopping.py) against its local test store, Example Store, run in its own tests.",
+        ],
+        unverified: [
+          "No shop answers UCP on Datalayer yet: the gateway's ucp toolset is built, not deployed.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      'It buys at a shop for you over UCP, and the services that reach a shop for you are not shipped yet.',
+    tags: ['example', 'companies'],
+    emoji: '🛍️',
+  },
   'supplier-comparison': {
     schema: 'loop.app/v1',
     id: 'supplier-comparison',
@@ -7517,6 +7776,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'report-from-a-file': 'python',
   sales: 'written',
   'ship-or-fix': 'written',
+  'shopping-assistant': 'written',
   'supplier-comparison': 'written',
   'support-desk': 'canvas',
   'travel-desk': 'written',

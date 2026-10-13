@@ -58,13 +58,13 @@ export const ACP_PROTOCOL_0_0_1: ProtocolSpec = {
   version: '0.0.1',
   name: 'Agentic Commerce Protocol',
   description:
-    'Checkout sessions at a seller, completed with a delegated payment token the model never sees. Planned in applications: the client exists, purchases wait on a source of payment tokens.',
+    'Checkout sessions at a seller, completed with a payment the model never sees. In applications at test merchants only, with no real payment token (decided 2026-10-13): each purchase asked of the person first, made at most once.',
   publisher: 'OpenAI, Stripe',
   layer: 'commerce',
   specUrl:
     'https://github.com/agentic-commerce-protocol/agentic-commerce-protocol',
   specVersion: '2026-04-17',
-  status: 'planned',
+  status: 'shipped',
   connects: 'Sellers, to check out with a delegated payment',
   packages: {
     python: ['agent-runtimes'],
@@ -175,12 +175,12 @@ export const UCP_PROTOCOL_0_0_1: ProtocolSpec = {
   version: '0.0.1',
   name: 'Universal Commerce Protocol',
   description:
-    'Shopping at a merchant: catalogue, checkout and orders, every purchase an exact proposal the person approves. Planned in applications: the client exists, purchases wait on a source of payment tokens.',
+    'Shopping at a merchant: catalogue, checkout and orders, every purchase an exact proposal the person approves. In applications at test merchants only, with no real payment (decided 2026-10-13): each purchase asked of the person first, made at most once.',
   publisher: 'Google, with Shopify and retailers',
   layer: 'commerce',
   specUrl: 'https://github.com/Universal-Commerce-Protocol/ucp',
   specVersion: '2026-08-25',
-  status: 'planned',
+  status: 'shipped',
   connects: 'Merchants, to search, check out and follow orders',
   packages: {
     python: ['ucp-sdk', 'agent-runtimes'],

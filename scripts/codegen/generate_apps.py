@@ -156,8 +156,8 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             mode="json", by_alias=True
         ):
             spec.pop("pap")
-        # PACT and A2A's extensions the same way (AGENT_PROTOCOLS PI-01, PR-02).
-        for block in ("pact", "a2a"):
+        # PACT, commerce and A2A's extensions the same way (AGENT_PROTOCOLS PI-01, PR-02).
+        for block in ("pact", "commerce", "a2a"):
             if block in spec and spec[block] == type(getattr(app, block))().model_dump(
                 mode="json", by_alias=True
             ):

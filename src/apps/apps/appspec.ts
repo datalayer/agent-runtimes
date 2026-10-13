@@ -42,6 +42,7 @@ import type {
   AppConnectionSpec,
   AppPapSpec,
   AppPactSpec,
+  AppCommerceSpec,
   AppA2ASpec,
   AppCriterionSpec,
   AppCustomComponentSpec,
@@ -314,6 +315,7 @@ const KNOWN_KEYS = [
   'ui',
   'pap',
   'pact',
+  'commerce',
   'a2a',
   'rules',
   'permissions',
@@ -483,6 +485,51 @@ function parsePact(data: Data): AppPactSpec {
       scopes: texts(connection.scopes),
     })),
   };
+}
+
+/** Commerce (AGENT_PROTOCOLS PI-01): the merchants it shops at for each person. */
+function parseCommerce(data: Data): AppCommerceSpec {
+  return {
+    merchants: records(data.merchants).map(merchant => ({
+      id: text(merchant.id),
+      protocol: oneOf(merchant.protocol, ['ucp', 'acp'] as const, 'ucp'),
+      merchant: text(merchant.merchant),
+      access: oneOf(merchant.access, ['read', 'write'] as const, 'read'),
+      ...(isData(merchant.limit)
+        ? {
+            limit: {
+              amount: text(merchant.limit.amount),
+              currency: text(merchant.limit.currency),
+            },
+          }
+        : {}),
+    })),
+  };
+}
+
+/** Commerce as its document says it, nothing at its default. */
+function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
+  if (!commerce) return {};
+  return new Writer().list(
+    'merchants',
+    commerce.merchants.map(
+      merchant =>
+        new Writer()
+          .text('id', merchant.id, '\u0000')
+          .text('protocol', merchant.protocol, '\u0000')
+          .text('merchant', merchant.merchant, '\u0000')
+          .value<string>('access', merchant.access, 'read')
+          .part(
+            'limit',
+            merchant.limit
+              ? {
+                  amount: merchant.limit.amount,
+                  currency: merchant.limit.currency,
+                }
+              : {},
+          ).data,
+    ),
+  ).data;
 }
 
 /** PACT as its document says it, nothing at its default. */
@@ -1197,6 +1244,9 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.pact)) {
     app.pact = parsePact(data.pact);
   }
+  if (isData(data.commerce)) {
+    app.commerce = parseCommerce(data.commerce);
+  }
   if (isData(data.a2a)) {
     app.a2a = parseA2A(data.a2a);
   }
@@ -1272,6 +1322,16 @@ export function protocolsProblems(
     if (block && configured[block] && !app.protocols.includes(spec.id)) {
       problems.push(
         `Its \`${block}\` block configures ${spec.name}, which it does not list: add '${spec.id}' to \`protocols\`.`,
+      );
+    }
+  }
+  // The `commerce` block configures UCP and ACP, by each merchant's protocol.
+  for (const id of new Set(
+    (app.commerce?.merchants ?? []).map(merchant => merchant.protocol),
+  )) {
+    if (!app.protocols.includes(id)) {
+      problems.push(
+        `Its \`commerce\` block shops over ${id.toUpperCase()}, which it does not list: add '${id}' to \`protocols\`.`,
       );
     }
   }
@@ -1668,6 +1728,7 @@ export function dumpAppspec(app: AppSpec): Data {
     .list('ui', app.ui)
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
+    .part('commerce', dumpCommerce(app.commerce))
     .part('a2a', dumpA2A(app.a2a))
     .list(
       'rules',

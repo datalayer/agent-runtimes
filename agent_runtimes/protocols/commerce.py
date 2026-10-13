@@ -30,19 +30,24 @@ def operation_classes(protocol: str) -> dict[str, str]:
     """Each operation's action class (F-10) for Rules (R-05), as agentspecs classes
     a protocol's tools (``protocol-tools/<protocol>.yaml``, AGENT_PROTOCOLS PR-54).
 
-    A commerce operation does one thing: one with several classes, or none, is
-    refused here rather than guessed.
+    The table names the gateway's tools (``ucp_search``, ``acp_complete``): an
+    operation is the tool's name without its connection's prefix. A commerce
+    operation does one thing: one with several classes, or none, or a tool not
+    under the prefix, is refused here rather than guessed.
     """
     from agent_runtimes.specs.actions import PROTOCOL_TOOL_CLASSES
 
-    tools = PROTOCOL_TOOL_CLASSES[protocol]["tools"]
+    table = PROTOCOL_TOOL_CLASSES[protocol]
+    prefix = f"{table['connection']}_"
     out: dict[str, str] = {}
-    for name, classes in tools.items():
+    for name, classes in table["tools"].items():
         if len(classes) != 1:
             raise ValueError(
                 f"{protocol} {name} is classed {classes!r}: one class each"
             )
-        out[name] = classes[0]
+        if not name.startswith(prefix):
+            raise ValueError(f"{protocol} {name} is not one of its `{prefix}` tools")
+        out[name[len(prefix) :]] = classes[0]
     return out
 
 

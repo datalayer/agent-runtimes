@@ -375,10 +375,10 @@ describe('writing an Appspec', () => {
     expect(said({ protocols: ['mcp', 'mcp'] })).toEqual([
       "It lists the protocol 'mcp' twice.",
     ]);
-    expect(said({ protocols: ['ucp'] })[0]).toMatch(/planned, not shipped/);
+    expect(said({ protocols: ['tap'] })[0]).toMatch(/planned, not shipped/);
     expect(
       said({
-        protocols: ['ucp'],
+        protocols: ['tap'],
         enabled: false,
         unavailable_because: 'Later.',
       }),
@@ -534,6 +534,37 @@ describe('writing an Appspec', () => {
     expect(parseAppspec({ kind: 'chat' }).app.a2a).toBeUndefined();
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('a2a');
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('pact');
+  });
+  it('reads and writes the merchants it shops at, each listed protocol (AGENT_PROTOCOLS PI-01)', () => {
+    const document = {
+      kind: 'chat',
+      protocols: ['ucp', 'acp'],
+      commerce: {
+        merchants: [
+          {
+            id: 'store',
+            protocol: 'ucp',
+            merchant: 'store.example',
+            access: 'write',
+            limit: { amount: '50', currency: 'USD' },
+          },
+          { id: 'outfitters', protocol: 'acp', merchant: 'outfitters.example' },
+        ],
+      },
+    };
+    const { app, problems } = parseAppspec(document);
+    expect(problems).toEqual([]);
+    expect(app.commerce?.merchants[1]).toEqual({
+      ...document.commerce.merchants[1],
+      access: 'read',
+    });
+    // Written back as read: nothing at its default.
+    expect(dumpAppspec(app).commerce).toEqual(document.commerce);
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('commerce');
+    // A merchant over a protocol it does not list is refused.
+    expect(parseAppspec({ ...document, protocols: ['ucp'] }).problems).toEqual([
+      "Its `commerce` block shops over ACP, which it does not list: add 'acp' to `protocols`.",
+    ]);
   });
   it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
     const operations = [

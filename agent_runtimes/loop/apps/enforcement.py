@@ -100,7 +100,11 @@ from agent_runtimes.loop.apps.pap_connections import (
 from agent_runtimes.loop.apps.pap_connections import (
     connection_actions as company_actions,
 )
-from agent_runtimes.loop.apps.pap_connections import domain_of, pap_tool
+from agent_runtimes.loop.apps.pap_connections import (
+    domain_of,
+    is_purchase,
+    pap_tool,
+)
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     BEHAVIOURS,
@@ -404,11 +408,23 @@ class AppRulesCapability(AbstractCapability[Any]):
                 # first time without the terms. *Ask me first* always, *Do it if
                 # I asked* unless an approval in advance covers the terms
                 # (`ask_the_person`, set in `before_tool_execute`).
-                because = GATEWAY_ASKS if decided.behaviour == ASK_FIRST else GATEWAY_ASKS_UNLESS_APPROVED
+                because = (
+                    GATEWAY_ASKS
+                    if decided.behaviour == ASK_FIRST
+                    else GATEWAY_ASKS_UNLESS_APPROVED
+                )
                 decided = replace(decided, behaviour=DO_IT, because=because)
-            elif _company_confirm(tool_name) is not None and decided.behaviour == LEAVE_TO_ME:
+            elif (
+                _company_confirm(tool_name) is not None
+                and decided.behaviour == LEAVE_TO_ME
+            ):
                 # *Leave it to me* never confirms: the person is pointed to the company.
                 decided = replace(decided, because=LEFT_AT_THE_COMPANY)
+            elif is_purchase(tool_name) and decided.behaviour != LEAVE_TO_ME:
+                # A purchase at a merchant is always asked of the person, by the
+                # gateway with the exact checkout (decided 2026-10-13): asked here
+                # too, it would be asked twice, the first time without what is bought.
+                decided = replace(decided, behaviour=DO_IT, because=GATEWAY_ASKS)
             return Enforced(tool_name, decided)
         if self._is_mcp_tool(tool_name):
             return Enforced(tool_name, self._decide_mcp(tool_name, args))

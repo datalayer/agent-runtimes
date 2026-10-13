@@ -236,6 +236,67 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppCommand',
       type: 'object',
     },
+    AppCommerce: {
+      additionalProperties: false,
+      description:
+        'Commerce: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01).',
+      properties: {
+        merchants: {
+          description:
+            'Merchants, over UCP or ACP: test merchants only for now',
+          items: {
+            $ref: '#/$defs/AppCommerceMerchant',
+          },
+          title: 'Merchants',
+          type: 'array',
+        },
+      },
+      title: 'AppCommerce',
+      type: 'object',
+    },
+    AppCommerceMerchant: {
+      additionalProperties: false,
+      description:
+        "A merchant the application shops at for each person, over UCP or ACP (AGENT_PROTOCOLS PI-01).\n\nDecided 2026-10-13: test merchants only, with no real payment — a\npurchase is always asked of the person first (*Ask me first*, PI-21),\nas the exact checkout, and made at most once; Datalayer's gateway pays\nwith a test instrument and refuses any merchant it does not know as a\ntest one. Named by its domain (its profile at `/.well-known/ucp`, or\n`/.well-known/acp.json`), always in each person's own name. No\ncredential is ever part of a spec.",
+      properties: {
+        id: {
+          description: 'Stable within the application: `example-store`',
+          title: 'Id',
+          type: 'string',
+        },
+        protocol: {
+          $ref: '#/$defs/CommerceProtocol',
+          description: '`ucp` or `acp`',
+        },
+        merchant: {
+          description: "The merchant's domain: `store.example`",
+          title: 'Merchant',
+          type: 'string',
+        },
+        access: {
+          $ref: '#/$defs/Access',
+          default: 'read',
+          description:
+            'How far: `read` (searches and reads its checkouts), or `write` (also fills a checkout and buys, each purchase asked of the person)',
+        },
+        limit: {
+          anyOf: [
+            {
+              $ref: '#/$defs/AppSpendLimit',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'The most one purchase may cost there: required for `write`',
+        },
+      },
+      required: ['id', 'protocol', 'merchant'],
+      title: 'AppCommerceMerchant',
+      type: 'object',
+    },
     AppComputer: {
       additionalProperties: false,
       description:
@@ -1559,6 +1620,26 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppSpaceGrant',
       type: 'object',
     },
+    AppSpendLimit: {
+      additionalProperties: false,
+      description:
+        'The most one purchase may cost at a merchant (AGENT_PROTOCOLS PI-22).',
+      properties: {
+        amount: {
+          description: 'At most this much, as written: `50`, `12.50`',
+          title: 'Amount',
+          type: 'string',
+        },
+        currency: {
+          description: 'Its currency, ISO 4217: `USD`',
+          title: 'Currency',
+          type: 'string',
+        },
+      },
+      required: ['amount', 'currency'],
+      title: 'AppSpendLimit',
+      type: 'object',
+    },
     AppStarter: {
       additionalProperties: false,
       description: 'A first message offered to the user.',
@@ -2123,6 +2204,13 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'CheckStage',
       type: 'string',
     },
+    CommerceProtocol: {
+      description:
+        'The commerce protocol a merchant is reached over (AGENT_PROTOCOLS PI-01).',
+      enum: ['ucp', 'acp'],
+      title: 'CommerceProtocol',
+      type: 'string',
+    },
     CriterionKind: {
       description: 'How a criterion is assessed.',
       enum: ['metric', 'noul', 'choice', 'score'],
@@ -2478,7 +2566,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     protocols: {
       description:
-        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact` and `a2a` blocks are refused unless their protocol is listed, and a planned protocol only while it is not offered',
+        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact` and `a2a` blocks, and each merchant of `commerce`, are refused unless their protocol is listed, and a planned protocol only while it is not offered',
       items: {
         type: 'string',
       },
@@ -2502,6 +2590,10 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     pact: {
       $ref: '#/$defs/AppPact',
       description: 'PACT: businesses it asks for each person',
+    },
+    commerce: {
+      $ref: '#/$defs/AppCommerce',
+      description: 'UCP and ACP: merchants it shops at for each person',
     },
     a2a: {
       $ref: '#/$defs/AppA2A',

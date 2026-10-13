@@ -69,6 +69,26 @@ An agent declares in `capabilities.extensions` only the extensions
 contributed to these points (`declared_extensions`); the seller answers
 with those it activates.
 
+## In an application
+
+An application lists `acp` in `protocols` and names each merchant in its
+`commerce` block (`commerce.merchants[]`: `protocol: acp`, the merchant's
+domain, a level and, to buy, the most one purchase may cost, `limit`). For
+now Datalayer shops at **test merchants only**, with no real payment
+(decided 2026-10-13). On Datalayer the runtime holds nothing of it: each
+merchant is one server, `acp_<domain>` (`acp_outfitters_example`), which is the
+MCP gateway's `acp` toolset (`/mcp?only=acp&acp-merchant=<domain>`)
+reached in the person's name; its tools are named with it
+(`acp_outfitters_example_acp_complete`).
+
+The application's Rules decide those tools by what agentspecs says each does
+(`protocol-tools/agentic-commerce.yaml`): reading reads, filling a checkout writes,
+`acp_complete` buys. A purchase is always asked of the person, by the
+gateway, with the exact checkout — whatever the rule on buying says, the
+runtime lets the call reach the gateway rather than ask twice — and made at
+most once; *Leave it to me* buys nothing. A connection that reads gives only
+what reads.
+
 ## Reading a seller's discovery
 
 `AgenticCommerceClient.discover()` reads `/.well-known/acp.json` through

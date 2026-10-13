@@ -193,8 +193,11 @@ def test_the_pap_tools_are_classed_as_agentspecs_classes_them() -> None:
 
     assert TOOL_CLASSES == of("pap")
     assert TOOL_CLASSES["pap_confirm"] == ("write", "buy")
-    assert {name: (cls,) for name, cls in UCP_CLASSES.items()} == of("ucp")
-    assert {name: (cls,) for name, cls in ACP_CLASSES.items()} == of("agentic-commerce")
+    # The tables name the gateway's tools; the clients' operations are the same without the prefix.
+    assert {f"ucp_{name}": (cls,) for name, cls in UCP_CLASSES.items()} == of("ucp")
+    assert {f"acp_{name}": (cls,) for name, cls in ACP_CLASSES.items()} == of(
+        "agentic-commerce"
+    )
 
 
 def business() -> AppSpec:
@@ -247,5 +250,62 @@ async def test_the_rules_decide_a_businesss_pact_tools_by_what_they_do() -> None
 def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
     assert pap_connections.server_id("air.example", "pact") == "pact_air_example"
     assert pap_connections.server_id("air.example") == "pap_air_example"
+    assert pap_connections.server_id("store.example", "ucp") == "ucp_store_example"
     with pytest.raises(ValueError, match="no gateway toolset"):
-        pap_connections.server_id("air.example", "ucp")
+        pap_connections.server_id("air.example", "tap")
+
+
+def shop() -> AppSpec:
+    """Shopping Assistant: a person's agent at Example Store over UCP (AGENT_PROTOCOLS PI-20)."""
+    spec = APP_CATALOGUE["shopping-assistant"].model_copy(deep=True)
+    spec.commerce.merchants.append(
+        {"id": "outfitters", "protocol": "acp", "merchant": "outfitters.example"}
+    )
+    return spec
+
+
+def test_a_merchant_is_the_gateways_commerce_toolset_in_the_persons_name() -> None:
+    pap_connections.remember_agent("agent-8", shop())
+    companies = pap_connections.companies_of_agent("agent-8")
+    assert companies == (
+        ("acp_outfitters_example", "user"),
+        ("ucp_store_example", "user"),
+    )
+    assert pap_connections.protocol_of("ucp_store_example") == "ucp"
+    built = toolsets_for_the_run(
+        [], "principal-token", users_token="person-token", companies=companies
+    )
+    urls = sorted(each.wrapped.client.transport.url for each in built)
+    assert urls[0].endswith("/mcp?only=acp&acp-merchant=outfitters.example")
+    assert urls[1].endswith("/mcp?only=ucp&ucp-merchant=store.example")
+
+
+@pytest.mark.asyncio
+async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
+    """Decided 2026-10-13: whatever the rule on buying says, the gateway asks the
+    person with the exact checkout; the runtime does not ask again. A connection
+    that only reads buys nothing."""
+    spec = shop()
+    pap_connections.remember_agent("agent-9", spec)
+    assert pap_connections.classes_of("ucp_store_example_ucp_complete") == ("buy",)
+    assert pap_connections.is_purchase("ucp_store_example_ucp_complete")
+    assert not pap_connections.is_purchase("ucp_store_example_ucp_search")
+    for behaviour in ("do_it", "ask_first", "if_asked"):
+        decided = spec.model_copy(
+            update={
+                "rules": [
+                    rule.model_copy(update={"behaviour": behaviour})
+                    for rule in spec.rules
+                ]
+            }
+        )
+        pap_connections.remember_agent("agent-9", decided)
+        harness = Harness(decided)
+        args = {"checkout_id": "chk_1"}
+        assert await harness.call("ucp_store_example_ucp_complete", args) == args
+        assert harness.asked == []
+        assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
+    harness = Harness(spec)
+    assert harness.capability.given("ucp_store_example_ucp_complete") is True
+    assert harness.capability.given("acp_outfitters_example_acp_complete") is False
+    assert harness.capability.given("acp_outfitters_example_acp_get_checkout") is True

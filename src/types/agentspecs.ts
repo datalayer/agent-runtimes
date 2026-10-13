@@ -594,6 +594,36 @@ export interface AppPactSpec {
   connections: AppPactConnectionSpec[];
 }
 
+/** The most one purchase may cost at a merchant (AGENT_PROTOCOLS PI-22). */
+export interface AppSpendLimitSpec {
+  /** As written: `50`, `12.50`. */
+  amount: string;
+  /** ISO 4217: `USD`. */
+  currency: string;
+}
+
+/**
+ * A merchant the application shops at for each person, over UCP or ACP
+ * (AGENT_PROTOCOLS PI-01). Test merchants only, every purchase asked of the
+ * person (decided 2026-10-13). Never a credential.
+ */
+export interface AppCommerceMerchantSpec {
+  /** Stable within the application: `example-store`. */
+  id: string;
+  protocol: 'ucp' | 'acp';
+  /** The merchant's domain: `store.example`. */
+  merchant: string;
+  /** `read`: searches and reads; `write`: also fills a checkout and buys, each purchase asked. */
+  access: 'read' | 'write';
+  /** The most one purchase may cost: required for `write`. */
+  limit?: AppSpendLimitSpec;
+}
+
+/** UCP and ACP: the merchants it shops at for each person. */
+export interface AppCommerceSpec {
+  merchants: AppCommerceMerchantSpec[];
+}
+
 /**
  * An A2A extension the application's Agent Card advertises, beside the
  * runtime's own (AGENT_PROTOCOLS PR-02). Its params are public: never a
@@ -1229,6 +1259,8 @@ export interface AppSpec {
   pap?: AppPapSpec;
   /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */
   pact?: AppPactSpec;
+  /** UCP and ACP: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01). */
+  commerce?: AppCommerceSpec;
   /** A2A: the extensions its Agent Card advertises (AGENT_PROTOCOLS PR-02). */
   a2a?: AppA2ASpec;
   rules: AppRuleSpec[];

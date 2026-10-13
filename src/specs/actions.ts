@@ -695,12 +695,11 @@ export const PROTOCOL_TOOL_CLASSES: Record<
   'agentic-commerce': {
     connection: 'acp',
     tools: {
-      propose_completion: ['read'],
-      get_checkout: ['read'],
-      create_checkout: ['write'],
-      update_checkout: ['write'],
-      cancel_checkout: ['write'],
-      complete: ['buy'],
+      acp_get_checkout: ['read'],
+      acp_create_checkout: ['write'],
+      acp_update_checkout: ['write'],
+      acp_cancel_checkout: ['write'],
+      acp_complete: ['buy'],
     },
   },
   pact: {
@@ -732,13 +731,12 @@ export const PROTOCOL_TOOL_CLASSES: Record<
   ucp: {
     connection: 'ucp',
     tools: {
-      search: ['read'],
-      propose_completion: ['read'],
-      get_checkout: ['read'],
-      create_checkout: ['write'],
-      update_checkout: ['write'],
-      cancel_checkout: ['write'],
-      complete: ['buy'],
+      ucp_search: ['read'],
+      ucp_get_checkout: ['read'],
+      ucp_create_checkout: ['write'],
+      ucp_update_checkout: ['write'],
+      ucp_cancel_checkout: ['write'],
+      ucp_complete: ['buy'],
     },
   },
 };
@@ -1002,6 +1000,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'report-from-a-file': {},
   sales: {},
   'ship-or-fix': {},
+  'shopping-assistant': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},
@@ -1073,6 +1072,7 @@ export const APP_ESCALATIONS: Record<
   'report-from-a-file': {},
   sales: {},
   'ship-or-fix': {},
+  'shopping-assistant': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},

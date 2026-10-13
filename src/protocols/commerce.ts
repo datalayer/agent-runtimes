@@ -29,17 +29,27 @@ type Json = Record<string, any>;
 export function operationClasses(
   protocol: string,
 ): Record<string, ActionClass> {
+  const table = PROTOCOL_TOOL_CLASSES[protocol];
+  // The table names the gateway's tools (`ucp_search`): an operation is the
+  // tool's name without its connection's prefix.
+  const prefix = `${table.connection}_`;
   const out: Record<string, ActionClass> = {};
-  for (const [name, classes] of Object.entries(
-    PROTOCOL_TOOL_CLASSES[protocol].tools,
-  )) {
+  for (const [name, classes] of Object.entries(table.tools)) {
     if (classes.length !== 1) {
       throw new Error(
         `${protocol} ${name} is classed ${classes}: one class each`,
       );
     }
-    out[name.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())] =
-      classes[0];
+    if (!name.startsWith(prefix)) {
+      throw new Error(
+        `${protocol} ${name} is not one of its \`${prefix}\` tools`,
+      );
+    }
+    out[
+      name
+        .slice(prefix.length)
+        .replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
+    ] = classes[0];
   }
   return out;
 }
