@@ -47,7 +47,7 @@ dependencies = [
     # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
     # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
     # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
-    "agentspecs>=0.0.84",
+    "agentspecs>=0.0.85",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

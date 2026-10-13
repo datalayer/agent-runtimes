@@ -7,6 +7,14 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.7
+
+On agentspecs 0.0.85.
+
+- **UCP after the sale** (AGENT_PROTOCOLS PR-31): `get_order` / `getOrder` and `order_summary` / `orderSummary` read an order the merchant placed; the test Example Store serves `/orders/{id}`.
+- **The seven recorded PAP journeys as Studio examples** (PR-05), off until each is drilled live.
+- **Two more scripted Stages** (EX-14, EX-15): *A Purchase, Approved* (UCP) and *A Personal Agent at a Business* (PACT).
+
 ## 1.5.6
 
 On agentspecs 0.0.84. 1.5.5 was tagged but never published: its build failed on two TypeScript errors (the protocol check did not read the `commerce` block's type; the empty scene spec lacked the scripted kind's fields), fixed here. Shopping Desk also checks out at Example Outfitters over ACP.
