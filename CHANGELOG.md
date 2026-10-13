@@ -15,6 +15,16 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.11
+
+On agentspecs 0.0.89.
+
+- **A company or business is told who asks** (PAP_DATALAYER B-04, AGENT_PROTOCOLS PR-13): ai-agents' `metadata.pap` and `metadata.pact` reach the turn as one line before the request (`asked_for_said`) — a business told a signed-in person "You are not signed in" before.
+- **A turn without someone to act for** (B-04, R-07): a server connected per person, with nobody to reach it in the name of, is left out of the turn instead of failing it.
+- **The sign-in card names the company** of a bound Direct Sign-In (P-04), and says when the person's browser came back.
+- **A company's decision keeps its correlation ID** (R-01).
+- **Examples on** (PI-42, EX-11): Signed Reader, Order Desk, Order Tracker, Sign-in Desk.
+
 ## 1.5.10
 
 On agentspecs 0.0.88.
