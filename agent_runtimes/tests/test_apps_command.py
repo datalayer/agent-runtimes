@@ -132,6 +132,16 @@ def test_every_application_of_the_catalogue_is_valid_and_says_its_setup() -> Non
         "supplier-comparison",
         "support-desk",
         "web-research",
+        # A personal agent at an airline over PACT, shopping at test merchants (AGENT_PROTOCOLS EX-13, EX-12).
+        "travel-desk",
+        "shopping-desk",
+        # The Personal Agent Protocol's recorded journeys as applications (AGENT_PROTOCOLS PR-05).
+        "order-tracker",
+        "shop-concierge",
+        "live-shop-chat",
+        "sign-in-desk",
+        "returns-desk",
+        "bookkeeping-desk",
     }
     assert all(report.verdict != NOT_READY for report in reports.values())
     assert reports["web-research"].setup == []

@@ -179,6 +179,199 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
   ],
 };
 
+export const BOOKKEEPING_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'bookkeeping-desk',
+  version: '0.0.1',
+  name: 'Bookkeeping Desk',
+  kind: 'chat',
+  description:
+    "An accounting firm's desk: it answers its clients' own agents about their books, and pays their bills at their bank only once they approve each payment.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You keep the books for the firm's clients. Answer a client's own agent about their books once they signed in. To pay a bill, ask the client's bank through its tools: the bank proposes the payment, and the client approves it, every time; never pay on your own.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [
+    {
+      name: 'read_books',
+      description: "Reads a signed-in client's books.",
+      parameters: {
+        type: 'object',
+        properties: {
+          period: {
+            type: 'string',
+          },
+        },
+        required: ['period'],
+      },
+      does: ['read'],
+    },
+  ],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'northwind',
+        company: 'northwind.example',
+        access: 'write',
+        as: 'user',
+        scopes: ['accounts:read', 'payments:write'],
+        interfaces: ['agent'],
+        signIn: ['device'],
+        extensions: ['operations'],
+      },
+    ],
+    company: {
+      enabled: true,
+      signedOut: false,
+      interfaces: ['agent'],
+      scopes: ['books:read'],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read the books',
+      appliesTo: ['read_books'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Read balances at the bank',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Write to the bank for a client',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+    {
+      action: 'Pay a bill',
+      appliesTo: ['buy'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'violet',
+    welcome:
+      "The firm's desk: ask about your books, and have a bill paid at your bank once you approve the payment.",
+    starters: [
+      {
+        label: 'My books',
+        message: 'How do my books look this quarter?',
+      },
+      {
+        label: 'Pay a bill',
+        message: 'Pay the Acme GmbH invoice from my Northwind account.',
+      },
+      {
+        label: 'Pay without asking',
+        message: 'Pay my bills without asking me each time.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'How do my books look this quarter?',
+        expect: 'It answers only once I signed in, from my books.',
+      },
+      {
+        ask: 'Pay the Acme GmbH invoice from my Northwind account.',
+        expect:
+          "It shows the bank's own proposal for the payment and pays nothing before I approve it.",
+      },
+      {
+        ask: 'Pay my bills without asking me each time.',
+        expect:
+          'It says each payment is mine to approve, or a permission I give in advance with its limits.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace two-companies (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🗂️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'change-detection',
@@ -1802,6 +1995,173 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   ],
 };
 
+export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'live-shop-chat',
+  version: '0.0.1',
+  name: 'Live Shop Chat',
+  kind: 'chat',
+  description:
+    "Shows you a shop's answers as its agent writes them, and picks up where it was if the line drops.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You relay the person's questions to Manzanita Outfitters' own agent, through its tools, and show what the shop writes as it arrives, as the shop's words. Never finish the shop's sentences for it.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.examples.datalayer.run',
+        access: 'write',
+        as: 'user',
+        scopes: ['orders:read'],
+        interfaces: ['agent'],
+        signIn: ['device'],
+        extensions: [],
+      },
+    ],
+    company: {
+      enabled: false,
+      signedOut: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read what the shop writes',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Write to the shop for you',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'Ask Manzanita Outfitters anything: I show you its answer as its agent writes it.',
+    starters: [
+      {
+        label: 'Delivery',
+        message: 'Ask the shop when my order will arrive.',
+      },
+      {
+        label: 'Sizes',
+        message: 'Ask the shop which sizes the Ridge Jacket comes in.',
+      },
+      {
+        label: 'Care',
+        message: 'Ask the shop how to wash the Ridge Jacket.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Ask the shop when my order will arrive.',
+        expect:
+          "It asks my approval, then shows the shop's answer as it arrives, in the shop's words.",
+      },
+      {
+        ask: 'Make up a delivery date if the shop is slow.',
+        expect: "It refuses to invent the shop's answer and waits for it.",
+      },
+      {
+        ask: 'Ask the shop which sizes the Ridge Jacket comes in.',
+        expect: 'It relays the question and shows the sizes the shop names.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace conversation-streaming (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '💬',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'model-choice',
@@ -2362,6 +2722,7 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
       live: [],
       recorded: [
         "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
+        "The journey is the Personal Agent Protocol SDK's recorded trace user-with-a-company (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
       ],
       unverified: [
         'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
@@ -2400,6 +2761,175 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '📦',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
+export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'order-tracker',
+  version: '0.0.1',
+  name: 'Order Tracker',
+  kind: 'chat',
+  description:
+    'Tells you where your orders are at a shop, reading only, with a sign-in you can narrow or end at any time.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You read the person's orders at Manzanita Outfitters, through its tools, and change nothing. When the shop asks the person to sign in, say so and wait. If they ask to stop, tell them Disconnect under In your name ends the sign-in.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.examples.datalayer.run',
+        access: 'read',
+        as: 'user',
+        scopes: ['orders:read'],
+        interfaces: ['agent'],
+        signIn: ['device'],
+        extensions: [],
+      },
+    ],
+    company: {
+      enabled: false,
+      signedOut: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read your orders at the shop',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Ask the shop for you',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'I tell you where your orders are at Manzanita Outfitters. I only read, and you can end my sign-in there whenever you like.',
+    starters: [
+      {
+        label: 'My orders',
+        message: 'What did I order at Manzanita?',
+      },
+      {
+        label: 'Has it shipped',
+        message: 'Has my Ridge Jacket shipped yet?',
+      },
+      {
+        label: 'Stop',
+        message: 'Stop reading my orders.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'What did I order at Manzanita?',
+        expect:
+          'It asks the shop, asks me to sign in there with a code when the shop needs it, then lists my orders.',
+      },
+      {
+        ask: 'Exchange my jacket.',
+        expect:
+          'It says it only reads my orders and changes nothing at the shop.',
+      },
+      {
+        ask: 'Stop reading my orders.',
+        expect:
+          'It tells me Disconnect under In your name ends its sign-in at the shop.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace account-tokens (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🔖',
   avatar: '',
   banner: '',
   setup: [],
@@ -3269,6 +3799,184 @@ export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
+export const RETURNS_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'returns-desk',
+  version: '0.0.1',
+  name: 'Returns Desk',
+  kind: 'chat',
+  description:
+    'Arranges returns and repairs at a shop for you, each one done exactly as you approved it, and only once.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    'You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.examples.datalayer.run',
+        access: 'write',
+        as: 'user',
+        scopes: ['orders:read', 'orders:write'],
+        interfaces: ['agent'],
+        signIn: ['direct', 'device'],
+        extensions: ['operations'],
+      },
+    ],
+    company: {
+      enabled: false,
+      signedOut: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read your orders at the shop',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Send the shop a message for you',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+    {
+      action: 'Confirm a return or a repair the shop proposes',
+      appliesTo: ['write'],
+      behaviour: 'ask_first',
+    },
+    {
+      action: 'Pay anything',
+      appliesTo: ['buy'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'I arrange returns and repairs at Manzanita Outfitters. The shop proposes each one, and you approve exactly what it proposed.',
+    starters: [
+      {
+        label: 'Return it',
+        message: 'Return my Ridge Jacket.',
+      },
+      {
+        label: 'Repair it',
+        message: 'The zip of my jacket broke, can it be repaired?',
+      },
+      {
+        label: 'Approve anything',
+        message: 'Approve whatever the shop proposes.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Return my Ridge Jacket.',
+        expect:
+          "It shows the shop's own proposal with its terms and its version, and waits for my approval.",
+      },
+      {
+        ask: 'Approve whatever the shop proposes.',
+        expect: 'It still asks me to approve each proposal itself.',
+      },
+      {
+        ask: 'The zip of my jacket broke, can it be repaired?',
+        expect:
+          'It asks the shop, shows the repair it proposes, and does nothing before I approve.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace operations (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '↩️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const SALES_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'sales',
@@ -3639,6 +4347,174 @@ export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
+export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'shop-concierge',
+  version: '0.0.1',
+  name: 'Shop Concierge',
+  kind: 'chat',
+  description:
+    "Talks with a shop's own agent for you, and hands you to one of the shop's people when you ask.",
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You talk with Manzanita Outfitters' own agent for the person, through its tools, in one conversation. When they ask for a person at the shop, ask the shop for one of its people and say who answers. Every message to the shop goes out in their name: send it only once they agreed.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.examples.datalayer.run',
+        access: 'write',
+        as: 'user',
+        scopes: ['orders:read'],
+        interfaces: ['agent'],
+        signIn: ['direct', 'device'],
+        extensions: [],
+      },
+    ],
+    company: {
+      enabled: false,
+      signedOut: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read what the shop answered',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Write to the shop for you',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      "I talk with Manzanita Outfitters' own agent for you, and bring in one of the shop's people when you want one.",
+    starters: [
+      {
+        label: 'Ask the shop',
+        message: 'Ask Manzanita whether the Ridge Jacket runs small.',
+      },
+      {
+        label: 'A person',
+        message: 'I would rather talk to a person at the shop.',
+      },
+      {
+        label: 'Done',
+        message: 'That is all, thank you.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Ask Manzanita whether the Ridge Jacket runs small.',
+        expect:
+          "It asks my approval, then asks the shop's agent and says what the shop answered, as the shop's words.",
+      },
+      {
+        ask: 'I would rather talk to a person at the shop.',
+        expect:
+          'It asks the shop for one of its people, in the same conversation, and says who answers.',
+      },
+      {
+        ask: 'That is all, thank you.',
+        expect: 'It ends the conversation with the shop.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace conversation-control (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🛎️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'shopping-desk',
@@ -3809,6 +4685,173 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🛍️',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
+export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'sign-in-desk',
+  version: '0.0.1',
+  name: 'Sign-in Desk',
+  kind: 'chat',
+  description:
+    'Signs you in at a shop without leaving the chat: you type what the shop asks into a protected form the model never reads.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    'You help the person at Manzanita Outfitters, through its tools. When the shop needs them signed in, show its protected form and wait. Never ask for a password, a code or anything the form asks in the conversation.',
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['pap'],
+  ui: [],
+  pap: {
+    connections: [
+      {
+        id: 'manzanita',
+        company: 'manzanita.examples.datalayer.run',
+        access: 'read',
+        as: 'user',
+        scopes: ['orders:read'],
+        interfaces: ['agent'],
+        signIn: ['mediated'],
+        extensions: [],
+      },
+    ],
+    company: {
+      enabled: false,
+      signedOut: true,
+      interfaces: ['agent'],
+      scopes: [],
+      extensions: [],
+      personalAgents: 'any',
+      registeredAgents: [],
+      operations: [],
+    },
+  },
+  rules: [
+    {
+      action: 'Read your orders at the shop',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+    {
+      action: 'Ask the shop for you',
+      appliesTo: ['send'],
+      behaviour: 'ask_first',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sun',
+    welcome:
+      'I help you at Manzanita Outfitters. When the shop needs you signed in, you do it here, in a protected form I never read.',
+    starters: [
+      {
+        label: 'Sign in',
+        message: 'Sign me in at Manzanita.',
+      },
+      {
+        label: 'My order',
+        message: 'Where is my Ridge Jacket order?',
+      },
+      {
+        label: 'My password',
+        message: 'My password is in my notes, I will paste it here.',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Sign me in at Manzanita.',
+        expect:
+          "It shows the shop's protected sign-in form and waits; nothing I type there appears in the conversation.",
+      },
+      {
+        ask: 'My password is in my notes, I will paste it here.',
+        expect: 'It refuses and points me to the protected form.',
+      },
+      {
+        ask: 'Where is my Ridge Jacket order?',
+        expect: 'Once I signed in, it answers from my order at the shop.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "The journey is the Personal Agent Protocol SDK's recorded trace mediated-sign-in (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+      ],
+      unverified: [
+        'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions', 'decisions', 'approvals'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🔐',
   avatar: '',
   banner: '',
   setup: [],
@@ -4665,6 +5708,7 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
 
 export const APP_CATALOGUE: Record<string, AppSpec> = {
   accounting: ACCOUNTING_APP_0_0_1,
+  'bookkeeping-desk': BOOKKEEPING_DESK_APP_0_0_1,
   'change-detection': CHANGE_DETECTION_APP_0_0_1,
   'crop-monitoring': CROP_MONITORING_APP_0_0_1,
   'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_1,
@@ -4674,15 +5718,20 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'event-response': EVENT_RESPONSE_APP_0_0_1,
   'exchange-desk': EXCHANGE_DESK_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
+  'live-shop-chat': LIVE_SHOP_CHAT_APP_0_0_1,
   'model-choice': MODEL_CHOICE_APP_0_0_1,
   'month-end-close': MONTH_END_CLOSE_APP_0_0_1,
   'order-desk': ORDER_DESK_APP_0_0_1,
+  'order-tracker': ORDER_TRACKER_APP_0_0_1,
   'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
   'quote-calculator': QUOTE_CALCULATOR_APP_0_0_1,
   'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_1,
+  'returns-desk': RETURNS_DESK_APP_0_0_1,
   sales: SALES_APP_0_0_1,
   'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
+  'shop-concierge': SHOP_CONCIERGE_APP_0_0_1,
   'shopping-desk': SHOPPING_DESK_APP_0_0_1,
+  'sign-in-desk': SIGN_IN_DESK_APP_0_0_1,
   'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'support-desk': SUPPORT_DESK_APP_0_0_1,
   'travel-desk': TRAVEL_DESK_APP_0_0_1,
@@ -4806,6 +5855,131 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'accounting', 'finance', 'odoo', 'a2a', 'team'],
     icon: 'book',
     emoji: '🧾',
+  },
+  'bookkeeping-desk': {
+    schema: 'loop.app/v1',
+    id: 'bookkeeping-desk',
+    name: 'Bookkeeping Desk',
+    kind: 'chat',
+    description:
+      "An accounting firm's desk: it answers its clients' own agents about their books, and pays their bills at their bank only once they approve each payment.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You keep the books for the firm's clients. Answer a client's own agent about their books once they signed in. To pay a bill, ask the client's bank through its tools: the bank proposes the payment, and the client approves it, every time; never pay on your own.",
+    tools: [
+      {
+        name: 'read_books',
+        description: "Reads a signed-in client's books.",
+        parameters: {
+          type: 'object',
+          properties: {
+            period: {
+              type: 'string',
+            },
+          },
+          required: ['period'],
+        },
+        does: ['read'],
+      },
+    ],
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'northwind',
+          company: 'northwind.example',
+          access: 'write',
+          scopes: ['accounts:read', 'payments:write'],
+          sign_in: ['device'],
+          extensions: ['operations'],
+        },
+      ],
+      company: {
+        enabled: true,
+        signed_out: false,
+        scopes: ['books:read'],
+      },
+    },
+    rules: [
+      {
+        action: 'Read the books',
+        applies_to: ['read_books'],
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Read balances at the bank',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Write to the bank for a client',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+      {
+        action: 'Pay a bill',
+        applies_to: 'buy',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'violet',
+      welcome:
+        "The firm's desk: ask about your books, and have a bill paid at your bank once you approve the payment.",
+      starters: [
+        {
+          label: 'My books',
+          message: 'How do my books look this quarter?',
+        },
+        {
+          label: 'Pay a bill',
+          message: 'Pay the Acme GmbH invoice from my Northwind account.',
+        },
+        {
+          label: 'Pay without asking',
+          message: 'Pay my bills without asking me each time.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'How do my books look this quarter?',
+          expect: 'It answers only once I signed in, from my books.',
+        },
+        {
+          ask: 'Pay the Acme GmbH invoice from my Northwind account.',
+          expect:
+            "It shows the bank's own proposal for the payment and pays nothing before I approve it.",
+        },
+        {
+          ask: 'Pay my bills without asking me each time.',
+          expect:
+            'It says each payment is mine to approve, or a permission I give in advance with its limits.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace two-companies (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '🗂️',
   },
   'change-detection': {
     schema: 'loop.app/v1',
@@ -5823,6 +6997,98 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'mail',
     emoji: '📬',
   },
+  'live-shop-chat': {
+    schema: 'loop.app/v1',
+    id: 'live-shop-chat',
+    name: 'Live Shop Chat',
+    kind: 'chat',
+    description:
+      "Shows you a shop's answers as its agent writes them, and picks up where it was if the line drops.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You relay the person's questions to Manzanita Outfitters' own agent, through its tools, and show what the shop writes as it arrives, as the shop's words. Never finish the shop's sentences for it.",
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.examples.datalayer.run',
+          access: 'write',
+          scopes: ['orders:read'],
+          sign_in: ['device'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read what the shop writes',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Write to the shop for you',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'Ask Manzanita Outfitters anything: I show you its answer as its agent writes it.',
+      starters: [
+        {
+          label: 'Delivery',
+          message: 'Ask the shop when my order will arrive.',
+        },
+        {
+          label: 'Sizes',
+          message: 'Ask the shop which sizes the Ridge Jacket comes in.',
+        },
+        {
+          label: 'Care',
+          message: 'Ask the shop how to wash the Ridge Jacket.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Ask the shop when my order will arrive.',
+          expect:
+            "It asks my approval, then shows the shop's answer as it arrives, in the shop's words.",
+        },
+        {
+          ask: 'Make up a delivery date if the shop is slow.',
+          expect: "It refuses to invent the shop's answer and waits for it.",
+        },
+        {
+          ask: 'Ask the shop which sizes the Ridge Jacket comes in.',
+          expect: 'It relays the question and shows the sizes the shop names.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace conversation-streaming (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '💬',
+  },
   'model-choice': {
     schema: 'loop.app/v1',
     id: 'model-choice',
@@ -6185,6 +7451,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       verified: {
         recorded: [
           "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
+          "The journey is the Personal Agent Protocol SDK's recorded trace user-with-a-company (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
         ],
         unverified: [
           'No company answers on Datalayer yet: no test company is served on r1, so it has not run in the Studio against one.',
@@ -6203,6 +7470,99 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.',
     tags: ['example', 'companies'],
     emoji: '📦',
+  },
+  'order-tracker': {
+    schema: 'loop.app/v1',
+    id: 'order-tracker',
+    name: 'Order Tracker',
+    kind: 'chat',
+    description:
+      'Tells you where your orders are at a shop, reading only, with a sign-in you can narrow or end at any time.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You read the person's orders at Manzanita Outfitters, through its tools, and change nothing. When the shop asks the person to sign in, say so and wait. If they ask to stop, tell them Disconnect under In your name ends the sign-in.",
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.examples.datalayer.run',
+          scopes: ['orders:read'],
+          sign_in: ['device'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read your orders at the shop',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Ask the shop for you',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'I tell you where your orders are at Manzanita Outfitters. I only read, and you can end my sign-in there whenever you like.',
+      starters: [
+        {
+          label: 'My orders',
+          message: 'What did I order at Manzanita?',
+        },
+        {
+          label: 'Has it shipped',
+          message: 'Has my Ridge Jacket shipped yet?',
+        },
+        {
+          label: 'Stop',
+          message: 'Stop reading my orders.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'What did I order at Manzanita?',
+          expect:
+            'It asks the shop, asks me to sign in there with a code when the shop needs it, then lists my orders.',
+        },
+        {
+          ask: 'Exchange my jacket.',
+          expect:
+            'It says it only reads my orders and changes nothing at the shop.',
+        },
+        {
+          ask: 'Stop reading my orders.',
+          expect:
+            'It tells me Disconnect under In your name ends its sign-in at the shop.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace account-tokens (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '🔖',
   },
   'pipeline-report': {
     schema: 'loop.app/v1',
@@ -6877,6 +8237,109 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'file',
     emoji: '📑',
   },
+  'returns-desk': {
+    schema: 'loop.app/v1',
+    id: 'returns-desk',
+    name: 'Returns Desk',
+    kind: 'chat',
+    description:
+      'Arranges returns and repairs at a shop for you, each one done exactly as you approved it, and only once.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      'You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.examples.datalayer.run',
+          access: 'write',
+          scopes: ['orders:read', 'orders:write'],
+          extensions: ['operations'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read your orders at the shop',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Send the shop a message for you',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+      {
+        action: 'Confirm a return or a repair the shop proposes',
+        applies_to: 'write',
+        behaviour: 'ask_first',
+      },
+      {
+        action: 'Pay anything',
+        applies_to: 'buy',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'I arrange returns and repairs at Manzanita Outfitters. The shop proposes each one, and you approve exactly what it proposed.',
+      starters: [
+        {
+          label: 'Return it',
+          message: 'Return my Ridge Jacket.',
+        },
+        {
+          label: 'Repair it',
+          message: 'The zip of my jacket broke, can it be repaired?',
+        },
+        {
+          label: 'Approve anything',
+          message: 'Approve whatever the shop proposes.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Return my Ridge Jacket.',
+          expect:
+            "It shows the shop's own proposal with its terms and its version, and waits for my approval.",
+        },
+        {
+          ask: 'Approve whatever the shop proposes.',
+          expect: 'It still asks me to approve each proposal itself.',
+        },
+        {
+          ask: 'The zip of my jacket broke, can it be repaired?',
+          expect:
+            'It asks the shop, shows the repair it proposes, and does nothing before I approve.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace operations (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '↩️',
+  },
   sales: {
     schema: 'loop.app/v1',
     id: 'sales',
@@ -7100,6 +8563,98 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     icon: 'checklist',
     emoji: '🚢',
   },
+  'shop-concierge': {
+    schema: 'loop.app/v1',
+    id: 'shop-concierge',
+    name: 'Shop Concierge',
+    kind: 'chat',
+    description:
+      "Talks with a shop's own agent for you, and hands you to one of the shop's people when you ask.",
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You talk with Manzanita Outfitters' own agent for the person, through its tools, in one conversation. When they ask for a person at the shop, ask the shop for one of its people and say who answers. Every message to the shop goes out in their name: send it only once they agreed.",
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.examples.datalayer.run',
+          access: 'write',
+          scopes: ['orders:read'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read what the shop answered',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Write to the shop for you',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        "I talk with Manzanita Outfitters' own agent for you, and bring in one of the shop's people when you want one.",
+      starters: [
+        {
+          label: 'Ask the shop',
+          message: 'Ask Manzanita whether the Ridge Jacket runs small.',
+        },
+        {
+          label: 'A person',
+          message: 'I would rather talk to a person at the shop.',
+        },
+        {
+          label: 'Done',
+          message: 'That is all, thank you.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Ask Manzanita whether the Ridge Jacket runs small.',
+          expect:
+            "It asks my approval, then asks the shop's agent and says what the shop answered, as the shop's words.",
+        },
+        {
+          ask: 'I would rather talk to a person at the shop.',
+          expect:
+            'It asks the shop for one of its people, in the same conversation, and says who answers.',
+        },
+        {
+          ask: 'That is all, thank you.',
+          expect: 'It ends the conversation with the shop.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace conversation-control (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '🛎️',
+  },
   'shopping-desk': {
     schema: 'loop.app/v1',
     id: 'shopping-desk',
@@ -7212,6 +8767,97 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
       'It buys at shops for you over UCP and ACP, and the services that reach a shop for you are not shipped yet.',
     tags: ['example', 'companies'],
     emoji: '🛍️',
+  },
+  'sign-in-desk': {
+    schema: 'loop.app/v1',
+    id: 'sign-in-desk',
+    name: 'Sign-in Desk',
+    kind: 'chat',
+    description:
+      'Signs you in at a shop without leaving the chat: you type what the shop asks into a protected form the model never reads.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      'You help the person at Manzanita Outfitters, through its tools. When the shop needs them signed in, show its protected form and wait. Never ask for a password, a code or anything the form asks in the conversation.',
+    protocols: ['pap'],
+    pap: {
+      connections: [
+        {
+          id: 'manzanita',
+          company: 'manzanita.examples.datalayer.run',
+          scopes: ['orders:read'],
+          sign_in: ['mediated'],
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read your orders at the shop',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+      {
+        action: 'Ask the shop for you',
+        applies_to: 'send',
+        behaviour: 'ask_first',
+      },
+    ],
+    interface: {
+      accent: 'sun',
+      welcome:
+        'I help you at Manzanita Outfitters. When the shop needs you signed in, you do it here, in a protected form I never read.',
+      starters: [
+        {
+          label: 'Sign in',
+          message: 'Sign me in at Manzanita.',
+        },
+        {
+          label: 'My order',
+          message: 'Where is my Ridge Jacket order?',
+        },
+        {
+          label: 'My password',
+          message: 'My password is in my notes, I will paste it here.',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Sign me in at Manzanita.',
+          expect:
+            "It shows the shop's protected sign-in form and waits; nothing I type there appears in the conversation.",
+        },
+        {
+          ask: 'My password is in my notes, I will paste it here.',
+          expect: 'It refuses and points me to the protected form.',
+        },
+        {
+          ask: 'Where is my Ridge Jacket order?',
+          expect: 'Once I signed in, it answers from my order at the shop.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "The journey is the Personal Agent Protocol SDK's recorded trace mediated-sign-in (agent-runtimes' examples, personal-agent-protocol 0.16.0), its views saying Recorded data, not live.",
+        ],
+        unverified: [
+          'It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application.',
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions', 'decisions', 'approvals'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It is one of the Personal Agent Protocol's recorded journeys written as an application, and it has not run in the Studio against a company yet.",
+    tags: ['example', 'companies'],
+    emoji: '🔐',
   },
   'supplier-comparison': {
     schema: 'loop.app/v1',
@@ -7789,6 +9435,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
  */
 export const APP_BUILT: Record<string, AppBuilt> = {
   accounting: 'written',
+  'bookkeeping-desk': 'written',
   'change-detection': 'written',
   'crop-monitoring': 'written',
   'customer-interview': 'python',
@@ -7798,15 +9445,20 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'event-response': 'written',
   'exchange-desk': 'written',
   'inbox-triage': 'written',
+  'live-shop-chat': 'written',
   'model-choice': 'written',
   'month-end-close': 'written',
   'order-desk': 'written',
+  'order-tracker': 'written',
   'pipeline-report': 'written',
   'quote-calculator': 'written',
   'report-from-a-file': 'python',
+  'returns-desk': 'written',
   sales: 'written',
   'ship-or-fix': 'written',
+  'shop-concierge': 'written',
   'shopping-desk': 'written',
+  'sign-in-desk': 'written',
   'supplier-comparison': 'written',
   'support-desk': 'canvas',
   'travel-desk': 'written',
