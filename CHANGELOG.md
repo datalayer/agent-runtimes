@@ -7,9 +7,9 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## 1.5.5
+## 1.5.6
 
-On agentspecs 0.0.84.
+On agentspecs 0.0.84. 1.5.5 was tagged but never published: its build failed on two TypeScript errors (the protocol check did not read the `commerce` block's type; the empty scene spec lacked the scripted kind's fields), fixed here. Shopping Desk also checks out at Example Outfitters over ACP.
 
 - **A Preview reaches its companies** (PAP_DATALAYER P-01): the runtime asks for its Preview token with its `pap.connections` beside its Spaces (`preview_grants`), so the gateway's `pap` toolset can reach the companies the Maker reviewed; no Preview could before.
 - **Talking to a company is a send** (R-02): `pap_ask` and `pap_handoff` are classed send, *Ask me first* by default; a read connection to a company no longer converses.
