@@ -651,11 +651,11 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
+CUSTOMER_INTERVIEW_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "customer-interview",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Customer Interview",
         "kind": "chat",
         "description": "Interviews a customer about what you want to learn, without leading questions, and turns the conversation into insights that each cite what was said.",
@@ -865,11 +865,11 @@ CUSTOMER_INTERVIEW_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DATA_QUALITY_APP_0_0_1 = AppSpec.model_validate(
+DATA_QUALITY_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "data-quality",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Data Quality Investigation",
         "kind": "decision",
         "description": "Which anomalies in this dataset should we fix first? For a data team, before a dataset is used for a decision.",
@@ -1454,11 +1454,11 @@ ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
+EVENT_RESPONSE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "event-response",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Event response",
         "kind": "chat",
         "description": "Takes word of a live event — a flood, a fire, a storm — asks Disaster assessment for the area affected and the damage and Change detection for what changed on the ground, each over A2A, and reports what they answered, adding no figure of its own.",
@@ -1593,11 +1593,11 @@ EVENT_RESPONSE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
+EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "exchange-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Exchange Desk",
         "kind": "chat",
         "description": "Answers people's own agents about their orders and exchanges them, each exchange proposed with its exact terms and done once the person approves.",
@@ -1613,12 +1613,12 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
                 "name": "exchange_order",
                 "description": "Exchanges an order for another size, once the person approved it.",
                 "parameters": {
-                    "type": "object",
                     "properties": {
                         "order_id": {"type": "string"},
                         "size": {"type": "string"},
                     },
                     "required": ["order_id", "size"],
+                    "type": "object",
                 },
                 "does": ["write"],
             }
@@ -1707,9 +1707,11 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
             ],
             "verified": {
                 "live": [],
-                "recorded": [],
+                "recorded": [
+                    "Its exchange_order runs in process in agent-runtimes' tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done."
+                ],
                 "unverified": [
-                    "Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes, to release), and its exchange_order has no code, so no exchange was proposed or done."
+                    "Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes 1.5.11), and its exchange_order had no code yet. Not drilled since."
                 ],
             },
         },
@@ -1731,8 +1733,8 @@ EXCHANGE_DESK_APP_0_0_1 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "Its exchange_order has no code yet, so it cannot exchange an order for a person.",
-        "tags": ["example", "companies"],
+        "unavailable_because": "Its exchange_order is written against the hosted Manzanita and has not been drilled live yet.",
+        "tags": ["example", "companies", "python"],
         "icon": "apps",
         "emoji": "🏪",
         "avatar": "",
@@ -1752,7 +1754,7 @@ GUEST_DESK_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "cog-crawler:0.0.1",
         "team": "",
-        "instructions": "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the Datalayer account they signed in with, as the request names it — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries.",
+        "instructions": "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — their handle and name, as the request names them — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries: no email, which the business is never told.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -2233,11 +2235,11 @@ LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-MODEL_CHOICE_APP_0_0_1 = AppSpec.model_validate(
+MODEL_CHOICE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "model-choice",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Model Choice",
         "kind": "decision",
         "description": "Which chat model should this use case run on? For a team choosing a model for one job — a summarizer, a classifier, an agent — from what a benchmark run measured and what a decision model reads in the answers.",
@@ -3224,11 +3226,11 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
+QUOTE_CALCULATOR_APP_0_0_5 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "quote-calculator",
-        "version": "0.0.1",
+        "version": "0.0.5",
         "name": "Quote Calculator",
         "kind": "widget",
         "description": "Computes a quote from a number of seats, a plan and a term, and shows how the total is made.",
@@ -3452,11 +3454,11 @@ QUOTE_CALCULATOR_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-REPORT_FROM_A_FILE_APP_0_0_1 = AppSpec.model_validate(
+REPORT_FROM_A_FILE_APP_0_0_4 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "report-from-a-file",
-        "version": "0.0.1",
+        "version": "0.0.4",
         "name": "Report from a File",
         "kind": "widget",
         "description": "Takes a CSV file, analyses it in the sandbox, and gives back a report: what the data holds, what stands out, and what is missing.",
@@ -3696,7 +3698,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
         "owner": "Datalayer <info@datalayer.io>",
         "agent": "cog-crawler:0.0.1",
         "team": "",
-        "instructions": "You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.",
+        "instructions": "You arrange returns and repairs at Manzanita Outfitters for the person. Ask the shop for a return or a repair through its API, with pap_propose; the shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.",
         "model": "",
         "skills": [],
         "backend_tools": [],
@@ -3715,7 +3717,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
                     "access": "write",
                     "as": "user",
                     "scopes": ["orders:read", "orders:write"],
-                    "interfaces": ["agent"],
+                    "interfaces": ["agent", "openapi"],
                     "sign_in": ["direct", "device"],
                     "extensions": ["operations"],
                 }
@@ -3839,7 +3841,7 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "The test company Manzanita proposes returns and repairs only through its API, and this application asks it through its agent, so neither can be shown live yet.",
+        "unavailable_because": "It asks the test company Manzanita for returns and repairs through its API, which Datalayer's gateway does not reach yet, so neither can be shown live yet.",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "↩️",
@@ -3849,11 +3851,11 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SALES_APP_0_0_1 = AppSpec.model_validate(
+SALES_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "sales",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Sales",
         "kind": "chat",
         "description": "Takes a request for a financial report, such as revenue for a period, open invoices or a customer's balance, asks the Accounting application for it over A2A and hands over what Accounting answered, without adding a figure of its own.",
@@ -3983,11 +3985,11 @@ SALES_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SHIP_OR_FIX_APP_0_0_1 = AppSpec.model_validate(
+SHIP_OR_FIX_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "ship-or-fix",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Ship or Fix",
         "kind": "decision",
         "description": "Which agent configuration should we ship, on the evidence of a benchmark run? For an AI platform team, after every run.",
@@ -4350,7 +4352,7 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
         "decision": None,
         "samples": {"documents": [], "alternatives": []},
         "enabled": False,
-        "unavailable_because": "Nobody works at the test company Manzanita to take a conversation, so asking for one of the shop's people cannot be shown live yet.",
+        "unavailable_because": "The test company Manzanita's staff, who take a conversation handed to them, are not on duty at the hosted shop yet, so asking for one of its people cannot be shown live yet.",
         "tags": ["example", "companies"],
         "icon": "apps",
         "emoji": "🛎️",
@@ -4807,11 +4809,11 @@ SIGNED_READER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
+SUPPLIER_COMPARISON_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "supplier-comparison",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Supplier Comparison",
         "kind": "decision",
         "description": "Which supplier should we choose for these orders? For an operations or procurement lead, at each sourcing round.",
@@ -5013,11 +5015,11 @@ SUPPLIER_COMPARISON_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SUPPORT_DESK_APP_0_0_1 = AppSpec.model_validate(
+SUPPORT_DESK_APP_0_0_4 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "support-desk",
-        "version": "0.0.1",
+        "version": "0.0.4",
         "name": "Support Desk",
         "kind": "chat",
         "description": "Answers product questions from the documentation it was given, cites the passage, and says when the documentation does not hold the answer.",
@@ -5585,32 +5587,32 @@ APP_CATALOGUE: Dict[str, AppSpec] = {
     "bookkeeping-desk": BOOKKEEPING_DESK_APP_0_0_1,
     "change-detection": CHANGE_DETECTION_APP_0_0_1,
     "crop-monitoring": CROP_MONITORING_APP_0_0_1,
-    "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_1,
-    "data-quality": DATA_QUALITY_APP_0_0_1,
+    "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_2,
+    "data-quality": DATA_QUALITY_APP_0_0_2,
     "decide": DECIDE_APP_0_0_1,
     "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_1,
     "errand-runner": ERRAND_RUNNER_APP_0_0_1,
-    "event-response": EVENT_RESPONSE_APP_0_0_1,
-    "exchange-desk": EXCHANGE_DESK_APP_0_0_1,
+    "event-response": EVENT_RESPONSE_APP_0_0_2,
+    "exchange-desk": EXCHANGE_DESK_APP_0_0_2,
     "guest-desk": GUEST_DESK_APP_0_0_1,
     "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
     "live-shop-chat": LIVE_SHOP_CHAT_APP_0_0_1,
-    "model-choice": MODEL_CHOICE_APP_0_0_1,
+    "model-choice": MODEL_CHOICE_APP_0_0_2,
     "month-end-close": MONTH_END_CLOSE_APP_0_0_1,
     "order-desk": ORDER_DESK_APP_0_0_1,
     "order-tracker": ORDER_TRACKER_APP_0_0_1,
     "pipeline-report": PIPELINE_REPORT_APP_0_0_1,
-    "quote-calculator": QUOTE_CALCULATOR_APP_0_0_1,
-    "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_1,
+    "quote-calculator": QUOTE_CALCULATOR_APP_0_0_5,
+    "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_4,
     "returns-desk": RETURNS_DESK_APP_0_0_1,
-    "sales": SALES_APP_0_0_1,
-    "ship-or-fix": SHIP_OR_FIX_APP_0_0_1,
+    "sales": SALES_APP_0_0_2,
+    "ship-or-fix": SHIP_OR_FIX_APP_0_0_2,
     "shop-concierge": SHOP_CONCIERGE_APP_0_0_1,
     "shopping-desk": SHOPPING_DESK_APP_0_0_1,
     "sign-in-desk": SIGN_IN_DESK_APP_0_0_1,
     "signed-reader": SIGNED_READER_APP_0_0_1,
-    "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_1,
-    "support-desk": SUPPORT_DESK_APP_0_0_1,
+    "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_2,
+    "support-desk": SUPPORT_DESK_APP_0_0_4,
     "travel-desk": TRAVEL_DESK_APP_0_0_1,
     "web-research": WEB_RESEARCH_APP_0_0_1,
 }
@@ -5628,7 +5630,7 @@ APP_BUILT: Dict[str, Literal["python", "canvas", "written"]] = {
     "disaster-assessment": "written",
     "errand-runner": "written",
     "event-response": "written",
-    "exchange-desk": "written",
+    "exchange-desk": "python",
     "guest-desk": "written",
     "inbox-triage": "written",
     "live-shop-chat": "written",

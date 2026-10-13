@@ -79,7 +79,7 @@ import {
   useA2ATeam,
   usePeerSandbox,
 } from '../components/teams';
-import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_1 } from '../specs/apps';
+import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_2 } from '../specs/apps';
 import {
   AgentInspector,
   classifyToolCall,
@@ -89,7 +89,7 @@ import {
 import { SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 } from '../specs/teams/teams';
 
 const TEAM = SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1;
-const SALES = SALES_APP_0_0_1;
+const SALES = SALES_APP_0_0_2;
 const ACCOUNTING = ACCOUNTING_APP_0_0_1;
 /** What Accounting reaches, from its Appspec: Odoo, through the odoo-accounting MCP server. */
 const ACCOUNTING_CONNECTIONS = teamConnectionsOf(ACCOUNTING);

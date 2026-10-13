@@ -18,9 +18,9 @@ import {
   ACCOUNTING_APP_0_0_1,
   CHANGE_DETECTION_APP_0_0_1,
   DISASTER_ASSESSMENT_APP_0_0_1,
-  EVENT_RESPONSE_APP_0_0_1,
+  EVENT_RESPONSE_APP_0_0_2,
   MONTH_END_CLOSE_APP_0_0_1,
-  SALES_APP_0_0_1,
+  SALES_APP_0_0_2,
 } from '../../../specs/apps';
 
 /** The tools the entry asks with, as the hook makes them, by the peer's name. */
@@ -136,7 +136,7 @@ describe('a team of three', () => {
     ];
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_1,
+        entry: EVENT_RESPONSE_APP_0_0_2,
         peers,
         inference: {} as never,
       }),
@@ -152,7 +152,7 @@ describe('a team of three', () => {
       'ask_change_detection',
     ]);
     const instructions = agents.made.at(-1)?.instructions ?? '';
-    expect(instructions.startsWith(EVENT_RESPONSE_APP_0_0_1.instructions)).toBe(
+    expect(instructions.startsWith(EVENT_RESPONSE_APP_0_0_2.instructions)).toBe(
       true,
     );
     expect(instructions).toContain(
@@ -160,17 +160,17 @@ describe('a team of three', () => {
     );
     // A team of two keeps the entry's instructions as they are.
     expect(
-      teamInstructions(SALES_APP_0_0_1, [
+      teamInstructions(SALES_APP_0_0_2, [
         { app: ACCOUNTING_APP_0_0_1, askTool: 'ask_accounting' },
       ]),
-    ).toBe(SALES_APP_0_0_1.instructions);
+    ).toBe(SALES_APP_0_0_2.instructions);
   });
 
   it('is not ready until every peer is reached', async () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_1,
+        entry: EVENT_RESPONSE_APP_0_0_2,
         peers: [
           {
             app: DISASTER_ASSESSMENT_APP_0_0_1,
@@ -205,7 +205,7 @@ describe('a team of three', () => {
     ];
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_1,
+        entry: EVENT_RESPONSE_APP_0_0_2,
         peers,
         inference: {} as never,
       }),
@@ -370,7 +370,7 @@ describe('a button pressed on what a peer showed', () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_1,
+        entry: SALES_APP_0_0_2,
         peerApp: ACCOUNTING_APP_0_0_1,
         peer: peerNamed('Accounting'),
         inference: {} as never,
@@ -428,7 +428,7 @@ describe('a button pressed on what a peer showed', () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_1,
+        entry: SALES_APP_0_0_2,
         peerApp: ACCOUNTING_APP_0_0_1,
         peer: null,
         inference: {} as never,

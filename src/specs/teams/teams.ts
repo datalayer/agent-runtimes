@@ -821,7 +821,7 @@ export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'Event response',
     ref: '',
-    app: 'event-response:0.0.1',
+    app: 'event-response:0.0.2',
     model: '',
     goal: ``,
     instructions: ``,
@@ -860,7 +860,7 @@ export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
       id: 'event-response',
       name: '',
       ref: '',
-      app: 'event-response:0.0.1',
+      app: 'event-response:0.0.2',
       runsIn: 'browser',
       talksTo: [
         { member: 'disaster-assessment', over: 'a2a' },
@@ -1759,7 +1759,7 @@ export const SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1: TeamSpec = {
   supervisor: {
     name: 'Sales',
     ref: '',
-    app: 'sales:0.0.1',
+    app: 'sales:0.0.2',
     model: '',
     goal: ``,
     instructions: ``,
@@ -1798,7 +1798,7 @@ export const SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1: TeamSpec = {
       id: 'sales',
       name: '',
       ref: '',
-      app: 'sales:0.0.1',
+      app: 'sales:0.0.2',
       runsIn: 'browser',
       talksTo: [{ member: 'accounting', over: 'a2a' }],
       role: 'initiator',

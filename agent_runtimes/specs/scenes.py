@@ -346,7 +346,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "event-response",
-                "app": "event-response:0.0.1",
+                "app": "event-response:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
@@ -1770,7 +1770,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "sales",
-                "app": "sales:0.0.1",
+                "app": "sales:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "initiator",

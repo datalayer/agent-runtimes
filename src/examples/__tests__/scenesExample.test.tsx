@@ -21,7 +21,7 @@ import {
   SALES_AND_ACCOUNTING_SCENE_0_0_1,
 } from '../../specs/scenes';
 import { DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1 } from '../../specs/teams/teams';
-import { EVENT_RESPONSE_APP_0_0_1 } from '../../specs/apps';
+import { EVENT_RESPONSE_APP_0_0_2 } from '../../specs/apps';
 import {
   sceneCuesOf,
   sceneMemberUrl,
@@ -91,7 +91,7 @@ describe('the stage of a scene', () => {
   it('reads the cast with its applications, the entry and whom it asks', () => {
     const stage = sceneStageOf(DISASTER_ASSESSMENT_SCENE_0_0_1);
     expect(stage.entry.id).toBe('event-response');
-    expect(stage.entry.app).toBe(EVENT_RESPONSE_APP_0_0_1);
+    expect(stage.entry.app).toBe(EVENT_RESPONSE_APP_0_0_2);
     expect(stage.entry.runsIn).toBe('browser');
     expect(stage.peers.map(peer => peer.id)).toEqual([
       'disaster-assessment',
@@ -144,7 +144,7 @@ describe('the stage of a scene', () => {
   });
 
   it('offers the script’s cues as the entry’s suggestions, labelled by its starters', () => {
-    const starters = EVENT_RESPONSE_APP_0_0_1.interface.starters ?? [];
+    const starters = EVENT_RESPONSE_APP_0_0_2.interface.starters ?? [];
     const cues = sceneCuesOf(DISASTER_ASSESSMENT_SCENE_0_0_1, starters);
     expect(cues.map(cue => cue.prompt)).toEqual(
       DISASTER_ASSESSMENT_SCENE_0_0_1.script.map(beat => beat.cue.say),

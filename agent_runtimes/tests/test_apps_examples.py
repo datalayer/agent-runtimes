@@ -29,8 +29,8 @@ CATALOGUE = Path(pytest.importorskip("agentspecs.apps").__file__).parent
 PYTHON_EXAMPLES = sorted(path.parent.name for path in CATALOGUE.glob("*/app.py"))
 
 
-def test_the_catalogue_has_its_two_python_examples() -> None:
-    assert PYTHON_EXAMPLES == ["customer-interview", "report-from-a-file"]
+def test_the_catalogue_has_its_three_python_examples() -> None:
+    assert PYTHON_EXAMPLES == ["customer-interview", "exchange-desk", "report-from-a-file"]
 
 
 def test_the_catalogue_says_how_each_example_was_built() -> None:
@@ -115,3 +115,67 @@ def test_the_report_from_a_file_takes_a_csv_and_refuses_anything_else() -> None:
             await host.message(session, "Run")
 
     asyncio.run(scenario())
+
+
+def test_the_exchange_desk_exchanges_at_manzanita_once_per_confirmed_operation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Decided 2026-10-13 (AGENT_PROTOCOLS PI-42): its exchange_order exchanges
+    against the hosted Manzanita's back office, keyed by the confirmed
+    operation's ticket; a stand-in answers as Manzanita does."""
+    import importlib.util
+
+    import httpx
+
+    from agent_runtimes.loop.apps.pap_company import (
+        PapTurn,
+        enter_pap_turn,
+        leave_pap_turn,
+    )
+
+    loaded = importlib.util.spec_from_file_location(
+        "exchange_desk_app", CATALOGUE / "exchange-desk" / "app.py"
+    )
+    assert loaded is not None and loaded.loader is not None
+    module = importlib.util.module_from_spec(loaded)
+    loaded.loader.exec_module(module)
+    done: dict = {}
+    asked: List[Any] = []
+
+    def manzanita(request: httpx.Request) -> httpx.Response:
+        import json
+
+        asked.append((str(request.url), json.loads(request.content)))
+        body = json.loads(request.content)
+        if body["order_id"] != "ord_7Hk2":
+            return httpx.Response(404, json={"error": "no such order"})
+        said = {"order_id": "ord_7Hk2", "to": f"Ridge Jacket, size {body['size']}", "status": "exchanged"}
+        if body["idempotency_key"] in done:
+            return httpx.Response(200, json={**done[body["idempotency_key"]], "already": True})
+        done[body["idempotency_key"]] = said
+        return httpx.Response(200, json=said)
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        module.httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(manzanita), **kwargs),
+    )
+
+    async def scenario() -> tuple:
+        token = enter_pap_turn(PapTurn(ticket="ticket-1"))
+        try:
+            first = await module.exchange_order("ord_7Hk2", "L")
+            again = await module.exchange_order("ord_7Hk2", "L")
+            with pytest.raises(ValueError, match="no such order"):
+                await module.exchange_order("ord_0000", "L")
+        finally:
+            leave_pap_turn(token)
+        return first, again
+
+    first, again = asyncio.run(scenario())
+    assert first == {"order_id": "ord_7Hk2", "to": "Ridge Jacket, size L", "status": "exchanged"}
+    assert again["already"] is True and len(done) == 1
+    url, body = asked[0]
+    assert url == "https://manzanita.examples.datalayer.run/back-office/exchanges"
+    assert body == {"order_id": "ord_7Hk2", "size": "L", "idempotency_key": "ticket-1"}

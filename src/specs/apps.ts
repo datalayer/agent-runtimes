@@ -715,10 +715,10 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
 };
 
-export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
+export const CUSTOMER_INTERVIEW_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'customer-interview',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Customer Interview',
   kind: 'chat',
   description:
@@ -964,10 +964,10 @@ export const CUSTOMER_INTERVIEW_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const DATA_QUALITY_APP_0_0_1: AppSpec = {
+export const DATA_QUALITY_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'data-quality',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Data Quality Investigation',
   kind: 'decision',
   description:
@@ -1621,10 +1621,10 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
+export const EVENT_RESPONSE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'event-response',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Event response',
   kind: 'chat',
   description:
@@ -1774,10 +1774,10 @@ export const EVENT_RESPONSE_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-event-response:0.0.1' is not enabled."],
 };
 
-export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
+export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'exchange-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Exchange Desk',
   kind: 'chat',
   description:
@@ -1796,7 +1796,6 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
       description:
         'Exchanges an order for another size, once the person approved it.',
       parameters: {
-        type: 'object',
         properties: {
           order_id: {
             type: 'string',
@@ -1806,6 +1805,7 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
           },
         },
         required: ['order_id', 'size'],
+        type: 'object',
       },
       does: ['write'],
     },
@@ -1890,9 +1890,11 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
     ],
     verified: {
       live: [],
-      recorded: [],
+      recorded: [
+        "Its exchange_order runs in process in agent-runtimes' tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
+      ],
       unverified: [
-        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes, to release), and its exchange_order has no code, so no exchange was proposed or done.',
+        'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes 1.5.11), and its exchange_order had no code yet. Not drilled since.',
       ],
     },
   },
@@ -1924,8 +1926,8 @@ export const EXCHANGE_DESK_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    'Its exchange_order has no code yet, so it cannot exchange an order for a person.',
-  tags: ['example', 'companies'],
+    'Its exchange_order is written against the hosted Manzanita and has not been drilled live yet.',
+  tags: ['example', 'companies', 'python'],
   icon: 'apps',
   emoji: '🏪',
   avatar: '',
@@ -1945,7 +1947,7 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
   agent: 'cog-crawler:0.0.1',
   team: '',
   instructions:
-    "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the Datalayer account they signed in with, as the request names it — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries.",
+    "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — their handle and name, as the request names them — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries: no email, which the business is never told.",
   model: '',
   skills: [],
   backendTools: [],
@@ -2460,10 +2462,10 @@ export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const MODEL_CHOICE_APP_0_0_1: AppSpec = {
+export const MODEL_CHOICE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'model-choice',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Model Choice',
   kind: 'decision',
   description:
@@ -3542,10 +3544,10 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   setup: ["The agent 'cog-sales-pipeline-board-report:0.0.1' is not enabled."],
 };
 
-export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
+export const QUOTE_CALCULATOR_APP_0_0_5: AppSpec = {
   schema: 'loop.app/v1',
   id: 'quote-calculator',
-  version: '0.0.1',
+  version: '0.0.5',
   name: 'Quote Calculator',
   kind: 'widget',
   description:
@@ -3819,10 +3821,10 @@ export const QUOTE_CALCULATOR_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const REPORT_FROM_A_FILE_APP_0_0_1: AppSpec = {
+export const REPORT_FROM_A_FILE_APP_0_0_4: AppSpec = {
   schema: 'loop.app/v1',
   id: 'report-from-a-file',
-  version: '0.0.1',
+  version: '0.0.4',
   name: 'Report from a File',
   kind: 'widget',
   description:
@@ -4113,7 +4115,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   agent: 'cog-crawler:0.0.1',
   team: '',
   instructions:
-    'You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
+    'You arrange returns and repairs at Manzanita Outfitters for the person. Ask the shop for a return or a repair through its API, with pap_propose; the shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
   model: '',
   skills: [],
   backendTools: [],
@@ -4132,7 +4134,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
         access: 'write',
         as: 'user',
         scopes: ['orders:read', 'orders:write'],
-        interfaces: ['agent'],
+        interfaces: ['agent', 'openapi'],
         signIn: ['direct', 'device'],
         extensions: ['operations'],
       },
@@ -4271,7 +4273,7 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    'The test company Manzanita proposes returns and repairs only through its API, and this application asks it through its agent, so neither can be shown live yet.',
+    "It asks the test company Manzanita for returns and repairs through its API, which Datalayer's gateway does not reach yet, so neither can be shown live yet.",
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '↩️',
@@ -4280,10 +4282,10 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SALES_APP_0_0_1: AppSpec = {
+export const SALES_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'sales',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Sales',
   kind: 'chat',
   description:
@@ -4426,10 +4428,10 @@ export const SALES_APP_0_0_1: AppSpec = {
   ],
 };
 
-export const SHIP_OR_FIX_APP_0_0_1: AppSpec = {
+export const SHIP_OR_FIX_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'ship-or-fix',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Ship or Fix',
   kind: 'decision',
   description:
@@ -4810,7 +4812,7 @@ export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
   },
   enabled: false,
   unavailable_because:
-    "Nobody works at the test company Manzanita to take a conversation, so asking for one of the shop's people cannot be shown live yet.",
+    "The test company Manzanita's staff, who take a conversation handed to them, are not on duty at the hosted shop yet, so asking for one of its people cannot be shown live yet.",
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🛎️',
@@ -5309,10 +5311,10 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
+export const SUPPLIER_COMPARISON_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'supplier-comparison',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Supplier Comparison',
   kind: 'decision',
   description:
@@ -5522,10 +5524,10 @@ export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SUPPORT_DESK_APP_0_0_1: AppSpec = {
+export const SUPPORT_DESK_APP_0_0_4: AppSpec = {
   schema: 'loop.app/v1',
   id: 'support-desk',
-  version: '0.0.1',
+  version: '0.0.4',
   name: 'Support Desk',
   kind: 'chat',
   description:
@@ -6171,32 +6173,32 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'bookkeeping-desk': BOOKKEEPING_DESK_APP_0_0_1,
   'change-detection': CHANGE_DETECTION_APP_0_0_1,
   'crop-monitoring': CROP_MONITORING_APP_0_0_1,
-  'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_1,
-  'data-quality': DATA_QUALITY_APP_0_0_1,
+  'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_2,
+  'data-quality': DATA_QUALITY_APP_0_0_2,
   decide: DECIDE_APP_0_0_1,
   'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_1,
   'errand-runner': ERRAND_RUNNER_APP_0_0_1,
-  'event-response': EVENT_RESPONSE_APP_0_0_1,
-  'exchange-desk': EXCHANGE_DESK_APP_0_0_1,
+  'event-response': EVENT_RESPONSE_APP_0_0_2,
+  'exchange-desk': EXCHANGE_DESK_APP_0_0_2,
   'guest-desk': GUEST_DESK_APP_0_0_1,
   'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
   'live-shop-chat': LIVE_SHOP_CHAT_APP_0_0_1,
-  'model-choice': MODEL_CHOICE_APP_0_0_1,
+  'model-choice': MODEL_CHOICE_APP_0_0_2,
   'month-end-close': MONTH_END_CLOSE_APP_0_0_1,
   'order-desk': ORDER_DESK_APP_0_0_1,
   'order-tracker': ORDER_TRACKER_APP_0_0_1,
   'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
-  'quote-calculator': QUOTE_CALCULATOR_APP_0_0_1,
-  'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_1,
+  'quote-calculator': QUOTE_CALCULATOR_APP_0_0_5,
+  'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_4,
   'returns-desk': RETURNS_DESK_APP_0_0_1,
-  sales: SALES_APP_0_0_1,
-  'ship-or-fix': SHIP_OR_FIX_APP_0_0_1,
+  sales: SALES_APP_0_0_2,
+  'ship-or-fix': SHIP_OR_FIX_APP_0_0_2,
   'shop-concierge': SHOP_CONCIERGE_APP_0_0_1,
   'shopping-desk': SHOPPING_DESK_APP_0_0_1,
   'sign-in-desk': SIGN_IN_DESK_APP_0_0_1,
   'signed-reader': SIGNED_READER_APP_0_0_1,
-  'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
-  'support-desk': SUPPORT_DESK_APP_0_0_1,
+  'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_2,
+  'support-desk': SUPPORT_DESK_APP_0_0_4,
   'travel-desk': TRAVEL_DESK_APP_0_0_1,
   'web-research': WEB_RESEARCH_APP_0_0_1,
 };
@@ -6659,6 +6661,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'customer-interview': {
     schema: 'loop.app/v1',
     id: 'customer-interview',
+    version: '0.0.2',
     name: 'Customer Interview',
     kind: 'chat',
     description:
@@ -6842,6 +6845,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'data-quality': {
     schema: 'loop.app/v1',
     id: 'data-quality',
+    version: '0.0.2',
     name: 'Data Quality Investigation',
     kind: 'decision',
     description:
@@ -7224,6 +7228,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'event-response': {
     schema: 'loop.app/v1',
     id: 'event-response',
+    version: '0.0.2',
     name: 'Event response',
     kind: 'chat',
     description:
@@ -7311,6 +7316,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'exchange-desk': {
     schema: 'loop.app/v1',
     id: 'exchange-desk',
+    version: '0.0.2',
     name: 'Exchange Desk',
     kind: 'chat',
     description:
@@ -7325,7 +7331,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         description:
           'Exchanges an order for another size, once the person approved it.',
         parameters: {
-          type: 'object',
           properties: {
             order_id: {
               type: 'string',
@@ -7335,6 +7340,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
             },
           },
           required: ['order_id', 'size'],
+          type: 'object',
         },
         does: ['write'],
       },
@@ -7381,8 +7387,11 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        recorded: [
+          "Its exchange_order runs in process in agent-runtimes' tests against a stand-in for Manzanita's back office: one exchange per confirmed operation, a retry answered as already done.",
+        ],
         unverified: [
-          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes, to release), and its exchange_order has no code, so no exchange was proposed or done.',
+          'Drilled on r1 on 13 October 2026: shipped at its own domain, it answered a personal agent signed out, and a person signed in through Datalayer granted orders:read and orders:write; but the application was not told who had signed in (fixed in agent-runtimes 1.5.11), and its exchange_order had no code yet. Not drilled since.',
         ],
       },
     },
@@ -7395,8 +7404,8 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      'Its exchange_order has no code yet, so it cannot exchange an order for a person.',
-    tags: ['example', 'companies'],
+      'Its exchange_order is written against the hosted Manzanita and has not been drilled live yet.',
+    tags: ['example', 'companies', 'python'],
     emoji: '🏪',
   },
   'guest-desk': {
@@ -7409,7 +7418,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'cog-crawler:0.0.1',
     instructions:
-      "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — the Datalayer account they signed in with, as the request names it — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries.",
+      "You answer for the business when a person's own agent asks. Say what the business offers to any agent. Say who the person is here — their handle and name, as the request names them — only when the request says they granted profile:read; otherwise say they need to sign in first. Never more than the request carries: no email, which the business is never told.",
     protocols: ['pact'],
     pact: {
       business: {
@@ -7725,6 +7734,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'model-choice': {
     schema: 'loop.app/v1',
     id: 'model-choice',
+    version: '0.0.2',
     name: 'Model Choice',
     kind: 'decision',
     description:
@@ -8452,6 +8462,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'quote-calculator': {
     schema: 'loop.app/v1',
     id: 'quote-calculator',
+    version: '0.0.5',
     name: 'Quote Calculator',
     kind: 'widget',
     description:
@@ -8663,6 +8674,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'report-from-a-file': {
     schema: 'loop.app/v1',
     id: 'report-from-a-file',
+    version: '0.0.4',
     name: 'Report from a File',
     kind: 'widget',
     description:
@@ -8882,7 +8894,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     owner: 'Datalayer <info@datalayer.io>',
     agent: 'cog-crawler:0.0.1',
     instructions:
-      'You arrange returns and repairs at Manzanita Outfitters for the person, through its tools. The shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
+      'You arrange returns and repairs at Manzanita Outfitters for the person. Ask the shop for a return or a repair through its API, with pap_propose; the shop proposes each one with its terms: show them, word for word, and never confirm on your own; the person approves it on Waiting for you.',
     protocols: ['pap'],
     pap: {
       profile: 'draft-01',
@@ -8892,6 +8904,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
           company: 'manzanita.examples.datalayer.run',
           access: 'write',
           scopes: ['orders:read', 'orders:write'],
+          interfaces: ['agent', 'openapi'],
           extensions: ['operations'],
         },
       ],
@@ -8972,13 +8985,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      'The test company Manzanita proposes returns and repairs only through its API, and this application asks it through its agent, so neither can be shown live yet.',
+      "It asks the test company Manzanita for returns and repairs through its API, which Datalayer's gateway does not reach yet, so neither can be shown live yet.",
     tags: ['example', 'companies'],
     emoji: '↩️',
   },
   sales: {
     schema: 'loop.app/v1',
     id: 'sales',
+    version: '0.0.2',
     name: 'Sales',
     kind: 'chat',
     description:
@@ -9057,6 +9071,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'ship-or-fix': {
     schema: 'loop.app/v1',
     id: 'ship-or-fix',
+    version: '0.0.2',
     name: 'Ship or Fix',
     kind: 'decision',
     description:
@@ -9288,7 +9303,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     },
     enabled: false,
     unavailable_because:
-      "Nobody works at the test company Manzanita to take a conversation, so asking for one of the shop's people cannot be shown live yet.",
+      "The test company Manzanita's staff, who take a conversation handed to them, are not on duty at the hosted shop yet, so asking for one of its people cannot be shown live yet.",
     tags: ['example', 'companies'],
     emoji: '🛎️',
   },
@@ -9582,6 +9597,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'supplier-comparison': {
     schema: 'loop.app/v1',
     id: 'supplier-comparison',
+    version: '0.0.2',
     name: 'Supplier Comparison',
     kind: 'decision',
     description:
@@ -9712,6 +9728,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'support-desk': {
     schema: 'loop.app/v1',
     id: 'support-desk',
+    version: '0.0.4',
     name: 'Support Desk',
     kind: 'chat',
     description:
@@ -10165,7 +10182,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'disaster-assessment': 'written',
   'errand-runner': 'written',
   'event-response': 'written',
-  'exchange-desk': 'written',
+  'exchange-desk': 'python',
   'guest-desk': 'written',
   'inbox-triage': 'written',
   'live-shop-chat': 'written',
