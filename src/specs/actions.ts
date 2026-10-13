@@ -728,6 +728,12 @@ export const PROTOCOL_TOOL_CLASSES: Record<
       pap_disconnect: ['write'],
     },
   },
+  'signed-fetch': {
+    connection: 'signed-fetch',
+    tools: {
+      signed_fetch: ['read'],
+    },
+  },
   ucp: {
     connection: 'ucp',
     tools: {
@@ -1008,6 +1014,7 @@ export const APP_BEHAVIOURS: Record<string, Record<string, AppBehaviour>> = {
   'shop-concierge': {},
   'shopping-desk': {},
   'sign-in-desk': {},
+  'signed-reader': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},
@@ -1086,6 +1093,7 @@ export const APP_ESCALATIONS: Record<
   'shop-concierge': {},
   'shopping-desk': {},
   'sign-in-desk': {},
+  'signed-reader': {},
   'supplier-comparison': {},
   'support-desk': {},
   'travel-desk': {},

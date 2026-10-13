@@ -213,6 +213,7 @@ def test_a_previews_run_carries_the_narrowed_token_and_an_ungranted_space_is_ref
                 "pap": {"connections": []},
                 "pact": {"connections": []},
                 "commerce": {"merchants": []},
+                "signed_fetch": {"sites": []},
             },
             "ada",
         )
@@ -284,7 +285,7 @@ def test_its_businesses_and_merchants_are_asked_for_too(
     does; without them, every call of the gateway's `pact`, `ucp` and `acp` toolsets was refused."""
     desk = {
         **DESK,
-        "protocols": ["pact", "ucp"],
+        "protocols": ["pact", "ucp", "web-bot-auth"],
         "pact": {
             "connections": [
                 {
@@ -306,6 +307,10 @@ def test_its_businesses_and_merchants_are_asked_for_too(
                     "limit": {"amount": "50", "currency": "USD"},
                 }
             ]
+        },
+        # The sites it reads signed (AGENT_PROTOCOLS EX-11).
+        "signed_fetch": {
+            "sites": [{"id": "verifier", "site": "verify.examples.datalayer.run"}]
         },
     }
     _make("support-desk", desk, {"app_uid": "app-1"}, ai_agents)
@@ -330,11 +335,18 @@ def test_its_businesses_and_merchants_are_asked_for_too(
         "store.examples.datalayer.run",
         {"amount": "50", "currency": "USD"},
     )
+    assert asked["signed_fetch"] == {
+        "sites": [{"id": "verifier", "site": "verify.examples.datalayer.run"}]
+    }
     # A business added is a token asked again, never the one narrowed to the list before.
     plain = {"permissions": {"spaces": []}}
     assert preview_key("app-1", "ada", {**plain, "pact": asked["pact"]}) != preview_key(
         "app-1", "ada", plain
     )
+    # And a site added.
+    assert preview_key(
+        "app-1", "ada", {**plain, "signed_fetch": asked["signed_fetch"]}
+    ) != preview_key("app-1", "ada", plain)
 
 
 def test_without_its_token_a_preview_runs_nothing(

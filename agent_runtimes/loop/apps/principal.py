@@ -440,16 +440,20 @@ def preview_grants(app: Any) -> dict[str, Any]:
     And its ``pact`` connections and ``commerce`` merchants (the businesses
     and the test merchants it asks for the person, AGENT_PROTOCOLS PI-42):
     without them, a Preview of *Travel Desk* or *Shopping Desk* had every
-    call of the gateway's `pact`, `ucp` and `acp` toolsets refused.
+    call of the gateway's `pact`, `ucp` and `acp` toolsets refused. And the
+    sites it reads signed (``signed_fetch``, AGENT_PROTOCOLS EX-11), for the
+    gateway's `signed-fetch` toolset.
     """
     pap = app.pap.model_dump(mode="json", by_alias=True, exclude_none=True)
     pact = app.pact.model_dump(mode="json", by_alias=True, exclude_none=True)
     commerce = app.commerce.model_dump(mode="json", by_alias=True, exclude_none=True)
+    signed_fetch = app.signed_fetch.model_dump(mode="json", by_alias=True, exclude_none=True)
     return {
         "permissions": app.permissions.model_dump(mode="json"),
         "pap": {"connections": pap.get("connections") or []},
         "pact": {"connections": pact.get("connections") or []},
         "commerce": {"merchants": commerce.get("merchants") or []},
+        "signed_fetch": {"sites": signed_fetch.get("sites") or []},
     }
 
 
@@ -467,12 +471,14 @@ def preview_key(app_uid: str, person_uid: str, grants: Mapping[str, Any]) -> str
         json.dumps(connection, sort_keys=True)
         for connection in (grants.get("pap") or {}).get("connections") or []
     )
-    # The businesses and merchants it asks for the person (AGENT_PROTOCOLS PI-42).
+    # The businesses and merchants it asks for the person (AGENT_PROTOCOLS PI-42),
+    # and the sites it reads signed (EX-11).
     others = sorted(
         json.dumps(connection, sort_keys=True)
         for connection in [
             *((grants.get("pact") or {}).get("connections") or []),
             *((grants.get("commerce") or {}).get("merchants") or []),
+            *((grants.get("signed_fetch") or {}).get("sites") or []),
         ]
     )
     digest = hashlib.sha256(

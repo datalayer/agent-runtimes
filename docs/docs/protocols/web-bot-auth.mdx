@@ -105,6 +105,33 @@ anything is sent, not only an address written in the URL
 `agent_runtimes.protocols.egress.metadata_fetch`, reads UCP and Agentic
 Commerce profiles.
 
+## In an application: a signed fetch
+
+An application on Datalayer signs every request its gateway sends to a
+company, a business or a merchant. To read pages at a website, it names the
+**exact sites** in its Appspec's `signed_fetch` block, with `web-bot-auth`
+listed under `protocols` (decided 2026-10-13):
+
+```yaml
+protocols: [web-bot-auth]
+
+signed_fetch:
+  sites:
+    - id: example-verifier
+      site: verify.examples.datalayer.run
+```
+
+Each site is one server of the gateway's `signed-fetch` toolset in the
+runtime (`/mcp?only=signed-fetch&signed-fetch-site=<domain>`,
+`agent_runtimes.loop.apps.pap_connections`), granted as
+`datalayer_connection` `signed-fetch:<domain>`. Its one tool,
+`signed_fetch`, is a `read` under the application's Rules
+(`protocol-tools/signed-fetch.yaml`): a `GET` of a path at that site and no
+other, on the resolving client above, signed with the application's own key
+(held by Datalayer, never by the runtime) and recorded as a
+`signed-fetch.request.signed` row. *Signed Reader*, in the catalogue, reads
+Example Verifier, which checks the signature and says whom it saw.
+
 ## The plugin and its points
 
 Web Bot Auth is a Reactor plugin, `agent-runtimes.protocols.web-bot-auth`,

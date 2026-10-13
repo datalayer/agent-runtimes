@@ -2338,6 +2338,19 @@ class AppCommerceSpec(BaseModel):
     merchants: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class AppSignedFetchSpec(BaseModel):
+    """Signed fetch: the sites it reads pages of (AGENT_PROTOCOLS EX-11, decided 2026-10-13).
+
+    Each site names an `id` and its exact domain (`site`); never a
+    credential. The gateway's `signed-fetch` toolset reads a page there with
+    GET only, every request signed with the application's Web Bot Auth key.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    sites: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class AppA2AExtensionSpec(BaseModel):
     """An A2A extension the application's Agent Card advertises (AGENT_PROTOCOLS PR-02)."""
 
@@ -3054,6 +3067,7 @@ class AppSpec(BaseModel):
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     pact: AppPactSpec = Field(default_factory=AppPactSpec)
     commerce: AppCommerceSpec = Field(default_factory=AppCommerceSpec)
+    signed_fetch: AppSignedFetchSpec = Field(default_factory=AppSignedFetchSpec)
     a2a: AppA2ASpec = Field(default_factory=AppA2ASpec)
     rules: List[AppRuleSpec] = Field(default_factory=list)
     permissions: AppPermissionsSpec = Field(default_factory=AppPermissionsSpec)

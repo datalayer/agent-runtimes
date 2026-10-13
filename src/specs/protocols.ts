@@ -195,7 +195,7 @@ export const WEB_BOT_AUTH_PROTOCOL_0_0_1: ProtocolSpec = {
   version: '0.0.1',
   name: 'Web Bot Auth',
   description:
-    'Signed outbound requests (RFC 9421) and the key directory a website checks them against.',
+    'Signed outbound requests (RFC 9421) and the key directory a website checks them against. In applications, every request to a company, business or merchant is signed, and a signed fetch reads pages at the sites an application names, GET only (decided 2026-10-13).',
   publisher: 'Cloudflare (IETF draft)',
   layer: 'identity',
   specUrl:
@@ -208,7 +208,8 @@ export const WEB_BOT_AUTH_PROTOCOL_0_0_1: ProtocolSpec = {
     python: ['agent-runtimes'],
     typescript: ['@datalayer/agent-runtimes', 'web-bot-auth'],
   },
-  protocolTools: [],
+  protocolTools: ['signed-fetch'],
+  appspecBlock: 'signed_fetch',
 };
 
 export const PROTOCOL_CATALOGUE: Record<string, ProtocolSpec> = {

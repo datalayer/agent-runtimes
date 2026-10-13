@@ -26,7 +26,7 @@ from versioning import ensure_spec_version, version_suffix
 
 LAYERS = ("transport", "consent", "identity", "commerce", "ui")
 STATUSES = ("shipped", "planned")
-BLOCKS = ("pap", "pact", "a2a")
+BLOCKS = ("pap", "pact", "a2a", "signed_fetch")
 
 
 def load_protocol_specs(specs_dir: Path) -> list[dict[str, Any]]:

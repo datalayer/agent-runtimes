@@ -45,6 +45,7 @@ import type {
   PapProfile,
   AppPactSpec,
   AppCommerceSpec,
+  AppSignedFetchSpec,
   AppA2ASpec,
   AppCriterionSpec,
   AppCustomComponentSpec,
@@ -318,6 +319,7 @@ const KNOWN_KEYS = [
   'pap',
   'pact',
   'commerce',
+  'signed_fetch',
   'a2a',
   'rules',
   'permissions',
@@ -612,6 +614,30 @@ function dumpCommerce(commerce: AppCommerceSpec | undefined): Data {
                 }
               : {},
           ).data,
+    ),
+  ).data;
+}
+
+/** Signed fetch (AGENT_PROTOCOLS EX-11): the exact sites it reads pages of, each request signed. */
+function parseSignedFetch(data: Data): AppSignedFetchSpec {
+  return {
+    sites: records(data.sites).map(site => ({
+      id: text(site.id),
+      site: text(site.site),
+    })),
+  };
+}
+
+/** Signed fetch as its document says it, nothing at its default. */
+function dumpSignedFetch(signedFetch: AppSignedFetchSpec | undefined): Data {
+  if (!signedFetch) return {};
+  return new Writer().list(
+    'sites',
+    signedFetch.sites.map(
+      site =>
+        new Writer()
+          .text('id', site.id, '\u0000')
+          .text('site', site.site, '\u0000').data,
     ),
   ).data;
 }
@@ -1361,6 +1387,9 @@ export function parseAppspec(document: unknown): ParsedAppspec {
   if (isData(data.commerce)) {
     app.commerce = parseCommerce(data.commerce);
   }
+  if (isData(data.signed_fetch)) {
+    app.signed_fetch = parseSignedFetch(data.signed_fetch);
+  }
   if (isData(data.a2a)) {
     app.a2a = parseA2A(data.a2a);
   }
@@ -1400,12 +1429,18 @@ export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
  * What is wrong with the protocols an application says it speaks
  * (AGENT_PROTOCOLS PS-02), as agentspecs says it: an id the catalogue does not
  * know or said twice, a planned protocol while it is offered, and a `pap`,
- * `pact` or `a2a` block configuring a protocol it does not list.
+ * `pact`, `a2a` or `signed_fetch` block configuring a protocol it does not list.
  */
 export function protocolsProblems(
   app: Pick<
     AppSpec,
-    'protocols' | 'enabled' | 'pap' | 'pact' | 'a2a' | 'commerce'
+    | 'protocols'
+    | 'enabled'
+    | 'pap'
+    | 'pact'
+    | 'a2a'
+    | 'commerce'
+    | 'signed_fetch'
   >,
 ): string[] {
   const problems: string[] = [];
@@ -1427,7 +1462,7 @@ export function protocolsProblems(
       );
     }
   }
-  const configured: Record<'pap' | 'pact' | 'a2a', boolean> = {
+  const configured: Record<'pap' | 'pact' | 'a2a' | 'signed_fetch', boolean> = {
     pap: Boolean(
       app.pap && (app.pap.connections.length > 0 || app.pap.company.enabled),
     ),
@@ -1436,6 +1471,9 @@ export function protocolsProblems(
       (app.pact.connections.length > 0 || app.pact.business?.enabled),
     ),
     a2a: Boolean(app.a2a && app.a2a.extensions.length > 0),
+    signed_fetch: Boolean(
+      app.signed_fetch && app.signed_fetch.sites.length > 0,
+    ),
   };
   for (const spec of Object.values(PROTOCOL_CATALOGUE)) {
     const block = spec.appspecBlock;
@@ -1849,6 +1887,7 @@ export function dumpAppspec(app: AppSpec): Data {
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
     .part('commerce', dumpCommerce(app.commerce))
+    .part('signed_fetch', dumpSignedFetch(app.signed_fetch))
     .part('a2a', dumpA2A(app.a2a))
     .list(
       'rules',

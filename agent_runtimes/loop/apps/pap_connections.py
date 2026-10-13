@@ -24,6 +24,12 @@ PI-20) is reached through the gateway's `ucp` or `acp` toolset
 gateway shops at test merchants only and asks the person before every
 purchase (decided 2026-10-13).
 
+A site it reads pages of (each `signed_fetch.sites[]`, AGENT_PROTOCOLS
+EX-11, decided 2026-10-13) is reached through the gateway's `signed-fetch`
+toolset (``/mcp?only=signed-fetch&signed-fetch-site=<domain>``): GET only at
+that exact site, every request signed with the application's own Web Bot
+Auth key, its one tool a read under the Rules.
+
 In the runtime a company is one gateway server, named from its protocol and
 domain (:func:`server_id`): two companies' tools never share a name, as each
 tool is prefixed with it. What each tool does to the world is agentspecs'
@@ -56,7 +62,11 @@ TOOL_CLASSES_BY_PROTOCOL.update(
             name: tuple(classes)
             for name, classes in PROTOCOL_TOOL_CLASSES[table]["tools"].items()
         }
-        for protocol, table in (("ucp", "ucp"), ("acp", "agentic-commerce"))
+        for protocol, table in (
+            ("ucp", "ucp"),
+            ("acp", "agentic-commerce"),
+            ("signed-fetch", "signed-fetch"),
+        )
     }
 )
 TOOL_CLASSES: Dict[str, Tuple[str, ...]] = TOOL_CLASSES_BY_PROTOCOL["pap"]
@@ -68,6 +78,7 @@ _BLOCKS: Dict[str, Tuple[str, str]] = {
     "pact": ("brand", "pact-brand"),
     "ucp": ("merchant", "ucp-merchant"),
     "acp": ("merchant", "acp-merchant"),
+    "signed-fetch": ("site", "signed-fetch-site"),
 }
 
 #: A merchant's tool that buys: the gateway asks the person before it, always (decided 2026-10-13).
@@ -81,11 +92,12 @@ def server_id(domain: str, protocol: str = "pap") -> str:
     """A company's server in the runtime: its protocol and its domain in plain characters."""
     if protocol not in _BLOCKS:
         raise ValueError(f"no gateway toolset for the protocol {protocol!r}")
-    return f"{protocol}_" + re.sub(r"[^a-z0-9]+", "_", domain.lower()).strip("_")
+    return re.sub(r"[^a-z0-9]+", "_", f"{protocol}_{domain.lower()}").strip("_")
 
 
 def connections_of(app: Any) -> Dict[str, Dict[str, Any]]:
-    """An application's companies (PAP), businesses (PACT) and merchants (UCP, ACP), by server id.
+    """An application's companies (PAP), businesses (PACT), merchants (UCP, ACP) and the sites
+    it reads signed (`signed-fetch`), by server id.
 
     Each carries `protocol` and `company` (its domain), whichever block it is from.
     """
@@ -94,6 +106,8 @@ def connections_of(app: Any) -> Dict[str, Dict[str, Any]]:
     for protocol, (key, _) in _BLOCKS.items():
         if protocol in ("ucp", "acp"):
             listed = [m for m in commerce if (m or {}).get("protocol") == protocol]
+        elif protocol == "signed-fetch":
+            listed = getattr(getattr(app, "signed_fetch", None), "sites", None) or []
         else:
             listed = getattr(getattr(app, protocol, None), "connections", None) or []
         for connection in listed:
@@ -121,7 +135,7 @@ def domain_of(sid: str) -> Optional[str]:
 
 
 def protocol_of(sid: str) -> Optional[str]:
-    """`pap`, `pact`, `ucp` or `acp` for a company's server, None for any other."""
+    """`pap`, `pact`, `ucp`, `acp` or `signed-fetch` for a company's server, None for any other."""
     known = _DOMAINS.get(sid)
     return known[0] if known else None
 

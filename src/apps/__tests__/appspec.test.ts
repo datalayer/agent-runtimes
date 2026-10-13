@@ -637,6 +637,27 @@ describe('writing an Appspec', () => {
       "Its `commerce` block shops over ACP, which it does not list: add 'acp' to `protocols`.",
     ]);
   });
+  it('reads and writes the sites it reads signed, its protocol listed (AGENT_PROTOCOLS EX-11)', () => {
+    const document = {
+      kind: 'chat',
+      protocols: ['web-bot-auth'],
+      signed_fetch: {
+        sites: [{ id: 'verifier', site: 'verify.examples.datalayer.run' }],
+      },
+    };
+    const { app, problems } = parseAppspec(document);
+    expect(problems).toEqual([]);
+    expect(app.signed_fetch?.sites).toEqual(document.signed_fetch.sites);
+    // Written back as read; an application reading no site says nothing of it.
+    expect(dumpAppspec(app).signed_fetch).toEqual(document.signed_fetch);
+    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty(
+      'signed_fetch',
+    );
+    // Sites read without Web Bot Auth listed are refused.
+    expect(parseAppspec({ ...document, protocols: [] }).problems).toEqual([
+      "Its `signed_fetch` block configures Web Bot Auth, which it does not list: add 'web-bot-auth' to `protocols`.",
+    ]);
+  });
   it('reads and writes what a company does once the person confirms (PAP_DATALAYER B-04)', () => {
     const operations = [
       {

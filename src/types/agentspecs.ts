@@ -167,7 +167,7 @@ export interface ProtocolSpec {
   /** Its tools' action-class tables (`agentspecs/protocol-tools`). */
   protocolTools: string[];
   /** The Appspec block it configures, if any: refused unless `protocols` lists it. */
-  appspecBlock?: 'pap' | 'pact' | 'a2a';
+  appspecBlock?: 'pap' | 'pact' | 'a2a' | 'signed_fetch';
 }
 
 /** A check a Frame requires of the output of work done under it. */
@@ -690,6 +690,24 @@ export interface AppCommerceMerchantSpec {
 /** UCP and ACP: the merchants it shops at for each person. */
 export interface AppCommerceSpec {
   merchants: AppCommerceMerchantSpec[];
+}
+
+/**
+ * A website the application reads pages of, each request signed with its
+ * own Web Bot Auth key (AGENT_PROTOCOLS EX-11, decided 2026-10-13): the
+ * gateway's `signed-fetch` toolset reads there with GET only. Never a
+ * credential.
+ */
+export interface AppSignedFetchSiteSpec {
+  /** Stable within the application: `example-verifier`. */
+  id: string;
+  /** The site's domain, exactly: `verify.examples.datalayer.run`. */
+  site: string;
+}
+
+/** Signed fetch: the exact sites it reads pages of, an allow-list. */
+export interface AppSignedFetchSpec {
+  sites: AppSignedFetchSiteSpec[];
 }
 
 /**
@@ -1329,6 +1347,8 @@ export interface AppSpec {
   pact?: AppPactSpec;
   /** UCP and ACP: the merchants it shops at for each person (AGENT_PROTOCOLS PI-01). */
   commerce?: AppCommerceSpec;
+  /** Signed fetch: the sites it reads pages of, each request signed (AGENT_PROTOCOLS EX-11). */
+  signed_fetch?: AppSignedFetchSpec;
   /** A2A: the extensions its Agent Card advertises (AGENT_PROTOCOLS PR-02). */
   a2a?: AppA2ASpec;
   rules: AppRuleSpec[];

@@ -251,6 +251,7 @@ def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
     assert pap_connections.server_id("air.example", "pact") == "pact_air_example"
     assert pap_connections.server_id("air.example") == "pap_air_example"
     assert pap_connections.server_id("store.example", "ucp") == "ucp_store_example"
+    assert pap_connections.server_id("verify.example", "signed-fetch") == "signed_fetch_verify_example"
     with pytest.raises(ValueError, match="no gateway toolset"):
         pap_connections.server_id("air.example", "tap")
 
@@ -312,3 +313,38 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
     assert harness.capability.given("ucp_store_examples_datalayer_run_ucp_complete") is True
     assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_complete") is False
     assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_get_checkout") is True
+
+
+def reader() -> AppSpec:
+    """Signed Reader: pages read at Example Verifier, each request signed (AGENT_PROTOCOLS EX-11)."""
+    return APP_CATALOGUE["signed-reader"].model_copy(deep=True)
+
+
+def test_a_site_read_signed_is_the_gateways_signed_fetch_toolset_in_the_persons_name() -> None:
+    pap_connections.remember_agent("agent-10", reader())
+    companies = pap_connections.companies_of_agent("agent-10")
+    assert companies == (("signed_fetch_verify_examples_datalayer_run", "user"),)
+    assert pap_connections.protocol_of("signed_fetch_verify_examples_datalayer_run") == "signed-fetch"
+    assert (
+        pap_connections.domain_of("signed_fetch_verify_examples_datalayer_run")
+        == "verify.examples.datalayer.run"
+    )
+    (built,) = toolsets_for_the_run(
+        [], "principal-token", users_token="person-token", companies=companies
+    )
+    assert built.wrapped.client.transport.url.endswith(
+        "/mcp?only=signed-fetch&signed-fetch-site=verify.examples.datalayer.run"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_rules_decide_a_signed_fetch_as_a_read() -> None:
+    spec = reader()
+    pap_connections.remember_agent("agent-11", spec)
+    harness = Harness(spec)
+    tool = "signed_fetch_verify_examples_datalayer_run_signed_fetch"
+    assert pap_connections.classes_of(tool) == ("read",)
+    assert await harness.call(tool, {"path": "/"}) == {"path": "/"}
+    assert harness.recorded[-1].decision.classes == ("read",)
+    assert harness.capability.given(tool) is True
+    assert not pap_connections.is_purchase(tool)

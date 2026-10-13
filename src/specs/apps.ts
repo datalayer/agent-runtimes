@@ -4866,6 +4866,150 @@ export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
+export const SIGNED_READER_APP_0_0_1: AppSpec = {
+  schema: 'loop.app/v1',
+  id: 'signed-reader',
+  version: '0.0.1',
+  name: 'Signed Reader',
+  kind: 'chat',
+  description:
+    'Reads a page at a site that checks who is asking, with every request signed, and tells you whom the site saw.',
+  owner: 'Datalayer <info@datalayer.io>',
+  agent: 'cog-crawler:0.0.1',
+  team: '',
+  instructions:
+    "You read pages at Example Verifier for the person you talk to, through its tool. Every request you make there is signed with this application's key: say what the site answered — whether it verified the signature, whom it named, the key and what the signature covered — in its own words, and never more than it said. You reach no other site.",
+  model: '',
+  skills: [],
+  backendTools: [],
+  tools: [],
+  context: [],
+  contents: [],
+  connections: [],
+  protocols: ['web-bot-auth'],
+  ui: [],
+  signed_fetch: {
+    sites: [
+      {
+        id: 'example-verifier',
+        site: 'verify.examples.datalayer.run',
+      },
+    ],
+  },
+  rules: [
+    {
+      action: 'Read a page at the site',
+      appliesTo: ['read'],
+      behaviour: 'do_it',
+    },
+  ],
+  permissions: {
+    spaces: [],
+    computer: {
+      browse: false,
+      files: false,
+      shell: false,
+    },
+  },
+  interface: {
+    layout: 'chat',
+    accent: 'sky',
+    welcome:
+      "I read pages at Example Verifier, signed with this application's key, and tell you whom it saw.",
+    starters: [
+      {
+        label: 'Whom does it see?',
+        message: 'Ask Example Verifier whom it sees.',
+      },
+      {
+        label: 'What is signed?',
+        message: 'Which parts of the request did the signature cover?',
+      },
+    ],
+    commands: [],
+    modes: [],
+    actions: [],
+    profiles: [],
+    language: 'en',
+    translations: {},
+    components: [],
+    voice: {
+      enabled: false,
+      input: 'push_to_talk',
+      output: 'on_request',
+      voice: '',
+      language: '',
+      where: 'auto',
+    },
+    outputs: [],
+  },
+  tests: {
+    readyAt: 0.8,
+    evalset: '',
+    cases: [
+      {
+        ask: 'Ask Example Verifier whom it sees.',
+        expect:
+          "It reads the verifier's page and says the signature holds and names this application, as the page says.",
+      },
+      {
+        ask: 'Which parts of the request did the signature cover?',
+        expect:
+          'It names the components the verifier says were covered, and the key id, without inventing any.',
+      },
+      {
+        ask: 'Read https://example.com for me.',
+        expect:
+          'It says it reads only Example Verifier and reaches no other site.',
+      },
+    ],
+    verified: {
+      live: [],
+      recorded: [
+        "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
+      ],
+      unverified: [
+        "Not run live yet: the gateway's signed fetch and Example Verifier are not deployed.",
+      ],
+    },
+  },
+  record: {
+    keepFor: '90_days',
+    include: ['conversations', 'actions'],
+    suggestTests: false,
+    retentionDays: 90,
+  },
+  checks: {
+    guards: [],
+    gates: [],
+    track: '',
+    code: [],
+  },
+  deployment: {
+    hosted: {
+      visibility: 'private',
+      slug: '',
+    },
+  },
+  goal: '',
+  triggers: [],
+  memory: '',
+  notifications: [],
+  samples: {
+    documents: [],
+    alternatives: [],
+  },
+  enabled: false,
+  unavailable_because:
+    "It reads Example Verifier through the gateway's signed fetch, which is not deployed yet.",
+  tags: ['example', 'companies'],
+  icon: 'apps',
+  emoji: '🔏',
+  avatar: '',
+  banner: '',
+  setup: [],
+};
+
 export const SUPPLIER_COMPARISON_APP_0_0_1: AppSpec = {
   schema: 'loop.app/v1',
   id: 'supplier-comparison',
@@ -5749,6 +5893,7 @@ export const APP_CATALOGUE: Record<string, AppSpec> = {
   'shop-concierge': SHOP_CONCIERGE_APP_0_0_1,
   'shopping-desk': SHOPPING_DESK_APP_0_0_1,
   'sign-in-desk': SIGN_IN_DESK_APP_0_0_1,
+  'signed-reader': SIGNED_READER_APP_0_0_1,
   'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_1,
   'support-desk': SUPPORT_DESK_APP_0_0_1,
   'travel-desk': TRAVEL_DESK_APP_0_0_1,
@@ -8884,6 +9029,88 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     tags: ['example', 'companies'],
     emoji: '🔐',
   },
+  'signed-reader': {
+    schema: 'loop.app/v1',
+    id: 'signed-reader',
+    name: 'Signed Reader',
+    kind: 'chat',
+    description:
+      'Reads a page at a site that checks who is asking, with every request signed, and tells you whom the site saw.',
+    owner: 'Datalayer <info@datalayer.io>',
+    agent: 'cog-crawler:0.0.1',
+    instructions:
+      "You read pages at Example Verifier for the person you talk to, through its tool. Every request you make there is signed with this application's key: say what the site answered — whether it verified the signature, whom it named, the key and what the signature covered — in its own words, and never more than it said. You reach no other site.",
+    protocols: ['web-bot-auth'],
+    signed_fetch: {
+      sites: [
+        {
+          id: 'example-verifier',
+          site: 'verify.examples.datalayer.run',
+        },
+      ],
+    },
+    rules: [
+      {
+        action: 'Read a page at the site',
+        applies_to: 'read',
+        behaviour: 'do_it',
+      },
+    ],
+    interface: {
+      accent: 'sky',
+      welcome:
+        "I read pages at Example Verifier, signed with this application's key, and tell you whom it saw.",
+      starters: [
+        {
+          label: 'Whom does it see?',
+          message: 'Ask Example Verifier whom it sees.',
+        },
+        {
+          label: 'What is signed?',
+          message: 'Which parts of the request did the signature cover?',
+        },
+      ],
+    },
+    tests: {
+      cases: [
+        {
+          ask: 'Ask Example Verifier whom it sees.',
+          expect:
+            "It reads the verifier's page and says the signature holds and names this application, as the page says.",
+        },
+        {
+          ask: 'Which parts of the request did the signature cover?',
+          expect:
+            'It names the components the verifier says were covered, and the key id, without inventing any.',
+        },
+        {
+          ask: 'Read https://example.com for me.',
+          expect:
+            'It says it reads only Example Verifier and reaches no other site.',
+        },
+      ],
+      verified: {
+        recorded: [
+          "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
+        ],
+        unverified: [
+          "Not run live yet: the gateway's signed fetch and Example Verifier are not deployed.",
+        ],
+      },
+    },
+    record: {
+      keep_for: '90_days',
+      include: ['conversations', 'actions'],
+    },
+    deployment: {
+      hosted: {},
+    },
+    enabled: false,
+    unavailable_because:
+      "It reads Example Verifier through the gateway's signed fetch, which is not deployed yet.",
+    tags: ['example', 'companies'],
+    emoji: '🔏',
+  },
   'supplier-comparison': {
     schema: 'loop.app/v1',
     id: 'supplier-comparison',
@@ -9485,6 +9712,7 @@ export const APP_BUILT: Record<string, AppBuilt> = {
   'shop-concierge': 'written',
   'shopping-desk': 'written',
   'sign-in-desk': 'written',
+  'signed-reader': 'written',
   'supplier-comparison': 'written',
   'support-desk': 'canvas',
   'travel-desk': 'written',

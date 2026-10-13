@@ -188,7 +188,7 @@ WEB_BOT_AUTH_PROTOCOL_0_0_1 = ProtocolSpec(
     id="web-bot-auth",
     version="0.0.1",
     name="Web Bot Auth",
-    description="Signed outbound requests (RFC 9421) and the key directory a website checks them against.",
+    description="Signed outbound requests (RFC 9421) and the key directory a website checks them against. In applications, every request to a company, business or merchant is signed, and a signed fetch reads pages at the sites an application names, GET only (decided 2026-10-13).",
     publisher="Cloudflare (IETF draft)",
     layer="identity",
     spec_url="https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/",
@@ -199,8 +199,8 @@ WEB_BOT_AUTH_PROTOCOL_0_0_1 = ProtocolSpec(
         python=["agent-runtimes"],
         typescript=["@datalayer/agent-runtimes", "web-bot-auth"],
     ),
-    protocol_tools=[],
-    appspec_block=None,
+    protocol_tools=["signed-fetch"],
+    appspec_block="signed_fetch",
 )
 
 

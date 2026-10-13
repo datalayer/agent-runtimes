@@ -1783,6 +1783,45 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'AppScenario',
       type: 'object',
     },
+    AppSignedFetch: {
+      additionalProperties: false,
+      description:
+        'Signed fetch: the sites it reads pages of, signed with its Web Bot Auth key (AGENT_PROTOCOLS EX-11).',
+      properties: {
+        sites: {
+          description:
+            'Sites, each by its exact domain: read with GET only, every request signed',
+          items: {
+            $ref: '#/$defs/AppSignedFetchSite',
+          },
+          title: 'Sites',
+          type: 'array',
+        },
+      },
+      title: 'AppSignedFetch',
+      type: 'object',
+    },
+    AppSignedFetchSite: {
+      additionalProperties: false,
+      description:
+        "A website the application reads pages of, each request signed (AGENT_PROTOCOLS EX-11).\n\nDecided 2026-10-13: a *signed fetch* names exact sites, an allow-list.\nDatalayer's gateway reads a page there with `GET` only, on its safe\negress path (public addresses only), each request signed with the\napplication's own Web Bot Auth key and recorded; reading is under the\napplication's Rules like any read. Named by its domain: no other host is\nreached, and no credential is ever part of a spec.",
+      properties: {
+        id: {
+          description: 'Stable within the application: `example-verifier`',
+          title: 'Id',
+          type: 'string',
+        },
+        site: {
+          description:
+            "The site's domain, exactly: `verify.examples.datalayer.run`",
+          title: 'Site',
+          type: 'string',
+        },
+      },
+      required: ['id', 'site'],
+      title: 'AppSignedFetchSite',
+      type: 'object',
+    },
     AppSpaceGrant: {
       additionalProperties: false,
       description: 'A Space the application may reach.',
@@ -2755,7 +2794,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     protocols: {
       description:
-        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact` and `a2a` blocks, and each merchant of `commerce`, are refused unless their protocol is listed, and a planned protocol only while it is not offered',
+        'The agent protocols it speaks, ids of the protocols catalogue (AGENT_PROTOCOLS PS-02): its `pap`, `pact`, `signed_fetch` and `a2a` blocks, and each merchant of `commerce`, are refused unless their protocol is listed, and a planned protocol only while it is not offered',
       items: {
         type: 'string',
       },
@@ -2783,6 +2822,11 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     commerce: {
       $ref: '#/$defs/AppCommerce',
       description: 'UCP and ACP: merchants it shops at for each person',
+    },
+    signed_fetch: {
+      $ref: '#/$defs/AppSignedFetch',
+      description:
+        'Web Bot Auth: the sites it reads pages of, GET only, each request signed with its key',
     },
     a2a: {
       $ref: '#/$defs/AppA2A',

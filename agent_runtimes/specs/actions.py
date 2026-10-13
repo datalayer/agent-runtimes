@@ -636,6 +636,7 @@ PROTOCOL_TOOL_CLASSES: Dict[str, Dict[str, Any]] = {
             "pap_disconnect": ["write"],
         },
     },
+    "signed-fetch": {"connection": "signed-fetch", "tools": {"signed_fetch": ["read"]}},
     "ucp": {
         "connection": "ucp",
         "tools": {
@@ -912,6 +913,7 @@ APP_BEHAVIOURS: Dict[str, Dict[str, str]] = {
     "shop-concierge": {},
     "shopping-desk": {},
     "sign-in-desk": {},
+    "signed-reader": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},
@@ -985,6 +987,7 @@ APP_ESCALATIONS: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
     "shop-concierge": {},
     "shopping-desk": {},
     "sign-in-desk": {},
+    "signed-reader": {},
     "supplier-comparison": {},
     "support-desk": {},
     "travel-desk": {},
