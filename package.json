@@ -188,6 +188,7 @@
         "@lumino/widgets": "^2.7.3",
         "@mcp-ui/client": "^5.17.1",
         "@modelcontextprotocol/ext-apps": "^0.2.2",
+        "@modelcontextprotocol/sdk": "^1.32.1",
         "@primer/behaviors": "^1.8.4",
         "@primer/brand-primitives": "^0.51.0",
         "@primer/css": "^21.5.1",

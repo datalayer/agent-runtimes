@@ -99,7 +99,7 @@ two packages cannot drift apart:
 | A2A 1.0 extensions | `a2a/fixtures/extensions.json`: a card's extensions, the one found, those required and not supported, and cards both refuse | `test_protocols_a2a_extensions.py`, `test_protocols_a2a_signed_requests.py` | `a2aExtensions.unit.test.ts` | — |
 | Every protocol's journey | — | `test_protocols_secrets.py`: every logger at DEBUG and every URL requested | — | the payment tokens, the seller's bearer, the device code and the delegation token, the private key: in no log line and no URL (MCP's and A2A's: `test_credentials_never_shown.py`, `test_delegated_credential.py`) |
 | Every plugin | its `reactor-points.json`; its entry in the agentspecs catalogue and the version it says | `test_protocols_reactor_points.py` | `reactorPoints.unit.test.ts` | — |
-| MCP | none yet: agent-runtimes has no TypeScript MCP client to pair (see [what is implemented](./mcp-and-a2a#mcp)) | the `mcp` SDK's own | — | `test_credentials_never_shown.py` |
+| MCP | `mcp/fixtures/session.json`: one server's answers on the wire (tools, calls, a refusal, a resource, a prompt) and what a client reads from each, the specification's defaults for missing tool annotations | `test_protocols_mcp.py` (the `mcp` SDK's types and its `Client` at the fixture's server), `test_protocols_mcp_two_languages.py` (the TypeScript `McpClient` at the Python server over Streamable HTTP, 2025-11-25 agreed) | `mcpClient.unit.test.ts` (`@modelcontextprotocol/sdk`'s schemas and a server of the SDK in memory), `mcpServer.integration.test.ts` | `test_credentials_never_shown.py` |
 
 ## Examples
 

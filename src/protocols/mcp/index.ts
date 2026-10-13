@@ -8,7 +8,8 @@
  * declares no point yet: MCP's optional capabilities and extensions become
  * `mcp.extension.<name>` points when the MCP client and server read them
  * from contributions (AGENT_PROTOCOLS PR-01). The twin of
- * `agent_runtimes.protocols.mcp`.
+ * `agent_runtimes.protocols.mcp`. Its client, on the official
+ * `@modelcontextprotocol/sdk`, is `./client` (PR-51).
  *
  * @module protocols/mcp
  */
@@ -44,3 +45,5 @@ export const McpPlugin = definePlugin({
     ),
   ],
 });
+
+export * from './client';

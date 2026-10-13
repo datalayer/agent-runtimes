@@ -18,14 +18,15 @@ row.
 | Python `mcp` | `mcp>=2,<3` (2.1.1 installed) | `2026-07-28` (`mcp.types.LATEST_PROTOCOL_VERSION`) |
 | Python `fastmcp-slim[client]` | `>=4.0.0b3,<5` | the transports of the MCP client |
 | Python `pydantic-ai-slim[mcp]` | `>=2.35.0,<3` | `MCPToolset`, which `DisplayMCPToolset` extends |
-| TypeScript `@modelcontextprotocol/sdk` | not a direct dependency (1.32.1, through `@mcp-ui/client` and `@modelcontextprotocol/ext-apps`) | `2025-11-25` (`MCP_SPECIFICATION_VERSION` in `src/protocols/mcp`) |
+| TypeScript `@modelcontextprotocol/sdk` | `^1.32.1` (1.32.1 installed) | `2025-11-25` (`MCP_SPECIFICATION_VERSION` in `src/protocols/mcp`) |
 | Python `fasta2a` | `>=2.1.1,<2.2` (extra `a2a`) | A2A 1.0, JSON-RPC binding |
 | Python `a2a-sdk` | `>=0.3.0,<0.4.0` | used by tests only, to validate agent cards |
 | TypeScript `@a2a-js/sdk` | `^1.3.0` | A2A 1.0 method names |
 
 The two MCP SDKs speak different protocol versions: Python `2026-07-28`,
-TypeScript `2025-11-25`. Nothing in TypeScript speaks MCP to a server today
-(below), so the difference does not reach the wire.
+TypeScript `2025-11-25`. The Python server answers a TypeScript client at
+`2025-11-25` (the initialize handshake), held by
+`test_protocols_mcp_two_languages.py`.
 
 ## MCP
 
@@ -35,13 +36,13 @@ and `/api/v1/mcp-ui/…` an agent chat transport.
 
 | Feature | Python client | TypeScript client | Server (either) |
 | --- | --- | --- | --- |
-| stdio | yes (`mcp/lifecycle.py`) | no | no |
-| Streamable HTTP | yes (`mcp/tools.py`, `mcp/datalayer_gateway.py`, `mcp/google_workspace.py`) | no | no |
+| stdio | yes (`mcp/lifecycle.py`) | through `McpClient.connect({ transport })` | no |
+| Streamable HTTP | yes (`mcp/tools.py`, `mcp/datalayer_gateway.py`, `mcp/google_workspace.py`) | yes (`McpClient` in `src/protocols/mcp/client.ts`) | no |
 | Legacy HTTP+SSE | not used | no | no |
-| Tools: list, call | yes (`mcp/lifecycle.py`, `mcp/displays.py`) | no: the page manages servers through the runtime's REST routes | no |
+| Tools: list, call | yes (`mcp/lifecycle.py`, `mcp/displays.py`) | yes (`McpClient.listTools`, `callTool`; the page still manages a runtime's servers through its REST routes) | no |
 | A tool's display (`_meta["reactor.ui/display"]`) | yes (`mcp/displays.py`) | drawn from the runtime's stream | no |
-| Structured content, output schemas, annotations | through pydantic-ai, not read by agent-runtimes | no | no |
-| Resources, prompts | no | no | no |
+| Structured content, output schemas, annotations | read (`protocols/mcp/reading.py`, the conformance's readings); through pydantic-ai for an agent's tools | read (`toolReading`, `callReading`; a structured answer checked against its output schema by the SDK) | no |
+| Resources, prompts | read (`resource_reading`, `prompt_reading`); not wired to an agent | read (`readResource`, `getPrompt`) | no |
 | Sampling, elicitation, roots | no | no | no |
 | Logging, progress, cancellation, completions | no | no | no |
 | Tasks | library only (`mcp/tasks.py`: call as a task, get, cancel, list, status) | no | no |
@@ -85,8 +86,8 @@ both languages.
 3. **MCP OAuth** stores a token after the flow but does not attach a stored
    token when connecting: on Datalayer the gateway holds credentials instead.
 4. **MCP tasks** are library code that only tests call.
-5. **No TypeScript MCP client**: `@mcp-ui/client` and `ext-apps` are declared
-   and not imported.
+5. **The TypeScript MCP client** (`McpClient`, on `@modelcontextprotocol/sdk`)
+   is a library: no page of the package uses it yet.
 6. **Two MCP versions** across the SDKs (`2026-07-28`, `2025-11-25`).
 7. **A2A server**: JSON-RPC only (no HTTP+JSON binding, which PACT 1.0
    requires of a Brand); push notifications and `ListTasks` answer

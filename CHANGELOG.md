@@ -7,6 +7,10 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## Unreleased
+
+- **A TypeScript MCP client, and MCP's conformance in both languages** (AGENT_PROTOCOLS PR-51, EX-09): `McpClient` on the official `@modelcontextprotocol/sdk` (now a direct dependency, `^1.32.1`) — connect over Streamable HTTP or any transport, the version agreed, tools listed through their pages and called, resources read, prompts got — and the readings both languages agree on (`toolReading` / `tool_reading` with the specification's defaults for missing annotations, `callReading`, `resourceReading`, `promptReading`), held to `protocols/mcp/fixtures/session.json` by both suites; `examples/protocols/mcp/fixture_server.py` serves the fixture with the `mcp` SDK, and the TypeScript client reads it across the two SDKs' versions (2025-11-25 agreed) — [Agent protocols](https://agent-runtimes.datalayer.tech/protocols/agent-protocols#conformance).
+
 ## 1.5.8
 
 On agentspecs 0.0.86.
