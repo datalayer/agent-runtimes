@@ -3018,13 +3018,15 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview's runtime reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
+      ],
       recorded: [
         "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
         "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
       ],
       unverified: [
-        'It has not run in the Studio against the hosted Manzanita (manzanita.examples.datalayer.run) from this example yet.',
+        "A model's turns in the Studio's Preview were not watched in that drill, and no exchange or return was confirmed live.",
       ],
     },
   },
@@ -3054,9 +3056,8 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    'It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.',
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '📦',
@@ -5259,12 +5260,14 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
       },
     ],
     verified: {
-      live: [],
+      live: [
+        "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview's runtime reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
+      ],
       recorded: [
         "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
       ],
       unverified: [
-        "Not run live yet: the gateway's signed fetch and Example Verifier are not deployed.",
+        "A model's turns in the Studio's Preview were not watched in that drill.",
       ],
     },
   },
@@ -5294,9 +5297,8 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
     documents: [],
     alternatives: [],
   },
-  enabled: false,
-  unavailable_because:
-    "It reads Example Verifier through the gateway's signed fetch, which is not deployed yet.",
+  enabled: true,
+  unavailable_because: '',
   tags: ['example', 'companies'],
   icon: 'apps',
   emoji: '🔏',
@@ -8079,12 +8081,15 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled on r1 on 13 October 2026 against the hosted Manzanita (manzanita.examples.datalayer.run), as its Preview's runtime reaches the gateway's pap toolset: discovery and a question answered signed out, then the person signed in both ways it declares — Direct Sign-In through the company's consent page and back to Datalayer, and Device Sign-In with the code entered at its /device page — each granting orders:read and orders:write, and the person's latest order answered for them; disconnected after, revoked at the company.",
+        ],
         recorded: [
           "The journey it takes is the Personal Agent Protocol SDK's demonstration with Manzanita Outfitters, run in the SDK's own tests (personal-agent-protocol 0.10.0).",
           "The journey is the Personal Agent Protocol SDK's recorded journey user-with-a-company (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live.",
         ],
         unverified: [
-          'It has not run in the Studio against the hosted Manzanita (manzanita.examples.datalayer.run) from this example yet.',
+          "A model's turns in the Studio's Preview were not watched in that drill, and no exchange or return was confirmed live.",
         ],
       },
     },
@@ -8095,9 +8100,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      'It works with a shop for you through the Personal Agent Protocol, and the services that sign you in at a company are not shipped yet.',
     tags: ['example', 'companies'],
     emoji: '📦',
   },
@@ -9554,11 +9556,14 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
         },
       ],
       verified: {
+        live: [
+          "Drilled on r1 on 13 October 2026 against the hosted Example Verifier (verify.examples.datalayer.run), as its Preview's runtime reaches the gateway's signed-fetch toolset: the page read signed with the application's own key, the verifier saying the signature holds and naming the application by its id, the key and the components covered; a site its signed fetch does not name refused.",
+        ],
         recorded: [
           "Example Verifier's checks are the counterparts service's own tests (a request signed with agent-runtimes' sign_request verified, an unsigned or tampered one answered the page anyone gets).",
         ],
         unverified: [
-          "Not run live yet: the gateway's signed fetch and Example Verifier are not deployed.",
+          "A model's turns in the Studio's Preview were not watched in that drill.",
         ],
       },
     },
@@ -9569,9 +9574,6 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
     deployment: {
       hosted: {},
     },
-    enabled: false,
-    unavailable_because:
-      "It reads Example Verifier through the gateway's signed fetch, which is not deployed yet.",
     tags: ['example', 'companies'],
     emoji: '🔏',
   },
