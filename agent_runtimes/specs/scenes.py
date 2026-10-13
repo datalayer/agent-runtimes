@@ -1043,6 +1043,147 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
     }
 )
 
+PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "pact-a-personal-agent-at-a-business",
+        "version": "0.0.1",
+        "name": "A Personal Agent at a Business",
+        "description": "Ada’s Travel Desk asks an airline about her flight, and she allows it to read her bookings, not to change them.",
+        "tags": ["stage", "pact"],
+        "icon": "people",
+        "emoji": "✈️",
+        "kind": "scripted",
+        "team": "",
+        "entry": "",
+        "cast": [],
+        "setting": {"systems": [], "period": "", "language": "", "assumes": ""},
+        "script": [],
+        "stage": {
+            "positions": {},
+            "opens_first": "",
+            "transcript": {"tools": True, "narration": True},
+            "inspectors": [],
+            "rests_after": "",
+            "pace": "steady",
+        },
+        "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
+        "rehearsal": {
+            "beats": [],
+            "within": "",
+            "verified": {"live": [], "recorded": [], "unverified": []},
+        },
+        "deployment": {"account": "", "page": "", "addresses": {}},
+        "actors": [
+            {"id": "ada", "name": "Ada", "face": "🧑", "is": "the person"},
+            {
+                "id": "agent",
+                "name": "Travel Desk",
+                "face": "🤖",
+                "is": "an application on Datalayer, working for Ada",
+            },
+            {
+                "id": "air",
+                "name": "Example Air Support",
+                "face": "🛫",
+                "is": "a business, at air.examples.datalayer.run",
+            },
+        ],
+        "lines": [
+            {"from": "ada", "to": "agent", "says": "“When is my flight?”", "how": ""},
+            {
+                "from": "agent",
+                "to": "",
+                "says": "Finds Example Air Support by its domain and checks who answers for it.",
+                "card": {
+                    "kind": "found",
+                    "title": "Example Air Support",
+                    "rows": [
+                        ["Its domain", "air.examples.datalayer.run"],
+                        ["Answered for it by", "Example Provider"],
+                        ["How a person signs in", "With a code, on the airline’s page"],
+                        [
+                            "It may ask",
+                            "See your bookings and their status · Change the date of a booking",
+                        ],
+                    ],
+                    "lines": [],
+                },
+                "how": "The application reads the card the business publishes for agents, at its own domain.",
+            },
+            {
+                "from": "agent",
+                "to": "air",
+                "says": "Asks the airline’s agent about Ada’s bookings, as Travel Desk.",
+                "how": "Each request says which application asks, signed by Datalayer; nobody is signed in yet.",
+            },
+            {
+                "from": "air",
+                "to": "agent",
+                "says": "“Happy to help. Please sign in so I can see your bookings.”",
+                "how": "The business asks for a sign-in and names what it may ask for.",
+            },
+            {
+                "from": "agent",
+                "to": "ada",
+                "says": "Asks Ada to sign in at Example Air, on the airline’s own page.",
+                "card": {
+                    "kind": "sign-in",
+                    "title": "Sign in at Example Air",
+                    "rows": [],
+                    "lines": [
+                        "Travel Desk asks for: See your bookings and their status; Change the date of a booking.",
+                        "You sign in on the airline’s page, and choose what it may do there.",
+                        "You can allow fewer permissions than it asks for.",
+                    ],
+                },
+                "how": "",
+                "turn": {
+                    "yes": "Sign in, and allow only “See your bookings”",
+                    "no": "",
+                    "declined": "",
+                },
+            },
+            {
+                "from": "ada",
+                "to": "air",
+                "says": "Signs in on the airline’s page and allows “See your bookings and their status” only.",
+                "how": "The airline gives Travel Desk a permission of its own, for Ada and for this application only; Datalayer keeps it, out of the agent’s reach.",
+            },
+            {
+                "from": "air",
+                "to": "agent",
+                "says": "“Your booking AB123 flies on 2026-11-02.”",
+                "how": "The airline signs a receipt of what it did with the permission.",
+            },
+            {
+                "from": "agent",
+                "to": "ada",
+                "says": "“Your flight, booking AB123, is on 2 November 2026.”",
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "",
+                "says": "Keeps the airline’s receipt with its record, for Ada and for whoever built it.",
+                "card": {
+                    "kind": "record",
+                    "title": "Activity",
+                    "rows": [
+                        ["Signed in at", "Example Air, for Ada"],
+                        ["Allowed", "See your bookings and their status"],
+                        ["Receipt", "Looked up booking AB123, signed by the airline"],
+                    ],
+                    "lines": [],
+                },
+                "how": "Ada sees the permission under In your name, and ends it there with Disconnect.",
+            },
+        ],
+        "live": "Working with a business over PACT is built in the Studio and its services; asking a business through Datalayer waits for them to be shipped.",
+        "setup": [],
+    }
+)
+
 PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1 = SceneSpec.model_validate(
     {
         "schema": "loop.scene/v1",
@@ -1974,6 +2115,156 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
     }
 )
 
+UCP_A_PURCHASE_APPROVED_SCENE_0_0_1 = SceneSpec.model_validate(
+    {
+        "schema": "loop.scene/v1",
+        "id": "ucp-a-purchase-approved",
+        "version": "0.0.1",
+        "name": "A Purchase, Approved",
+        "description": "Ada’s Shopping Desk fills a basket at a test shop, and buys only once she approves the exact purchase.",
+        "tags": ["stage", "ucp", "commerce"],
+        "icon": "people",
+        "emoji": "🛍️",
+        "kind": "scripted",
+        "team": "",
+        "entry": "",
+        "cast": [],
+        "setting": {"systems": [], "period": "", "language": "", "assumes": ""},
+        "script": [],
+        "stage": {
+            "positions": {},
+            "opens_first": "",
+            "transcript": {"tools": True, "narration": True},
+            "inspectors": [],
+            "rests_after": "",
+            "pace": "steady",
+        },
+        "audience": {"who": "signed-in", "ceiling_per_ask": 0.0, "asks_a_day": 0},
+        "rehearsal": {
+            "beats": [],
+            "within": "",
+            "verified": {"live": [], "recorded": [], "unverified": []},
+        },
+        "deployment": {"account": "", "page": "", "addresses": {}},
+        "actors": [
+            {"id": "ada", "name": "Ada", "face": "🧑", "is": "the person"},
+            {
+                "id": "agent",
+                "name": "Shopping Desk",
+                "face": "🤖",
+                "is": "an application on Datalayer, shopping for Ada",
+            },
+            {
+                "id": "store",
+                "name": "Example Store",
+                "face": "🍵",
+                "is": "a test shop, at store.examples.datalayer.run",
+            },
+        ],
+        "lines": [
+            {
+                "from": "ada",
+                "to": "agent",
+                "says": "“Buy one Sencha green tea for me.”",
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "store",
+                "says": "Searches the shop for green tea.",
+                "how": "The application reads the page every shop publishes for agents, then its catalogue; reading changes nothing, so its rule lets it do it.",
+            },
+            {
+                "from": "store",
+                "to": "agent",
+                "says": "“Sencha green tea, 100 g: USD 12.50.”",
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "store",
+                "says": "Fills a checkout with one Sencha green tea, for Ada.",
+                "how": "A checkout the shop can cancel; nothing is bought yet.",
+            },
+            {
+                "from": "store",
+                "to": "agent",
+                "says": "“Your checkout is ready to complete.”",
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "ada",
+                "says": "Every purchase is asked first, whatever its rule says: it waits for Ada.",
+                "card": {
+                    "kind": "approval",
+                    "title": "Shopping Desk asks you to approve a purchase",
+                    "rows": [
+                        ["Shop", "Example Store"],
+                        ["What", "Sencha green tea, 100 g × 1"],
+                        ["Tax", "USD 1.00"],
+                        ["Total", "USD 13.50"],
+                        ["The most one purchase may cost", "USD 50.00"],
+                    ],
+                    "lines": [
+                        "Buy 1 Sencha green tea, 100 g at Example Store for USD 13.50."
+                    ],
+                },
+                "how": "The purchase is the shop’s own checkout, read again before it is shown; approving this one never approves a changed basket.",
+                "turn": {
+                    "yes": "Approve",
+                    "no": "Decline",
+                    "declined": "Ada declined: the checkout is cancelled, and nothing is bought.",
+                },
+            },
+            {
+                "from": "agent",
+                "to": "store",
+                "says": "Completes the checkout, exactly as Ada approved it, with a test payment.",
+                "how": "Datalayer writes down that it buys before it does: asked again, it reads the order back instead of paying twice. No card is ever in the conversation.",
+            },
+            {
+                "from": "store",
+                "to": "agent",
+                "says": "“Your order is placed.”",
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "ada",
+                "says": "Tells Ada what the shop says it did.",
+                "card": {
+                    "kind": "done",
+                    "title": "Bought, once",
+                    "rows": [],
+                    "lines": [
+                        "1 Sencha green tea, 100 g, USD 13.50, at Example Store."
+                    ],
+                },
+                "how": "",
+            },
+            {
+                "from": "agent",
+                "to": "",
+                "says": "Keeps a record of the purchase, for Ada and for whoever built it.",
+                "card": {
+                    "kind": "record",
+                    "title": "Activity",
+                    "rows": [
+                        ["Bought at", "Example Store, for Ada"],
+                        ["Amount", "USD 13.50"],
+                        ["Approved by", "Ada, once"],
+                    ],
+                    "lines": [],
+                },
+                "how": "The purchase shows in the application’s Activity with its amount.",
+            },
+        ],
+        "live": "Buying at a test shop is built in the Studio and its services, always asked first, under a limit, with no real payment; the test shops answering on Datalayer wait for them to be shipped.",
+        "setup": [],
+    }
+)
+
 
 # ============================================================================
 # Scene Catalog
@@ -1983,11 +2274,13 @@ SCENE_CATALOGUE: Dict[str, SceneSpec] = {
     "crop-monitoring": CROP_MONITORING_SCENE_0_0_1,
     "disaster-assessment": DISASTER_ASSESSMENT_SCENE_0_0_1,
     "month-end-close": MONTH_END_CLOSE_SCENE_0_0_1,
+    "pact-a-personal-agent-at-a-business": PACT_A_PERSONAL_AGENT_AT_A_BUSINESS_SCENE_0_0_1,
     "pap-a-person-and-a-company": PAP_A_PERSON_AND_A_COMPANY_SCENE_0_0_1,
     "pap-approve-once": PAP_APPROVE_ONCE_SCENE_0_0_1,
     "pap-two-companies": PAP_TWO_COMPANIES_SCENE_0_0_1,
     "pap-your-application-a-company": PAP_YOUR_APPLICATION_A_COMPANY_SCENE_0_0_1,
     "sales-and-accounting": SALES_AND_ACCOUNTING_SCENE_0_0_1,
+    "ucp-a-purchase-approved": UCP_A_PURCHASE_APPROVED_SCENE_0_0_1,
 }
 
 

@@ -35,10 +35,14 @@ PAP_STAGES = (
     "pap-your-application-a-company",
     "pap-two-companies",
 )
+#: The other protocols' Stages, scripted (AGENT_PROTOCOLS EX-14, EX-15).
+PROTOCOL_STAGES = ("ucp-a-purchase-approved", "pact-a-personal-agent-at-a-business")
 
 
 def test_the_catalogue_holds_the_four_scenes_with_their_faces() -> None:
-    assert set(SCENE_CATALOGUE) == set(HOME_SCENES) | set(PAP_STAGES)
+    assert set(SCENE_CATALOGUE) == set(HOME_SCENES) | set(PAP_STAGES) | set(
+        PROTOCOL_STAGES
+    )
     faces = [scene.emoji for scene in SCENE_CATALOGUE.values()]
     assert len(set(faces)) == len(faces) and "👀" not in faces
     for scene in SCENE_CATALOGUE.values():
