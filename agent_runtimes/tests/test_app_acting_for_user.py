@@ -105,14 +105,56 @@ def test_the_servers_in_the_users_name_are_reached_with_their_token(
         users_token=PERSON,
     )
     toolsets_for_the_run([SimpleNamespace(id="datalayer")], PRINCIPAL)
-    # Not let act in their name: nothing of theirs, and never the principal's either.
-    toolsets_for_the_run(
-        [SimpleNamespace(id="datalayer")],
+    # Not let act in their name: nothing of theirs, and never the principal's either — the
+    # server is left out of the run (an empty Bearer broke the whole run, PAP_DATALAYER B-04),
+    # never handed back as the process holds it.
+    other = SimpleNamespace(id="tavily")
+    assert toolsets_for_the_run(
+        [SimpleNamespace(id="datalayer"), other],
         PRINCIPAL,
         in_users_name=frozenset({"datalayer"}),
-    )
+    ) == [other]
     assert seen == [
         {"Authorization": f"Bearer {PERSON}"},
         {"Authorization": f"Bearer {PRINCIPAL}"},
-        {"Authorization": "Bearer "},
     ]
+
+
+def test_a_company_in_each_persons_name_is_left_out_of_a_turn_nobody_signed_in_to_datalayer_asked(
+    monkeypatch: Any,
+) -> None:
+    """PAP_DATALAYER B-04/R-07, found on r1 (runtime image 0.0.30): a company application's
+    turn for a personal agent runs as its deployment's principal; its own company connection
+    in each person's name had no token, was opened with `Bearer ` and the MCP client refused
+    the header — the whole turn failed (*could not answer just now*). That company is left
+    out of the turn now; one reached as the owner stays."""
+    seen: list = []
+
+    def client(
+        headers: dict[str, str] | None = None, **kwargs: Any
+    ) -> httpx.AsyncClient:
+        seen.append(dict(headers or {}))
+        return httpx.AsyncClient(headers=headers)
+
+    from agent_runtimes.loop.apps import pap_connections
+
+    monkeypatch.setattr(datalayer_gateway, "tracing_client", client)
+    app = SimpleNamespace(
+        pap=SimpleNamespace(
+            connections=[
+                {"company": "manzanita.example", "access": "write"},
+                {"company": "ledgerly.example", "access": "read"},
+            ]
+        )
+    )
+    pap_connections.remember(app)
+    try:
+        mine = pap_connections.server_id("manzanita.example")
+        owners = pap_connections.server_id("ledgerly.example")
+        toolsets = toolsets_for_the_run(
+            [], PRINCIPAL, companies=((mine, "user"), (owners, "owner"))
+        )
+    finally:
+        pap_connections.forget()
+    assert [toolset.wrapped.id for toolset in toolsets] == [owners]
+    assert seen == [{"Authorization": f"Bearer {PRINCIPAL}"}]

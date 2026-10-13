@@ -14,11 +14,14 @@ toolset holding the run's token takes its place, opened and closed with the run.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
 from agent_runtimes.mcp.displays import DisplayMCPToolset
 from agent_runtimes.mcp.tracing import tracing_client
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "DEFAULT_GATEWAY_URL",
@@ -83,6 +86,13 @@ def gateway_query(server_id: str) -> str | None:
     return None
 
 
+def _left_out(server_id: str) -> None:
+    logger.info(
+        "The gateway's server %s is left out of this run: nobody to reach it in the name of.",
+        server_id,
+    )
+
+
 def toolsets_for_the_run(
     toolsets: list[Any],
     token: str,
@@ -106,8 +116,9 @@ def toolsets_for_the_run(
         with the run's.
     users_token : str
         The token of the person talking to it, naming the application;
-        `""` when they have not let it act in their name, and the gateway
-        then refuses those servers in its sentence.
+        `""` when they have not let it act in their name, or nobody signed in
+        to Datalayer is talking to it: those servers are then left out of the
+        run, which goes on without them (never reached with an empty Bearer).
     companies : tuple[tuple[str, str], ...]
         The companies its application works with as a personal agent
         (PAP_DATALAYER ADR-1), as `(server id, in whose name)`: each the
@@ -125,20 +136,28 @@ def toolsets_for_the_run(
     """
     kept: list[Any] = []
     swapped: list[Any] = []
+    # Whether the run reaches the gateway at all: a server of it left out is never handed back
+    # as the process holds it (with the runtime's own key).
+    reaches = False
     for toolset in toolsets:
         server_id = str(getattr(toolset, "id", None) or "")
         query = gateway_query(server_id) if server_id else None
         if query is None:
             kept.append(toolset)
             continue
+        reaches = True
+        bearer = users_token if server_id in in_users_name else token
+        if not bearer:
+            # Nobody to reach it in the name of: left out of this run, which goes on
+            # without it — an empty Bearer is no header, and broke the whole run.
+            _left_out(server_id)
+            continue
         swapped.append(
             DisplayMCPToolset(
                 f"{gateway_url()}?{query}" if query else gateway_url(),
                 id=server_id if query else "datalayer",
                 http_client=tracing_client(
-                    headers={
-                        "Authorization": f"Bearer {users_token if server_id in in_users_name else token}"
-                    }
+                    headers={"Authorization": f"Bearer {bearer}"}
                 ),
             )
         )
@@ -153,7 +172,14 @@ def toolsets_for_the_run(
         query = company_query(sid)
         if query is None:
             continue
+        reaches = True
         bearer = token if acting == "owner" else users_token
+        if not bearer:
+            # A company reached in each person's name, and nobody signed in to Datalayer is
+            # talking to it — a company's turn for a personal agent, run as the deployment's
+            # principal (PAP_DATALAYER B-04): left out, the turn answered without it.
+            _left_out(sid)
+            continue
         swapped.append(
             DisplayMCPToolset(
                 f"{gateway_url()}?{query}",
@@ -163,7 +189,7 @@ def toolsets_for_the_run(
                 ),
             ).prefixed(tool_prefix(sid))
         )
-    if not swapped:
+    if not reaches:
         # An agent not given the gateway is not given it by a delegation.
         return toolsets
     return [*kept, *swapped]
