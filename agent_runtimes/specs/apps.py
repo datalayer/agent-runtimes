@@ -2639,7 +2639,7 @@ ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
             "verified": {
                 "live": [],
                 "recorded": [
-                    "The journey is the Personal Agent Protocol SDK's recorded journey account-tokens (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
+                    "The journey is the Personal Agent Protocol SDK's recorded journey of a sign-in kept for each person (Datalayer's protocol examples, personal-agent-protocol 0.16.0), shown as recorded data, not live."
                 ],
                 "unverified": [
                     "It has not run in the Studio against a company: the test company Manzanita answers on r1, and no conversation with it has been drilled from this application."
