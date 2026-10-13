@@ -7,6 +7,15 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.5
+
+On agentspecs 0.0.84.
+
+- **A Preview reaches its companies** (PAP_DATALAYER P-01): the runtime asks for its Preview token with its `pap.connections` beside its Spaces (`preview_grants`), so the gateway's `pap` toolset can reach the companies the Maker reviewed; no Preview could before.
+- **Talking to a company is a send** (R-02): `pap_ask` and `pap_handoff` are classed send, *Ask me first* by default; a read connection to a company no longer converses.
+- **Scripted scenes** (X-02): `SceneSpec` gains `kind`, `actors`, `lines` and `live` in both languages.
+- **Merchants in an application** (AGENT_PROTOCOLS PI-01, PI-20, PI-21): the Appspec's `commerce` block — UCP and ACP test merchants only, every purchase asked first, no real payment.
+
 ## 1.5.4
 
 On agentspecs 0.0.83.
