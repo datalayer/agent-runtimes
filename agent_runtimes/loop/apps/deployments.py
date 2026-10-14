@@ -543,6 +543,65 @@ def _refusal_of(response: httpx.Response) -> str:
     return str(detail if detail is not None else response.text)[:500]
 
 
+def _own_routes_only(response: httpx.Response) -> bool:
+    """Whether the runtime said it serves a deployment, and answers its own routes only."""
+    from agent_runtimes.loop.apps.principal import OWN_ROUTES_ONLY
+
+    if response.status_code != 404:
+        return False
+    try:
+        said = response.json()
+    except ValueError:
+        return False
+    return isinstance(said, Mapping) and said.get("detail") == OWN_ROUTES_ONLY
+
+
+def _made_already(
+    http: httpx.Client,
+    base: str,
+    token: str,
+    payload: Mapping[str, Any],
+    agent: str,
+) -> str:
+    """The agent a lost answer made, read back on the application's own route; its id.
+
+    `SessionNotStarted` when the runtime serves another deployment, another
+    version of it, or answers that the agent is not there or not the
+    caller's: it is not asked again.
+    """
+    instance = payload.get("app_instance") or {}
+    wanted = (
+        str(instance.get("deployment_uid") or ""),
+        int(instance.get("version") or 0),
+    )
+    if not wanted[0]:
+        raise SessionNotStarted(
+            "The runtime already serves a deployment, and this agent serves none."
+        )
+    try:
+        response = http.get(
+            f"{base}/api/v1/apps/agents/{quote(agent, safe='')}/deployment",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except httpx.HTTPError as error:
+        raise SessionNotStarted(
+            f"The runtime already serves a deployment, and did not say which: {error}."
+        ) from None
+    if response.status_code >= 300:
+        raise SessionNotStarted(
+            "The runtime already serves a deployment, and not this agent's "
+            f"({response.status_code}): {_refusal_of(response)}"
+        )
+    said = response.json() or {}
+    served = (str(said.get("deployment_uid") or ""), int(said.get("version") or 0))
+    if served != wanted:
+        raise SessionNotStarted(
+            f"The runtime already serves deployment {served[0]} at version {served[1]}, "
+            f"not {wanted[0]} at version {wanted[1]}."
+        )
+    return agent
+
+
 def create_agent(
     *,
     ingress: str,
@@ -561,6 +620,15 @@ def create_agent(
     the runtime refused the application (400, 422: not asked again);
     `SessionNotStarted` when the agent could not be created otherwise — the
     runtime never answered.
+
+    Asked again after an answer that was lost, the runtime already serves
+    the deployment its agent was made for, and answers ``/api/v1/agents`` to
+    nobody from outside (404, `OWN_ROUTES_ONLY`): which deployment the agent
+    serves is then read on the application's own route
+    (`GET /api/v1/apps/agents/{agent}/deployment`, with the same token), and
+    the agent is the one made when it serves this payload's deployment, at
+    its version. Serving another, or not there, it is not asked again
+    (`SessionNotStarted`).
     """
     import time
 
@@ -585,6 +653,8 @@ def create_agent(
             else:
                 if response.status_code == 409:
                     return fallback
+                if _own_routes_only(response):
+                    return _made_already(http, base, token, payload, fallback)
                 if response.status_code in (400, 422):
                     raise ApplicationRefused(_refusal_of(response))
                 if response.status_code < 300:

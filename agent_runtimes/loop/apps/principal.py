@@ -54,6 +54,7 @@ __all__ = [
     "a_deployment_is_served",
     "api_key_for",
     "deployment_of",
+    "deployments_served",
     "ensure_preview_token",
     "ensure_principal_token",
     "forget_principal_token",
@@ -61,6 +62,7 @@ __all__ = [
     "give_principal_token",
     "holds_principal_token",
     "is_held_principal",
+    "owner_of",
     "preview_grants",
     "preview_key",
     "preview_token",
@@ -134,6 +136,31 @@ def a_deployment_is_served() -> bool:
     from agent_runtimes.models.models import agents_serving_apps
 
     return any(serves_a_deployment(agent) for agent in agents_serving_apps())
+
+
+def deployments_served() -> list[str]:
+    """The deployments the agents of this runtime serve, by uid, each once."""
+    from agent_runtimes.models.models import agents_serving_apps, app_instance_of
+
+    served = (deployment_of(app_instance_of(agent)) for agent in agents_serving_apps())
+    return sorted({deployment for deployment in served if deployment})
+
+
+def owner_of(deployment_uid: str) -> str:
+    """Whose a deployment an agent here serves is: its owner's account uid, or ``""``.
+
+    As the token of its principal held here says (``account_uid``, which IAM
+    signs and ai-agents handed this runtime as its agent was made) — never as
+    a caller says. What keeps it on this runtime answers its owner alone
+    (PAP_DATALAYER's release gates, decided 14 October 2026). ``""`` when no
+    token of its principal is held here: nobody's, so nobody is answered.
+    """
+    from agent_runtimes.loop.apps.callers import _unverified_claims  # noqa: PLC0415
+
+    held = _HELD.get(deployment_uid)
+    if not held:
+        return ""
+    return str(_unverified_claims(str(held["token"])).get("account_uid") or "")
 
 
 def give_principal_token(

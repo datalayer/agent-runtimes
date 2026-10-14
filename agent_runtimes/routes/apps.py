@@ -381,6 +381,33 @@ async def a_person(request: Request) -> Authorized:
     return await _authorize(request, person_only=True)
 
 
+#: Said to anybody but its owner on what keeps a deployment on this runtime.
+NOT_ITS_OWNER = (
+    "Only the owner of the deployment an agent here serves keeps it on this runtime."
+)
+
+
+def its_owner(authorized: Authorized, deployments: List[str]) -> None:
+    """The owner of every deployment named, or the pod itself; else 403.
+
+    What ai-agents keeps a deployment on a runtime with — its agent served
+    over A2A or not, its principal renewed, which agent serves it — answers
+    the deployment's owner alone, whose own token, or the key IAM mints of
+    them, ai-agents sends (PAP_DATALAYER's release gates, decided 14 October
+    2026): another person, signed in or not, is refused. The owner is the
+    account the deployment's principal is of, as its token held here says
+    (`principal.owner_of`); a deployment none is held for is nobody's, and
+    refused to everybody but the pod.
+    """
+    if authorized.caller.kind == "local":
+        return
+    from agent_runtimes.loop.apps.principal import owner_of
+
+    owners = {owner_of(deployment) for deployment in deployments}
+    if not authorized.caller.uid or owners != {authorized.caller.uid}:
+        raise HTTPException(status_code=403, detail=NOT_ITS_OWNER)
+
+
 async def a_caller(request: Request) -> Authorized:
     """Whoever the running application answers."""
     return await _authorize(request, person_only=False)
@@ -589,8 +616,11 @@ async def serve_agent_over_a2a(
     """
     from agent_runtimes.loop.apps.a2a import serve_app_over_a2a
     from agent_runtimes.loop.apps.plugins import find_app
+    from agent_runtimes.loop.apps.principal import deployment_of
+    from agent_runtimes.models.models import app_instance_of
     from agent_runtimes.routes.acp import _agents
 
+    its_owner(authorized, [deployment_of(app_instance_of(body.agent))])
     held = _agents.get(body.agent)
     if held is None:
         raise HTTPException(
@@ -622,6 +652,9 @@ async def stop_serving_over_a2a(
 ) -> Dict[str, Any]:
     """Serve nothing over A2A here any more: its deployment no longer is."""
     from agent_runtimes.loop.apps.a2a import served_apps, stop_serving_apps
+    from agent_runtimes.loop.apps.principal import deployments_served
+
+    its_owner(authorized, deployments_served())
 
     stopped = served_apps()
     stop_serving_apps()
@@ -659,6 +692,7 @@ async def renew_principal(
     )
 
     deployment = body.deployment.strip()
+    its_owner(authorized, [deployment])
     bearer = bearer_of(request.headers.get("authorization"))
     if not bearer:
         raise HTTPException(
@@ -675,6 +709,38 @@ async def renew_principal(
     except PrincipalTokenMissing as missing:
         raise HTTPException(status_code=502, detail=str(missing)) from None
     return {"success": True, "deployment": deployment, "expires_at": expires_at}
+
+
+@router.get("/agents/{agent}/deployment")
+async def agent_deployment(
+    agent: str, authorized: Authorized = Depends(a_person)
+) -> Dict[str, Any]:
+    """Which deployment an agent here serves: asked by whoever made it, after the fact.
+
+    What `deployments.create_agent` asks when its `POST /api/v1/agents` was
+    answered — and the answer lost — before it asked again: the runtime then
+    serves a deployment and answers that route to nobody from outside
+    (`visitors.OwnRoutesOnly`), so whether its agent is there is read here.
+    The deployment's owner alone (`its_owner`); 404 when the agent serves no
+    deployment here.
+    """
+    from agent_runtimes.loop.apps.principal import deployment_of
+    from agent_runtimes.models.models import app_instance_of
+
+    instance = app_instance_of(agent) or {}
+    deployment = deployment_of(instance)
+    its_owner(authorized, [deployment] if deployment else [])
+    if not deployment:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No agent {agent} on this runtime serves a deployment.",
+        )
+    return {
+        "agent": agent,
+        "app_uid": str(instance.get("app_uid") or ""),
+        "deployment_uid": deployment,
+        "version": int(instance.get("version") or 0),
+    }
 
 
 class BuildRequest(BaseModel):
