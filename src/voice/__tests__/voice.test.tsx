@@ -22,7 +22,7 @@ import {
 } from '../pinned';
 import { DeviceHearing, joinSegments, runtimeFiles } from '../hearing';
 import { resample } from '../capture';
-import { ServerSpeaker, SYNTHESES_PATH } from '../speaker';
+import { SENTENCES_AHEAD, ServerSpeaker, SYNTHESES_PATH } from '../speaker';
 import { answerText, useSpokenAnswers } from '../useSpokenAnswers';
 import { assistantStateOf } from '../../chat/assistant/state';
 import { mouthOpening } from '../../chat/assistant/AssistantStage';
@@ -306,6 +306,34 @@ describe('the speaker (VO-33)', () => {
       refused: 'Answers are not spoken without an account yet.',
     });
     expect(speaker.level()).toBe(0);
+  });
+});
+
+describe('a long answer, said (VO-33, VO-39)', () => {
+  it('asks the next sentences only, never more at once than the service lets a person have', async () => {
+    const answers: Array<(response: Response) => void> = [];
+    const fetcher = vi.fn(
+      () => new Promise<Response>(resolve => answers.push(resolve)),
+    );
+    const states: Array<{ refused?: string }> = [];
+    const speaker = new ServerSpeaker({
+      speechUrl: 'https://r1.example',
+      voice: 'kokoro-af-heart',
+      language: 'en-US',
+      fetcher: fetcher as unknown as typeof fetch,
+      onState: state => states.push(state),
+    });
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      speaker.say(`Sentence ${n}.`);
+    }
+    expect(SENTENCES_AHEAD).toBeLessThan(4);
+    expect(fetcher).toHaveBeenCalledTimes(SENTENCES_AHEAD);
+    // Refused: said once, and nothing more is asked.
+    answers[0](
+      new Response(JSON.stringify({ detail: 'No.' }), { status: 429 }),
+    );
+    await vi.waitFor(() => expect(states.at(-1)?.refused).toBe('No.'));
+    expect(fetcher).toHaveBeenCalledTimes(SENTENCES_AHEAD);
   });
 });
 

@@ -56,9 +56,19 @@ export interface SpeakerOptions {
 
 interface Queued {
   text: string;
-  audio: Promise<ArrayBuffer | string>;
+  /** Asked of the service once it is among the next `SENTENCES_AHEAD`. */
+  audio?: Promise<ArrayBuffer | string>;
   asked: number;
 }
+
+/**
+ * How many sentences are asked of the speech service ahead of the one
+ * playing: enough that the next is ready when one ends, and under the calls
+ * it lets a person have at once (`DATALAYER_SPEECH_CONCURRENT`, 4) — asked
+ * all at once, a long answer's fifth sentence was refused (seen on :3063,
+ * 14 October 2026).
+ */
+export const SENTENCES_AHEAD = 2;
 
 /** Plays an answer's sentences, said by the speech service. */
 export class ServerSpeaker {
@@ -146,13 +156,19 @@ export class ServerSpeaker {
     if (!sentence) {
       return;
     }
-    this.queue.push({
-      text: sentence,
-      audio: this.fetch(sentence),
-      asked: performance.now(),
-    });
+    this.queue.push({ text: sentence, asked: performance.now() });
+    this.askAhead();
     if (!this.running) {
       void this.run(this.generation);
+    }
+  }
+
+  /** Ask the service for the next sentences, `SENTENCES_AHEAD` at most. */
+  private askAhead(): void {
+    for (const queued of this.queue.slice(0, SENTENCES_AHEAD)) {
+      if (!queued.audio) {
+        queued.audio = this.fetch(queued.text);
+      }
     }
   }
 
@@ -199,8 +215,9 @@ export class ServerSpeaker {
     this.running = true;
     try {
       while (this.queue.length && generation === this.generation) {
-        const next = this.queue.shift()!;
-        const audio = await next.audio;
+        this.askAhead();
+        const next = this.queue[0];
+        const audio = await next.audio!;
         if (generation !== this.generation) {
           return;
         }
@@ -210,6 +227,9 @@ export class ServerSpeaker {
           this.set({ speaking: false, sentence: undefined, refused: audio });
           return;
         }
+        // Played now: the one after it is asked for.
+        this.queue.shift();
+        this.askAhead();
         const context = this.audio();
         const decoded = await context.decodeAudioData(audio);
         if (generation !== this.generation) {
