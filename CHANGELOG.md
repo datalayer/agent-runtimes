@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.21
+
+On agentspecs 0.0.96.
+
+- **A shipped Python application's own code runs wherever its deployment's agent is made** (LOOP R-14, [Python applications](https://agent-runtimes.datalayer.tech/docs/apps/python-applications)): the hosted page, kept always on or not, an embed, a tick. The runtime reads the version's `app.py` from the deployment (ai-agents' `GET /apps/deployments/{uid}/code?version=N`, with the caller's token, once the principal's token is held); before, it ran only on a runtime kept always on, and the plain agent answered silently elsewhere.
+- **`app_code` is refused** (422): code is never taken from the request that makes an agent; `session_payload` and `kept_payload` carry none. A deployment's agent names the version it runs (`app_instance.version`).
+
 ## 1.5.20
 
 On agentspecs 0.0.96.
