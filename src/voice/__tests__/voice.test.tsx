@@ -123,9 +123,11 @@ describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
     }
   });
 
-  it('serves onnxruntime’s own files beside the models', () => {
-    expect(runtimeFiles(`${base}/`, '1.31.0').wasm).toBe(
-      `${base}/onnxruntime-web/1.31.0/ort-wasm-simd-threaded.asyncify.wasm`,
+  it('serves onnxruntime’s own files beside the models, in its version’s folder', () => {
+    // A folder: each build of onnxruntime-web names its own file there —
+    // transformers.js's asyncify, vad-web's jsep.
+    expect(runtimeFiles(`${base}/`, '1.31.0')).toBe(
+      `${base}/onnxruntime-web/1.31.0/`,
     );
   });
 });

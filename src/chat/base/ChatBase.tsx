@@ -127,6 +127,9 @@ import { DeviceHearing } from '../../voice/hearing';
 import { VoiceInput } from '../../voice/VoiceInput';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
 import type { SpokenMetadata, Transcript } from '../../voice/types';
+import { settledVoice } from '../../voice/chatVoice';
+import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
+import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
   ToolApprovalBanner,
@@ -4042,13 +4045,39 @@ function ChatBaseInner({
   // ========================================================================
   // Voice (VOICE.md V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
+  // What the composer held when the microphone opened: the words heard go after it.
+  const voiceBaseRef = useRef('');
+  // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
+  const settled = useMemo(
+    () => (voice ? settledVoice(voice) : undefined),
+    [voice],
+  );
   const hearing = useMemo(
     () =>
-      voice && voice.input !== 'off'
-        ? new DeviceHearing(voice.modelsUrl, voice.engines)
+      settled && settled.input !== 'off'
+        ? new DeviceHearing(settled.modelsUrl, settled.engines)
         : undefined,
-    [voice?.input, voice?.modelsUrl, voice?.engines],
+    [settled?.input, settled?.modelsUrl, settled?.engines],
   );
+  /*
+   * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
+   * host's speaker when it gives one (`ChatFloating`, whose assistant's mouth
+   * moves with it), else the chat's own — a chat given a `voice` speaks
+   * wherever it is drawn.
+   */
+  const hostSpeaks = Boolean(onReadAloud || onStopSpeaking);
+  const ownVoice = useVoiceSpeaker(settled, !hostSpeaks);
+  useSpokenAnswers(
+    displayItems,
+    isLoading,
+    !hostSpeaks && settled?.output === 'always',
+    ownVoice.speaker,
+  );
+  const speakingNow = voiceSpeaking || ownVoice.state.speaking;
+  const stopSpeaking =
+    onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
+  const readAnswerAloud =
+    onReadAloud ?? (ownVoice.speaker ? ownVoice.read : undefined);
   const handleSend = useCallback(
     async (
       messageOverride?: string,
@@ -4946,11 +4975,11 @@ function ChatBaseInner({
               !isToolCallMessage(item) && item.role === 'assistant',
           )?.id
       : undefined;
-  const readAloudFooter = onReadAloud
+  const readAloudFooter = readAnswerAloud
     ? (message: ChatMessage) => {
         const text = getMessageText(message);
         return readsAloud(message, text, writingId) ? (
-          <ReadAloud onRead={() => onReadAloud(text)} />
+          <ReadAloud onRead={() => readAnswerAloud(text)} />
         ) : null;
       }
     : undefined;
@@ -5016,34 +5045,62 @@ function ChatBaseInner({
   );
 
   // The microphone, in the composer's footer (VO-10).
+  // The words heard after what the composer held when the microphone opened.
+  const afterBase = (words: string) =>
+    [voiceBaseRef.current, words].filter(Boolean).join(' ');
   const voiceControl =
-    hearing && voice ? (
+    hearing && settled ? (
       <VoiceInput
         hearing={hearing}
-        language={voice.language}
-        consentKey={voice.consentKey ?? 'chat'}
+        language={settled.language}
+        consentKey={settled.consentKey ?? 'chat'}
+        silenceMs={settled.silenceMs}
+        microphoneId={settled.microphoneId}
         disabled={disabled || launching}
-        speaking={voiceSpeaking}
-        onStopSpeaking={onStopSpeaking}
-        onListen={onStopSpeaking}
+        speaking={speakingNow}
+        onStopSpeaking={stopSpeaking}
+        onListen={() => {
+          voiceBaseRef.current = input.trim();
+          stopSpeaking?.();
+        }}
+        // The words as they are heard, in the box (VO-11); '' gives it back.
+        onInterim={(words: string) => setInput(afterBase(words))}
         onTranscript={(transcript: Transcript) => {
-          if (voice.sendWhatISay) {
+          if (settled.sendWhatISay) {
+            setInput(voiceBaseRef.current);
             void handleSend(transcript.text, undefined, transcript.metadata);
             return;
           }
+          // In the box, for the person to edit and send: never sent here.
           spokenRef.current = transcript.metadata;
-          setInput(
-            input.trim()
-              ? `${input.trim()} ${transcript.text}`
-              : transcript.text,
-          );
+          setInput(afterBase(transcript.text));
         }}
       />
     ) : undefined;
+  // Why an answer could not be heard, in a sentence, by the composer.
+  const voiceRefused =
+    !hostSpeaks && ownVoice.state.refused ? (
+      <Text
+        role="alert"
+        sx={{ fontSize: 0, color: 'danger.fg', maxWidth: 260 }}
+        data-voice-refused=""
+      >
+        {ownVoice.state.refused}
+      </Text>
+    ) : null;
 
   const inputToolbar = showInput ? (
     <InputPrompt
-      footerExtras={voiceControl}
+      footerExtras={
+        voiceRefused ? (
+          <>
+            {voiceRefused}
+            {voiceControl}
+          </>
+        ) : (
+          voiceControl
+        )
+      }
       input={input}
       setInput={setInput}
       isLoading={isLoading}

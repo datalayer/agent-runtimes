@@ -4,15 +4,21 @@
  */
 
 /**
- * Push-to-talk in the composer (VOICE.md VO-10, VO-61, VO-62, VO-65 to VO-68).
+ * The microphone in the composer (VOICE.md VO-10, VO-11, VO-61, VO-62, VO-65
+ * to VO-68).
  *
- * The microphone button: pressed and held, or clicked to start and clicked
- * to stop; `Ctrl`+`Space` held does the same, and `Esc` cancels. While it
- * listens the button says *Listening* and a meter shows the level (still,
- * and said in words, for a reader who asks for reduced motion). Released,
- * what was said is heard on the device and given to `onTranscript`: put in
- * the composer, or sent at once when *Send what I say* is on. The first time,
- * one sentence says where the audio goes before the browser asks.
+ * Clicked, it listens: the words are written in the composer as they are
+ * heard (`onInterim`), and it stops at a second click, or once the person
+ * has stopped speaking (`silenceMs` of silence after speech, found by Silero
+ * VAD). Pressed and held, or `Ctrl`+`Space` held, it listens until let go.
+ * `Esc` cancels, and the composer gets back what it held. While it listens
+ * the button is red and pressed (`aria-pressed`), says *Listening*, and a
+ * meter shows the level (still, and said in words, for a reader who asks for
+ * reduced motion). Stopped, what was said is heard once more, whole, and
+ * given to `onTranscript`: put in the composer for the person to edit and
+ * send, or sent at once when *Send what I say* is on. Never sent otherwise.
+ * The first time, one sentence says where the audio goes before the browser
+ * asks.
  *
  * @module voice/VoiceInput
  */
@@ -40,8 +46,21 @@ const WORDS: Record<ListeningState, string> = {
   hearing: 'Hearing what you said…',
 };
 
+/** While a click listens: it stops by itself. */
+const CLICKED_WORDS =
+  'Listening… click the microphone or stop speaking to stop, Esc to cancel';
+
 /** A press shorter than this is a click: it starts, and the next click stops. */
 const CLICK_MS = 300;
+
+/** How often the words heard so far are written in the composer, in ms (VO-11). */
+export const INTERIM_MS = 700;
+
+/** The longest a microphone listens in one go, in ms: then it stops by itself. */
+export const LONGEST_MS = 60_000;
+
+/** Waits, between two looks at what was heard. */
+const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export interface VoiceInputProps {
   hearing: DeviceHearing;
@@ -49,6 +68,19 @@ export interface VoiceInputProps {
   language: string;
   /** What was said, once heard. */
   onTranscript: (transcript: Transcript) => void;
+  /**
+   * The words heard so far, while it listens (VO-11): for the composer, as
+   * they come. Called with `''` when it stops with nothing heard, or is
+   * cancelled, for the composer to get back what it held.
+   */
+  onInterim?: (text: string) => void;
+  /**
+   * How long a silence after speech stops a microphone clicked on, in ms;
+   * one held stops when let go.
+   */
+  silenceMs?: number;
+  /** The microphone the person chose (VO-30); the browser's own when unsaid. */
+  microphoneId?: string;
   /** The microphone opens: the agent stops speaking (VO-13). */
   onListen?: () => void;
   /** Whose consent is remembered: the application's id. */
@@ -70,6 +102,9 @@ export function VoiceInput({
   hearing,
   language,
   onTranscript,
+  onInterim,
+  silenceMs = 1500,
+  microphoneId,
   onListen,
   consentKey,
   disabled = false,
@@ -83,6 +118,13 @@ export function VoiceInput({
   const capture = useRef<Capture | undefined>(undefined);
   const pressedAt = useRef(0);
   const stopOnRelease = useRef(false);
+  // Clicked on (not held): it stops by itself once the person stops speaking.
+  const [clicked, setClicked] = useState(false);
+  const clickedRef = useRef(false);
+  clickedRef.current = clicked;
+  // The look at what was heard so far, while one runs: the last one waits for it.
+  const looking = useRef<Promise<unknown> | undefined>(undefined);
+  const listenedAt = useRef(0);
   const meter = useRef<HTMLDivElement>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -107,7 +149,8 @@ export function VoiceInput({
       if ((stateRef.current as ListeningState) !== 'loading') {
         return;
       }
-      capture.current = await openMicrophone();
+      capture.current = await openMicrophone(microphoneId);
+      listenedAt.current = Date.now();
       setState('listening');
       setSaid('Listening');
     } catch (error) {
@@ -119,7 +162,7 @@ export function VoiceInput({
           : 'The microphone could not be opened.',
       );
     }
-  }, [consentKey, disabled, hearing, language, onListen]);
+  }, [consentKey, disabled, hearing, language, microphoneId, onListen]);
 
   const stop = useCallback(async () => {
     const open = capture.current;
@@ -131,11 +174,15 @@ export function VoiceInput({
       return;
     }
     setState('hearing');
+    setClicked(false);
     try {
       const audio = await open.stop();
+      // One model at a time: the look at the words so far ends first.
+      await looking.current?.catch(() => undefined);
       const transcript = await hearing.hear(audio, language);
       setState('idle');
       if (!transcript) {
+        onInterim?.('');
         setSaid('Nothing was heard.');
         return;
       }
@@ -143,22 +190,85 @@ export function VoiceInput({
       onTranscript(transcript);
     } catch (error) {
       setState('idle');
+      onInterim?.('');
       setProblem(
         error instanceof Error
           ? error.message
           : 'What you said could not be heard.',
       );
     }
-  }, [hearing, language, onTranscript]);
+  }, [hearing, language, onInterim, onTranscript]);
 
   const cancel = useCallback(() => {
     capture.current?.cancel();
     capture.current = undefined;
+    setClicked(false);
     if (stateRef.current !== 'idle') {
       setState('idle');
+      onInterim?.('');
       setSaid('Cancelled.');
     }
-  }, []);
+  }, [onInterim]);
+
+  /*
+   * While it listens, the words heard so far go in the composer (VO-11), and
+   * a microphone clicked on stops once the person has stopped speaking: what
+   * was heard is looked at again every INTERIM_MS — Silero VAD finds the
+   * speech and the silence after it, the language's model writes the words.
+   */
+  const interimRef = useRef(onInterim);
+  interimRef.current = onInterim;
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  useEffect(() => {
+    if (state !== 'listening') {
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      while (alive) {
+        await pause(INTERIM_MS);
+        const open = capture.current;
+        if (!alive || !open) {
+          return;
+        }
+        if (Date.now() - listenedAt.current >= LONGEST_MS) {
+          void stopRef.current();
+          return;
+        }
+        // One model run at a time, whoever started the last.
+        await looking.current?.catch(() => undefined);
+        if (!alive || capture.current !== open) {
+          return;
+        }
+        const look = hearing.hearSoFar(open.peek(), language);
+        looking.current = look;
+        let so: Awaited<typeof look> | undefined;
+        try {
+          so = await look;
+        } catch {
+          so = undefined;
+        } finally {
+          if (looking.current === look) {
+            looking.current = undefined;
+          }
+        }
+        if (!alive || capture.current !== open || !so) {
+          continue;
+        }
+        if (so.text) {
+          interimRef.current?.(so.text);
+        }
+        if (clickedRef.current && so.spoke && so.silentMs >= silenceMs) {
+          void stopRef.current();
+          return;
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [state, hearing, language, silenceMs]);
 
   // The key: Ctrl+Space held listens; Esc cancels, or stops the voice.
   useEffect(() => {
@@ -223,8 +333,10 @@ export function VoiceInput({
 
   const listening = state === 'listening';
   const label = listening
-    ? 'Listening — let go to stop'
-    : 'Hold to talk (Ctrl+Space)';
+    ? clicked
+      ? 'Listening — click to stop'
+      : 'Listening — let go to stop'
+    : 'Click to talk, or hold (Ctrl+Space)';
   return (
     <Box
       data-voice-input={state}
@@ -290,13 +402,16 @@ export function VoiceInput({
             }
           }}
           onPointerUp={() => {
-            // Held: letting go stops. A click: it goes on until the next one.
+            // Held: letting go stops. A click: it goes on until the next
+            // one, or until the person stops speaking.
             if (
               stopOnRelease.current ||
               Date.now() - pressedAt.current >= CLICK_MS
             ) {
               stopOnRelease.current = false;
               void stop();
+            } else {
+              setClicked(true);
             }
           }}
           onKeyDown={event => {
@@ -306,6 +421,7 @@ export function VoiceInput({
               if (stateRef.current === 'listening') {
                 void stop();
               } else {
+                setClicked(true);
                 void start();
               }
             }
@@ -365,7 +481,8 @@ export function VoiceInput({
         overflow="hidden"
         clip="rect(0 0 0 0)"
       >
-        {WORDS[state] || said}
+        {(state === 'listening' && clicked ? CLICKED_WORDS : WORDS[state]) ||
+          said}
       </Box>
       {problem && (
         <Text

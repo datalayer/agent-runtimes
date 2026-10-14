@@ -46,9 +46,9 @@ import { AssistantStage } from './assistant/AssistantStage';
 import { decisionsAskerAt } from './assistant/decisions';
 import { DecisionAsk } from './assistant/DecisionAsk';
 import type { ChatBaseProps } from '../types/chat';
-import { ServerSpeaker, type SpeakerState } from '../voice/speaker';
 import { useSpokenAnswers } from '../voice/useSpokenAnswers';
-import { readAloud } from '../voice/ReadAloud';
+import { useVoiceSpeaker } from '../voice/useVoiceSpeaker';
+import { settledVoice } from '../voice/chatVoice';
 import type { ChatVoice } from '../voice';
 import {
   BalloonApprovalMessage,
@@ -561,63 +561,24 @@ export function ChatFloating({
    * they are written (VO-20), the state following the sound (VO-22).
    */
   const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);
-  const [speakerState, setSpeakerState] = useState<SpeakerState>({
-    speaking: false,
-  });
-  const speaker = useMemo(
-    () =>
-      voice && voice.output !== 'off' && voice.speechUrl
-        ? new ServerSpeaker({
-            speechUrl: voice.speechUrl,
-            voice: voice.voice,
-            language: voice.language,
-            token: voice.token,
-            onState: setSpeakerState,
-          })
-        : undefined,
-    [voice?.output, voice?.speechUrl],
+  const settledVoiceOf = useMemo(
+    () => (voice ? settledVoice(voice) : undefined),
+    [voice],
   );
-  useEffect(() => {
-    speaker?.update({
-      voice: voice?.voice,
-      language: voice?.language,
-      token: voice?.token,
-    });
-  }, [speaker, voice?.voice, voice?.language, voice?.token]);
-  useEffect(() => () => speaker?.close(), [speaker]);
-  // A browser plays only what a gesture allowed: the first one does.
-  useEffect(() => {
-    if (!speaker) {
-      return;
-    }
-    const unlock = () => speaker.unlock();
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
-  }, [speaker]);
+  const {
+    speaker,
+    state: speakerState,
+    stop: stopSpeaking,
+    read: readAnswerAloud,
+    level: mouthLevel,
+  } = useVoiceSpeaker(settledVoiceOf);
   // `always`: each answer heard as it is written; `on_request`: a *Read
   // aloud* under each (VO-21).
   useSpokenAnswers(
     voiceItems,
     chatBusy,
-    !!speaker && voice?.output === 'always' && !speechMuted,
+    !!speaker && settledVoiceOf?.output === 'always' && !speechMuted,
     speaker,
-  );
-  const stopSpeaking = useCallback(() => speaker?.stop(), [speaker]);
-  const readAnswerAloud = useCallback(
-    (answer: string) => {
-      if (speaker) {
-        readAloud(speaker, answer);
-      }
-    },
-    [speaker],
-  );
-  const mouthLevel = useMemo(
-    () => (speaker ? () => speaker.level() : undefined),
-    [speaker],
   );
   const [arriving, setArriving] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -1888,7 +1849,7 @@ export function ChatFloating({
           onClear={!conversation && useStoreMode ? handleClear : undefined}
           onChangeCharacter={onChangeCharacter}
           speech={
-            speaker && voice?.output === 'always'
+            speaker && settledVoiceOf?.output === 'always'
               ? {
                   muted: speechMuted,
                   onToggle: () => {

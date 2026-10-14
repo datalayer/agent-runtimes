@@ -34,6 +34,17 @@ export interface SpeakerOptions {
   language: string;
   /** The person's token, an application's principal's, or a visitor's. */
   token?: string;
+  /**
+   * How fast it speaks, as a multiplier of the voice's own pace (VO-25,
+   * VO-30). Applied here rather than asked of the service: `POST
+   * /speech/syntheses` takes a text, a voice, a language and a format, and
+   * no speed. Playing a buffer faster lifts its pitch a little; a speed the
+   * engine itself honoured would not, and is where this belongs once the
+   * service takes one.
+   */
+  rate?: number;
+  /** How loud it is, 0 (silent) to 1 (the voice's own) (VO-25, VO-30). */
+  volume?: number;
   /** Called whenever the state changes. */
   onState?: (state: SpeakerState) => void;
   /** Called with how long a sentence took from asked to first sound, in ms. */
@@ -51,6 +62,7 @@ interface Queued {
 export class ServerSpeaker {
   private context?: AudioContext;
   private analyser?: AnalyserNode;
+  private gain?: GainNode;
   private buffer?: Float32Array;
   private queue: Queued[] = [];
   private playing?: AudioBufferSourceNode;
@@ -79,7 +91,12 @@ export class ServerSpeaker {
       this.context = new AudioContext();
       this.analyser = this.context.createAnalyser();
       this.analyser.fftSize = 512;
-      this.analyser.connect(this.context.destination);
+      // The gain sits after the analyser, so the mouth keeps moving to what
+      // the voice says rather than to how loud the person set it — a muted
+      // answer still shows the assistant speaking (VO-23).
+      this.gain = this.context.createGain();
+      this.analyser.connect(this.gain);
+      this.gain.connect(this.context.destination);
       this.buffer = new Float32Array(this.analyser.fftSize);
     }
     return this.context;
@@ -98,6 +115,22 @@ export class ServerSpeaker {
       sum += sample * sample;
     }
     return Math.min(1, Math.sqrt(sum / this.buffer.length) * 6);
+  }
+
+  /** The speaking speed asked for, within what is intelligible. */
+  private speed(): number {
+    const rate = this.options.rate;
+    return typeof rate === 'number' && Number.isFinite(rate)
+      ? Math.min(2, Math.max(0.5, rate))
+      : 1;
+  }
+
+  /** The loudness asked for, between silence and the voice's own. */
+  private loudness(): number {
+    const volume = this.options.volume;
+    return typeof volume === 'number' && Number.isFinite(volume)
+      ? Math.min(1, Math.max(0, volume))
+      : 1;
   }
 
   private set(state: Partial<SpeakerState>): void {
@@ -170,6 +203,10 @@ export class ServerSpeaker {
         await new Promise<void>(resolve => {
           const source = context.createBufferSource();
           source.buffer = decoded;
+          source.playbackRate.value = this.speed();
+          if (this.gain) {
+            this.gain.gain.value = this.loudness();
+          }
           source.connect(this.analyser!);
           source.onended = () => resolve();
           this.playing = source;

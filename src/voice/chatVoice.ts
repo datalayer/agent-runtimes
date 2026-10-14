@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * A chat's voice, from what an application or an agent says of it (VOICE.md
+ * VO-41, VO-49): the `voice` a host gives `ChatBase`, `ChatFloating` or an
+ * application's workspace, with Datalayer's places filled in — the browser's
+ * models from Datalayer's CDN, the packages that hear loaded on first use.
+ *
+ * @module voice/chatVoice
+ */
+
+import { voiceFor } from '../specs/voices';
+import type { AppVoiceSpec } from '../types/agentspecs';
+import type { VoiceEngines } from './types';
+import {
+  keptVoiceSettings,
+  voiceForPerson,
+  type VoiceSettings,
+} from './settings';
+import type { ChatVoice } from './index';
+
+/**
+ * Datalayer's origin for the browser's speech models, as pinned
+ * (`s3://datalayer-models-speech` behind its CDN; VO-48, VO-49): each model
+ * at `<provider>/<model id>/<path>`, onnxruntime-web's own files at
+ * `onnxruntime-web/<version>/`.
+ */
+export const DATALAYER_SPEECH_MODELS_URL =
+  'https://models-speech.datalayer.tech';
+
+/**
+ * The packages that hear — transformers.js for Moonshine and Whisper,
+ * vad-web for Silero VAD — each loaded only the first time the microphone
+ * is used: a page whose chat has no voice never fetches them.
+ */
+export const DATALAYER_VOICE_ENGINES: VoiceEngines = {
+  transformers: () => import('@huggingface/transformers'),
+  vad: () => import('@ricky0123/vad-web'),
+};
+
+/** Where a chat's voice runs, as its host knows it. */
+export interface ChatVoicePlace {
+  /** ai-agents' origin, whose speech service says the answers (`https://r1.datalayer.run`). */
+  speechUrl?: string;
+  /** The token the speech service is asked with: the person's, or the application's. */
+  token?: string;
+  /** The browser's models; Datalayer's CDN when unsaid. */
+  modelsUrl?: string;
+  /** Whose consent to the microphone is remembered: the application's id. */
+  consentKey: string;
+  /** The language the person reads in, when the spec says none; English when neither does. */
+  language?: string;
+}
+
+/**
+ * The chat's voice an application's `interface.voice` (or an agent spec's
+ * `voice:`) asks for, or `undefined` when it has none: off unless said.
+ *
+ * - **Listening**: a microphone in the composer — click it and speak, the
+ *   words written in the box as they are heard, stopped by a second click
+ *   or when the person stops speaking; or held, and let go (VO-10, VO-11).
+ *   `hands_free` (VO-12) is not built: it listens as that microphone does,
+ *   a turn at a time, and never sends on its own.
+ * - **Speaking**: its answers said by Datalayer's speech service, on request
+ *   or always (VO-20, VO-21); refused here when its host says no service.
+ */
+export function chatVoiceOf(
+  spec: AppVoiceSpec | undefined,
+  place: ChatVoicePlace,
+): ChatVoice | undefined {
+  if (!spec?.enabled || (spec.input === 'off' && spec.output === 'off')) {
+    return undefined;
+  }
+  if (spec.output !== 'off' && !place.speechUrl) {
+    throw new Error(
+      'Its answers are said by Datalayer’s speech service, and its host gave no address for it.',
+    );
+  }
+  const language = spec.language || place.language || 'en-US';
+  return {
+    language,
+    input: spec.input === 'off' ? 'off' : 'push_to_talk',
+    output: spec.output,
+    voice: spec.voice || voiceFor(language)?.id || '',
+    modelsUrl: place.modelsUrl || DATALAYER_SPEECH_MODELS_URL,
+    engines: DATALAYER_VOICE_ENGINES,
+    speechUrl: place.speechUrl,
+    token: place.token,
+    consentKey: place.consentKey,
+  };
+}
+
+/** A chat's voice with every place said: what the chat reads. */
+export type SettledVoice = Required<
+  Pick<
+    ChatVoice,
+    | 'language'
+    | 'input'
+    | 'output'
+    | 'voice'
+    | 'modelsUrl'
+    | 'engines'
+    | 'silenceMs'
+  >
+> &
+  Omit<
+    ChatVoice,
+    | 'language'
+    | 'input'
+    | 'output'
+    | 'voice'
+    | 'modelsUrl'
+    | 'engines'
+    | 'silenceMs'
+  >;
+
+/** How long a silence after speech stops a microphone clicked on, when unsaid (VO-10). */
+export const SILENCE_MS = 1500;
+
+/**
+ * A chat's voice as the person hears it, with what it leaves unsaid filled
+ * in: the person's own settings first where they made some (`voiceForPerson`:
+ * their language, voice, rate, volume, microphone; VO-14, VO-25, VO-30),
+ * else the host's; answers not heard, the language's first voice,
+ * Datalayer's models and packages, a silence of 1.5 s. Answers heard need
+ * the speech service's address: refused without.
+ */
+export function settledVoice(
+  given: ChatVoice,
+  person: VoiceSettings = keptVoiceSettings(),
+): SettledVoice {
+  const voice = voiceForPerson(given, person);
+  const output = voice.output ?? 'off';
+  if (output !== 'off' && !voice.speechUrl) {
+    throw new Error(
+      `A chat whose answers are heard (${output}) names the speech service: its speechUrl is missing.`,
+    );
+  }
+  return {
+    ...voice,
+    output,
+    voice: voice.voice || voiceFor(voice.language)?.id || '',
+    modelsUrl: voice.modelsUrl || DATALAYER_SPEECH_MODELS_URL,
+    engines: voice.engines ?? DATALAYER_VOICE_ENGINES,
+    silenceMs: voice.silenceMs ?? SILENCE_MS,
+  };
+}

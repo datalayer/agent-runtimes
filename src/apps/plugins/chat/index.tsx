@@ -35,6 +35,7 @@ import { createTurnFeed, feedWriters } from './turnState';
 import type { PresenceState } from '../../../chat/presence/presenceStatus';
 import type { AssistantSaying } from '../../../chat/assistant/state';
 import type { ResumedThread, ThemeOverrides } from '../../../types/chat';
+import type { ChatVoice } from '../../../voice';
 
 /**
  * An editor toolbar button that asks an agent to do something.
@@ -143,6 +144,13 @@ export type ChatPluginConfig = {
    * On unless said: a person using an application is not asking.
    */
   showTokenUsage?: boolean;
+  /**
+   * Its voice (VOICE.md VO-10, VO-20, VO-49): a microphone in the composer,
+   * the words written in it as they are heard, and the answers said by
+   * Datalayer's speech service — an application's `interface.voice`
+   * (`chatVoiceOf`). None unless said.
+   */
+  voice?: ChatVoice;
   /**
    * What the empty prompt says.
    *

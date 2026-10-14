@@ -6,17 +6,19 @@
 /**
  * A voice chat with the floating assistant (VOICE.md V1).
  *
- * Hold the microphone (or `Ctrl`+`Space`), speak, let go: what you said is
- * heard in this page — Moonshine for English, Whisper for French, Silero VAD
- * keeping only the speech — and put in the composer, marked as said. Send
- * it, and the answer is read aloud as it is written, sentence by sentence,
+ * Click the microphone and speak: the words are written in the composer as
+ * they are heard — Moonshine for English, Whisper for French, Silero VAD
+ * keeping only the speech — and it stops at a second click or when you stop
+ * speaking; or hold it (or `Ctrl`+`Space`) and let go. Edit what was heard,
+ * marked as said, and send it, and the answer is read aloud as it is written, sentence by sentence,
  * by Datalayer's speech service (Kokoro, on ai-agents), the assistant's
  * mouth moving with the sound and its balloon showing the sentence said.
  *
  * Three places, each named in the address when it is not this machine's:
  * - `?agentRuntimesUrl=` — the agent-runtimes server and its `assistant`
  *   agent (http://127.0.0.1:8765);
- * - `?voiceModelsUrl=` — the browser's models, as pinned
+ * - `?voiceModelsUrl=` — the browser's models, as pinned: Datalayer's CDN
+ *   (https://models-speech.datalayer.tech), or this machine's store
  *   (`scripts/voice/serve_store.py`, http://127.0.0.1:8770);
  * - `?speechUrl=` — Datalayer's speech service, datalayer-speech on r1
  *   (https://r1.datalayer.run), asked with the signed-in person's token.
@@ -29,7 +31,7 @@ import { useSimpleAuthStore } from '@datalayer/core/lib/views/otel';
 import { ThemedProvider } from './utils/themedProvider';
 import { ChatFloating } from '../chat';
 import { VOICE_CATALOGUE, voiceFor } from '../specs/voices';
-import type { ChatVoice, VoiceEngines } from '../voice';
+import { DATALAYER_SPEECH_MODELS_URL, type ChatVoice } from '../voice';
 
 function fromAddress(name: string, otherwise: string): string {
   return (
@@ -40,14 +42,8 @@ function fromAddress(name: string, otherwise: string): string {
 }
 
 const SERVER = fromAddress('agentRuntimesUrl', 'http://127.0.0.1:8765');
-const MODELS = fromAddress('voiceModelsUrl', 'http://127.0.0.1:8770');
+const MODELS = fromAddress('voiceModelsUrl', DATALAYER_SPEECH_MODELS_URL);
 const SPEECH = fromAddress('speechUrl', 'https://r1.datalayer.run');
-
-/** The packages that hear, loaded the first time the microphone is used. */
-const ENGINES: VoiceEngines = {
-  transformers: () => import('@huggingface/transformers'),
-  vad: () => import('@ricky0123/vad-web'),
-};
 
 const LANGUAGES = [
   { tag: 'en-US', label: 'English' },
@@ -72,7 +68,6 @@ const VoiceChatExample: React.FC = () => {
       output,
       voice: voiceSpec.id,
       modelsUrl: MODELS,
-      engines: ENGINES,
       speechUrl: SPEECH,
       token: token || undefined,
       consentKey: 'voice-chat-example',
@@ -87,13 +82,15 @@ const VoiceChatExample: React.FC = () => {
             Voice chat
           </Heading>
           <Text as="p" sx={{ color: 'fg.muted', mb: 3 }}>
-            Talk to the assistant instead of typing: hold the microphone in its
-            composer, or <kbd>Ctrl</kbd>+<kbd>Space</kbd>, speak, and let go.
-            What you say is heard in this page and never leaves it; the words go
-            in the message box for you to send. Its answers are read aloud by
-            Datalayer&rsquo;s speech service, and not kept: on request, with{' '}
-            <em>Read aloud</em> under an answer, or always, as they are written.{' '}
-            <kbd>Esc</kbd> stops its voice.
+            Talk to the assistant instead of typing: click the microphone in its
+            composer and speak — the words are written in the message box as
+            they are heard, and it stops when you click again or stop speaking.
+            Or hold it, or <kbd>Ctrl</kbd>+<kbd>Space</kbd>, and let go. What
+            you say is heard in this page and never leaves it; edit the words,
+            then send them. Its answers are read aloud by Datalayer&rsquo;s
+            speech service, and not kept: on request, with <em>Read aloud</em>{' '}
+            under an answer, or always, as they are written. <kbd>Esc</kbd>{' '}
+            stops its voice.
           </Text>
           <Box
             display="flex"
@@ -150,7 +147,7 @@ const VoiceChatExample: React.FC = () => {
           protocol="vercel-ai"
           endpoint={`${SERVER}/api/v1/vercel-ai/assistant`}
           title="Assistant"
-          description="Hello! Hold the microphone and ask me anything."
+          description="Hello! Click the microphone and ask me anything."
           position="bottom-right"
           useStore={false}
           voice={voice}

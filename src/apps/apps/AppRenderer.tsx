@@ -98,6 +98,7 @@ import { keepsFeedback } from './feedback';
 import { keptBeforeFirstMessage } from './kept';
 import type { PresenceState } from '../../chat/presence/presenceStatus';
 import { ChatLanguage } from '../../chat/ChatLanguage';
+import { chatVoiceOf, type ChatVoicePlace } from '../../voice/chatVoice';
 import { defineAppRuntimePlugin } from './AppRuntimePlugins';
 import { hasFolderModules } from './customComponents';
 import { appPluginPair } from './pluginPair';
@@ -281,6 +282,14 @@ export type AppRendererProps = Omit<LoopEmbedProps, 'agentId'> & {
    * when unsaid (LOOP P-26).
    */
   language?: string;
+  /**
+   * Where its voice runs, as its host knows it (VOICE.md VO-49): the speech
+   * service's origin and the token it is asked with, and the browser's
+   * models (Datalayer's CDN when unsaid). Given, an application whose
+   * `interface.voice` is on has the microphone in its composer and its
+   * answers heard; a host that gives none draws it without a voice.
+   */
+  speech?: Omit<ChatVoicePlace, 'consentKey' | 'language'>;
 };
 
 /** What `interface.layout` sets on the workspace. */
@@ -557,6 +566,7 @@ export function AppRenderer({
   page,
   pluginsOff,
   language,
+  speech,
   ...embed
 }: AppRendererProps): React.JSX.Element {
   /*
@@ -662,13 +672,46 @@ export function AppRenderer({
     [accent],
   );
   const agent = appAgentOf(app, embed.datalayerVisitors?.app);
+  /*
+   * Its voice, as its Appspec says (VO-41, VO-49), where its host says the
+   * speech runs: remembered consent is the application's own.
+   */
+  const voice = useMemo(():
+    { voice?: ReturnType<typeof chatVoiceOf> } | { problem: string } => {
+    if (!speech) {
+      return {};
+    }
+    try {
+      return {
+        voice: chatVoiceOf(app.interface?.voice, {
+          ...speech,
+          consentKey: app.id,
+          language,
+        }),
+      };
+    } catch (error) {
+      return {
+        problem: error instanceof Error ? error.message : String(error),
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(app.interface?.voice ?? null),
+    app.id,
+    language,
+    speech?.speechUrl,
+    speech?.token,
+    speech?.modelsUrl,
+  ]);
   const problem =
     'problem' in preset
       ? preset.problem
       : 'problem' in agent
         ? agent.problem
-        : undefined;
-  if ('problem' in preset || 'problem' in agent) {
+        : 'problem' in voice
+          ? voice.problem
+          : undefined;
+  if ('problem' in preset || 'problem' in agent || 'problem' in voice) {
     return (
       <div role="status" style={{ padding: 16 }}>
         {problem}
@@ -718,6 +761,7 @@ export function AppRenderer({
           onSaying,
         }}
         showTokenUsage={false}
+        voice={voice.voice}
         datalayerCreatePayload={datalayerCreatePayload}
         {...embed}
         plugins={allPlugins}

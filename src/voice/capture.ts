@@ -18,6 +18,8 @@ export const HEARING_RATE = 16000;
 export interface Capture {
   /** How loud it is now, between 0 and 1: what the level meter shows. */
   level: () => number;
+  /** What it has heard so far, mono at 16 kHz, while it stays open: for the words as they come (VO-11). */
+  peek: () => Float32Array;
   /** Close it and give what it heard, mono at 16 kHz. */
   stop: () => Promise<Float32Array>;
   /** Close it and forget what it heard. */
@@ -63,7 +65,7 @@ export function resample(
  * Open the microphone. The browser's echo cancellation is asked for, so
  * the agent's own voice is not heard back (VO-13).
  */
-export async function openMicrophone(): Promise<Capture> {
+export async function openMicrophone(deviceId?: string): Promise<Capture> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new MicrophoneRefused('This browser gives no page a microphone.');
   }
@@ -71,6 +73,8 @@ export async function openMicrophone(): Promise<Capture> {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: {
+        // The person's microphone, when they chose one (VO-30).
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
         channelCount: 1,
         echoCancellation: true,
         noiseSuppression: true,
@@ -105,6 +109,16 @@ export async function openMicrophone(): Promise<Capture> {
   recorder.connect(mute);
   mute.connect(context.destination);
   const buffer = new Float32Array(analyser.fftSize);
+  const heard = (): Float32Array => {
+    const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+    const joined = new Float32Array(length);
+    let at = 0;
+    for (const chunk of chunks) {
+      joined.set(chunk, at);
+      at += chunk.length;
+    }
+    return resample(joined, context.sampleRate);
+  };
   const close = () => {
     recorder.onaudioprocess = null;
     stream.getTracks().forEach(track => track.stop());
@@ -112,18 +126,12 @@ export async function openMicrophone(): Promise<Capture> {
   };
   return {
     level: () => levelOf(analyser, buffer),
+    peek: heard,
     stop: async () => {
-      const rate = context.sampleRate;
+      const audio = heard();
       close();
-      const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
-      const joined = new Float32Array(length);
-      let at = 0;
-      for (const chunk of chunks) {
-        joined.set(chunk, at);
-        at += chunk.length;
-      }
       chunks.length = 0;
-      return resample(joined, rate);
+      return audio;
     },
     cancel: () => {
       close();

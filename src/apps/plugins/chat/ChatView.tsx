@@ -2273,6 +2273,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // or one opened from the person's history (P-24).
               key={chatThread?.id}
               thread={chatThread}
+              // Its voice, when its host gives one (an application's
+              // `interface.voice`, VOICE.md VO-49): the microphone in the
+              // composer, its answers heard.
+              voice={config?.voice}
               // The header says why, beside the title, for the same reason the
               // placeholder does: a dead control with no explanation is worse
               // than an absent one.

@@ -29,13 +29,26 @@ export type HearingProgress = (loaded: number, total: number) => void;
 /** A language no device model hears. */
 export class NotHeardHere extends Error {}
 
-/** Where onnxruntime-web's own files are served, beside the models. */
-export function runtimeFiles(modelsUrl: string, version: string) {
-  const root = `${modelsUrl.replace(/\/+$/, '')}/onnxruntime-web/${version}/`;
-  return {
-    mjs: `${root}ort-wasm-simd-threaded.asyncify.mjs`,
-    wasm: `${root}ort-wasm-simd-threaded.asyncify.wasm`,
-  };
+/**
+ * Where onnxruntime-web's own files are served, beside the models: the
+ * folder of its version, `<origin>/onnxruntime-web/<version>/`. Given as a
+ * folder, each build of onnxruntime-web names the file it needs there —
+ * transformers.js's (the WebGPU build, `ort-wasm-simd-threaded.asyncify`)
+ * and vad-web's (the default build, `ort-wasm-simd-threaded.jsep`) differ,
+ * and each is a version of its own (VO-49).
+ */
+export function runtimeFiles(modelsUrl: string, version: string): string {
+  return `${modelsUrl.replace(/\/+$/, '')}/onnxruntime-web/${version}/`;
+}
+
+/** What was heard so far while the microphone stays open (VO-11). */
+export interface HeardSoFar {
+  /** The words heard so far; empty while nothing was said. */
+  text: string;
+  /** Whether speech was found at all. */
+  spoke: boolean;
+  /** How long it has been silent since the speech last ended, in ms. */
+  silentMs: number;
 }
 
 /** Joins the speech a VAD found, in order. */
@@ -59,7 +72,7 @@ export class DeviceHearing {
     run: (
       audio: Float32Array,
       rate: number,
-    ) => AsyncIterable<{ audio: Float32Array }>;
+    ) => AsyncIterable<{ audio: Float32Array; end: number }>;
   }>;
 
   constructor(
@@ -170,6 +183,56 @@ export class DeviceHearing {
     return this.vad;
   }
 
+  /** The speech Silero VAD finds in what was heard, and where the last ended, in ms. */
+  private async speechIn(
+    audio: Float32Array,
+  ): Promise<{ speech: Float32Array; lastEnd?: number }> {
+    const vad = await this.activity();
+    const segments: Float32Array[] = [];
+    let lastEnd: number | undefined;
+    for await (const segment of vad.run(audio, HEARING_RATE)) {
+      segments.push(segment.audio);
+      lastEnd = segment.end;
+    }
+    return { speech: joinSegments(segments), lastEnd };
+  }
+
+  /** The words a recognizer hears in some speech, in a language. */
+  private async words(speech: Float32Array, language: string): Promise<string> {
+    const model = this.modelFor(language);
+    const recognize = await this.recognizer(language);
+    // Whisper is told the language; Moonshine hears English only.
+    const options = model.id.startsWith('whisper')
+      ? {
+          language: language.startsWith('fr') ? 'french' : 'english',
+          task: 'transcribe',
+        }
+      : {};
+    const heard = await recognize(speech, options);
+    return (
+      Array.isArray(heard) ? heard.map(h => h.text).join(' ') : heard.text
+    ).trim();
+  }
+
+  /**
+   * What was said so far, while the microphone stays open (VO-11): the
+   * words, for the composer as they come, and how long it has been silent
+   * since the speech ended — what stops a click to talk (VO-10).
+   */
+  async hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar> {
+    const { speech, lastEnd } = await this.speechIn(audio);
+    const heardMs = (audio.length / HEARING_RATE) * 1000;
+    const silentMs = lastEnd === undefined ? 0 : Math.max(0, heardMs - lastEnd);
+    if (speech.length < HEARING_RATE * 0.2) {
+      return { text: '', spoke: false, silentMs };
+    }
+    return {
+      text: await this.words(speech, language),
+      spoke: true,
+      silentMs,
+    };
+  }
+
   /**
    * What was said in a press, or `undefined` when nothing was: its speech
    * found by the VAD, then transcribed in the language.
@@ -180,29 +243,12 @@ export class DeviceHearing {
   ): Promise<Transcript | undefined> {
     const started = performance.now();
     const model = this.modelFor(language);
-    const [recognize, vad] = await Promise.all([
-      this.recognizer(language),
-      this.activity(),
-    ]);
-    const segments: Float32Array[] = [];
-    for await (const segment of vad.run(audio, HEARING_RATE)) {
-      segments.push(segment.audio);
-    }
-    const speech = joinSegments(segments);
+    await this.recognizer(language);
+    const { speech } = await this.speechIn(audio);
     if (speech.length < HEARING_RATE * 0.2) {
       return undefined;
     }
-    // Whisper is told the language; Moonshine hears English only.
-    const options = model.id.startsWith('whisper')
-      ? {
-          language: language.startsWith('fr') ? 'french' : 'english',
-          task: 'transcribe',
-        }
-      : {};
-    const heard = await recognize(speech, options);
-    const text = (
-      Array.isArray(heard) ? heard.map(h => h.text).join(' ') : heard.text
-    ).trim();
+    const text = await this.words(speech, language);
     if (!text) {
       return undefined;
     }

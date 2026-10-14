@@ -193,6 +193,8 @@ export type LoopPresetOptions = {
   presence?: ChatPresence;
   /** Whether the counters are shown under the prompt; on unless said. */
   showTokenUsage?: boolean;
+  /** Its voice, when it has one (VOICE.md): the chat's `voice`. */
+  voice?: ChatPluginConfig['voice'];
   /** The conversation to go on with: an embed's session after a reload (LOOP D-13). */
   thread?: ResumedThread;
   /**
@@ -303,6 +305,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     colorMode,
     presence,
     showTokenUsage,
+    voice,
     thread,
     floatingPrompt = false,
     editorSelector = false,
@@ -350,6 +353,7 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
       colorMode,
       presence,
       showTokenUsage,
+      ...(voice ? { voice } : {}),
       ...(thread ? { thread } : {}),
     }),
     // The composer and the title bar are plugins of their own: the chat
