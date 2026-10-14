@@ -287,21 +287,50 @@ class ComponentSpec(BaseModel):
     )
 
 
+class UiContributionsSpec(BaseModel):
+    """What a UI plugin contributes, as its Reactor plugin registers it."""
+
+    slots: List[str] = Field(default_factory=list, description="The Slots it fills")
+    points: List[str] = Field(
+        default_factory=list,
+        description="The Contribution Points it contributes to",
+    )
+    commands: List[str] = Field(
+        default_factory=list,
+        description="The Commands it adds: Reactor Commands by id, the composer's `/` commands by name",
+    )
+
+
 class UISpec(BaseModel):
-    """How an agent's answer becomes an interface: a protocol the host
-    renders (`agentspecs/ui`). An agent spec's `ui` names one.
+    """A UI plugin (`agentspecs/ui`, AGENTIC_UI R8): one Reactor plugin of
+    agent-runtimes a Maker composes an interface with, and the UI renderers it
+    may be exposed through. An agent's or an application's `ui` names plugins,
+    each with its renderer.
     """
 
-    id: str = Field(..., description="What an agent spec's `ui` names (e.g. 'a2ui')")
+    id: str = Field(..., description="What a `ui` choice's `plugin` names (e.g. 'chat')")
     version: str = Field(default="0.0.1", description="Specification version")
-    name: str = Field(..., description="Display name")
-    description: str = Field(
-        default="",
-        description="What the plugin renders, and how the user's action comes back",
+    name: str = Field(..., description="What a Maker reads")
+    description: str = Field(default="", description="What it is, in a Maker's words")
+    emoji: str = Field(..., description="Its face")
+    octicon: Optional[str] = Field(default=None, description="Its Octicon")
+    plugin: str = Field(..., description="The name the Reactor plugin registers under")
+    folder: str = Field(..., description="Its folder under src/apps/plugins")
+    per: Optional[str] = Field(
+        default=None,
+        description="Registered once per application, source or UI spec, as `<plugin>-<its id>`",
     )
-    docs_url: str = Field(default="", description="The protocol's own documentation")
-    enabled: bool = Field(
-        default=True, description="Whether an agent spec may name it today"
+    contributions: UiContributionsSpec = Field(default_factory=UiContributionsSpec)
+    contribution_points: List[str] = Field(
+        default_factory=list, description="The Contribution Points it offers"
+    )
+    settings: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Its settings, as the JSON Schema of an object",
+    )
+    renderers: List[str] = Field(
+        default_factory=list,
+        description="The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`",
     )
     catalog: str = Field(
         default="", description="The catalog its components are written in"
@@ -309,6 +338,46 @@ class UISpec(BaseModel):
     components: List[ComponentSpec] = Field(
         default_factory=list, description="The visual components it renders (LOOP C-13)"
     )
+
+
+class UiRendererSpec(BaseModel):
+    """A UI renderer (`agentspecs/ui-renderers`, AGENTIC_UI R8): how a UI
+    plugin's interface reaches a host that is not Datalayer's own page.
+    """
+
+    id: str = Field(..., description="What a plugin's `renderers` lists (e.g. 'a2ui')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What it does")
+    docs_url: str = Field(default="", description="Its own documentation")
+    enabled: bool = Field(
+        default=True, description="Whether an application may be exposed through it today"
+    )
+
+
+class UiChoiceSpec(BaseModel):
+    """A UI plugin an agent or an application names, and the renderer it is
+    exposed through, when it is (AGENTIC_UI R8).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    plugin: str = Field(..., description="A UI plugin of `agentspecs/ui`, by id")
+    renderer: Optional[str] = Field(
+        default=None,
+        description="The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _not_a_bare_id(cls, data: Any) -> Any:
+        """The old shape — a renderer's id under `ui` — is refused, not read."""
+        if isinstance(data, str):
+            raise ValueError(
+                f"`ui` lists UI plugins, each as `{{plugin, renderer}}`, not {data!r}: "
+                "a renderer is said as a plugin's `renderer`"
+            )
+        return data
 
 
 class ProtocolPackagesSpec(BaseModel):
@@ -1849,9 +1918,12 @@ class Agentspec(BaseModel):
         default=None,
         description="Communication protocol (e.g., 'ag-ui', 'acp', 'a2a', 'vercel-ai')",
     )
-    ui: Optional[str] = Field(
-        default=None,
-        description="The UI its answers render in (e.g., 'a2ui', 'mcp-apps'), one of `agentspecs/ui`.",
+    ui: List[UiChoiceSpec] = Field(
+        default_factory=list,
+        description=(
+            "Its UI plugins, each `{plugin, renderer}` (AGENTIC_UI R8): a plugin of `agentspecs/ui` "
+            "and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is."
+        ),
     )
     protocols: List[str] = Field(
         default_factory=list,
@@ -3080,9 +3152,9 @@ class AppSpec(BaseModel):
         default_factory=list,
         description="The agent protocols it speaks, ids of `agentspecs/protocols` (AGENT_PROTOCOLS PS-02)",
     )
-    ui: List[str] = Field(
+    ui: List[UiChoiceSpec] = Field(
         default_factory=list,
-        description="The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04)",
+        description="Its UI plugins, each `{plugin, renderer}` (AGENTIC_UI R8)",
     )
     pap: AppPapSpec = Field(default_factory=AppPapSpec)
     pact: AppPactSpec = Field(default_factory=AppPactSpec)

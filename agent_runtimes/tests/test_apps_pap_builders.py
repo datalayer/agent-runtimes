@@ -159,7 +159,7 @@ def test_what_the_builders_refuse() -> None:
 
 
 def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
-    """`protocols` and `ui` from Python (AGENT_PROTOCOLS PS-02, PS-04): the Canvas and the YAML read the same lists."""
+    """`protocols` and `ui` from Python (AGENT_PROTOCOLS PS-02, AGENTIC_UI R8): the Canvas and the YAML read the same lists."""
     from agent_runtimes.loop.apps.application import Application
 
     app = Application(
@@ -167,12 +167,27 @@ def test_an_application_says_what_it_speaks_and_where_it_renders() -> None:
         "chat",
         agent="example-blank:0.0.1",
         protocols=["mcp", "a2a"],
-        ui=["a2ui"],
+        ui=[{"plugin": "a2ui-surface", "renderer": "a2ui"}, {"plugin": "chat"}],
     )
-    assert (app.spec.protocols, app.spec.ui) == (["mcp", "a2a"], ["a2ui"])
-    assert app.document["protocols"] == ["mcp", "a2a"] and app.document["ui"] == [
-        "a2ui"
+    assert app.spec.protocols == ["mcp", "a2a"]
+    assert [choice.model_dump(exclude_none=True) for choice in app.spec.ui] == [
+        {"plugin": "a2ui-surface", "renderer": "a2ui"},
+        {"plugin": "chat"},
     ]
+    assert app.document["ui"] == [
+        {"plugin": "a2ui-surface", "renderer": "a2ui"},
+        {"plugin": "chat"},
+    ]
+
+
+def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
+    """The old shape (AGENTIC_UI R8): a renderer's id under `ui` is refused, with no reading of it."""
+    from agent_runtimes.loop.apps.application import Application
+
+    with pytest.raises(Exception, match="UI renderer"):
+        Application(
+            "speaker", "chat", agent="example-blank:0.0.1", ui=["a2ui"]
+        ).spec
 
 
 def test_loop_apps_build_marks_what_the_code_decides_of_pap_with_its_line(

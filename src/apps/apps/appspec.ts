@@ -72,10 +72,12 @@ import type {
   AppToolSpec,
   AppTriggerSpec,
   AppUploadsSpec,
+  UiChoice,
 } from '../../types/agentspecs';
 import { BEHAVIOURS } from './rules';
 import { PROTOCOL_CATALOGUE } from '../../specs/protocols';
 import { UI_CATALOGUE } from '../../specs/ui';
+import { UI_RENDERER_CATALOGUE } from '../../specs/uiRenderers';
 import { DEFAULT_MAX_FILES, DEFAULT_UPLOAD_MB } from './uploads';
 
 /** The version of the spec itself. */
@@ -194,6 +196,29 @@ const texts = (value: unknown): string[] =>
 
 const records = (value: unknown): Data[] =>
   Array.isArray(value) ? value.filter(isData) : [];
+
+/**
+ * An application's UI plugins as its document says them (AGENTIC_UI R8):
+ * `{plugin, renderer}` each. A bare id — the old shape, a renderer named as a
+ * UI — is read as the plugin it names, which `uiProblems` refuses.
+ */
+const uiChoices = (value: unknown): UiChoice[] =>
+  Array.isArray(value)
+    ? value.flatMap((item): UiChoice[] =>
+        typeof item === 'string'
+          ? [{ plugin: item }]
+          : isData(item)
+            ? [
+                {
+                  plugin: text(item.plugin),
+                  ...(text(item.renderer)
+                    ? { renderer: text(item.renderer) }
+                    : {}),
+                },
+              ]
+            : [],
+      )
+    : [];
 
 /**
  * One turn of a test's conversation as its document says it (STUDIO E-01):
@@ -1303,7 +1328,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
     contents: texts(data.contents),
     connections: records(data.connections).map(parseConnection),
     protocols: texts(data.protocols),
-    ui: texts(data.ui),
+    ui: uiChoices(data.ui),
     rules: records(data.rules).map(parseRule),
     permissions: {
       spaces: records(permissions.spaces).map(grant => ({
@@ -1421,27 +1446,50 @@ export function parseAppspec(document: unknown): ParsedAppspec {
 }
 
 /**
- * What is wrong with the UI an application says its answers render in
- * (AGENT_PROTOCOLS PS-04), as agentspecs says it: an id the catalogue does not
- * know or said twice, one not enabled while it is offered.
+ * What is wrong with the UI plugins an application names (AGENTIC_UI R8), in
+ * the sentences agentspecs says (`ui_choices_problems`): a plugin the
+ * catalogue does not have or said twice — a renderer named as a plugin is
+ * refused —, a renderer the catalogue does not have or the plugin may not be
+ * exposed through, and one not enabled while the application is offered.
  */
 export function uiProblems(app: Pick<AppSpec, 'ui' | 'enabled'>): string[] {
   const problems: string[] = [];
   const seen: string[] = [];
-  for (const id of app.ui) {
+  for (const choice of app.ui) {
+    const id = choice.plugin;
     if (seen.includes(id)) {
-      problems.push(`It lists the UI '${id}' twice.`);
+      problems.push(`It lists the UI plugin '${id}' twice.`);
       continue;
     }
     seen.push(id);
     const spec = UI_CATALOGUE[id];
     if (!spec) {
       problems.push(
-        `There is no UI named '${id}': one of ${Object.keys(UI_CATALOGUE).sort().join(', ')}.`,
+        `There is no UI plugin named '${id}': one of ${Object.keys(UI_CATALOGUE).sort().join(', ')}.` +
+          (UI_RENDERER_CATALOGUE[id]
+            ? ` '${id}' is a UI renderer: say it as a plugin's \`renderer\`.`
+            : ''),
       );
-    } else if (app.enabled && !spec.enabled) {
+      continue;
+    }
+    if (choice.renderer === undefined) {
+      continue;
+    }
+    const renderer = UI_RENDERER_CATALOGUE[choice.renderer];
+    if (!renderer) {
       problems.push(
-        `The UI ${spec.name} ('${id}') is not enabled: an application cannot render in it yet.`,
+        `There is no UI renderer named '${choice.renderer}': one of ${Object.keys(UI_RENDERER_CATALOGUE).sort().join(', ')}.`,
+      );
+    } else if (!spec.renderers.includes(renderer.id)) {
+      problems.push(
+        `The UI plugin ${spec.name} ('${id}') is not exposed through ${renderer.name}: ` +
+          (spec.renderers.length > 0
+            ? `through ${spec.renderers.join(', ')} only.`
+            : 'through no renderer.'),
+      );
+    } else if (app.enabled && !renderer.enabled) {
+      problems.push(
+        `The UI renderer ${renderer.name} ('${renderer.id}') is not enabled: an application cannot be exposed through it yet.`,
       );
     }
   }
@@ -1906,7 +1954,14 @@ export function dumpAppspec(app: AppSpec): Data {
       ),
     )
     .list('protocols', app.protocols)
-    .list('ui', app.ui)
+    .list(
+      'ui',
+      app.ui.map(choice =>
+        choice.renderer
+          ? { plugin: choice.plugin, renderer: choice.renderer }
+          : { plugin: choice.plugin },
+      ),
+    )
     .part('pap', dumpPap(app.pap))
     .part('pact', dumpPact(app.pact))
     .part('commerce', dumpCommerce(app.commerce))

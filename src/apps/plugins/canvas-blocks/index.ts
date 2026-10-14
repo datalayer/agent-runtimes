@@ -4,9 +4,10 @@
  */
 
 /**
- * The Canvas's palette as a contribution point (LOOP C-12): each UI of
- * the catalogue that renders components (`agentspecs/ui`, C-13) is a
- * Reactor plugin contributing its components to `loop.canvas.block`. The
+ * The Canvas's palette as a Contribution Point (LOOP C-12): each UI plugin
+ * of the catalogue that renders components (`agentspecs/ui`, C-13 — the
+ * A2UI surfaces, `a2ui-surface`) has its components contributed to
+ * `loop.canvas.block` by a Reactor plugin of its own, one per UI spec. The
  * palette lists what the enabled plugins contribute, and nothing else; a
  * plugin disabled takes its blocks off it, and an application that uses one
  * of them says so in its setup notes (`blockSetupNotes`).
@@ -61,16 +62,13 @@ export function uiPluginBlocks(
   });
 }
 
-/**
- * The plugins of the catalogue's UI specs that render components and may
- * be named today (`enabled` in the catalogue).
- */
+/** The block plugins of the catalogue's UI plugins that render components. */
 export const CANVAS_BLOCK_PLUGINS: ReactorPlugin<
   Record<string, never>,
   unknown,
   unknown
 >[] = listUI()
-  .filter(ui => ui.enabled && ui.components.length > 0)
+  .filter(ui => ui.components.length > 0)
   .map(uiPluginBlocks);
 
 /**
@@ -95,8 +93,8 @@ export function canvasBlocksReactor(
 }
 
 /**
- * The palette of an organization: the block plugins of the UI specs it has
- * turned off (`plugins_off` in IAM, catalogue ids such as 'a2ui') switched
+ * The palette of an organization: the block plugins of the UI plugins it has
+ * turned off (`plugins_off` in IAM, ids of `agentspecs/ui` such as 'a2ui-surface') switched
  * off. A UI of the catalogue that contributes no block takes nothing
  * off; an id the catalogue does not have is said by `unknownPluginsOff`.
  */

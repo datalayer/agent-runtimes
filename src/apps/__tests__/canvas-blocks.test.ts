@@ -29,7 +29,7 @@ import { emptyAppspec } from '../apps/appspec';
 import { listComponents } from '../../specs/ui';
 import type { AppSpec, ComponentSpec } from '../../types/agentspecs';
 
-const A2UI = canvasBlocksPluginName('a2ui');
+const A2UI = canvasBlocksPluginName('a2ui-surface');
 
 const gauge: ComponentSpec = {
   id: 'Gauge',
@@ -125,12 +125,12 @@ describe('an application using a block whose plugin is off', () => {
         canvasBlocksReactor([A2UI]),
       ),
     ).toEqual([
-      'The UI “A2UI” is not enabled, and its page uses its blocks Table, Chart: they are off the Canvas until it is.',
+      'The UI “Surfaces in the conversation” is not enabled, and its page uses its blocks Table, Chart: they are off the Canvas until it is.',
     ]);
     expect(
       blockSetupNotes(withPage([], ['Chart']), canvasBlocksReactor([A2UI])),
     ).toEqual([
-      'The UI “A2UI” is not enabled, and its page uses its block Chart: it is off the Canvas until it is.',
+      'The UI “Surfaces in the conversation” is not enabled, and its page uses its block Chart: it is off the Canvas until it is.',
     ]);
   });
 
@@ -143,7 +143,7 @@ describe('an application using a block whose plugin is off', () => {
 
 describe('the plugins an organization has turned off', () => {
   it('take the blocks of a UI off its palette, by catalogue id', () => {
-    expect(canvasBlocksOf(canvasBlocksReactorOf(['a2ui']))).toEqual([]);
+    expect(canvasBlocksOf(canvasBlocksReactorOf(['a2ui-surface']))).toEqual([]);
     expect(canvasBlocksOf(canvasBlocksReactorOf([])).length).toBe(
       listComponents().length,
     );
@@ -151,30 +151,32 @@ describe('the plugins an organization has turned off', () => {
 
   it('take nothing off for a UI with no blocks, or one the catalogue does not have', () => {
     expect(
-      canvasBlocksOf(canvasBlocksReactorOf(['mcp-ui', 'no-such-plugin']))
-        .length,
+      canvasBlocksOf(canvasBlocksReactorOf(['chat', 'no-such-plugin'])).length,
     ).toBe(listComponents().length);
-    expect(unknownPluginsOff(['a2ui', 'mcp-ui', 'no-such-plugin'])).toEqual([
-      'no-such-plugin',
-    ]);
+    // 'a2ui' is a renderer, not a UI plugin (AGENTIC_UI R8): unknown, as any other.
+    expect(
+      unknownPluginsOff(['a2ui-surface', 'chat', 'a2ui', 'no-such-plugin']),
+    ).toEqual(['a2ui', 'no-such-plugin']);
   });
 
   it('are said in the setup notes of an application using their blocks', () => {
     const app = withPage(['Table']);
     expect(pluginsOffSetupNotes(app, [])).toEqual([]);
-    expect(pluginsOffSetupNotes(app, ['a2ui'])).toEqual([
-      'The UI “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.',
+    expect(pluginsOffSetupNotes(app, ['a2ui-surface'])).toEqual([
+      'The UI “Surfaces in the conversation” is not enabled, and its page uses its block Table: it is off the Canvas until it is.',
     ]);
   });
 
   it('are said by checkApp and checkAppspec, given them, and by nothing else', () => {
     const app = withPage(['Table']);
     const note =
-      'The UI “A2UI” is not enabled, and its page uses its block Table: it is off the Canvas until it is.';
+      'The UI “Surfaces in the conversation” is not enabled, and its page uses its block Table: it is off the Canvas until it is.';
     expect(checkApp(app).setup).not.toContain(note);
-    expect(checkApp(app, [], { pluginsOff: ['a2ui'] }).setup).toContain(note);
+    expect(checkApp(app, [], { pluginsOff: ['a2ui-surface'] }).setup).toContain(
+      note,
+    );
     expect(
-      checkAppspec(dumpAppspec(app), { pluginsOff: ['a2ui'] }).setup,
+      checkAppspec(dumpAppspec(app), { pluginsOff: ['a2ui-surface'] }).setup,
     ).toContain(note);
   });
 });

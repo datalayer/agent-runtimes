@@ -40,7 +40,7 @@ APP = {
 }
 
 TABLE_OFF = (
-    "The UI “A2UI” is not enabled, and its page uses its block Table: "
+    "The UI “Surfaces in the conversation” is not enabled, and its page uses its block Table: "
     "it is off the Canvas until it is."
 )
 
@@ -92,11 +92,11 @@ class TestReadingThemFromIam:
 
         def get(url, headers, timeout):
             calls.append((url, headers))
-            return httpx.Response(200, json={"success": True, "plugins_off": ["a2ui"]})
+            return httpx.Response(200, json={"success": True, "plugins_off": ["a2ui-surface"]})
 
         monkeypatch.setattr(httpx, "get", get)
         read = read_plugins_off(ORG, iam_url=IAM + "/", token="t")
-        assert read == PluginsOff(["a2ui"], f"Organization {ORG} has turned off: a2ui.")
+        assert read == PluginsOff(["a2ui-surface"], f"Organization {ORG} has turned off: a2ui-surface.")
         assert calls == [
             (
                 f"{IAM}/api/iam/v1/organizations/{ORG}/plugins-off",
@@ -117,15 +117,15 @@ class TestTheSetupNotes:
         assert plugins_off_setup_notes(interface(["Table"]), []) == []
 
     def test_the_plugin_and_its_blocks_are_named(self) -> None:
-        assert plugins_off_setup_notes(interface(["Table"]), ["a2ui"]) == [TABLE_OFF]
-        assert plugins_off_setup_notes(interface(["Table"], ["Chart"]), ["a2ui"]) == [
-            "The UI “A2UI” is not enabled, and its page uses its blocks Table, Chart: "
+        assert plugins_off_setup_notes(interface(["Table"]), ["a2ui-surface"]) == [TABLE_OFF]
+        assert plugins_off_setup_notes(interface(["Table"], ["Chart"]), ["a2ui-surface"]) == [
+            "The UI “Surfaces in the conversation” is not enabled, and its page uses its blocks Table, Chart: "
             "they are off the Canvas until it is."
         ]
 
     def test_a_plugin_with_no_blocks_or_unknown_takes_nothing_off(self) -> None:
         assert plugins_off_setup_notes(interface(["Table"]), ["mcp-ui", "nope"]) == []
-        assert unknown_plugins_off(["a2ui", "mcp-ui", "nope"]) == ["nope"]
+        assert unknown_plugins_off(["a2ui-surface", "chat", "a2ui", "nope"]) == ["a2ui", "nope"]
 
 
 class TestLoopAppsValidate:
@@ -133,10 +133,10 @@ class TestLoopAppsValidate:
         path = write(tmp_path)
         assert TABLE_OFF not in validate_file(path).setup
         report = validate_file(
-            path, PluginsOff(["a2ui"], "Organization O has turned off: a2ui.")
+            path, PluginsOff(["a2ui-surface"], "Organization O has turned off: a2ui-surface.")
         )
         assert TABLE_OFF in report.setup
-        assert report.plugins_off_says == "Organization O has turned off: a2ui."
+        assert report.plugins_off_says == "Organization O has turned off: a2ui-surface."
 
     def test_with_no_organization_the_run_says_none_is_off(
         self, tmp_path: Path
@@ -157,7 +157,7 @@ class TestLoopAppsValidate:
             httpx,
             "get",
             lambda *args, **kwargs: httpx.Response(
-                200, json={"success": True, "plugins_off": ["a2ui"]}
+                200, json={"success": True, "plugins_off": ["a2ui-surface"]}
             ),
         )
         result = runner.invoke(
@@ -166,7 +166,7 @@ class TestLoopAppsValidate:
         assert result.exit_code == 0
         [report] = json.loads(result.output)
         assert TABLE_OFF in report["setup"]
-        assert report["plugins_off_says"] == f"Organization {ORG} has turned off: a2ui."
+        assert report["plugins_off_says"] == f"Organization {ORG} has turned off: a2ui-surface."
 
     def test_signed_out_the_run_says_none_is_off(
         self, tmp_path: Path, monkeypatch
@@ -186,4 +186,4 @@ class TestLoopAppsValidate:
 
 
 def test_the_module_reads_the_catalogue_of_this_package() -> None:
-    assert module.list_ui()[0].id == "a2ui"
+    assert module.list_ui()[0].id == "a2ui-surface"

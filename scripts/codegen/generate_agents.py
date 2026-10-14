@@ -242,6 +242,15 @@ def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
         raise SystemExit(
             f"Error: {path} says `ui_plugin`: the field is `ui`, one of agentspecs/ui"
         )
+    ui = spec.get("ui")
+    if ui is not None and (
+        not isinstance(ui, list)
+        or not all(isinstance(choice, dict) and "plugin" in choice for choice in ui)
+    ):
+        raise SystemExit(
+            f"Error: {path} says `ui: {ui!r}`: `ui` lists UI plugins, each "
+            "`{plugin, renderer}` (AGENTIC_UI R8); a renderer is said as a plugin's `renderer`"
+        )
     if "tools" in spec:
         raise SystemExit(
             f"Error: {path} says `tools`: the field is `backend_tools` — the tools "
@@ -548,8 +557,7 @@ from agent_runtimes.types import (
             protocol_val = spec.get("protocol")
             protocol_str = f'"{protocol_val}"' if protocol_val else "None"
             delegable_str = _fmt_py_delegable(spec.get("delegable", []))
-            ui_id = spec.get("ui")
-            ui_str = f'"{ui_id}"' if ui_id else "None"
+            ui_str = _fmt_py_literal(list(spec.get("ui") or []))
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -1176,8 +1184,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
             protocol_val = spec.get("protocol")
             protocol_ts = f"'{protocol_val}'" if protocol_val else "undefined"
             delegable_ts = _fmt_ts_delegable(spec.get("delegable", []))
-            ui_id = spec.get("ui")
-            ui_ts = f"'{ui_id}'" if ui_id else "undefined"
+            ui_ts = _fmt_ts_literal(list(spec.get("ui") or []))
             trigger_val = spec.get("trigger")
             model_cfg = spec.get("model_config")
             mcp_srv_tools = spec.get("mcp_server_tools")
@@ -1683,6 +1690,7 @@ export * from './skills';
 export * from './backendTools';
 export * from './triggers';
 export * from './ui';
+export * from './uiRenderers';
 export * from './protocols';
 export * from './frames';
 export * from './cogs';

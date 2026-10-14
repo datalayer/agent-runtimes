@@ -5,10 +5,13 @@
 """
 Generate Python and TypeScript code from YAML UI specifications.
 
-A UI spec is how an agent's answer becomes an interface rather than text —
-a protocol the host knows how to render (A2UI, MCP Apps, MCP UI). One YAML per
-plugin under ``agentspecs/ui``; an agent spec's ``ui`` names
-one. A UI spec hosts the visual components it renders (LOOP C-13).
+A UI spec is one Reactor plugin of this package (``src/apps/plugins/``) a
+Maker composes an interface with (AGENTIC_UI R8): its registered name, its
+Contributions, the Contribution Points it offers, its settings, the visual
+components it renders (LOOP C-13) and the UI renderers it may be exposed
+through (``agentspecs/ui-renderers``, ``generate_ui_renderers.py``). One YAML
+per plugin under ``agentspecs/ui``; an agent's or an application's ``ui``
+names plugins, each with its renderer.
 
 Usage:
     python generate_ui.py \\
@@ -29,7 +32,13 @@ from versioning import ensure_spec_version, version_suffix
 
 
 def load_plugin_specs(specs_dir: Path) -> list[dict[str, Any]]:
-    """Load all UI YAML specifications from a directory."""
+    """Load all UI YAML specifications from a directory.
+
+    A spec of the old shape — a renderer listed as a UI, with no `plugin` —
+    is refused, and so is a renderer the `ui-renderers` beside it does not have.
+    """
+    renderers_dir = specs_dir.parent / "ui-renderers"
+    renderers = {path.stem for path in renderers_dir.glob("*.yaml")}
     specs = []
     for yaml_file in sorted(specs_dir.glob("*.yaml")):
         with open(yaml_file) as f:
@@ -39,6 +48,16 @@ def load_plugin_specs(specs_dir: Path) -> list[dict[str, Any]]:
                 raise ValueError(
                     f"{yaml_file.name}: the file is named for id {yaml_file.stem!r}, the spec says {spec['id']!r}"
                 )
+            if "plugin" not in spec:
+                raise ValueError(
+                    f"{yaml_file.name}: a UI spec is a Reactor plugin (`plugin`); "
+                    "a renderer is a spec of agentspecs/ui-renderers"
+                )
+            for renderer in spec.get("renderers") or []:
+                if renderer not in renderers:
+                    raise ValueError(
+                        f"{yaml_file.name}: there is no UI renderer {renderer!r} in {renderers_dir}"
+                    )
             specs.append(spec)
     return specs
 
@@ -122,8 +141,6 @@ def _py_calls(specs: list[dict[str, Any]]) -> list[str]:
         "        self._place = place",
     ]
     for spec in specs:
-        if not spec.get("enabled", True):
-            continue
         for component in spec.get("components") or []:
             schema = component.get("properties") or {}
             required = set(schema.get("required") or [])
@@ -203,7 +220,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         '"""',
         "UI Catalog.",
         "",
-        "How an agent's answer becomes an interface: the protocols a host renders.",
+        "The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).",
         "",
         "This file is AUTO-GENERATED from YAML specifications.",
         "DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -211,7 +228,12 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
         "",
         "from typing import Any, Callable, Dict, List, Literal, Mapping, Optional, Union",
         "",
-        "from agent_runtimes.types import ComponentBindingsSpec, ComponentSpec, UISpec",
+        "from agent_runtimes.types import (",
+        "    ComponentBindingsSpec,",
+        "    ComponentSpec,",
+        "    UiContributionsSpec,",
+        "    UISpec,",
+        ")",
         "",
         "# " + "=" * 76,
         "# UI Definitions",
@@ -227,9 +249,20 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
                 f"    version={_py(str(spec['version']))},",
                 f"    name={_py(spec['name'])},",
                 f"    description={_py(str(spec.get('description', '')).strip())},",
-                f"    docs_url={_py(str(spec.get('docs_url', '')))},",
-                f"    enabled={bool(spec.get('enabled', True))},",
-                f"    catalog={_py(str(spec.get('catalog', '')))},",
+                f"    emoji={json.dumps(spec['emoji'], ensure_ascii=False)},",
+                f"    octicon={_py(spec['octicon']) if spec.get('octicon') else 'None'},",
+                f"    plugin={_py(spec['plugin'])},",
+                f"    folder={_py(spec['folder'])},",
+                f"    per={_py(spec['per']) if spec.get('per') else 'None'},",
+                "    contributions=UiContributionsSpec(",
+                f"        slots={list((spec.get('contributions') or {}).get('slots') or [])!r},",
+                f"        points={list((spec.get('contributions') or {}).get('points') or [])!r},",
+                f"        commands={list((spec.get('contributions') or {}).get('commands') or [])!r},",
+                "    ),",
+                f"    contribution_points={list(spec.get('contribution_points') or [])!r},",
+                f"    settings={spec.get('settings') or {}!r},",
+                f"    renderers={list(spec.get('renderers') or [])!r},",
+                f"    catalog={_py(str(spec.get('catalog') or ''))},",
                 "    components=[",
                 *[f"        {_py_component(c)}," for c in spec.get("components") or []],
                 "    ],",
@@ -257,7 +290,7 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "",
             "",
             "def get_ui(plugin_id: str) -> UISpec | None:",
-            '    """The UI an agent spec\'s `ui` names, or None."""',
+            '    """The UI plugin an agent\'s or an application\'s `ui` names, or None."""',
             "    return UI_CATALOGUE.get(plugin_id)",
             "",
             "",
@@ -265,12 +298,11 @@ def generate_python_code(specs: list[dict[str, Any]]) -> str:
             "    return list(UI_CATALOGUE.values())",
             "",
             "",
-            "#: The visual components the enabled UI specs render, by the name a",
+            "#: The visual components the UI plugins render, by the name a",
             "#: surface gives them (LOOP C-13).",
             "COMPONENT_CATALOGUE: Dict[str, ComponentSpec] = {",
             "    component.id: component",
             "    for plugin in UI_CATALOGUE.values()",
-            "    if plugin.enabled",
             "    for component in plugin.components",
             "}",
             "",
@@ -300,7 +332,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "/**",
         " * UI Catalog.",
         " *",
-        " * How an agent's answer becomes an interface: the protocols a host renders.",
+        " * The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).",
         " *",
         " * This file is AUTO-GENERATED from YAML specifications.",
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
@@ -318,9 +350,20 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  version: {_ts(str(spec['version']))},",
                 f"  name: {_ts(spec['name'])},",
                 f"  description: {_ts(str(spec.get('description', '')).strip())},",
-                f"  docsUrl: {_ts(str(spec.get('docs_url', '')))},",
-                f"  enabled: {'true' if spec.get('enabled', True) else 'false'},",
-                f"  catalog: {_ts(str(spec.get('catalog', '')))},",
+                f"  emoji: {json.dumps(spec['emoji'], ensure_ascii=False)},",
+                *([f"  octicon: {_ts(spec['octicon'])},"] if spec.get("octicon") else []),
+                f"  plugin: {_ts(spec['plugin'])},",
+                f"  folder: {_ts(spec['folder'])},",
+                *([f"  per: {_ts(spec['per'])},"] if spec.get("per") else []),
+                "  contributions: {",
+                f"    slots: {json.dumps(list((spec.get('contributions') or {}).get('slots') or []))},",
+                f"    points: {json.dumps(list((spec.get('contributions') or {}).get('points') or []))},",
+                f"    commands: {json.dumps(list((spec.get('contributions') or {}).get('commands') or []))},",
+                "  },",
+                f"  contributionPoints: {json.dumps(list(spec.get('contribution_points') or []))},",
+                f"  settings: {json.dumps(spec.get('settings') or {}, ensure_ascii=False)},",
+                f"  renderers: {json.dumps(list(spec.get('renderers') or []))},",
+                f"  catalog: {_ts(str(spec.get('catalog') or ''))},",
                 f"  components: {json.dumps([{**c, 'events': c.get('events', [])} for c in spec.get('components') or []], indent=2, ensure_ascii=False)},",
                 "};",
                 "",
@@ -335,7 +378,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         [
             "};",
             "",
-            "/** The UI an agent spec's `ui` names, or undefined. */",
+            "/** The UI plugin an agent's or an application's `ui` names, or undefined. */",
             "export function getUI(pluginId: string): UISpec | undefined {",
             "  return UI_CATALOGUE[pluginId];",
             "}",
@@ -344,10 +387,9 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
             "  return Object.values(UI_CATALOGUE);",
             "}",
             "",
-            "/** The visual components the enabled UI specs render, by the name a surface gives them (LOOP C-13). */",
+            "/** The visual components the UI plugins render, by the name a surface gives them (LOOP C-13). */",
             "export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> = Object.fromEntries(",
             "  Object.values(UI_CATALOGUE)",
-            "    .filter(plugin => plugin.enabled)",
             "    .flatMap(plugin => plugin.components.map(component => [component.id, component])),",
             ");",
             "",

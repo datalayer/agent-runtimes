@@ -3,9 +3,9 @@
 
 """The plugins an organization has turned off, for the checks of an application (LOOP C-12).
 
-An organization keeps the UI specs of the catalogue it has turned off in IAM
-(`GET /api/iam/v1/organizations/{uid}/plugins-off`, catalogue ids such as
-``a2ui``). An application whose page uses a block of one of them says so in
+An organization keeps the UI plugins of the catalogue it has turned off in IAM
+(`GET /api/iam/v1/organizations/{uid}/plugins-off`, ids of agentspecs' ``ui``
+such as ``a2ui-surface``). An application whose page uses a block of one of them says so in
 its setup notes, in the words of the Studio's Canvas (agent-runtimes'
 `blockSetupNotes`): `loop apps validate` and a runtime configured with the
 application read the list with the caller's token. With no organization, or
@@ -114,8 +114,8 @@ def unknown_plugins_off(plugins_off: Sequence[str]) -> List[str]:
 def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[str]:
     """What an application's page uses from a UI that is off, one sentence per plugin.
 
-    The sentence the Studio's Canvas says (`blockSetupNotes`). A UI the
-    catalogue does not offer contributes no block, so it takes nothing off.
+    The sentence the Studio's Canvas says (`blockSetupNotes`). A UI plugin
+    that renders no component contributes no block, so it takes nothing off.
 
     Parameters
     ----------
@@ -132,7 +132,7 @@ def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[
     off = [
         plugin
         for plugin in list_ui()
-        if plugin.id in plugins_off and plugin.enabled and plugin.components
+        if plugin.id in plugins_off and plugin.components
     ]
     notes: List[str] = []
     used = components_used_by(interface)

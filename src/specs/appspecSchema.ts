@@ -2675,6 +2675,36 @@ export const APPSPEC_SCHEMA: JsonSchema = {
       title: 'TriggerType',
       type: 'string',
     },
+    UiChoice: {
+      additionalProperties: false,
+      description:
+        'A UI plugin an agent or an application names, and the renderer it is exposed through, when it is.',
+      properties: {
+        plugin: {
+          description: 'A UI plugin of `agentspecs/ui`, by id',
+          minLength: 1,
+          title: 'Plugin',
+          type: 'string',
+        },
+        renderer: {
+          anyOf: [
+            {
+              type: 'string',
+            },
+            {
+              type: 'null',
+            },
+          ],
+          default: null,
+          description:
+            'The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id',
+          title: 'Renderer',
+        },
+      },
+      required: ['plugin'],
+      title: 'UiChoice',
+      type: 'object',
+    },
     Visibility: {
       description: 'Who can open a hosted application.',
       enum: ['private', 'invited', 'organization', 'link', 'public'],
@@ -2829,9 +2859,9 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     ui: {
       description:
-        'The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04): each once, and one that is not enabled only while it is not offered',
+        'Its UI plugins, each `{plugin, renderer}` (AGENTIC_UI R8): a plugin of `agentspecs/ui`, each once, and the renderer of `agentspecs/ui-renderers` it is exposed through, when it is — one the plugin may be exposed through, and one that is not enabled only while the application is not offered',
       items: {
-        type: 'string',
+        $ref: '#/$defs/UiChoice',
       },
       title: 'Ui',
       type: 'array',

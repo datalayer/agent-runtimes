@@ -1,43 +1,80 @@
 ---
-title: UI and Components
+title: UI plugins and Components
 ---
 
-# UI specs and the catalog of visual components
+# UI plugins, UI renderers and the catalog of visual components
 
-A **UI spec** is how an agent's answer becomes an interface rather than text: a
-protocol the host renders — A2UI today; MCP Apps and MCP UI are listed and not enabled.
-Each plugin hosts **the catalog of visual components** it renders (LOOP C-13): A2UI's
-18 standard v0.9 components (`Text`, `Row`, `Card`, `Button`, `ChoicePicker`…) and
-Datalayer's own six — `Table`, `Chart`, `FileUpload`, `Chat`, `Evidence` and `Form`.
-Every one has a version and carries its properties as a JSON Schema of the catalog's
-own — a standard one's named, required and chosen as A2UI's are; Datalayer's own with
-what it can be bound to, the events it reports and a valid example.
+The interface of an application is made of **UI plugins**: the Reactor plugins of
+`src/apps/plugins/` the Loop editor assembles — the chat and its composer and title
+bar, the notebook and its toolbar, the document and its toolbar, the surfaces drawn in
+the conversation, an application's page, its rules and approvals, its activity, the
+*Sign in at a company* card, the page layout… **A UI spec is one of them**
+(`agentspecs/ui/*.yaml`): the name the plugin registers under, its Contributions — the
+Slots it fills, the Contribution Points it contributes to, the Commands it adds —, the
+Contribution Points it offers, its settings, the components it renders and the
+renderers it may be exposed through.
 
-The plugins are specs of [Agentspecs](./index.mdx) (`agentspecs/ui/*.yaml`).
-Their fields, every component and how an Appspec's surface names one are documented
-there: [UI](https://agentspecs.datalayer.tech/agents/ui) and
+A **UI renderer** is how a plugin's interface reaches a host that is not Datalayer's
+own page — A2UI today; MCP Apps and MCP UI are listed and not enabled. Renderers are
+specs of their own (`agentspecs/ui-renderers/*.yaml`). An agent or an application
+names its UI plugins and, per plugin, the renderer:
+
+```yaml
+ui:
+  - plugin: a2ui-surface
+    renderer: a2ui
+  - plugin: chat
+```
+
+A renderer named as a UI — the old shape, `ui: a2ui` — is refused by agentspecs, by
+`checkAppspec` (`uiProblems`) and by `make specs`, with no compatibility reading.
+
+**The specs are the plugins' registrations.** `src/apps/__tests__/ui-specs.test.ts`
+builds each plugin on a reactor, starts it, and holds what it registers — its name,
+Slots, Contribution Points, Commands, offered Contribution Points and settings — to its
+spec, both ways; and every folder of `src/apps/plugins/` has a spec, or a reason it has
+none (`NOT_UI` in `src/apps/__tests__/fixtures/uiPluginRegistrations.ts`). A plugin
+added without its spec, a spec whose plugin went, or a Slot added to a plugin and not
+to its spec fails there.
+
+The plugin that draws A2UI surfaces (`a2ui-surface`) hosts **the catalog of visual
+components** (LOOP C-13): A2UI's 18 standard v0.9 components (`Text`, `Row`, `Card`,
+`Button`, `ChoicePicker`…) and Datalayer's own — `Table`, `Chart`, `FileUpload`, `Chat`,
+`Evidence`, `Form` and `Download`. Every one has a version and carries its properties
+as a JSON Schema of the catalog's own — a standard one's named, required and chosen as
+A2UI's are; Datalayer's own with what it can be bound to, the events it reports and a
+valid example.
+
+Their fields, every component and how an Appspec's surface names one are documented in
+Agentspecs: [UI](https://agentspecs.datalayer.tech/agents/ui),
+[Renderers](https://agentspecs.datalayer.tech/agents/ui/renderers) and
 [the catalog of visual components](https://agentspecs.datalayer.tech/agents/ui/components).
 This page is about the lookups Agent Runtimes generates from them.
 
 ## The generated lookups
 
-`make specs` generates the plugins into one catalogue per language — do not edit them
-by hand:
+`make specs` generates both kinds into one catalogue per language and kind — do not
+edit them by hand:
 
 | | Python | TypeScript |
 |---|---|---|
-| Module | `agent_runtimes.specs.ui` | `src/specs/ui.ts` (`@datalayer/agent-runtimes/lib/specs/ui`, also re-exported from `@datalayer/agent-runtimes`) |
-| The plugins, by id | `UI_CATALOGUE` | `UI_CATALOGUE` |
-| One plugin | `get_ui(ui_id)` | `getUI(uiId)` |
-| Every plugin | `list_ui()` | `listUI()` |
+| Modules | `agent_runtimes.specs.ui`, `agent_runtimes.specs.ui_renderers` | `src/specs/ui.ts`, `src/specs/uiRenderers.ts` |
+| The UI plugins, by id | `UI_CATALOGUE` | `UI_CATALOGUE` |
+| One UI plugin | `get_ui(ui_id)` | `getUI(uiId)` |
+| Every UI plugin | `list_ui()` | `listUI()` |
+| The renderers, by id | `UI_RENDERER_CATALOGUE` | `UI_RENDERER_CATALOGUE` |
+| One renderer | `get_ui_renderer(renderer_id)` | `getUiRenderer(rendererId)` |
 | The components, by the name a surface gives them | `COMPONENT_CATALOGUE` | `COMPONENT_CATALOGUE` |
 | One component, or none | `get_component(name)` → `ComponentSpec \| None` | `getComponent(name)` → `ComponentSpec \| undefined` |
 | Every component | `list_components()` | `listComponents()` |
-| Types | `UIPluginSpec`, `ComponentSpec`, `ComponentBindingsSpec` (`agent_runtimes.types`) | `UIPluginSpec`, `ComponentSpec` (`src/types/agentspecs.ts`) |
+| Types | `UISpec`, `UiContributionsSpec`, `UiRendererSpec`, `UiChoiceSpec`, `ComponentSpec` (`agent_runtimes.types`) | `UISpec`, `UiRendererSpec`, `UiChoice`, `ComponentSpec` (`src/types/agentspecs.ts`) |
 
-`COMPONENT_CATALOGUE` holds the components of the **enabled** plugins only: a plugin
-that is listed and not enabled contributes none, and a component no enabled plugin
+`COMPONENT_CATALOGUE` holds the components the UI plugins render; a component none
 renders is `None` / `undefined`.
+
+The Canvas's palette is a plugin per UI plugin that renders components
+(`canvas-blocks`, `@datalayer/loop-plugin-ui-<id>`), and an organization turns one off
+by the UI plugin's id (`plugins_off` in IAM: `a2ui-surface`).
 
 A `ComponentSpec` says:
 
@@ -61,8 +98,8 @@ from agent_runtimes.specs.ui import COMPONENT_CATALOGUE, get_component
 table = get_component("Table")
 table.properties["required"]       # ['columns']
 table.bindings.shows, table.events  # (['rows'], ['select'])
-get_component("Marquee")           # None: no enabled plugin renders it
-len(COMPONENT_CATALOGUE)           # 24
+get_component("Marquee")           # None: no UI plugin renders it
+len(COMPONENT_CATALOGUE)           # 25
 ```
 
 ```ts
@@ -71,7 +108,7 @@ import { getComponent, listComponents } from '@datalayer/agent-runtimes/lib/spec
 const chart = getComponent('Chart');
 chart?.properties; // its JSON Schema: kind, x, y, title, series
 listComponents().filter(c => !c.standard).map(c => c.id);
-// ['Table', 'Chart', 'FileUpload', 'Chat', 'Evidence', 'Form']
+// ['Table', 'Chart', 'FileUpload', 'Chat', 'Evidence', 'Form', 'Download']
 ```
 
 ## Where they are read

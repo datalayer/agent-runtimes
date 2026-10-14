@@ -6,7 +6,7 @@
 /**
  * UI Catalog.
  *
- * How an agent's answer becomes an interface: the protocols a host renders.
+ * The UI plugins: the Reactor plugins an interface is made of (AGENTIC_UI R8).
  *
  * This file is AUTO-GENERATED from YAML specifications.
  * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.
@@ -14,14 +14,24 @@
 
 import type { ComponentSpec, UISpec } from '../types/agentspecs';
 
-export const A2UI_UI_0_0_1: UISpec = {
-  id: 'a2ui',
+export const A2UI_SURFACE_UI_0_0_1: UISpec = {
+  id: 'a2ui-surface',
   version: '0.0.1',
-  name: 'A2UI',
+  name: 'Surfaces in the conversation',
   description:
-    'An agent describes an interface — a form, a table, a card — as a tree of components from a catalogue the host allows, and the host renders it; what the user does in it comes back to the agent as an action.',
-  docsUrl: 'https://a2ui.org/',
-  enabled: true,
+    'Forms, tables and cards the agent draws in the conversation; what you fill in goes back to it.',
+  emoji: '🪟',
+  octicon: 'browser',
+  plugin: '@datalayer/loop-plugin-a2ui-surface',
+  folder: 'a2ui-surface',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
   catalog: 'a2ui/v0.9',
   components: [
     {
@@ -1093,37 +1103,814 @@ export const A2UI_UI_0_0_1: UISpec = {
   ],
 };
 
-export const MCP_APPS_UI_0_0_1: UISpec = {
-  id: 'mcp-apps',
+export const A2UI_VIEW_UI_0_0_1: UISpec = {
+  id: 'a2ui-view',
   version: '0.0.1',
-  name: 'MCP Apps',
+  name: 'Surface view',
   description:
-    "An MCP server ships an interactive app with a tool: the host renders it in a sandboxed frame beside the conversation, and the app calls the server's tools through the host.",
-  docsUrl: 'https://modelcontextprotocol.io/docs/extensions/apps',
-  enabled: false,
+    'The last result of the code, shown as a page you can use rather than as raw output.',
+  emoji: '🖼',
+  octicon: 'browser',
+  plugin: '@datalayer/loop-plugin-a2ui',
+  folder: 'a2ui',
+  contributions: {
+    slots: [],
+    points: ['loop.command', 'loop.viewType'],
+    commands: ['a2ui'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
   catalog: '',
   components: [],
 };
 
-export const MCP_UI_UI_0_0_1: UISpec = {
-  id: 'mcp-ui',
+export const AGENTSPECS_UI_0_0_1: UISpec = {
+  id: 'agentspecs',
   version: '0.0.1',
-  name: 'MCP UI',
+  name: 'Agent picker',
+  description: 'Choose which agent answers in this conversation.',
+  emoji: '🤖',
+  octicon: 'people',
+  plugin: '@datalayer/loop-plugin-agentspecs',
+  folder: 'agentspecs',
+  contributions: {
+    slots: ['loop.header'],
+    points: ['loop.command'],
+    commands: ['agents'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const APP_ACTIVITY_UI_0_0_1: UISpec = {
+  id: 'app-activity',
+  version: '0.0.1',
+  name: 'Activity',
   description:
-    'An MCP tool answers with a UI resource — HTML, a remote page or a component — that the host renders in place of plain text.',
-  docsUrl: 'https://mcpui.dev/',
-  enabled: false,
+    'What your application did, is doing, and is about to do, beside its page.',
+  emoji: '🕘',
+  octicon: 'pulse',
+  plugin: '@datalayer/loop-plugin-app-activity',
+  folder: 'app-activity',
+  per: 'application',
+  contributions: {
+    slots: ['loop.sidebar'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const APP_COMPONENTS_UI_0_0_1: UISpec = {
+  id: 'app-components',
+  version: '0.0.1',
+  name: 'Your own components',
+  description:
+    "The components your application's developer wrote, on its page and in its answers.",
+  emoji: '🧩',
+  octicon: 'apps',
+  plugin: '@datalayer/loop-plugin-app-components',
+  folder: 'app-components',
+  per: 'application',
+  contributions: {
+    slots: [],
+    points: ['loop.a2ui.component', 'loop.canvas.block'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
+  catalog: '',
+  components: [],
+};
+
+export const APP_COMPUTER_UI_0_0_1: UISpec = {
+  id: 'app-computer',
+  version: '0.0.1',
+  name: 'Computer',
+  description:
+    'The computer your application works on: what ran there, its files, and taking it over.',
+  emoji: '🖥️',
+  octicon: 'device-desktop',
+  plugin: '@datalayer/loop-plugin-app-computer',
+  folder: 'app-computer',
+  per: 'application',
+  contributions: {
+    slots: ['loop.sidebar'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const APP_ELEMENTS_UI_0_0_1: UISpec = {
+  id: 'app-elements',
+  version: '0.0.1',
+  name: 'Side panel and pages',
+  description:
+    'What your application opens beside the conversation: a side panel, a page of its own, a question for you.',
+  emoji: '🗂️',
+  octicon: 'sidebar-expand',
+  plugin: '@datalayer/loop-plugin-app-elements',
+  folder: 'app-elements',
+  contributions: {
+    slots: ['root'],
+    points: ['reactor.ui.renderer'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui'],
+  catalog: '',
+  components: [],
+};
+
+export const APP_PAGE_UI_0_0_1: UISpec = {
+  id: 'app-page',
+  version: '0.0.1',
+  name: 'Application page',
+  description: "Your application's page, drawn beside its conversation.",
+  emoji: '📈',
+  octicon: 'browser',
+  plugin: '@datalayer/loop-plugin-app-page',
+  folder: 'app-page',
+  per: 'application',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.surface'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['a2ui', 'mcp-apps'],
+  catalog: '',
+  components: [],
+};
+
+export const APP_RULES_UI_0_0_1: UISpec = {
+  id: 'app-rules',
+  version: '0.0.1',
+  name: 'Rules and approvals',
+  description:
+    'When your application acts alone, when it asks you, and the approvals waiting for your yes.',
+  emoji: '🛡️',
+  octicon: 'shield-check',
+  plugin: '@datalayer/loop-plugin-app-rules',
+  folder: 'app-rules',
+  per: 'application',
+  contributions: {
+    slots: ['loop.sidebar'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CANVAS_BLOCKS_UI_0_0_1: UISpec = {
+  id: 'canvas-blocks',
+  version: '0.0.1',
+  name: 'Blocks',
+  description:
+    "The blocks you place on your application's page in the visual editor, one set for each part that draws them.",
+  emoji: '🧱',
+  octicon: 'apps',
+  plugin: '@datalayer/loop-plugin-ui',
+  folder: 'canvas-blocks',
+  per: 'ui',
+  contributions: {
+    slots: [],
+    points: ['loop.canvas.block'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CANVAS_PARTS_UI_0_0_1: UISpec = {
+  id: 'canvas-parts',
+  version: '0.0.1',
+  name: 'Parts',
+  description:
+    'What you drop on your agent in the visual editor: connections, skills, models, rules, tests and events.',
+  emoji: '🧰',
+  octicon: 'package',
+  plugin: '@datalayer/loop-plugin-parts',
+  folder: 'canvas-parts',
+  per: 'source',
+  contributions: {
+    slots: [],
+    points: ['loop.canvas.part'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CHAT_EXTRAS_UI_0_0_1: UISpec = {
+  id: 'chat-extras',
+  version: '0.0.1',
+  name: 'Banner and status',
+  description:
+    'A live banner over the conversation and a status line under it, set by the page around it.',
+  emoji: '📣',
+  octicon: 'megaphone',
+  plugin: '@datalayer/loop-plugin-chat-extras',
+  folder: 'chat-extras',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.extras'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CHAT_HEADER_UI_0_0_1: UISpec = {
+  id: 'chat-header',
+  version: '0.0.1',
+  name: 'Chat title bar',
+  description:
+    "The conversation's title bar: who answers, what it runs on, and its actions.",
+  emoji: '🏷️',
+  octicon: 'rows',
+  plugin: '@datalayer/loop-plugin-chat-header',
+  folder: 'chat-header',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.header'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CHAT_VIEW_UI_0_0_1: UISpec = {
+  id: 'chat-view',
+  version: '0.0.1',
+  name: 'Chat button',
+  description: 'Back to the conversation alone, from under the composer.',
+  emoji: '💬',
+  octicon: 'comment-discussion',
+  plugin: '@datalayer/loop-plugin-chat-view',
+  folder: 'chat-view',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const CHAT_UI_0_0_1: UISpec = {
+  id: 'chat',
+  version: '0.0.1',
+  name: 'Chat',
+  description:
+    'The conversation: what you ask, what it answers, and the work it opens beside it.',
+  emoji: '💬',
+  octicon: 'comment-discussion',
+  plugin: '@datalayer/loop-plugin-chat',
+  folder: 'chat',
+  contributions: {
+    slots: [],
+    points: [
+      'loop.chat.turn',
+      'loop.command',
+      'loop.document.toolbar.item',
+      'loop.notebook.toolbar.item',
+      'loop.viewType',
+    ],
+    commands: ['chat'],
+  },
+  contributionPoints: [
+    'loop.agent.available',
+    'loop.chat.composer',
+    'loop.chat.extras',
+    'loop.chat.header',
+    'loop.chat.suggestion',
+    'loop.chat.turn',
+    'loop.frontendTool',
+  ],
+  settings: {
+    type: 'object',
+    properties: {
+      placeholder: {
+        type: 'string',
+        title: 'Composer hint',
+        description:
+          "Shown in the composer while it is empty; the agent's own when unsaid.",
+        default: '',
+      },
+      defaultSurface: {
+        type: 'string',
+        title: 'Opens beside it',
+        description:
+          'What opens beside the conversation: notebook, document, a page, or none.',
+        default: 'notebook',
+      },
+      showSurfaceSelector: {
+        type: 'boolean',
+        title: 'Offers the switcher',
+        description:
+          'The strip that switches what is open beside the conversation.',
+        default: true,
+      },
+      hideHeader: {
+        type: 'boolean',
+        title: 'Hides its title bar',
+        description: 'The conversation without its own title bar.',
+        default: false,
+      },
+      headerButtons: {
+        type: 'object',
+        title: 'Title bar buttons',
+        description:
+          'Whether the title bar offers a new chat and clearing this one.',
+        properties: {
+          newChat: {
+            type: 'boolean',
+            title: 'New chat',
+            description: 'Start another conversation.',
+          },
+          clear: {
+            type: 'boolean',
+            title: 'Clear',
+            description: 'Clear this conversation.',
+          },
+        },
+        default: { newChat: false, clear: false },
+      },
+      hidePrompt: {
+        type: 'boolean',
+        title: 'Hides the composer',
+        description: 'The conversation read without being written to.',
+        default: false,
+      },
+      promptPlacement: {
+        type: 'string',
+        title: 'Composer place',
+        description: 'Where the composer sits.',
+        enum: ['top', 'bottom', 'bottom-chat', 'floating'],
+        default: 'bottom',
+      },
+      autoFocusPrompt: {
+        type: 'boolean',
+        title: 'Composer takes the caret',
+        description: 'The composer is ready to type in when the page opens.',
+        default: true,
+      },
+      suggestionLabels: {
+        type: 'boolean',
+        title: 'Openers by the composer',
+        description:
+          'The openers shown as labels by the composer, not only in its menu.',
+        default: true,
+      },
+      fullScreenTopOffset: {
+        type: ['number', 'string'],
+        title: 'Room kept at the top',
+        description:
+          "What full screen leaves at the top for the page's own header.",
+        default: 0,
+      },
+    },
+  },
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const COMMANDS_UI_0_0_1: UISpec = {
+  id: 'commands',
+  version: '0.0.1',
+  name: 'Command palette',
+  description: 'Every command at hand, with Ctrl-K.',
+  emoji: '⌘',
+  octicon: 'command-palette',
+  plugin: '@datalayer/loop-plugin-commands',
+  folder: 'commands',
+  contributions: {
+    slots: ['loop.status'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const DOCUMENT_TOOLBAR_UI_0_0_1: UISpec = {
+  id: 'document-toolbar',
+  version: '0.0.1',
+  name: 'Document toolbar',
+  description: "Shows what the document's code blocks run on.",
+  emoji: '🔵',
+  octicon: 'circle',
+  plugin: '@datalayer/loop-plugin-document-toolbar',
+  folder: 'document-toolbar',
+  contributions: {
+    slots: [],
+    points: ['loop.document.toolbar'],
+    commands: [],
+  },
+  contributionPoints: ['loop.document.toolbar.item'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const DOCUMENT_VIEW_UI_0_0_1: UISpec = {
+  id: 'document-view',
+  version: '0.0.1',
+  name: 'Document button',
+  description: 'The document beside the conversation, from under the composer.',
+  emoji: '📄',
+  octicon: 'file',
+  plugin: '@datalayer/loop-plugin-document-view',
+  folder: 'document-view',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const DOCUMENT_UI_0_0_1: UISpec = {
+  id: 'document',
+  version: '0.0.1',
+  name: 'Document',
+  description: 'A document beside the conversation, written with the agent.',
+  emoji: '📄',
+  octicon: 'file',
+  plugin: '@datalayer/loop-plugin-document',
+  folder: 'document',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.surface', 'loop.command'],
+    commands: ['document'],
+  },
+  contributionPoints: ['loop.document.opening', 'loop.document.toolbar'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const INPUT_PROMPT_UI_0_0_1: UISpec = {
+  id: 'input-prompt',
+  version: '0.0.1',
+  name: 'Composer',
+  description: 'Where you write to the agent, under or over the conversation.',
+  emoji: '✏️',
+  octicon: 'pencil',
+  plugin: '@datalayer/loop-plugin-input-prompt',
+  folder: 'input-prompt',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.composer'],
+    commands: [],
+  },
+  contributionPoints: ['loop.prompt.panel'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const MODELS_UI_0_0_1: UISpec = {
+  id: 'models',
+  version: '0.0.1',
+  name: 'Models',
+  description: 'Which model answers, and the models you may choose from.',
+  emoji: '🧠',
+  octicon: 'cpu',
+  plugin: '@datalayer/loop-plugin-models',
+  folder: 'models',
+  contributions: {
+    slots: [],
+    points: ['loop.command'],
+    commands: ['models'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const NOTEBOOK_TOOLBAR_UI_0_0_1: UISpec = {
+  id: 'notebook-toolbar',
+  version: '0.0.1',
+  name: 'Notebook toolbar',
+  description: 'Shows what the notebook is running on.',
+  emoji: '🟢',
+  octicon: 'circle',
+  plugin: '@datalayer/loop-plugin-notebook-toolbar',
+  folder: 'notebook-toolbar',
+  contributions: {
+    slots: [],
+    points: ['loop.notebook.toolbar'],
+    commands: [],
+  },
+  contributionPoints: ['loop.notebook.toolbar.item'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const NOTEBOOK_VIEW_UI_0_0_1: UISpec = {
+  id: 'notebook-view',
+  version: '0.0.1',
+  name: 'Notebook button',
+  description: 'The notebook beside the conversation, from under the composer.',
+  emoji: '📓',
+  octicon: 'rows',
+  plugin: '@datalayer/loop-plugin-notebook-view',
+  folder: 'notebook-view',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const NOTEBOOK_UI_0_0_1: UISpec = {
+  id: 'notebook',
+  version: '0.0.1',
+  name: 'Notebook',
+  description: 'A notebook beside the conversation, its code run as you go.',
+  emoji: '📓',
+  octicon: 'rows',
+  plugin: '@datalayer/loop-plugin-notebook',
+  folder: 'notebook',
+  contributions: {
+    slots: [],
+    points: ['loop.chat.surface', 'loop.command'],
+    commands: ['notebook'],
+  },
+  contributionPoints: ['loop.notebook.opening', 'loop.notebook.toolbar'],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const PAGE_LAYOUT_UI_0_0_1: UISpec = {
+  id: 'page-layout',
+  version: '0.0.1',
+  name: 'Page layout',
+  description:
+    'The work on a centred sheet like a document, the composer above it and the conversation in a panel beside it; or the conversation and the work side by side.',
+  emoji: '📄',
+  octicon: 'file',
+  plugin: '@datalayer/loop-plugin-page-layout',
+  folder: 'page-layout',
+  contributions: {
+    slots: ['loop.header'],
+    points: ['loop.chat.layout', 'loop.prompt.panel'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {
+    type: 'object',
+    properties: {
+      arrangement: {
+        type: 'string',
+        title: 'Arrangement',
+        description:
+          'The work on a sheet with the conversation in a panel, or both side by side.',
+        enum: ['page', 'split'],
+        default: 'page',
+      },
+      turnPanel: {
+        type: 'string',
+        title: 'Current turn',
+        description: 'Where the current turn hangs on the composer.',
+        enum: ['below', 'above', 'none'],
+        default: 'below',
+      },
+      turnPanelFooter: {
+        type: 'string',
+        title: 'Under the reply',
+        description:
+          'What is drawn under the reply: everything, its actions, or nothing.',
+        enum: ['full', 'actions', 'none'],
+        default: 'full',
+      },
+      prompt: {
+        type: 'string',
+        title: 'Composer',
+        description: 'Docked above the sheet, or floating over it.',
+        enum: ['docked', 'floating'],
+        default: 'docked',
+      },
+      promptAnchor: {
+        type: 'string',
+        title: 'Floating composer starts',
+        description: 'The edge a floating composer starts at.',
+        enum: ['top', 'bottom'],
+        default: 'top',
+      },
+      pageSize: {
+        type: 'object',
+        title: 'Sheet',
+        description:
+          'The sheet: free at its reading width when unsaid, or a paper (letter, a4) whose width it takes, with a width or a height of its own over either.',
+        properties: {
+          format: {
+            type: 'string',
+            title: 'Paper',
+            description: 'The paper the sheet is.',
+            enum: ['free', 'letter', 'a4'],
+          },
+          width: {
+            type: 'number',
+            title: 'Width',
+            description:
+              "The sheet's width in pixels; over a paper, it replaces the paper's.",
+          },
+          height: {
+            type: 'number',
+            title: 'Height',
+            description:
+              "The sheet's least height in pixels; what is past it grows the sheet.",
+          },
+        },
+      },
+    },
+  },
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const PAP_SIGN_IN_UI_0_0_1: UISpec = {
+  id: 'pap-sign-in',
+  version: '0.0.1',
+  name: 'Sign in at a company',
+  description:
+    'Where your agent asks you to sign in at a company: its page, the code, and until when.',
+  emoji: '🔑',
+  octicon: 'sign-in',
+  plugin: '@datalayer/loop-plugin-pap-sign-in',
+  folder: 'pap-sign-in',
+  contributions: {
+    slots: ['loop.chatHeader'],
+    points: ['reactor.ui.renderer', 'reactor.ui.toolBinding'],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: ['mcp-ui'],
+  catalog: '',
+  components: [],
+};
+
+export const PROMPT_UI_0_0_1: UISpec = {
+  id: 'prompt',
+  version: '0.0.1',
+  name: 'Floating composer',
+  description:
+    'The composer in a card you move over the page, and the commands that bring it back or start over.',
+  emoji: '🪶',
+  octicon: 'paper-airplane',
+  plugin: '@datalayer/loop-plugin-prompt',
+  folder: 'prompt',
+  contributions: {
+    slots: ['loop.promptAction'],
+    points: ['loop.command'],
+    commands: ['new', 'prompt'],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const SUBAGENT_ACTIVITY_UI_0_0_1: UISpec = {
+  id: 'subagent-activity',
+  version: '0.0.1',
+  name: 'Delegated work',
+  description:
+    'The face of an agent yours handed work to, pulsing while it works.',
+  emoji: '👥',
+  octicon: 'people',
+  plugin: '@datalayer/loop-plugin-subagent-activity',
+  folder: 'subagent-activity',
+  contributions: {
+    slots: ['loop.inpromptMenu'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
+  catalog: '',
+  components: [],
+};
+
+export const WINDOW_FRAME_UI_0_0_1: UISpec = {
+  id: 'window-frame',
+  version: '0.0.1',
+  name: 'Window',
+  description:
+    'Draws the editor as a window, with room in its title bar for controls and actions.',
+  emoji: '🪟',
+  octicon: 'browser',
+  plugin: '@datalayer/loop-plugin-window-frame',
+  folder: 'window-frame',
+  contributions: {
+    slots: ['loop.header', 'loop.window.controls'],
+    points: [],
+    commands: [],
+  },
+  contributionPoints: [],
+  settings: {},
+  renderers: [],
   catalog: '',
   components: [],
 };
 
 export const UI_CATALOGUE: Record<string, UISpec> = {
-  a2ui: A2UI_UI_0_0_1,
-  'mcp-apps': MCP_APPS_UI_0_0_1,
-  'mcp-ui': MCP_UI_UI_0_0_1,
+  'a2ui-surface': A2UI_SURFACE_UI_0_0_1,
+  'a2ui-view': A2UI_VIEW_UI_0_0_1,
+  agentspecs: AGENTSPECS_UI_0_0_1,
+  'app-activity': APP_ACTIVITY_UI_0_0_1,
+  'app-components': APP_COMPONENTS_UI_0_0_1,
+  'app-computer': APP_COMPUTER_UI_0_0_1,
+  'app-elements': APP_ELEMENTS_UI_0_0_1,
+  'app-page': APP_PAGE_UI_0_0_1,
+  'app-rules': APP_RULES_UI_0_0_1,
+  'canvas-blocks': CANVAS_BLOCKS_UI_0_0_1,
+  'canvas-parts': CANVAS_PARTS_UI_0_0_1,
+  'chat-extras': CHAT_EXTRAS_UI_0_0_1,
+  'chat-header': CHAT_HEADER_UI_0_0_1,
+  'chat-view': CHAT_VIEW_UI_0_0_1,
+  chat: CHAT_UI_0_0_1,
+  commands: COMMANDS_UI_0_0_1,
+  'document-toolbar': DOCUMENT_TOOLBAR_UI_0_0_1,
+  'document-view': DOCUMENT_VIEW_UI_0_0_1,
+  document: DOCUMENT_UI_0_0_1,
+  'input-prompt': INPUT_PROMPT_UI_0_0_1,
+  models: MODELS_UI_0_0_1,
+  'notebook-toolbar': NOTEBOOK_TOOLBAR_UI_0_0_1,
+  'notebook-view': NOTEBOOK_VIEW_UI_0_0_1,
+  notebook: NOTEBOOK_UI_0_0_1,
+  'page-layout': PAGE_LAYOUT_UI_0_0_1,
+  'pap-sign-in': PAP_SIGN_IN_UI_0_0_1,
+  prompt: PROMPT_UI_0_0_1,
+  'subagent-activity': SUBAGENT_ACTIVITY_UI_0_0_1,
+  'window-frame': WINDOW_FRAME_UI_0_0_1,
 };
 
-/** The UI an agent spec's `ui` names, or undefined. */
+/** The UI plugin an agent's or an application's `ui` names, or undefined. */
 export function getUI(pluginId: string): UISpec | undefined {
   return UI_CATALOGUE[pluginId];
 }
@@ -1132,14 +1919,12 @@ export function listUI(): UISpec[] {
   return Object.values(UI_CATALOGUE);
 }
 
-/** The visual components the enabled UI specs render, by the name a surface gives them (LOOP C-13). */
+/** The visual components the UI plugins render, by the name a surface gives them (LOOP C-13). */
 export const COMPONENT_CATALOGUE: Record<string, ComponentSpec> =
   Object.fromEntries(
-    Object.values(UI_CATALOGUE)
-      .filter(plugin => plugin.enabled)
-      .flatMap(plugin =>
-        plugin.components.map(component => [component.id, component]),
-      ),
+    Object.values(UI_CATALOGUE).flatMap(plugin =>
+      plugin.components.map(component => [component.id, component]),
+    ),
   );
 
 /** The component a layout names, or undefined. */

@@ -398,20 +398,39 @@ describe('writing an Appspec', () => {
       /add 'a2a' to `protocols`/,
     );
   });
-  it('reads and writes the UI its answers render in (AGENT_PROTOCOLS PS-04)', () => {
-    const { app, problems } = parseAppspec({ kind: 'chat', ui: ['a2ui'] });
+  it('reads and writes its UI plugins, each with its renderer (AGENTIC_UI R8)', () => {
+    const ui = [
+      { plugin: 'a2ui-surface', renderer: 'a2ui' },
+      { plugin: 'chat' },
+    ];
+    const { app, problems } = parseAppspec({ kind: 'chat', ui });
     expect(problems).toEqual([]);
-    expect(dumpAppspec(app).ui).toEqual(['a2ui']);
+    expect(dumpAppspec(app).ui).toEqual(ui);
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('ui');
     const said = (document: Record<string, unknown>) =>
       parseAppspec({ kind: 'chat', ...document }).problems;
-    expect(said({ ui: ['nope'] })[0]).toMatch(/no UI named 'nope'/);
-    expect(said({ ui: ['a2ui', 'a2ui'] })).toEqual([
-      "It lists the UI 'a2ui' twice.",
+    // The old shape — a renderer named as a UI — is refused.
+    expect(said({ ui: ['a2ui'] })[0]).toMatch(
+      /no UI plugin named 'a2ui'.*'a2ui' is a UI renderer/,
+    );
+    expect(said({ ui: [{ plugin: 'nope' }] })[0]).toMatch(
+      /no UI plugin named 'nope'/,
+    );
+    expect(said({ ui: [{ plugin: 'chat' }, { plugin: 'chat' }] })).toEqual([
+      "It lists the UI plugin 'chat' twice.",
     ]);
-    expect(said({ ui: ['mcp-ui'] })[0]).toMatch(/is not enabled/);
+    expect(said({ ui: [{ plugin: 'chat', renderer: 'a2ui' }] })).toEqual([
+      "The UI plugin Chat ('chat') is not exposed through A2UI: through no renderer.",
+    ]);
     expect(
-      said({ ui: ['mcp-ui'], enabled: false, unavailable_because: 'Later.' }),
+      said({ ui: [{ plugin: 'app-page', renderer: 'mcp-apps' }] })[0],
+    ).toMatch(/is not enabled/);
+    expect(
+      said({
+        ui: [{ plugin: 'app-page', renderer: 'mcp-apps' }],
+        enabled: false,
+        unavailable_because: 'Later.',
+      }),
     ).toEqual([]);
   });
   it('reads and writes the personal agents a company accepts (PAP_DATALAYER U-04)', () => {

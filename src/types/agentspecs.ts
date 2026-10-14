@@ -117,24 +117,72 @@ export interface ComponentSpec {
 }
 
 /**
- * How an agent's answer becomes an interface: a protocol the host renders
- * (`agentspecs/ui`). An agent spec's `ui` names one.
+ * A UI plugin (`agentspecs/ui`, AGENTIC_UI R8): one Reactor plugin of this
+ * package a Maker composes an interface with, read from its registration, and
+ * the UI renderers it may be exposed through. An agent's or an application's
+ * `ui` names plugins, each with its renderer.
  */
 export interface UISpec {
-  /** What an agent spec's `ui` names (e.g. 'a2ui'). */
+  /** What a `ui` choice's `plugin` names (e.g. 'chat'). */
   id: string;
   version: string;
+  /** What a Maker reads. */
   name: string;
-  /** What the plugin renders, and how the user's action comes back. */
+  /** What it is, in a Maker's words. */
   description: string;
-  /** The protocol's own documentation. */
-  docsUrl: string;
-  /** Whether an agent spec may name it today. */
-  enabled: boolean;
+  /** Its face. */
+  emoji: string;
+  /** Its Octicon. */
+  octicon?: string;
+  /** The name the Reactor plugin registers under. */
+  plugin: string;
+  /** Its folder under `src/apps/plugins`. */
+  folder: string;
+  /** Registered once per application, source or UI spec, as `<plugin>-<its id>`. */
+  per?: 'application' | 'source' | 'ui';
+  /** Its Contributions, as the reactor registers them. */
+  contributions: {
+    /** The Slots it fills. */
+    slots: string[];
+    /** The Contribution Points it contributes to. */
+    points: string[];
+    /** The Commands it adds: Reactor Commands by id, the composer's `/` commands by name. */
+    commands: string[];
+  };
+  /** The Contribution Points it offers. */
+  contributionPoints: string[];
+  /** Its settings, as the JSON Schema of an object; each default the plugin's. */
+  settings: Record<string, unknown>;
+  /** The UI renderers it may be exposed through, ids of `agentspecs/ui-renderers`. */
+  renderers: string[];
   /** The catalog its components are written in. */
   catalog: string;
   /** The visual components it renders (LOOP C-13). */
   components: ComponentSpec[];
+}
+
+/**
+ * A UI renderer (`agentspecs/ui-renderers`, AGENTIC_UI R8): how a UI plugin's
+ * interface reaches a host that is not Datalayer's own page.
+ */
+export interface UiRendererSpec {
+  /** What a plugin's `renderers` lists (e.g. 'a2ui'). */
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** Its own documentation. */
+  docsUrl: string;
+  /** Whether an application may be exposed through it today. */
+  enabled: boolean;
+}
+
+/** A UI plugin an agent or an application names, and the renderer it is exposed through, when it is. */
+export interface UiChoice {
+  /** A UI plugin of `agentspecs/ui`, by id. */
+  plugin: string;
+  /** The UI renderer of `agentspecs/ui-renderers` it is exposed through, by id. */
+  renderer?: string;
 }
 
 /** The layer of an agent's visit a protocol answers (AGENT_PROTOCOLS §1). */
@@ -1352,8 +1400,8 @@ export interface AppSpec {
    * is listed, and a planned one only while it is not offered.
    */
   protocols: string[];
-  /** The UI its answers render in, ids of `agentspecs/ui` (AGENT_PROTOCOLS PS-04). */
-  ui: string[];
+  /** Its UI plugins, each with the renderer it is exposed through, when it is (AGENTIC_UI R8). */
+  ui: UiChoice[];
   /** Personal Agent Protocol; absent, the application has none. */
   pap?: AppPapSpec;
   /** PACT: the businesses it asks for each person (AGENT_PROTOCOLS PI-01). */
@@ -1492,8 +1540,8 @@ export interface Agentspec {
    * PS-02). `protocol` says how a page reaches it; this, what it speaks to the world.
    */
   protocols?: string[];
-  /** The UI its answers render in (e.g., 'a2ui', 'mcp-apps'), one of the `UI_CATALOGUE`. */
-  ui?: string;
+  /** Its UI plugins, each with the renderer it is exposed through, when it is (AGENTIC_UI R8). */
+  ui?: UiChoice[];
   /** Trigger configuration (type, cron, event source, prompt) */
   trigger?: AgentTriggerConfig;
   /** Model configuration (temperature, max_tokens) */

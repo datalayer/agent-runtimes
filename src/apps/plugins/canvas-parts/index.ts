@@ -234,14 +234,17 @@ export const PROTOCOL_PARTS: CanvasPartContribution[] = listProtocolSpecs().map(
   }),
 );
 
-/** Each UI of the catalogue its answers may render in (AGENT_PROTOCOLS PS-04). */
+/**
+ * Each UI plugin of the catalogue (AGENTIC_UI R8): a part of the agent's
+ * interface, dropped on it, then exposed through a renderer it may be.
+ */
 export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
   id: `ui:${ui.id}`,
   kind: 'ui',
   label: ui.name,
   says: ui.description,
   example: ui.id,
-  enabled: ui.enabled,
+  enabled: true,
 }));
 
 /** Datalayer's characters for its floating assistant, dropped on the agent (AGENT_PROTOCOLS PS-05). */

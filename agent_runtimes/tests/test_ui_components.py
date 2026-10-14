@@ -13,7 +13,7 @@ from agent_runtimes.specs.ui import (
 
 
 def test_the_component_catalog_is_the_ui_specs_own() -> None:
-    a2ui = get_ui("a2ui")
+    a2ui = get_ui("a2ui-surface")
     assert a2ui is not None and a2ui.catalog == "a2ui/v0.9"
     assert set(COMPONENT_CATALOGUE) == {component.id for component in a2ui.components}
 
@@ -33,3 +33,15 @@ def test_every_component_carries_a_version_and_a_schema() -> None:
 def test_a_component_no_plugin_renders_is_none() -> None:
     assert get_component("Marquee") is None
     assert get_component("Table") is not None
+
+
+def test_ui_plugins_name_only_renderers_of_the_catalogue() -> None:
+    """The two kinds (AGENTIC_UI R8): each plugin's renderers are UI renderers, none is a UI."""
+    from agent_runtimes.specs.ui import UI_CATALOGUE
+    from agent_runtimes.specs.ui_renderers import UI_RENDERER_CATALOGUE
+
+    assert set(UI_RENDERER_CATALOGUE) == {"a2ui", "mcp-apps", "mcp-ui"}
+    assert not set(UI_CATALOGUE) & set(UI_RENDERER_CATALOGUE)
+    for spec in UI_CATALOGUE.values():
+        assert set(spec.renderers) <= set(UI_RENDERER_CATALOGUE), spec.id
+        assert spec.plugin.startswith("@datalayer/loop-plugin-"), spec.id

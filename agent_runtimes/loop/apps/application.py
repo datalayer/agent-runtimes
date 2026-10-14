@@ -247,8 +247,12 @@ class Application:
     protocols : Sequence[str]
         The agent protocols it speaks, ids of agentspecs' ``protocols``
         (``["mcp", "pap"]``); a block of a protocol it writes lists it too.
-    ui : Sequence[str]
-        The UI its answers render in, ids of agentspecs' ``ui`` (``["a2ui"]``).
+    ui : Sequence[Mapping[str, str]]
+        Its UI plugins, each with the renderer it is exposed through when it is
+        one (AGENTIC_UI R8): ``[{"plugin": "a2ui-surface", "renderer": "a2ui"}]``.
+        A plugin is one of agentspecs' ``ui``, a renderer one of its
+        ``ui-renderers`` the plugin may be exposed through; a renderer's id
+        alone (``["a2ui"]``) is refused.
     """
 
     def __init__(
@@ -265,7 +269,7 @@ class Application:
         goal: str = "",
         version: Optional[str] = None,
         protocols: Sequence[str] = (),
-        ui: Sequence[str] = (),
+        ui: Sequence[Mapping[str, str]] = (),
     ) -> None:
         """Start an app's declaration with its id and kind."""
         document: Dict[str, Any] = {
@@ -285,12 +289,16 @@ class Application:
         ):
             if value:
                 document[key] = value
-        # What it speaks and where its answers render (AGENT_PROTOCOLS PS-02, PS-04):
-        # ids of agentspecs' protocols and ui catalogues, as the Appspec's lists.
+        # What it speaks (AGENT_PROTOCOLS PS-02), ids of agentspecs' protocols,
+        # and its UI plugins with their renderers (AGENTIC_UI R8), as the
+        # Appspec's lists; the spec refuses a renderer's id said alone.
         if protocols:
             document["protocols"] = list(protocols)
         if ui:
-            document["ui"] = list(ui)
+            document["ui"] = [
+                dict(choice) if isinstance(choice, Mapping) else choice
+                for choice in ui
+            ]
         self._document = document
         self._version_declared = version is not None
         self._attach_code()
