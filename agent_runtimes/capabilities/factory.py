@@ -518,6 +518,15 @@ def build_capabilities_from_agent_spec(
             )
         )
 
+    # Answers that may be heard are written for the ear too: an agent spec's
+    # own voice (VOICE.md VO-41, VO-44); an application's is joined by
+    # app_capabilities.
+    from ..voice import agent_voice_capability
+
+    voicing = agent_voice_capability(agent_spec)
+    if voicing is not None:
+        capabilities.append(voicing)
+
     # Always enforce user-selected skills and MCP tool toggles.
     capabilities.extend(build_default_choice_guardrails(agent_id=agent_id))
 

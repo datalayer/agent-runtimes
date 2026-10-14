@@ -1581,6 +1581,11 @@ export interface Agentspec {
   parameters?: Record<string, any>;
   /** Subagent delegation configuration. */
   subagents?: SubAgentsConfig;
+  /**
+   * Its voice, for an agent that is not an application (VOICE.md VO-41):
+   * the fields an Appspec says under `interface.voice`; absent when unsaid.
+   */
+  voice?: AppVoiceSpec;
 }
 
 /**

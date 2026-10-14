@@ -182,3 +182,108 @@ async def test_the_record_keeps_a_spoken_turn_as_its_transcript_marked_spoken():
     await agent.run("and tomorrow")
     turn = next(entry for entry in sent[0]["entries"] if entry["kind"] == "turn")
     assert "spoken" not in turn["payload"]
+
+
+# --- An agent spec's voice, for agents that are not applications (VO-41) ----
+
+
+def _generate_agents():
+    import sys
+    from pathlib import Path
+
+    codegen = Path(__file__).resolve().parents[2] / "scripts" / "codegen"
+    sys.path.insert(0, str(codegen))
+    try:
+        import generate_agents
+    finally:
+        sys.path.remove(str(codegen))
+    return generate_agents
+
+
+def test_an_agent_whose_answers_may_be_heard_is_told_to_write_for_the_ear():
+    from agent_runtimes.capabilities.factory import build_capabilities_from_agent_spec
+    from agent_runtimes.types import Agentspec
+
+    def voicings(voice: dict[str, Any] | None) -> list[VoiceCapability]:
+        spec = Agentspec(id="desk", name="Desk", voice=voice)
+        return [
+            capability
+            for capability in build_capabilities_from_agent_spec(spec)
+            if isinstance(capability, VoiceCapability)
+        ]
+
+    heard = voicings({"enabled": True, "output": "always", "language": "fr-FR"})
+    assert [capability.language for capability in heard] == ["fr-FR"]
+    assert "fr-FR" in heard[0].get_instructions()
+    assert voicings(None) == []
+    assert voicings({"enabled": False, "output": "always"}) == []
+    assert voicings({"enabled": True, "output": "off"}) == []
+
+
+def test_the_generator_writes_an_agents_voice_whole_and_only_when_said():
+    from pathlib import Path
+
+    generate_agents = _generate_agents()
+    specs = [
+        (
+            "",
+            {
+                "id": "desk",
+                "version": "0.0.1",
+                "name": "Desk",
+                "description": "d",
+                "voice": {"enabled": True, "output": "always", "language": "fr-FR"},
+            },
+        ),
+        ("", {"id": "quiet", "version": "0.0.1", "name": "Quiet", "description": "q"}),
+    ]
+    whole = {
+        "enabled": True,
+        "input": "push_to_talk",
+        "output": "always",
+        "voice": "",
+        "language": "fr-FR",
+        "where": "auto",
+    }
+    python = generate_agents.generate_python_code(specs)
+    assert [line.strip() for line in python.splitlines() if "voice=" in line] == [
+        f"voice={whole!r},"
+    ]
+    catalogue = Path(__file__).resolve().parents[2] / "agentspecs" / "agentspecs"
+    typescript = generate_agents.generate_typescript_code(
+        specs,
+        str(catalogue / "mcp-servers"),
+        str(catalogue / "skills"),
+        str(catalogue / "backend-tools"),
+    )
+    voiced = [line.strip() for line in typescript.splitlines() if "voice:" in line]
+    assert len(voiced) == 1 and '"language": "fr-FR"' in voiced[0]
+
+
+def test_the_generator_refuses_a_voice_the_catalogue_does_not_have():
+    import pytest
+
+    generate_agents = _generate_agents()
+    generate_agents.check_voices(
+        [("", {"id": "desk", "voice": {"enabled": True, "voice": "kokoro-af-heart"}})]
+    )
+    with pytest.raises(SystemExit, match="desk: There is no voice named 'lessac'"):
+        generate_agents.check_voices(
+            [("", {"id": "desk", "voice": {"enabled": True, "voice": "lessac"}})]
+        )
+    with pytest.raises(SystemExit, match="does not speak en-US"):
+        generate_agents.check_voices(
+            [
+                (
+                    "",
+                    {
+                        "id": "desk",
+                        "voice": {
+                            "enabled": True,
+                            "voice": "kokoro-ff-siwis",
+                            "language": "en-US",
+                        },
+                    },
+                )
+            ]
+        )

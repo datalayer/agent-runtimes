@@ -1706,6 +1706,31 @@ class AgentCapability(BaseModel):
         return value
 
 
+class AppVoiceSpec(BaseModel):
+    """An application's voice (VOICE.md VO-41): off unless said.
+
+    What is said becomes a message and what is heard is the answer the
+    conversation shows; `voice` is an id of the voice catalogue
+    (`agent_runtimes.specs.voices`), `language` BCP 47.
+    """
+
+    enabled: bool = False
+    input: str = Field(
+        default="push_to_talk", description="`off`, `push_to_talk` or `hands_free`"
+    )
+    output: str = Field(
+        default="on_request", description="`off`, `on_request` or `always`"
+    )
+    voice: str = Field(default="", description="A voice of the voice catalogue")
+    language: str = Field(default="", description="BCP 47; the person's when unsaid")
+    where: str = Field(default="auto", description="`auto`, `device` or `server`")
+
+    @property
+    def speaks(self) -> bool:
+        """Whether its answers may be heard."""
+        return self.enabled and self.output != "off"
+
+
 class Agentspec(BaseModel):
     """
     Specification for an AI agent.
@@ -2035,6 +2060,13 @@ class Agentspec(BaseModel):
             "Subagent delegation configuration. When set, the agent can "
             "delegate tasks to specialised child agents via the in-repo "
             "SubagentsCapability."
+        ),
+    )
+    voice: Optional[AppVoiceSpec] = Field(
+        default=None,
+        description=(
+            "Its voice, for an agent that is not an application (VOICE.md "
+            "VO-41): the fields an Appspec says under `interface.voice`."
         ),
     )
 
@@ -2618,31 +2650,6 @@ class AppSurfaceSpec(BaseModel):
     components: List[Dict[str, Any]] = Field(default_factory=list)
     composed_by: str = Field(default="")
     composed_at: str = Field(default="")
-
-
-class AppVoiceSpec(BaseModel):
-    """An application's voice (VOICE.md VO-41): off unless said.
-
-    What is said becomes a message and what is heard is the answer the
-    conversation shows; `voice` is an id of the voice catalogue
-    (`agent_runtimes.specs.voices`), `language` BCP 47.
-    """
-
-    enabled: bool = False
-    input: str = Field(
-        default="push_to_talk", description="`off`, `push_to_talk` or `hands_free`"
-    )
-    output: str = Field(
-        default="on_request", description="`off`, `on_request` or `always`"
-    )
-    voice: str = Field(default="", description="A voice of the voice catalogue")
-    language: str = Field(default="", description="BCP 47; the person's when unsaid")
-    where: str = Field(default="auto", description="`auto`, `device` or `server`")
-
-    @property
-    def speaks(self) -> bool:
-        """Whether its answers may be heard."""
-        return self.enabled and self.output != "off"
 
 
 class AppUploadKindSpec(BaseModel):

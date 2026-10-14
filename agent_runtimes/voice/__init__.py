@@ -107,7 +107,11 @@ def voice_settings(app: Any) -> Dict[str, Any]:
     takes the person's then.
     """
     interface = getattr(app, "interface", None)
-    voice = getattr(interface, "voice", None)
+    return settings_of(getattr(interface, "voice", None))
+
+
+def settings_of(voice: Any) -> Dict[str, Any]:
+    """A voice block (an Appspec's `interface.voice`, an agent spec's `voice`), resolved against the catalogue."""
     if voice is None or not voice.enabled:
         return {"enabled": False}
     language = voice.language
@@ -143,21 +147,31 @@ class VoiceCapability(AbstractCapability[Any]):
         return VOICE_INSTRUCTIONS
 
 
-def voice_capability(app: Any) -> Optional[VoiceCapability]:
-    """The capability for an application whose answers may be heard; None otherwise."""
-    settings = voice_settings(app)
+def _capability_of(settings: Dict[str, Any]) -> Optional[VoiceCapability]:
     if not settings["enabled"] or settings["output"] == "off":
         return None
     return VoiceCapability(language=settings["language"])
+
+
+def voice_capability(app: Any) -> Optional[VoiceCapability]:
+    """The capability for an application whose answers may be heard; None otherwise."""
+    return _capability_of(voice_settings(app))
+
+
+def agent_voice_capability(agent_spec: Any) -> Optional[VoiceCapability]:
+    """The capability for an agent spec whose `voice` says its answers may be heard (VO-41); None otherwise."""
+    return _capability_of(settings_of(getattr(agent_spec, "voice", None)))
 
 
 __all__ = [
     "SpokenInput",
     "VOICE_INSTRUCTIONS",
     "VoiceCapability",
+    "agent_voice_capability",
     "hear",
     "heard",
     "spoken_of",
+    "settings_of",
     "spoken_of_vercel_body",
     "voice_capability",
     "voice_settings",

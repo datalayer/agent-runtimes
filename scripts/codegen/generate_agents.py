@@ -304,7 +304,31 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
     check_model_additionals(resolved, load_model_ids(specs_dir))
     check_protocols(resolved, load_protocol_ids(specs_dir))
+    check_voices(resolved)
     return resolved
+
+
+def check_voices(specs: List[tuple[str, Dict[str, Any]]]) -> None:
+    """Refuse an agent whose `voice` is not an `interface.voice` block of the voice catalogue (VOICE.md VO-41)."""
+    from agentspecs.apps import agent_voice_problems
+
+    problems = [
+        problem
+        for _, spec in specs
+        if "voice" in spec
+        for problem in agent_voice_problems(str(spec.get("id")), spec["voice"])
+    ]
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+def voice_of(spec: Dict[str, Any]) -> Dict[str, Any] | None:
+    """An agent's voice with every field said, as the Appspec's block reads it; None when unsaid."""
+    if "voice" not in spec:
+        return None
+    from agentspecs.apps import AppVoice
+
+    return AppVoice(**spec["voice"]).model_dump(mode="json")
 
 
 def load_protocol_ids(specs_dir: Path) -> set[str]:
@@ -525,6 +549,10 @@ from agent_runtimes.types import (
                 if model_additionals
                 else ""
             )
+            voice = voice_of(spec)
+            voice_py_line = (
+                f"    voice={_fmt_py_literal(voice)},\n" if voice is not None else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_str = (
                 f'"{inference_provider}"' if inference_provider else "None"
@@ -687,7 +715,7 @@ from agent_runtimes.types import (
     tool_hooks={_fmt_py_literal(tool_hooks_val)},
     parameters={_fmt_py_literal(parameters_val)},
     subagents={subagents_str},
-)
+{voice_py_line})
 
 '''
 
@@ -1154,6 +1182,10 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
                 if model_additionals
                 else ""
             )
+            voice = voice_of(spec)
+            voice_ts_line = (
+                f"    voice: {_fmt_ts_literal(voice)},\n" if voice is not None else ""
+            )
             inference_provider = spec.get("inference_provider")
             inference_provider_ts = (
                 f"'{inference_provider}'" if inference_provider else "undefined"
@@ -1262,7 +1294,7 @@ const FRONTEND_TOOL_MAP: Record<string, any> = {
     toolHooks: {_fmt_ts_literal(tool_hooks_val)},
     parameters: {_fmt_ts_literal(parameters_val)},
     subagents: {subagents_ts},
-}};
+{voice_ts_line}}};
 
 """
 
