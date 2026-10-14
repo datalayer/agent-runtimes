@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.22
+
+On agentspecs 0.0.96.
+
+- **A signed-out visitor of a Python application talks to it on the runtime its deployment is kept on** (R-30, decided 14 October 2026, [Python applications](https://agent-runtimes.datalayer.tech/docs/apps/python-applications)): never the shared visitors' runtime, whose plain agent would answer in its code's place. That runtime takes a visitor's token for its own address, makes the address's agent with the deployment's code, and holds the visitor to the visitors' runtime's rules (their own token for its models, read only, turns and minutes, nothing kept). The visitors' runtime refuses such an address; the embed sends the visitor to the kept runtime.
+- Portable session/AG-UI client and conversation reducer (MOBILE M-030, M-033).
+
 ## 1.5.21
 
 On agentspecs 0.0.96.
