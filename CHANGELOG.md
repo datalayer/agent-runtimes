@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.20
+
+On agentspecs 0.0.96.
+
+- **Voice in the chat** (VOICE.md): the microphone in an application's own composer, dictation into the input as it is heard, stopped on silence; spoken answers and Read aloud through the speech service, a long answer said whole; Stop speaking in an application's composer; a person's own voice settings; voice for visitors and embeds; `hands_free` refused until VO-12.
+- **Each example in Python** (`APP_PYTHON`): its own `app.py`, or the one `loop apps eject` writes from its spec.
+
 ## 1.5.19
 
 On agentspecs 0.0.95.
