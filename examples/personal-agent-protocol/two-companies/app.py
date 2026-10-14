@@ -49,6 +49,8 @@ app = Application(
     name="PAP Two Companies",
     description="Ledgerly is a company to Ada's agent and her personal agent at Northwind Bank.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_two_companies. Every approval is an Operation, never a chat "

@@ -34,7 +34,7 @@ CROP_MONITORING_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "crop-monitoring",
-                "app": "crop-monitoring:0.0.1",
+                "app": "crop-monitoring:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
@@ -346,7 +346,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "event-response",
-                "app": "event-response:0.0.2",
+                "app": "event-response:0.0.3",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
@@ -364,7 +364,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             },
             {
                 "member": "disaster-assessment",
-                "app": "disaster-assessment:0.0.1",
+                "app": "disaster-assessment:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "contributor",
@@ -378,7 +378,7 @@ DISASTER_ASSESSMENT_SCENE_0_0_1 = SceneSpec.model_validate(
             },
             {
                 "member": "change-detection",
-                "app": "change-detection:0.0.1",
+                "app": "change-detection:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "contributor",
@@ -756,7 +756,7 @@ MONTH_END_CLOSE_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "month-end-close",
-                "app": "month-end-close:0.0.1",
+                "app": "month-end-close:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
@@ -1770,7 +1770,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
         "cast": [
             {
                 "member": "sales",
-                "app": "sales:0.0.2",
+                "app": "sales:0.0.3",
                 "ref": "",
                 "server": "",
                 "role": "initiator",
@@ -1785,7 +1785,7 @@ SALES_AND_ACCOUNTING_SCENE_0_0_1 = SceneSpec.model_validate(
             },
             {
                 "member": "accounting",
-                "app": "accounting:0.0.1",
+                "app": "accounting:0.0.2",
                 "ref": "",
                 "server": "",
                 "role": "contributor",

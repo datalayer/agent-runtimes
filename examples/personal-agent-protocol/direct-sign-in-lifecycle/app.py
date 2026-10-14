@@ -110,6 +110,8 @@ app = Application(
     name="PAP Direct Sign-In Lifecycle",
     description="Upgrade an existing Session with one-use state, PKCE, and DPoP.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_direct_sign_in_lifecycle. Never request or expose an "

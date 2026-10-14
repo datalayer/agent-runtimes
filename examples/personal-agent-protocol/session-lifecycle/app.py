@@ -56,6 +56,8 @@ app = Application(
     name="PAP Session Lifecycle",
     description="Start, retry, and renew a signed-out Session without exposing secrets.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_session_lifecycle to explain signed-out Session start and "

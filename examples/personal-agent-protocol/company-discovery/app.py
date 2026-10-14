@@ -15,6 +15,8 @@ app = Application(
     name="PAP Company Discovery",
     description="Inspect a company's verified Personal Agent Protocol capabilities.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Call discover_pap_company before describing a domain. Treat its result "

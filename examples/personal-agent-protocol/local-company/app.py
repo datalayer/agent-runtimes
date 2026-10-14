@@ -65,6 +65,8 @@ app = Application(
     name="PAP Local Company",
     description="An application published as a PAP company by a local runtime, reached by a local personal agent.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions="Use walk_through.",
 )

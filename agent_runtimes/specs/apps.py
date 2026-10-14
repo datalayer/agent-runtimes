@@ -18,11 +18,11 @@ from agent_runtimes.types import AppSpec
 # Application Definitions
 # ============================================================================
 
-ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
+ACCOUNTING_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "accounting",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Accounting",
         "kind": "chat",
         "description": "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
@@ -171,11 +171,11 @@ ACCOUNTING_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-BOOKKEEPING_DESK_APP_0_0_1 = AppSpec.model_validate(
+BOOKKEEPING_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "bookkeeping-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Bookkeeping Desk",
         "kind": "chat",
         "description": "An accounting firm's desk: it answers its clients' own agents about their books, and pays their bills at their bank only once they approve each payment.",
@@ -349,11 +349,11 @@ BOOKKEEPING_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
+CHANGE_DETECTION_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "change-detection",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Change detection",
         "kind": "chat",
         "description": "Finds what changed on the ground between two dates — land use, vegetation, water, built-up area — from the satellite imagery NASA Earthdata holds, which it searches and reads, with the granules behind each change it reports.",
@@ -504,11 +504,11 @@ CHANGE_DETECTION_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
+CROP_MONITORING_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "crop-monitoring",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Crop Monitoring",
         "kind": "chat",
         "description": "Tracks crop vigour and growth over time from the satellite imagery NASA Earthdata holds, which it searches and reads, and flags the fields that need attention, with the datasets and granules behind each finding.",
@@ -663,11 +663,11 @@ CROP_MONITORING_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-CUSTOMER_INTERVIEW_APP_0_0_2 = AppSpec.model_validate(
+CUSTOMER_INTERVIEW_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "customer-interview",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Customer Interview",
         "kind": "chat",
         "description": "Interviews a customer about what you want to learn, without leading questions, and turns the conversation into insights that each cite what was said.",
@@ -877,11 +877,11 @@ CUSTOMER_INTERVIEW_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-DATA_QUALITY_APP_0_0_2 = AppSpec.model_validate(
+DATA_QUALITY_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "data-quality",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Data Quality Investigation",
         "kind": "decision",
         "description": "Which anomalies in this dataset should we fix first? For a data team, before a dataset is used for a decision.",
@@ -1060,11 +1060,11 @@ DATA_QUALITY_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-DECIDE_APP_0_0_1 = AppSpec.model_validate(
+DECIDE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "decide",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Decide",
         "kind": "chat",
         "description": "Answers a question about a text — a ticket, a message, a review — by asking Jev a typed decision: yes or no, one of named options, or a score, each with its confidence.",
@@ -1185,11 +1185,11 @@ DECIDE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
+DISASTER_ASSESSMENT_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "disaster-assessment",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Disaster Assessment",
         "kind": "chat",
         "description": "Estimates the area a natural disaster affected and the extent of the damage from the satellite imagery NASA Earthdata holds before and after the event, which it searches and reads, with the granules behind each figure.",
@@ -1340,11 +1340,11 @@ DISASTER_ASSESSMENT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
+ERRAND_RUNNER_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "errand-runner",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Errand Runner",
         "kind": "chat",
         "description": "Asks a business's own agent for you, as itself first and for you once you sign in at the business and choose what it may see.",
@@ -1469,11 +1469,11 @@ ERRAND_RUNNER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-EVENT_RESPONSE_APP_0_0_2 = AppSpec.model_validate(
+EVENT_RESPONSE_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "event-response",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Event response",
         "kind": "chat",
         "description": "Takes word of a live event — a flood, a fire, a storm — asks Disaster assessment for the area affected and the damage and Change detection for what changed on the ground, each over A2A, and reports what they answered, adding no figure of its own.",
@@ -1608,11 +1608,11 @@ EVENT_RESPONSE_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
+EXCHANGE_DESK_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "exchange-desk",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Exchange Desk",
         "kind": "chat",
         "description": "Answers people's own agents about their orders and exchanges them, each exchange proposed with its exact terms and done once the person approves.",
@@ -1760,11 +1760,11 @@ EXCHANGE_DESK_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-GUEST_DESK_APP_0_0_1 = AppSpec.model_validate(
+GUEST_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "guest-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Guest Desk",
         "kind": "chat",
         "description": "Answers people's own agents for your business, over PACT: what you offer to anyone who asks, and who they are here once they let their agent ask for them.",
@@ -1893,11 +1893,11 @@ GUEST_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
+INBOX_TRIAGE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "inbox-triage",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Inbox Triage",
         "kind": "worker",
         "description": "Keeps an inbox sorted: labels and archives what needs no answer, drafts the replies, and asks before anything is sent.",
@@ -2096,11 +2096,11 @@ INBOX_TRIAGE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
+LIVE_SHOP_CHAT_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "live-shop-chat",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Live Shop Chat",
         "kind": "chat",
         "description": "Shows you a shop's answers as its agent writes them, and picks up where it was if the line drops.",
@@ -2260,11 +2260,11 @@ LIVE_SHOP_CHAT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-MODEL_CHOICE_APP_0_0_2 = AppSpec.model_validate(
+MODEL_CHOICE_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "model-choice",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Model Choice",
         "kind": "decision",
         "description": "Which chat model should this use case run on? For a team choosing a model for one job — a summarizer, a classifier, an agent — from what a benchmark run measured and what a decision model reads in the answers.",
@@ -2509,11 +2509,11 @@ MODEL_CHOICE_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
+MONTH_END_CLOSE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "month-end-close",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Month-end Close",
         "kind": "chat",
         "description": "Drives the month-end close from the Odoo books, which it only reads: the close checklist, the accruals to book, the open items and the reconciliation gaps that remain, each with the figures behind it.",
@@ -2669,11 +2669,11 @@ MONTH_END_CLOSE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
+ORDER_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "order-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Order Desk",
         "kind": "chat",
         "description": "Looks up your orders at a shop and arranges exchanges and returns there for you, signed in to your own account at the shop, each change approved by you.",
@@ -2838,11 +2838,11 @@ ORDER_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
+ORDER_TRACKER_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "order-tracker",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Order Tracker",
         "kind": "chat",
         "description": "Tells you where your orders are at a shop, reading only, with a sign-in you can narrow or end at any time.",
@@ -2998,11 +2998,11 @@ ORDER_TRACKER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
+PIPELINE_REPORT_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "pipeline-report",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Weekly Pipeline Report",
         "kind": "worker",
         "description": "Builds the board's sales pipeline report every Monday, checks every figure against the pipeline data, and sends it only once a person has approved it.",
@@ -3265,11 +3265,11 @@ PIPELINE_REPORT_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-QUOTE_CALCULATOR_APP_0_0_5 = AppSpec.model_validate(
+QUOTE_CALCULATOR_APP_0_0_6 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "quote-calculator",
-        "version": "0.0.5",
+        "version": "0.0.6",
         "name": "Quote Calculator",
         "kind": "widget",
         "description": "Computes a quote from a number of seats, a plan and a term, and shows how the total is made.",
@@ -3498,11 +3498,11 @@ QUOTE_CALCULATOR_APP_0_0_5 = AppSpec.model_validate(
     }
 )
 
-REPORT_FROM_A_FILE_APP_0_0_4 = AppSpec.model_validate(
+REPORT_FROM_A_FILE_APP_0_0_5 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "report-from-a-file",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "name": "Report from a File",
         "kind": "widget",
         "description": "Takes a CSV file, analyses it in the sandbox, and gives back a report: what the data holds, what stands out, and what is missing.",
@@ -3736,11 +3736,11 @@ REPORT_FROM_A_FILE_APP_0_0_4 = AppSpec.model_validate(
     }
 )
 
-RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
+RETURNS_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "returns-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Returns Desk",
         "kind": "chat",
         "description": "Arranges returns and repairs at a shop for you, each one done exactly as you approved it, and only once.",
@@ -3905,11 +3905,11 @@ RETURNS_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SALES_APP_0_0_2 = AppSpec.model_validate(
+SALES_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "sales",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Sales",
         "kind": "chat",
         "description": "Takes a request for a financial report, such as revenue for a period, open invoices or a customer's balance, asks the Accounting application for it over A2A and hands over what Accounting answered, without adding a figure of its own.",
@@ -4039,11 +4039,11 @@ SALES_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-SHIP_OR_FIX_APP_0_0_2 = AppSpec.model_validate(
+SHIP_OR_FIX_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "ship-or-fix",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Ship or Fix",
         "kind": "decision",
         "description": "Which agent configuration should we ship, on the evidence of a benchmark run? For an AI platform team, after every run.",
@@ -4258,11 +4258,11 @@ SHIP_OR_FIX_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
+SHOP_CONCIERGE_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "shop-concierge",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Shop Concierge",
         "kind": "chat",
         "description": "Talks with a shop's own agent for you, and hands you to one of the shop's people when you ask.",
@@ -4421,11 +4421,11 @@ SHOP_CONCIERGE_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
+SHOPPING_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "shopping-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Shopping Desk",
         "kind": "chat",
         "description": "Finds what you want at the shop, fills your basket and buys it only once you approve the exact purchase, up to a limit you know.",
@@ -4577,11 +4577,11 @@ SHOPPING_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SIGN_IN_DESK_APP_0_0_1 = AppSpec.model_validate(
+SIGN_IN_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "sign-in-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Sign-in Desk",
         "kind": "chat",
         "description": "Signs you in at a shop without leaving the chat: you type what the shop asks into a protected form the model never reads.",
@@ -4737,11 +4737,11 @@ SIGN_IN_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SIGNED_READER_APP_0_0_1 = AppSpec.model_validate(
+SIGNED_READER_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "signed-reader",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Signed Reader",
         "kind": "chat",
         "description": "Reads a page at a site that checks who is asking, with every request signed, and tells you whom the site saw.",
@@ -4871,11 +4871,11 @@ SIGNED_READER_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-SUPPLIER_COMPARISON_APP_0_0_2 = AppSpec.model_validate(
+SUPPLIER_COMPARISON_APP_0_0_3 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "supplier-comparison",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "name": "Supplier Comparison",
         "kind": "decision",
         "description": "Which supplier should we choose for these orders? For an operations or procurement lead, at each sourcing round.",
@@ -5077,11 +5077,11 @@ SUPPLIER_COMPARISON_APP_0_0_2 = AppSpec.model_validate(
     }
 )
 
-SUPPORT_DESK_APP_0_0_4 = AppSpec.model_validate(
+SUPPORT_DESK_APP_0_0_5 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "support-desk",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "name": "Support Desk",
         "kind": "chat",
         "description": "Answers product questions from the documentation it was given, cites the passage, and says when the documentation does not hold the answer.",
@@ -5357,11 +5357,11 @@ SUPPORT_DESK_APP_0_0_4 = AppSpec.model_validate(
     }
 )
 
-TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
+TRAVEL_DESK_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "travel-desk",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Travel Desk",
         "kind": "chat",
         "description": "Asks your airline about your bookings and changes them for you, signed in to your own account at the airline, with only the permissions you grant.",
@@ -5506,11 +5506,11 @@ TRAVEL_DESK_APP_0_0_1 = AppSpec.model_validate(
     }
 )
 
-WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
+WEB_RESEARCH_APP_0_0_2 = AppSpec.model_validate(
     {
         "schema": "loop.app/v1",
         "id": "web-research",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "name": "Web Research",
         "kind": "chat",
         "description": "Researches a question on the web and answers with the sources it opened, saying which are primary and where they disagree.",
@@ -5650,38 +5650,38 @@ WEB_RESEARCH_APP_0_0_1 = AppSpec.model_validate(
 # ============================================================================
 
 APP_CATALOGUE: Dict[str, AppSpec] = {
-    "accounting": ACCOUNTING_APP_0_0_1,
-    "bookkeeping-desk": BOOKKEEPING_DESK_APP_0_0_1,
-    "change-detection": CHANGE_DETECTION_APP_0_0_1,
-    "crop-monitoring": CROP_MONITORING_APP_0_0_1,
-    "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_2,
-    "data-quality": DATA_QUALITY_APP_0_0_2,
-    "decide": DECIDE_APP_0_0_1,
-    "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_1,
-    "errand-runner": ERRAND_RUNNER_APP_0_0_1,
-    "event-response": EVENT_RESPONSE_APP_0_0_2,
-    "exchange-desk": EXCHANGE_DESK_APP_0_0_2,
-    "guest-desk": GUEST_DESK_APP_0_0_1,
-    "inbox-triage": INBOX_TRIAGE_APP_0_0_1,
-    "live-shop-chat": LIVE_SHOP_CHAT_APP_0_0_1,
-    "model-choice": MODEL_CHOICE_APP_0_0_2,
-    "month-end-close": MONTH_END_CLOSE_APP_0_0_1,
-    "order-desk": ORDER_DESK_APP_0_0_1,
-    "order-tracker": ORDER_TRACKER_APP_0_0_1,
-    "pipeline-report": PIPELINE_REPORT_APP_0_0_1,
-    "quote-calculator": QUOTE_CALCULATOR_APP_0_0_5,
-    "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_4,
-    "returns-desk": RETURNS_DESK_APP_0_0_1,
-    "sales": SALES_APP_0_0_2,
-    "ship-or-fix": SHIP_OR_FIX_APP_0_0_2,
-    "shop-concierge": SHOP_CONCIERGE_APP_0_0_1,
-    "shopping-desk": SHOPPING_DESK_APP_0_0_1,
-    "sign-in-desk": SIGN_IN_DESK_APP_0_0_1,
-    "signed-reader": SIGNED_READER_APP_0_0_1,
-    "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_2,
-    "support-desk": SUPPORT_DESK_APP_0_0_4,
-    "travel-desk": TRAVEL_DESK_APP_0_0_1,
-    "web-research": WEB_RESEARCH_APP_0_0_1,
+    "accounting": ACCOUNTING_APP_0_0_2,
+    "bookkeeping-desk": BOOKKEEPING_DESK_APP_0_0_2,
+    "change-detection": CHANGE_DETECTION_APP_0_0_2,
+    "crop-monitoring": CROP_MONITORING_APP_0_0_2,
+    "customer-interview": CUSTOMER_INTERVIEW_APP_0_0_3,
+    "data-quality": DATA_QUALITY_APP_0_0_3,
+    "decide": DECIDE_APP_0_0_2,
+    "disaster-assessment": DISASTER_ASSESSMENT_APP_0_0_2,
+    "errand-runner": ERRAND_RUNNER_APP_0_0_2,
+    "event-response": EVENT_RESPONSE_APP_0_0_3,
+    "exchange-desk": EXCHANGE_DESK_APP_0_0_3,
+    "guest-desk": GUEST_DESK_APP_0_0_2,
+    "inbox-triage": INBOX_TRIAGE_APP_0_0_2,
+    "live-shop-chat": LIVE_SHOP_CHAT_APP_0_0_2,
+    "model-choice": MODEL_CHOICE_APP_0_0_3,
+    "month-end-close": MONTH_END_CLOSE_APP_0_0_2,
+    "order-desk": ORDER_DESK_APP_0_0_2,
+    "order-tracker": ORDER_TRACKER_APP_0_0_2,
+    "pipeline-report": PIPELINE_REPORT_APP_0_0_2,
+    "quote-calculator": QUOTE_CALCULATOR_APP_0_0_6,
+    "report-from-a-file": REPORT_FROM_A_FILE_APP_0_0_5,
+    "returns-desk": RETURNS_DESK_APP_0_0_2,
+    "sales": SALES_APP_0_0_3,
+    "ship-or-fix": SHIP_OR_FIX_APP_0_0_3,
+    "shop-concierge": SHOP_CONCIERGE_APP_0_0_2,
+    "shopping-desk": SHOPPING_DESK_APP_0_0_2,
+    "sign-in-desk": SIGN_IN_DESK_APP_0_0_2,
+    "signed-reader": SIGNED_READER_APP_0_0_2,
+    "supplier-comparison": SUPPLIER_COMPARISON_APP_0_0_3,
+    "support-desk": SUPPORT_DESK_APP_0_0_5,
+    "travel-desk": TRAVEL_DESK_APP_0_0_2,
+    "web-research": WEB_RESEARCH_APP_0_0_2,
 }
 
 #: How each application was built: `python` (its `app.py`), `canvas` (its

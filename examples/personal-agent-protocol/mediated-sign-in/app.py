@@ -29,6 +29,8 @@ app = Application(
     name="PAP Mediated Sign-In",
     description="Collect credentials on the host's protected input and send them to one endpoint, once.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_mediated_sign_in. Never ask the user for a password or a "

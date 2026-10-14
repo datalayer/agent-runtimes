@@ -30,6 +30,7 @@ scaffold that would not validate is refused, never written.
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import tempfile
@@ -38,6 +39,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import yaml
+from agentspecs.apps import ui_for
 
 from agent_runtimes.loop.apps.application import Application
 from agent_runtimes.loop.apps.build import build
@@ -116,7 +118,13 @@ Written by `loop apps init`. This file is the application's source:
 
 from agent_runtimes.loop.apps import Application, Session
 
-app = Application(id="{app_id}", kind="{kind}", agent="{BLANK_PYTHON_AGENT}")
+app = Application(
+    id="{app_id}",
+    kind="{kind}",
+    agent="{BLANK_PYTHON_AGENT}",
+    # Its interface: the Reactor plugins of agentspecs/ui its kind is drawn with.
+    ui={json.dumps(ui_for(kind))},
+)
 app.starter("Say hello", "Hello! What can you do?")
 
 
@@ -244,7 +252,7 @@ def _blank(folder: Path, app_id: str, kind: str, python: bool) -> List[str]:
         )
     if python:
         return _write_python(folder, _blank_python(app_id, kind))
-    application = Application(id=app_id, kind=kind, agent=BLANK_AGENT)
+    application = Application(id=app_id, kind=kind, agent=BLANK_AGENT, ui=ui_for(kind))
     application.starter("Say hello", "Hello! What can you do?")
     body = yaml.safe_dump(
         application.document,

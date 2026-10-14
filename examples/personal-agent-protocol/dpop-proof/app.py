@@ -41,6 +41,8 @@ app = Application(
     name="PAP DPoP Proof",
     description="Verify request binding and replay rejection without exposing secrets.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_dpop_proof to explain PAP proof-of-possession safety. "

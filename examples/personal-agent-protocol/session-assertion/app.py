@@ -59,6 +59,8 @@ app = Application(
     name="PAP Session Assertion",
     description="Explain the safe shape of a short-lived PAP Session assertion.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_session_assertion to explain Session assertion safety. "

@@ -100,6 +100,8 @@ app = Application(
     name="PAP Device Sign-In",
     description="Hand sign-in to the user and poll safely without exposing credentials.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_device_sign_in. Never request or expose a device code, "

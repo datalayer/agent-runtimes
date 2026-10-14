@@ -163,6 +163,71 @@ export const DEFAULT_LAYOUTS: Record<AppKind, AppLayout> = {
   worker: 'split',
 };
 
+/** The media type of an answer drawn as A2UI surfaces. */
+export const A2UI_OUTPUT = 'application/json+a2ui';
+
+/** What `uiFor` reads of an application besides its kind. */
+export interface AppUiFacts {
+  /** Its layout; its kind's own when unsaid. */
+  layout?: AppLayout;
+  /** The media types it answers in. */
+  outputs?: readonly string[];
+  /** It signs people in at companies (`pap.connections`). */
+  signsIn?: boolean;
+  /** It has components of its own (`interface.customComponents`). */
+  ownComponents?: boolean;
+}
+
+/**
+ * The UI plugins an application is drawn with (AGENTIC_UI R8), as its `ui`
+ * lists them: what `appPreset` mounts for it. A decision: its page alone,
+ * drawn by its host. Every other kind: the conversation — `chat`, which
+ * stands for the conversation base the runtime mounts — then the A2UI
+ * surfaces when it answers in `application/json+a2ui`, the sign-in card when
+ * it signs people in at companies, its page, its layout and the Canvas's
+ * blocks when its layout is not `chat`, and its own components when it has
+ * some. What a host adds (the Preview's sidebar, a frame) is not the
+ * application's.
+ *
+ * agentspecs' `ui_for` is the same function: both are held to
+ * `agent_runtimes/tests/fixtures/app_ui.json`.
+ */
+export function uiFor(kind: AppKind, facts: AppUiFacts = {}): UiChoice[] {
+  if (kind === 'decision') {
+    return [{ plugin: 'app-page' }];
+  }
+  const drawn: UiChoice[] = [{ plugin: 'chat' }];
+  if (facts.outputs?.includes(A2UI_OUTPUT)) {
+    drawn.push({ plugin: 'a2ui-surface', renderer: 'a2ui' });
+  }
+  if (facts.signsIn) {
+    drawn.push({ plugin: 'pap-sign-in' });
+  }
+  if ((facts.layout ?? DEFAULT_LAYOUTS[kind]) !== 'chat') {
+    drawn.push(
+      { plugin: 'page-layout' },
+      { plugin: 'app-page' },
+      { plugin: 'canvas-blocks' },
+    );
+  }
+  if (facts.ownComponents) {
+    drawn.push({ plugin: 'app-components' });
+  }
+  return drawn;
+}
+
+/** The UI plugins an application is drawn with, by what its spec says (`uiFor`). */
+export function uiOf(
+  app: Pick<AppSpec, 'kind' | 'interface' | 'pap'>,
+): UiChoice[] {
+  return uiFor(app.kind, {
+    layout: app.interface.layout,
+    outputs: app.interface.outputs,
+    signsIn: Boolean(app.pap?.connections.length),
+    ownComponents: Boolean(app.interface.customComponents?.length),
+  });
+}
+
 /** What an application keeps of what it did, when it does not say. */
 export const DEFAULT_RECORD_INCLUDE = ['conversations', 'actions', 'approvals'];
 
@@ -279,7 +344,8 @@ export function emptyAppspec(kind: AppKind = 'chat'): AppSpec {
     contents: [],
     connections: [],
     protocols: [],
-    ui: [],
+    // A blank application starts with its kind's UI plugins (AGENTIC_UI R8).
+    ui: uiFor(kind),
     rules: [],
     permissions: {
       spaces: [],

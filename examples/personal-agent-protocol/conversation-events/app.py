@@ -36,6 +36,8 @@ app = Application(
     name="PAP Conversation Events",
     description="Follow ordered events with cursor recovery and duplicate suppression.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions="Use follow_conversation. Never expose PAP credentials or identity.",
 )

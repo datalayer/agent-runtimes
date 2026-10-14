@@ -42,6 +42,8 @@ app = Application(
     name="PAP Local Personal Agent",
     description="A local runtime's personal agent at a PAP company: Session, Device Sign-In, conversation, an operation approved by the person.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use walk_through. A chat message is never an approval: the person "

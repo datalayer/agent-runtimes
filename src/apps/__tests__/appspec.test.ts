@@ -217,11 +217,14 @@ describe('writing an Appspec', () => {
   });
 
   it('writes nothing that is at its default', () => {
+    // A blank application lists its kind's UI plugins (AGENTIC_UI R8): what
+    // it is drawn with is said, not a default, so it is written.
     expect(dumpAppspec(emptyAppspec('chat'))).toEqual({
       schema: APP_SCHEMA,
       id: '',
       name: '',
       kind: 'chat',
+      ui: [{ plugin: 'chat' }],
     });
     const worker = emptyAppspec('worker');
     // A worker's split layout is its kind's own: not written. A chat's would be.
@@ -421,7 +424,9 @@ describe('writing an Appspec', () => {
     const { app, problems } = parseAppspec({ kind: 'chat', ui });
     expect(problems).toEqual([]);
     expect(dumpAppspec(app).ui).toEqual(ui);
-    expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('ui');
+    // A blank chat starts with its kind's; a document that lists none reads none.
+    expect(dumpAppspec(emptyAppspec('chat')).ui).toEqual([{ plugin: 'chat' }]);
+    expect(parseAppspec({ kind: 'chat' }).app.ui).toEqual([]);
     const said = (document: Record<string, unknown>) =>
       parseAppspec({ kind: 'chat', ...document }).problems;
     // The old shape — a bare id, a renderer named as a UI — is refused, never read as a plugin.

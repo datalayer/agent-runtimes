@@ -28,6 +28,8 @@ app = Application(
     name="PAP Account Tokens",
     description="Refresh, rotate, narrow, and revoke an Account Token kept behind a reference.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_account_tokens. Never request or expose an Account Token, "

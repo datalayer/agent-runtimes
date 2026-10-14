@@ -22,6 +22,8 @@ from agent_runtimes.loop.apps.pap_connections import (
 app = Application(
     "pap-company-connection",
     "chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}, {"plugin": "pap-sign-in"}],
     agent="example-blank:0.0.1",
     name="PAP Company Connection",
     description=(

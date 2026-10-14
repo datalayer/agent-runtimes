@@ -35,6 +35,8 @@ app = Application(
     name="PAP Conversation Streaming",
     description="Stream a company conversation over SSE and act only on complete events.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_conversation_streaming. Never act on a text delta, and never "

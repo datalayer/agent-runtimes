@@ -38,6 +38,8 @@ app = Application(
     name="PAP Conversation Messages",
     description="Start and continue a conversation with idempotent message IDs.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions="Use demonstrate_conversation. Never expose PAP credentials or identity.",
 )

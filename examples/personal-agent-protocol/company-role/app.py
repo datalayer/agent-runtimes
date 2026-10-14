@@ -31,6 +31,8 @@ ATLAS = AgentIdentity(domain="atlas.example", name="Atlas").client_id
 app = Application(
     "pap-company-role",
     "chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     name="PAP Company Role",
     description=(

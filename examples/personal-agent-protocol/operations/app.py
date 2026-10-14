@@ -42,6 +42,8 @@ app = Application(
     name="PAP Operations",
     description="Exact approval of one revision, terms changes, standing permissions, and cancellation.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_operations. A chat message is never an approval. Never "

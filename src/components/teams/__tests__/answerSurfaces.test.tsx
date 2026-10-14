@@ -28,7 +28,7 @@ import type {
   A2APeerArtifact,
   A2APeerEvent,
 } from '../../../runtimes/browser/a2aPeer';
-import { ACCOUNTING_APP_0_0_1, SALES_APP_0_0_2 } from '../../../specs/apps';
+import { ACCOUNTING_APP_0_0_2, SALES_APP_0_0_3 } from '../../../specs/apps';
 
 /** The tool the entry asks with, as the hook makes it: its events are what is checked. */
 const told = vi.hoisted(() => ({
@@ -141,8 +141,8 @@ describe('a surface a peer shows', () => {
     const peer = { card: { name: 'Accounting' } } as unknown as A2APeer;
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_2,
-        peerApp: ACCOUNTING_APP_0_0_1,
+        entry: SALES_APP_0_0_3,
+        peerApp: ACCOUNTING_APP_0_0_2,
         peer,
         inference: {} as never,
         accept: COMPONENTS_NOTEBOOK_AND_WORDS,
@@ -165,7 +165,7 @@ describe('a surface a peer shows', () => {
       });
     answered('t1', [SURFACE]);
     expect(result.current.surfaces).toEqual([
-      { id: SURFACE_ID, giver: ACCOUNTING_APP_0_0_1.id, artifact: SURFACE },
+      { id: SURFACE_ID, giver: ACCOUNTING_APP_0_0_2.id, artifact: SURFACE },
     ]);
     // Words alone keep it; the same surface again is not drawn twice.
     answered('t2', []);

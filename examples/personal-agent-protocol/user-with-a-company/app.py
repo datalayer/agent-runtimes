@@ -54,6 +54,8 @@ app = Application(
     name="PAP User with a Company",
     description="Ada's personal agent and Manzanita Outfitters, from question to confirmed exchange.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_user_with_a_company. A chat message is never an approval. "

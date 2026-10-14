@@ -39,6 +39,8 @@ app = Application(
     name="PAP Conversation Control",
     description="Direct Conversations, handoff to a person, and closing, through the real client.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_conversation_control. Never expose a Session Token, proof, "

@@ -70,6 +70,8 @@ app = Application(
     name="PAP Browser Session",
     description="Join an existing PAP Session through a protected browser form POST.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_browser_session. Never request or expose an assertion, "

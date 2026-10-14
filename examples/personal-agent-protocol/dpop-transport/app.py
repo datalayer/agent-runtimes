@@ -46,6 +46,8 @@ app = Application(
     name="PAP DPoP Transport",
     description="Send proof-bound PAP requests through nonce retries and redirects safely.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_dpop_transport. Never request or expose a Session Token, "

@@ -31,7 +31,7 @@ export const CROP_MONITORING_SCENE_0_0_1: SceneSpec = {
   cast: [
     {
       member: 'crop-monitoring',
-      app: 'crop-monitoring:0.0.1',
+      app: 'crop-monitoring:0.0.2',
       ref: '',
       server: '',
       role: 'initiator',
@@ -356,7 +356,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
   cast: [
     {
       member: 'event-response',
-      app: 'event-response:0.0.2',
+      app: 'event-response:0.0.3',
       ref: '',
       server: '',
       role: 'initiator',
@@ -381,7 +381,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
     },
     {
       member: 'disaster-assessment',
-      app: 'disaster-assessment:0.0.1',
+      app: 'disaster-assessment:0.0.2',
       ref: '',
       server: '',
       role: 'contributor',
@@ -396,7 +396,7 @@ export const DISASTER_ASSESSMENT_SCENE_0_0_1: SceneSpec = {
     },
     {
       member: 'change-detection',
-      app: 'change-detection:0.0.1',
+      app: 'change-detection:0.0.2',
       ref: '',
       server: '',
       role: 'contributor',
@@ -799,7 +799,7 @@ export const MONTH_END_CLOSE_SCENE_0_0_1: SceneSpec = {
   cast: [
     {
       member: 'month-end-close',
-      app: 'month-end-close:0.0.1',
+      app: 'month-end-close:0.0.2',
       ref: '',
       server: '',
       role: 'initiator',
@@ -1979,7 +1979,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
   cast: [
     {
       member: 'sales',
-      app: 'sales:0.0.2',
+      app: 'sales:0.0.3',
       ref: '',
       server: '',
       role: 'initiator',
@@ -2000,7 +2000,7 @@ export const SALES_AND_ACCOUNTING_SCENE_0_0_1: SceneSpec = {
     },
     {
       member: 'accounting',
-      app: 'accounting:0.0.1',
+      app: 'accounting:0.0.2',
       ref: '',
       server: '',
       role: 'contributor',

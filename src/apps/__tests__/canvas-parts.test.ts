@@ -61,6 +61,19 @@ function withPart(part: CanvasPartContribution): Record<string, unknown> {
     };
   }
   const list = data[head];
+  // A UI plugin is listed once: the Canvas selects the one a blank
+  // application already starts with (its kind's, `uiFor`) instead.
+  if (
+    part.kind === 'ui' &&
+    Array.isArray(list) &&
+    list.some(
+      choice =>
+        (choice as { plugin?: string }).plugin ===
+        (part.example as { plugin: string }).plugin,
+    )
+  ) {
+    return data;
+  }
   return {
     ...data,
     [head]: [

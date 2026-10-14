@@ -15,6 +15,8 @@ app = Application(
     name="PAP Agent Identity",
     description="Verify a personal agent's public metadata and signing policy.",
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Call inspect_pap_agent before describing an agent identity. Report only "

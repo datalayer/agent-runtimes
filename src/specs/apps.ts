@@ -15,10 +15,10 @@
 
 import type { AppBuilt, AppKind, AppSpec } from '../types/agentspecs';
 
-export const ACCOUNTING_APP_0_0_1: AppSpec = {
+export const ACCOUNTING_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'accounting',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Accounting',
   kind: 'chat',
   description:
@@ -187,10 +187,10 @@ export const ACCOUNTING_APP_0_0_1: AppSpec = {
   ],
 };
 
-export const BOOKKEEPING_DESK_APP_0_0_1: AppSpec = {
+export const BOOKKEEPING_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'bookkeeping-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Bookkeeping Desk',
   kind: 'chat',
   description:
@@ -388,10 +388,10 @@ export const BOOKKEEPING_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
+export const CHANGE_DETECTION_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'change-detection',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Change detection',
   kind: 'chat',
   description:
@@ -565,10 +565,10 @@ export const CHANGE_DETECTION_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-change-detection:0.0.1' is not enabled."],
 };
 
-export const CROP_MONITORING_APP_0_0_1: AppSpec = {
+export const CROP_MONITORING_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'crop-monitoring',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Crop Monitoring',
   kind: 'chat',
   description:
@@ -746,10 +746,10 @@ export const CROP_MONITORING_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-crop-monitoring:0.0.1' is not enabled."],
 };
 
-export const CUSTOMER_INTERVIEW_APP_0_0_2: AppSpec = {
+export const CUSTOMER_INTERVIEW_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'customer-interview',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Customer Interview',
   kind: 'chat',
   description:
@@ -999,10 +999,10 @@ export const CUSTOMER_INTERVIEW_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const DATA_QUALITY_APP_0_0_2: AppSpec = {
+export const DATA_QUALITY_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'data-quality',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Data Quality Investigation',
   kind: 'decision',
   description:
@@ -1206,10 +1206,10 @@ export const DATA_QUALITY_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const DECIDE_APP_0_0_1: AppSpec = {
+export const DECIDE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'decide',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Decide',
   kind: 'chat',
   description:
@@ -1351,10 +1351,10 @@ export const DECIDE_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
+export const DISASTER_ASSESSMENT_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'disaster-assessment',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Disaster Assessment',
   kind: 'chat',
   description:
@@ -1528,10 +1528,10 @@ export const DISASTER_ASSESSMENT_APP_0_0_1: AppSpec = {
   setup: ["The agent 'worker-disaster-assessment:0.0.1' is not enabled."],
 };
 
-export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
+export const ERRAND_RUNNER_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'errand-runner',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Errand Runner',
   kind: 'chat',
   description:
@@ -1675,10 +1675,10 @@ export const ERRAND_RUNNER_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const EVENT_RESPONSE_APP_0_0_2: AppSpec = {
+export const EVENT_RESPONSE_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'event-response',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Event response',
   kind: 'chat',
   description:
@@ -1832,10 +1832,10 @@ export const EVENT_RESPONSE_APP_0_0_2: AppSpec = {
   setup: ["The agent 'worker-event-response:0.0.1' is not enabled."],
 };
 
-export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
+export const EXCHANGE_DESK_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'exchange-desk',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Exchange Desk',
   kind: 'chat',
   description:
@@ -1998,10 +1998,10 @@ export const EXCHANGE_DESK_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const GUEST_DESK_APP_0_0_1: AppSpec = {
+export const GUEST_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'guest-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Guest Desk',
   kind: 'chat',
   description:
@@ -2152,10 +2152,10 @@ export const GUEST_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
+export const INBOX_TRIAGE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'inbox-triage',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Inbox Triage',
   kind: 'worker',
   description:
@@ -2373,10 +2373,10 @@ export const INBOX_TRIAGE_APP_0_0_1: AppSpec = {
   ],
 };
 
-export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
+export const LIVE_SHOP_CHAT_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'live-shop-chat',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Live Shop Chat',
   kind: 'chat',
   description:
@@ -2548,10 +2548,10 @@ export const LIVE_SHOP_CHAT_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const MODEL_CHOICE_APP_0_0_2: AppSpec = {
+export const MODEL_CHOICE_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'model-choice',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Model Choice',
   kind: 'decision',
   description:
@@ -2807,10 +2807,10 @@ export const MODEL_CHOICE_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
+export const MONTH_END_CLOSE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'month-end-close',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Month-end Close',
   kind: 'chat',
   description:
@@ -2989,10 +2989,10 @@ export const MONTH_END_CLOSE_APP_0_0_1: AppSpec = {
   ],
 };
 
-export const ORDER_DESK_APP_0_0_1: AppSpec = {
+export const ORDER_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'order-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Order Desk',
   kind: 'chat',
   description:
@@ -3173,10 +3173,10 @@ export const ORDER_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
+export const ORDER_TRACKER_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'order-tracker',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Order Tracker',
   kind: 'chat',
   description:
@@ -3351,10 +3351,10 @@ export const ORDER_TRACKER_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
+export const PIPELINE_REPORT_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'pipeline-report',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Weekly Pipeline Report',
   kind: 'worker',
   description:
@@ -3669,10 +3669,10 @@ export const PIPELINE_REPORT_APP_0_0_1: AppSpec = {
   setup: ["The agent 'cog-sales-pipeline-board-report:0.0.1' is not enabled."],
 };
 
-export const QUOTE_CALCULATOR_APP_0_0_5: AppSpec = {
+export const QUOTE_CALCULATOR_APP_0_0_6: AppSpec = {
   schema: 'loop.app/v1',
   id: 'quote-calculator',
-  version: '0.0.5',
+  version: '0.0.6',
   name: 'Quote Calculator',
   kind: 'widget',
   description:
@@ -3959,10 +3959,10 @@ export const QUOTE_CALCULATOR_APP_0_0_5: AppSpec = {
   setup: [],
 };
 
-export const REPORT_FROM_A_FILE_APP_0_0_4: AppSpec = {
+export const REPORT_FROM_A_FILE_APP_0_0_5: AppSpec = {
   schema: 'loop.app/v1',
   id: 'report-from-a-file',
-  version: '0.0.4',
+  version: '0.0.5',
   name: 'Report from a File',
   kind: 'widget',
   description:
@@ -4254,10 +4254,10 @@ export const REPORT_FROM_A_FILE_APP_0_0_4: AppSpec = {
   setup: [],
 };
 
-export const RETURNS_DESK_APP_0_0_1: AppSpec = {
+export const RETURNS_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'returns-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Returns Desk',
   kind: 'chat',
   description:
@@ -4441,10 +4441,10 @@ export const RETURNS_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SALES_APP_0_0_2: AppSpec = {
+export const SALES_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'sales',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Sales',
   kind: 'chat',
   description:
@@ -4591,10 +4591,10 @@ export const SALES_APP_0_0_2: AppSpec = {
   ],
 };
 
-export const SHIP_OR_FIX_APP_0_0_2: AppSpec = {
+export const SHIP_OR_FIX_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'ship-or-fix',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Ship or Fix',
   kind: 'decision',
   description:
@@ -4819,10 +4819,10 @@ export const SHIP_OR_FIX_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
+export const SHOP_CONCIERGE_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'shop-concierge',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Shop Concierge',
   kind: 'chat',
   description:
@@ -4996,10 +4996,10 @@ export const SHOP_CONCIERGE_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
+export const SHOPPING_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'shopping-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Shopping Desk',
   kind: 'chat',
   description:
@@ -5176,10 +5176,10 @@ export const SHOPPING_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
+export const SIGN_IN_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'sign-in-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Sign-in Desk',
   kind: 'chat',
   description:
@@ -5352,10 +5352,10 @@ export const SIGN_IN_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SIGNED_READER_APP_0_0_1: AppSpec = {
+export const SIGNED_READER_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'signed-reader',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Signed Reader',
   kind: 'chat',
   description:
@@ -5501,10 +5501,10 @@ export const SIGNED_READER_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const SUPPLIER_COMPARISON_APP_0_0_2: AppSpec = {
+export const SUPPLIER_COMPARISON_APP_0_0_3: AppSpec = {
   schema: 'loop.app/v1',
   id: 'supplier-comparison',
-  version: '0.0.2',
+  version: '0.0.3',
   name: 'Supplier Comparison',
   kind: 'decision',
   description:
@@ -5718,10 +5718,10 @@ export const SUPPLIER_COMPARISON_APP_0_0_2: AppSpec = {
   setup: [],
 };
 
-export const SUPPORT_DESK_APP_0_0_4: AppSpec = {
+export const SUPPORT_DESK_APP_0_0_5: AppSpec = {
   schema: 'loop.app/v1',
   id: 'support-desk',
-  version: '0.0.4',
+  version: '0.0.5',
   name: 'Support Desk',
   kind: 'chat',
   description:
@@ -6062,10 +6062,10 @@ export const SUPPORT_DESK_APP_0_0_4: AppSpec = {
   setup: [],
 };
 
-export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
+export const TRAVEL_DESK_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'travel-desk',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Travel Desk',
   kind: 'chat',
   description:
@@ -6225,10 +6225,10 @@ export const TRAVEL_DESK_APP_0_0_1: AppSpec = {
   setup: [],
 };
 
-export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
+export const WEB_RESEARCH_APP_0_0_2: AppSpec = {
   schema: 'loop.app/v1',
   id: 'web-research',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Web Research',
   kind: 'chat',
   description:
@@ -6384,38 +6384,38 @@ export const WEB_RESEARCH_APP_0_0_1: AppSpec = {
 };
 
 export const APP_CATALOGUE: Record<string, AppSpec> = {
-  accounting: ACCOUNTING_APP_0_0_1,
-  'bookkeeping-desk': BOOKKEEPING_DESK_APP_0_0_1,
-  'change-detection': CHANGE_DETECTION_APP_0_0_1,
-  'crop-monitoring': CROP_MONITORING_APP_0_0_1,
-  'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_2,
-  'data-quality': DATA_QUALITY_APP_0_0_2,
-  decide: DECIDE_APP_0_0_1,
-  'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_1,
-  'errand-runner': ERRAND_RUNNER_APP_0_0_1,
-  'event-response': EVENT_RESPONSE_APP_0_0_2,
-  'exchange-desk': EXCHANGE_DESK_APP_0_0_2,
-  'guest-desk': GUEST_DESK_APP_0_0_1,
-  'inbox-triage': INBOX_TRIAGE_APP_0_0_1,
-  'live-shop-chat': LIVE_SHOP_CHAT_APP_0_0_1,
-  'model-choice': MODEL_CHOICE_APP_0_0_2,
-  'month-end-close': MONTH_END_CLOSE_APP_0_0_1,
-  'order-desk': ORDER_DESK_APP_0_0_1,
-  'order-tracker': ORDER_TRACKER_APP_0_0_1,
-  'pipeline-report': PIPELINE_REPORT_APP_0_0_1,
-  'quote-calculator': QUOTE_CALCULATOR_APP_0_0_5,
-  'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_4,
-  'returns-desk': RETURNS_DESK_APP_0_0_1,
-  sales: SALES_APP_0_0_2,
-  'ship-or-fix': SHIP_OR_FIX_APP_0_0_2,
-  'shop-concierge': SHOP_CONCIERGE_APP_0_0_1,
-  'shopping-desk': SHOPPING_DESK_APP_0_0_1,
-  'sign-in-desk': SIGN_IN_DESK_APP_0_0_1,
-  'signed-reader': SIGNED_READER_APP_0_0_1,
-  'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_2,
-  'support-desk': SUPPORT_DESK_APP_0_0_4,
-  'travel-desk': TRAVEL_DESK_APP_0_0_1,
-  'web-research': WEB_RESEARCH_APP_0_0_1,
+  accounting: ACCOUNTING_APP_0_0_2,
+  'bookkeeping-desk': BOOKKEEPING_DESK_APP_0_0_2,
+  'change-detection': CHANGE_DETECTION_APP_0_0_2,
+  'crop-monitoring': CROP_MONITORING_APP_0_0_2,
+  'customer-interview': CUSTOMER_INTERVIEW_APP_0_0_3,
+  'data-quality': DATA_QUALITY_APP_0_0_3,
+  decide: DECIDE_APP_0_0_2,
+  'disaster-assessment': DISASTER_ASSESSMENT_APP_0_0_2,
+  'errand-runner': ERRAND_RUNNER_APP_0_0_2,
+  'event-response': EVENT_RESPONSE_APP_0_0_3,
+  'exchange-desk': EXCHANGE_DESK_APP_0_0_3,
+  'guest-desk': GUEST_DESK_APP_0_0_2,
+  'inbox-triage': INBOX_TRIAGE_APP_0_0_2,
+  'live-shop-chat': LIVE_SHOP_CHAT_APP_0_0_2,
+  'model-choice': MODEL_CHOICE_APP_0_0_3,
+  'month-end-close': MONTH_END_CLOSE_APP_0_0_2,
+  'order-desk': ORDER_DESK_APP_0_0_2,
+  'order-tracker': ORDER_TRACKER_APP_0_0_2,
+  'pipeline-report': PIPELINE_REPORT_APP_0_0_2,
+  'quote-calculator': QUOTE_CALCULATOR_APP_0_0_6,
+  'report-from-a-file': REPORT_FROM_A_FILE_APP_0_0_5,
+  'returns-desk': RETURNS_DESK_APP_0_0_2,
+  sales: SALES_APP_0_0_3,
+  'ship-or-fix': SHIP_OR_FIX_APP_0_0_3,
+  'shop-concierge': SHOP_CONCIERGE_APP_0_0_2,
+  'shopping-desk': SHOPPING_DESK_APP_0_0_2,
+  'sign-in-desk': SIGN_IN_DESK_APP_0_0_2,
+  'signed-reader': SIGNED_READER_APP_0_0_2,
+  'supplier-comparison': SUPPLIER_COMPARISON_APP_0_0_3,
+  'support-desk': SUPPORT_DESK_APP_0_0_5,
+  'travel-desk': TRAVEL_DESK_APP_0_0_2,
+  'web-research': WEB_RESEARCH_APP_0_0_2,
 };
 
 /** An application, by `id` or `id:version`, or undefined. */
@@ -6443,6 +6443,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   accounting: {
     schema: 'loop.app/v1',
     id: 'accounting',
+    version: '0.0.2',
     name: 'Accounting',
     kind: 'chat',
     description:
@@ -6548,6 +6549,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'bookkeeping-desk': {
     schema: 'loop.app/v1',
     id: 'bookkeeping-desk',
+    version: '0.0.2',
     name: 'Bookkeeping Desk',
     kind: 'chat',
     description:
@@ -6682,6 +6684,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'change-detection': {
     schema: 'loop.app/v1',
     id: 'change-detection',
+    version: '0.0.2',
     name: 'Change detection',
     kind: 'chat',
     description:
@@ -6794,6 +6797,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'crop-monitoring': {
     schema: 'loop.app/v1',
     id: 'crop-monitoring',
+    version: '0.0.2',
     name: 'Crop Monitoring',
     kind: 'chat',
     description:
@@ -6911,7 +6915,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'customer-interview': {
     schema: 'loop.app/v1',
     id: 'customer-interview',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Customer Interview',
     kind: 'chat',
     description:
@@ -7100,7 +7104,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'data-quality': {
     schema: 'loop.app/v1',
     id: 'data-quality',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Data Quality Investigation',
     kind: 'decision',
     description:
@@ -7226,6 +7230,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   decide: {
     schema: 'loop.app/v1',
     id: 'decide',
+    version: '0.0.2',
     name: 'Decide',
     kind: 'chat',
     description:
@@ -7308,6 +7313,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'disaster-assessment': {
     schema: 'loop.app/v1',
     id: 'disaster-assessment',
+    version: '0.0.2',
     name: 'Disaster Assessment',
     kind: 'chat',
     description:
@@ -7420,6 +7426,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'errand-runner': {
     schema: 'loop.app/v1',
     id: 'errand-runner',
+    version: '0.0.2',
     name: 'Errand Runner',
     kind: 'chat',
     description:
@@ -7504,7 +7511,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'event-response': {
     schema: 'loop.app/v1',
     id: 'event-response',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Event response',
     kind: 'chat',
     description:
@@ -7597,7 +7604,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'exchange-desk': {
     schema: 'loop.app/v1',
     id: 'exchange-desk',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Exchange Desk',
     kind: 'chat',
     description:
@@ -7697,6 +7704,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'guest-desk': {
     schema: 'loop.app/v1',
     id: 'guest-desk',
+    version: '0.0.2',
     name: 'Guest Desk',
     kind: 'chat',
     description:
@@ -7784,6 +7792,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'inbox-triage': {
     schema: 'loop.app/v1',
     id: 'inbox-triage',
+    version: '0.0.2',
     name: 'Inbox Triage',
     kind: 'worker',
     description:
@@ -7943,6 +7952,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'live-shop-chat': {
     schema: 'loop.app/v1',
     id: 'live-shop-chat',
+    version: '0.0.2',
     name: 'Live Shop Chat',
     kind: 'chat',
     description:
@@ -8044,7 +8054,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'model-choice': {
     schema: 'loop.app/v1',
     id: 'model-choice',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Model Choice',
     kind: 'decision',
     description:
@@ -8227,6 +8237,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'month-end-close': {
     schema: 'loop.app/v1',
     id: 'month-end-close',
+    version: '0.0.2',
     name: 'Month-end Close',
     kind: 'chat',
     description:
@@ -8341,6 +8352,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'order-desk': {
     schema: 'loop.app/v1',
     id: 'order-desk',
+    version: '0.0.2',
     name: 'Order Desk',
     kind: 'chat',
     description:
@@ -8450,6 +8462,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'order-tracker': {
     schema: 'loop.app/v1',
     id: 'order-tracker',
+    version: '0.0.2',
     name: 'Order Tracker',
     kind: 'chat',
     description:
@@ -8552,6 +8565,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'pipeline-report': {
     schema: 'loop.app/v1',
     id: 'pipeline-report',
+    version: '0.0.2',
     name: 'Weekly Pipeline Report',
     kind: 'worker',
     description:
@@ -8816,7 +8830,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'quote-calculator': {
     schema: 'loop.app/v1',
     id: 'quote-calculator',
-    version: '0.0.5',
+    version: '0.0.6',
     name: 'Quote Calculator',
     kind: 'widget',
     description:
@@ -9042,7 +9056,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'report-from-a-file': {
     schema: 'loop.app/v1',
     id: 'report-from-a-file',
-    version: '0.0.4',
+    version: '0.0.5',
     name: 'Report from a File',
     kind: 'widget',
     description:
@@ -9269,6 +9283,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'returns-desk': {
     schema: 'loop.app/v1',
     id: 'returns-desk',
+    version: '0.0.2',
     name: 'Returns Desk',
     kind: 'chat',
     description:
@@ -9382,7 +9397,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   sales: {
     schema: 'loop.app/v1',
     id: 'sales',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Sales',
     kind: 'chat',
     description:
@@ -9466,7 +9481,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'ship-or-fix': {
     schema: 'loop.app/v1',
     id: 'ship-or-fix',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Ship or Fix',
     kind: 'decision',
     description:
@@ -9617,6 +9632,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'shop-concierge': {
     schema: 'loop.app/v1',
     id: 'shop-concierge',
+    version: '0.0.2',
     name: 'Shop Concierge',
     kind: 'chat',
     description:
@@ -9718,6 +9734,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'shopping-desk': {
     schema: 'loop.app/v1',
     id: 'shopping-desk',
+    version: '0.0.2',
     name: 'Shopping Desk',
     kind: 'chat',
     description:
@@ -9836,6 +9853,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'sign-in-desk': {
     schema: 'loop.app/v1',
     id: 'sign-in-desk',
+    version: '0.0.2',
     name: 'Sign-in Desk',
     kind: 'chat',
     description:
@@ -9936,6 +9954,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'signed-reader': {
     schema: 'loop.app/v1',
     id: 'signed-reader',
+    version: '0.0.2',
     name: 'Signed Reader',
     kind: 'chat',
     description:
@@ -10023,7 +10042,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'supplier-comparison': {
     schema: 'loop.app/v1',
     id: 'supplier-comparison',
-    version: '0.0.2',
+    version: '0.0.3',
     name: 'Supplier Comparison',
     kind: 'decision',
     description:
@@ -10159,7 +10178,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'support-desk': {
     schema: 'loop.app/v1',
     id: 'support-desk',
-    version: '0.0.4',
+    version: '0.0.5',
     name: 'Support Desk',
     kind: 'chat',
     description:
@@ -10436,6 +10455,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'travel-desk': {
     schema: 'loop.app/v1',
     id: 'travel-desk',
+    version: '0.0.2',
     name: 'Travel Desk',
     kind: 'chat',
     description:
@@ -10531,6 +10551,7 @@ export const APP_SOURCES: Record<string, Record<string, unknown>> = {
   'web-research': {
     schema: 'loop.app/v1',
     id: 'web-research',
+    version: '0.0.2',
     name: 'Web Research',
     kind: 'chat',
     description:

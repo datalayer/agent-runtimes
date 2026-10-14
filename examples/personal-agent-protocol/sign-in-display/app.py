@@ -48,6 +48,8 @@ app = Application(
         "model view, the page draws the card with the link and the code."
     ),
     kind="chat",
+    # Its interface: the Reactor plugins of agentspecs/ui it is drawn with.
+    ui=[{"plugin": "chat"}],
     agent="example-blank:0.0.1",
     instructions=(
         "Use explain_sign_in_display. Never repeat a sign-in link or code: the "
