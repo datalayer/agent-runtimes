@@ -441,6 +441,9 @@ export function reduceConversation(
           ),
           streaming: false,
         })),
+        // The conversation said again is what this turn says (a resume):
+        // never also said as a wordless answer.
+        1,
       );
     }
 
@@ -518,9 +521,7 @@ export function questionWords(question: ConversationQuestion): string {
 }
 
 /** The fields a form question asks, in order, with their titles: what a native form draws. */
-export function formFieldsOf(
-  schema: Record<string, unknown> | null,
-): {
+export function formFieldsOf(schema: Record<string, unknown> | null): {
   name: string;
   title: string;
   type: string;

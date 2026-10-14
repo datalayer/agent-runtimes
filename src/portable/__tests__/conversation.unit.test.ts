@@ -362,6 +362,26 @@ describe('the conversation a run builds', () => {
     ]);
   });
 
+  it('says nothing more of a resume than the conversation it restores', () => {
+    const state = replay([
+      { type: 'RUN_STARTED' },
+      {
+        type: 'MESSAGES_SNAPSHOT',
+        messages: [{ id: 'u', role: 'user', content: 'Before' }],
+      },
+      { type: 'RUN_FINISHED' },
+    ]);
+    expect(state.items).toEqual([
+      {
+        kind: 'message',
+        id: 'u',
+        role: 'user',
+        text: 'Before',
+        streaming: false,
+      },
+    ]);
+  });
+
   it('refuses a reactor.ui op on the run', () => {
     const state = replay([
       { type: 'RUN_STARTED' },
