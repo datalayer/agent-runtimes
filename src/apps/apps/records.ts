@@ -103,6 +103,34 @@ export function entrySaid(entry: RecordEntry): string {
   return entry.summary || RUN_END_WORDS[runEndOf(entry)] || '';
 }
 
+/**
+ * The mark around what the runtime tells an application of a turn a personal
+ * agent asked over PAP or PACT, before the request (`asked_for_said`,
+ * `ASKED_FOR_TAG` in agent_runtimes.loop.apps.pap_company).
+ */
+export const ASKED_FOR_TAG = 'asked-for';
+
+/**
+ * What a person asked, as they are shown it: without what the runtime told
+ * the application before their words (PAP_DATALAYER, decided 2026-10-14).
+ * The record keeps it for the application's builder; the person never wrote
+ * it, so *Your conversations* and a thread opened again leave it out.
+ */
+export function askedOf(text: string): string {
+  const open = `<${ASKED_FOR_TAG}>`;
+  const close = `</${ASKED_FOR_TAG}>`;
+  if (!text.startsWith(open)) {
+    return text;
+  }
+  const end = text.indexOf(close);
+  if (end < 0) {
+    throw new Error(
+      `What was asked opens <${ASKED_FOR_TAG}> and never closes it.`,
+    );
+  }
+  return text.slice(end + close.length).trimStart();
+}
+
 /** A session in a sentence: how many calls, what stopped it, how it ended. */
 export function sessionSentence(entries: readonly RecordEntry[]): string {
   const calls = entries.filter(entry => entry.kind === 'tool_call').length;

@@ -12,6 +12,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { answerIdOf, sendFeedback } from '../apps/feedback';
 import { openThread, snapshotOfStream, THREAD_WORDS } from '../apps/threads';
+import { askedOf } from '../apps/records';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -110,6 +111,46 @@ describe('a thread opened from the history', () => {
         'data: {"type":"MESSAGES_SNAPSHOT","messages":[1]}\n\ndata: not json\n\n',
       ),
     ).toEqual([1]);
+  });
+});
+
+describe('a turn a personal agent asked (decided 2026-10-14)', () => {
+  const TOLD =
+    '<asked-for>Asked over PAP by the personal agent https://agent.example ' +
+    'for a person signed in here, their account 01JV, who granted it: ' +
+    'orders:read.</asked-for>';
+
+  it("is opened again with the person's words only", async () => {
+    const fetcher = vi.fn(async () =>
+      json(200, {
+        uid: 's-1',
+        messages: [
+          { id: 'm1', role: 'user', content: `${TOLD}\n\nWhere is my order?` },
+          { id: 'm2', role: 'assistant', content: 'Delivered.' },
+        ],
+      }),
+    );
+    const messages = await openThread({
+      agentBaseUrl: 'https://pod.example',
+      agentId: 'desk',
+      uid: 's-1',
+      fetcher,
+    });
+    expect(messages.map(m => [m.role, m.content])).toEqual([
+      ['user', 'Where is my order?'],
+      ['assistant', 'Delivered.'],
+    ]);
+  });
+
+  it('leaves what the person wrote as they wrote it', () => {
+    expect(askedOf('Where is my order?')).toBe('Where is my order?');
+    expect(askedOf(`Quote: ${TOLD}`)).toBe(`Quote: ${TOLD}`);
+    expect(askedOf(`${TOLD}\n\nWhere is my <asked-for> order?`)).toBe(
+      'Where is my <asked-for> order?',
+    );
+    expect(() => askedOf('<asked-for>Asked over PAP')).toThrow(
+      'never closes it',
+    );
   });
 });
 

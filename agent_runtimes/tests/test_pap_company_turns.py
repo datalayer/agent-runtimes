@@ -205,13 +205,13 @@ def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_g
         }
     }
     assert asked_for_said(for_person) == (
-        f"[Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
-        "their account 01ADA, who granted it: profile:read.]"
+        f"<asked-for>Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
+        "their account 01ADA, who granted it: profile:read.</asked-for>"
     )
     alone = {"pact": {"personal_agent": ISSUER, "person": None, "scopes": []}}
     assert asked_for_said(alone) == (
-        f"[Asked over PACT by the personal agent {ISSUER}, as itself: "
-        "no person signed in here, so it holds no permission for anyone.]"
+        f"<asked-for>Asked over PACT by the personal agent {ISSUER}, as itself: "
+        "no person signed in here, so it holds no permission for anyone.</asked-for>"
     )
     # Nothing said for a message that is not a business's turn, or names no personal agent.
     assert (
@@ -235,8 +235,8 @@ def test_under_profile_read_a_business_is_told_the_persons_handle_and_name() -> 
         }
     }
     assert asked_for_said(granted) == (
-        f"[Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
-        "their account 01ADA (@ada, Ada Lovelace), who granted it: profile:read.]"
+        f"<asked-for>Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
+        "their account 01ADA (@ada, Ada Lovelace), who granted it: profile:read.</asked-for>"
     )
     not_granted = {"pact": {**granted["pact"], "scopes": ["trips:read"]}}
     assert "@ada" not in asked_for_said(not_granted)
@@ -287,13 +287,13 @@ def test_a_turn_asked_of_its_company_says_who_asks_for_whom_and_what_was_granted
         }
     }
     assert asked_for_said(signed_in) == (
-        f"[Asked over PAP by the personal agent {ISSUER} for a person signed in here, "
-        "their account acc-1, who granted it: orders:read, orders:write.]"
+        f"<asked-for>Asked over PAP by the personal agent {ISSUER} for a person signed in here, "
+        "their account acc-1, who granted it: orders:read, orders:write.</asked-for>"
     )
     signed_out = {"pap": {"account": None, "client_id": ISSUER}}
     assert asked_for_said(signed_out) == (
-        f"[Asked over PAP by the personal agent {ISSUER}, as itself: "
-        "no person signed in here, so it holds no permission for anyone.]"
+        f"<asked-for>Asked over PAP by the personal agent {ISSUER}, as itself: "
+        "no person signed in here, so it holds no permission for anyone.</asked-for>"
     )
 
 

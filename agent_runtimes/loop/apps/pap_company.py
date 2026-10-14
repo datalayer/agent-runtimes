@@ -77,6 +77,17 @@ def pap_turn_of(meta: Any) -> Optional[PapTurn]:
 PACT_META_KEY = "pact"
 
 
+#: The mark around what the runtime tells the application of a turn a personal
+#: agent asked (``asked_for_said``): kept in the record for its builder, never
+#: shown to the person — the chat and *Your conversations* leave it out by it
+#: (``askedOf``, agent-runtimes ``src/apps/apps/records.ts``; decided 2026-10-14).
+ASKED_FOR_TAG = "asked-for"
+
+
+def _marked(said: str) -> str:
+    return f"<{ASKED_FOR_TAG}>{said}</{ASKED_FOR_TAG}>"
+
+
 #: The scope under which a PACT business is told who the person is (decided 2026-10-13).
 PACT_PROFILE_SCOPE = "profile:read"
 
@@ -90,7 +101,9 @@ def _profile_said(ours: Mapping[str, Any], scopes: list[str]) -> str:
     handle, name = profile.get("handle"), profile.get("name")
     if not isinstance(handle, str) or not handle:
         return ""
-    return f" (@{handle}, {name})" if isinstance(name, str) and name else f" (@{handle})"
+    return (
+        f" (@{handle}, {name})" if isinstance(name, str) and name else f" (@{handle})"
+    )
 
 
 def asked_for_said(meta: Any) -> str:
@@ -102,7 +115,8 @@ def asked_for_said(meta: Any) -> str:
     the personal agent's issuer, the person's Datalayer account once they
     signed in, what they granted, and under ``profile:read`` their handle and
     display name). The application is told so before the
-    request, in a line of its own, and decides what to answer under its own
+    request, in a line of its own marked ``ASKED_FOR_TAG`` (the person is never
+    shown it: decided 2026-10-14), and decides what to answer under its own
     instructions — found on r1, 13 October 2026: never told, *Guest Desk*
     answered a person who had signed in and granted ``profile:read`` that
     nobody had, and *Exchange Desk* asked a signed-in person to sign in.
@@ -129,17 +143,17 @@ def asked_for_said(meta: Any) -> str:
             continue
         person = ours.get(person_field)
         if not isinstance(person, str) or not person:
-            return (
-                f"[Asked over {protocol} by the personal agent {agent}, as itself: "
-                "no person signed in here, so it holds no permission for anyone.]"
+            return _marked(
+                f"Asked over {protocol} by the personal agent {agent}, as itself: "
+                "no person signed in here, so it holds no permission for anyone."
             )
         scopes = [scope for scope in ours.get("scopes") or [] if isinstance(scope, str)]
         granted = ", ".join(scopes) if scopes else "nothing"
         where = "with Datalayer" if key == PACT_META_KEY else "here"
         who = _profile_said(ours, scopes) if key == PACT_META_KEY else ""
-        return (
-            f"[Asked over {protocol} by the personal agent {agent} for a person signed in "
-            f"{where}, their account {person}{who}, who granted it: {granted}.]"
+        return _marked(
+            f"Asked over {protocol} by the personal agent {agent} for a person signed in "
+            f"{where}, their account {person}{who}, who granted it: {granted}."
         )
     return ""
 

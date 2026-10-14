@@ -28,6 +28,7 @@
 import type { ChatMessage } from '../../types/messages';
 import { windowTurnErrorOf } from '../../chat/base/loopWindow';
 import { AGUI_NAME } from '@datalayer/reactor/ui';
+import { askedOf } from '../apps/records';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
@@ -164,7 +165,14 @@ export function messagesOfThread(messages: unknown): ChatMessage[] {
       typeof content === 'string' &&
       content.trim()
     ) {
-      drawn.push({ id, role, content, createdAt: new Date() });
+      // A turn a personal agent asked: what the runtime told the application
+      // before the person's words is never shown to them (decided 2026-10-14).
+      drawn.push({
+        id,
+        role,
+        content: role === 'user' ? askedOf(content) : content,
+        createdAt: new Date(),
+      });
     }
   }
   return drawn;
