@@ -59,6 +59,8 @@ import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
+import { askedOf } from '../../apps/apps/records';
+import { extractChatMessagesFromFullContext } from './fullContextMessages';
 import {
   generateMessageId,
   createUserMessage,
@@ -550,116 +552,6 @@ function formatToolResultFallback(result: unknown): string {
   } catch {
     return 'Tool completed successfully.';
   }
-}
-
-function extractChatMessagesFromFullContext(
-  fullContext: Record<string, unknown> | null,
-): ChatMessage[] {
-  if (!fullContext) {
-    return [];
-  }
-
-  const rawMessages = Array.isArray(fullContext.messages)
-    ? (fullContext.messages as Array<Record<string, unknown>>)
-    : [];
-
-  return rawMessages
-    .map((msg, index) => {
-      const role = String(msg.role || '').toLowerCase();
-
-      const timestampValue =
-        typeof msg.timestamp === 'string' && msg.timestamp.length > 0
-          ? msg.timestamp
-          : new Date().toISOString();
-      const createdAtRaw = new Date(timestampValue);
-      const createdAt = Number.isNaN(createdAtRaw.getTime())
-        ? new Date()
-        : createdAtRaw;
-
-      const rawContent =
-        typeof msg.content === 'string'
-          ? msg.content
-          : JSON.stringify(msg.content ?? '');
-
-      const isToolCall = Boolean(msg.isToolCall);
-      const isToolResult = Boolean(msg.isToolResult);
-      const toolCallId =
-        typeof msg.toolCallId === 'string' && msg.toolCallId.length > 0
-          ? msg.toolCallId
-          : undefined;
-      const toolName =
-        typeof msg.toolName === 'string' && msg.toolName.length > 0
-          ? msg.toolName
-          : undefined;
-
-      // Tool-call turns arrive as assistant messages whose `content` is the
-      // JSON-encoded tool arguments. Reconstruct a structured `toolCalls`
-      // entry so it renders as a tool card (matching the live stream) instead
-      // of leaking raw JSON into the transcript.
-      if (isToolCall) {
-        let args: Record<string, unknown> = {};
-        if (rawContent) {
-          try {
-            const parsed = JSON.parse(rawContent);
-            if (
-              parsed &&
-              typeof parsed === 'object' &&
-              !Array.isArray(parsed)
-            ) {
-              args = parsed as Record<string, unknown>;
-            }
-          } catch {
-            args = {};
-          }
-        }
-        const resolvedToolCallId = toolCallId || `history-tc-${index}`;
-        return {
-          id: `history-toolcall-${index}-${timestampValue}`,
-          role: 'assistant',
-          content: '',
-          createdAt,
-          toolCalls: [
-            {
-              type: 'tool-call',
-              toolCallId: resolvedToolCallId,
-              toolName: toolName || 'tool',
-              args,
-              status: 'completed',
-            },
-          ],
-        } as ChatMessage;
-      }
-
-      // Tool results arrive as `role: 'tool'` messages; keep them (with the
-      // matching toolCallId) so `convertHistoryToDisplayItems` can merge the
-      // result into its tool card.
-      if (isToolResult || role === 'tool') {
-        return {
-          id: `history-toolresult-${index}-${timestampValue}`,
-          role: 'tool',
-          content: rawContent,
-          createdAt,
-          metadata: {
-            toolCallId,
-            toolName,
-          },
-        } as ChatMessage;
-      }
-
-      // Only hydrate conversational turns in the visible history.
-      // System messages may contain internal prompts and metadata.
-      if (role !== 'user' && role !== 'assistant') {
-        return null;
-      }
-
-      return {
-        id: `history-${role}-${index}-${timestampValue}`,
-        role,
-        content: rawContent,
-        createdAt,
-      } as ChatMessage;
-    })
-    .filter((m): m is ChatMessage => m !== null);
 }
 
 function parseEnabledMcpToolsByServer(
@@ -5145,7 +5037,9 @@ function ChatBaseInner({
       promptCommands={promptCommands}
       // The runtime's memory of what was sent to this agent, for the arrow
       // keys — part of the same initial state as the models and tools.
-      promptHistory={configQuery.data?.promptHistory}
+      // Without what the runtime told the application before a personal
+      // agent's request (`askedOf`): the person never wrote it.
+      promptHistory={configQuery.data?.promptHistory?.map(askedOf)}
       showTokenUsage={showTokenUsage}
       showContextRing={showContextRing}
       agentUsage={agentUsage}
