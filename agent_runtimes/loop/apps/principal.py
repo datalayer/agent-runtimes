@@ -447,7 +447,9 @@ def preview_grants(app: Any) -> dict[str, Any]:
     pap = app.pap.model_dump(mode="json", by_alias=True, exclude_none=True)
     pact = app.pact.model_dump(mode="json", by_alias=True, exclude_none=True)
     commerce = app.commerce.model_dump(mode="json", by_alias=True, exclude_none=True)
-    signed_fetch = app.signed_fetch.model_dump(mode="json", by_alias=True, exclude_none=True)
+    signed_fetch = app.signed_fetch.model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    )
     return {
         "permissions": app.permissions.model_dump(mode="json"),
         "pap": {"connections": pap.get("connections") or []},

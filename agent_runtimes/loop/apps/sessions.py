@@ -206,7 +206,9 @@ def owner_of(caller: Caller) -> Tuple[str, str, str]:
     return (caller.kind, caller.uid, caller.visit)
 
 
-def given_files(raw: Any, *, scope: str, owner: Tuple[str, str, str]) -> List[UploadedFile]:
+def given_files(
+    raw: Any, *, scope: str, owner: Tuple[str, str, str]
+) -> List[UploadedFile]:
     """The files a run names, by the refs their upload answered (REACTOR_UI
     RU-6): each read back from `UI_FILES`, for whoever uploaded it in this
     conversation. A file's bytes never ride in the run.

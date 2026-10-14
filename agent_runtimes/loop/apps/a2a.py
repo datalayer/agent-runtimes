@@ -524,7 +524,9 @@ class A2AGate:
             # The deployment's own principal, as ai-agents sends it a company's
             # turn (PAP_DATALAYER B-04): only the principal this runtime acts as,
             # for the same deployment grant; any other principal is refused.
-            from agent_runtimes.loop.apps.principal import is_held_principal  # noqa: PLC0415
+            from agent_runtimes.loop.apps.principal import (
+                is_held_principal,  # noqa: PLC0415
+            )
 
             if is_held_principal(claims):
                 return None

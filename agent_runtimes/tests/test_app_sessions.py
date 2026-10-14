@@ -155,9 +155,7 @@ def uploaded(
     refs: List[Dict[str, Any]] = []
     for given in files:
         head, _, body = given["data_url"].partition(",")
-        content = (
-            base64.b64decode(body) if head.endswith(";base64") else body.encode()
-        )
+        content = base64.b64decode(body) if head.endswith(";base64") else body.encode()
         answer = client.post(
             f"/api/v1/apps/agents/{agent}/files",
             content=content,
@@ -703,7 +701,13 @@ def test_without_a_shell_a_text_file_goes_in_the_message_and_anything_else_is_re
         local,
         "notes-assistant",
         "session-0099",
-        [{"name": "y.txt", "type": "text/plain", "data_url": data_url(b"y", "text/plain")}],
+        [
+            {
+                "name": "y.txt",
+                "type": "text/plain",
+                "data_url": data_url(b"y", "text/plain"),
+            }
+        ],
     )
     unknown = local.post(
         url, json=_page_run("session-0003", "run-5", "This.", [elsewhere])
@@ -1230,7 +1234,9 @@ def test_report_from_a_file_takes_its_file_from_the_page(
 
     # Run without a file: it asks, the stream ends on the question, and the
     # file given next answers it.
-    asked = events_of(local.post(url, json=_page_run("session-0007", "run-2", "Again", [])))
+    asked = events_of(
+        local.post(url, json=_page_run("session-0007", "run-2", "Again", []))
+    )
     # The run ends on the question, its result saying what it asks; the
     # question is a display on the ui socket (REACTOR_UI RU-4).
     assert asked[-1]["type"] == "RUN_FINISHED"
@@ -1624,7 +1630,8 @@ def test_a_test_that_is_a_conversation_is_played_on_the_session_api(
     was answered — a choice in its option's words, a message, an action by its
     name with its payload — as its page sends them; its code answers, and its
     record is kept under that session."""
-    from agentspecs.apps import dump_app, get_app as spec_of
+    from agentspecs.apps import dump_app
+    from agentspecs.apps import get_app as spec_of
 
     from agent_runtimes.client import agent_client
 
@@ -1711,7 +1718,8 @@ def test_a_conversation_declined_is_answered_and_a_wrong_turn_refused(
     """STUDIO E-01: the decline answers the consent it asks, and what it says
     after is its code's; a turn that is not one thing is refused before
     anything is sent."""
-    from agentspecs.apps import dump_app, get_app as spec_of
+    from agentspecs.apps import dump_app
+    from agentspecs.apps import get_app as spec_of
 
     from agent_runtimes.client import agent_client
 

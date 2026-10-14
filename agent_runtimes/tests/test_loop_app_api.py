@@ -457,7 +457,9 @@ async def test_a_press_its_model_refuses_never_reaches_its_handler():
         "Input should be greater than or equal to 1",
     ):
         await host.action(session, "price", {"values": {"seats": 0}})
-    with pytest.raises(ValueError, match="clear' was pressed with what it does not take"):
+    with pytest.raises(
+        ValueError, match="clear' was pressed with what it does not take"
+    ):
         await host.action(session, "clear", {"secret": "x"})
     await host.action(session, "price", {"values": {"seats": 2}})
     await host.action(session, "clear")

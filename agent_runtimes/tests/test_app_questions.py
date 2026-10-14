@@ -231,16 +231,20 @@ async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
     """REACTOR_UI RU-6: a file question offers reactor.answer as any other; its
     value is the ref the upload answered, read back for whoever uploaded it in
     this conversation, held to the question's kinds."""
-    live, got, _ = await asking(
-        "session-ask-6", FileQuestion("Which file?", (".csv",))
-    )
+    live, got, _ = await asking("session-ask-6", FileQuestion("Which file?", (".csv",)))
     display = asked_display(live)
     assert [offer["name"] for offer in display["actions"]] == [ANSWER_ACTION]
     owner = sessions.owner_of(ADA)
-    csv = sessions.UI_FILES.put("session-ask-6", owner, "orders.csv", "text/csv", b"a\n1\n")
+    csv = sessions.UI_FILES.put(
+        "session-ask-6", owner, "orders.csv", "text/csv", b"a\n1\n"
+    )
     png = sessions.UI_FILES.put("session-ask-6", owner, "a.png", "image/png", b"x")
     bobs = sessions.UI_FILES.put(
-        "session-ask-6", sessions.owner_of(Caller(kind="person", uid="bob")), "b.csv", "text/csv", b"b"
+        "session-ask-6",
+        sessions.owner_of(Caller(kind="person", uid="bob")),
+        "b.csv",
+        "text/csv",
+        b"b",
     )
     # Bytes in the press, another's file, a kind it did not ask: refused, still waiting.
     for value, status in (
@@ -257,7 +261,11 @@ async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
     events = await answered(live, "k-ok")
     assert events[0]["type"] == "RUN_STARTED"
     [file] = got
-    assert (file.name, file.media_type, file.content) == ("orders.csv", "text/csv", b"a\n1\n")
+    assert (file.name, file.media_type, file.content) == (
+        "orders.csv",
+        "text/csv",
+        b"a\n1\n",
+    )
     assert live.describe()["files"][-1]["name"] == "orders.csv"
     patch = sessions.UI_HUB.ops(live.uid)[-1].op.model_dump(mode="json")
     assert patch["body"][1] == {"op": "replace", "path": "/actions", "value": []}

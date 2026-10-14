@@ -2358,8 +2358,12 @@ class AppPairSpec(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str = Field(..., description="The pair's id, the same on both of its applications")
-    role: Literal["business", "personal_agent"] = Field(..., description="Which side of the pair it is")
+    id: str = Field(
+        ..., description="The pair's id, the same on both of its applications"
+    )
+    role: Literal["business", "personal_agent"] = Field(
+        ..., description="Which side of the pair it is"
+    )
 
 
 class AppA2AExtensionSpec(BaseModel):
@@ -3870,6 +3874,12 @@ class SceneSpec(BaseModel):
         default=None,
         description="The last rehearsal played on Datalayer, what *Live* is read from",
     )
-    actors: List[SceneActorSpec] = Field(default_factory=list, description="A scripted scene's actors")
-    lines: List[SceneLineSpec] = Field(default_factory=list, description="A scripted scene's lines")
-    live: str = Field(default="", description="A scripted scene: what of it runs on Datalayer today")
+    actors: List[SceneActorSpec] = Field(
+        default_factory=list, description="A scripted scene's actors"
+    )
+    lines: List[SceneLineSpec] = Field(
+        default_factory=list, description="A scripted scene's lines"
+    )
+    live: str = Field(
+        default="", description="A scripted scene: what of it runs on Datalayer today"
+    )

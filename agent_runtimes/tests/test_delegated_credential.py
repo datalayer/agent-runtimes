@@ -317,12 +317,21 @@ class TestAnApplicationsRunOverA2AReachesItsCompanies:
         monkeypatch.setattr(adapter, "_get_runtime_toolsets_async", process_toolsets)
         app = SimpleNamespace(
             pap=SimpleNamespace(
-                connections=[{"id": "shop", "company": "manzanita.example", "access": "write", "as": "owner"}]
+                connections=[
+                    {
+                        "id": "shop",
+                        "company": "manzanita.example",
+                        "access": "write",
+                        "as": "owner",
+                    }
+                ]
             ),
             pact=None,
             commerce=None,
         )
-        remember_app_instance("agent-kept", {"app_uid": "01APP", "deployment_uid": "dep-kept"})
+        remember_app_instance(
+            "agent-kept", {"app_uid": "01APP", "deployment_uid": "dep-kept"}
+        )
         pap_connections.remember_agent("agent-kept", app)
         principal.give_principal_token("dep-kept", "principal-token", expires_in=3600)
         try:
@@ -330,7 +339,9 @@ class TestAnApplicationsRunOverA2AReachesItsCompanies:
                 event
                 async for event in adapter.stream(
                     "Has my jacket arrived?",
-                    AgentContext(session_id="s1", metadata={"user_token": "company-turn-token"}),
+                    AgentContext(
+                        session_id="s1", metadata={"user_token": "company-turn-token"}
+                    ),
                 )
             ]
         finally:
@@ -338,5 +349,8 @@ class TestAnApplicationsRunOverA2AReachesItsCompanies:
             pap_connections.forget()
             principal.forget_principal_token("dep-kept")
         [company] = agent.calls[0]["toolsets"]
-        assert company.wrapped.id == "pap_manzanita_example" and company.prefix == "pap_manzanita_example"
+        assert (
+            company.wrapped.id == "pap_manzanita_example"
+            and company.prefix == "pap_manzanita_example"
+        )
         assert seen == [{"Authorization": "Bearer principal-token"}]

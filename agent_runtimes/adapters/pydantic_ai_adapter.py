@@ -550,7 +550,9 @@ class PydanticAIAdapter(BaseAgent):
             # And the tools of its code, when it is written in Python (LOOP
             # R-14): a session adds them itself, a run over A2A only here.
             own = agent_code_toolset(self._agent_id)
-            gateway = await gateway_toolsets_of_the_run(self._agent_id, toolsets, user_token)
+            gateway = await gateway_toolsets_of_the_run(
+                self._agent_id, toolsets, user_token
+            )
             return [*gateway, own] if own is not None else gateway
         if user_token:
             from ..mcp.datalayer_gateway import toolsets_for_the_run

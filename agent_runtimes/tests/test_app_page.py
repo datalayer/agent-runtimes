@@ -380,10 +380,7 @@ def live_of(application: Optional[Application], spec: Any = None) -> Any:
 
 async def test_over_the_session_api_its_page_run_answers_a_loop_page_event() -> None:
     live = live_of(quote_app())
-    chunks = [
-        chunk
-        async for chunk in live.run_page({"seats": 2})
-    ]
+    chunks = [chunk async for chunk in live.run_page({"seats": 2})]
     events = _events(chunks)
     assert [event["type"] for event in events] == [
         "RUN_STARTED",

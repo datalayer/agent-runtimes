@@ -121,7 +121,9 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
     """R-01: the Rules evaluator decides a company's tool, and the record keeps the inputs the
     runtime holds — the company, its protocol, the connection's level and in whose account it
     acts, whether that level gives the tool — beside what it does, the Rule and the narrowest
@@ -131,7 +133,9 @@ async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(mo
     spec = app()
     pap_connections.remember_agent("agent-r01", spec)
     harness = Harness(spec)
-    await harness.call("pap_manzanita_example_pap_ask", {"message": "Where is my order?"})
+    await harness.call(
+        "pap_manzanita_example_pap_ask", {"message": "Where is my order?"}
+    )
     enforced = harness.recorded[-1]
     assert dict(enforced.inputs) == {
         "server": "pap_manzanita_example",
@@ -165,7 +169,9 @@ async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(mo
     monkeypatch.setattr(
         tracing,
         "trace_headers",
-        lambda: {"traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+        lambda: {
+            "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+        },
     )
     added.clear()
     recorder.decided(enforced)
@@ -272,13 +278,18 @@ def test_a_pact_business_is_the_gateways_pact_toolset_in_the_persons_name() -> N
     companies = pap_connections.companies_of_agent("agent-6")
     assert companies == (("pact_air_examples_datalayer_run", "user"),)
     assert pap_connections.protocol_of("pact_air_examples_datalayer_run") == "pact"
-    assert pap_connections.domain_of("pact_air_examples_datalayer_run") == "air.examples.datalayer.run"
+    assert (
+        pap_connections.domain_of("pact_air_examples_datalayer_run")
+        == "air.examples.datalayer.run"
+    )
     (built,) = toolsets_for_the_run(
         [], "principal-token", users_token="person-token", companies=companies
     )
     assert built.prefix == "pact_air_examples_datalayer_run"
     transport = built.wrapped.client.transport
-    assert transport.url.endswith("/mcp?only=pact&pact-brand=air.examples.datalayer.run")
+    assert transport.url.endswith(
+        "/mcp?only=pact&pact-brand=air.examples.datalayer.run"
+    )
     assert (
         transport.httpx_client_factory().headers["authorization"]
         == "Bearer person-token"
@@ -295,14 +306,19 @@ async def test_the_rules_decide_a_businesss_pact_tools_by_what_they_do() -> None
         "message": "When is my flight?"
     }
     assert harness.recorded[-1].decision.classes == ("read",)
-    assert pap_connections.classes_of("pact_air_examples_datalayer_run_pact_ask_for_person") == (
-        "write",
-    )
+    assert pap_connections.classes_of(
+        "pact_air_examples_datalayer_run_pact_ask_for_person"
+    ) == ("write",)
     # A PAP tool's name under a PACT server is no tool of it.
-    assert pap_connections.classes_of("pact_air_examples_datalayer_run_pap_confirm") is None
+    assert (
+        pap_connections.classes_of("pact_air_examples_datalayer_run_pap_confirm")
+        is None
+    )
     # The level of its connection decides what is given.
     access = spec.pact.connections[0].get("access") or "read"
-    given = harness.capability.given("pact_air_examples_datalayer_run_pact_ask_for_person")
+    given = harness.capability.given(
+        "pact_air_examples_datalayer_run_pact_ask_for_person"
+    )
     assert given is (access == "write")
     assert harness.capability.given("pact_air_examples_datalayer_run_pact_ask") is True
 
@@ -311,7 +327,10 @@ def test_a_pact_server_is_named_apart_from_a_pap_one() -> None:
     assert pap_connections.server_id("air.example", "pact") == "pact_air_example"
     assert pap_connections.server_id("air.example") == "pap_air_example"
     assert pap_connections.server_id("store.example", "ucp") == "ucp_store_example"
-    assert pap_connections.server_id("verify.example", "signed-fetch") == "signed_fetch_verify_example"
+    assert (
+        pap_connections.server_id("verify.example", "signed-fetch")
+        == "signed_fetch_verify_example"
+    )
     with pytest.raises(ValueError, match="no gateway toolset"):
         pap_connections.server_id("air.example", "tap")
 
@@ -340,7 +359,9 @@ def test_a_merchant_is_the_gateways_commerce_toolset_in_the_persons_name() -> No
         [], "principal-token", users_token="person-token", companies=companies
     )
     urls = sorted(each.wrapped.client.transport.url for each in built)
-    assert urls[0].endswith("/mcp?only=acp&acp-merchant=outfitters.examples.datalayer.run")
+    assert urls[0].endswith(
+        "/mcp?only=acp&acp-merchant=outfitters.examples.datalayer.run"
+    )
     assert urls[1].endswith("/mcp?only=ucp&ucp-merchant=store.examples.datalayer.run")
 
 
@@ -351,9 +372,13 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
     that only reads buys nothing."""
     spec = shop()
     pap_connections.remember_agent("agent-9", spec)
-    assert pap_connections.classes_of("ucp_store_examples_datalayer_run_ucp_complete") == ("buy",)
+    assert pap_connections.classes_of(
+        "ucp_store_examples_datalayer_run_ucp_complete"
+    ) == ("buy",)
     assert pap_connections.is_purchase("ucp_store_examples_datalayer_run_ucp_complete")
-    assert not pap_connections.is_purchase("ucp_store_examples_datalayer_run_ucp_search")
+    assert not pap_connections.is_purchase(
+        "ucp_store_examples_datalayer_run_ucp_search"
+    )
     for behaviour in ("do_it", "ask_first", "if_asked"):
         decided = spec.model_copy(
             update={
@@ -366,13 +391,27 @@ async def test_a_purchase_is_always_asked_by_the_gateway_never_twice() -> None:
         pap_connections.remember_agent("agent-9", decided)
         harness = Harness(decided)
         args = {"checkout_id": "chk_1"}
-        assert await harness.call("ucp_store_examples_datalayer_run_ucp_complete", args) == args
+        assert (
+            await harness.call("ucp_store_examples_datalayer_run_ucp_complete", args)
+            == args
+        )
         assert harness.asked == []
         assert harness.recorded[-1].decision.because == "the_gateway_asks_the_person"
     harness = Harness(spec)
-    assert harness.capability.given("ucp_store_examples_datalayer_run_ucp_complete") is True
-    assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_complete") is False
-    assert harness.capability.given("acp_outfitters_examples_datalayer_run_acp_get_checkout") is True
+    assert (
+        harness.capability.given("ucp_store_examples_datalayer_run_ucp_complete")
+        is True
+    )
+    assert (
+        harness.capability.given("acp_outfitters_examples_datalayer_run_acp_complete")
+        is False
+    )
+    assert (
+        harness.capability.given(
+            "acp_outfitters_examples_datalayer_run_acp_get_checkout"
+        )
+        is True
+    )
 
 
 def reader() -> AppSpec:
@@ -380,11 +419,16 @@ def reader() -> AppSpec:
     return APP_CATALOGUE["signed-reader"].model_copy(deep=True)
 
 
-def test_a_site_read_signed_is_the_gateways_signed_fetch_toolset_in_the_persons_name() -> None:
+def test_a_site_read_signed_is_the_gateways_signed_fetch_toolset_in_the_persons_name() -> (
+    None
+):
     pap_connections.remember_agent("agent-10", reader())
     companies = pap_connections.companies_of_agent("agent-10")
     assert companies == (("signed_fetch_verify_examples_datalayer_run", "user"),)
-    assert pap_connections.protocol_of("signed_fetch_verify_examples_datalayer_run") == "signed-fetch"
+    assert (
+        pap_connections.protocol_of("signed_fetch_verify_examples_datalayer_run")
+        == "signed-fetch"
+    )
     assert (
         pap_connections.domain_of("signed_fetch_verify_examples_datalayer_run")
         == "verify.examples.datalayer.run"

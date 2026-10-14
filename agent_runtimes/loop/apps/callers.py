@@ -258,7 +258,11 @@ class CallerVerifier:
             if agent and agent == str(claims.get("sub") or ""):
                 # A principal's own token — an application's, as a deployment
                 # acts (LOOP I-03) — is nobody's: never let through as a person.
-                caller = Caller(kind="principal", uid=agent, app_uid=str(claims.get("app_uid") or ""))
+                caller = Caller(
+                    kind="principal",
+                    uid=agent,
+                    app_uid=str(claims.get("app_uid") or ""),
+                )
             else:
                 caller = Caller(
                     kind="person",

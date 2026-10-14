@@ -238,7 +238,9 @@ def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
     `ui_plugin` (it is `ui` now, AGENT_PROTOCOLS PS-03)."""
     if "ui_plugin" in spec:
-        raise SystemExit(f"Error: {path} says `ui_plugin`: the field is `ui`, one of agentspecs/ui")
+        raise SystemExit(
+            f"Error: {path} says `ui_plugin`: the field is `ui`, one of agentspecs/ui"
+        )
     if "tools" in spec:
         raise SystemExit(
             f"Error: {path} says `tools`: the field is `backend_tools` — the tools "
@@ -305,7 +307,9 @@ def load_protocol_ids(specs_dir: Path) -> set[str]:
     return ids
 
 
-def check_protocols(specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]) -> None:
+def check_protocols(
+    specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[str]
+) -> None:
     """Refuse an agent whose `protocols` is not a list of the catalogue's ids, each once (PS-02)."""
     problems = []
     for _, spec in specs:
@@ -313,11 +317,15 @@ def check_protocols(specs: List[tuple[str, Dict[str, Any]]], protocol_ids: set[s
         if said is None:
             continue
         if not isinstance(said, list) or len(set(map(str, said))) != len(said):
-            problems.append(f"{spec.get('id')}: protocols is a list of protocol ids, each once")
+            problems.append(
+                f"{spec.get('id')}: protocols is a list of protocol ids, each once"
+            )
             continue
         unknown = [str(p) for p in said if str(p) not in protocol_ids]
         if unknown:
-            problems.append(f"{spec.get('id')}: protocols names what the catalogue does not know: {', '.join(unknown)}")
+            problems.append(
+                f"{spec.get('id')}: protocols names what the catalogue does not know: {', '.join(unknown)}"
+            )
     if problems:
         raise SystemExit("\n".join(problems))
 

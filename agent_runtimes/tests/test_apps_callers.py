@@ -72,7 +72,9 @@ def test_a_principals_own_token_is_a_principal_never_a_person() -> None:
     then a principal: a route for a person refuses it (PAP_DATALAYER B-04)."""
     platform = Platform()
     verifier = CallerVerifier(fetch=platform)
-    caller = asyncio.run(verifier.verify(token(sub="01P", agent_uid="01P", app_uid="01APP")))
+    caller = asyncio.run(
+        verifier.verify(token(sub="01P", agent_uid="01P", app_uid="01APP"))
+    )
     assert (caller.kind, caller.uid, caller.app_uid) == ("principal", "01P", "01APP")
     assert platform.asked == ["http://iam/api/iam/v1/whoami"]
     # A person's token acting through an agent stays the person's.

@@ -209,7 +209,9 @@ async def explain_direct_sign_in_lifecycle() -> dict[str, Any]:
         "callback_and_code_withheld": True,
         "assertions_and_proofs_withheld": True,
         "session_and_account_tokens_withheld": True,
-        "account_token_stored_by_reference": getattr(result, "account_token_reference", None)
+        "account_token_stored_by_reference": getattr(
+            result, "account_token_reference", None
+        )
         in security.tokens.values,
         "account_token_not_in_result": result.token.refresh_token is None,
     }

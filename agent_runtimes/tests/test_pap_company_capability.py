@@ -292,7 +292,9 @@ def test_a_local_company_gives_no_standing_permission() -> None:
         allows=allows,
         summary="Pay up to {maximum}, {uses} times, for {days} days",
     )
-    with pytest.raises(ValueError, match="gives no standing permission: payments.allow"):
+    with pytest.raises(
+        ValueError, match="gives no standing permission: payments.allow"
+    ):
         PapCompanyCapability(
             name="X",
             domain=DOMAIN,

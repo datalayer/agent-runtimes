@@ -96,17 +96,17 @@ from agent_runtimes.loop.apps.host_user import (
 )
 from agent_runtimes.loop.apps.pap_company import performs, propose
 from agent_runtimes.loop.apps.pap_connections import (
-    classes_of as company_classes,
-)
-from agent_runtimes.loop.apps.pap_connections import (
-    connection_actions as company_actions,
-)
-from agent_runtimes.loop.apps.pap_connections import (
     acts_as,
     connections_of,
     domain_of,
     is_purchase,
     pap_tool,
+)
+from agent_runtimes.loop.apps.pap_connections import (
+    classes_of as company_classes,
+)
+from agent_runtimes.loop.apps.pap_connections import (
+    connection_actions as company_actions,
 )
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,

@@ -19,8 +19,8 @@ import json
 from typing import Any, Dict, List, Tuple
 
 import pytest
-from pydantic import BaseModel
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from starlette.websockets import WebSocketDisconnect
 
 from agent_runtimes.loop.apps import AppHost, Application, sessions

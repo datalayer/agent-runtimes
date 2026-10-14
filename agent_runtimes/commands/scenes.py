@@ -254,7 +254,11 @@ def scenes_ls(
     """The scenes of the catalogue: faces, members, setup, and whether each is Live."""
     module = _require_scenes()
     # The teams staged live: a scripted scene is played as written on its page (PAP_DATALAYER X-02).
-    scenes = [scene for scene in module.list_scenes() if getattr(scene.kind, "value", scene.kind) != "scripted"]
+    scenes = [
+        scene
+        for scene in module.list_scenes()
+        if getattr(scene.kind, "value", scene.kind) != "scripted"
+    ]
     if as_json:
         typer.echo(
             json.dumps(
@@ -509,7 +513,9 @@ def scenes_rehearse(
     scene = scene_of(scene_name)
     if getattr(getattr(scene, "kind", None), "value", "team") == "scripted":
         # Written out and played as written, on the page (PAP_DATALAYER X-02): nothing to rehearse.
-        raise typer.BadParameter(f"{scene.id} is scripted: it is played as written, with no team to rehearse.")
+        raise typer.BadParameter(
+            f"{scene.id} is scripted: it is played as written, with no team to rehearse."
+        )
     known = {beat.beat for beat in scene.rehearsal.beats}
     for beat in beats or []:
         if beat not in known:

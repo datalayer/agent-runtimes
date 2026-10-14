@@ -216,23 +216,48 @@ def test_a_standing_permission_is_declared_in_python_as_in_yaml() -> None:
     """PAP_DATALAYER R-07: an operation that gives a standing permission (the Ledgerly
     pattern), written by its builder, is the block agentspecs reads — no tool, every bound."""
     app = Application("ledger", "chat", agent="example-blank:0.0.1")
-    app.company_connection("bank", "northwind.example", access="write", scopes=["payments:write"])
+    app.company_connection(
+        "bank", "northwind.example", access="write", scopes=["payments:write"]
+    )
     app.as_company(scopes=["books:write"], extensions=["operations"])
-    limits = [{"path": "payee", "allowed": "payee"}, {"path": "amount.amount", "maximum": "maximum"}]
+    limits = [
+        {"path": "payee", "allowed": "payee"},
+        {"path": "amount.amount", "maximum": "maximum"},
+    ]
     app.company_standing_permission(
         "payments.allow",
         summary="Let it pay {payee} without asking, up to {maximum} each, at most {uses} payments, for {days} days.",
-        connection="bank", does="buy", limits=limits, uses="uses", days="days",
+        connection="bank",
+        does="buy",
+        limits=limits,
+        uses="uses",
+        days="days",
     )
     [operation] = app.document["pap"]["company"]["operations"]
     assert operation == {
         "action": "payments.allow",
-        "allows": {"connection": "bank", "action": "buy", "limits": limits, "uses": "uses", "days": "days"},
+        "allows": {
+            "connection": "bank",
+            "action": "buy",
+            "limits": limits,
+            "uses": "uses",
+            "days": "days",
+        },
         "summary": "Let it pay {payee} without asking, up to {maximum} each, at most {uses} payments, for {days} days.",
     }
-    assert parse_app(yaml.safe_load(yaml.safe_dump(app.document))).pap.company.operations[0].allows.connection == "bank"
+    assert (
+        parse_app(yaml.safe_load(yaml.safe_dump(app.document)))
+        .pap.company.operations[0]
+        .allows.connection
+        == "bank"
+    )
     with pytest.raises(ValidationError, match="only the person|one of them|allows"):
         app.company_standing_permission(
-            "payments.other", summary="Pay {maximum}, {uses} times, {days} days.",
-            connection="bank", does="delete", limits=limits[1:], uses="uses", days="days",
+            "payments.other",
+            summary="Pay {maximum}, {uses} times, {days} days.",
+            connection="bank",
+            does="delete",
+            limits=limits[1:],
+            uses="uses",
+            days="days",
         )
