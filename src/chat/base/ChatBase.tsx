@@ -123,10 +123,9 @@ import {
   type ToolApprovalConfig,
 } from '../messages/ChatMessageList';
 import { InputPrompt } from '../prompt/InputPrompt';
-import { DeviceHearing } from '../../voice/hearing';
-import { VoiceInput } from '../../voice/VoiceInput';
+import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
-import type { SpokenMetadata, Transcript } from '../../voice/types';
+import type { SpokenMetadata } from '../../voice/types';
 import { settledVoice } from '../../voice/chatVoice';
 import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
 import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
@@ -4045,19 +4044,10 @@ function ChatBaseInner({
   // ========================================================================
   // Voice (VOICE.md V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
-  // What the composer held when the microphone opened: the words heard go after it.
-  const voiceBaseRef = useRef('');
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
   const settled = useMemo(
     () => (voice ? settledVoice(voice) : undefined),
     [voice],
-  );
-  const hearing = useMemo(
-    () =>
-      settled && settled.input !== 'off'
-        ? new DeviceHearing(settled.modelsUrl, settled.engines)
-        : undefined,
-    [settled?.input, settled?.modelsUrl, settled?.engines],
   );
   /*
    * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
@@ -4141,8 +4131,10 @@ function ChatBaseInner({
         isToolCallOnlyPrompt(messageContent);
       // Said, then sent: by the microphone at once, or from the composer it
       // was put in — the words may have been edited, it was still said.
+      // Or said in a composer its host holds, riding on the run (`voice`).
       const spoken =
         spokenGiven ??
+        spokenOf(forwardedPropsGiven?.voice) ??
         (messageOverride === undefined ? spokenRef.current : undefined);
       spokenRef.current = undefined;
       const forwardedProps = spoken
@@ -5044,37 +5036,20 @@ function ChatBaseInner({
     </Box>
   );
 
-  // The microphone, in the composer's footer (VO-10).
-  // The words heard after what the composer held when the microphone opened.
-  const afterBase = (words: string) =>
-    [voiceBaseRef.current, words].filter(Boolean).join(' ');
+  // The microphone, in the composer's footer (VO-10, VO-11).
   const voiceControl =
-    hearing && settled ? (
-      <VoiceInput
-        hearing={hearing}
-        language={settled.language}
-        consentKey={settled.consentKey ?? 'chat'}
-        silenceMs={settled.silenceMs}
-        microphoneId={settled.microphoneId}
+    settled && settled.input !== 'off' ? (
+      <ComposerVoice
+        voice={settled}
+        input={input}
+        setInput={setInput}
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
-        onListen={() => {
-          voiceBaseRef.current = input.trim();
-          stopSpeaking?.();
+        onSpoken={metadata => {
+          spokenRef.current = metadata;
         }}
-        // The words as they are heard, in the box (VO-11); '' gives it back.
-        onInterim={(words: string) => setInput(afterBase(words))}
-        onTranscript={(transcript: Transcript) => {
-          if (settled.sendWhatISay) {
-            setInput(voiceBaseRef.current);
-            void handleSend(transcript.text, undefined, transcript.metadata);
-            return;
-          }
-          // In the box, for the person to edit and send: never sent here.
-          spokenRef.current = transcript.metadata;
-          setInput(afterBase(transcript.text));
-        }}
+        send={(text, metadata) => void handleSend(text, undefined, metadata)}
       />
     ) : undefined;
   // Why an answer could not be heard, in a sentence, by the composer.

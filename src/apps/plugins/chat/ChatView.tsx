@@ -187,6 +187,9 @@ import {
   type AssistantSaying,
 } from '../../../chat/assistant/state';
 import { useChatWords } from '../../../chat/ChatLanguage';
+import { ComposerVoice } from '../../../voice/ComposerVoice';
+import { settledVoice } from '../../../voice/chatVoice';
+import type { SpokenMetadata } from '../../../voice/types';
 
 type ChatControls = {
   send: (message: string, forwardedProps?: Record<string, unknown>) => void;
@@ -557,6 +560,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const hostClosedRef = useRef<string | undefined>(undefined);
   /** What goes with every run (an application's modes, LOOP P-19), read when it is sent. */
+  // How the words in the composer were heard, when they were said (VO-27).
+  const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   const runProps = useContributions(LoopRunProps);
   const runPropsRef = useRef(runProps);
   runPropsRef.current = runProps;
@@ -581,9 +586,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       if (hostClosedRef.current) {
         return hostClosedRef.current;
       }
+      // Said into the composer, then sent: how it was heard rides on the
+      // run, and the chat marks the message spoken (VOICE.md VO-27).
+      const spoken = spokenRef.current;
+      spokenRef.current = undefined;
       const forwardedProps = runForwardedProps(
         runPropsRef.current.map(entry => entry.value),
-        given,
+        spoken ? { ...(given ?? {}), voice: spoken } : given,
       );
       // The page's files, or those attached in the composer (LOOP P-21).
       const loop = forwardedProps?.loop as { files?: unknown[] } | undefined;
@@ -1451,6 +1460,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * live somewhere both the suggestion and the composer can reach.
    */
   const [draft, setDraft] = useState('');
+  /*
+   * Its voice (VOICE.md VO-10, VO-11, VO-49): the microphone in the
+   * workspace's composer, which this view holds — the words written in it as
+   * they are heard. The chat speaks its answers itself (`voice` below).
+   */
+  const voice = useMemo(
+    () => (config?.voice ? settledVoice(config.voice) : undefined),
+    [config?.voice],
+  );
 
   /*
    * The model this conversation is on.
@@ -2036,8 +2054,27 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         <ReactorSlot slot={LoopSlots.inpromptMenu} props={{ workspace }} />
       ) : undefined,
     footerExtras:
-      promptActions.length > 0 ? (
-        <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+      promptActions.length > 0 || (voice && voice.input !== 'off') ? (
+        <>
+          {promptActions.length > 0 ? (
+            <ReactorSlot slot={LoopSlots.promptAction} props={{ workspace }} />
+          ) : null}
+          {voice && voice.input !== 'off' ? (
+            <ComposerVoice
+              voice={voice}
+              input={draft}
+              setInput={setDraft}
+              disabled={chatDisabled}
+              onSpoken={metadata => {
+                spokenRef.current = metadata;
+              }}
+              send={(text, metadata) => {
+                spokenRef.current = metadata;
+                void handleSend(text);
+              }}
+            />
+          ) : null}
+        </>
       ) : undefined,
     /*
       An application's conversation keeps none of the session's controls

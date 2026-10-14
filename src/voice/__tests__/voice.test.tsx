@@ -105,6 +105,28 @@ describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
     ).toBe(true);
   });
 
+  it('answers transformers.js’s first-byte probe, and refuses any other part of a file', async () => {
+    // Seen on :3063, 14 October 2026: transformers.js 4 asks `bytes=0-0` of
+    // each file before reading it, and the 206 was refused as a bad pin.
+    const fetcher = vi.fn(
+      async () =>
+        new Response(new Uint8Array([123]), {
+          status: 206,
+          headers: { 'Content-Range': 'bytes 0-0/1290' },
+        }),
+    );
+    const fetchPinned = pinnedFetch(base, fetcher as unknown as typeof fetch);
+    const url = `${base}/snakers4/silero-vad/${pin.path}`;
+    const probe = await fetchPinned(url, {
+      headers: { Range: 'bytes=0-0' },
+    });
+    expect(probe.status).toBe(206);
+    expect(probe.headers.get('Content-Range')).toBe('bytes 0-0/1290');
+    await expect(
+      fetchPinned(url, { headers: { Range: 'bytes=0-1000' } }),
+    ).rejects.toThrow('read whole and checked');
+  });
+
   it('answers a file whose hash is the pin', async () => {
     const bytes = new TextEncoder().encode('{"a":1}');
     const hash = await sha256Hex(bytes.buffer as ArrayBuffer);

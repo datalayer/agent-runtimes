@@ -36,6 +36,8 @@ export {
 } from './chatVoice';
 export type { ChatVoicePlace, SettledVoice } from './chatVoice';
 export { useVoiceSpeaker } from './useVoiceSpeaker';
+export { ComposerVoice, spokenOf } from './ComposerVoice';
+export type { ComposerVoiceProps } from './ComposerVoice';
 export type { VoiceSpeaker } from './useVoiceSpeaker';
 
 /**

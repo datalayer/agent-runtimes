@@ -136,8 +136,13 @@ export function LoopEmbed({
       preset.presence?.welcome,
       preset.presence?.paused,
       preset.showTokenUsage,
-      // Its voice by its content, the packages that hear aside (functions).
-      JSON.stringify({ ...(preset.voice ?? {}), engines: undefined }),
+      // Its voice by its content, the packages that hear aside (functions),
+      // and its token aside: a renewed sign-in must not restart the workspace.
+      JSON.stringify({
+        ...(preset.voice ?? {}),
+        engines: undefined,
+        token: undefined,
+      }),
       // The thread a reloaded embed goes on with, by its id (D-13).
       preset.thread?.id,
       // By its content: an application's spec written inline is a new object each render.

@@ -43,6 +43,24 @@ export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
     .join('');
 }
 
+/** A request header, however it was given: `Headers`, pairs or a record. */
+function headerOf(
+  headers: HeadersInit | undefined,
+  name: string,
+): string | null {
+  if (!headers) {
+    return null;
+  }
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    return headers.get(name);
+  }
+  const pairs = Array.isArray(headers)
+    ? headers
+    : Object.entries(headers as Record<string, string>);
+  const found = pairs.find(([key]) => key.toLowerCase() === name);
+  return found ? found[1] : null;
+}
+
 /**
  * A `fetch` that reaches the models' origin only, and answers a model's
  * file only once its hash is the one pinned. The runtime's own files
@@ -64,6 +82,22 @@ export function pinnedFetch(
     const answered = await fetcher(url, init);
     const pin = pinOf(base, url);
     if (!pin || !answered.ok) {
+      return answered;
+    }
+    /*
+     * transformers.js asks a file's first byte (`Range: bytes=0-0`) to learn
+     * that it exists and its size, before it reads it whole: that probe is
+     * answered as is — nothing reads it as the model, and the whole file is
+     * checked when it is read. Any other part of a file is refused: a model
+     * is only ever read whole, and checked.
+     */
+    const range = headerOf(init?.headers, 'range');
+    if (range !== null) {
+      if (range.replace(/\s+/g, '') !== 'bytes=0-0') {
+        throw new PinRefused(
+          `${url.slice(root.length)} is read whole and checked, not in part (${range}).`,
+        );
+      }
       return answered;
     }
     const bytes = await answered.arrayBuffer();

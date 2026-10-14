@@ -10,11 +10,16 @@ is another way into the same conversation, not a second one: what is said
 becomes a message, what is heard is the answer the conversation shows, and the
 text stays on screen.
 
-- **Push-to-talk.** Hold the microphone in the composer, or `Ctrl`+`Space`,
-  speak, and let go. A click starts it and the next click stops it. `Esc`
-  cancels. What was said is heard **in the browser**, and the words go in the
-  composer for the person to read, edit and send. The sound never leaves the
-  page, and is forgotten once heard.
+- **The microphone in the composer.** Click it and speak: it turns red and
+  pressed, and the words are written in the composer **as they are heard**.
+  It stops when you click it again, or once you stop speaking (1.5 s of
+  silence after speech, found by Silero VAD; `silenceMs` changes it). Or hold
+  it, or `Ctrl`+`Space`, and let go. `Esc` cancels and gives the composer
+  back what it held. What was said is heard **in the browser**, and the words
+  stay in the composer for the person to read, edit and send: nothing is sent
+  on its own unless *Send what I say* is on. The sound never leaves the page,
+  and is forgotten once heard. No microphone, a refused permission or a model
+  that cannot load is said in a sentence beside it.
 - **Read aloud, on request.** With `output: on_request`, the default of an
   Appspec, each answer the agent has finished has *Read aloud* under it. It
   stops whatever the voice was saying and reads that answer from its start, a
@@ -78,7 +83,20 @@ be distributing it. Answers are spoken on the server, where it only runs.
 
 ## In a page
 
-`ChatBase` and `ChatFloating` take a `voice`:
+`ChatBase`, `ChatFloating` and the workspace's chat (`ChatPlugin`'s
+`voice`, which `AppRenderer` sets from an Appspec) take a `voice`. The least
+is the microphone alone, heard with the models on Datalayer's CDN:
+
+```tsx
+<ChatBase protocol={protocol} voice={{ language: 'en-US', input: 'push_to_talk' }} />
+```
+
+Add `output` and `speechUrl` (and the `token` to ask it with) for the answers
+to be heard. Everything else has a default: the language's first voice of the
+catalogue, `modelsUrl` `https://models-speech.datalayer.tech`, the packages
+that hear (`DATALAYER_VOICE_ENGINES`), a silence of 1.5 s. A person's own
+settings (`voice/settings`: their language, voice, rate, volume, microphone,
+*Send what I say*, speech kept on the device) are laid over it. In full:
 
 ```tsx
 import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
@@ -93,14 +111,9 @@ import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
     // `on_request`: *Read aloud* under each answer; `always`: as written.
     output: 'on_request',
     voice: 'kokoro-af-heart',
-    // The browser's models, from Datalayer's origin, each file checked
-    // against its SHA-256 before it is read.
-    modelsUrl: 'https://…/speech-models',
-    // The packages that hear, loaded the first time the microphone is used.
-    engines: {
-      transformers: () => import('@huggingface/transformers'),
-      vad: () => import('@ricky0123/vad-web'),
-    },
+    // The browser's models, from Datalayer's CDN (the default), each file
+    // checked against its SHA-256 before it is read.
+    modelsUrl: 'https://models-speech.datalayer.tech',
     // Datalayer's speech service (datalayer-speech, on r1), and the token to ask it with.
     speechUrl: 'https://r1.datalayer.run',
     token,
@@ -108,9 +121,18 @@ import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
 />;
 ```
 
+An application's page has its voice from its Appspec: `AppRenderer` takes a
+`speech` (`{ speechUrl, token }`, where the speech service is) and turns
+`interface.voice` into the chat's `voice` (`chatVoiceOf`); a host that gives
+no `speech` draws it without a voice. Its consent to the microphone is
+remembered under the application's id.
+
 The models are fetched only from `modelsUrl`, laid out as the pinned store is
 (`<provider>/<model id>/<path>`, the provider the organisation that published the model: `usefulsensors/moonshine-tiny-en/…`), together with onnxruntime-web's WASM
-(`onnxruntime-web/<version>/`). A file whose hash isn't the catalogue's is
+(`onnxruntime-web/<version>/`, where each build of onnxruntime-web finds the
+file it names). A file whose hash isn't the catalogue's is refused; the only
+part of a file answered without its check is the first byte transformers.js
+asks to learn a file's size (`Range: bytes=0-0`), and any other part is
 refused. They are fetched on first use, with the progress shown, and kept in
 the browser's cache. Before the browser asks for the microphone the first time,
 one sentence says where the audio goes, and the answer is remembered for each

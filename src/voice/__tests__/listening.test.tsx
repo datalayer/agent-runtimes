@@ -18,6 +18,7 @@ import { DeviceHearing } from '../hearing';
 import { HEARING_RATE, MicrophoneRefused, openMicrophone } from '../capture';
 import { consent } from '../consent';
 import { VoiceInput } from '../VoiceInput';
+import { ComposerVoice, spokenOf } from '../ComposerVoice';
 import {
   DATALAYER_SPEECH_MODELS_URL,
   DATALAYER_VOICE_ENGINES,
@@ -267,6 +268,97 @@ describe('the microphone in the composer (VO-10, VO-11)', () => {
     ).toBe('alert');
     expect(container.textContent).toContain('The microphone was not allowed');
     expect(state()).toBe('idle');
+  });
+});
+
+describe('the composer a host holds (VO-10, VO-27)', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    consent('composer-test');
+    vi.mocked(openMicrophone).mockReset();
+    vi.mocked(openMicrophone).mockResolvedValue(microphone());
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+
+  function draw(sendWhatISay: boolean) {
+    const box: string[] = [];
+    const spoken: unknown[] = [];
+    const sent: string[] = [];
+    act(() => {
+      root.render(
+        <ComposerVoice
+          voice={{
+            ...settledVoice(
+              {
+                language: 'en-US',
+                input: 'push_to_talk',
+                consentKey: 'composer-test',
+                sendWhatISay,
+                silenceMs: 800,
+              },
+              {},
+            ),
+            engines: engines(['Open', 'the', 'notebook.']),
+          }}
+          input="Please"
+          setInput={text => box.push(text)}
+          onSpoken={metadata => spoken.push(metadata)}
+          send={text => sent.push(text)}
+        />,
+      );
+    });
+    return {
+      mic: container.querySelector('[data-voice-mic]')!,
+      box,
+      spoken,
+      sent,
+    };
+  }
+
+  it('writes the words after what the box held, and leaves them there to send', async () => {
+    const { mic, box, spoken, sent } = draw(false);
+    await act(async () => {
+      press(mic, 'pointerdown');
+      press(mic, 'pointerup');
+    });
+    await until(() => spoken.length === 1);
+    expect(box[0]).toBe('Please Open');
+    expect(box[box.length - 1]).toBe('Please Open the');
+    expect(spokenOf(spoken[0])).toEqual(spoken[0]);
+    expect(sent).toEqual([]);
+  });
+
+  it('sends at once with “send what I say”, the box given back', async () => {
+    const { mic, box, sent } = draw(true);
+    await act(async () => {
+      press(mic, 'pointerdown');
+      press(mic, 'pointerup');
+    });
+    await until(() => sent.length === 1);
+    expect(sent).toEqual(['Open the']);
+    expect(box[box.length - 1]).toBe('Please');
+  });
+
+  it('knows a spoken message’s metadata riding on a run, and nothing else', () => {
+    expect(
+      spokenOf({
+        input: 'voice',
+        language: 'en',
+        engine: 'm',
+        where: 'device',
+      }),
+    ).toBeDefined();
+    expect(spokenOf({ input: 'text' })).toBeUndefined();
+    expect(spokenOf(undefined)).toBeUndefined();
   });
 });
 
