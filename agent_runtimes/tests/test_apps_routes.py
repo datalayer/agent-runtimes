@@ -335,7 +335,7 @@ def test_feedback_is_refused_when_the_application_keeps_none(client: Any) -> Non
 
 
 TABLE_OFF = (
-    "The UI “A2UI” is not enabled, and its page uses its block Table: "
+    "The UI “Surfaces in the conversation” is not enabled, and its page uses its block Table: "
     "it is off the Canvas until it is."
 )
 
@@ -349,7 +349,9 @@ def test_configure_says_a_block_of_a_plugin_its_organization_turned_off(
 
     def get(url: str, headers: dict, timeout: float) -> httpx.Response:
         asked.append((url, headers))
-        return httpx.Response(200, json={"success": True, "plugins_off": ["a2ui"]})
+        return httpx.Response(
+            200, json={"success": True, "plugins_off": ["a2ui-surface"]}
+        )
 
     monkeypatch.setattr(httpx, "get", get)
     with_table = {**WEB_RESEARCH, "interface": {"components": ["Table"]}}
@@ -360,7 +362,9 @@ def test_configure_says_a_block_of_a_plugin_its_organization_turned_off(
     assert response.status_code == 200, response.text
     body = response.json()
     assert TABLE_OFF in body["setup"]
-    assert body["plugins_off_says"] == "Organization 01ORG has turned off: a2ui."
+    assert (
+        body["plugins_off_says"] == "Organization 01ORG has turned off: a2ui-surface."
+    )
     [(url, headers)] = asked
     assert url.endswith("/api/iam/v1/organizations/01ORG/plugins-off")
     assert headers == {"Authorization": "Bearer t"}
