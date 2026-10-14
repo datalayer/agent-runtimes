@@ -32,7 +32,7 @@ os.environ["AGENT_RUNTIMES_PROTOCOL_STATE_PATH"] = os.path.join(
 os.environ.pop("DATALAYER_MAGIC_API_KEY", None)
 
 from collections.abc import Iterator, Mapping  # noqa: E402
-from typing import Any, Dict  # noqa: E402
+from typing import Any, Dict, Optional  # noqa: E402
 
 import pytest  # noqa: E402
 
@@ -182,3 +182,30 @@ def _ai_agents_not_asked_for_previews() -> Iterator[None]:
     principal.use_preview_asker(None)
     for key in [key for key in principal._HELD if key.startswith("preview:")]:
         principal._HELD.pop(key, None)
+
+
+@pytest.fixture(autouse=True)
+def _ai_agents_not_asked_for_code() -> Iterator[None]:
+    """No test asks the real ai-agents for a deployment's code (LOOP R-14).
+
+    The agent of a deployment is made with the code of the version it runs,
+    read from ai-agents (`GET /apps/deployments/{uid}/code`); without this, a
+    test making one would ask whatever ``DATALAYER_AI_AGENTS_URL`` names.
+    Here every version is written as a spec (no code); a test about the code
+    installs its own reader with `principal.use_code_reader`.
+
+    Yields
+    ------
+    None
+        While the test runs with this reader.
+    """
+    from agent_runtimes.loop.apps import principal
+
+    async def none(
+        deployment_uid: str, version: int, bearer: Optional[str]
+    ) -> Optional[Dict[str, Any]]:
+        return None
+
+    principal.use_code_reader(none)
+    yield
+    principal.use_code_reader(None)

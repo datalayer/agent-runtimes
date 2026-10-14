@@ -324,63 +324,119 @@ def tick_spec() -> Dict[str, Any]:
     return load_application_source(TICK_SOURCE, "app.py").document
 
 
-def test_a_versions_code_is_in_the_payload_the_scheduler_hands_the_runtime() -> None:
-    """ai-agents' `/wake` reads the item's `app.py` beside its spec and
-    `session_payload` carries it as `app_code`; a spec version carries none;
-    what is not an `app.py` is refused."""
-    from agent_runtimes.loop.apps.deployments import (
-        DeployRefused,
-        kept_payload,
-        session_payload,
-    )
+class _Bearing(_DummyRequest):
+    """A request that makes an agent, with the token of whoever opened the session."""
+
+    def __init__(self, bearer: str = "person") -> None:
+        super().__init__()
+        self.headers = {"Authorization": f"Bearer {bearer}"}
+
+
+def _reading(codes: Dict[str, Any]) -> List[tuple]:
+    """ai-agents answering each deployment's code from ``codes`` (an
+    exception is raised as it would be refused); what was asked, kept."""
+    asked: List[tuple] = []
+
+    async def read(deployment: str, version: int, bearer: Any) -> Any:
+        asked.append((deployment, version, bearer))
+        found = codes[deployment]
+        if isinstance(found, Exception):
+            raise found
+        return found
+
+    principal.use_code_reader(read)
+    return asked
+
+
+def test_no_payload_that_makes_a_deployments_agent_carries_code() -> None:
+    """ai-agents' `/wake` and its keeper make a deployment's agent with its
+    Appspec and its instance, never its code: the runtime reads the
+    version's `app.py` from the deployment as the agent is made (R-14)."""
+    from agent_runtimes.loop.apps.deployments import kept_payload, session_payload
 
     spec = tick_spec()
     woken_by = {"kind": "schedule", "position": 1}
-    carried = session_payload(
-        spec,
-        app_uid="app-14",
-        deployment_uid="dep-14",
-        version=2,
-        woken_by=woken_by,
-        code=TICK_CODE,
-    )
-    assert carried["app_code"] == TICK_CODE
-    assert carried["app_instance"]["woken_by"] == woken_by
-    assert "app_code" not in session_payload(
+    woken = session_payload(
         spec, app_uid="app-14", deployment_uid="dep-14", version=2, woken_by=woken_by
     )
-    assert (
-        kept_payload(
+    assert "app_code" not in woken
+    assert woken["app_instance"]["woken_by"] == woken_by
+    kept = kept_payload(spec, app_uid="app-14", deployment_uid="dep-14", version=2)
+    assert "app_code" not in kept
+    assert kept["app_instance"]["version"] == 2
+    with pytest.raises(TypeError):
+        session_payload(  # type: ignore[call-arg]
+            spec,
+            app_uid="app-14",
+            deployment_uid="dep-14",
+            version=2,
+            woken_by=woken_by,
+            code=TICK_CODE,
+        )
+    with pytest.raises(TypeError):
+        kept_payload(  # type: ignore[call-arg]
             spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=TICK_CODE
-        )["app_code"]
-        == TICK_CODE
-    )
-    for wrong in (
-        {"file": "app.txt", "text": TICK_SOURCE},
-        {"file": "../app.py", "text": TICK_SOURCE},
-        {"file": "app.py", "text": " "},
-        {"text": TICK_SOURCE},
-    ):
-        with pytest.raises(DeployRefused):
-            session_payload(
-                spec,
-                app_uid="app-14",
-                deployment_uid="dep-14",
-                version=2,
-                woken_by=woken_by,
-                code=wrong,
+        )
+
+
+def test_a_request_that_carries_code_is_refused() -> None:
+    """Code sent with the request that makes an agent is never run in a
+    principal's name: `app_code` is refused (422), whatever else it says."""
+    from pydantic import ValidationError
+
+    from agent_runtimes.routes.agents import APP_CODE_REFUSED, CreateAgentRequest
+
+    for key in ("app_code", "appCode"):
+        with pytest.raises(ValidationError) as refused:
+            CreateAgentRequest(
+                **{
+                    "name": "r14-carried",
+                    "transport": "ag-ui",
+                    "app_spec": tick_spec(),
+                    "app_instance": TICK_DEPLOYMENT,
+                    key: TICK_CODE,
+                }
             )
+        assert APP_CODE_REFUSED in str(refused.value)
+
+
+def test_a_request_that_carries_code_is_refused_by_the_route() -> None:
+    """On the runtime's own route: 422, and no agent is made."""
+    from fastapi import FastAPI
+
+    from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.routes.agents import APP_CODE_REFUSED, router
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1")
+    refused = TestClient(app).post(
+        "/api/v1/agents",
+        headers={"Authorization": "Bearer person"},
+        json={
+            "name": "r14-carried",
+            "transport": "ag-ui",
+            "app_spec": tick_spec(),
+            "app_instance": TICK_DEPLOYMENT,
+            "app_code": TICK_CODE,
+        },
+    )
+    assert refused.status_code == 422
+    assert APP_CODE_REFUSED in refused.text
+    assert sessions.code_of(load_app(tick_spec()), "r14-carried") is None
 
 
 def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
-    """`app_code` is accepted for a deployment's agent once its principal's
-    token is held, and served for that agent's sessions; with no deployment
-    behind the request, or code of another application, nothing runs."""
+    """The code of a deployment's agent is read from the deployment, once its
+    principal's token is held, with the token of whoever opened the session
+    and the version it runs, and served for that agent's sessions; a Preview
+    reads none; code of another application, or that does not load, is
+    refused; code not read stops the agent."""
     from fastapi import HTTPException
 
     from agent_runtimes.loop.apps.loading import load_app
+    from agent_runtimes.loop.apps.principal import DeploymentCodeUnread
     from agent_runtimes.routes.agents import (
         CreateAgentRequest,
         create_agent,
@@ -388,61 +444,71 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
     )
 
     spec = tick_spec()
+    codes: Dict[str, Any] = {"dep-14": TICK_CODE}
+    asked = _reading(codes)
 
-    def create(name: str, instance: Dict[str, Any], code: Dict[str, Any]) -> None:
+    def create(name: str, instance: Dict[str, Any]) -> None:
         request = CreateAgentRequest(
             name=name,
             transport="ag-ui",
             app_spec=spec,
             app_instance=instance,
-            app_code=code,
         )
-        asyncio.run(create_agent(request, _DummyRequest()))
+        asyncio.run(create_agent(request, _Bearing()))
 
     principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
     try:
         create(
-            "r14-tick-agent",
-            {**TICK_DEPLOYMENT, "woken_by": woken(1, "*/2 * * * *")},
-            TICK_CODE,
+            "r14-tick-agent", {**TICK_DEPLOYMENT, "woken_by": woken(1, "*/2 * * * *")}
         )
+        assert asked == [("dep-14", 2, "person")]
         served = sessions.code_of(load_app(spec), "r14-tick-agent")
         assert served is not None and served.schedule_at(1) == "tick"
         # Another agent of the same application was given no code: the
         # catalogue has none for it either.
         assert sessions.code_of(load_app(spec), "another-agent") is None
-        # A Preview — no deployment — runs no code from a request.
-        with pytest.raises(HTTPException) as refused:
-            create("r14-preview", {"app_uid": "app-14", "version": 2}, TICK_CODE)
-        assert (
-            refused.value.status_code == 422
-            and "deployment only" in refused.value.detail
-        )
+        # A Preview — no deployment — reads no code.
+        create("r14-preview", {"app_uid": "app-14", "version": 2})
+        assert len(asked) == 1
         assert sessions.code_of(load_app(spec), "r14-preview") is None
+        # A deployment's agent that does not say the version it runs.
+        with pytest.raises(HTTPException) as refused:
+            create("r14-unversioned", {"app_uid": "app-14", "deployment_uid": "dep-14"})
+        assert refused.value.status_code == 422
+        assert "app_instance.version" in refused.value.detail
         # Code of another application, or that does not load, is refused.
-        other = {
+        codes["dep-14"] = {
             "file": "app.py",
             "text": TICK_SOURCE.replace('"id": "r14-tick"', '"id": "r14-other"'),
         }
         with pytest.raises(HTTPException) as refused:
-            create("r14-other", TICK_DEPLOYMENT, other)
+            create("r14-other", TICK_DEPLOYMENT)
         assert (
             refused.value.status_code == 422
             and "another application's" in refused.value.detail
         )
+        codes["dep-14"] = {"file": "app.py", "text": "def (:\n"}
         with pytest.raises(HTTPException) as refused:
-            create(
-                "r14-broken", TICK_DEPLOYMENT, {"file": "app.py", "text": "def (:\n"}
-            )
+            create("r14-broken", TICK_DEPLOYMENT)
         assert (
             refused.value.status_code == 422 and "does not load" in refused.value.detail
         )
+        codes["dep-14"] = {"file": "app.py", "text": "x = 1\n"}
         with pytest.raises(HTTPException) as refused:
-            create("r14-none", TICK_DEPLOYMENT, {"file": "app.py", "text": "x = 1\n"})
+            create("r14-none", TICK_DEPLOYMENT)
         assert (
             refused.value.status_code == 422
             and "defines 0 applications" in refused.value.detail
         )
+        # Not read — ai-agents refused, or could not be asked — no agent.
+        codes["dep-14"] = DeploymentCodeUnread(
+            "ai-agents gave deployment dep-14 no code (409): deploy it again."
+        )
+        with pytest.raises(HTTPException) as refused:
+            create("r14-unread", TICK_DEPLOYMENT)
+        assert refused.value.status_code == 422
+        assert "deploy it again" in refused.value.detail
+        assert sessions.code_of(load_app(spec), "r14-unread") is None
         # Deleted, the agent's code goes with it (the registry stubbed by
         # `creation_spy` holds no agent: one is put there for the route).
         from agent_runtimes.routes.acp import _agents
@@ -456,11 +522,65 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
         for name in (
             "r14-tick-agent",
             "r14-preview",
+            "r14-unversioned",
             "r14-other",
             "r14-broken",
             "r14-none",
+            "r14-unread",
         ):
             sessions.serve_agent_code(name, None)
+
+
+def test_with_no_token_sent_ai_agents_is_not_asked_for_the_code() -> None:
+    """ai-agents is asked for a deployment's code with the token of whoever
+    opened the session: with none, it is not asked, and nothing is run."""
+    from agent_runtimes.loop.apps.principal import (
+        DeploymentCodeUnread,
+        _read_from_ai_agents,
+    )
+
+    with pytest.raises(DeploymentCodeUnread, match="none was sent"):
+        asyncio.run(_read_from_ai_agents("dep-14", 2, None))
+
+
+def test_ai_agents_is_asked_for_the_version_the_agent_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`GET /apps/deployments/{uid}/code?version=` with the caller's bearer;
+    what it refuses is said in its own sentence; an answer without the code
+    is not taken for none."""
+    from agent_runtimes.loop.apps import principal as module
+    from agent_runtimes.loop.apps.principal import DeploymentCodeUnread
+
+    seen: List[httpx.Request] = []
+    answers: List[httpx.Response] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return answers.pop(0)
+
+    real = httpx.AsyncClient
+
+    def client(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(httpx, "AsyncClient", client)
+    monkeypatch.setenv("DATALAYER_AI_AGENTS_URL", "https://ai-agents.test")
+    answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
+    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) == TICK_CODE
+    [request] = seen
+    assert request.method == "GET"
+    assert request.url.path == "/api/ai-agents/v1/apps/deployments/dep-14/code"
+    assert request.url.params["version"] == "2"
+    assert request.headers["authorization"] == "Bearer person"
+    answers.append(httpx.Response(200, json={"success": True, "code": None}))
+    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) is None
+    answers.append(httpx.Response(409, json={"detail": "Deploy it again."}))
+    with pytest.raises(DeploymentCodeUnread, match=r"\(409\): Deploy it again\."):
+        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
+    answers.append(httpx.Response(200, json={"success": True}))
+    with pytest.raises(DeploymentCodeUnread, match="without it"):
+        asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))
 
 
 def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
@@ -485,15 +605,18 @@ def test_the_deployed_version_is_the_authority_over_a_code_that_says_none(
     assert load_application_source(unsaid, "app.py").declared_version is None
     deployed = {**tick_spec(), "version": "0.0.4"}
 
+    codes: Dict[str, Any] = {}
+    _reading(codes)
+
     def create(name: str, text: str) -> None:
+        codes["dep-14"] = {"file": "app.py", "text": text}
         request = CreateAgentRequest(
             name=name,
             transport="ag-ui",
             app_spec=deployed,
             app_instance=TICK_DEPLOYMENT,
-            app_code={"file": "app.py", "text": text},
         )
-        asyncio.run(create_agent(request, _DummyRequest()))
+        asyncio.run(create_agent(request, _Bearing()))
 
     principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
     try:
@@ -536,8 +659,8 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
     creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
 ) -> None:
     """The keeper of a deployment kept always on (R-33) makes its agent from
-    `kept_payload` with the version's `app.py`: the create route takes it as
-    for a tick, and every session of that agent — a visitor's at the
+    `kept_payload`, and the create route reads the version's `app.py` from
+    the deployment as for a tick, and every session of that agent — a visitor's at the
     address, not only a woken one — runs with the code; without it, none."""
     from agent_runtimes.loop.apps.deployments import kept_payload
     from agent_runtimes.loop.apps.loading import load_app
@@ -546,12 +669,17 @@ def test_the_agent_a_kept_runtime_is_made_with_runs_the_deployments_code(
     spec = tick_spec()
     principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
     try:
+        codes: Dict[str, Any] = {}
+        asked = _reading(codes)
         for name, code in (("r14-kept", TICK_CODE), ("r14-kept-spec", None)):
+            codes["dep-14"] = code
             payload = kept_payload(
-                spec, app_uid="app-14", deployment_uid="dep-14", version=2, code=code
+                spec, app_uid="app-14", deployment_uid="dep-14", version=2
             )
             request = CreateAgentRequest(**{**payload, "name": name})
-            asyncio.run(create_agent(request, _DummyRequest()))
+            # Made with the key the keeper started the runtime with (R-33).
+            asyncio.run(create_agent(request, _Bearing("kept-key")))
+        assert asked == [("dep-14", 2, "kept-key"), ("dep-14", 2, "kept-key")]
         served = sessions.code_of(load_app(spec), "r14-kept")
         assert served is not None and served.spec.id == "r14-tick"
         assert served.schedule_at(1) == "tick"
@@ -850,6 +978,7 @@ def test_the_runtimes_application_is_its_kept_agents(
     )
 
     spec = tick_spec()
+    _reading({"dep-14": TICK_CODE})
     routes._RUNNING.clear()
     principal.give_principal_token("dep-14", "narrowed", expires_in=3600)
     try:
@@ -860,9 +989,8 @@ def test_the_runtimes_application_is_its_kept_agents(
                     transport="ag-ui",
                     app_spec=spec,
                     app_instance=TICK_DEPLOYMENT,
-                    app_code=TICK_CODE,
                 ),
-                _DummyRequest(),
+                _Bearing(),
             )
         )
         current = routes.running_app()

@@ -397,10 +397,11 @@ def event_prompt(trigger: EventTrigger, details: Mapping[str, str]) -> str:
 
 
 def code_carried(code: Optional[Mapping[str, Any]]) -> Optional[dict[str, str]]:
-    """The ``app.py`` a deployment carries to its runtime, ``{file, text}``,
+    """The ``app.py`` of the version a deployment runs, ``{file, text}``,
     checked: what `loop apps push` kept in the item (``model.code``), as
-    `store.code_of` reads it. ``None`` for a version written as a spec.
-    `DeployRefused` for a shape that is not one.
+    `store.code_of` reads it, and as the runtime reads it from the deployment
+    (`GET /apps/deployments/{uid}/code`). ``None`` for a version written as a
+    spec. `DeployRefused` for a shape that is not one.
     """
     if code is None:
         return None
@@ -426,19 +427,18 @@ def session_payload(
     deployment_uid: str,
     version: int,
     woken_by: Mapping[str, Any],
-    code: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     """What creates a deployment's agent on a runtime for a session nobody
     opened: the payload the hosted page sends (`AppRenderer`), over AG-UI —
     the session API's transport, on which `start_session` opens the session
     — with the instance its record is kept under: the deployment, and what
-    woke it. With the version's ``app.py`` (``code``, as the item keeps it)
-    when it is written in Python: ``app_code``, which the runtime runs the
-    sessions with, so a ``@app.schedule`` handler runs on a tick (LOOP R-14).
+    woke it. Never with code: the runtime reads the version's ``app.py``
+    from the deployment as the agent is made, and runs the sessions with it,
+    so a ``@app.schedule`` handler runs on a tick (LOOP R-14).
 
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which a woken session
-    does not run yet, or code that is not an ``app.py``.
+    does not run yet.
     """
     from agent_runtimes.loop.apps.loading import agent_id_of, load_app
 
@@ -447,7 +447,6 @@ def session_payload(
         raise DeployRefused(
             f"{app.name or app.id} is run by a team, which a woken session does not run yet."
         )
-    carried = code_carried(code)
     return {
         "name": app.id,
         "description": f"{app.name or app.id}, version {version}, woken by its {woken_by.get('kind') or 'trigger'}",
@@ -456,7 +455,6 @@ def session_payload(
         "app_spec": dict(spec),
         "enable_codemode": bool(app.permissions.computer.shell),
         **({"model": app.model} if app.model else {}),
-        **({"app_code": carried} if carried else {}),
         "app_instance": {
             "app_uid": app_uid,
             "deployment_uid": deployment_uid,
@@ -473,14 +471,13 @@ def kept_payload(
     deployment_uid: str,
     version: int,
     organization_uid: str = "",
-    code: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     """What creates a deployment's agent on the runtime it is kept on
     (LOOP R-33): the payload the hosted page sends (`AppRenderer`'s
     `appDatalayerCreatePayload`) — under the application's id, over AG-UI,
     with its Appspec and the deployment as its instance — so that the page's
-    chat finds the agent it would have made, already there. With the
-    version's ``app.py`` as ``app_code`` when it has one (R-14).
+    chat finds the agent it would have made, already there. Never with code:
+    the runtime reads the version's ``app.py`` from the deployment (R-14).
 
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which is not kept yet.
@@ -492,7 +489,6 @@ def kept_payload(
         raise DeployRefused(
             f"{app.name or app.id} is run by a team, which is not kept on a runtime yet."
         )
-    carried = code_carried(code)
     return {
         "name": app.id,
         "description": f"{app.name or app.id}, version {version}, kept on its runtime",
@@ -501,7 +497,6 @@ def kept_payload(
         "app_spec": dict(spec),
         "enable_codemode": bool(app.permissions.computer.shell),
         **({"model": app.model} if app.model else {}),
-        **({"app_code": carried} if carried else {}),
         "app_instance": {
             "app_uid": app_uid,
             "deployment_uid": deployment_uid,

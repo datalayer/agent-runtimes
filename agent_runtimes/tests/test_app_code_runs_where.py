@@ -1,27 +1,33 @@
 # Copyright (c) 2025-2026 Datalayer, Inc.
 # Distributed under the terms of the Modified BSD License.
 
-"""Where a Python application's code runs (LOOP R-21).
+"""Where a Python application's code runs (LOOP R-14, R-21).
 
-On the platform, the only Python application code that runs is the
-catalogue's — its examples' ``app.py``, shipped with agentspecs — and it runs
-on a runtime, the sandbox a person's agent runs in. An ``app.py`` of
-anybody's own is built on their machine into the spec it amounts to; the
-platform keeps and runs the spec, never the file. The services import the
-loaders that read a spec (``load_app``, ``schedule_triggers``,
-``session_payload``), which run no code of the application's, and the
-scheduler starts a woken session on a runtime over HTTP (``start_session``);
-services' own test (``test_no_service_runs_application_code``, services
-dac587ca) keeps them so.
+On the platform, Python application code runs on a runtime only, the
+sandbox a person's agent runs in: the catalogue's — its examples'
+``app.py``, shipped with agentspecs — and the ``app.py`` of a version
+somebody shipped, kept with its deployment and read from it by the runtime
+(``GET /apps/deployments/{uid}/code``) as the agent of that deployment is
+made — hosted, embedded, woken by a schedule or kept always on alike, never
+from the request that makes the agent. The services import the loaders that
+read a spec (``load_app``, ``schedule_triggers``, ``session_payload``),
+which run no code of the application's, and the scheduler starts a woken
+session on a runtime over HTTP (``start_session``); services' own test
+(``test_no_service_runs_application_code``, services dac587ca) keeps them so.
 """
 
+import asyncio
 from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
 
 from agent_runtimes.loop.apps import sessions
 from agent_runtimes.loop.apps.loading import load_app
 from agent_runtimes.specs.apps import APP_BUILT, APP_CATALOGUE
+from agent_runtimes.tests.test_agents_create_integration import (  # noqa: F401 - a fixture
+    creation_spy,
+)
 
 agentspecs_apps = pytest.importorskip("agentspecs.apps")
 
@@ -69,3 +75,61 @@ def test_the_loaders_a_service_imports_run_no_application_code(
     deployments.session_payload(
         spec, app_uid="app-1", deployment_uid="dep-1", version=1, woken_by={}
     )
+
+
+def test_a_hosted_deployment_not_kept_runs_its_own_code(
+    creation_spy: Dict[str, Any],  # noqa: F811 - the fixture
+) -> None:
+    """The agent the hosted page makes (`AppRenderer`'s
+    `appDatalayerCreatePayload`: the Appspec and the deployment as its
+    instance, nothing woke it, no code) runs the version's own ``app.py``,
+    read from the deployment: its handlers answer, not the plain agent —
+    whether or not the deployment is kept always on (drilled on r1, 14
+    October 2026: a shipped app's code ran only when kept)."""
+    from agent_runtimes.loop.apps import principal
+    from agent_runtimes.loop.apps.application import Application
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+    from agent_runtimes.tests.test_agents_create_integration import _DummyRequest
+
+    text = (
+        "from agent_runtimes.loop.apps import Application\n"
+        "app = Application('hosted-own', agent='cog-crawler:0.0.1', version='0.0.3')\n"
+        "@app.message\n"
+        "async def answer(session, text):\n"
+        "    await session.send('OWN-CODE')\n"
+    )
+    spec = Application(
+        "hosted-own", agent="cog-crawler:0.0.1", version="0.0.3"
+    ).document
+    asked: List[tuple] = []
+
+    async def read(deployment: str, version: int, bearer: Any) -> Dict[str, str]:
+        asked.append((deployment, version, bearer))
+        return {"file": "app.py", "text": text}
+
+    principal.use_code_reader(read)
+    principal.give_principal_token("dep-hosted", "narrowed", expires_in=3600)
+    request = _DummyRequest()
+    request.headers = {"Authorization": "Bearer visitor"}
+    try:
+        asyncio.run(
+            create_agent(
+                CreateAgentRequest(
+                    name="hosted-own",
+                    transport="ag-ui",
+                    app_spec=spec,
+                    app_instance={
+                        "app_uid": "app-h",
+                        "deployment_uid": "dep-hosted",
+                        "version": 3,
+                    },
+                ),
+                request,  # type: ignore[arg-type]
+            )
+        )
+        assert asked == [("dep-hosted", 3, "visitor")]
+        served = sessions.code_of(load_app(spec), "hosted-own")
+        assert served is not None and served.spec.id == "hosted-own"
+    finally:
+        principal.forget_principal_token("dep-hosted")
+        sessions.serve_agent_code("hosted-own", None)

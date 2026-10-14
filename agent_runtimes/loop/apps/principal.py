@@ -57,6 +57,7 @@ __all__ = [
     "administers",
     "api_key_for",
     "deployment_of",
+    "DeploymentCodeUnread",
     "deployments_served",
     "ensure_preview_token",
     "ensure_principal_token",
@@ -73,7 +74,9 @@ __all__ = [
     "principal_token",
     "principal_token_refusal",
     "principal_uid_of",
+    "read_deployment_code",
     "renew_principal_token",
+    "use_code_reader",
     "use_memberships_asker",
     "use_preview_asker",
 ]
@@ -369,6 +372,116 @@ _asker: dict[str, Callable[[str, str], Awaitable[dict[str, Any]]]] = {
 def use_asker(asker: Optional[Callable[[str, str], Awaitable[dict[str, Any]]]]) -> None:
     """Who answers the principal's token: ai-agents, or a test; ``None`` for ai-agents."""
     _asker["ask"] = asker or _ask_ai_agents
+
+
+class DeploymentCodeUnread(RuntimeError):
+    """The code of the version a deployment runs, not read, in a sentence."""
+
+
+async def _read_from_ai_agents(
+    deployment_uid: str, version: int, bearer: Optional[str]
+) -> Optional[dict[str, Any]]:
+    import httpx
+    from datalayer_core.utils.urls import DatalayerURLs
+
+    from agent_runtimes.loop.apps.opening import page_origin_headers
+
+    if not bearer:
+        raise DeploymentCodeUnread(
+            f"The code of deployment {deployment_uid} is read with the token of "
+            "whoever opens its session: none was sent."
+        )
+    url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
+    if not url:
+        raise DeploymentCodeUnread(
+            f"The code of deployment {deployment_uid} cannot be read: no ai-agents is configured."
+        )
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(
+                f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
+                params={"version": int(version)},
+                # An embed's page, checked as for the principal's token (D-12).
+                headers={"Authorization": f"Bearer {bearer}", **page_origin_headers()},
+            )
+    except httpx.HTTPError as error:
+        raise DeploymentCodeUnread(
+            f"ai-agents could not be asked for the code of deployment {deployment_uid}: {error}."
+        ) from error
+    if response.status_code >= 300:
+        detail = ""
+        try:
+            detail = str((response.json() or {}).get("detail") or "")
+        except ValueError:
+            detail = response.text[:200]
+        raise DeploymentCodeUnread(
+            f"ai-agents gave deployment {deployment_uid} no code "
+            f"({response.status_code}){': ' + detail if detail else ''}."
+        )
+    try:
+        answer = response.json()
+    except ValueError as error:
+        raise DeploymentCodeUnread(
+            f"ai-agents answered the code of deployment {deployment_uid} in no JSON."
+        ) from error
+    if not isinstance(answer, dict) or "code" not in answer:
+        raise DeploymentCodeUnread(
+            f"ai-agents answered the code of deployment {deployment_uid} without it."
+        )
+    code = answer["code"]
+    if code is not None and not isinstance(code, dict):
+        raise DeploymentCodeUnread(
+            f"ai-agents answered the code of deployment {deployment_uid} in another shape."
+        )
+    return code
+
+
+#: Who answers a deployment's code; replaced by a test.
+_code_reader: dict[
+    str, Callable[[str, int, Optional[str]], Awaitable[Optional[dict[str, Any]]]]
+] = {"read": _read_from_ai_agents}
+
+
+def use_code_reader(
+    reader: Optional[
+        Callable[[str, int, Optional[str]], Awaitable[Optional[dict[str, Any]]]]
+    ],
+) -> None:
+    """Who answers a deployment's code: ai-agents, or a test; ``None`` for ai-agents."""
+    _code_reader["read"] = reader or _read_from_ai_agents
+
+
+async def read_deployment_code(
+    deployment_uid: str, version: int, bearer: Optional[str]
+) -> Optional[dict[str, Any]]:
+    """
+    The ``app.py`` of the version a deployment runs, ``{file, text}``, or
+    ``None`` for a version written as a spec (LOOP R-14).
+
+    Read from ai-agents (`GET /apps/deployments/{uid}/code`) with the token
+    of whoever opened the session, admitted as for the principal's token:
+    never taken from the request that makes the agent.
+
+    Parameters
+    ----------
+    deployment_uid : str
+        The deployment the agent serves.
+    version : int
+        The version its agent runs.
+    bearer : str | None
+        The token of whoever opened the session.
+
+    Returns
+    -------
+    dict | None
+        The code, or ``None`` when the version has none.
+
+    Raises
+    ------
+    DeploymentCodeUnread
+        When it could not be read: the agent is not made.
+    """
+    return await _code_reader["read"](deployment_uid, int(version), bearer)
 
 
 async def _ensure_held(

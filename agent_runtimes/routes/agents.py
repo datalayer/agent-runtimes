@@ -1152,6 +1152,13 @@ class McpServerSelection(BaseModel):
         return self.origin == "contents"
 
 
+#: Why a request that makes an agent carries no code (LOOP R-14).
+APP_CODE_REFUSED = (
+    "A deployment's code is read from the deployment: a request that makes "
+    "its agent carries none (app_code is refused)."
+)
+
+
 class CreateAgentRequest(BaseModel):
     """Request body for creating a new agent."""
 
@@ -1166,6 +1173,16 @@ class CreateAgentRequest(BaseModel):
                 "`tools` is now `backend_tools` (`backendTools`): the tools that run "
                 "on the runtime, as `frontend_tools` are those that run on the page"
             )
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def _carries_no_code(cls, data: Any) -> Any:
+        """Refuse `app_code`: a deployment's code is read from the deployment
+        by the runtime (LOOP R-14), never taken from the request that makes
+        its agent and run in its principal's name."""
+        if isinstance(data, dict) and ("app_code" in data or "appCode" in data):
+            raise ValueError(APP_CODE_REFUSED)
         return data
 
     name: str = Field(..., description="Agent name")
@@ -1264,19 +1281,6 @@ class CreateAgentRequest(BaseModel):
             "an application runs: it reaches only the MCP servers the application "
             "connects to, its instructions are added, and its rules are enforced "
             "before every tool call in place of the default approvals (LOOP R-03, R-05)."
-        ),
-    )
-    app_code: dict[str, Any] | None = Field(
-        default=None,
-        description=(
-            "The `app.py` of the version a deployment's agent runs, `{file, text}`, "
-            "as `loop apps push` kept it in the application's item and the "
-            "deployment carries it (LOOP R-14): the runtime runs the agent's "
-            "sessions with it — its `start`, `message`, `schedule` handlers, "
-            "its tools and checks — under the application's rules, as "
-            "`loop apps run` does. Accepted for a deployment's agent only, once "
-            "its principal's token is held (I-03): code carried by a request "
-            "with no deployment behind it is refused (422)."
         ),
     )
     app_instance: dict[str, Any] | None = Field(
@@ -1793,42 +1797,58 @@ async def create_agent(
             # the token ai-agents mints for it from the caller's: it is not
             # made without one (LOOP I-03).
             from agent_runtimes.loop.apps.principal import (
+                DeploymentCodeUnread,
                 PrincipalTokenMissing,
                 deployment_of,
                 ensure_principal_token,
+                read_deployment_code,
             )
             from agent_runtimes.loop.apps.visitors import visitors_runtime
 
             serving_deployment = deployment_of(request.app_instance)
+            # The version's own code is the deployment's, read from it (LOOP
+            # R-14): a request never brings code of its own (`app_code` is
+            # refused by the request's model).
+            served_code = None
             # On the visitors' runtime nobody's principal acts: a visitor's
             # own token calls its models, and it reaches nothing of its
             # owner's (LOOP R-30).
             if serving_deployment and not visitors_runtime():
                 creator = http_request.headers.get("Authorization", "")
+                bearer = (
+                    creator[7:].strip()
+                    if creator.lower().startswith("bearer ")
+                    else None
+                )
                 try:
-                    await ensure_principal_token(
-                        serving_deployment,
-                        creator[7:].strip()
-                        if creator.lower().startswith("bearer ")
-                        else None,
-                    )
+                    await ensure_principal_token(serving_deployment, bearer)
                 except PrincipalTokenMissing as missing:
                     raise HTTPException(status_code=422, detail=str(missing)) from None
-            # The version's own code, carried by the deployment (LOOP R-14):
-            # run for this agent's sessions, in its principal's name only —
-            # a request with no deployment behind it runs no code here.
-            served_code = None
-            if request.app_code is not None:
-                if not serving_deployment or visitors_runtime():
+                # The code of the version it runs, read from the deployment
+                # with the same caller's token: run for this agent's
+                # sessions, in its principal's name only.
+                try:
+                    deployed_version = int(
+                        (request.app_instance or {}).get("version") or 0
+                    )
+                except (TypeError, ValueError):
+                    deployed_version = 0
+                if deployed_version < 1:
                     raise HTTPException(
                         status_code=422,
                         detail=(
-                            "An application's code runs on a runtime for a "
-                            "deployment only, in its principal's name: this agent "
-                            "serves none."
+                            "A deployment's agent names the version it runs "
+                            "(app_instance.version): its code is that version's."
                         ),
                     )
-                served_code = _application_code_of(request.app_code, running_app)
+                try:
+                    code = await read_deployment_code(
+                        serving_deployment, deployed_version, bearer
+                    )
+                except DeploymentCodeUnread as unread:
+                    raise HTTPException(status_code=422, detail=str(unread)) from None
+                if code is not None:
+                    served_code = _application_code_of(code, running_app)
             # The contexts it works under, as the organization it belongs
             # to reads them: its version in place of the catalogue's, and
             # its own (LOOP U-31, U-32), read from IAM with the caller's

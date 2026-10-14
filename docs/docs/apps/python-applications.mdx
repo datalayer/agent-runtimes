@@ -55,10 +55,18 @@ application code runs on a runtime only — the sandbox a person's agent runs
 in, through the [Session API](./session-api) — never inside ai-agents or
 durable. An `app.py` of your own is built on your machine into the spec it
 amounts to (`loop apps build`, `push`); the platform keeps the file beside
-the spec, versioned with it, and hands it to the deployment's runtime as
-`app_code` when its agent is made (its always-on runtime, a tick's, a hosted
-session's). A deployment whose record carries no code — one deployed before
-the file was kept — is refused a relaunch in a sentence: deploy it again.
+the spec, versioned with it, and with each deployment of that version. The
+runtime reads it from the deployment when the deployment's agent is made
+(`GET /api/ai-agents/v1/apps/deployments/{uid}/code?version=N` on
+ai-agents, with the token of whoever opened the session, admitted as for the
+deployment's principal's token), wherever that agent is made: the hosted page
+— whether or not the deployment is kept always on — an embed, a tick, an
+always-on runtime. Every session of that agent runs your code: its handlers
+answer, not the plain agent. Code is never taken from the request that makes
+the agent: a request carrying `app_code` is refused (422), and a deployment's
+code that cannot be read stops its agent from being made, in a sentence. A
+deployment whose record does not say whether its version has code — one
+deployed before the file was kept — is refused (409): deploy it again.
 
 The services — ai-agents, durable — import only what reads a spec:
 `load_app`, `schedule_triggers`, `session_payload`; the scheduler starts a
@@ -544,15 +552,15 @@ resuming starts them again, taking it down removes them; deploying another
 version registers that version's schedules. Every tick is a run of the
 schedule, which says whether it answered.
 
-Your code travels with the deployment. The `app.py` that `loop apps push`
-kept beside the version's spec is what the platform hands the runtime on
-each tick (`app_code` on the payload that creates the agent), and the
-runtime runs the session with it — its `start`, `message` and `schedule`
-handlers, its tools and checks — under the application's rules, as
-`loop apps run` does. The runtime accepts code for a deployment's agent
-only, once it holds the deployment's principal token: a request carrying
-code with no deployment behind it is refused. A version written as a spec
-carries no code, and its agent is asked the prompt. The stream of a woken
+Your code is the deployment's. The `app.py` that `loop apps push` kept
+beside the version's spec is kept with the deployment, and the runtime of
+each tick reads it from there as the agent is made (the payload that
+creates the agent carries none), then runs the session with it — its
+`start`, `message` and `schedule` handlers, its tools and checks — under
+the application's rules, as `loop apps run` does. The runtime reads code
+for a deployment's agent only, once it holds the deployment's principal
+token, with the same caller's token. A version written as a spec has no
+code, and its agent is asked the prompt. The stream of a woken
 session ends only once its turn is on the record, so a scheduler that stops
 the runtime as the stream ends loses nothing of it. A tick run by your code
 is recorded as an agent's run is: the run, its turn — the trigger's prompt
@@ -564,10 +572,11 @@ a share of what the owner has left.
 
 A deployment kept **always on** runs your code too. Its version's `app.py`
 is kept with the deployment as it is deployed or moved to another version,
-beside its spec, and the runtime it is kept on is handed it each time it
-starts — `app_code` on the payload that makes its agent there
-(`kept_payload`), also when the platform starts it again with nobody
-present, which reads no Spacer item. Every session of that agent — a
+beside its spec, and the runtime it is kept on reads it from the
+deployment each time its agent is made there (`kept_payload` carries none),
+with the key it was started with — also when the platform starts it again
+with nobody present, which reads no Spacer item; the runtime of a version
+it moves to, made before the move is written, reads that version's. Every session of that agent — a
 visitor's at the address, a tick's — runs with it. A deployment kept
 before its code was kept with it is not guessed to have none: it stops
 being kept on, saying it is to be deployed again.
