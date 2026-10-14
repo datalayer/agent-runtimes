@@ -7,6 +7,14 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.19
+
+On agentspecs 0.0.95.
+
+- **A kept organization deployment's keeper routes answer its administrators** (PAP_DATALAYER, decided 2026-10-14): an organization owner counts as the deployment's owner, asked of IAM's memberships; refused when IAM cannot be asked.
+- **A deployment's page asks its runtime only the application's own routes**: no `/runtime/status`, no `DELETE /agents/{id}`, no `/configure/models`.
+- **Speech models kept under their provider** (VOICE.md VO-48): `<provider>/<model id>/<path>`, in the browser store and the pinning tools.
+
 ## 1.5.18
 
 On agentspecs 0.0.94 and personal-agent-protocol 0.24.0.
