@@ -79,18 +79,19 @@ import {
   useA2ATeam,
   usePeerSandbox,
 } from '../components/teams';
-import { ACCOUNTING_APP_0_0_2, SALES_APP_0_0_3 } from '../specs/apps';
+import { APP_CATALOGUE } from '../specs/apps';
 import {
   AgentInspector,
   classifyToolCall,
   traceA2AFetch,
   useAgentInspector,
 } from '../components/inspector';
-import { SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1 } from '../specs/teams/teams';
+import { TEAM_SPECS } from '../specs/teams/teams';
 
-const TEAM = SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1;
-const SALES = SALES_APP_0_0_3;
-const ACCOUNTING = ACCOUNTING_APP_0_0_2;
+// By id, never by the version-named constants: a version bump touches no caller.
+const TEAM = TEAM_SPECS['sales-and-accounting'];
+const SALES = APP_CATALOGUE['sales'];
+const ACCOUNTING = APP_CATALOGUE['accounting'];
 /** What Accounting reaches, from its Appspec: Odoo, through the odoo-accounting MCP server. */
 const ACCOUNTING_CONNECTIONS = teamConnectionsOf(ACCOUNTING);
 

@@ -14,14 +14,9 @@
 import * as React from 'react';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import {
-  listSceneSpecs,
-  SCENE_CATALOGUE,
-  DISASTER_ASSESSMENT_SCENE_0_0_1,
-  SALES_AND_ACCOUNTING_SCENE_0_0_1,
-} from '../../specs/scenes';
-import { DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1 } from '../../specs/teams/teams';
-import { EVENT_RESPONSE_APP_0_0_3 } from '../../specs/apps';
+import { listSceneSpecs, SCENE_CATALOGUE } from '../../specs/scenes';
+import { TEAM_SPECS } from '../../specs/teams/teams';
+import { APP_CATALOGUE } from '../../specs/apps';
 import {
   sceneCuesOf,
   sceneMemberUrl,
@@ -89,9 +84,9 @@ afterEach(() => cleanup());
 
 describe('the stage of a scene', () => {
   it('reads the cast with its applications, the entry and whom it asks', () => {
-    const stage = sceneStageOf(DISASTER_ASSESSMENT_SCENE_0_0_1);
+    const stage = sceneStageOf(SCENE_CATALOGUE['disaster-assessment']);
     expect(stage.entry.id).toBe('event-response');
-    expect(stage.entry.app).toBe(EVENT_RESPONSE_APP_0_0_3);
+    expect(stage.entry.app).toBe(APP_CATALOGUE['event-response']);
     expect(stage.entry.runsIn).toBe('browser');
     expect(stage.peers.map(peer => peer.id)).toEqual([
       'disaster-assessment',
@@ -106,15 +101,15 @@ describe('the stage of a scene', () => {
       { from: 'event-response', to: 'change-detection' },
     ]);
     expect(stage.opensFirst).toBe('event-response');
-    expect(stage.assumes).toBe(DISASTER_ASSESSMENT_SCENE_0_0_1.setting.assumes);
-    // The team says the same links.
-    expect(teamLinksOf(DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1)).toEqual(
-      stage.links,
+    expect(stage.assumes).toBe(
+      SCENE_CATALOGUE['disaster-assessment'].setting.assumes,
     );
+    // The team says the same links.
+    expect(teamLinksOf(TEAM_SPECS['disaster-assessment'])).toEqual(stage.links);
   });
 
   it('places the members as the stage directions say: columns and rows', () => {
-    const stage = sceneStageOf(DISASTER_ASSESSMENT_SCENE_0_0_1);
+    const stage = sceneStageOf(SCENE_CATALOGUE['disaster-assessment']);
     expect(stage.positions).toEqual({
       'event-response': { x: 0.5, y: 0.2 },
       'disaster-assessment': { x: 0.25, y: 0.75 },
@@ -138,16 +133,16 @@ describe('the stage of a scene', () => {
     const pair = placeMembers(
       'sales',
       ['accounting'],
-      SALES_AND_ACCOUNTING_SCENE_0_0_1.stage.positions,
+      SCENE_CATALOGUE['sales-and-accounting'].stage.positions,
     );
     expect(pair).toEqual(placeMembers('sales', ['accounting']));
   });
 
   it('offers the script’s cues as the entry’s suggestions, labelled by its starters', () => {
-    const starters = EVENT_RESPONSE_APP_0_0_3.interface.starters ?? [];
-    const cues = sceneCuesOf(DISASTER_ASSESSMENT_SCENE_0_0_1, starters);
+    const starters = APP_CATALOGUE['event-response'].interface.starters ?? [];
+    const cues = sceneCuesOf(SCENE_CATALOGUE['disaster-assessment'], starters);
     expect(cues.map(cue => cue.prompt)).toEqual(
-      DISASTER_ASSESSMENT_SCENE_0_0_1.script.map(beat => beat.cue.say),
+      SCENE_CATALOGUE['disaster-assessment'].script.map(beat => beat.cue.say),
     );
     for (const cue of cues) {
       const starter = starters.find(one => one.message === cue.prompt);
@@ -281,6 +276,6 @@ describe('the Scenes example', () => {
     // The composer offers the first cue.
     expect(
       container.querySelector('textarea')?.getAttribute('placeholder'),
-    ).toBe(DISASTER_ASSESSMENT_SCENE_0_0_1.script[0].cue.say);
+    ).toBe(SCENE_CATALOGUE['disaster-assessment'].script[0].cue.say);
   });
 });

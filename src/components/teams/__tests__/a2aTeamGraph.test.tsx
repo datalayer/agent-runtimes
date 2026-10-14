@@ -39,7 +39,7 @@ import { teamConnectionsOf } from '../teamConnections';
 import { AT_REST, balloonLine, type A2ATeamPersona } from '../useA2ATeam';
 import type { A2ATeamFlow } from '../a2aTeamFlow';
 import type { A2APeerEvent } from '../../../runtimes/browser/a2aPeer';
-import { ACCOUNTING_APP_0_0_2 } from '../../../specs/apps';
+import { APP_CATALOGUE } from '../../../specs/apps';
 
 beforeAll(() => {
   // React Flow measures its box; jsdom has no layout.
@@ -202,7 +202,7 @@ const call = (name: string, ended = false, id = 'c1'): A2APeerEvent => ({
 
 describe("Accounting's connections", () => {
   it('are read from its Appspec: the odoo-accounting server, its mark and its tools', () => {
-    const [odoo, ...others] = teamConnectionsOf(ACCOUNTING_APP_0_0_2);
+    const [odoo, ...others] = teamConnectionsOf(APP_CATALOGUE['accounting']);
     expect(others).toEqual([]);
     expect(odoo).toMatchObject({
       id: 'odoo-accounting',

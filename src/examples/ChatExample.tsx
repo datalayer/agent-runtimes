@@ -34,7 +34,7 @@ import {
   useExampleAgentProtocol,
 } from './hooks/useExampleAgentProtocol';
 import { runsInBrowser } from '../runtimes/variants';
-import { EXAMPLE_SIMPLE_AGENTSPEC_0_0_1 } from '../specs/agents/agents';
+import { AGENTSPECS } from '../specs/agents/agents';
 import { ErrorView } from './components';
 import { Chat } from '../chat';
 
@@ -43,7 +43,7 @@ setupPrimerPortals();
 const AGENTSPEC_ID = 'example-simple';
 const AGENT_NAME = 'simple';
 
-const SPEC = EXAMPLE_SIMPLE_AGENTSPEC_0_0_1;
+const SPEC = AGENTSPECS[AGENTSPEC_ID];
 
 const AgentRuntimeChatExample: React.FC = () => {
   const agentName = useMemo(() => uniqueAgentId(AGENT_NAME), []);

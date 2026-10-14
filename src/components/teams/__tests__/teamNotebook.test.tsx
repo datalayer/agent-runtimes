@@ -24,7 +24,7 @@ import type {
   A2APeerArtifact,
   A2APeerEvent,
 } from '../../../runtimes/browser/a2aPeer';
-import { ACCOUNTING_APP_0_0_2, SALES_APP_0_0_3 } from '../../../specs/apps';
+import { APP_CATALOGUE } from '../../../specs/apps';
 
 /** The view, as the lazy import loads it: its loading is what is checked. */
 const loaded = vi.hoisted(() => ({ count: 0 }));
@@ -94,8 +94,8 @@ describe('what the peer gave', () => {
     const peer = { card: { name: 'Accounting' } } as unknown as A2APeer;
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_3,
-        peerApp: ACCOUNTING_APP_0_0_2,
+        entry: APP_CATALOGUE['sales'],
+        peerApp: APP_CATALOGUE['accounting'],
         peer,
         inference: {} as never,
         accept: NOTEBOOK_AND_WORDS,

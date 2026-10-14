@@ -14,14 +14,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { A2APeer, A2APeerEvent } from '../../../runtimes/browser/a2aPeer';
-import {
-  ACCOUNTING_APP_0_0_2,
-  CHANGE_DETECTION_APP_0_0_2,
-  DISASTER_ASSESSMENT_APP_0_0_2,
-  EVENT_RESPONSE_APP_0_0_3,
-  MONTH_END_CLOSE_APP_0_0_2,
-  SALES_APP_0_0_3,
-} from '../../../specs/apps';
+import { APP_CATALOGUE } from '../../../specs/apps';
 
 /** The tools the entry asks with, as the hook makes them, by the peer's name. */
 const told = vi.hoisted(() => ({
@@ -124,19 +117,19 @@ describe('a team of three', () => {
       await import('../useA2ATeam');
     const peers = [
       {
-        app: DISASTER_ASSESSMENT_APP_0_0_2,
+        app: APP_CATALOGUE['disaster-assessment'],
         peer: peerNamed('Disaster Assessment'),
         connections: [EARTHDATA],
       },
       {
-        app: CHANGE_DETECTION_APP_0_0_2,
+        app: APP_CATALOGUE['change-detection'],
         peer: peerNamed('Change detection'),
         connections: [EARTHDATA],
       },
     ];
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_3,
+        entry: APP_CATALOGUE['event-response'],
         peers,
         inference: {} as never,
       }),
@@ -152,31 +145,31 @@ describe('a team of three', () => {
       'ask_change_detection',
     ]);
     const instructions = agents.made.at(-1)?.instructions ?? '';
-    expect(instructions.startsWith(EVENT_RESPONSE_APP_0_0_3.instructions)).toBe(
-      true,
-    );
+    expect(
+      instructions.startsWith(APP_CATALOGUE['event-response'].instructions),
+    ).toBe(true);
     expect(instructions).toContain(
       'ask Disaster Assessment with `ask_disaster_assessment`, Change detection with `ask_change_detection`',
     );
     // A team of two keeps the entry's instructions as they are.
     expect(
-      teamInstructions(SALES_APP_0_0_3, [
-        { app: ACCOUNTING_APP_0_0_2, askTool: 'ask_accounting' },
+      teamInstructions(APP_CATALOGUE['sales'], [
+        { app: APP_CATALOGUE['accounting'], askTool: 'ask_accounting' },
       ]),
-    ).toBe(SALES_APP_0_0_3.instructions);
+    ).toBe(APP_CATALOGUE['sales'].instructions);
   });
 
   it('is not ready until every peer is reached', async () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_3,
+        entry: APP_CATALOGUE['event-response'],
         peers: [
           {
-            app: DISASTER_ASSESSMENT_APP_0_0_2,
+            app: APP_CATALOGUE['disaster-assessment'],
             peer: peerNamed('Disaster Assessment'),
           },
-          { app: CHANGE_DETECTION_APP_0_0_2, peer: null },
+          { app: APP_CATALOGUE['change-detection'], peer: null },
         ],
         inference: {} as never,
       }),
@@ -192,12 +185,12 @@ describe('a team of three', () => {
     const { useA2ATeam, askedLine } = await import('../useA2ATeam');
     const peers = [
       {
-        app: DISASTER_ASSESSMENT_APP_0_0_2,
+        app: APP_CATALOGUE['disaster-assessment'],
         peer: peerNamed('Disaster Assessment'),
         connections: [EARTHDATA],
       },
       {
-        app: CHANGE_DETECTION_APP_0_0_2,
+        app: APP_CATALOGUE['change-detection'],
         peer: peerNamed('Change detection'),
         connections: [EARTHDATA],
         greeting: 'I compare before and after.',
@@ -205,7 +198,7 @@ describe('a team of three', () => {
     ];
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: EVENT_RESPONSE_APP_0_0_3,
+        entry: APP_CATALOGUE['event-response'],
         peers,
         inference: {} as never,
       }),
@@ -325,7 +318,7 @@ describe('an entry on a runtime', () => {
     const { result, rerender } = renderHook(
       ({ peer }: { peer: A2APeer | null }) =>
         useA2ATeam({
-          entry: MONTH_END_CLOSE_APP_0_0_2,
+          entry: APP_CATALOGUE['month-end-close'],
           entryPeer: peer,
           inference: {} as never,
         }),
@@ -370,8 +363,8 @@ describe('a button pressed on what a peer showed', () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_3,
-        peerApp: ACCOUNTING_APP_0_0_2,
+        entry: APP_CATALOGUE['sales'],
+        peerApp: APP_CATALOGUE['accounting'],
         peer: peerNamed('Accounting'),
         inference: {} as never,
       }),
@@ -379,7 +372,7 @@ describe('a button pressed on what a peer showed', () => {
     let reply = '';
     await act(async () => {
       reply = await result.current.pressAction(
-        ACCOUNTING_APP_0_0_2.id,
+        APP_CATALOGUE['accounting'].id,
         PRESSED,
       );
     });
@@ -392,7 +385,7 @@ describe('a button pressed on what a peer showed', () => {
         action: PRESSED.action,
       },
     ]);
-    const member = { id: ACCOUNTING_APP_0_0_2.id, name: 'Accounting' };
+    const member = { id: APP_CATALOGUE['accounting'].id, name: 'Accounting' };
     expect(result.current.turns).toEqual([
       { role: 'user', text: 'Send the reminders', member },
       { role: 'assistant', text: told.answer, member },
@@ -428,14 +421,14 @@ describe('a button pressed on what a peer showed', () => {
     const { useA2ATeam } = await import('../useA2ATeam');
     const { result } = renderHook(() =>
       useA2ATeam({
-        entry: SALES_APP_0_0_3,
-        peerApp: ACCOUNTING_APP_0_0_2,
+        entry: APP_CATALOGUE['sales'],
+        peerApp: APP_CATALOGUE['accounting'],
         peer: null,
         inference: {} as never,
       }),
     );
     await expect(
-      result.current.pressAction(ACCOUNTING_APP_0_0_2.id, PRESSED),
+      result.current.pressAction(APP_CATALOGUE['accounting'].id, PRESSED),
     ).rejects.toThrow('Accounting is not reached');
     expect(told.asked).toEqual([]);
     expect(result.current.turns).toEqual([]);
