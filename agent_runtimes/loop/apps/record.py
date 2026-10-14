@@ -353,6 +353,9 @@ class AppRecorder:
     launch_uid: str = ""
     #: What woke its sessions, when nobody opened them: ``{"kind": "schedule", ...}``.
     woken_by: Dict[str, Any] = field(default_factory=dict)
+    #: The agent only visitors without an account talk to, on the runtime its
+    #: deployment is kept on (R-30): nothing of it is kept, as on theirs.
+    visitors: bool = False
     send: Send = send_to_ai_agents
 
     _pending: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict, init=False)
@@ -367,7 +370,7 @@ class AppRecorder:
         # Nothing is kept of a conversation without an account (LOOP R-30).
         from agent_runtimes.loop.apps.visitors import visitors_runtime
 
-        if visitors_runtime():
+        if visitors_runtime() or self.visitors:
             return False
         # What a channel was sent, or why it was not, is always kept: a
         # notification that reached nobody is never silent (LOOP R-37).

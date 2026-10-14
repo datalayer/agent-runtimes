@@ -401,6 +401,8 @@ class Address:
     def __init__(self) -> None:
         self.version = 2
         self.opens = True
+        #: Whether its version has code of its own, as ai-agents says it to nobody.
+        self.runs_code = False
         self.made: List[Tuple[str, Optional[Dict[str, Any]]]] = []
 
     async def resolve(self, slug: str) -> Tuple[int, Dict[str, Any]]:
@@ -414,6 +416,7 @@ class Address:
                 "opens": self.opens,
                 "reason": "" if self.opens else "Without an account it is not run.",
             },
+            "runs_code": self.runs_code,
         }
 
     async def make(self, name: str, body: Optional[Dict[str, Any]]) -> Tuple[int, str]:
@@ -429,7 +432,9 @@ class Address:
 
 
 @pytest.fixture()
-def address() -> Iterator[Address]:
+def address(monkeypatch: pytest.MonkeyPatch) -> Iterator[Address]:
+    """An address the visitors' runtime resolves."""
+    monkeypatch.setenv(visitors.VISITORS_ENV, "notes-assistant")
     found = Address()
     use_address_resolver(found.resolve, found.make)
     yield found
@@ -594,3 +599,198 @@ def test_no_runtime_but_the_visitors_makes_a_visitors_agent(remote: TestClient) 
     """Any other runtime refuses it."""
     refused = remote.post(AGENT, headers=as_visitor("tab-ada-0001", "at:notes"))
     assert refused.status_code == 404 and refused.json()["detail"] == NOT_HERE
+
+
+# --- a Python application, on the runtime it is kept on (R-30, decided 14 October 2026) ---
+
+
+def test_the_visitors_runtime_never_runs_an_address_with_code_of_its_own(
+    address: Address,
+) -> None:
+    """Its plain agent would answer in its code's place: refused, nothing made."""
+    address.runs_code = True
+    with pytest.raises(AddressRefused) as refused:
+        asyncio.run(ensure_address_agent("at:notes"))
+    assert (refused.value.status, refused.value.reason) == (
+        409,
+        visitors.RUNS_ITS_CODE_ELSEWHERE,
+    )
+    assert address.made == []
+
+
+def test_an_answer_that_does_not_say_whether_it_runs_code_is_not_run(
+    address: Address, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fail fast: never guessed to be a spec."""
+    real = address.resolve
+
+    async def unsaid(slug: str) -> Tuple[int, Dict[str, Any]]:
+        status, said = await real(slug)
+        said.pop("runs_code")
+        return status, said
+
+    use_address_resolver(unsaid, address.make)
+    with pytest.raises(AddressRefused) as refused:
+        asyncio.run(ensure_address_agent("at:notes"))
+    assert refused.value.status == 409 and "code of its own" in refused.value.reason
+    assert address.made == []
+
+
+@pytest.fixture()
+def kept_runtime(
+    runtime: Runtime, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Tuple[TestClient, Address]]:
+    """The runtime deployment dep-1 is kept on: its agent made by the keeper,
+    visitors told apart by their token, addresses made as the create route
+    makes them."""
+    from agent_runtimes.app import create_app
+
+    monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)
+    monkeypatch.setenv(visitors.TURNS_ENV, "2")
+    monkeypatch.setattr(routes, "VERIFIER", Visitors())
+    from agent_runtimes.models.models import remember_app_instance
+
+    kept = {"app_uid": "app-1", "deployment_uid": "dep-1", "version": 2}
+    runtime.make("notes-assistant", ASSISTANT, kept)
+    # As the create route keeps it: what says the runtime serves dep-1.
+    remember_app_instance("notes-assistant", kept)
+    found = Address()
+    found.runs_code = True
+
+    async def make(name: str, body: Optional[Dict[str, Any]]) -> Tuple[int, str]:
+        found.made.append((name, body))
+        if body is not None:
+            runtime.make(name, body["app_spec"], body["app_instance"])
+            remember_app_instance(name, body["app_instance"])
+        return 200, ""
+
+    use_address_resolver(found.resolve, make)
+    visitors.forget_turns()
+    with TestClient(create_app(), client=("10.0.0.4", 50000)) as client:
+        yield client, found
+    use_address_resolver()
+    visitors.forget_turns()
+
+
+def test_the_kept_runtime_talks_to_a_visitor_of_its_own_address(
+    kept_runtime: Tuple[TestClient, Address], runtime: Runtime
+) -> None:
+    """The address's agent made here, for visitors only (nothing kept), the
+    chat answered on it, the visitor's turns counted as on the visitors'
+    runtime; their token reaches nothing else here."""
+    client, address = kept_runtime
+    visitor = as_visitor("tab-ada-0001", "at:notes")
+    said = client.post(AGENT, headers=visitor)
+    assert said.status_code == 200, said.text
+    assert said.json() == {"agent": "at-notes", "app_id": "notes-assistant"}
+    [(name, body)] = address.made
+    assert body is not None and body["app_instance"] == {
+        "app_uid": "app-1",
+        "deployment_uid": "dep-1",
+        "version": 2,
+        "visitor_app": "at:notes",
+    }
+    answered = client.post(
+        "/api/v1/apps/agents/at-notes/ag-ui/", headers=visitor, json=agui("thread-k1")
+    )
+    assert answered.status_code == 200 and answer_of(events_of(answered))
+    # The keeper's own agent is not the token's.
+    named = client.post(AGUI, headers=visitor, json=agui("thread-k2"))
+    assert named.status_code == 403 and named.json()["detail"] == OTHER_APPLICATION
+    # Its turns a day, as on the visitors' runtime.
+    second = client.post(
+        "/api/v1/apps/agents/at-notes/ag-ui/", headers=visitor, json=agui("thread-k3")
+    )
+    assert second.status_code == 200
+    third = client.post(
+        "/api/v1/apps/agents/at-notes/ag-ui/", headers=visitor, json=agui("thread-k4")
+    )
+    assert "today's 2 turns" in third.text
+    # An example's token is not this runtime's to answer.
+    example = client.post(AGENT, headers=as_visitor("tab-ada-0001"))
+    assert example.status_code == 403 and example.json()["detail"] == OTHER_APPLICATION
+
+
+def test_the_kept_runtime_refuses_an_address_it_does_not_run_or_one_written_as_a_spec(
+    kept_runtime: Tuple[TestClient, Address],
+) -> None:
+    client, address = kept_runtime
+    address.runs_code = False
+    spec = client.post(AGENT, headers=as_visitor("tab-ada-0001", "at:notes"))
+    assert spec.status_code == 409
+    assert spec.json()["detail"] == visitors.SPEC_ON_VISITORS
+    address.runs_code = True
+    real = address.resolve
+
+    async def elsewhere(slug: str) -> Tuple[int, Dict[str, Any]]:
+        status, said = await real(slug)
+        said["deployment"] = {**said["deployment"], "uid": "dep-other"}
+        return status, said
+
+    use_address_resolver(elsewhere, address.make)
+    other = client.post(AGENT, headers=as_visitor("tab-ada-0001", "at:notes"))
+    assert other.status_code == 409
+    assert other.json()["detail"] == visitors.NOT_SERVED_HERE
+    assert address.made == []
+
+
+def test_a_visitors_token_is_verified_where_a_deployment_is_served(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A runtime serving a deployment asks ai-inference who the visitor is,
+    as the visitors' runtime does; one serving none refuses them."""
+    from agent_runtimes.loop.apps import principal
+
+    monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)
+    monkeypatch.setenv("DATALAYER_AI_INFERENCE_URL", "https://inference.example")
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200, json={"visitor": "tab-ada-0001", "app": "at:notes", "expires_in": 200}
+        )
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        callers.httpx,
+        "AsyncClient",
+        lambda **kwargs: real(transport=httpx.MockTransport(answer), **kwargs),
+    )
+    token = _token(sub="anonymous:j", aud=visitors.ANONYMOUS_AUDIENCE)
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: True)
+    assert _verify(token) == Caller(
+        kind="visitor", uid="tab-ada-0001", app_uid="at:notes"
+    )
+    monkeypatch.setattr(principal, "a_deployment_is_served", lambda: False)
+    with pytest.raises(CallerRefused) as refused:
+        _verify(_token(sub="anonymous:k", aud=visitors.ANONYMOUS_AUDIENCE))
+    assert (refused.value.status, refused.value.reason) == (403, NOT_HERE)
+
+
+def test_a_visitors_turn_on_a_deployment_calls_its_models_with_their_token() -> None:
+    """In a visitor's turn their own token, as on the visitors' runtime (their
+    limits, nobody's account); in anybody else's, the principal's."""
+
+    async def principal_key() -> str:
+        return "principal-token"
+
+    key = visitors.or_visitors_key(principal_key)
+
+    async def anybody() -> str:
+        return await key()
+
+    async def a_visitor() -> str:
+        use_turn_token("visitor-token")
+        return await key()
+
+    assert asyncio.run(anybody()) == "principal-token"
+    assert asyncio.run(a_visitor()) == "visitor-token"
+
+
+def test_nothing_is_kept_of_the_agent_only_visitors_talk_to() -> None:
+    from agent_runtimes.loop.apps.record import ALWAYS_KEPT
+
+    app = load_app(ASSISTANT)
+    for kind in sorted(ALWAYS_KEPT):
+        # What any other agent of the runtime always keeps, this one does not.
+        assert AppRecorder(app=app).kept(kind)
+        assert not AppRecorder(app=app, visitors=True).kept(kind)

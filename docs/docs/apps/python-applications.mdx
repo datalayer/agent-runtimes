@@ -68,6 +68,25 @@ code that cannot be read stops its agent from being made, in a sentence. A
 deployment whose record does not say whether its version has code — one
 deployed before the file was kept — is refused (409): deploy it again.
 
+**Signed out, on the runtime it is kept on** (R-30, decided 14 October 2026:
+*kept runtime + refusal*). A visitor without an account never talks to a
+Python application on the shared visitors' runtime, whose plain agent would
+answer in your code's place. ai-agents points them at the runtime the
+deployment is kept always on (`runs_code` and `kept.url` in what
+`/apps/deployments/at/{slug}` answers somebody signed out); that runtime takes
+their visitor's token for its own address only, makes the address's agent
+with the deployment's code (read as nobody, which ai-agents answers only for a
+deployment such a visitor may talk to), and holds them to what the visitors'
+runtime does: their own token for its models, so ai-inference's limits for
+visitors apply and nobody's account pays; reading only; their turns a day and
+minutes a conversation; nothing remembered and nothing recorded. So a Python
+application open to `link` or `public` must be kept always on: opening it to
+them, turning always on off while it is, or moving an open address to a
+Python version not kept on is refused (409, *A Python application open to
+people without an account must be kept always on*). One not kept on, or whose
+runtime is not running now, is refused to a visitor in a sentence, never run
+as the plain agent; the visitors' runtime refuses such an address too.
+
 The services — ai-agents, durable — import only what reads a spec:
 `load_app`, `schedule_triggers`, `session_payload`; the scheduler starts a
 woken session on the runtime it launched, over HTTP (`start_session`). None

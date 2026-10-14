@@ -57,6 +57,7 @@ function opened(
     },
     spec,
     session: { opens: true, reason: '' },
+    runs_code: false,
     ...extra,
   };
 }
@@ -139,6 +140,58 @@ describe('a visitor’s application', () => {
       visitorsAt('https://r1.datalayer.run', `${AT_PREFIX}research`),
     );
     expect(read.visitors.app).toBe('at:research');
+  });
+
+  it('runs an address with code of its own on the runtime it is kept on, never the visitors’ (R-30)', async () => {
+    const spec = {
+      schema: 'loop.app/v1',
+      id: 'research',
+      name: 'Research',
+      kind: 'chat',
+      agent: 'research-agent',
+    };
+    const read = await readVisitorApp({
+      api: 'https://r1.datalayer.run/',
+      app: 'research',
+      fetcher: answer(
+        200,
+        opened(spec, {
+          runs_code: true,
+          kept: { url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1/' },
+        }),
+      ),
+      catalogue: () => undefined,
+    });
+    expect(read.kind).toBe('visitors');
+    if (read.kind !== 'visitors') return;
+    expect(read.visitors).toEqual({
+      url: 'https://r1.datalayer.run/jupyter/server/pool/kept-1',
+      app: 'at:research',
+      inferenceUrl: 'https://r1.datalayer.run',
+    });
+    expect(read.visitors.url).not.toContain(VISITORS_PATH);
+  });
+
+  it('does not run an address with code and no runtime, or one that does not say (fail fast)', async () => {
+    const spec = { schema: 'loop.app/v1', id: 'r', kind: 'chat', agent: 'a' };
+    const none = await readVisitorApp({
+      app: 'research',
+      fetcher: answer(200, opened(spec, { runs_code: true })),
+      catalogue: () => undefined,
+    });
+    expect(none.kind).toBe('said');
+    if (none.kind !== 'said') return;
+    expect(none.text).toContain('none is running now');
+    const unsaid = opened(spec) as Record<string, unknown>;
+    delete unsaid.runs_code;
+    const silent = await readVisitorApp({
+      app: 'research',
+      fetcher: answer(200, unsaid),
+      catalogue: () => undefined,
+    });
+    expect(silent.kind).toBe('said');
+    if (silent.kind !== 'said') return;
+    expect(silent.text).toContain('code of its own');
   });
 
   it('says, in ai-agents’ words, an address a visitor may not talk to, and the token it takes', async () => {

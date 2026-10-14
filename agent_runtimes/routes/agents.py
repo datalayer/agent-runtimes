@@ -2531,6 +2531,8 @@ async def create_agent(
                     launch_uid=str(serving.get("launch_uid") or ""),
                     # What woke it, when nobody opened it (R-14).
                     woken_by=dict(serving.get("woken_by") or {}),
+                    # Only visitors without an account talk to it (R-30).
+                    visitors=bool(serving.get("visitor_app")),
                 )
                 # The session API writes a session's start to it (R-04).
                 keep_agent_recorder(agent_id, recorder)

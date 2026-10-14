@@ -18,7 +18,9 @@
  *   `GET /apps/deployments/at/<slug>` without a token says what its page is
  *   drawn from — the Appspec of the version it runs — and whether somebody
  *   signed out may talk to it (`session.opens`); the visitors' runtime
- *   answers `at:<slug>`, making the address's agent when first talked to;
+ *   answers `at:<slug>`, making the address's agent when first talked to —
+ *   or, for a version with code of its own (`runs_code`), the runtime its
+ *   deployment is kept on (`kept.url`), which runs that code;
  * - **a decision**, named by its id (`01M…`): framed from Datalayer's run
  *   page, as before.
  *
@@ -75,10 +77,22 @@ export type VisitorApp =
   /** Not run, and why, in a sentence. */
   | { kind: 'said'; text: string };
 
-/** Where a visitor's conversation with `app` runs: the visitors' runtime beside ai-agents, its token from ai-inference. */
-export function visitorsAt(api: string, app: string): DatalayerVisitors {
+/**
+ * Where a visitor's conversation with `app` runs: the visitors' runtime beside
+ * ai-agents — or `runtime`, the one a deployment with code of its own is
+ * kept on (R-30) — its token from ai-inference.
+ */
+export function visitorsAt(
+  api: string,
+  app: string,
+  runtime?: string,
+): DatalayerVisitors {
   const base = api.replace(/\/+$/, '');
-  return { url: `${base}${VISITORS_PATH}`, app, inferenceUrl: base };
+  return {
+    url: runtime ? runtime.replace(/\/+$/, '') : `${base}${VISITORS_PATH}`,
+    app,
+    inferenceUrl: base,
+  };
 }
 
 /** What an embed without a token is told it takes. */
@@ -178,9 +192,42 @@ export async function readVisitorApp({
     typeof deployment.app_name === 'string' && deployment.app_name
       ? deployment.app_name
       : parsed.app.name;
+  const runtime = signedOutRuntime(body);
+  if ('said' in runtime) {
+    return { kind: 'said', text: refusedSentence(runtime.said) };
+  }
   return {
     kind: 'visitors',
     app: runnable({ app: { ...parsed.app, name }, problems: parsed.problems }),
-    visitors: visitorsAt(api, `${AT_PREFIX}${named}`),
+    visitors: visitorsAt(api, `${AT_PREFIX}${named}`, runtime.url),
   };
+}
+
+/**
+ * Where somebody without an account talks to an address, as ai-agents says
+ * it (R-30, decided 14 October 2026): written as a spec, on the visitors'
+ * runtime (`url` unsaid); with code of its own (`runs_code`), on the runtime
+ * its deployment is kept on (`kept.url`), which runs that code — never the
+ * visitors', where its plain agent would answer in its code's place. An
+ * answer that does not say, or says code with no runtime, is not run.
+ */
+export function signedOutRuntime(
+  body: Record<string, unknown>,
+): { url?: string } | { said: string } {
+  if (typeof body.runs_code !== 'boolean') {
+    return {
+      said: 'Datalayer did not say whether it runs code of its own, so it is not run.',
+    };
+  }
+  if (!body.runs_code) {
+    return {};
+  }
+  const kept = (body.kept ?? {}) as { url?: unknown };
+  const url = typeof kept.url === 'string' ? kept.url.trim() : '';
+  if (!url) {
+    return {
+      said: 'It runs its own code on a runtime kept for it, and none is running now.',
+    };
+  }
+  return { url };
 }

@@ -531,18 +531,6 @@ def test_the_create_route_runs_the_deployments_code_in_its_principals_name_only(
             sessions.serve_agent_code(name, None)
 
 
-def test_with_no_token_sent_ai_agents_is_not_asked_for_the_code() -> None:
-    """ai-agents is asked for a deployment's code with the token of whoever
-    opened the session: with none, it is not asked, and nothing is run."""
-    from agent_runtimes.loop.apps.principal import (
-        DeploymentCodeUnread,
-        _read_from_ai_agents,
-    )
-
-    with pytest.raises(DeploymentCodeUnread, match="none was sent"):
-        asyncio.run(_read_from_ai_agents("dep-14", 2, None))
-
-
 def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -575,6 +563,11 @@ def test_ai_agents_is_asked_for_the_version_the_agent_runs(
     assert request.headers["authorization"] == "Bearer person"
     answers.append(httpx.Response(200, json={"success": True, "code": None}))
     assert asyncio.run(module._read_from_ai_agents("dep-14", 2, "person")) is None
+    # With no token, asked as nobody (R-30): ai-agents answers a deployment
+    # somebody without an account may talk to, and refuses the rest.
+    answers.append(httpx.Response(200, json={"success": True, "code": TICK_CODE}))
+    assert asyncio.run(module._read_from_ai_agents("dep-14", 2, None)) == TICK_CODE
+    assert "authorization" not in seen[-1].headers
     answers.append(httpx.Response(409, json={"detail": "Deploy it again."}))
     with pytest.raises(DeploymentCodeUnread, match=r"\(409\): Deploy it again\."):
         asyncio.run(module._read_from_ai_agents("dep-14", 2, "person"))

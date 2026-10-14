@@ -386,11 +386,6 @@ async def _read_from_ai_agents(
 
     from agent_runtimes.loop.apps.opening import page_origin_headers
 
-    if not bearer:
-        raise DeploymentCodeUnread(
-            f"The code of deployment {deployment_uid} is read with the token of "
-            "whoever opens its session: none was sent."
-        )
     url = getattr(DatalayerURLs.from_environment(), "ai_agents_url", "") or ""
     if not url:
         raise DeploymentCodeUnread(
@@ -402,7 +397,12 @@ async def _read_from_ai_agents(
                 f"{url.rstrip('/')}/api/ai-agents/v1/apps/deployments/{deployment_uid}/code",
                 params={"version": int(version)},
                 # An embed's page, checked as for the principal's token (D-12).
-                headers={"Authorization": f"Bearer {bearer}", **page_origin_headers()},
+                # With no token, asked as nobody: answered only for a deployment
+                # somebody without an account may talk to (R-30).
+                headers={
+                    **({"Authorization": f"Bearer {bearer}"} if bearer else {}),
+                    **page_origin_headers(),
+                },
             )
     except httpx.HTTPError as error:
         raise DeploymentCodeUnread(
@@ -460,7 +460,10 @@ async def read_deployment_code(
 
     Read from ai-agents (`GET /apps/deployments/{uid}/code`) with the token
     of whoever opened the session, admitted as for the principal's token:
-    never taken from the request that makes the agent.
+    never taken from the request that makes the agent. With none — the
+    runtime a deployment is kept on, making the agent a visitor without an
+    account talks to — asked as nobody, which ai-agents answers only for a
+    deployment such a visitor may talk to (R-30).
 
     Parameters
     ----------
@@ -469,7 +472,7 @@ async def read_deployment_code(
     version : int
         The version its agent runs.
     bearer : str | None
-        The token of whoever opened the session.
+        The token of whoever opened the session; ``None`` to ask as nobody.
 
     Returns
     -------

@@ -197,6 +197,7 @@ class CallerVerifier:
 
     async def verify(self, token: str, app_uid: str = "") -> Caller:
         """The caller a token is, or `CallerRefused`."""
+        from agent_runtimes.loop.apps.principal import a_deployment_is_served
         from agent_runtimes.loop.apps.visitors import (
             NOT_HERE,
             ONLY_VISITORS,
@@ -208,8 +209,13 @@ class CallerVerifier:
         if not claims:
             raise CallerRefused(401, "The token is not one this platform issues.")
         visitor = is_anonymous_audience(claims)
-        if visitor != visitors_runtime():
-            raise CallerRefused(403, NOT_HERE if visitor else ONLY_VISITORS)
+        if not visitor and visitors_runtime():
+            raise CallerRefused(403, ONLY_VISITORS)
+        # A visitor is answered by the visitors' runtime, and by the runtime a
+        # deployment with code of its own is kept on, which runs it for them
+        # (R-30, decided 14 October 2026): nowhere else.
+        if visitor and not (visitors_runtime() or a_deployment_is_served()):
+            raise CallerRefused(403, NOT_HERE)
         if visitor:
             return await self._visitor(token)
         if is_host_token(claims):

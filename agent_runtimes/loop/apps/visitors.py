@@ -3,8 +3,8 @@
 
 """Signed-out sessions, on the visitors' runtime (plans/LOOP.md, R-30).
 
-A visitor without an account talks to an application on a runtime kept warm
-for everybody without one: the runtime image the pools run, started with
+A visitor without an account talks to an application written as a spec on a
+runtime kept warm for everybody without one: the runtime image the pools run, started with
 ``AGENT_RUNTIMES_VISITORS`` — the examples it keeps warm, each one's agent
 made as it starts — and nobody's token. Every other runtime refuses a
 visitor, and this one refuses anybody signed in: a person has runtimes of
@@ -17,6 +17,15 @@ application at its address that its owner lets anybody open (D-02). The
 runtime asks ai-inference who it is for (``GET /anonymous/whoami``), as any
 runtime asks IAM who a person is (R-32,
 `agent_runtimes.loop.apps.callers`). A caller is then ``visitor:<id>``.
+
+**An application with code of its own** (an ``app.py``; decided 14 October
+2026) is never talked to here, where its plain agent would answer in its
+code's place: ai-agents points a visitor at the runtime its deployment is
+kept always on, and refuses one not kept on, in a sentence. That runtime
+takes the visitor's token for its own address, makes the address's agent
+with the deployment's code (read from ai-agents as nobody), and holds the
+visitor to all that follows — their own token for its models, read only,
+their turns and minutes, nothing kept — as this runtime does.
 
 **A session is its own.** A visitor's session answers that visitor and
 nobody else, on the same runtime as everybody else's: somebody else's is not
@@ -65,6 +74,7 @@ __all__ = [
     "forget_turns",
     "is_anonymous_audience",
     "kept_examples",
+    "or_visitors_key",
     "path_answered",
     "session_minutes",
     "turn_api_key",
@@ -222,6 +232,21 @@ async def turn_api_key() -> str:
             "The visitors' runtime calls a model only in a visitor's turn, with their token."
         )
     return token
+
+
+def or_visitors_key(otherwise: Any) -> Any:
+    """The key a deployment's model call is made with: in a visitor's turn on
+    the runtime it is kept on, the visitor's own token, as on the visitors'
+    runtime (R-30, decided 14 October 2026); else ``otherwise()``, its
+    principal's. Read as each call is made."""
+
+    async def key() -> str:
+        token = _TURN_TOKEN.get()
+        if token:
+            return token
+        return await otherwise()
+
+    return key
 
 
 # --- read only --------------------------------------------------------------------
@@ -496,9 +521,46 @@ def use_address_resolver(resolver: Any = None, maker: Any = None) -> None:
 use_address_resolver()
 
 
+#: Said by the visitors' runtime of an address whose version has code of its own.
+RUNS_ITS_CODE_ELSEWHERE = (
+    "It runs its own code on the runtime it is kept on, not on the visitors' "
+    "runtime: open it at its address again."
+)
+#: Said by a deployment's runtime of an address it does not serve.
+NOT_SERVED_HERE = "This runtime does not run the application at that address."
+#: Said by a deployment's runtime of an address written as a spec.
+SPEC_ON_VISITORS = (
+    "Without an account it is talked to on the visitors' runtime: open it at "
+    "its address again."
+)
+
+
+def _where_refused(said: Mapping[str, Any], deployment_uid: str) -> str:
+    """Why this runtime does not talk to a visitor of an address, or ``""``
+    (R-30, decided 14 October 2026). A version with code of its own
+    (``runs_code``, as ai-agents answers somebody without an account) runs
+    on the runtime it is kept on, never on the visitors' — where its plain
+    agent would answer in its code's place; that runtime talks to visitors
+    of its own deployment, and only of one with code.
+    """
+    from agent_runtimes.loop.apps.principal import deployments_served
+
+    runs_code = said.get("runs_code")
+    if not isinstance(runs_code, bool):
+        return "ai-agents did not say whether it runs code of its own: it is not run."
+    if visitors_runtime():
+        return RUNS_ITS_CODE_ELSEWHERE if runs_code else ""
+    if deployment_uid not in deployments_served():
+        return NOT_SERVED_HERE
+    return "" if runs_code else SPEC_ON_VISITORS
+
+
 async def ensure_address_agent(app_key: str) -> str:
     """The agent of the application at an address, made here if it is not, or made again
-    when its owner moved it to another version (R-30, D-02).
+    when its owner moved it to another version (R-30, D-02): on the visitors'
+    runtime for a version written as a spec; on the runtime its deployment is
+    kept on for one with code of its own, which that agent runs — the code
+    read from the deployment as nobody, as the agent is made.
 
     Asked of ai-agents as nobody: refused, in its sentence, when the address
     lets nobody in, or a visitor nobody knows may not talk to it.
@@ -528,6 +590,9 @@ async def ensure_address_agent(app_key: str) -> str:
             raise AddressRefused(
                 409, "Its owner has to deploy it again before anybody can talk to it."
             )
+        where_refused = _where_refused(said, str(deployment.get("uid") or ""))
+        if where_refused:
+            raise AddressRefused(409, where_refused)
         instance = {
             "app_uid": str(deployment.get("app_uid") or ""),
             "deployment_uid": str(deployment.get("uid") or ""),

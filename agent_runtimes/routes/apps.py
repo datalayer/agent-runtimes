@@ -300,24 +300,30 @@ def _reaches(caller: Caller, agent: str) -> None:
 
 
 async def _visitors_agent(agent: str, request: Request) -> None:
-    """On the visitors' runtime, the agent a visitor's new session is opened on.
+    """On the visitors' runtime, or the runtime a deployment with code of its
+    own is kept on, the agent a visitor's new session is opened on.
 
     The visitor's token names it; an application at its address has its
     agent made here as it is first talked to, from what ai-agents shows
     somebody not signed in (R-30, D-02).
     """
+    from agent_runtimes.loop.apps.principal import a_deployment_is_served
     from agent_runtimes.loop.apps.visitors import (
         AT_PREFIX,
+        OTHER_APPLICATION,
         AddressRefused,
         ensure_address_agent,
         visitors_runtime,
     )
 
-    if not visitors_runtime():
+    if not (visitors_runtime() or a_deployment_is_served()):
         return
     caller = (await _authorize(request, False)).caller
     if caller.kind != "visitor":
         return
+    if not visitors_runtime() and not caller.app_uid.startswith(AT_PREFIX):
+        # The runtime a deployment is kept on answers its address only.
+        raise HTTPException(status_code=403, detail=OTHER_APPLICATION)
     _reaches(caller, agent)
     if caller.app_uid.startswith(AT_PREFIX):
         try:
@@ -330,7 +336,10 @@ async def _visitors_agent(agent: str, request: Request) -> None:
 
 @router.post("/visitors/agent")
 async def visitor_agent(request: Request) -> Dict[str, str]:
-    """The agent a visitor's token names on the visitors' runtime, made if it is not.
+    """The agent a visitor's token names, made if it is not: on the visitors'
+    runtime, or — for an address whose version has code of its own — on the
+    runtime that deployment is kept on, which runs its code (R-30, decided 14
+    October 2026).
 
     What a visitor's page asks before it follows the application's plugins
     here (LOOP F-15, STUDIO D-15): an application at its address has its
@@ -339,25 +348,30 @@ async def visitor_agent(request: Request) -> Dict[str, str]:
     speaks to it; an example is one this runtime keeps warm. Answers the
     agent — ``at-<slug>`` for an address, the example's id — and the id of
     the application it runs, which the page names its chat's agent and
-    follows by. Refused anywhere but the visitors' runtime, and to anybody
-    but a visitor.
+    follows by. Refused on a runtime that serves no deployment and is not the
+    visitors', and to anybody but a visitor.
     """
+    from agent_runtimes.loop.apps.principal import a_deployment_is_served
     from agent_runtimes.loop.apps.sessions import SessionRefused, agent_app
     from agent_runtimes.loop.apps.visitors import (
         AT_PREFIX,
         NOT_HERE,
         ONLY_VISITORS,
+        OTHER_APPLICATION,
         AddressRefused,
         agent_of,
         ensure_address_agent,
         visitors_runtime,
     )
 
-    if not visitors_runtime():
+    if not (visitors_runtime() or a_deployment_is_served()):
         raise HTTPException(status_code=404, detail=NOT_HERE)
     caller = (await _authorize(request, False)).caller
     if caller.kind != "visitor":
         raise HTTPException(status_code=403, detail=ONLY_VISITORS)
+    if not visitors_runtime() and not caller.app_uid.startswith(AT_PREFIX):
+        # The runtime a deployment is kept on answers its address only.
+        raise HTTPException(status_code=403, detail=OTHER_APPLICATION)
     try:
         agent = agent_of(caller.app_uid)
     except ValueError as wrong:
