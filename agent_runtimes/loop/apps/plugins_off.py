@@ -130,9 +130,7 @@ def plugins_off_setup_notes(interface: Any, plugins_off: Sequence[str]) -> List[
         One note per UI whose blocks its page uses.
     """
     off = [
-        plugin
-        for plugin in list_ui()
-        if plugin.id in plugins_off and plugin.components
+        plugin for plugin in list_ui() if plugin.id in plugins_off and plugin.components
     ]
     notes: List[str] = []
     used = components_used_by(interface)

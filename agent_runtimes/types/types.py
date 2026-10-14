@@ -308,7 +308,9 @@ class UISpec(BaseModel):
     each with its renderer.
     """
 
-    id: str = Field(..., description="What a `ui` choice's `plugin` names (e.g. 'chat')")
+    id: str = Field(
+        ..., description="What a `ui` choice's `plugin` names (e.g. 'chat')"
+    )
     version: str = Field(default="0.0.1", description="Specification version")
     name: str = Field(..., description="What a Maker reads")
     description: str = Field(default="", description="What it is, in a Maker's words")
@@ -351,7 +353,8 @@ class UiRendererSpec(BaseModel):
     description: str = Field(default="", description="What it does")
     docs_url: str = Field(default="", description="Its own documentation")
     enabled: bool = Field(
-        default=True, description="Whether an application may be exposed through it today"
+        default=True,
+        description="Whether an application may be exposed through it today",
     )
 
 

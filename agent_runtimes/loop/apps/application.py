@@ -296,8 +296,7 @@ class Application:
             document["protocols"] = list(protocols)
         if ui:
             document["ui"] = [
-                dict(choice) if isinstance(choice, Mapping) else choice
-                for choice in ui
+                dict(choice) if isinstance(choice, Mapping) else choice for choice in ui
             ]
         self._document = document
         self._version_declared = version is not None

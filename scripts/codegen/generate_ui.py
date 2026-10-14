@@ -351,7 +351,11 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
                 f"  name: {_ts(spec['name'])},",
                 f"  description: {_ts(str(spec.get('description', '')).strip())},",
                 f"  emoji: {json.dumps(spec['emoji'], ensure_ascii=False)},",
-                *([f"  octicon: {_ts(spec['octicon'])},"] if spec.get("octicon") else []),
+                *(
+                    [f"  octicon: {_ts(spec['octicon'])},"]
+                    if spec.get("octicon")
+                    else []
+                ),
                 f"  plugin: {_ts(spec['plugin'])},",
                 f"  folder: {_ts(spec['folder'])},",
                 *([f"  per: {_ts(spec['per'])},"] if spec.get("per") else []),
