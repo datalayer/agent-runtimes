@@ -55,6 +55,8 @@ export interface SpeechModelSpec {
   id: string;
   version: string;
   name: string;
+  /** What it is for, in a sentence or two. */
+  description: string;
   task: 'stt' | 'tts' | 'vad';
   engine: string;
   dtype: string;
@@ -145,6 +147,8 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     id: 'kokoro-82m',
     version: '0.0.1',
     name: 'Kokoro 82M',
+    description:
+      "Text to speech on Datalayer's servers, on CPU: hexgrad's Kokoro-82M v1.0 exported to ONNX, in full precision, with the voices file that holds its 54 voices, run by kokoro-onnx. Its phonemes come from eSpeak NG (GPL-3.0), which runs on the server and is never sent to a browser. Full precision, not the 8-bit export: on a 16-core CPU the 8-bit one speaks slower than real time (6 s for 3.9 s of speech), this one about four times faster than real time (1 s).",
     task: 'tts',
     engine: 'kokoro-onnx',
     dtype: 'fp32',
@@ -177,6 +181,8 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     id: 'moonshine-base-en',
     version: '0.0.1',
     name: 'Moonshine Base (English)',
+    description:
+      "Speech to text in the browser, in English: Useful Sensors' Moonshine Base (61M parameters), its ONNX export quantized to 8 bits, run by transformers.js. One of the English models whose weights are MIT; the legacy non-English Moonshine models are under a non-commercial licence and are not listed.",
     task: 'stt',
     engine: 'transformers.js',
     dtype: 'q8',
@@ -245,6 +251,8 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     id: 'moonshine-tiny-en',
     version: '0.0.1',
     name: 'Moonshine Tiny (English)',
+    description:
+      "Speech to text in the browser, in English: Useful Sensors' Moonshine Tiny (27M parameters), its ONNX export quantized to 8 bits, run by transformers.js. One of the English models whose weights are MIT; the legacy non-English Moonshine models are under a non-commercial licence and are not listed.",
     task: 'stt',
     engine: 'transformers.js',
     dtype: 'q8',
@@ -313,6 +321,8 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     id: 'silero-vad',
     version: '0.0.1',
     name: 'Silero VAD',
+    description:
+      'Where speech starts and ends in what the microphone heard, in the browser: Silero VAD (about 2 MB), the build @ricky0123/vad-web 0.0.31 ships and runs on onnxruntime-web. Push-to-talk keeps the speech it finds and drops the rest.',
     task: 'vad',
     engine: 'vad-web',
     dtype: 'fp32',
@@ -339,6 +349,8 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     id: 'whisper-base',
     version: '0.0.1',
     name: 'Whisper Base',
+    description:
+      "Speech to text in the browser for the languages Moonshine's MIT models do not speak, French first: OpenAI's Whisper base (74M parameters, 99 languages), its ONNX export quantized to 8 bits, run by transformers.js. A clip at a time.",
     task: 'stt',
     engine: 'transformers.js',
     dtype: 'q8',

@@ -49,6 +49,19 @@ def test_the_catalogue_is_generated_from_agentspecs():
         )
 
 
+def test_each_speech_model_carries_what_it_is_for():
+    """The generated catalogue says each model's agentspecs description, on one line."""
+    from agentspecs.speech import list_speech_models
+
+    described = {
+        model.id: " ".join(model.description.split()) for model in list_speech_models()
+    }
+    assert set(described) == set(SPEECH_MODEL_CATALOGUE)
+    for model_id, model in SPEECH_MODEL_CATALOGUE.items():
+        assert model["description"], model_id
+        assert model["description"] == described[model_id]
+
+
 def test_an_application_without_a_voice_says_so():
     assert voice_settings(app()) == {"enabled": False}
     assert voice_capability(app()) is None
