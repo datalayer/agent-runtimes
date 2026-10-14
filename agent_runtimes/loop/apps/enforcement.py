@@ -727,6 +727,10 @@ class AppRulesCapability(AbstractCapability[Any]):
                 )
             proposed = propose(self.app, call.tool_name, args)
             if proposed:
+                # Recorded like any decision (found on r1, 14 October 2026:
+                # Exchange Desk's proposal left no decision in its record).
+                if self.record is not None:
+                    self.record(enforced)
                 # The tool does not run, and the run goes on: the sentence is
                 # its result, the model tells the person (found on r1,
                 # 13 October 2026: raised, it failed Exchange Desk's whole

@@ -119,7 +119,8 @@ async def test_a_proposal_does_not_end_the_turn(turn: PapTurn) -> None:
         returned.extend(returns)
         return ModelResponse(parts=[TextPart("Proposed: confirm it to have it sent.")])
 
-    agent = Agent(FunctionModel(model), capabilities=[Harness(company()).capability])
+    harness = Harness(company())
+    agent = Agent(FunctionModel(model), capabilities=[harness.capability])
 
     @agent.tool_plain(name=SEND)
     def send(to: str, subject: str) -> str:
@@ -134,6 +135,9 @@ async def test_a_proposal_does_not_end_the_turn(turn: PapTurn) -> None:
         "Proposed to the person, not done: Send Your exchange"
     )
     assert [proposal["action"] for proposal in turn.proposals] == ["mail.send"]
+    # Its Rule's decision is in the record, as every decision is (found on r1,
+    # 14 October 2026: Exchange Desk's proposal left none).
+    assert [enforced.tool_name for enforced in harness.recorded] == [SEND]
 
 
 @pytest.mark.asyncio
