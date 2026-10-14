@@ -1281,6 +1281,13 @@ export interface ChatBaseProps {
   onStopSpeaking?: () => void;
 
   /**
+   * Reads an answer aloud (VOICE.md VO-21): given, each answer the agent has
+   * finished writing has a *Read aloud* under it, which calls it with the
+   * answer's text.
+   */
+  onReadAloud?: (answer: string) => void;
+
+  /**
    * Show the information icon in the header.
    * When clicked, fires onInformationClick.
    * @default false

@@ -54,15 +54,22 @@ const LANGUAGES = [
   { tag: 'fr-FR', label: 'Français' },
 ] as const;
 
+/** When answers are heard (VO-21): on request is the Appspec's default. */
+const OUTPUTS = [
+  { output: 'on_request', label: 'Read aloud on request' },
+  { output: 'always', label: 'Always read aloud' },
+] as const;
+
 const VoiceChatExample: React.FC = () => {
   const { token } = useSimpleAuthStore();
   const [language, setLanguage] = useState<string>('en-US');
+  const [output, setOutput] = useState<ChatVoice['output']>('on_request');
   const voiceSpec = voiceFor(language) ?? VOICE_CATALOGUE['kokoro-af-heart'];
   const voice: ChatVoice = useMemo(
     () => ({
       language,
       input: 'push_to_talk',
-      output: 'always',
+      output,
       voice: voiceSpec.id,
       modelsUrl: MODELS,
       engines: ENGINES,
@@ -70,7 +77,7 @@ const VoiceChatExample: React.FC = () => {
       token: token || undefined,
       consentKey: 'voice-chat-example',
     }),
-    [language, voiceSpec.id, token],
+    [language, output, voiceSpec.id, token],
   );
   return (
     <ThemedProvider>
@@ -83,11 +90,18 @@ const VoiceChatExample: React.FC = () => {
             Talk to the assistant instead of typing: hold the microphone in its
             composer, or <kbd>Ctrl</kbd>+<kbd>Space</kbd>, speak, and let go.
             What you say is heard in this page and never leaves it; the words go
-            in the message box for you to send. Its answers are read aloud as
-            they are written, by Datalayer&rsquo;s speech service, and not kept.{' '}
+            in the message box for you to send. Its answers are read aloud by
+            Datalayer&rsquo;s speech service, and not kept: on request, with{' '}
+            <em>Read aloud</em> under an answer, or always, as they are written.{' '}
             <kbd>Esc</kbd> stops its voice.
           </Text>
-          <Box display="flex" alignItems="center" gap={3} mb={3}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={3}
+            mb={3}
+            flexWrap="wrap"
+          >
             <SegmentedControl aria-label="Language">
               {LANGUAGES.map(option => (
                 <SegmentedControl.Button
@@ -95,6 +109,18 @@ const VoiceChatExample: React.FC = () => {
                   selected={language === option.tag}
                   onClick={() => setLanguage(option.tag)}
                   data-voice-language={option.tag}
+                >
+                  {option.label}
+                </SegmentedControl.Button>
+              ))}
+            </SegmentedControl>
+            <SegmentedControl aria-label="When answers are heard">
+              {OUTPUTS.map(option => (
+                <SegmentedControl.Button
+                  key={option.output}
+                  selected={output === option.output}
+                  onClick={() => setOutput(option.output)}
+                  data-voice-output={option.output}
                 >
                   {option.label}
                 </SegmentedControl.Button>

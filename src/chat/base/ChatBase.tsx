@@ -89,6 +89,7 @@ import type { FrontendToolDefinition } from '../../types/tools';
 import {
   internalQueryClient,
   isToolCallMessage,
+  getMessageText,
   convertHistoryToDisplayItems,
   createProtocolAdapter,
   getApiBaseFromConfig,
@@ -124,6 +125,7 @@ import {
 import { InputPrompt } from '../prompt/InputPrompt';
 import { DeviceHearing } from '../../voice/hearing';
 import { VoiceInput } from '../../voice/VoiceInput';
+import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
 import type { SpokenMetadata, Transcript } from '../../voice/types';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
@@ -788,6 +790,7 @@ function ChatBaseInner({
   voice,
   voiceSpeaking = false,
   onStopSpeaking,
+  onReadAloud,
   showInformation = false,
   onInformationClick,
   headerContent,
@@ -4930,6 +4933,28 @@ function ChatBaseInner({
       ]
     : displayItems;
 
+  /*
+   * *Read aloud* under each answer the agent has finished (VOICE.md VO-21),
+   * when the host reads answers aloud on request.
+   */
+  const writingId =
+    isLoading || isStreaming
+      ? [...welcomedItems]
+          .reverse()
+          .find(
+            (item): item is ChatMessage =>
+              !isToolCallMessage(item) && item.role === 'assistant',
+          )?.id
+      : undefined;
+  const readAloudFooter = onReadAloud
+    ? (message: ChatMessage) => {
+        const text = getMessageText(message);
+        return readsAloud(message, text, writingId) ? (
+          <ReadAloud onRead={() => onReadAloud(text)} />
+        ) : null;
+      }
+    : undefined;
+
   const messagesContent = children ? (
     children
   ) : (
@@ -4968,6 +4993,7 @@ function ChatBaseInner({
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         onRespond={handleRespond}
         showTurnFooters={showTurnFooter}
+        renderMessageFooter={readAloudFooter}
         agentUsage={agentUsage}
         onRemoveItems={handleRemoveItems}
         mcpServers={filteredMcpServers}

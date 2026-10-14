@@ -48,6 +48,7 @@ import { DecisionAsk } from './assistant/DecisionAsk';
 import type { ChatBaseProps } from '../types/chat';
 import { ServerSpeaker, type SpeakerState } from '../voice/speaker';
 import { useSpokenAnswers } from '../voice/useSpokenAnswers';
+import { readAloud } from '../voice/ReadAloud';
 import type { ChatVoice } from '../voice';
 import {
   BalloonApprovalMessage,
@@ -565,7 +566,7 @@ export function ChatFloating({
   });
   const speaker = useMemo(
     () =>
-      voice && voice.output === 'always' && voice.speechUrl
+      voice && voice.output !== 'off' && voice.speechUrl
         ? new ServerSpeaker({
             speechUrl: voice.speechUrl,
             voice: voice.voice,
@@ -597,8 +598,23 @@ export function ChatFloating({
       window.removeEventListener('keydown', unlock);
     };
   }, [speaker]);
-  useSpokenAnswers(voiceItems, chatBusy, !!speaker && !speechMuted, speaker);
+  // `always`: each answer heard as it is written; `on_request`: a *Read
+  // aloud* under each (VO-21).
+  useSpokenAnswers(
+    voiceItems,
+    chatBusy,
+    !!speaker && voice?.output === 'always' && !speechMuted,
+    speaker,
+  );
   const stopSpeaking = useCallback(() => speaker?.stop(), [speaker]);
+  const readAnswerAloud = useCallback(
+    (answer: string) => {
+      if (speaker) {
+        readAloud(speaker, answer);
+      }
+    },
+    [speaker],
+  );
   const mouthLevel = useMemo(
     () => (speaker ? () => speaker.level() : undefined),
     [speaker],
@@ -1747,6 +1763,7 @@ export function ChatFloating({
           voice={voice}
           voiceSpeaking={speakerState.speaking}
           onStopSpeaking={speaker ? stopSpeaking : undefined}
+          onReadAloud={speaker ? readAnswerAloud : undefined}
           {...panelProps}
           {...assistantChat}
           onLoadingChange={handleLoadingChange}
@@ -1871,7 +1888,7 @@ export function ChatFloating({
           onClear={!conversation && useStoreMode ? handleClear : undefined}
           onChangeCharacter={onChangeCharacter}
           speech={
-            speaker
+            speaker && voice?.output === 'always'
               ? {
                   muted: speechMuted,
                   onToggle: () => {

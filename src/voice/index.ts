@@ -25,6 +25,8 @@ export * from './consent';
 export * from './useSpokenAnswers';
 export { VoiceInput } from './VoiceInput';
 export type { VoiceInputProps, ListeningState } from './VoiceInput';
+export { ReadAloud, readAloud, readsAloud } from './ReadAloud';
+export type { ReadAloudProps, ReadableMessage, ReadingSink } from './ReadAloud';
 
 /**
  * A chat's voice: what a host gives `ChatBase` and `ChatFloating` to let a
@@ -36,8 +38,11 @@ export interface ChatVoice {
   language: string;
   /** `push_to_talk`, or `off`. Hands-free is Phase V3. */
   input: 'off' | 'push_to_talk';
-  /** When answers are heard: `always`, or `off`. */
-  output: 'off' | 'always';
+  /**
+   * When answers are heard: `always`, as they are written; `on_request`, a
+   * *Read aloud* under each answer (VO-21); or `off`.
+   */
+  output: 'off' | 'on_request' | 'always';
   /** The voice of the catalogue answers are spoken with. */
   voice: string;
   /** Datalayer's origin for the browser's models: the pinned store. */

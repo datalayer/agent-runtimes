@@ -1327,7 +1327,7 @@ export function ChatMessageList({
                 )}
               </Box>
             ) : null}
-            {renderMessageFooter ? (
+            {renderMessageFooter?.(message) ? (
               <Box
                 display="flex"
                 gap={2}
@@ -1336,7 +1336,7 @@ export function ChatMessageList({
                 flexWrap="wrap"
                 flexDirection={isUser ? 'row-reverse' : 'row'}
               >
-                {renderMessageFooter(message)}
+                {renderMessageFooter!(message)}
               </Box>
             ) : null}
           </Box>
