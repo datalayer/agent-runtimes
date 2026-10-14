@@ -16,6 +16,10 @@ PAP_DATALAYER's release gates, round 19 (decided 14 October 2026):
   that read answer the deployment's owner — the account its principal's
   token held here names — and the pod itself; another signed-in person 403,
   nobody 401.
+- An organization's deployment (decided 14 October 2026) answers the people
+  IAM says administer the organization (``organization_owner`` in their
+  membership, read with their own token); a member without it 403; when IAM
+  cannot say, 503.
 
 Launch the tests:
 
@@ -32,6 +36,7 @@ import httpx
 import jwt
 import pytest
 from agentspecs.apps import APP_CATALOGUE
+from datalayer_core.models.iam import MembershipModel
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -41,9 +46,12 @@ from agent_runtimes.loop.apps import callers, plugins, principal
 from agent_runtimes.loop.apps.callers import Caller, CallerRefused
 from agent_runtimes.loop.apps.deployments import SessionNotStarted, create_agent
 from agent_runtimes.loop.apps.principal import (
+    ORGANIZATION_OWNER,
     OWN_ROUTES_ONLY,
+    MembershipsUnread,
     forget_principal_token,
     give_principal_token,
+    use_memberships_asker,
 )
 from agent_runtimes.models.models import remember_app_instance
 from agent_runtimes.routes import a2a as a2a_routes
@@ -65,6 +73,32 @@ PEOPLE = {
     "owner-minted-key": Caller(kind="person", uid=OWNER),
     "another-person": Caller(kind="person", uid="someone-else"),
     "the-principal": Caller(kind="principal", uid="principal-1", app_uid="01APP"),
+    "org-admin": Caller(kind="person", uid="admin-1"),
+    "org-member": Caller(kind="person", uid="member-1"),
+}
+
+ORGANIZATION = "org-9"
+
+
+def _membership(uid: str, kind: str, roles: List[str]) -> dict[str, Any]:
+    """A membership as IAM's ``GET /memberships`` answers it (its own model, dumped)."""
+    return MembershipModel(
+        type=kind, id=uid, uid=uid, handle=uid, name=uid, roles_ss=roles
+    ).model_dump()
+
+
+#: What IAM says each token's person is a member of: the organization's
+#: administrator, a plain member of it, another person administering another
+#: organization.
+MEMBERSHIPS = {
+    "org-admin": [_membership(ORGANIZATION, "organization", [ORGANIZATION_OWNER])],
+    "org-member": [
+        _membership(ORGANIZATION, "organization", ["organization_member"]),
+        _membership("team-1", "team", ["team_owner"]),
+    ],
+    "another-person": [_membership("org-other", "organization", [ORGANIZATION_OWNER])],
+    # Whatever IAM would say of a principal's token, it is nobody: never asked.
+    "the-principal": [_membership(ORGANIZATION, "organization", [ORGANIZATION_OWNER])],
 }
 
 
@@ -98,8 +132,14 @@ def kept(monkeypatch: Any) -> Iterator[Accounting]:
             "principal_uid": "principal-1",
         }
 
+    async def memberships(bearer: str) -> list[dict[str, Any]]:
+        asked.append(bearer)
+        return MEMBERSHIPS.get(bearer, [])
+
+    asked: List[str] = []
     monkeypatch.setattr(callers.VERIFIER, "verify", verify)
     principal.use_asker(ask)
+    use_memberships_asker(memberships)
     agent = Accounting()
     monkeypatch.setitem(acp._agents, AGENT, (agent, None))
     monkeypatch.setattr(plugins, "find_app", lambda app_id: APP_CATALOGUE.get(app_id))
@@ -123,6 +163,7 @@ def kept(monkeypatch: Any) -> Iterator[Accounting]:
         remember_app_instance(AGENT, None)
         forget_principal_token(DEPLOYMENT)
         principal.use_asker(None)
+        use_memberships_asker(None)
 
 
 def _bearer(token: str) -> dict[str, str]:
@@ -214,6 +255,132 @@ def test_a_deployment_of_another_account_is_not_the_callers(
     assert _keepers_routes(outside, "owner-token") == [403, 403, 403, 403]
     read = f"/api/v1/apps/agents/{AGENT}/deployment"
     assert outside.get(read, headers=_bearer("another-person")).status_code == 200
+
+
+# --- an organization's deployment: its administrators -------------------------
+
+
+def _owned_by(account_uid: str) -> None:
+    """The deployment of ``account_uid``: its principal's token held, and renewed, so."""
+
+    async def ask(deployment_uid: str, bearer: str) -> dict:
+        return {
+            "access_token": _principal_token(account_uid),
+            "expires_in": 3600,
+            "principal_uid": "principal-1",
+        }
+
+    principal.use_asker(ask)
+    give_principal_token(
+        DEPLOYMENT,
+        _principal_token(account_uid),
+        expires_in=3600,
+        principal_uid="principal-1",
+    )
+
+
+def test_a_personal_deployments_owner_passes_without_asking_iam(
+    app: FastAPI, kept: Accounting
+) -> None:
+    def unreachable(bearer: str) -> Any:
+        raise AssertionError("IAM is not asked about the owner's own deployment")
+
+    use_memberships_asker(unreachable)
+    outside = TestClient(app, client=OUTSIDE)
+    assert _keepers_routes(outside, "owner-token") == [200, 200, 200, 200]
+
+
+def test_an_organizations_administrator_passes(app: FastAPI, kept: Accounting) -> None:
+    _owned_by(ORGANIZATION)
+    outside = TestClient(app, client=OUTSIDE)
+    assert _keepers_routes(outside, "org-admin") == [200, 200, 200, 200]
+
+
+def test_a_member_who_does_not_administer_it_is_refused(
+    app: FastAPI, kept: Accounting
+) -> None:
+    _owned_by(ORGANIZATION)
+    outside = TestClient(app, client=OUTSIDE)
+    refused = outside.delete("/api/v1/apps/a2a", headers=_bearer("org-member"))
+    assert refused.status_code == 403 and refused.json()["detail"] == NOT_ITS_OWNER
+    assert _keepers_routes(outside, "org-member") == [403, 403, 403, 403]
+
+
+def test_another_person_is_refused_an_organizations_deployment(
+    app: FastAPI, kept: Accounting
+) -> None:
+    """Administering another organization, or none: refused; the principal is never asked about."""
+    _owned_by(ORGANIZATION)
+    outside = TestClient(app, client=OUTSIDE)
+    assert _keepers_routes(outside, "another-person") == [403, 403, 403, 403]
+    assert _keepers_routes(outside, "owner-token") == [403, 403, 403, 403]
+    assert _keepers_routes(outside, "the-principal") == [403, 403, 403, 403]
+
+
+def test_iam_unreachable_is_refused(app: FastAPI, kept: Accounting) -> None:
+    async def unreachable(bearer: str) -> list[dict[str, Any]]:
+        raise MembershipsUnread(
+            "IAM could not be asked who administers the organization (ConnectError)."
+        )
+
+    _owned_by(ORGANIZATION)
+    use_memberships_asker(unreachable)
+    outside = TestClient(app, client=OUTSIDE)
+    refused = outside.delete("/api/v1/apps/a2a", headers=_bearer("org-admin"))
+    assert refused.status_code == 503
+    assert refused.json()["detail"].startswith(NOT_ITS_OWNER)
+    assert "IAM could not be asked" in refused.json()["detail"]
+    assert _keepers_routes(outside, "org-admin") == [503, 503, 503, 503]
+
+
+def test_iam_answers_that_cannot_be_read_are_refused(
+    app: FastAPI, kept: Accounting
+) -> None:
+    """A membership missing what IAM's model requires is not taken as an administrator's."""
+
+    async def garbled(bearer: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "type": "organization",
+                "uid": ORGANIZATION,
+                "roles_ss": [ORGANIZATION_OWNER],
+            }
+        ]
+
+    _owned_by(ORGANIZATION)
+    use_memberships_asker(garbled)
+    outside = TestClient(app, client=OUTSIDE)
+    assert _keepers_routes(outside, "org-admin") == [503, 503, 503, 503]
+
+
+def test_iam_is_asked_over_http_with_the_callers_own_token(monkeypatch: Any) -> None:
+    """The real asker: ``GET {iam}/api/iam/v1/memberships`` with the bearer; refusals fail closed."""
+    import asyncio
+
+    seen: List[httpx.Request] = []
+    status = {"code": 200}
+
+    def iam(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if status["code"] != 200:
+            return httpx.Response(status["code"], json={"detail": "no"})
+        return httpx.Response(200, json={"memberships": MEMBERSHIPS["org-admin"]})
+
+    real = httpx.AsyncClient
+
+    def client(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real(transport=httpx.MockTransport(iam), timeout=kwargs.get("timeout"))
+
+    monkeypatch.setenv("DATALAYER_IAM_URL", "https://iam.example")
+    monkeypatch.setattr(httpx, "AsyncClient", client)
+    use_memberships_asker(None)
+    assert asyncio.run(principal.administers(ORGANIZATION, "org-admin")) is True
+    assert asyncio.run(principal.administers("org-other", "org-admin")) is False
+    assert str(seen[0].url) == "https://iam.example/api/iam/v1/memberships"
+    assert seen[0].headers["authorization"] == "Bearer org-admin"
+    status["code"] = 401
+    with pytest.raises(MembershipsUnread, match="401"):
+        asyncio.run(principal.administers(ORGANIZATION, "org-admin"))
 
 
 # --- asking again after a lost answer --------------------------------------------

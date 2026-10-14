@@ -17,7 +17,7 @@ from typing import Any, Iterator
 import httpx
 import pytest
 from agentspecs.apps import APP_CATALOGUE
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from agent_runtimes.loop.apps import a2a as apps_a2a
 from agent_runtimes.loop.apps import plugins
@@ -30,6 +30,8 @@ from agent_runtimes.tests.test_apps_a2a import Accounting
 
 STABLE = "https://r1.example/api/ai-agents/v1/apps/deployments/at/demo-accounting/a2a"
 AUTHORIZED = apps_routes.Authorized(LOCAL, None)
+#: The pod's own request: no token (the keeper's routes read the caller's bearer).
+REQUEST = Request({"type": "http", "headers": []})
 
 
 @pytest.fixture
@@ -59,6 +61,7 @@ async def test_its_card_names_the_stable_address_and_visitors_follow_the_deploym
     """Its card names the stable address; visitors are let in as the deployment says."""
     said = await apps_routes.serve_agent_over_a2a(
         apps_routes.ServeOverA2ARequest(agent="accounting", url=STABLE, visitors=True),
+        REQUEST,
         AUTHORIZED,
     )
     assert said["a2a"]["url"] == f"{STABLE}/"
@@ -70,10 +73,11 @@ async def test_its_card_names_the_stable_address_and_visitors_follow_the_deploym
     # Served again closed to visitors: the gate no longer answers them.
     again = await apps_routes.serve_agent_over_a2a(
         apps_routes.ServeOverA2ARequest(agent="accounting", url=STABLE),
+        REQUEST,
         AUTHORIZED,
     )
     assert "visitors" not in again["a2a"]
-    stopped = await apps_routes.stop_serving_over_a2a(AUTHORIZED)
+    stopped = await apps_routes.stop_serving_over_a2a(REQUEST, AUTHORIZED)
     assert stopped["stopped"] == ["accounting"] and apps_a2a.served_apps() == []
 
 
@@ -85,6 +89,7 @@ async def test_an_agent_not_made_here_or_not_an_application_is_refused(
     with pytest.raises(HTTPException) as missing:
         await apps_routes.serve_agent_over_a2a(
             apps_routes.ServeOverA2ARequest(agent="month-end-close", url=STABLE),
+            REQUEST,
             AUTHORIZED,
         )
     assert missing.value.status_code == 404 and "make it" in missing.value.detail
@@ -92,6 +97,7 @@ async def test_an_agent_not_made_here_or_not_an_application_is_refused(
     with pytest.raises(HTTPException) as plain:
         await apps_routes.serve_agent_over_a2a(
             apps_routes.ServeOverA2ARequest(agent="accounting", url=STABLE),
+            REQUEST,
             AUTHORIZED,
         )
     assert plain.value.status_code == 409
@@ -99,6 +105,7 @@ async def test_an_agent_not_made_here_or_not_an_application_is_refused(
     with pytest.raises(HTTPException) as nowhere:
         await apps_routes.serve_agent_over_a2a(
             apps_routes.ServeOverA2ARequest(agent="accounting", url="r1/a2a"),
+            REQUEST,
             AUTHORIZED,
         )
     assert nowhere.value.status_code == 422

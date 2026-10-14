@@ -48,10 +48,13 @@ from typing import Any, Awaitable, Callable, Mapping, Optional
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "ORGANIZATION_OWNER",
     "OWN_ROUTES_ONLY",
+    "MembershipsUnread",
     "REFRESH_MARGIN_SECONDS",
     "PrincipalTokenMissing",
     "a_deployment_is_served",
+    "administers",
     "api_key_for",
     "deployment_of",
     "deployments_served",
@@ -71,6 +74,7 @@ __all__ = [
     "principal_token_refusal",
     "principal_uid_of",
     "renew_principal_token",
+    "use_memberships_asker",
     "use_preview_asker",
 ]
 
@@ -161,6 +165,90 @@ def owner_of(deployment_uid: str) -> str:
     if not held:
         return ""
     return str(_unverified_claims(str(held["token"])).get("account_uid") or "")
+
+
+#: IAM's administrator role in an organization (`OrganizationRoles.OWNER`),
+#: as its memberships carry it (`roles_ss`).
+ORGANIZATION_OWNER = "organization_owner"
+
+
+class MembershipsUnread(RuntimeError):
+    """IAM could not say which organizations a person administers, in a sentence."""
+
+
+async def _ask_iam_memberships(bearer: str) -> list[dict[str, Any]]:
+    """The caller's memberships as IAM says them (``GET /api/iam/v1/memberships``)."""
+    import httpx
+
+    from agent_runtimes.loop.apps.callers import _platform_url  # noqa: PLC0415
+
+    # The IAM that verified the caller's token (`callers.CallerVerifier`).
+    url = _platform_url("DATALAYER_IAM_URL")
+    if not url:
+        raise MembershipsUnread(
+            "This runtime does not know where IAM is, so it cannot read who administers an organization."
+        )
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{url}/api/iam/v1/memberships",
+                headers={"Authorization": f"Bearer {bearer}"},
+            )
+    except httpx.HTTPError as error:
+        raise MembershipsUnread(
+            f"IAM could not be asked who administers the organization ({type(error).__name__})."
+        ) from error
+    if response.status_code != 200:
+        raise MembershipsUnread(
+            f"IAM did not say who administers the organization ({response.status_code})."
+        )
+    try:
+        return list((response.json() or {}).get("memberships") or [])
+    except (ValueError, AttributeError, TypeError) as error:
+        raise MembershipsUnread(
+            f"IAM said memberships this runtime cannot read ({type(error).__name__})."
+        ) from error
+
+
+#: Who says a person's memberships: IAM, or a test.
+_memberships_asker: dict[str, Callable[[str], Awaitable[list[dict[str, Any]]]]] = {
+    "ask": _ask_iam_memberships
+}
+
+
+def use_memberships_asker(
+    asker: Optional[Callable[[str], Awaitable[list[dict[str, Any]]]]],
+) -> None:
+    """Who says a person's memberships: IAM, or a test; ``None`` for IAM."""
+    _memberships_asker["ask"] = asker or _ask_iam_memberships
+
+
+async def administers(organization_uid: str, bearer: str) -> bool:
+    """Whether the person whose token ``bearer`` is administers ``organization_uid``.
+
+    Read from IAM with their own token, as Spacer and Contents read an
+    organization's owners: their membership of it (``GET
+    /api/iam/v1/memberships``, `datalayer_core.models.iam.MembershipsModel`)
+    carries IAM's administrator role, :data:`ORGANIZATION_OWNER`, which only
+    an organization's memberships carry. A member without it does not.
+    Fails closed: `MembershipsUnread` when IAM cannot say.
+    """
+    from datalayer_core.models.iam import MembershipsModel
+
+    if not organization_uid or not bearer:
+        return False
+    try:
+        memberships = MembershipsModel(
+            memberships=await _memberships_asker["ask"](bearer)
+        ).memberships
+    except ValueError as error:
+        raise MembershipsUnread(
+            f"IAM said memberships this runtime cannot read ({type(error).__name__})."
+        ) from error
+    return any(
+        membership.uid == organization_uid and ORGANIZATION_OWNER in membership.roles_ss
+        for membership in memberships
+    )
 
 
 def give_principal_token(

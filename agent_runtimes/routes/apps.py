@@ -387,7 +387,9 @@ NOT_ITS_OWNER = (
 )
 
 
-def its_owner(authorized: Authorized, deployments: List[str]) -> None:
+async def its_owner(
+    authorized: Authorized, deployments: List[str], bearer: str
+) -> None:
     """The owner of every deployment named, or the pod itself; else 403.
 
     What ai-agents keeps a deployment on a runtime with — its agent served
@@ -398,14 +400,37 @@ def its_owner(authorized: Authorized, deployments: List[str]) -> None:
     account the deployment's principal is of, as its token held here says
     (`principal.owner_of`); a deployment none is held for is nobody's, and
     refused to everybody but the pod.
+
+    An organization's deployment is its administrators' (decided 14 October
+    2026): a person IAM says has the organization's administrator role
+    (`principal.administers`, asked with their own token ``bearer``) counts
+    as its owner; a member without it is refused. When IAM cannot say, the
+    caller is refused (503).
     """
     if authorized.caller.kind == "local":
         return
-    from agent_runtimes.loop.apps.principal import owner_of
+    from agent_runtimes.loop.apps.principal import (
+        MembershipsUnread,
+        administers,
+        owner_of,
+    )
 
     owners = {owner_of(deployment) for deployment in deployments}
-    if not authorized.caller.uid or owners != {authorized.caller.uid}:
+    caller = authorized.caller
+    if not caller.uid or len(owners) != 1 or "" in owners:
         raise HTTPException(status_code=403, detail=NOT_ITS_OWNER)
+    (owner,) = owners
+    if owner == caller.uid:
+        return
+    # A person (`a_person`): a principal's token is refused before it is here.
+    try:
+        if await administers(owner, bearer):
+            return
+    except MembershipsUnread as unread:
+        raise HTTPException(
+            status_code=503, detail=f"{NOT_ITS_OWNER} {unread}"
+        ) from None
+    raise HTTPException(status_code=403, detail=NOT_ITS_OWNER)
 
 
 async def a_caller(request: Request) -> Authorized:
@@ -604,6 +629,7 @@ class ServeOverA2ARequest(BaseModel):
 @router.put("/a2a")
 async def serve_agent_over_a2a(
     body: ServeOverA2ARequest,
+    request: Request,
     authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
     """Serve an application's agent already made here over A2A (STUDIO A-08).
@@ -620,7 +646,11 @@ async def serve_agent_over_a2a(
     from agent_runtimes.models.models import app_instance_of
     from agent_runtimes.routes.acp import _agents
 
-    its_owner(authorized, [deployment_of(app_instance_of(body.agent))])
+    await its_owner(
+        authorized,
+        [deployment_of(app_instance_of(body.agent))],
+        bearer_of(request.headers.get("authorization")) or "",
+    )
     held = _agents.get(body.agent)
     if held is None:
         raise HTTPException(
@@ -648,13 +678,18 @@ async def serve_agent_over_a2a(
 
 @router.delete("/a2a")
 async def stop_serving_over_a2a(
+    request: Request,
     authorized: Authorized = Depends(a_person),
 ) -> Dict[str, Any]:
     """Serve nothing over A2A here any more: its deployment no longer is."""
     from agent_runtimes.loop.apps.a2a import served_apps, stop_serving_apps
     from agent_runtimes.loop.apps.principal import deployments_served
 
-    its_owner(authorized, deployments_served())
+    await its_owner(
+        authorized,
+        deployments_served(),
+        bearer_of(request.headers.get("authorization")) or "",
+    )
 
     stopped = served_apps()
     stop_serving_apps()
@@ -692,8 +727,8 @@ async def renew_principal(
     )
 
     deployment = body.deployment.strip()
-    its_owner(authorized, [deployment])
     bearer = bearer_of(request.headers.get("authorization"))
+    await its_owner(authorized, [deployment], bearer or "")
     if not bearer:
         raise HTTPException(
             status_code=401,
@@ -713,7 +748,7 @@ async def renew_principal(
 
 @router.get("/agents/{agent}/deployment")
 async def agent_deployment(
-    agent: str, authorized: Authorized = Depends(a_person)
+    agent: str, request: Request, authorized: Authorized = Depends(a_person)
 ) -> Dict[str, Any]:
     """Which deployment an agent here serves: asked by whoever made it, after the fact.
 
@@ -729,7 +764,11 @@ async def agent_deployment(
 
     instance = app_instance_of(agent) or {}
     deployment = deployment_of(instance)
-    its_owner(authorized, [deployment] if deployment else [])
+    await its_owner(
+        authorized,
+        [deployment] if deployment else [],
+        bearer_of(request.headers.get("authorization")) or "",
+    )
     if not deployment:
         raise HTTPException(
             status_code=404,
