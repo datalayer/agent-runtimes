@@ -754,6 +754,9 @@ async def get_agent_context_details(
     Returns:
         Context usage details for the agent.
     """
+    from .history import refuse_every_visitors
+
+    refuse_every_visitors(agent_id)
     tracker = get_usage_tracker()
     return tracker.get_context_details(agent_id)
 
@@ -796,7 +799,9 @@ async def get_agent_context_table_endpoint(
     from rich.console import Console
 
     from ..context.session import get_agent_context_snapshot
+    from .history import refuse_every_visitors
 
+    refuse_every_visitors(agent_id)
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
         return {
@@ -834,6 +839,9 @@ async def reset_agent_context(
     Returns:
         Confirmation message.
     """
+    from .history import refuse_every_visitors
+
+    refuse_every_visitors(agent_id)
     tracker = get_usage_tracker()
     tracker.reset_agent(agent_id)
     return {"status": "ok", "message": f"Context reset for agent '{agent_id}'"}
@@ -865,7 +873,9 @@ async def export_agent_context_csv(
     from io import StringIO
 
     from ..context.session import get_agent_context_snapshot
+    from .history import refuse_every_visitors
 
+    refuse_every_visitors(agent_id)
     snapshot = get_agent_context_snapshot(agent_id)
     if snapshot is None:
         return {

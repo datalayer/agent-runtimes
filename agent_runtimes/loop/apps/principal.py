@@ -89,6 +89,30 @@ def deployment_of(app_instance: Optional[Mapping[str, Any]]) -> str:
     return str(app_instance.get("deployment_uid") or "").strip()
 
 
+#: Why the conversation an agent that serves a deployment holds in memory is read by nobody.
+EVERY_VISITORS = (
+    "{agent} serves a deployment: what it holds in memory is every visitor's, so nobody reads it "
+    "here; each person reads their own conversation through their own session."
+)
+
+
+def serves_a_deployment(agent_id: Optional[str]) -> bool:
+    """Whether an agent serves a deployment, every visitor of which talks to it.
+
+    Its message history, its context, its pending approvals and its events
+    are then every visitor's at once — the last run's, whoever ran it — so
+    the runtime's agent-wide reads (the monitoring stream, history, context,
+    checkpoints) hand them to nobody, and nobody decides an approval there:
+    a person's own conversation is their session's (`/apps/sessions`), their
+    approvals ai-agents' (PAP_DATALAYER's release gates, found on r1, 14
+    October 2026: a second account, and a caller with no token at all, read
+    the first person's turns and approved their tool call).
+    """
+    from agent_runtimes.models.models import app_instance_of
+
+    return bool(deployment_of(app_instance_of(agent_id)))
+
+
 def give_principal_token(
     deployment_uid: str, token: str, *, expires_in: int, principal_uid: str = ""
 ) -> None:

@@ -45,6 +45,7 @@ async def _decide_approval_via_ws(
     tool_call_id: str | None = None,
 ) -> ToolApprovalRecord:
     resolved_approval_id = _resolve_local_approval_id(approval_id, tool_call_id)
+    await _refuse_every_visitors(resolved_approval_id)
     return await _update_approval(
         resolved_approval_id,
         status="approved" if approved else "rejected",
@@ -54,7 +55,23 @@ async def _decide_approval_via_ws(
 
 async def _delete_approval_via_ws(approval_id: str) -> ToolApprovalRecord:
     resolved_approval_id = _resolve_local_approval_id(approval_id)
+    await _refuse_every_visitors(resolved_approval_id)
     return await _delete_approval(resolved_approval_id)
+
+
+async def _refuse_every_visitors(approval_id: str) -> None:
+    """Refuse a decision on an approval of an agent that serves a deployment, over this stream.
+
+    Anybody reaches the runtime's monitoring stream; the person decides at
+    ai-agents, whose decision reaches the run (`serves_a_deployment`).
+    """
+    from agent_runtimes.loop.apps.principal import EVERY_VISITORS, serves_a_deployment
+
+    record = await _get_approval(approval_id)
+    if serves_a_deployment(record.agent_id):
+        raise HTTPException(
+            status_code=403, detail=EVERY_VISITORS.format(agent=record.agent_id)
+        )
 
 
 class ToolApprovalCreateRequest(BaseModel):
