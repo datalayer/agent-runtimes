@@ -23,6 +23,7 @@ import { dumpAppspec, emptyAppspec } from '../apps/appspec';
 import { checkAppspec } from '../apps/checks';
 import { MCP_SERVER_LIBRARY } from '../../specs/mcpServers';
 import { getSkillSpecs } from '../../specs/skills';
+import { listProtocolSpecs } from '../../specs/protocols';
 
 const LISTS: Record<string, readonly string[]> = {
   connection: ['connections'],
@@ -95,9 +96,11 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     );
     // Every protocol of the catalogue, a planned one offered but not enabled
     // (PS-04), and every UI plugin (AGENTIC_UI R8) — never a renderer.
-    expect(ids).toContain('protocol:pap');
-    expect(parts.find(part => part.id === 'protocol:ucp')?.enabled).toBe(true);
-    expect(parts.find(part => part.id === 'protocol:tap')?.enabled).toBe(false);
+    for (const protocol of listProtocolSpecs()) {
+      expect(
+        parts.find(part => part.id === `protocol:${protocol.id}`)?.enabled,
+      ).toBe(protocol.status === 'shipped');
+    }
     expect(ids).toContain('ui:a2ui-surface');
     expect(ids).toContain('ui:chat');
     expect(ids).not.toContain('ui:a2ui');
