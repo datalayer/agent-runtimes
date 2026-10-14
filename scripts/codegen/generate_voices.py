@@ -121,7 +121,8 @@ def generate_python_code(
             "    base = (language or '').strip()",
             "    exact = [v for v in VOICE_CATALOGUE.values() if base in v['languages']]",
             "    near = [v for v in VOICE_CATALOGUE.values() if voice_speaks(v, base.split('-')[0])]",
-            "    return (exact or near or [None])[0]",
+            "    found = exact or near",
+            "    return found[0] if found else None",
             "",
         ]
     )
