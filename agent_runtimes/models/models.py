@@ -178,6 +178,11 @@ def app_instance_of(agent_id: str | None) -> dict[str, Any] | None:
     return _APP_INSTANCES.get(agent_id or "")
 
 
+def agents_serving_apps() -> list[str]:
+    """The agents of this runtime that serve an application, by id."""
+    return list(_APP_INSTANCES)
+
+
 def app_usage_headers(app_instance: Mapping[str, Any] | None) -> dict[str, str]:
     """The headers naming an application's instance on a model call.
 

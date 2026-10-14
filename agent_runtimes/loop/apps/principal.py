@@ -48,8 +48,10 @@ from typing import Any, Awaitable, Callable, Mapping, Optional
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "OWN_ROUTES_ONLY",
     "REFRESH_MARGIN_SECONDS",
     "PrincipalTokenMissing",
+    "a_deployment_is_served",
     "api_key_for",
     "deployment_of",
     "ensure_preview_token",
@@ -111,6 +113,27 @@ def serves_a_deployment(agent_id: Optional[str]) -> bool:
     from agent_runtimes.models.models import app_instance_of
 
     return bool(deployment_of(app_instance_of(agent_id)))
+
+
+#: Why a runtime that serves a deployment answers a route that is not the application's own.
+OWN_ROUTES_ONLY = (
+    "This runtime serves a deployment: it answers only the application's own routes."
+)
+
+
+def a_deployment_is_served() -> bool:
+    """Whether an agent of this runtime serves a deployment (`serves_a_deployment`).
+
+    Such a runtime — a deployment's kept runtime, or the one a hosted page
+    launched for it — then answers anybody but itself only on the
+    application's own routes (`agent_runtimes.loop.apps.visitors.path_answered`):
+    configuring it, making, changing or listing its agents, its MCP servers,
+    its sandbox and its monitoring stream are nobody's to reach from outside
+    (PAP_DATALAYER's release gates, decided 14 October 2026).
+    """
+    from agent_runtimes.models.models import agents_serving_apps
+
+    return any(serves_a_deployment(agent) for agent in agents_serving_apps())
 
 
 def give_principal_token(

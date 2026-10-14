@@ -1498,7 +1498,17 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Add CORS middleware - must be added before other middleware
+    # One gate (PAP_DATALAYER's release gates, decided 14 October 2026): the
+    # visitors' runtime (LOOP R-30), and a runtime that serves a deployment —
+    # kept always on, or launched by a hosted page — answer anybody but the
+    # pod itself only on the application's own routes, websockets and the
+    # dynamic AG-UI and A2A mounts included. Inside CORS, so that a page reads
+    # the refusal's sentence.
+    from .loop.apps.visitors import OwnRoutesOnly
+
+    app.add_middleware(OwnRoutesOnly)
+
+    # Add CORS middleware - outermost
     # Allow all origins for development and cross-origin agent runtimes
     app.add_middleware(
         CORSMiddleware,
@@ -1508,26 +1518,6 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         allow_headers=["*"],  # Allow all headers
         expose_headers=["*"],  # Expose all headers to the client
     )
-
-    # The visitors' runtime answers anybody but itself only on the
-    # application routes and the chat's reads of its models (LOOP R-30).
-    from .loop.apps.visitors import path_answered, visitors_runtime
-
-    if visitors_runtime():
-        from fastapi.responses import JSONResponse
-
-        from .loop.apps.callers import is_loopback
-
-        @app.middleware("http")
-        async def _visitors_reach(request: Request, call_next: Any) -> Any:
-            if path_answered(request.method, request.url.path) or is_loopback(
-                request.client.host if request.client else None
-            ):
-                return await call_next(request)
-            return JSONResponse(
-                {"detail": "This route of the visitors' runtime is its own."},
-                status_code=404,
-            )
 
     # Include routers
     app.include_router(health_router)

@@ -36,10 +36,12 @@ sent (`AppRecorder.kept`).
 when it is reached. The rate of model calls and the day's ceiling are
 ai-inference's.
 
-**Reach.** Only the application routes and the chat's reads of its models
-answer anybody but the pod itself (:func:`path_answered`): every other route
-of a runtime — making agents, configuring it, its MCP servers — is the
-pod's own, as its ingress publishes nothing else either.
+**Reach.** Only the application's own routes and the chat's reads of its
+models answer anybody but the pod itself (:func:`path_answered`): every other
+route of a runtime — making agents, configuring it, its MCP servers — is the
+pod's own, as its ingress publishes nothing else either. One gate
+(:class:`OwnRoutesOnly`) holds a runtime that serves a deployment to the same
+routes (PAP_DATALAYER's release gates, decided 14 October 2026).
 """
 
 from __future__ import annotations
@@ -55,6 +57,8 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 __all__ = [
     "AT_PREFIX",
     "NOT_HERE",
+    "VISITORS_OWN",
+    "OwnRoutesOnly",
     "ONLY_VISITORS",
     "OTHER_APPLICATION",
     "agent_of",
@@ -313,17 +317,98 @@ def admit_turn(visitor: str, started_at: str, *, now: Optional[float] = None) ->
 
 # --- reach -----------------------------------------------------------------------
 
-#: The chat's reads of the runtime's models: answered to a visitor's page.
+#: The chat's reads of the runtime's models: answered to an application's page.
 _READS = ("/api/v1/configure", "/api/v1/configure/models")
+
+#: Under the application routes, and not the application's own: what makes the
+#: runtime's agent another application (the companion's, at launch) and the
+#: Studio's tools, a person's (LOOP P-10, P-13).
+_NOT_THE_APPLICATIONS = (
+    "/api/v1/apps/configure",
+    "/api/v1/apps/build",
+    "/api/v1/apps/eject",
+)
+
+#: Where an agent is served over A2A: its own when it runs an application.
+_A2A_AGENTS = "/api/v1/a2a/agents/"
 
 
 def path_answered(method: str, path: str) -> bool:
-    """Whether the visitors' runtime answers a request from anybody but itself."""
+    """Whether a request from anybody but the runtime itself is the application's own.
+
+    What the visitors' runtime and a runtime that serves a deployment answer
+    (:class:`OwnRoutesOnly`): the application routes — its sessions, its
+    chat, its page's plugins and files, its computer, what it remembers, and
+    what ai-agents keeps a deployment with (A2A, its principal) — an
+    application's agent over A2A, the chat's reads of its models, and health.
+    """
+    if path.rstrip("/") in _NOT_THE_APPLICATIONS:
+        return False
     if path.startswith("/api/v1/apps/") or path == "/api/v1/apps":
         return True
+    if path.startswith(_A2A_AGENTS):
+        from agent_runtimes.models.models import app_instance_of
+
+        agent = path[len(_A2A_AGENTS) :].split("/", 1)[0]
+        return app_instance_of(agent) is not None
     if method in ("GET", "HEAD", "OPTIONS") and path.rstrip("/") in _READS:
         return True
     return path == "/health" or path.startswith("/health/")
+
+
+#: Said of a route that is not the application's own, on the visitors' runtime.
+VISITORS_OWN = "This route of the visitors' runtime is its own."
+
+
+class OwnRoutesOnly:
+    """The one gate: a runtime held to the application's own routes (:func:`path_answered`).
+
+    The visitors' runtime always (LOOP R-30); any other runtime once one of its
+    agents serves a deployment (`a_deployment_is_served`) — a deployment's kept
+    runtime, or the one a hosted page launched for it, beside the agent it was
+    allocated with. Every other route — configuring it, its inference token,
+    codemode, its sandbox and its websocket, making, changing, listing or
+    deleting agents, MCP servers, skills, history, the monitoring stream —
+    answers 404 in a sentence, over HTTP and on a websocket's handshake alike.
+    The pod itself (the companion, the sandbox's tool calls through the MCP
+    proxy) is answered everywhere, as on the visitors' runtime.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+        from starlette.responses import JSONResponse
+
+        from agent_runtimes.loop.apps.callers import is_loopback
+        from agent_runtimes.loop.apps.principal import (
+            OWN_ROUTES_ONLY,
+            a_deployment_is_served,
+        )
+
+        visitors = visitors_runtime()
+        method = scope.get("method") or "GET"
+        client = scope.get("client")
+        if (
+            not (visitors or a_deployment_is_served())
+            or path_answered(method, scope["path"])
+            or is_loopback(client[0] if client else None)
+        ):
+            await self.app(scope, receive, send)
+            return
+        refused = JSONResponse(
+            {"detail": VISITORS_OWN if visitors else OWN_ROUTES_ONLY},
+            status_code=404,
+        )
+        if scope["type"] == "websocket":
+            from starlette.websockets import WebSocket
+
+            await WebSocket(scope, receive, send).send_denial_response(refused)
+            return
+        await refused(scope, receive, send)
 
 
 def loopback_url() -> str:
