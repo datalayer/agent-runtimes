@@ -4,9 +4,9 @@
 
 """Serve the pinned store to a page on this machine, as Datalayer's origin serves it (VOICE.md VO-49).
 
-    python scripts/voice/serve_store.py --store ~/.cache/speech-store [--port 8770]
+    python scripts/voice/serve_store.py --store ~/.cache/voice-work/store [--port 8770]
 
-The browser's models at ``/<model id>/<path>`` and onnxruntime-web's own
+The browser's models at ``/<provider>/<model id>/<path>`` and onnxruntime-web's own
 files at ``/onnxruntime-web/<version>/``, from the onnxruntime-web the page
 bundles (``--node-modules`` when it is not this checkout's), with the CORS
 headers a page on another port needs. For a local run only: in production

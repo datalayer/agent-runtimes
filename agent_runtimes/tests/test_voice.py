@@ -62,6 +62,28 @@ def test_each_speech_model_carries_what_it_is_for():
         assert model["description"] == described[model_id]
 
 
+def test_each_speech_model_is_kept_under_its_provider():
+    """Datalayer's storage, the pod's and the page's store: `<provider>/<model id>/<path>` (VO-48)."""
+    import sys
+    from pathlib import Path
+
+    from agentspecs.speech import list_speech_models
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts" / "voice"
+    sys.path.insert(0, str(scripts))
+    try:
+        import pin_store
+    finally:
+        sys.path.remove(str(scripts))
+    for model in list_speech_models():
+        generated = SPEECH_MODEL_CATALOGUE[model.id]
+        assert generated["provider"] == model.provider
+        assert pin_store.folder_of(generated) == model.folder
+    assert pin_store.folder_of(SPEECH_MODEL_CATALOGUE["kokoro-82m"]) == (
+        "hexgrad/kokoro-82m"
+    )
+
+
 def test_an_application_without_a_voice_says_so():
     assert voice_settings(app()) == {"enabled": False}
     assert voice_capability(app()) is None

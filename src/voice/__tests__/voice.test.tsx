@@ -13,7 +13,13 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 import { SentenceCutter, plainWords } from '../sentences';
-import { PinRefused, pinOf, pinnedFetch, sha256Hex } from '../pinned';
+import {
+  PinRefused,
+  modelFolder,
+  pinOf,
+  pinnedFetch,
+  sha256Hex,
+} from '../pinned';
 import { DeviceHearing, joinSegments, runtimeFiles } from '../hearing';
 import { resample } from '../capture';
 import { ServerSpeaker, SYNTHESES_PATH } from '../speaker';
@@ -70,7 +76,14 @@ describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
   const pin = SPEECH_MODEL_CATALOGUE['silero-vad'].files[0];
 
   it('knows the pin of a model’s file under the origin', () => {
-    expect(pinOf(base, `${base}/silero-vad/${pin.path}`)).toEqual(pin);
+    // Kept under its provider, as Datalayer's storage keeps it (VO-48).
+    expect(pinOf(base, `${base}/snakers4/silero-vad/${pin.path}`)).toEqual(pin);
+    expect(modelFolder('kokoro-82m')).toBe('hexgrad/kokoro-82m');
+    // Without its provider, or under another, it is no pinned file.
+    expect(pinOf(base, `${base}/silero-vad/${pin.path}`)).toBeUndefined();
+    expect(
+      pinOf(base, `${base}/openai/silero-vad/${pin.path}`),
+    ).toBeUndefined();
     expect(
       pinOf(base, `${base}/onnxruntime-web/1.30.0/ort.wasm`),
     ).toBeUndefined();
@@ -83,9 +96,9 @@ describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
       fetchPinned('https://huggingface.co/x/config.json'),
     ).rejects.toBeInstanceOf(PinRefused);
     expect(fetcher).not.toHaveBeenCalled();
-    await expect(fetchPinned(`${base}/silero-vad/${pin.path}`)).rejects.toThrow(
-      'not the file the voice catalogue pins',
-    );
+    await expect(
+      fetchPinned(`${base}/snakers4/silero-vad/${pin.path}`),
+    ).rejects.toThrow('not the file the voice catalogue pins');
     // The runtime's own files are under the origin and pinned by version.
     expect(
       (await fetchPinned(`${base}/onnxruntime-web/1.30.0/x.wasm`)).ok,
@@ -103,7 +116,7 @@ describe('the models, from Datalayer’s origin and as pinned (VO-49)', () => {
       const answered = await pinnedFetch(
         base,
         (async () => new Response(bytes)) as unknown as typeof fetch,
-      )(`${base}/whisper-base/${file.path}`);
+      )(`${base}/openai/whisper-base/${file.path}`);
       expect(await answered.text()).toBe('{"a":1}');
     } finally {
       Object.assign(file, original);
@@ -141,24 +154,29 @@ function engines(heard: string) {
         return { text: ` ${heard} ` };
       },
   };
+  const vadUrls: string[] = [];
   const vad: VadModule = {
     NonRealTimeVAD: {
-      new: async () => ({
-        run: async function* (audio: Float32Array) {
-          // Speech in the middle of what was heard, silence around it.
-          yield {
-            audio: audio.slice(1600, audio.length - 1600),
-            start: 100,
-            end: 900,
-          };
-        },
-      }),
+      new: async options => {
+        vadUrls.push(options.modelURL);
+        return {
+          run: async function* (audio: Float32Array) {
+            // Speech in the middle of what was heard, silence around it.
+            yield {
+              audio: audio.slice(1600, audio.length - 1600),
+              start: 100,
+              end: 900,
+            };
+          },
+        };
+      },
     },
   };
   return {
     engines: { transformers: async () => transformers, vad: async () => vad },
     env,
     asked,
+    vadUrls,
   };
 }
 
@@ -184,6 +202,11 @@ describe('hearing on the device (VO-10, VO-14)', () => {
       runtimeFiles('https://models.example/speech', '1.31.0'),
     );
     expect(transcript?.text).toBe('Open the notebook.');
+    // Each model read under its provider, as the store keeps it (VO-48).
+    expect(stand.asked[0].model).toBe('usefulsensors/moonshine-tiny-en');
+    expect(stand.vadUrls[0]).toBe(
+      `https://models.example/speech/snakers4/silero-vad/${SPEECH_MODEL_CATALOGUE['silero-vad'].files[0].path}`,
+    );
     expect(transcript?.metadata).toEqual({
       input: 'voice',
       language: 'en-US',
@@ -200,7 +223,7 @@ describe('hearing on the device (VO-10, VO-14)', () => {
     );
     await hearing.hear(new Float32Array(16000), 'fr-FR');
     expect(stand.asked[0]).toEqual({
-      model: 'whisper-base',
+      model: 'openai/whisper-base',
       options: { language: 'french', task: 'transcribe' },
     });
     // Less than a fifth of a second of speech: nothing was said.

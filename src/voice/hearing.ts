@@ -14,7 +14,7 @@
  */
 
 import { SPEECH_MODEL_CATALOGUE, transcriberFor } from '../specs/voices';
-import { pinnedBytes, pinnedFetch, downloadSize } from './pinned';
+import { pinnedBytes, pinnedFetch, downloadSize, modelFolder } from './pinned';
 import { HEARING_RATE } from './capture';
 import type {
   SpeechDtype,
@@ -115,7 +115,8 @@ export class DeviceHearing {
         const loaded = new Map<string, number>();
         const recognizer = await transformers.pipeline(
           'automatic-speech-recognition',
-          model.id,
+          // Read at `<origin>/<provider>/<model id>/`, as the store keeps it.
+          modelFolder(model.id),
           {
             dtype: model.dtype as SpeechDtype,
             device: 'wasm',
@@ -145,7 +146,7 @@ export class DeviceHearing {
   private activity() {
     if (!this.vad) {
       const file = SPEECH_MODEL_CATALOGUE['silero-vad'].files[0].path;
-      const url = `${this.modelsUrl.replace(/\/+$/, '')}/silero-vad/${file}`;
+      const url = `${this.modelsUrl.replace(/\/+$/, '')}/${modelFolder('silero-vad')}/${file}`;
       this.vad = this.engines.vad().then(module =>
         module.NonRealTimeVAD.new({
           modelURL: url,

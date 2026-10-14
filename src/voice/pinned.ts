@@ -6,7 +6,7 @@
 /**
  * The browser's models, from Datalayer's origin and as pinned (VOICE.md
  * VO-49, VO-03): every file a model is made of is fetched from the models'
- * origin, laid out as the pinned store is (`<model id>/<path>`), and its
+ * origin, laid out as the pinned store is (`<provider>/<model id>/<path>`), and its
  * SHA-256 checked against the catalogue before anything reads it. A file
  * that is not the one pinned is refused; nothing is asked of another origin.
  *
@@ -24,9 +24,15 @@ export function pinOf(base: string, url: string): PinnedFile | undefined {
   if (!url.startsWith(root)) {
     return undefined;
   }
-  const [model, ...rest] = url.slice(root.length).split('?')[0].split('/');
+  const [provider, model, ...rest] = url
+    .slice(root.length)
+    .split('?')[0]
+    .split('/');
   const path = rest.join('/');
-  return SPEECH_MODEL_CATALOGUE[model]?.files.find(file => file.path === path);
+  const spec = SPEECH_MODEL_CATALOGUE[model];
+  return spec?.provider === provider
+    ? spec.files.find(file => file.path === path)
+    : undefined;
 }
 
 /** The SHA-256 of some bytes, in hex. */
@@ -87,6 +93,15 @@ export async function pinnedBytes(
     throw new PinRefused(`${url} could not be read (${answered.status}).`);
   }
   return answered.arrayBuffer();
+}
+
+/** Where a model's files are, under the models' origin: `<provider>/<model id>` (VO-48). */
+export function modelFolder(modelId: string): string {
+  const model = SPEECH_MODEL_CATALOGUE[modelId];
+  if (!model) {
+    throw new PinRefused(`The voice catalogue has no speech model ${modelId}.`);
+  }
+  return `${model.provider}/${model.id}`;
 }
 
 /** What a first use downloads for a model, in bytes. */

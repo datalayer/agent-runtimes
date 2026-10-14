@@ -4,7 +4,7 @@
 
 """Measure the speech models on the recorded fixtures (VOICE.md VO-05, VO-51, VO-52).
 
-    python scripts/voice/measure.py --store ~/.cache/speech-store
+    python scripts/voice/measure.py --store ~/.cache/voice-work/store
 
 Writes ``tests/voice/measured/*.json``, which ``test_voice_wer.py`` checks
 against ``tests/voice/baselines.json``:
@@ -136,7 +136,7 @@ def main() -> int:
                     print(f"{model['id']} on {len(clips)} {language} clips", flush=True)
                     heard = transcribe(
                         args.store,
-                        model["id"],
+                        f"{model['provider']}/{model['id']}",
                         language,
                         [wavs[c["id"]] for c in clips],
                         env,
@@ -168,7 +168,8 @@ def main() -> int:
             # --- text to speech, and what the device hears of it -----------------------
             from kokoro_onnx import Kokoro
 
-            kokoro_dir = args.store / "kokoro-82m"
+            kokoro_spec = voices.SPEECH_MODEL_CATALOGUE["kokoro-82m"]
+            kokoro_dir = args.store / kokoro_spec["provider"] / "kokoro-82m"
             files = {
                 item["path"]
                 for item in voices.SPEECH_MODEL_CATALOGUE["kokoro-82m"]["files"]
@@ -206,7 +207,11 @@ def main() -> int:
                 ]
                 items = [item for item in spoken if item["language"] == base]
                 heard = transcribe(
-                    args.store, model["id"], base, [item["wav"] for item in items], env
+                    args.store,
+                    f"{model['provider']}/{model['id']}",
+                    base,
+                    [item["wav"] for item in items],
+                    env,
                 )
                 for item, result in zip(items, heard["results"]):
                     round_trips.append(

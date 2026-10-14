@@ -109,7 +109,7 @@ import { ChatFloating } from '@datalayer/agent-runtimes/lib/chat';
 ```
 
 The models are fetched only from `modelsUrl`, laid out as the pinned store is
-(`<model id>/<path>`), together with onnxruntime-web's WASM
+(`<provider>/<model id>/<path>`, the provider the organisation that published the model: `usefulsensors/moonshine-tiny-en/…`), together with onnxruntime-web's WASM
 (`onnxruntime-web/<version>/`). A file whose hash isn't the catalogue's is
 refused. They are fetched on first use, with the progress shown, and kept in
 the browser's cache. Before the browser asks for the microphone the first time,
@@ -129,9 +129,14 @@ instead.
 2. **The models**: fill the pinned store once, then serve it:
 
    ```bash
-   python scripts/voice/pin_store.py --store ~/.cache/speech-store
-   python scripts/voice/serve_store.py --store ~/.cache/speech-store   # :8770
+   python scripts/voice/pin_store.py --store ~/.cache/voice-work/store
+   python scripts/voice/serve_store.py --store ~/.cache/voice-work/store   # :8770
    ```
+
+   Datalayer's own copy, laid out the same, is
+   `https://models-speech.datalayer.tech` (the CDN of
+   `s3://datalayer-models-speech`); the speech service copies its models from
+   it.
 
    (`?voiceModelsUrl=`).
 3. **The speech service**: Datalayer's, `datalayer-speech` on r1
@@ -141,7 +146,7 @@ instead.
 
    ```bash
    cd services/ai-agents && pip install -e '.[speech]'
-   DATALAYER_SPEECH_MODELS_DIR=~/.cache/speech-store \
+   DATALAYER_SPEECH_MODELS_DIR=~/.cache/voice-work/store \
      uvicorn datalayer_ai_agents.speech.main:app --port 4401
    ```
 

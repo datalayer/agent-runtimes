@@ -5,13 +5,14 @@
 """The pinned-file store of the speech models (VOICE.md VO-03, VO-48, VO-49).
 
 Every file of every speech model of the catalogue, laid out as
-``<store>/<model id>/<path>`` and checked against the SHA-256 and the size
+``<store>/<provider>/<model id>/<path>`` — as Datalayer's storage keeps them,
+``s3://datalayer-models-speech`` behind ``https://models-speech.datalayer.tech`` — and checked against the SHA-256 and the size
 the catalogue pins. The store is filled **once**, from where each model was
 published, and then copied to Datalayer's storage; the browser and the speech
 service read it from there and never from a third party's hub.
 
-    python scripts/voice/pin_store.py --store ~/.cache/speech-store [--from DIR]
-    python scripts/voice/pin_store.py --store ~/.cache/speech-store --verify
+    python scripts/voice/pin_store.py --store ~/.cache/voice-work/store [--from DIR]
+    python scripts/voice/pin_store.py --store ~/.cache/voice-work/store --verify
 
 ``--from`` takes files already downloaded (any layout) whose hash matches,
 instead of downloading them again. ``--verify`` downloads nothing and fails
@@ -102,6 +103,11 @@ def _download(url: str, target: Path) -> None:
                 stream.write(block)
 
 
+def folder_of(model: Dict[str, Any]) -> str:
+    """Where a model's files are kept: `<provider>/<model id>`, as Datalayer's storage keeps them (VO-48)."""
+    return f"{model['provider']}/{model['id']}"
+
+
 def files() -> Iterator[tuple[Dict[str, Any], Dict[str, Any]]]:
     for model in SPEECH_MODEL_CATALOGUE.values():
         for item in model["files"]:
@@ -117,7 +123,7 @@ def main() -> int:
     problems = []
     total = 0
     for model, item in files():
-        target = args.store / model["id"] / item["path"]
+        target = args.store / folder_of(model) / item["path"]
         total += item["size"]
         if (
             target.is_file()
@@ -127,7 +133,7 @@ def main() -> int:
             continue
         if args.verify:
             problems.append(
-                f"{model['id']}/{item['path']} is missing or does not match its pin"
+                f"{folder_of(model)}/{item['path']} is missing or does not match its pin"
             )
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
