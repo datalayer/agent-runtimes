@@ -55,9 +55,11 @@ CANDIDATES = ("chromium", "chromium-browser", "google-chrome", "google-chrome-st
 #: The page's size, in CSS pixels: a screenshot's pixels are the page's.
 WIDTH, HEIGHT = 1280, 800
 
-#: How long a page is waited for, and the browser to start, in seconds.
+#: How long a page is waited for, and the browser to start, in seconds. A
+#: first start on a fresh machine (a new pod, a CI runner) builds Chromium's
+#: caches and took close to 20 seconds on GitHub's runners, sometimes more.
 LOAD_TIMEOUT = 30.0
-START_TIMEOUT = 20.0
+START_TIMEOUT = 60.0
 
 #: The most of a page's text an agent is told.
 TEXT_LIMIT = 60_000
