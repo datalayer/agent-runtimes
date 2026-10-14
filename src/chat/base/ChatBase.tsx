@@ -2151,8 +2151,10 @@ function ChatBaseInner({
   useEffect(() => {
     onContextSnapshot?.(agentUsage);
   }, [agentUsage, onContextSnapshot]);
+  // Never on a runtime held to the application's own routes: it answers no
+  // sandbox socket (OwnRoutesOnly).
   const sandboxStatusQuery = useSandbox(
-    configQueriesEnabled && showHeader,
+    configQueriesEnabled && showHeader && !protocol?.ownRoutesOnly,
     protocol?.configEndpoint,
     protocol?.authToken,
     protocol?.agentId,
@@ -2530,8 +2532,17 @@ function ChatBaseInner({
   const wsBaseUrl = protocol?.configEndpoint
     ? protocol.configEndpoint.replace(/\/api\/v1\/(config|configure)\/?$/, '')
     : (protocol?.endpoint?.replace(/\/api\/v1\/.*$/, '') ?? '');
+  /*
+   * Not on a runtime held to the application's own routes (OwnRoutesOnly): it
+   * answers no monitoring stream, and an application's session asks its
+   * approvals in the conversation, over its ui socket.
+   */
   useAgentRuntimeWebSocket({
-    enabled: !!protocol && !!wsBaseUrl && !isAgentNodeTunnelAgUi,
+    enabled:
+      !!protocol &&
+      !!wsBaseUrl &&
+      !isAgentNodeTunnelAgUi &&
+      !protocol.ownRoutesOnly,
     baseUrl: wsBaseUrl,
     authToken: protocol?.authToken,
     agentId: protocol?.agentId,

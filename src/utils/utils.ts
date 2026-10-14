@@ -249,7 +249,16 @@ export function createProtocolAdapter(
 
   switch (config.type) {
     case 'ag-ui':
-      return new AGUIAdapter(adapterConfig);
+      if (config.ownRoutesOnly && !config.appSessions) {
+        // Its runtime answers no generic Stop: an application's own or none.
+        throw new Error(
+          'A chat whose runtime answers only the application’s own routes is an application’s: it needs its sessions (appSessions).',
+        );
+      }
+      return new AGUIAdapter({
+        ...adapterConfig,
+        ...(config.appSessions ? { appSessions: config.appSessions } : {}),
+      });
     case 'a2a':
       return new A2AAdapter(adapterConfig);
     case 'vercel-ai':

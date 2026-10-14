@@ -1606,6 +1606,18 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   /*
+   * A deployment's runtime, and the visitors', answer only the application's
+   * own routes (OwnRoutesOnly, PAP_DATALAYER's release gates): its chat calls
+   * nothing else — Stop is its session's, no monitoring stream, no sandbox
+   * socket, no runtime-wide model switch. A Preview runs on the Maker's.
+   */
+  const ownRoutesOnly = Boolean(deploymentUid || visitors);
+  if (ownRoutesOnly && !runsApp) {
+    throw new Error(
+      'A deployment’s page runs its application: its host gave no app_spec.',
+    );
+  }
+  /*
    * A thread opened from the person's history (LOOP P-24): its conversation
    * read from the runtime once it answers — held there, else resumed from
    * its record — then drawn and gone on with on the same thread. One that
@@ -1742,6 +1754,9 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
                     uiSocket: `${agentServerUrl.replace(/^http/, 'ws')}/api/v1/apps/ui`,
                     // Its files, uploaded before what names them (RU-6).
                     uiFiles: `${agentServerUrl}/api/v1/apps/agents/${encodeURIComponent(agentId)}/files`,
+                    // Each thread a session: Stop is its session's.
+                    appSessions: `${agentServerUrl}/api/v1/apps/sessions`,
+                    ...(ownRoutesOnly ? { ownRoutesOnly: true } : {}),
                   }
                 : {}),
               agentId,
@@ -1765,6 +1780,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       agentServerUrl,
       runsApp,
       iamToken,
+      ownRoutesOnly,
     ],
   );
 
@@ -1910,6 +1926,12 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const selectModel = useCallback(
     async (model: string) => {
+      if (ownRoutesOnly) {
+        // Runtime-wide, and not the application's own: never offered here.
+        throw new Error(
+          'A deployment’s chat does not switch its runtime’s model.',
+        );
+      }
       setPickedModel(model);
       if (inPage || agentServerUrl === undefined) {
         return;
@@ -1920,7 +1942,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         body: JSON.stringify({ model }),
       }).catch(() => undefined);
     },
-    [agentServerUrl, inPage],
+    [agentServerUrl, inPage, ownRoutesOnly],
   );
 
   /* `bottom-chat` keeps the prompt in the chat column; `bottom`, the default,
@@ -2028,7 +2050,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     showTokenUsage: chatExtras.showTokenUsage ?? config?.showTokenUsage ?? true,
     showContextRing: true,
     agentUsage: contextUsage ?? undefined,
-    showModelSelector: !presence,
+    // Nor on a deployment's page: the model is its runtime's, for everyone.
+    showModelSelector: !presence && !ownRoutesOnly,
     models: offeredModels,
     decisions,
     selectedModel: activeModel,

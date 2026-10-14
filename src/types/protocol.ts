@@ -81,6 +81,23 @@ export interface ProtocolConfig {
    * never the bytes. Set for an application's agent.
    */
   uiFiles?: string;
+  /**
+   * The application's sessions (`…/api/v1/apps/sessions`), each AG-UI thread
+   * one of them: Stop is its session's (`{appSessions}/{thread}/stop`). Set
+   * for an application's agent. The runtime's generic `/ag-ui/terminate`
+   * never knew a session's thread, and a deployment's runtime does not
+   * answer it (OwnRoutesOnly).
+   */
+  appSessions?: string;
+  /**
+   * The runtime answers only the application's own routes (OwnRoutesOnly,
+   * PAP_DATALAYER's release gates): it serves a deployment — kept always on,
+   * launched by a hosted page for it — or is the visitors' runtime. Nothing
+   * outside them is opened: not the monitoring stream (an application's
+   * session asks its approvals in the conversation, over `uiSocket`), not
+   * the sandbox's socket, nor any runtime-wide setting. Needs `appSessions`.
+   */
+  ownRoutesOnly?: boolean;
   /** Additional protocol options */
   options?: Record<string, unknown>;
 }

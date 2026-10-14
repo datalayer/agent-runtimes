@@ -35,12 +35,38 @@ describe('an application in the chat', () => {
   it('keeps none of the session’s controls under its composer', () => {
     for (const control of [
       'showAgentsMenu',
-      'showModelSelector',
       'showToolsMenu',
       'showSkillsMenu',
     ]) {
       expect(chat).toContain(`${control}: !presence,`);
     }
+    expect(chat).toContain('showModelSelector: !presence && !ownRoutesOnly,');
+  });
+
+  /*
+   * A deployment's runtime, and the visitors', answer only the application's
+   * own routes (OwnRoutesOnly, PAP_DATALAYER's release gates, round 19): the
+   * chat says so to ChatBase, which then opens no monitoring stream and no
+   * sandbox socket (ownRoutesOnly.test), Stop is the session's
+   * (appSessionStop.test), and the runtime-wide model is never switched.
+   */
+  it('on a deployment’s page, calls only the application’s own routes', () => {
+    expect(chat).toContain(
+      'const ownRoutesOnly = Boolean(deploymentUid || visitors);',
+    );
+    expect(chat).toMatch(
+      /if \(ownRoutesOnly && !runsApp\) \{\s+throw new Error\(/,
+    );
+    expect(chat).toContain(
+      'appSessions: `${agentServerUrl}/api/v1/apps/sessions`,',
+    );
+    expect(chat).toContain(
+      '...(ownRoutesOnly ? { ownRoutesOnly: true } : {}),',
+    );
+    // The model switch is runtime-wide: refused before anything is sent.
+    expect(chat).toMatch(
+      /const selectModel = useCallback\(\s+async \(model: string\) => \{\s+if \(ownRoutesOnly\) \{\s+\/\/[^\n]*\n\s+throw new Error\(/,
+    );
   });
 
   it('is switched off, with the reason, when its host says there is nothing to talk to (LOOP R-27)', () => {
@@ -71,7 +97,10 @@ describe('an application in the chat', () => {
     // it, its page plugin stands down, and its chat is still never sent to
     // the runtime's bare agent route.
     expect(chat).toMatch(
-      /const runsApp = Boolean\(\s+blueprintTurn\?\.createPayload\?\.app_spec \|\|\s+reactor\.getConfig<AgentsConfig>\(AGENTS_PLUGIN_NAME\)\?\.datalayerCreatePayload\s+\?\.app_spec,\s+\);/,
+      /const hostCreatePayload =\s+reactor\.getConfig<AgentsConfig>\(AGENTS_PLUGIN_NAME\)\?\.datalayerCreatePayload;/,
+    );
+    expect(chat).toMatch(
+      /const runsApp = Boolean\(\s+blueprintTurn\?\.createPayload\?\.app_spec \|\| hostCreatePayload\?\.app_spec,\s+\);/,
     );
   });
 });

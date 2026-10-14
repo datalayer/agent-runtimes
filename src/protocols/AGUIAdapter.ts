@@ -27,6 +27,11 @@ export const RUN_CUT_SHORT =
 export interface AGUIAdapterConfig extends ProtocolAdapterConfig {
   /** Runtime URL (e.g., /api/copilotkit) */
   runtimeUrl?: string;
+  /**
+   * An application's sessions (`…/api/v1/apps/sessions`): Stop is the
+   * thread's session's (`ProtocolConfig.appSessions`).
+   */
+  appSessions?: string;
 }
 
 /**
@@ -133,8 +138,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     // Abort every ongoing fetch request, not merely the newest.
     this.stopGeneration();
 
-    // Send terminate request to backend if we have a thread ID
-    if (this.currentThreadId) {
+    // Send terminate request to backend if we have a thread ID. Never an
+    // application's session: a page going away, or the chat rebuilt with a
+    // fresh token, is not the person's Stop — it waits for them to come back.
+    if (this.currentThreadId && !this.aguiConfig.appSessions) {
       this.terminateAgent(this.currentThreadId).catch(err => {
         console.warn('[AGUIAdapter] Failed to terminate agent:', err);
       });
@@ -147,6 +154,11 @@ export class AGUIAdapter extends BaseProtocolAdapter {
    * Terminate a running agent thread on the backend
    */
   async terminateAgent(threadId?: string): Promise<void> {
+    const sessions = this.aguiConfig.appSessions;
+    if (sessions) {
+      await this.stopSession(sessions, threadId || this.currentThreadId);
+      return;
+    }
     try {
       // Derive the terminate endpoint from the base URL
       // e.g., http://localhost:8765/api/v1/ag-ui/default -> http://localhost:8765/api/v1/ag-ui/terminate
@@ -171,6 +183,30 @@ export class AGUIAdapter extends BaseProtocolAdapter {
       // else: Successfully terminated, no action needed
     } catch {
       // Ignore errors - agent may have already completed
+    }
+  }
+
+  /**
+   * Stop an application's session (`POST {sessions}/{uid}/stop`): what runs
+   * is cancelled and it waits to be resumed. Its thread is the session; with
+   * none, nothing was sent and there is nothing to stop.
+   */
+  private async stopSession(
+    sessions: string,
+    threadId: string | null | undefined,
+  ): Promise<void> {
+    if (!threadId) {
+      return;
+    }
+    const url = `${sessions.replace(/\/+$/, '')}/${encodeURIComponent(threadId)}/stop`;
+    const response = await this.fetchOf()(url, {
+      method: 'POST',
+      headers: this.buildHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `The session ${threadId} could not be stopped (${response.status}).`,
+      );
     }
   }
 
