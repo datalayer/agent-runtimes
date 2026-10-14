@@ -84,6 +84,20 @@ def built_of(specs_dir: Path, identity: str, app: Any) -> str:
     return "written"
 
 
+def python_of(specs_dir: Path, identity: str) -> str:
+    """Each application in Python, as the example pages show it.
+
+    Its own ``app.py`` when it was built in Python; otherwise the file `loop
+    apps eject` writes from its spec, so every example can be read in Python.
+    """
+    from agent_runtimes.loop.apps.scaffold import eject_text  # noqa: PLC0415
+
+    code = specs_dir / identity / "app.py"
+    if code.is_file():
+        return code.read_text()
+    return eject_text((specs_dir / f"{identity}.yaml").read_text()).code
+
+
 def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Every application, validated, as plain data — and the action classes."""
     apps_module = import_from_clone(specs_dir, "apps")
@@ -94,6 +108,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     escalations: dict[str, dict[str, Any]] = {}
     sources: dict[str, Any] = {}
     built: dict[str, str] = {}
+    python: dict[str, str] = {}
     for identity in sorted(apps):
         app = apps[identity]
         spec = app.model_dump(mode="json", by_alias=True)
@@ -113,6 +128,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         escalations[identity] = dict(sorted(apps_module.tool_escalations(app).items()))
         sources[identity] = apps_module.dump_app(app)
         built[identity] = built_of(specs_dir, identity, app)
+        python[identity] = python_of(specs_dir, identity)
         for rule in spec["rules"]:
             rule["applies_to"] = (
                 [rule["applies_to"]]
@@ -230,6 +246,7 @@ def load_specs(specs_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         "escalations": escalations,
         "sources": sources,
         "built": built,
+        "python": python,
     }
     return specs, actions
 
@@ -339,7 +356,10 @@ def generate_python_code(specs: list[dict[str, Any]], built: dict[str, str]) -> 
 
 
 def generate_typescript_code(
-    specs: list[dict[str, Any]], sources: dict[str, Any], built: dict[str, str]
+    specs: list[dict[str, Any]],
+    sources: dict[str, Any],
+    built: dict[str, str],
+    python: dict[str, str],
 ) -> str:
     """Generate the TypeScript application catalogue."""
     lines = [
@@ -398,6 +418,14 @@ def generate_typescript_code(
             " */",
             "export const APP_BUILT: Record<string, AppBuilt> = "
             + json.dumps(built, indent=2)
+            + ";",
+            "",
+            "/**",
+            " * Each application in Python: its own `app.py` when it was built in",
+            " * Python, otherwise the file `loop apps eject` writes from its spec.",
+            " */",
+            "export const APP_PYTHON: Record<string, string> = "
+            + json.dumps(python, indent=2, ensure_ascii=False)
             + ";",
             "",
             "/** Every application of the catalogue, or those of a kind. */",
@@ -601,7 +629,9 @@ def main() -> None:
         (args.python_output, generate_python_code(specs, actions["built"])),
         (
             args.typescript_output,
-            generate_typescript_code(specs, actions["sources"], actions["built"]),
+            generate_typescript_code(
+                specs, actions["sources"], actions["built"], actions["python"]
+            ),
         ),
         (args.actions_python_output, generate_actions_python_code(actions)),
         (args.actions_typescript_output, generate_actions_typescript_code(actions)),
