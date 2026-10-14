@@ -101,6 +101,9 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     expect(ids).toContain('ui:a2ui-surface');
     expect(ids).toContain('ui:chat');
     expect(ids).not.toContain('ui:a2ui');
+    expect(parts.find(part => part.id === 'ui:chat')?.example).toEqual({
+      plugin: 'chat',
+    });
     expect(ids).toContain('character:paperclip');
     expect(CANVAS_PART_PLUGINS.map(plugin => plugin.name)).toEqual(
       CANVAS_PART_SOURCES.map(canvasPartsPluginName),

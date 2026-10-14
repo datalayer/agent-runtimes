@@ -243,7 +243,8 @@ export const UI_PARTS: CanvasPartContribution[] = listUI().map(ui => ({
   kind: 'ui',
   label: ui.name,
   says: ui.description,
-  example: ui.id,
+  // The Appspec's `ui` entry it adds: the plugin, its renderer chosen after.
+  example: { plugin: ui.id },
   enabled: true,
 }));
 
