@@ -9,7 +9,10 @@
  * whose composer is a plugin of its own). What the box held when the
  * microphone opened stays; the words heard go after it as they come, and the
  * whole of what was heard replaces them once it stops. Put there for the
- * person to edit and send — or sent at once with *Send what I say*.
+ * person to edit and send — or sent at once with *Send what I say*. While
+ * the words are still being heard the host is told (`onInterimChange`), to
+ * grey them until they are final (VO-11). Beside the microphone, the
+ * person's voice menu (`VoiceMenu`, VO-30).
  *
  * @module voice/ComposerVoice
  */
@@ -18,6 +21,7 @@ import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
 import { DeviceHearing } from './hearing';
 import { VoiceInput } from './VoiceInput';
+import { VoiceMenu } from './VoiceMenu';
 import type { SettledVoice } from './chatVoice';
 import type { SpokenMetadata, Transcript } from './types';
 
@@ -36,6 +40,16 @@ export interface ComposerVoiceProps {
   speaking?: boolean;
   /** Stops the agent's voice, also when the microphone opens (VO-13). */
   onStopSpeaking?: () => void;
+  /**
+   * The words in the box are still being heard (`true`), or final
+   * (`false`): the host greys them until they are (VO-11).
+   */
+  onInterimChange?: (interim: boolean) => void;
+  /**
+   * The application lets its answers be heard: the voice menu offers when,
+   * the voice, its speed and loudness (VO-21, VO-25, VO-30).
+   */
+  answers?: boolean;
 }
 
 /** Whether something rides on a run as a spoken message's metadata (VO-27). */
@@ -58,6 +72,8 @@ export function ComposerVoice({
   disabled = false,
   speaking = false,
   onStopSpeaking,
+  onInterimChange,
+  answers = false,
 }: ComposerVoiceProps): JSX.Element | null {
   const hearing = useMemo(
     () =>
@@ -74,32 +90,43 @@ export function ComposerVoice({
     return null;
   }
   return (
-    <VoiceInput
-      hearing={hearing}
-      language={voice.language}
-      consentKey={voice.consentKey ?? 'chat'}
-      silenceMs={voice.silenceMs}
-      microphoneId={voice.microphoneId}
-      disabled={disabled}
-      speaking={speaking}
-      onStopSpeaking={onStopSpeaking}
-      onListen={() => {
-        base.current = input.trim();
-        onStopSpeaking?.();
-      }}
-      // The words as they are heard, in the box (VO-11); '' gives it back.
-      onInterim={(words: string) => setInput(afterBase(words))}
-      onTranscript={(transcript: Transcript) => {
-        if (voice.sendWhatISay) {
-          setInput(base.current);
-          send(transcript.text, transcript.metadata);
-          return;
-        }
-        // In the box, for the person to edit and send: never sent here.
-        onSpoken(transcript.metadata);
-        setInput(afterBase(transcript.text));
-      }}
-    />
+    <span
+      data-composer-voice=""
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
+    >
+      <VoiceMenu voice={voice} answers={answers} disabled={disabled} />
+      <VoiceInput
+        hearing={hearing}
+        language={voice.language}
+        consentKey={voice.consentKey ?? 'chat'}
+        silenceMs={voice.silenceMs}
+        microphoneId={voice.microphoneId}
+        disabled={disabled}
+        speaking={speaking}
+        onStopSpeaking={onStopSpeaking}
+        onListen={() => {
+          base.current = input.trim();
+          onStopSpeaking?.();
+        }}
+        // The words as they are heard, in the box (VO-11), greyed until
+        // final; '' gives it back.
+        onInterim={(words: string) => {
+          setInput(afterBase(words));
+          onInterimChange?.(words !== '');
+        }}
+        onTranscript={(transcript: Transcript) => {
+          onInterimChange?.(false);
+          if (voice.sendWhatISay) {
+            setInput(base.current);
+            send(transcript.text, transcript.metadata);
+            return;
+          }
+          // In the box, for the person to edit and send: never sent here.
+          onSpoken(transcript.metadata);
+          setInput(afterBase(transcript.text));
+        }}
+      />
+    </span>
   );
 }
 

@@ -49,6 +49,7 @@ import type { ChatBaseProps } from '../types/chat';
 import { useSpokenAnswers } from '../voice/useSpokenAnswers';
 import { useVoiceSpeaker } from '../voice/useVoiceSpeaker';
 import { settledVoice } from '../voice/chatVoice';
+import { useVoiceSettings } from '../voice/useVoiceSettings';
 import type { ChatVoice } from '../voice';
 import {
   BalloonApprovalMessage,
@@ -561,9 +562,11 @@ export function ChatFloating({
    * they are written (VO-20), the state following the sound (VO-22).
    */
   const [voiceItems, setVoiceItems] = useState<readonly unknown[]>([]);
+  // The person's own settings, followed as the voice menu changes them (VO-30).
+  const [personVoice] = useVoiceSettings();
   const settledVoiceOf = useMemo(
-    () => (voice ? settledVoice(voice) : undefined),
-    [voice],
+    () => (voice ? settledVoice(voice, personVoice) : undefined),
+    [voice, personVoice],
   );
   const {
     speaker,

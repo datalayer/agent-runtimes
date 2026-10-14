@@ -127,6 +127,7 @@ import { ComposerVoice, spokenOf } from '../../voice/ComposerVoice';
 import { ReadAloud, readsAloud } from '../../voice/ReadAloud';
 import type { SpokenMetadata } from '../../voice/types';
 import { settledVoice } from '../../voice/chatVoice';
+import { useVoiceSettings } from '../../voice/useVoiceSettings';
 import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
 import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
 import { isFloatingChatViewMode } from '../viewModes';
@@ -4046,10 +4047,14 @@ function ChatBaseInner({
   // Voice (VOICE.md V1): what was said and put in the composer, until sent.
   const spokenRef = useRef<SpokenMetadata | undefined>(undefined);
   // Its voice with what it leaves unsaid filled in: Datalayer's models and packages.
+  // The person's own settings, followed as the voice menu changes them (VO-30).
+  const [personVoice] = useVoiceSettings();
   const settled = useMemo(
-    () => (voice ? settledVoice(voice) : undefined),
-    [voice],
+    () => (voice ? settledVoice(voice, personVoice) : undefined),
+    [voice, personVoice],
   );
+  // The words in the box are still being heard: greyed until final (VO-11).
+  const [voiceInterim, setVoiceInterim] = useState(false);
   /*
    * Its answers heard (VO-20, VO-21), by Datalayer's speech service: the
    * host's speaker when it gives one (`ChatFloating`, whose assistant's mouth
@@ -5055,6 +5060,12 @@ function ChatBaseInner({
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
+        onInterimChange={setVoiceInterim}
+        // The menu offers when answers are heard where the application
+        // lets them be (VO-21, VO-30).
+        answers={Boolean(
+          voice?.output && voice.output !== 'off' && voice.speechUrl,
+        )}
         onSpoken={metadata => {
           spokenRef.current = metadata;
         }}
@@ -5085,6 +5096,7 @@ function ChatBaseInner({
           voiceControl
         )
       }
+      interim={voiceInterim}
       input={input}
       setInput={setInput}
       isLoading={isLoading}

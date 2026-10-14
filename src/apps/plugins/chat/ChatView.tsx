@@ -189,6 +189,7 @@ import {
 import { useChatWords } from '../../../chat/ChatLanguage';
 import { ComposerVoice } from '../../../voice/ComposerVoice';
 import { settledVoice, voiceAskedAs } from '../../../voice/chatVoice';
+import { useVoiceSettings } from '../../../voice/useVoiceSettings';
 import type { SpokenMetadata } from '../../../voice/types';
 
 type ChatControls = {
@@ -1469,10 +1470,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * workspace's composer, which this view holds — the words written in it as
    * they are heard. The chat speaks its answers itself (`voice` below).
    */
+  // The person's own settings, followed as the voice menu changes them (VO-30).
+  const [personVoice] = useVoiceSettings();
   const voice = useMemo(
-    () => (config?.voice ? settledVoice(config.voice) : undefined),
-    [config?.voice],
+    () => (config?.voice ? settledVoice(config.voice, personVoice) : undefined),
+    [config?.voice, personVoice],
   );
+  // The words in the box are still being heard: greyed until final (VO-11).
+  const [voiceInterim, setVoiceInterim] = useState(false);
 
   /*
    * The model this conversation is on.
@@ -2044,6 +2049,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     suggestions: chatSuggestions,
     disableInputPrompt: chatDisabled,
     connectionConfirmed: !chatDisabled,
+    interim: voiceInterim,
     // Tighter on top: every pixel of the composer is a pixel of the editor
     // under it pushed down, and the bar reads as a command line at this size.
     // Both of the page layout's placements are that bar — one floating over
@@ -2082,6 +2088,14 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // opening stops it, and *Stop speaking* while it speaks.
               speaking={speaking}
               onStopSpeaking={() => controlsRef.current?.stopSpeaking?.()}
+              onInterimChange={setVoiceInterim}
+              // The menu offers when answers are heard where the
+              // application lets them be (VO-21, VO-30).
+              answers={Boolean(
+                config?.voice?.output &&
+                config.voice.output !== 'off' &&
+                config.voice.speechUrl,
+              )}
               onSpoken={metadata => {
                 spokenRef.current = metadata;
               }}

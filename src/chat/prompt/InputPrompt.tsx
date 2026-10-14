@@ -119,6 +119,11 @@ export interface InputPromptProps {
    */
   footerExtras?: ReactNode;
   /**
+   * The words in the box are still being heard by the microphone (VOICE.md
+   * VO-11): shown greyed, in italics, until they are final.
+   */
+  interim?: boolean;
+  /**
    * Panels inside the prompt's card, above and below the composer itself.
    *
    * Inside rather than beside, so a floating prompt carries them: the loop's
@@ -341,6 +346,7 @@ export function InputPrompt({
   draggable = false,
   container,
   footerExtras,
+  interim = false,
   leadingPanel,
   trailingPanel,
   onSend,
@@ -478,7 +484,21 @@ export function InputPrompt({
   const hasContext = Boolean(agentUsage && !agentUsage.error);
 
   const body = (
-    <Box>
+    <Box
+      // Words still being heard, greyed until final (VO-11); the same Box
+      // either way, so the editor is never mounted again.
+      data-voice-interim={interim ? '' : undefined}
+      sx={
+        interim
+          ? {
+              '& [contenteditable="true"], & textarea': {
+                color: 'fg.muted',
+                fontStyle: 'italic',
+              },
+            }
+          : undefined
+      }
+    >
       {leadingPanel}
       {/* Input Area — powered by the standalone InputPrompt component */}
       <InputPromptBase

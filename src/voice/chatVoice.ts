@@ -16,7 +16,7 @@ import { voiceFor } from '../specs/voices';
 import type { AppVoiceSpec } from '../types/agentspecs';
 import type { VoiceEngines } from './types';
 import {
-  keptVoiceSettings,
+  heldVoiceSettings,
   voiceForPerson,
   type VoiceSettings,
 } from './settings';
@@ -153,7 +153,7 @@ export const SILENCE_MS = 1500;
  */
 export function settledVoice(
   given: ChatVoice,
-  person: VoiceSettings = keptVoiceSettings(),
+  person: VoiceSettings = heldVoiceSettings(),
 ): SettledVoice {
   const voice = voiceForPerson(given, person);
   const output = voice.output ?? 'off';

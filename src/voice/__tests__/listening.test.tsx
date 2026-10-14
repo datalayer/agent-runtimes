@@ -295,6 +295,7 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
     const spoken: unknown[] = [];
     const sent: string[] = [];
     const stopped: number[] = [];
+    const interims: boolean[] = [];
     act(() => {
       root.render(
         <ComposerVoice
@@ -317,6 +318,7 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
           send={text => sent.push(text)}
           speaking={speaking}
           onStopSpeaking={() => stopped.push(1)}
+          onInterimChange={interim => interims.push(interim)}
         />,
       );
     });
@@ -326,6 +328,7 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
       spoken,
       sent,
       stopped,
+      interims,
     };
   }
 
@@ -351,12 +354,15 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
   });
 
   it('writes the words after what the box held, and leaves them there to send', async () => {
-    const { mic, box, spoken, sent } = draw(false);
+    const { mic, box, spoken, sent, interims } = draw(false);
     await act(async () => {
       press(mic, 'pointerdown');
       press(mic, 'pointerup');
     });
     await until(() => spoken.length === 1);
+    // Greyed while they are being heard, plain once final (VO-11).
+    expect(interims[0]).toBe(true);
+    expect(interims[interims.length - 1]).toBe(false);
     expect(box[0]).toBe('Please Open');
     expect(box[box.length - 1]).toBe('Please Open the');
     expect(spokenOf(spoken[0])).toEqual(spoken[0]);

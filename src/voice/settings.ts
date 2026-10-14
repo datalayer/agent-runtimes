@@ -116,7 +116,55 @@ export function keptVoiceSettings(): VoiceSettings {
   }
 }
 
-/** Keep what the person chose; an empty choice forgets it. */
+/**
+ * What the page holds: the kept settings, or the choice made on this page
+ * when storage refused it. Read once, then told of each change.
+ */
+let held: VoiceSettings | undefined;
+
+/** Who is told when the person's settings change: every chat on the page (VO-30). */
+const listeners = new Set<(settings: VoiceSettings) => void>();
+
+/** The person's settings as the page holds them (VO-30). */
+export function heldVoiceSettings(): VoiceSettings {
+  if (held === undefined) {
+    held = keptVoiceSettings();
+  }
+  return held;
+}
+
+/**
+ * Be told when the person's settings change — from a menu on this page, or
+ * from another tab, whose storage event is read here. Returns the unsubscribe.
+ */
+export function onVoiceSettingsChange(
+  listener: (settings: VoiceSettings) => void,
+): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function told(settings: VoiceSettings): void {
+  held = settings;
+  for (const listener of [...listeners]) {
+    listener(settings);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', event => {
+    if (event.key === VOICE_SETTINGS_KEY || event.key === null) {
+      told(keptVoiceSettings());
+    }
+  });
+}
+
+/**
+ * Keep what the person chose; an empty choice forgets it. Every chat on the
+ * page is told, so the menu's choice is heard at once (VO-30).
+ */
 export function keepVoiceSettings(settings: VoiceSettings): VoiceSettings {
   const sane = saneVoiceSettings(settings);
   try {
@@ -128,7 +176,37 @@ export function keepVoiceSettings(settings: VoiceSettings): VoiceSettings {
   } catch {
     // Without storage the choice holds for the page.
   }
+  told(sane);
   return sane;
+}
+
+/**
+ * The settings with one choice changed (VO-30): `undefined` forgets that
+ * choice, giving it back to the application. A new language drops a voice
+ * the person chose that does not speak it, for the language's own.
+ */
+export function withVoiceSetting<K extends keyof VoiceSettings>(
+  settings: VoiceSettings,
+  key: K,
+  value: VoiceSettings[K] | undefined,
+  speaks?: (voice: string, language: string) => boolean,
+): VoiceSettings {
+  const next: VoiceSettings = { ...saneVoiceSettings(settings) };
+  if (value === undefined) {
+    delete next[key];
+  } else {
+    next[key] = value;
+  }
+  if (
+    key === 'language' &&
+    typeof value === 'string' &&
+    next.voice &&
+    speaks &&
+    !speaks(next.voice, value)
+  ) {
+    delete next.voice;
+  }
+  return saneVoiceSettings(next);
 }
 
 /** The language the browser says the person reads, or nothing. */
