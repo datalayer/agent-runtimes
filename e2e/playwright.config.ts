@@ -34,7 +34,7 @@ export const HOST_PAGE_PORT = 8788;
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'mounts.spec.ts',
+  testMatch: ['mounts.spec.ts', 'voice.spec.ts'],
   outputDir: './test-results',
   globalSetup: './global-setup.ts',
   workers: 1,
