@@ -30,6 +30,8 @@ app = Application.from_spec(
         "id": "file-analysis",
         "name": "File Analysis",
         "kind": "chat",
+        # Its interface (AGENTIC_UI R8): the conversation.
+        "ui": [{"plugin": "chat"}],
         "agent": AGENT,
         "description": "Reads a CSV you send, computes its figures, charts them and says what they show.",
         "instructions": (

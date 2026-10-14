@@ -29,6 +29,18 @@ ui:
 A renderer named as a UI — the old shape, `ui: a2ui` — is refused by agentspecs, by
 `checkAppspec` (`uiProblems`) and by `make specs`, with no compatibility reading.
 
+**An application lists what it is drawn with.** Every application of the
+catalogue lists the plugins `appPreset` (`src/apps/apps/AppRenderer.tsx`) mounts for
+its kind and layout, beyond those every conversation has: `chat` for a conversation,
+`a2ui-surface` through `a2ui` when its `interface.outputs` has
+`application/json+a2ui`, `pap-sign-in` when it signs people in at companies
+(`pap.connections`), `page-layout`, `app-page` and `canvas-blocks` when its layout is
+`page` or `split`, `app-page` alone for a decision, `app-components` for components of
+its own. What a host adds — the Preview's rules, activity and computer, a window — is
+not the application's. `src/apps/__tests__/app-preset.test.tsx` holds each catalogue
+application's `ui` to what its preset mounts, and agentspecs' `test_ui.py` to what its
+spec says.
+
 **The specs are the plugins' registrations.** `src/apps/__tests__/ui-specs.test.ts`
 builds each plugin on a reactor, starts it, and holds what it registers — its name,
 Slots, Contribution Points, Commands, offered Contribution Points and settings — to its

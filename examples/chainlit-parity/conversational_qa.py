@@ -46,6 +46,8 @@ app = Application(
         "Answer only from the passages you are given and from the conversation so "
         "far. When they do not hold the answer, say so; never guess."
     ),
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 CHUNK, OVERLAP = 1000, 100

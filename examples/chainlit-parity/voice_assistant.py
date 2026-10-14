@@ -33,6 +33,8 @@ app = Application.from_spec(
         "id": "voice-assistant",
         "name": "Voice Assistant",
         "kind": "chat",
+        # Its interface (AGENTIC_UI R8): the conversation.
+        "ui": [{"plugin": "chat"}],
         "agent": AGENT,
         "description": "Send a voice note: it is transcribed, answered, and the answer spoken back.",
         "instructions": "You are a voice assistant: answer in two short spoken sentences, no markdown.",

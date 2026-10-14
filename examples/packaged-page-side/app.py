@@ -20,6 +20,15 @@ app = Application(
     description="A desk with a dial of its own, drawn from its package.",
     kind="widget",
     agent="example-simple",
+    # Its interface (AGENTIC_UI R8): the conversation, its page laid out with
+    # the Canvas's blocks, and the components it packages.
+    ui=[
+        {"plugin": "chat"},
+        {"plugin": "page-layout"},
+        {"plugin": "app-page"},
+        {"plugin": "canvas-blocks"},
+        {"plugin": "app-components"},
+    ],
 )
 
 app.custom_component(

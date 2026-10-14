@@ -27,6 +27,7 @@ import { CHAT_PLUGIN_NAME } from '../plugins/chat';
 import { LoopViewType } from '../core';
 import { loopPlugins } from '../presets';
 import { APP_CATALOGUE } from '../../specs/apps';
+import { listUI } from '../../specs/ui';
 import type { AppSpec } from '../../types/agentspecs';
 
 (
@@ -162,4 +163,51 @@ describe('a decision, on the workspace', () => {
     );
     await act(async () => root.unmount());
   });
+});
+
+/**
+ * The UI plugins (AGENTIC_UI R8) a workspace mounts for an application: its
+ * preset's plugins and the workspace's own (`loopPlugins`) as its layout
+ * says, each read as the UI spec it registers under — once per application,
+ * source or UI when the spec says so (`<plugin>-<id>`).
+ */
+function uiDrawnWith(app: AppSpec): Set<string> {
+  const preset = appPreset(app, { page: DecisionPage });
+  const mounted = names([
+    ...preset.plugins,
+    ...loopPlugins({ ...preset.workspace }),
+  ]);
+  return new Set(
+    listUI()
+      .filter(spec =>
+        mounted.some(name =>
+          spec.per ? name.startsWith(`${spec.plugin}-`) : name === spec.plugin,
+        ),
+      )
+      .map(spec => spec.id),
+  );
+}
+
+describe('the UI plugins an application of the catalogue lists', () => {
+  // What every application with a conversation is drawn with: the chat and
+  // the plugins it comes with, the A2UI surfaces and the sign-in card idle
+  // until an answer needs them.
+  const everyConversation = uiDrawnWith(APP_CATALOGUE['web-research']);
+
+  it.each(Object.keys(APP_CATALOGUE))(
+    '%s lists what its preset mounts for it, and nothing it does not',
+    id => {
+      const app = APP_CATALOGUE[id];
+      const drawn = uiDrawnWith(app);
+      const listed = app.ui.map(choice => choice.plugin);
+      // Nothing it lists is left out of its workspace…
+      expect(listed.filter(plugin => !drawn.has(plugin))).toEqual([]);
+      // …it lists the conversation when it has one…
+      expect(listed.includes('chat')).toBe(drawn.has('chat'));
+      // …and every plugin its kind, layout and blocks add to a conversation's.
+      expect(
+        [...drawn].filter(plugin => !everyConversation.has(plugin)).sort(),
+      ).toEqual(listed.filter(plugin => !everyConversation.has(plugin)).sort());
+    },
+  );
 });

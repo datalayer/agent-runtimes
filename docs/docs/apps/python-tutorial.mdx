@@ -42,7 +42,7 @@ checks that the two agree and that the spec passes the instant checks:
 ### What it declares
 
 ```python
-app = Application.from_spec({...})   # its spec: name, agent, instructions, page, tests, record
+app = Application.from_spec({...})   # its spec: name, agent, instructions, ui, page, tests, record
 app.starter("Trial churn", "Interview me about why I stopped after the trial.")
 app.setting(
     "language",

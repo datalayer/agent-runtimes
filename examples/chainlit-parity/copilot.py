@@ -33,6 +33,8 @@ app = Application.from_spec(
         "id": "copilot",
         "name": "Copilot",
         "kind": "chat",
+        # Its interface (AGENTIC_UI R8): the conversation.
+        "ui": [{"plugin": "chat"}],
         "agent": AGENT,
         "description": "A copilot in the corner of a page, talking to the page it sits in.",
         "deployment": {"embedded": {"mode": "bubble"}},

@@ -31,6 +31,8 @@ app = Application(
         "You write SQL queries, and nothing else: the query alone, with no "
         "fence and no words around it."
     ),
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 app.starter(
     ">50 minutes watched",

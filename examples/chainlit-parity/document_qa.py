@@ -40,6 +40,8 @@ app = Application(
         "Answer only from the passages you are given, and name the ones you used as "
         "source_<n>. When they do not hold the answer, say so; never guess."
     ),
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 WELCOME = """Welcome to the Document QA demo! To get started:

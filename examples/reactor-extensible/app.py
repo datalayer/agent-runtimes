@@ -43,6 +43,8 @@ app = Application(
         "email, look them up with lookup_customer before answering about their "
         "account. Answer in two sentences at most."
     ),
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 #: What greets a person: other plugins extend it.

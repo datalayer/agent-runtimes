@@ -36,6 +36,8 @@ app = Application(
         "You are a helpful assistant. Placeholders such as <EMAIL_ADDRESS> stand "
         "for data you are not shown: keep them as they are."
     ),
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 #: What it looks for, by kind, as Presidio names them.

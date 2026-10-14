@@ -31,6 +31,8 @@ app = Application(
     agent=AGENT,
     description="Writes the SQL for a question about orders, runs it, and explains the result.",
     instructions="You write SQLite queries and explain query results to customer support, briefly.",
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 SQL_PROMPT = """You have a SQLite table named `orders`.

@@ -186,6 +186,32 @@ app = Application(
     model="",                          # in place of its agent's model
     goal="",                           # for a worker
     version="0.0.1",                   # optional: see below
+    protocols=[],                      # ids of agentspecs' protocols: ["pap"]
+    ui=[{"plugin": "chat"}],           # its UI plugins: see below
+)
+```
+
+**Its interface.** `ui` lists the Reactor plugins of agentspecs' `ui` it is
+drawn with, each `{plugin, renderer}` — `renderer`, one of `ui-renderers` the
+plugin may be exposed through, when that part reaches a host that is not
+Datalayer's own page. It says what its kind and layout put on its page: `chat`
+for a conversation, `a2ui-surface` through `a2ui` when it answers with A2UI
+cards, `pap-sign-in` when it signs people in at companies, `page-layout`,
+`app-page` and `canvas-blocks` for a page, `app-page` alone for a decision,
+`app-components` for components of its own. A plugin the catalogue does not
+have, or a renderer's id said alone (`ui=["a2ui"]`), is refused:
+
+```python
+app = Application(
+    id="quote",
+    kind="widget",
+    agent="jupyter-data-analyst:0.0.1",
+    ui=[
+        {"plugin": "chat"},
+        {"plugin": "page-layout"},
+        {"plugin": "app-page"},
+        {"plugin": "canvas-blocks"},
+    ],
 )
 ```
 

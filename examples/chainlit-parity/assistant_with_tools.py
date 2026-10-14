@@ -30,6 +30,8 @@ app = Application(
     agent=AGENT,
     description="A helpful assistant with a weather and a calculator.",
     instructions="You are a helpful assistant. Use your tools for the weather and for arithmetic.",
+    # Its interface (AGENTIC_UI R8): the conversation.
+    ui=[{"plugin": "chat"}],
 )
 
 
