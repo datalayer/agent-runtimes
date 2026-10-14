@@ -160,7 +160,7 @@ export default async function globalSetup(): Promise<void> {
   // The visitors' runtime answers a visitor's token only: anything it says
   // but a network error, or nothing at this path, means it is there.
   const runtime = await reach(
-    `${apiUrl()}/api/loop-visitors/api/v1/apps/agents/${encodeURIComponent(exampleId())}/ag-ui/`,
+    `${apiUrl()}/api/runtime-visitors/api/v1/apps/agents/${encodeURIComponent(exampleId())}/ag-ui/`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +172,7 @@ export default async function globalSetup(): Promise<void> {
     'error' in runtime
       ? `The visitors' runtime at ${apiUrl()} is not reachable (${runtime.error}).`
       : runtime.status === 404
-        ? `The visitors' runtime at ${apiUrl()}/api/loop-visitors is not deployed, or keeps no ${exampleId()}.`
+        ? `The visitors' runtime at ${apiUrl()}/api/runtime-visitors is not deployed, or keeps no ${exampleId()}.`
         : '',
   );
 

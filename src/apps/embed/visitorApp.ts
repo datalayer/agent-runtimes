@@ -45,7 +45,7 @@ import type { DatalayerVisitors } from '../apps/visitorToken';
 import { runnable } from './embedConfig';
 
 /** Where the visitors' runtime is published, on ai-agents' host (its chart). */
-export const VISITORS_PATH = '/api/loop-visitors';
+export const VISITORS_PATH = '/api/runtime-visitors';
 
 /** The examples the visitors' runtime keeps warm (its chart's `AGENT_RUNTIMES_VISITORS`). */
 export const VISITOR_EXAMPLES: readonly string[] = [

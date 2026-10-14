@@ -99,14 +99,14 @@ function answers(
 }
 
 const VISITORS = {
-  url: 'https://r1.datalayer.run/api/loop-visitors/',
+  url: 'https://r1.datalayer.run/api/runtime-visitors/',
   app: 'at:desk',
   inferenceUrl: 'https://r1.datalayer.run',
 };
 const TOKEN_URL =
   'https://r1.datalayer.run/api/ai-inference/v1/anonymous/token';
 const AGENT_URL =
-  'https://r1.datalayer.run/api/loop-visitors/api/v1/apps/visitors/agent';
+  'https://r1.datalayer.run/api/runtime-visitors/api/v1/apps/visitors/agent';
 
 describe("a visitor's agent (STUDIO D-15)", () => {
   it('is the one the runtime names: an example by its id, an address by at-<slug>', () => {

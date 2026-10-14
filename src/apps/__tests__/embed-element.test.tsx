@@ -673,7 +673,7 @@ deployment:
       expect(props).toMatchObject({
         target: 'datalayer',
         datalayerVisitors: {
-          url: 'https://r1.datalayer.run/api/loop-visitors',
+          url: 'https://r1.datalayer.run/api/runtime-visitors',
           app: 'web-research',
           inferenceUrl: 'https://r1.datalayer.run',
         },

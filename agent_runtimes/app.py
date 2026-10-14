@@ -1396,7 +1396,7 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         from .loop.apps.visitors import loopback_url, visitors_runtime, warm
 
         _visitors_task = (
-            asyncio.create_task(warm(loopback_url()), name="loop-visitors-warm")
+            asyncio.create_task(warm(loopback_url()), name="runtime-visitors-warm")
             if visitors_runtime()
             else None
         )
