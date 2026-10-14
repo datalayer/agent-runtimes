@@ -19,6 +19,7 @@
  * @module apps/apps/threads
  */
 
+import type { ResumedThread } from '../../types/chat';
 import type { ChatMessage } from '../../types/messages';
 import { messagesOfThread } from '../embed/embedSession';
 
@@ -28,6 +29,45 @@ export const THREAD_WORDS = {
   notOpened: (detail: string): string =>
     `Your conversation could not be opened, so this is a new one: ${detail}`,
 } as const;
+
+/**
+ * The deployment an application's agent is created for, as its create
+ * payload names it (`app_instance.deployment_uid`, `appDatalayerCreatePayload`),
+ * or `''` for a Preview, a test or no application.
+ */
+export function deploymentOfPayload(
+  createPayload: Record<string, unknown> | undefined,
+): string {
+  const instance = createPayload?.app_instance;
+  if (!instance || typeof instance !== 'object') {
+    return '';
+  }
+  const uid = (instance as { deployment_uid?: unknown }).deployment_uid;
+  return typeof uid === 'string' ? uid.trim() : '';
+}
+
+/**
+ * The thread a deployment's chat opens on when its host gave none: a new one,
+ * `id` (PAP_DATALAYER's release gates, found on r1, 14 October 2026).
+ *
+ * A deployment's agent serves every visitor, and what its runtime holds in
+ * memory is the last run's, whoever ran it: drawn as the page's
+ * conversation, a second account opening the same link saw the first
+ * person's turns. A given thread is drawn as given and never replaced by the
+ * runtime's snapshot, so each visitor sees only their own conversation —
+ * this one, or one opened from their history. A Preview, or a chat that runs
+ * no deployment, keeps what it was given.
+ */
+export function threadOfVisit(
+  given: ResumedThread | undefined,
+  deploymentUid: string,
+  id: string,
+): ResumedThread | undefined {
+  if (given || !deploymentUid) {
+    return given;
+  }
+  return { id, messages: [] };
+}
 
 /** The AG-UI messages a session-API stream's `MESSAGES_SNAPSHOT` carries, if one does. */
 export function snapshotOfStream(text: string): unknown[] | undefined {

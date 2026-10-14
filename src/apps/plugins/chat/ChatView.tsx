@@ -163,7 +163,12 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import { generateMessageId } from '../../../types/messages';
-import { openThread, THREAD_WORDS } from '../../apps/threads';
+import {
+  deploymentOfPayload,
+  openThread,
+  THREAD_WORDS,
+  threadOfVisit,
+} from '../../apps/threads';
 import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
 import {
   FaceDrawing,
@@ -1580,11 +1585,13 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * not published (STUDIO D-15). It speaks to the application's session API,
    * whose refusal says why.
    */
+  const hostCreatePayload =
+    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerCreatePayload;
   const runsApp = Boolean(
-    blueprintTurn?.createPayload?.app_spec ||
-    reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.datalayerCreatePayload
-      ?.app_spec,
+    blueprintTurn?.createPayload?.app_spec || hostCreatePayload?.app_spec,
   );
+  // The deployment its host runs, if it runs one: its agent is every visitor's.
+  const deploymentUid = deploymentOfPayload(hostCreatePayload);
   const memberToken = useIAMStore(state => state.token);
   /*
    * Without an account (LOOP R-30) the application runs on the visitors'
@@ -1604,7 +1611,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    * its record — then drawn and gone on with on the same thread. One that
    * cannot be opened is said, and a new one starts.
    */
-  const givenThread = config?.thread;
+  /*
+   * A deployment's visit with no thread given opens a new one: its runtime's
+   * agent holds every visitor's turns, never drawn as this person's.
+   */
+  const [visitThreadId] = useState(generateMessageId);
+  const givenThread = useMemo(
+    () => threadOfVisit(config?.thread, deploymentUid, visitThreadId),
+    [config?.thread, deploymentUid, visitThreadId],
+  );
   const [openedThread, setOpenedThread] = useState<{
     given: string;
     thread: ResumedThread;

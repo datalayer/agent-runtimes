@@ -11,7 +11,13 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { answerIdOf, sendFeedback } from '../apps/feedback';
-import { openThread, snapshotOfStream, THREAD_WORDS } from '../apps/threads';
+import {
+  deploymentOfPayload,
+  openThread,
+  snapshotOfStream,
+  THREAD_WORDS,
+  threadOfVisit,
+} from '../apps/threads';
 import { askedOf } from '../apps/records';
 
 const json = (status: number, body: unknown) =>
@@ -151,6 +157,41 @@ describe('a turn a personal agent asked (decided 2026-10-14)', () => {
     expect(() => askedOf('<asked-for>Asked over PAP')).toThrow(
       'never closes it',
     );
+  });
+});
+
+describe("a deployment's visit (PAP_DATALAYER, found on r1 2026-10-14)", () => {
+  it('opens a new thread of its own, never the runtime agent of every visitor', () => {
+    expect(threadOfVisit(undefined, 'dep-7', 'visit-1')).toEqual({
+      id: 'visit-1',
+      messages: [],
+    });
+  });
+
+  it('keeps the thread its host gave, opened from the history or not', () => {
+    const given = { id: 's-1', messages: [], fromRuntime: true };
+    expect(threadOfVisit(given, 'dep-7', 'visit-1')).toBe(given);
+  });
+
+  it('leaves a Preview, which runs no deployment, as it was', () => {
+    expect(threadOfVisit(undefined, '', 'visit-1')).toBeUndefined();
+  });
+
+  it('reads the deployment from the payload the agent is created with', () => {
+    // As `appDatalayerCreatePayload` writes it: the Appspec dumped, the instance beside it.
+    const payload = {
+      app_spec: { id: 'shop' },
+      app_instance: { app_uid: '01APP', deployment_uid: 'dep-7', version: 1 },
+    };
+    expect(deploymentOfPayload(payload)).toBe('dep-7');
+    expect(
+      deploymentOfPayload({
+        ...payload,
+        app_instance: { app_uid: '01APP', deployment_uid: '' },
+      }),
+    ).toBe('');
+    expect(deploymentOfPayload({ app_spec: { id: 'shop' } })).toBe('');
+    expect(deploymentOfPayload(undefined)).toBe('');
   });
 });
 
