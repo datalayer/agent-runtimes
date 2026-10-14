@@ -197,6 +197,8 @@ type ChatControls = {
   newChat: () => void;
   /** The conversation the next message goes to (AG-UI's thread). */
   thread: () => string;
+  /** Stops the agent's voice: the chat's own speaker (VOICE.md VO-10). */
+  stopSpeaking?: () => void;
 };
 
 /** No editor: the conversation on its own. */
@@ -368,6 +370,8 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
    */
   const [busy, setBusy] = useState(false);
   const [sendReady, setSendReady] = useState(false);
+  // The agent's voice speaks (VOICE.md VO-10): the composer's *Stop speaking*.
+  const [speaking, setSpeaking] = useState(false);
   const [presenceTool, setPresenceTool] = useState<PresenceTool>({
     open: false,
     pendingApproval: false,
@@ -2065,6 +2069,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               input={draft}
               setInput={setDraft}
               disabled={chatDisabled}
+              // The chat's own speaker, never a second one: the microphone
+              // opening stops it, and *Stop speaking* while it speaks.
+              speaking={speaking}
+              onStopSpeaking={() => controlsRef.current?.stopSpeaking?.()}
               onSpoken={metadata => {
                 spokenRef.current = metadata;
               }}
@@ -2614,6 +2622,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               }
               onContextSnapshot={handleContextSnapshot}
               onLoadingChange={handleLoadingChange}
+              onSpeakingChange={setSpeaking}
               onItemsChange={handleMessagesChange}
               onDisplayItemsChange={handleDisplayItemsChange}
               enableStreaming

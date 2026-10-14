@@ -774,6 +774,7 @@ function ChatBaseInner({
   onSendMessage,
   onSendReady,
   onLoadingChange,
+  onSpeakingChange,
   onContextSnapshot,
   enableStreaming = false,
   // Extended props
@@ -4509,6 +4510,8 @@ function ChatBaseInner({
       // live outside this component — the LOOP prompt's + reaches it here.
       newChat: handleNewChat,
       thread: () => threadIdRef.current,
+      // Its speaker, for a host whose composer holds the microphone (VO-10).
+      stopSpeaking,
     });
     return () => {
       onSendReady(null);
@@ -4520,12 +4523,18 @@ function ChatBaseInner({
     handleSend,
     handleStop,
     handleNewChat,
+    stopSpeaking,
   ]);
 
   // Streaming state, for a host that draws the prompt.
   useEffect(() => {
     onLoadingChange?.(isLoading);
   }, [onLoadingChange, isLoading]);
+
+  // Whether its voice speaks, for a host that draws the composer (VO-10).
+  useEffect(() => {
+    onSpeakingChange?.(speakingNow);
+  }, [onSpeakingChange, speakingNow]);
 
   // ---- handleClear ----
   const handleClear = useCallback(() => {

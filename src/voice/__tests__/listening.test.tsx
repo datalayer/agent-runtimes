@@ -289,10 +289,11 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
     container.remove();
   });
 
-  function draw(sendWhatISay: boolean) {
+  function draw(sendWhatISay: boolean, speaking = false) {
     const box: string[] = [];
     const spoken: unknown[] = [];
     const sent: string[] = [];
+    const stopped: number[] = [];
     act(() => {
       root.render(
         <ComposerVoice
@@ -313,6 +314,8 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
           setInput={text => box.push(text)}
           onSpoken={metadata => spoken.push(metadata)}
           send={text => sent.push(text)}
+          speaking={speaking}
+          onStopSpeaking={() => stopped.push(1)}
         />,
       );
     });
@@ -321,8 +324,30 @@ describe('the composer a host holds (VO-10, VO-27)', () => {
       box,
       spoken,
       sent,
+      stopped,
     };
   }
+
+  it('offers “Stop speaking” while the agent speaks, and stops its voice when the microphone opens', async () => {
+    const { mic, spoken, stopped } = draw(false, true);
+    const stop = container.querySelector('[data-voice-stop]');
+    expect(stop).not.toBeNull();
+    act(() => {
+      (stop as HTMLElement).click();
+    });
+    expect(stopped).toHaveLength(1);
+    await act(async () => {
+      press(mic, 'pointerdown');
+      press(mic, 'pointerup');
+    });
+    expect(stopped).toHaveLength(2);
+    await until(() => spoken.length === 1);
+  });
+
+  it('offers no “Stop speaking” while the agent is silent', () => {
+    draw(false, false);
+    expect(container.querySelector('[data-voice-stop]')).toBeNull();
+  });
 
   it('writes the words after what the box held, and leaves them there to send', async () => {
     const { mic, box, spoken, sent } = draw(false);

@@ -887,8 +887,20 @@ export interface ChatBaseProps {
        * (AG-UI's thread): what an application's record keeps it under.
        */
       thread: () => string;
+      /**
+       * Stops the agent's voice (VOICE.md VO-10): the chat's own speaker,
+       * for a host whose composer holds the microphone and *Stop speaking*.
+       * Absent while its answers are not heard.
+       */
+      stopSpeaking?: () => void;
     } | null,
   ) => void;
+
+  /**
+   * Reports whether the agent's voice is speaking, for a host that draws the
+   * composer and so its *Stop speaking* (VOICE.md VO-10).
+   */
+  onSpeakingChange?: (speaking: boolean) => void;
 
   /**
    * Reports whether the chat is streaming a reply, so a host that owns the
