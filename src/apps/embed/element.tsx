@@ -491,6 +491,17 @@ export function defineDatalayerAppElement(
       });
     }
 
+    /** Where its voice runs (VO-18): ai-agents' speech service, as the platform's configuration says it; one object per address. */
+    private spoken: { speechUrl: string } | null = null;
+
+    private get speech(): { speechUrl: string } {
+      const speechUrl = coreStore.getState().configuration?.aiAgentsUrl ?? '';
+      if (this.spoken?.speechUrl !== speechUrl) {
+        this.spoken = { speechUrl };
+      }
+      return this.spoken;
+    }
+
     /** Datalayer's services: the `api` attribute, else the platform's, else prod1's. */
     private api(): string {
       return (
@@ -639,6 +650,10 @@ export function defineDatalayerAppElement(
             // A public application for a visitor without an account: on the
             // visitors' runtime, with a visitor's token (D-07, R-30).
             {...(source.visitors ? { visitors: source.visitors } : {})}
+            // Its voice, when its Appspec says one (VOICE.md VO-18): ai-agents'
+            // speech service; the microphone needs the page's
+            // Permissions-Policy to allow it.
+            speech={this.speech}
             height={inlineHeightOf(this.getAttribute('height'))}
             ownPortal
             host={this.host}

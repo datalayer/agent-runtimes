@@ -18,12 +18,15 @@ import {
   loopFontFamily,
   loopThemeStyles,
 } from '@datalayer/primer-addons';
-import { emptyAppspec } from '../apps/appspec';
+import { DEFAULT_VOICE, emptyAppspec } from '../apps/appspec';
+import type { AppVoiceSpec } from '../../types/agentspecs';
 import {
+  EMBED_MICROPHONE_NOTE,
   EMBED_OBSERVED_ATTRIBUTES,
   EmbedAttributeError,
   adoptPropertiesSetEarly,
   checkedFont,
+  embedListens,
   embedLookOf,
   embedSnippetOf,
   floatingViewOf,
@@ -208,6 +211,31 @@ describe('the snippet', () => {
     expect(snippet).toContain(' accent="sun" theme="dark"');
     expect(snippet).toContain(' font="&quot;Helvetica Neue&quot;, sans-serif"');
     expect(snippet).toContain(' token="eyJ&quot;&lt;x&gt;"');
+  });
+});
+
+describe('an application that listens, embedded (VOICE.md VO-18)', () => {
+  it('says in its snippet that the page must allow the microphone', () => {
+    const snippet = embedSnippetOf({
+      origin: 'https://datalayer.app',
+      app: '01M',
+      listens: true,
+    });
+    expect(snippet.split('\n')[0]).toBe(EMBED_MICROPHONE_NOTE);
+    expect(EMBED_MICROPHONE_NOTE).toContain('microphone=(self)');
+    expect(
+      embedSnippetOf({ origin: 'https://datalayer.app', app: '01M' }),
+    ).not.toContain('Permissions-Policy');
+  });
+
+  it('listens when its voice is on and its input is not off', () => {
+    const spec = emptyAppspec('chat');
+    const voiced = (voice: Partial<AppVoiceSpec>) => ({
+      interface: { ...spec.interface, voice: { ...DEFAULT_VOICE, ...voice } },
+    });
+    expect(embedListens(spec)).toBe(false);
+    expect(embedListens(voiced({ enabled: true }))).toBe(true);
+    expect(embedListens(voiced({ enabled: true, input: 'off' }))).toBe(false);
   });
 });
 

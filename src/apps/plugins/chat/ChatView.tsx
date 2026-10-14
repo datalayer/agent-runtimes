@@ -188,7 +188,7 @@ import {
 } from '../../../chat/assistant/state';
 import { useChatWords } from '../../../chat/ChatLanguage';
 import { ComposerVoice } from '../../../voice/ComposerVoice';
-import { settledVoice } from '../../../voice/chatVoice';
+import { settledVoice, voiceAskedAs } from '../../../voice/chatVoice';
 import type { SpokenMetadata } from '../../../voice/types';
 
 type ChatControls = {
@@ -1629,6 +1629,15 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     reactor.getConfig<AgentsConfig>(AGENTS_PLUGIN_NAME)?.embedToken;
   const iamToken = visitors ? visitor.token : embedToken || memberToken;
   /*
+   * Its voice asked of the speech service as this chat speaks to its runtime
+   * (VOICE.md VO-37, VO-19): the host's token, else this one — a visitor's,
+   * an embed's or the person's — and the deployment it runs.
+   */
+  const askedVoice = useMemo(
+    () => voiceAskedAs(config?.voice, iamToken || undefined, deploymentUid),
+    [config?.voice, iamToken, deploymentUid],
+  );
+  /*
    * A deployment's runtime, and the visitors', answer only the application's
    * own routes (OwnRoutesOnly, PAP_DATALAYER's release gates): its chat calls
    * nothing else — Stop is its session's, no monitoring stream, no sandbox
@@ -2321,7 +2330,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
               // Its voice, when its host gives one (an application's
               // `interface.voice`, VOICE.md VO-49): the microphone in the
               // composer, its answers heard.
-              voice={config?.voice}
+              voice={askedVoice}
               // The header says why, beside the title, for the same reason the
               // placeholder does: a dead control with no explanation is worse
               // than an absent one.

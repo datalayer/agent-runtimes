@@ -142,6 +142,13 @@ export type AppEmbedProps = {
    * and nothing is kept; the visitor's limits are the runtime's.
    */
   visitors?: DatalayerVisitors;
+  /**
+   * Where its voice runs (VOICE.md VO-18): Datalayer's speech service and
+   * the browser's models, in every mode, when its Appspec's `interface.voice`
+   * is on — the microphone in its composer, its answers heard, asked with
+   * the conversation's own token. None, it is drawn without a voice.
+   */
+  speech?: AppRendererProps['speech'];
   /** Height of an inline application. */
   height?: number | string;
   /**
@@ -487,7 +494,10 @@ export type AppFloatingProps = {
    * organization turned off, the visitors' runtime and the one kept on.
    */
   renderer?: Partial<
-    Pick<AppRendererProps, 'pluginsOff' | 'datalayerVisitors' | 'datalayerKept'>
+    Pick<
+      AppRendererProps,
+      'pluginsOff' | 'datalayerVisitors' | 'datalayerKept' | 'speech'
+    >
   >;
   /** What the page gives the application (D-10). */
   host?: AppEmbedHost;
@@ -684,6 +694,7 @@ export function AppEmbed({
   instance,
   embedToken,
   visitors,
+  speech,
   height = 640,
   ownPortal = false,
   plugins = NO_PLUGINS,
@@ -695,11 +706,17 @@ export function AppEmbed({
   // `AppFloating` bridges it itself. Bridged twice, every window message of a
   // turn reached the page twice (seen 2026-10-10 with P-27's copilot).
   const bridge = useHostBridge(app, shownAs === 'inline' ? host : undefined);
-  // Where a visitor without an account runs it (D-07): one object, so that
-  // the renderer never reads a change.
+  // Where a visitor without an account runs it (D-07), and where its voice
+  // runs (VO-18): one object, so that the renderer never reads a change.
   const renderer = useMemo(
-    () => (visitors ? { datalayerVisitors: visitors } : undefined),
-    [visitors],
+    () =>
+      visitors || speech
+        ? {
+            ...(visitors ? { datalayerVisitors: visitors } : {}),
+            ...(speech ? { speech } : {}),
+          }
+        : undefined,
+    [visitors, speech],
   );
   const kept = useEmbedSession({ app, serverUrl, embedToken, resume });
   // Window messages from the page, on the host's own server (P-25).

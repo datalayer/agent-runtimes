@@ -24,6 +24,7 @@ import {
   DATALAYER_VOICE_ENGINES,
   chatVoiceOf,
   settledVoice,
+  voiceAskedAs,
 } from '../chatVoice';
 import { useVoiceSpeaker, type VoiceSpeaker } from '../useVoiceSpeaker';
 import { SYNTHESES_PATH } from '../speaker';
@@ -529,6 +530,71 @@ describe('a chat’s answers said by the speech service (VO-21, VO-33)', () => {
     });
     // A refusal is said once, in the service's words.
     expect(speaker!.state.refused).toBe('Speech is over its hour for you.');
+    act(() => root.unmount());
+    vi.unstubAllGlobals();
+  });
+
+  it('is asked as the chat speaks to its runtime: a visitor’s or an embed’s token, the deployment it runs (VO-37, VO-19)', async () => {
+    const given = {
+      language: 'en-US',
+      input: 'push_to_talk' as const,
+      output: 'always' as const,
+      speechUrl: 'https://r1.example',
+    };
+    expect(voiceAskedAs(undefined, 'tok', 'dep-1')).toBeUndefined();
+    expect(voiceAskedAs(given, 'visitor-tok', '')).toEqual({
+      ...given,
+      token: 'visitor-tok',
+    });
+    // The host's token wins: one the host gave is never replaced.
+    expect(
+      voiceAskedAs({ ...given, token: 'person' }, 'embed-tok', 'dep-1'),
+    ).toEqual({ ...given, token: 'person', deployment: 'dep-1' });
+    expect(voiceAskedAs(given, undefined, undefined)).toEqual(given);
+    // The deployment goes with each sentence.
+    class StandInContext {
+      destination = {};
+      createAnalyser() {
+        return { fftSize: 0, connect: () => undefined };
+      }
+      createGain() {
+        return { gain: { value: 1 }, connect: () => undefined };
+      }
+      resume() {
+        return Promise.resolve();
+      }
+      close() {
+        return Promise.resolve();
+      }
+    }
+    vi.stubGlobal('AudioContext', StandInContext);
+    const bodies: unknown[] = [];
+    const auths: Array<string | null> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        auths.push(new Headers(init?.headers).get('Authorization'));
+        return new Response(JSON.stringify({ detail: 'No.' }), {
+          status: 403,
+        });
+      }),
+    );
+    let speaker: VoiceSpeaker | undefined;
+    function Host() {
+      speaker = useVoiceSpeaker(
+        settledVoice(voiceAskedAs(given, 'embed-tok', 'dep-1')!),
+      );
+      return null;
+    }
+    const root = createRoot(document.createElement('div'));
+    act(() => root.render(<Host />));
+    await act(async () => {
+      speaker!.read('Hello there.');
+    });
+    await until(() => !!speaker?.state.refused);
+    expect(bodies[0]).toMatchObject({ deployment: 'dep-1' });
+    expect(auths[0]).toBe('Bearer embed-tok');
     act(() => root.unmount());
     vi.unstubAllGlobals();
   });

@@ -319,7 +319,23 @@ export type EmbedSnippetOptions = {
   accent?: AppAccent;
   theme?: EmbedColorMode;
   font?: string;
+  /**
+   * Its voice listens (VOICE.md VO-18, `embedListens`): the snippet says that
+   * the page's `Permissions-Policy` must allow the microphone, which the
+   * element asks for in the page itself.
+   */
+  listens?: boolean;
 };
+
+/** Said in a snippet whose application listens (VO-18): the element is in the page, so the page's policy decides. */
+export const EMBED_MICROPHONE_NOTE =
+  '<!-- It listens: this page’s Permissions-Policy must allow the microphone (microphone=(self)), or its composer says the microphone was refused. -->';
+
+/** Whether an application's voice listens (VO-18): its snippet and its frame ask for the microphone. */
+export function embedListens(app: Pick<AppSpec, 'interface'>): boolean {
+  const voice = app.interface.voice;
+  return Boolean(voice?.enabled && voice.input !== 'off');
+}
 
 /**
  * The snippet a host pastes (D-08): one script tag and one element. A public
@@ -344,6 +360,7 @@ export function embedSnippetOf(options: EmbedSnippetOptions): string {
     .map(([name, value]) => ` ${name}="${attributeValue(value)}"`)
     .join('');
   return [
+    ...(options.listens ? [EMBED_MICROPHONE_NOTE] : []),
     `<script src="${attributeValue(origin + EMBED_SCRIPT_PATH)}" async></script>`,
     `<${EMBED_TAG}${written}></${EMBED_TAG}>`,
   ].join('\n');

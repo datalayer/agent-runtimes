@@ -62,6 +62,22 @@ tells the agent that its answers may be heard: short sentences, no table where
 a sentence will do, and numbers and links in words. The capability changes no
 tool and no rule.
 
+### Who it speaks to
+
+Its voice is asked of the speech service with the token its conversation
+already has. A visitor without an account is heard in the browser, and its
+answers are asked with the visitor's token from ai-inference, under the
+visitors' daily ceiling (zero until it is raised: the page then says the answer
+isn't spoken without an account). An embedded application's answers are asked
+with its embed token for the deployment the page runs. ai-agents checks that
+the page may open that deployment, as a runtime does, and counts the speech
+against the deployment's spend limit. The owner pays.
+
+`<datalayer-app>` is drawn in the host's page, so the page's
+`Permissions-Policy` decides whether the microphone may be asked for. The
+snippet from *Ship* says so for an application that listens. When the policy
+refuses the microphone, the composer says so in a sentence.
+
 ## The voice catalogue
 
 Voices and speech models come from agentspecs (`voices`, `speech-models`) and
