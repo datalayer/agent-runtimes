@@ -433,8 +433,8 @@ that message on the [ui socket](#the-ui-socket) — an `ask` op of a
 `QuestionShown` (`application/vnd.datalayer.loop.question+json`, id
 `<message id>-ask`, `data` `{message_id, kind, prompt, options, accept,
 max_bytes, form, answered}`) offering `reactor.answer` with a token this
-session minted for it — then `RUN_FINISHED` whose `result` is `{asking:
-{kind, prompt, …}}`, which a reader with no page (a schedule, a test) reads as
+session minted for it — then `RUN_FINISHED` whose `result` is
+`{asking: {kind, prompt, …}}`, which a reader with no page (a schedule, a test) reads as
 waiting. The session is `waiting`. The chat draws the question with the
 `app-elements` plugin's renderer: a choice as its buttons — a rule's prompt
 (*ask first*) is *Allow* and *Refuse* — words as a field, a form as its

@@ -545,8 +545,8 @@ surface is drawn.
 answer to the member that showed it: `onPress(surface, pressed)` gets the
 option's words and its action (`pressedOf`), and the page asks that member
 with them — `askA2APeer(peer, pressed.message, { action: pressed.action })`
-puts the action in the message's metadata, `loop.action: {name, payload:
-{does}}`. One choice per surface; what came back is said under it (a
+puts the action in the message's metadata,
+`loop.action: {name, payload: {does}}`. One choice per surface; what came back is said under it (a
 press that failed is said, and another button can be pressed).
 
 **A press is a turn of the conversation.** In a team, give `onPress` the
