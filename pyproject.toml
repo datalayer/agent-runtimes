@@ -39,7 +39,7 @@ dependencies = [
     # 0.15.0: the release PapPersonalAgentCapability's local personal agent is
     # tested against (Sessions, Device Sign-In, conversations, Operations,
     # the reference company of PapCompanyCapability; AGENT_PROTOCOLS PR-03).
-    "personal-agent-protocol[ui]>=0.15.0,<1",
+    "personal-agent-protocol[ui]>=0.24.0,<1",
     # The first releases of both on mcp 2; an older one pins mcp<2.
     "agent-codemode>=1.1.0",
     "agent-skills>=1.1.0",
@@ -47,7 +47,7 @@ dependencies = [
     # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
     # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
     # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
-    "agentspecs>=0.0.93",
+    "agentspecs>=0.0.94",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

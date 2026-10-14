@@ -7,7 +7,14 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## Unreleased
+## 1.5.18
+
+On agentspecs 0.0.94 and personal-agent-protocol 0.24.0.
+
+- **A deployment's runtime answers only the application's own routes** (PAP_DATALAYER release gates, decided 2026-10-14): every generic and admin route answers 404 for an agent serving a deployment; the deployment page calls only those it answers (Stop through `/apps/sessions/{uid}/stop`, no monitoring stream, no sandbox socket, no model switch); the keeper's routes answer the deployment's owner alone, and its retry finds the agent it created.
+- **Applications' UI plugins** (AGENTIC_UI R8): `uiFor`/`uiOf`, the same mapping as agentspecs' `ui_for`, held by a shared fixture; a blank application starts with its kind's plugins; a bare id in `ui` is refused.
+- **Voice** (VOICE.md): an agent spec's own `voice:`, Read aloud on request in the floating chat, the speech models' descriptions.
+- **Catalogue entries read by id**, never through version-named constants.
 
 - **A signed fetch** (AGENT_PROTOCOLS EX-11, decided 2026-10-13; agentspecs 69c5da3): an application's `signed_fetch.sites[]` (`AppSignedFetchSpec`, Python and TypeScript, read and written, refused unless `web-bot-auth` is listed) are each one server of the gateway's `signed-fetch` toolset (`/mcp?only=signed-fetch&signed-fetch-site=<domain>`), in the person's name, its one tool `signed_fetch` a `read` under the Rules; a Preview names them as its token is asked for. *Signed Reader* in the catalogue — [Web Bot Auth](https://agent-runtimes.datalayer.tech/docs/protocols/web-bot-auth#in-an-application-a-signed-fetch).
 
