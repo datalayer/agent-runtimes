@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.23
+
+On agentspecs 0.0.96.
+
+- **A Preview's ask-first tool call runs once the person approves it** (PAP_DATALAYER release gate *Preview and the shipped renderer*, round 23): a token ai-agents reads as narrowed (a Preview's, a run's) is refused by its `/ws`, so the runtime reads each approval it forwarded with such a token at `GET /tool-approvals/{id}` until it is decided, and opens no `/ws` for it.
+- **Web Bot Auth: a key a verifier's cached directory does not list is read again** (`DirectoryResolver`, at most once in ten seconds per agent): an agent's rotated key, which signs at once, is verified straight after the rotation, not an hour later.
+
 ## 1.5.22
 
 On agentspecs 0.0.96.
