@@ -281,7 +281,7 @@ def parse_signatures(
 
 
 def components_of(names: Sequence[str]) -> tuple[Component, ...]:
-    """Components from their serialized identifiers or bare names."""
+    """Parse components from their serialized identifiers or bare names."""
     out = []
     for name in names:
         out.append(

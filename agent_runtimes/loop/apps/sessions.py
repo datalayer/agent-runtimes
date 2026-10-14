@@ -202,7 +202,8 @@ def _file_name(name: str) -> str:
 
 def owner_of(caller: Caller) -> Tuple[str, str, str]:
     """Who a file uploaded is kept for (REACTOR_UI RU-6): the caller, as a
-    session tells its own apart (`LiveSession.answers_to`)."""
+    session tells its own apart (`LiveSession.answers_to`).
+    """
     return (caller.kind, caller.uid, caller.visit)
 
 
@@ -1051,7 +1052,8 @@ class LiveSession:
     def show_op(self, op: UiOp) -> None:
         """Say a ``reactor.ui`` op to the page: on the session's ui socket,
         numbered and kept for a resume (REACTOR_UI RU-W). The run stream
-        carries the conversation's text only."""
+        carries the conversation's text only.
+        """
         UI_HUB.emit(op)
 
     # --- what its answers offer (REACTOR_UI RU-2) -----------------------------------
@@ -1085,7 +1087,8 @@ class LiveSession:
 
     async def _run_pressed(self, payload: BaseModel, context: Any) -> None:
         """A press the registry let through, its payload its model: the code's
-        `@app.action`."""
+        `@app.action`.
+        """
         assert self.session is not None
         await self.host.action(self.session, context.action, payload)
 
@@ -1490,7 +1493,7 @@ class LiveSession:
         await self._actions().dispatch(self.opened_by, self.uid, press)
 
     async def _page_code(self, inputs: Mapping[str, Any]) -> None:
-        """Its page, run on its inputs (LOOP P-05)."""
+        """Run its page on its inputs (LOOP P-05)."""
         if self.session is None:
             await self._open_code()
         assert self.session is not None
@@ -1598,7 +1601,7 @@ class LiveSession:
     def run_page(
         self, inputs: Mapping[str, Any], *, head: str = ""
     ) -> AsyncIterator[str]:
-        """Its page run on its inputs (LOOP P-05): checked against its form
+        """Run its page on its inputs (LOOP P-05): checked against its form
         first — refused with the sentence — then its ``@app.page``, its
         outputs a ``loop.page`` event. Not a turn of the conversation.
         """

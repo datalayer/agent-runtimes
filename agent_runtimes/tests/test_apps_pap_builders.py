@@ -52,7 +52,7 @@ def _exchange_desk() -> Application:
     )
     @app.tool(does="write")
     def exchange_order(order_id: str, size: str) -> dict:
-        """Exchanges an order for another size, once the person approved it."""
+        """Exchange an order for another size, once the person approved it."""
         return {"order_id": order_id, "size": size}
 
     return app

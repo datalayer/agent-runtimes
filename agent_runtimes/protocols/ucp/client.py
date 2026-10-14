@@ -214,7 +214,7 @@ class UcpClient:
         return answer.json()
 
     async def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
-        """Products matching a query (``read``)."""
+        """Search the products matching a query (``read``)."""
         body = await self._call(
             "POST", "/catalog/search", {"query": query, "pagination": {"limit": limit}}
         )

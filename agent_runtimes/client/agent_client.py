@@ -747,7 +747,8 @@ TURN_DOINGS = ("say", "choose", "press")
 
 def _conversation_turn(raw: Any) -> dict[str, Any]:
     """A turn of a test's conversation as its case carries it, checked: what
-    it says, chooses or presses — exactly one — and a press's payload."""
+    it says, chooses or presses — exactly one — and a press's payload.
+    """
     if not isinstance(raw, dict):
         raise ValueError(f"A turn of a test's conversation is a mapping, not {raw!r}.")
     does = [key for key in TURN_DOINGS if str(raw.get(key) or "").strip()]
@@ -774,7 +775,8 @@ def _turn_in_words(turn: dict[str, Any]) -> str:
 def _session_offers(lines: list[str]) -> dict[str, dict[str, Any]]:
     """The actions a session offers, by name, as its ``loop.session`` event
     says them (REACTOR_UI RU-5): each with the display that offers it and its
-    token."""
+    token.
+    """
     offers: dict[str, dict[str, Any]] = {}
     for line in lines:
         if not line.startswith("data:"):

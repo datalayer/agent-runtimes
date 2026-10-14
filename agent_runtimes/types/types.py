@@ -2298,7 +2298,8 @@ class AppPactRegisteredAgentSpec(BaseModel):
 class AppPactBusinessSpec(BaseModel):
     """The application as a PACT business (AGENT_PROTOCOLS PR-13, PI-32): Datalayer
     the Provider, its owner the Brand (`brand` when said), the scopes a person
-    may delegate and the personal agents its Maker registered."""
+    may delegate and the personal agents its Maker registered.
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -2354,7 +2355,8 @@ class AppSignedFetchSpec(BaseModel):
 class AppPairSpec(BaseModel):
     """One of a pair of examples, a PACT business and the personal agent that asks it
     (AGENT_PROTOCOLS PR-13; decided 2026-10-13): when a person has copied both, the
-    Studio registers the personal agent's copy with the business's copy."""
+    Studio registers the personal agent's copy with the business's copy.
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -2679,7 +2681,8 @@ class AppPageSpec(BaseModel):
 
 class AppActionSpec(BaseModel):
     """An action of an application's code a person presses (`@app.action`,
-    REACTOR_UI RU-5): its name, and the JSON Schema of its payload."""
+    REACTOR_UI RU-5): its name, and the JSON Schema of its payload.
+    """
 
     name: str = Field(..., description="Its name, as its button presses it")
     description: str = Field(default="", description="What it does, in a sentence")
@@ -2792,7 +2795,8 @@ class AppTestFileSpec(BaseModel):
 
 class AppTestTurnSpec(BaseModel):
     """One turn of a test's conversation: what the person says, the option of
-    a choice they pick, or an action of its code they press, with its payload."""
+    a choice they pick, or an action of its code they press, with its payload.
+    """
 
     say: str = ""
     choose: str = ""
@@ -2811,7 +2815,8 @@ class AppTestTurnSpec(BaseModel):
 
 class AppTestCaseSpec(BaseModel):
     """An example of what an application should do, in plain words: one
-    message (``ask``), or a short conversation (``turns``) judged whole."""
+    message (``ask``), or a short conversation (``turns``) judged whole.
+    """
 
     ask: str = Field(
         default="", description="What it is asked, in one message; none with turns"

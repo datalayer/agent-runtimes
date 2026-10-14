@@ -94,7 +94,8 @@ PACT_PROFILE_SCOPE = "profile:read"
 
 def _profile_said(ours: Mapping[str, Any], scopes: list[str]) -> str:
     """The person's handle and display name, as ai-agents sends them to a PACT business under
-    ``profile:read`` (decided 2026-10-13), or ``""`` — never without that grant, never their email."""
+    ``profile:read`` (decided 2026-10-13), or ``""`` — never without that grant, never their email.
+    """
     profile = ours.get("profile")
     if not isinstance(profile, Mapping) or PACT_PROFILE_SCOPE not in scopes:
         return ""

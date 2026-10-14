@@ -36,7 +36,7 @@ class CardExtension:
             raise ValueError(f"an extension is named by a URI, not `{self.uri}`")
 
     def to_json(self) -> dict[str, Any]:
-        """As the card's JSON writes it."""
+        """Return it as the card's JSON writes it."""
         out: dict[str, Any] = {"uri": self.uri}
         if self.description:
             out["description"] = self.description
@@ -47,7 +47,7 @@ class CardExtension:
         return out
 
     def to_fasta2a(self) -> Any:
-        """As ``fasta2a`` publishes it on a card it serves."""
+        """Return it as ``fasta2a`` publishes it on a card it serves."""
         from fasta2a.schema import AgentExtension
 
         return AgentExtension(

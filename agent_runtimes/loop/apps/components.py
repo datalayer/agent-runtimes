@@ -290,7 +290,8 @@ def answer_actions(nodes: Sequence[Mapping[str, Any]]) -> List[str]:
 
 def answer_text(title: str, nodes: Sequence[Mapping[str, Any]]) -> str:
     """What an answer's components read as without a renderer: each by its
-    kind and the words it shows (a title, a text, a label, a name)."""
+    kind and the words it shows (a title, a text, a label, a name).
+    """
     said: List[str] = []
     for node in nodes:
         if node.get("component") in _LAYOUT:

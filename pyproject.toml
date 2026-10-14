@@ -488,4 +488,6 @@ exclude = [
     "tests",
     "scripts",
     "node_modules",
+    # Generated (scripts/codegen/generate_agentic_commerce.sh), never edited.
+    "agent_runtimes/protocols/agentic_commerce/models.py",
 ]

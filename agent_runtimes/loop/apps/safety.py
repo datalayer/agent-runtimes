@@ -194,10 +194,12 @@ class SafetyCase:
 
     @property
     def title(self) -> str:
+        """The case's title, from its kind."""
         return SAFETY_TITLES[self.kind]
 
     @property
     def failure_mode(self) -> str:
+        """The failure mode the case checks, from its kind."""
         return SAFETY_CHECKS[self.kind]
 
     @property
@@ -247,6 +249,8 @@ class SafetyCase:
 
 @dataclass(frozen=True)
 class _Decision:
+    """A tool's decision: its classes, behaviour and escalation."""
+
     tool: str
     classes: Sequence[str]
     behaviour: str
@@ -254,11 +258,13 @@ class _Decision:
 
 
 def _id_of(ref: str) -> str:
+    """Return a reference without its version."""
     base, _, version = str(ref).rpartition(":")
     return base if base and "." in version else str(ref)
 
 
 def _normal(target: str) -> str:
+    """Normalize a rule target to ``server.name`` or a behaviour."""
     if target in DEFAULT_BEHAVIOURS:
         return target
     server, name = split_ref(target)
@@ -360,6 +366,7 @@ def reads_content(spec: AppSpec) -> bool:
 
 
 def _hidden(spec: AppSpec) -> SafetyCase:
+    """Make the hidden-instructions case for the app's source."""
     where = (
         HIDDEN_FROM_DOCUMENT
         if any(source.strip() for source in spec.contents)
@@ -371,6 +378,7 @@ def _hidden(spec: AppSpec) -> SafetyCase:
 
 
 def _outside_rules(spec: AppSpec) -> Optional[SafetyCase]:
+    """Make the case for an action the app holds back, or None."""
     held = held_back_action(spec)
     if held is None:
         return None
@@ -427,10 +435,12 @@ class SafetyReading:
 
     @property
     def held(self) -> int:
+        """The number of cases that held."""
         return sum(1 for result in self.results if result.state == HELD)
 
     @property
     def total(self) -> int:
+        """The number of cases read."""
         return len(self.results)
 
     @property
@@ -456,6 +466,7 @@ class SafetyReading:
 
 
 def _with_why(said: str, why: str) -> str:
+    """Append the reason to what was said, when there is one."""
     return f"{said} {why.strip()}" if why and why.strip() else said
 
 
@@ -527,6 +538,7 @@ def model_judge(model: str) -> JudgeCall:
     """A judge on this machine: a model named as pydantic-ai names it, with this machine's keys."""
 
     def call(prompt: str, _model: str) -> str:
+        """Ask the judge model and return its text."""
         from pydantic_ai import Agent
 
         from agent_runtimes.models.models import resolve_model_for_inference_provider
@@ -552,15 +564,18 @@ class _SafetyChannel:
     """
 
     def __init__(self, turns: Sequence[Any] = ()) -> None:
+        """Keep the scripted turns and a memory channel."""
         from agent_runtimes.loop.apps.session import MemoryChannel
 
         self.memory = MemoryChannel()
         self.turns: List[Any] = list(turns)
 
     async def deliver(self, event: Any) -> None:
+        """Deliver the event to the memory channel."""
         await self.memory.deliver(event)
 
     async def ask(self, session_id: str, question: Any) -> Any:
+        """Answer from the next scripted turn, or raise when none."""
         if self.turns and not self.turns[0].press.strip():
             turn = self.turns.pop(0)
             return (turn.say or turn.choose).strip()
@@ -604,6 +619,7 @@ class _WatchedRecorder(AppRecorderBase):
     """
 
     def __init__(self, app: AppSpec) -> None:
+        """Record nothing, but watch verdicts, tools and entries."""
         super().__init__(app=app, send=_keep_nothing, purpose="test")
         self.verdicts: List[Tuple[str, Any]] = []
         self.tools: List[str] = []
@@ -612,6 +628,7 @@ class _WatchedRecorder(AppRecorderBase):
     def add(
         self, kind: str, summary: str, payload: Optional[Dict[str, Any]] = None
     ) -> None:
+        """Keep a redacted entry when its kind is kept."""
         from agent_runtimes.guardrails.credentials import redact, redacted
 
         if self.kept(kind):
@@ -625,10 +642,12 @@ class _WatchedRecorder(AppRecorderBase):
         super().add(kind, summary, payload)
 
     def checked(self, stage: str, verdict: Any) -> None:
+        """Watch a verdict, then record it."""
         self.verdicts.append((stage, verdict))
         super().checked(stage, verdict)
 
     def decided(self, enforced: Any) -> None:
+        """Watch the tool decided, then record it."""
         tool = getattr(enforced, "tool_name", "") or getattr(
             getattr(enforced, "decision", None), "tool", ""
         )
@@ -752,6 +771,7 @@ class Answered:
 
 
 def _why(error: BaseException) -> str:
+    """Return the error's type and first line."""
     said = str(error).strip().splitlines()
     return f"{type(error).__name__}: {said[0][:300]}" if said else type(error).__name__
 
@@ -775,12 +795,14 @@ class SafetyCloudRefused(Exception):
 
 
 def _digest(cases: Sequence[SafetyCase]) -> str:
+    """Return a short digest of the cases' keys."""
     return hashlib.sha256(
         "\n".join(case.key for case in cases).encode("utf-8")
     ).hexdigest()[:16]
 
 
 def _as_dict(value: Any) -> Dict[str, Any]:
+    """Return ``value`` when a dict, else an empty one."""
     return value if isinstance(value, dict) else {}
 
 
@@ -827,6 +849,7 @@ def app_subject(app_uid: str, version: int) -> Dict[str, Any]:
 def _experiment(
     client: Any, evalset_id: str, subject: Dict[str, Any], name: str
 ) -> str:
+    """Return the evalset's experiment for ``subject``, made when missing."""
     listed = client.evals_list_experiments(evalset_id=evalset_id, limit=100)
     for item in listed.get("experiments") or []:
         config = _as_dict(_as_dict(item).get("config"))

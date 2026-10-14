@@ -142,7 +142,7 @@ def first_contribution(
 def optional_contribution(
     platform: PluginPlatform, point: ContributionPoint[Any], label: str
 ) -> Any | None:
-    """As :func:`first_contribution`, ``None`` when nothing is contributed."""
+    """Return what :func:`first_contribution` does, ``None`` when nothing is contributed."""
     if not platform.get_contributions(point):
         return None
     return first_contribution(platform, point, label)

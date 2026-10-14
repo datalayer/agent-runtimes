@@ -390,12 +390,14 @@ def browser_toolset(app: AppSpec, agent_id: Optional[str]) -> Any:
 
     async def open_page(url: str) -> str:
         """Open a web page (an http or https address) in your computer's
-        browser, and read its title and text."""
+        browser, and read its title and text.
+        """
         return said(await (await browser_of(agent_id)).open(url), "Opened: ")
 
     async def read_page() -> str:
         """Read the page open in your computer's browser: its address, title
-        and text."""
+        and text.
+        """
         return said(await (await browser_of(agent_id)).read())
 
     async def page_screenshot():  # type: ignore[no-untyped-def]
@@ -413,13 +415,15 @@ def browser_toolset(app: AppSpec, agent_id: Optional[str]) -> Any:
 
     async def click_on_page(selector: str) -> str:
         """Click what a CSS selector finds on the page open in your computer's
-        browser (a link, a button), and read the page after."""
+        browser (a link, a button), and read the page after.
+        """
         browser = await browser_of(agent_id)
         return said(await browser.click(selector), "Clicked; now: ")
 
     async def type_on_page(selector: str, text: str, submit: bool = False) -> str:
         """Type text in the field a CSS selector finds on the page open in your
-        computer's browser; `submit` presses Enter after it."""
+        computer's browser; `submit` presses Enter after it.
+        """
         browser = await browser_of(agent_id)
         return said(await browser.type(selector, text, submit), "Typed; now: ")
 

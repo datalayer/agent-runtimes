@@ -236,7 +236,8 @@ def load_fragments(specs_dir: Path) -> List[Dict[str, Any]]:
 
 def refuse_tools_field(spec: Dict[str, Any], path: Path) -> None:
     """Refuse an agent spec that still says `tools` (it is `backend_tools` now) or
-    `ui_plugin` (it is `ui` now, AGENT_PROTOCOLS PS-03)."""
+    `ui_plugin` (it is `ui` now, AGENT_PROTOCOLS PS-03).
+    """
     if "ui_plugin" in spec:
         raise SystemExit(
             f"Error: {path} says `ui_plugin`: the field is `ui`, one of agentspecs/ui"

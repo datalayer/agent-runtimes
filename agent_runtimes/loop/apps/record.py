@@ -222,7 +222,8 @@ def keep_days_of(app: AppSpec) -> int:
 
 def _trace_id() -> str:
     """The current run's trace ID, the correlation ID its calls carry to the
-    gateway (PAP_DATALAYER A-05); ``""`` without a trace, never one made up."""
+    gateway (PAP_DATALAYER A-05); ``""`` without a trace, never one made up.
+    """
     from agent_runtimes.mcp.tracing import trace_headers
     from agent_runtimes.orchestration.adapter import trace_id_of
 

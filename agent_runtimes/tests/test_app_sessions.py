@@ -147,9 +147,10 @@ def uploaded(
     files: List[Dict[str, Any]],
     headers: Dict[str, str] | None = None,
 ) -> List[Dict[str, Any]]:
-    """Files as a page uploads them before the run that names them (REACTOR_UI
+    """Upload files as a page does before the run that names them (REACTOR_UI
     RU-6): what File upload holds (``{name, type, data_url}``) sent as bytes,
-    their refs back."""
+    their refs back.
+    """
     from urllib.parse import quote
 
     refs: List[Dict[str, Any]] = []

@@ -43,6 +43,11 @@ def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
     The hub numbers and keeps each session's ops for the page's socket; a
     test reading them must not read another test's under the same uid.
+
+    Yields
+    ------
+    None
+        Control to the test, with a fresh hub in place.
     """
     from reactor.ui.ws import UiHub
 

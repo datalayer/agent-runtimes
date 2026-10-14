@@ -1550,7 +1550,8 @@ async def upload_file(agent: str, request: Request) -> Any:
 async def download_file(scope: str, ref: str, request: Request) -> Any:
     """A file of a conversation by its signed url (REACTOR_UI RU-6): its
     bytes, as an attachment, until the url expires (403 after, or for a
-    signature that is not this file's; 404 for a file no longer kept)."""
+    signature that is not this file's; 404 for a file no longer kept).
+    """
     from reactor.ui.files import UiFilesRoutes
 
     from agent_runtimes.loop.apps import sessions

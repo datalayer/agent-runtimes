@@ -63,7 +63,7 @@ class A2AExtension(Protocol):
     required: bool
 
     def params(self, context: CardContext) -> Optional[Mapping[str, Any]]:
-        """Its params on this card; ``None`` when it is not published there."""
+        """Return its params on this card; ``None`` when it is not published there."""
         ...
 
 

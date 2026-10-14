@@ -92,10 +92,12 @@ _HOOK_DECISION_ALIASES = {
 
 
 def _now_iso() -> str:
+    """Return the current UTC time in ISO 8601 with a Z."""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _normalize_decision(value: Any) -> str:
+    """Map a hook's decision to its canonical name."""
     if not isinstance(value, str):
         return "approval-needed"
     key = value.strip().lower()
@@ -103,6 +105,7 @@ def _normalize_decision(value: Any) -> str:
 
 
 def _extract_resource(tool_name: str, args: dict[str, Any]) -> str:
+    """Return the resource a tool call targets, from its arguments."""
     candidate_keys = (
         "resource",
         "path",
@@ -124,6 +127,7 @@ def _extract_resource(tool_name: str, args: dict[str, Any]) -> str:
 
 
 def _risk_class_for_tool(tool_name: str, args: dict[str, Any]) -> str:
+    """Classify a tool call's risk as high, medium or low."""
     lowered = tool_name.lower()
     if any(token in lowered for token in ("sudo", "shell", "exec", "delete")):
         return "high"
@@ -135,6 +139,7 @@ def _risk_class_for_tool(tool_name: str, args: dict[str, Any]) -> str:
 
 
 def _append_audit_log(path: str, payload: dict[str, Any]) -> bool:
+    """Append one JSON line to the audit log; True when written."""
     try:
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -147,12 +152,14 @@ def _append_audit_log(path: str, payload: dict[str, Any]) -> bool:
 
 
 def _default_audit_log_path() -> str:
+    """Return the default audit log path in the temp directory."""
     return str(
         Path(tempfile.gettempdir()) / "agent_runtimes_tool_approvals_audit.jsonl"
     )
 
 
 def _normalize_hook_steps(raw: Any) -> list[dict[str, Any]]:
+    """Normalize a phase's hook configuration into a list of steps."""
     if raw is None:
         return []
 
@@ -180,6 +187,7 @@ def _normalize_hook_steps(raw: Any) -> list[dict[str, Any]]:
 
 
 def _normalize_hook_tool_filter(raw: Any) -> list[str] | None:
+    """Normalize a step's tool filter into names, or None for all."""
     if raw is None:
         return None
     if isinstance(raw, str):
@@ -238,6 +246,7 @@ def _approval_envelope_matches(
     tool_args: Any,
     tool_call_id: str | None = None,
 ) -> bool:
+    """Tell whether an approval covers this agent, tool and arguments."""
     if agent_id is not None and getattr(approval, "agent_id", None) != agent_id:
         return False
     if getattr(approval, "tool_name", None) != tool_name:
@@ -328,6 +337,7 @@ class ToolApprovalConfig:
 
     @classmethod
     def from_env(cls) -> ToolApprovalConfig:
+        """Read the configuration from the environment."""
         import os
 
         # The runtime's uid, set on the pod by the Operator. An approval is
@@ -423,6 +433,7 @@ class ToolApprovalRejectedError(GuardrailBlockedError):
     """Raised when the tool call is rejected by the human."""
 
     def __init__(self, tool_name: str, note: str | None = None):
+        """Name the rejected tool and the reviewer's note."""
         self.tool_name = tool_name
         self.note = note
         msg = f"Tool '{tool_name}' was rejected by human reviewer"
@@ -435,6 +446,7 @@ class ToolApprovalExecutionReservationError(GuardrailBlockedError):
     """Raised when an approval cannot be reserved before tool execution."""
 
     def __init__(self, tool_name: str, approval_id: str | None = None):
+        """Name the tool and approval that could not be reserved."""
         suffix = f" (approval_id={approval_id})" if approval_id else ""
         super().__init__(
             f"Tool '{tool_name}' was blocked because its approval could not be "
@@ -458,6 +470,7 @@ class ToolApprovalManager:
     """
 
     def __init__(self, config: ToolApprovalConfig):
+        """Keep the configuration."""
         self.config = config
 
     async def close(self) -> None:
@@ -701,16 +714,19 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
     def _has_tool_grant(
         self, *, scope_key: str, tool_name: str, tool_args: Any
     ) -> bool:
+        """Tell whether the scope already holds a grant for this call."""
         return has_tool_grant_for_scope(scope_key, tool_name, tool_args)
 
     def _remember_tool_grant(
         self, *, scope_key: str, tool_name: str, tool_args: Any
     ) -> None:
+        """Remember a grant for this call in the scope."""
         key = _grant_envelope_key(tool_name, tool_args)
         self._approved_tools_by_scope.setdefault(scope_key, set()).add(key)
         _APPROVED_TOOL_GRANTS_BY_SCOPE.setdefault(scope_key, set()).add(key)
 
     def __post_init__(self) -> None:
+        """Check the configured hooks."""
         has_agent_sudo_local = False
         hooks = self.config.tool_hooks or {}
         for phase, steps in hooks.items():
@@ -729,6 +745,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
                 ) from exc
 
     def _get_manager(self) -> ToolApprovalManager:
+        """Return the approval manager, made on first use."""
         if self._manager is None:
             self._manager = ToolApprovalManager(self.config)
         return self._manager
@@ -740,6 +757,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         call: ToolCallPart,
         args: dict[str, Any],
     ) -> dict[str, Any]:
+        """Build the payload hooks decide a tool call on."""
         actor = self.config.actor or os.environ.get("USER") or "unknown"
         run_id = (
             getattr(ctx, "run_id", None)
@@ -768,6 +786,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         *,
         phase: str,
     ) -> list[dict[str, Any]]:
+        """Return the hook steps configured for ``phase``."""
         hooks = self.config.tool_hooks or {}
         return _normalize_hook_steps(hooks.get(phase))
 
@@ -777,6 +796,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         payload: dict[str, Any],
         step: dict[str, Any],
     ) -> Any:
+        """Call a ``module:function`` hook with the payload."""
         module_name, sep, attr_name = function_ref.partition(":")
         if not sep or not module_name or not attr_name:
             raise ValueError(
@@ -797,6 +817,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         payload: dict[str, Any],
         step: dict[str, Any],
     ) -> Any:
+        """Run an inline Python hook script on the payload."""
         local_vars: dict[str, Any] = {
             "payload": payload,
             "request": payload,
@@ -818,6 +839,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         phase: str,
         payload: dict[str, Any],
     ) -> list[Any]:
+        """Run the hooks of ``phase`` that apply; return their outputs."""
         steps = self._get_steps_for_phase(phase=phase)
         outputs: list[Any] = []
         tool_name = str(payload.get("tool") or "")
@@ -974,6 +996,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         return outputs
 
     def _extract_decision(self, outputs: list[Any]) -> tuple[str, str | None]:
+        """Return the first decision and note among hook outputs."""
         for output in outputs:
             if isinstance(output, str):
                 return _normalize_decision(output), None
@@ -991,6 +1014,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         note: str | None,
         request_payload: dict[str, Any],
     ) -> None:
+        """Remember the decision taken for a tool call."""
         if not tool_call_id:
             return
         self._decision_by_tool_call[tool_call_id] = {
@@ -1001,6 +1025,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         }
 
     def _log_decision(self, payload: dict[str, Any]) -> None:
+        """Write an authorization decision to the audit log."""
         _append_audit_log(
             self.config.audit_log_path,
             {
@@ -1011,6 +1036,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         )
 
     def _log_execution_result(self, payload: dict[str, Any]) -> str | None:
+        """Write an execution result to the audit log; return its ref."""
         execution_ref = f"tool-execution:{uuid4()}"
         payload["execution_ref"] = execution_ref
         persisted = _append_audit_log(
@@ -1037,6 +1063,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         tool_call_id: str | None,
         request_payload: dict[str, Any],
     ) -> None:
+        """Mark the approval executing, or raise when it cannot be."""
         from agent_runtimes.routes.tool_approvals import _mark_approval_executing
 
         try:
@@ -1219,6 +1246,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         tool_def: ToolDefinition,
         args: dict[str, Any],
     ) -> dict[str, Any]:
+        """Decide a tool call before it runs: allow, ask or refuse."""
         manager = self._get_manager()
         if not manager.requires_approval(call.tool_name):
             return args
@@ -1501,6 +1529,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         args: dict[str, Any],
         result: Any,
     ) -> Any:
+        """Run the after hooks and log the tool's result."""
         tool_call_id = getattr(call, "tool_call_id", None)
         decision_entry = (
             self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None
@@ -1570,6 +1599,7 @@ class ToolsGuardrailCapability(AbstractCapability[Any]):
         args: dict[str, Any],
         error: Exception,
     ) -> Exception:
+        """Run the error hooks and log the tool's failure."""
         tool_call_id = getattr(call, "tool_call_id", None)
         decision_entry = (
             self._decision_by_tool_call.get(tool_call_id) if tool_call_id else None

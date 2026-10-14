@@ -194,6 +194,7 @@ async def refusal_of(
 
 
 def _is_address(host: str) -> bool:
+    """Tell whether ``host`` is an IP address rather than a name."""
     try:
         ipaddress.ip_address(host.split("%", 1)[0])
     except ValueError:
@@ -208,6 +209,7 @@ class _Connection:
     """One DevTools connection: commands answered by id, events by name."""
 
     def __init__(self, socket_: Any) -> None:
+        """Wrap the DevTools websocket and start reading it."""
         self._socket = socket_
         self._next = 0
         self._waiting: Dict[int, asyncio.Future] = {}
@@ -215,6 +217,7 @@ class _Connection:
         self._reader = asyncio.create_task(self._read())
 
     async def _read(self) -> None:
+        """Route each message to its waiting call or event handlers."""
         try:
             async for message in self._socket:
                 data = json.loads(message)
@@ -241,9 +244,11 @@ class _Connection:
 
     @property
     def open(self) -> bool:
+        """Tell whether the connection is still read."""
         return not self._reader.done()
 
     def on(self, method: str, handler: Callable[[Dict[str, Any]], None]) -> None:
+        """Call ``handler`` on each ``method`` event."""
         self._handlers.setdefault(method, []).append(handler)
 
     async def send(
@@ -252,6 +257,7 @@ class _Connection:
         params: Optional[Dict[str, Any]] = None,
         timeout: float = LOAD_TIMEOUT,
     ) -> Dict[str, Any]:
+        """Send one DevTools command and wait for its result."""
         if not self.open:
             raise BrowserFailed("The browser stopped.")
         self._next += 1
@@ -267,6 +273,7 @@ class _Connection:
             self._waiting.pop(ident, None)
 
     async def close(self) -> None:
+        """Close the websocket and stop reading."""
         await self._socket.close()
         self._reader.cancel()
 
@@ -324,6 +331,7 @@ class ChromiumBrowser:
         connection: _Connection,
         private: bool,
     ) -> None:
+        """Keep the browser process, its profile and its connection."""
         self._process = process
         self._profile = profile
         self._connection = connection
@@ -380,6 +388,7 @@ class ChromiumBrowser:
         return browser
 
     async def _prepare(self) -> None:
+        """Enable the page domains and set the viewport."""
         send = self._connection.send
         await send("Page.enable")
         await send("Runtime.enable")
@@ -395,13 +404,16 @@ class ChromiumBrowser:
     # --- events -------------------------------------------------------------------
 
     def _on_load(self, params: Dict[str, Any]) -> None:
+        """Signal that the page loaded."""
         if self._loaded is not None:
             self._loaded.set()
 
     def _on_request(self, params: Dict[str, Any]) -> None:
+        """Decide a paused request in the background."""
         asyncio.ensure_future(self._decide_request(params))
 
     async def _decide_request(self, params: Dict[str, Any]) -> None:
+        """Let a request through, or fail it when refused."""
         request_id = params.get("requestId")
         url = str(params.get("request", {}).get("url", ""))
         try:
@@ -420,6 +432,7 @@ class ChromiumBrowser:
             logger.debug("A request of its browser was not decided: %s", failed)
 
     async def _refusal(self, url: str) -> str:
+        """Return why the URL's host is refused, cached per host."""
         host = (urlsplit(url).hostname or "").lower()
         if host not in self._hosts:
             self._hosts[host] = await refusal_of(url)
@@ -428,6 +441,7 @@ class ChromiumBrowser:
     # --- reading ------------------------------------------------------------------
 
     async def _evaluate(self, expression: str) -> Any:
+        """Evaluate JavaScript in the page and return its value."""
         answer = await self._connection.send(
             "Runtime.evaluate",
             {"expression": expression, "returnByValue": True, "awaitPromise": True},
@@ -441,10 +455,12 @@ class ChromiumBrowser:
         return answer.get("result", {}).get("value")
 
     async def _call(self, function: str, *arguments: Any) -> Any:
+        """Call a JavaScript function in the page with JSON arguments."""
         given = ", ".join(json.dumps(argument) for argument in arguments)
         return await self._evaluate(f"({function})({given})")
 
     async def _seen(self) -> PageSeen:
+        """Read what the page shows now."""
         page = json.loads(await self._evaluate(_READ_PAGE))
         text = page.get("text") or ""
         if len(text) > TEXT_LIMIT:
@@ -465,6 +481,7 @@ class ChromiumBrowser:
             await asyncio.sleep(0.1)
 
     async def open(self, url: str) -> PageSeen:
+        """Open ``url`` unless refused, and read the page."""
         refused = await refusal_of(url, private=self._private)
         if refused:
             raise ComputerRefused(400, refused)
@@ -484,10 +501,12 @@ class ChromiumBrowser:
             return await self._seen()
 
     async def read(self) -> PageSeen:
+        """Read the page as it is."""
         async with self._lock:
             return await self._seen()
 
     async def screenshot(self) -> bytes:
+        """Take a PNG screenshot of the page."""
         async with self._lock:
             shot = await self._connection.send(
                 "Page.captureScreenshot", {"format": "png"}
@@ -495,6 +514,7 @@ class ChromiumBrowser:
         return base64.b64decode(shot["data"])
 
     async def click(self, selector: str) -> PageSeen:
+        """Click the element matching ``selector``."""
         async with self._lock:
             if not await self._call(_CLICK, selector):
                 raise ComputerRefused(404, f"Nothing on the page matches {selector}.")
@@ -502,6 +522,7 @@ class ChromiumBrowser:
             return await self._seen()
 
     async def type(self, selector: str, text: str, submit: bool = False) -> PageSeen:
+        """Type ``text`` into the element matching ``selector``."""
         async with self._lock:
             if not await self._call(_FOCUS, selector):
                 raise ComputerRefused(
@@ -514,6 +535,7 @@ class ChromiumBrowser:
             return await self._seen()
 
     async def click_at(self, x: float, y: float) -> PageSeen:
+        """Click at a point on the page."""
         if not (0 <= x <= WIDTH and 0 <= y <= HEIGHT):
             raise ComputerRefused(400, f"{x}, {y} is not on the page.")
         async with self._lock:
@@ -526,11 +548,13 @@ class ChromiumBrowser:
             return await self._seen()
 
     async def type_text(self, text: str) -> PageSeen:
+        """Type ``text`` where the focus is."""
         async with self._lock:
             await self._connection.send("Input.insertText", {"text": text})
             return await self._seen()
 
     async def _key(self, key: str) -> None:
+        """Send the key down and up events of ``key``."""
         name, code, text = KEYS[key]
         down: Dict[str, Any] = {
             "type": "keyDown",
@@ -547,6 +571,7 @@ class ChromiumBrowser:
         )
 
     async def press(self, key: str) -> PageSeen:
+        """Hit one named key, then read the page."""
         if key not in KEYS:
             raise ComputerRefused(400, f"{key} is not a key it presses.")
         async with self._lock:
@@ -555,6 +580,7 @@ class ChromiumBrowser:
             return await self._seen()
 
     async def scroll(self, dy: float) -> PageSeen:
+        """Scroll the page by ``dy`` pixels."""
         async with self._lock:
             await self._connection.send(
                 "Input.dispatchMouseEvent",
@@ -571,9 +597,11 @@ class ChromiumBrowser:
 
     @property
     def alive(self) -> bool:
+        """Tell whether the browser and its connection are up."""
         return self._process.returncode is None and self._connection.open
 
     async def close(self) -> None:
+        """Close the connection and stop the browser."""
         try:
             await self._connection.close()
         except Exception:
@@ -587,6 +615,7 @@ class ChromiumBrowser:
 
 
 def _stop(process: asyncio.subprocess.Process) -> None:
+    """Terminate the process when still running."""
     if process.returncode is None:
         try:
             process.terminate()

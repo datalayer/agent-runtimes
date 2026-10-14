@@ -41,6 +41,7 @@ CATALOG = {
 
 
 def discovery(base: str) -> dict[str, Any]:
+    """Return the seller's ACP discovery document."""
     return {
         "protocol": {
             "name": "acp",
@@ -58,7 +59,7 @@ def discovery(base: str) -> dict[str, Any]:
 
 
 def _counted(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Items as the schema sends them, one per unit, counted into lines."""
+    """Count items as the schema sends them, one per unit, into lines."""
     counts: dict[str, int] = {}
     for item in items:
         counts[item["id"]] = counts.get(item["id"], 0) + 1
@@ -68,6 +69,7 @@ def _counted(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
+    """Answer an ACP invalid-request error."""
     return JSONResponse(
         {"type": "invalid_request", "code": code, "message": message},
         status_code=status,
@@ -78,12 +80,14 @@ class ExampleOutfitters:
     """The seller's state and its routes."""
 
     def __init__(self, base: str = "https://outfitters.example") -> None:
+        """Start the example seller with no sessions or orders."""
         self.base = base
         self.sessions: dict[str, dict[str, Any]] = {}
         self.orders: list[str] = []
         self._replies: dict[str, tuple[str, int, dict[str, Any]]] = {}
 
     def _check(self, request: Request) -> JSONResponse | None:
+        """Refuse a request without the seller's bearer."""
         if request.headers.get("authorization") != f"Bearer {TEST_BEARER}":
             return _error(
                 401, "unauthorized", "a bearer this seller issued is required"
@@ -97,6 +101,7 @@ class ExampleOutfitters:
         return None
 
     def _render(self, session: dict[str, Any]) -> dict[str, Any]:
+        """Render a checkout session as ACP answers it."""
         from .models import CheckoutSessionBase, CheckoutSessionWithOrder
 
         lines, subtotal = [], 0
@@ -202,6 +207,7 @@ class ExampleOutfitters:
         return rendered
 
     async def _post(self, request: Request, handler: Any) -> JSONResponse:
+        """Run a write once per idempotency key."""
         refused = self._check(request)
         if refused:
             return refused
@@ -228,6 +234,7 @@ class ExampleOutfitters:
     def _create(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Create a checkout session."""
         from .models import CheckoutSessionCreateRequest
 
         CheckoutSessionCreateRequest.model_validate(body)
@@ -253,6 +260,7 @@ class ExampleOutfitters:
     def _update(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Update a checkout session."""
         session = self.sessions[request.path_params["id"]]
         if "buyer" in body:
             session["buyer"] = body["buyer"]
@@ -267,6 +275,7 @@ class ExampleOutfitters:
     def _complete(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Complete a checkout session and place its order."""
         from .models import CheckoutSessionCompleteRequest
 
         CheckoutSessionCompleteRequest.model_validate(body)
@@ -297,16 +306,21 @@ class ExampleOutfitters:
     def _cancel(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Cancel a checkout session not completed."""
         session = self.sessions[request.path_params["id"]]
         if session["status"] != "completed":
             session["status"] = "canceled"
         return 200, self._render(session)
 
     def app(self) -> Starlette:
+        """Return the Starlette app serving the seller's routes."""
+
         async def well_known(request: Request) -> JSONResponse:
+            """Serve the discovery document."""
             return JSONResponse(discovery(self.base))
 
         async def get(request: Request) -> JSONResponse:
+            """Return one checkout session."""
             refused = self._check(request)
             if refused:
                 return refused
@@ -316,15 +330,19 @@ class ExampleOutfitters:
             return JSONResponse(self._render(session))
 
         async def create(request: Request) -> JSONResponse:
+            """Create a checkout session."""
             return await self._post(request, self._create)
 
         async def update(request: Request) -> JSONResponse:
+            """Update a checkout session."""
             return await self._post(request, self._update)
 
         async def complete(request: Request) -> JSONResponse:
+            """Complete a checkout session."""
             return await self._post(request, self._complete)
 
         async def cancel(request: Request) -> JSONResponse:
+            """Cancel a checkout session."""
             return await self._post(request, self._cancel)
 
         return Starlette(

@@ -287,7 +287,8 @@ class PactPersonalAgent:
         self, user: str, sign_in: SignIn
     ) -> Optional[tuple[str, ...]]:
         """Ask once whether the person approved (RFC 8628): the scopes they granted,
-        or ``None`` while they have not (``authorization_pending``, ``slow_down``)."""
+        or ``None`` while they have not (``authorization_pending``, ``slow_down``).
+        """
         card = await self._card()
         assert card.delegation is not None
         device_code = self._pending.get(sign_in.reference)

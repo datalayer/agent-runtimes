@@ -48,6 +48,7 @@ SCOPES = {
 
 
 def _a2a_error(status: int, reason: str, message: str) -> JSONResponse:
+    """Answer an A2A JSON error with its HTTP status."""
     names = {400: "INVALID_ARGUMENT", 404: "NOT_FOUND"}
     return JSONResponse(
         {
@@ -72,12 +73,15 @@ def _a2a_error(status: int, reason: str, message: str) -> JSONResponse:
 
 
 def _unauthorized(error: str | None = None) -> Response:
+    """Answer 401 with a Bearer challenge, naming the error if any."""
     challenge = 'Bearer realm="a2a"' + (f', error="{error}"' if error else "")
     return Response(status_code=401, headers={"WWW-Authenticate": challenge})
 
 
 @dataclass
 class _Grant:
+    """A device grant: the code, the client, the scopes asked and approved."""
+
     user_code: str
     client_id: str
     scopes: tuple[str, ...]
@@ -86,6 +90,7 @@ class _Grant:
     issued: bool = False
 
     def record(self) -> dict[str, Any]:
+        """Return the grant as a JSON record for the store."""
         return {
             "user_code": self.user_code,
             "client_id": self.client_id,
@@ -97,6 +102,7 @@ class _Grant:
 
     @classmethod
     def of(cls, record: Mapping[str, Any]) -> "_Grant":
+        """Read a grant back from its stored record."""
         approved = record.get("approved")
         return cls(
             user_code=str(record["user_code"]),
@@ -129,7 +135,8 @@ class BrandTurn:
 @dataclass(frozen=True)
 class BrandAnswer:
     """What the Brand's agent says, the scopes it used and its actions (for the receipt),
-    and the scopes it lacks (a step-up, §5.5)."""
+    and the scopes it lacks (a step-up, §5.5).
+    """
 
     text: str
     scopes_used: tuple[str, ...] = ()
@@ -140,38 +147,45 @@ class BrandAnswer:
 class BrandAgent(Protocol):
     """The Brand's own agent."""
 
-    async def answer(self, turn: BrandTurn) -> BrandAnswer: ...
+    async def answer(self, turn: BrandTurn) -> BrandAnswer:
+        """Answer one turn of a conversation with the Brand."""
 
 
 class IssuerKeys(Protocol):
     """The personal agents a Brand accepts (§3.1): an issuer's public keys, or None."""
 
-    async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]: ...
+    async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]:
+        """Return the issuer's public keys, or None when not accepted."""
 
 
 class BrandStore(Protocol):
     """Where a Brand keeps its device grants, its contexts and its replies (JSON records)."""
 
-    async def get(self, kind: str, key: str) -> Optional[dict[str, Any]]: ...
+    async def get(self, kind: str, key: str) -> Optional[dict[str, Any]]:
+        """Return the record of ``kind`` under ``key``, or None."""
 
     async def put(
         self, kind: str, key: str, value: dict[str, Any], *, seconds: int
-    ) -> None: ...
+    ) -> None:
+        """Keep ``value`` under ``kind`` and ``key`` for ``seconds``."""
 
 
 class InMemoryBrandStore:
     """A :class:`BrandStore` in this process: tests and examples."""
 
     def __init__(self) -> None:
+        """Start with no records."""
         self.records: dict[tuple[str, str], dict[str, Any]] = {}
 
     async def get(self, kind: str, key: str) -> Optional[dict[str, Any]]:
+        """Return a copy of the record, or None."""
         found = self.records.get((kind, key))
         return None if found is None else json.loads(json.dumps(found))
 
     async def put(
         self, kind: str, key: str, value: dict[str, Any], *, seconds: int
     ) -> None:
+        """Keep a copy of the record (expiry is not enforced)."""
         self.records[(kind, key)] = json.loads(json.dumps(value))
 
 
@@ -179,9 +193,11 @@ class RegisteredIssuers:
     """An :class:`IssuerKeys` from a table: issuer → JWKS (the registration of §3.1)."""
 
     def __init__(self, agents: Optional[dict[str, Mapping[str, Any]]] = None) -> None:
+        """Accept the given issuers and their keys."""
         self.agents: dict[str, Mapping[str, Any]] = dict(agents or {})
 
     async def jwks_of(self, issuer: str) -> Optional[Mapping[str, Any]]:
+        """Return the registered keys of ``issuer``, or None."""
         return self.agents.get(issuer)
 
 
@@ -192,6 +208,7 @@ TOKEN_SECONDS = 3600
 
 
 def _b64url(data: bytes) -> str:
+    """Encode bytes as unpadded base64url."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
@@ -223,6 +240,7 @@ class PactBrand:
         description: str = "",
         skills: tuple[Mapping[str, Any], ...] = (),
     ) -> None:
+        """Configure the Brand, its Provider, signer, agent and store."""
         if getattr(signer, "algorithm", "") != "ecdsa-p256-sha256":
             raise ValueError(
                 "a Brand's tokens and receipts are signed ES256 (a P-256 key)"
@@ -244,14 +262,16 @@ class PactBrand:
 
     @property
     def interface_url(self) -> str:
+        """The Brand's A2A interface URL."""
         return f"{self.base}/a2a/{self.brand_id}"
 
     @property
     def oauth(self) -> str:
+        """The Brand's OAuth endpoints root."""
         return f"{self.interface_url}/oauth"
 
     def card(self) -> dict[str, Any]:
-        """Its A2A Agent Card (§2.1, §5.1): the JWT alone, or with the device-code delegation."""
+        """Return its A2A Agent Card (§2.1, §5.1): the JWT alone, or with the device-code delegation."""
         schemes: dict[str, Any] = {
             "paJwt": {
                 "httpAuthSecurityScheme": {"scheme": "Bearer", "bearerFormat": "JWT"}
@@ -308,6 +328,7 @@ class PactBrand:
         return str(keys[-1]["kid"])
 
     async def _sign(self, header: dict[str, Any], payload: bytes) -> str:
+        """Sign a compact JWS over ``header`` and ``payload``."""
         signing_input = (
             _b64url(json.dumps(header, separators=(",", ":")).encode())
             + "."
@@ -317,6 +338,7 @@ class PactBrand:
         return f"{signing_input}.{_b64url(signature)}"
 
     async def _personal_agent(self, request: Request) -> dict[str, Any] | None:
+        """Verify the personal agent's bearer JWT; None when it fails."""
         header = request.headers.get("authorization", "")
         if not header.startswith("Bearer "):
             return None
@@ -343,7 +365,8 @@ class PactBrand:
         self, user_code: str, brand_user: str, scopes: list[str]
     ) -> tuple[str, ...]:
         """The person signed in at the Brand and approved ``scopes`` (maybe fewer than asked):
-        what they granted. :class:`KeyError` for a code unknown, used or expired."""
+        what they granted. :class:`KeyError` for a code unknown, used or expired.
+        """
         device_code = (await self.store.get("pact_code", user_code) or {}).get(
             "device_code"
         )
@@ -362,7 +385,8 @@ class PactBrand:
 
     async def asked(self, user_code: str) -> dict[str, Any]:
         """What a code's sign-in asks, for the page where the person decides: the personal
-        agent and each scope with what it lets it do. :class:`KeyError` when unknown or used."""
+        agent and each scope with what it lets it do. :class:`KeyError` when unknown or used.
+        """
         device_code = (await self.store.get("pact_code", user_code) or {}).get(
             "device_code"
         )
@@ -386,6 +410,7 @@ class PactBrand:
         return f"{self.verification_uri}{joiner}scopes={'+'.join(missing)}"
 
     async def _send(self, request: Request) -> Response:
+        """Handle an A2A message: verify the caller, then answer the turn."""
         identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
@@ -498,6 +523,7 @@ class PactBrand:
         return JSONResponse(reply, media_type="application/a2a+json")
 
     async def _device_authorization(self, request: Request) -> Response:
+        """Start a device grant for the calling personal agent."""
         identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
@@ -533,6 +559,7 @@ class PactBrand:
         )
 
     async def _token(self, request: Request) -> Response:
+        """Exchange an approved device code for a delegation token."""
         identity = await self._personal_agent(request)
         if identity is None:
             return _unauthorized()
@@ -577,7 +604,7 @@ class PactBrand:
         )
 
     def metadata(self) -> dict[str, Any]:
-        """Its RFC 8414 authorization server metadata."""
+        """Return its RFC 8414 authorization server metadata."""
         return {
             "issuer": self.oauth,
             "device_authorization_endpoint": f"{self.oauth}/device_authorization",
@@ -588,13 +615,18 @@ class PactBrand:
         }
 
     def app(self) -> Starlette:
+        """Return the Starlette app serving the Brand's routes."""
+
         async def card(request: Request) -> Response:
+            """Serve the Agent Card."""
             return JSONResponse(self.card())
 
         async def metadata(request: Request) -> Response:
+            """Serve the OAuth authorization server metadata."""
             return JSONResponse(self.metadata())
 
         async def jwks(request: Request) -> Response:
+            """Serve the Brand's public keys."""
             return JSONResponse(dict(await self._jwks()))
 
         root = f"/a2a/{self.brand_id}"
@@ -621,6 +653,7 @@ class _ExampleAirAgent:
     """Example Air's agent: bookings read and changed, as the person allowed."""
 
     async def answer(self, turn: BrandTurn) -> BrandAnswer:
+        """Answer from the example airline's canned bookings."""
         lowered = turn.text.lower()
         if "change" in lowered:
             if "bookings:change" not in turn.scopes:
@@ -653,6 +686,7 @@ class ExampleAir(PactBrand):
         base: str = "https://provider.example",
         audience: str = "https://provider.example/a2a",
     ) -> None:
+        """Make the example Brand with a fresh EC signing key."""
         from cryptography.hazmat.primitives.asymmetric import ec
 
         from ..web_bot_auth.keys import LocalSigner
@@ -663,6 +697,7 @@ class ExampleAir(PactBrand):
         self._memory = InMemoryBrandStore()
 
         async def jwks() -> Mapping[str, Any]:
+            """Return the example Brand's public key set."""
             return {"keys": [self.public_jwk]}
 
         super().__init__(
@@ -703,12 +738,14 @@ class ExampleAir(PactBrand):
         }
 
     def register(self, issuer: str, jwks: dict[str, Any]) -> None:
+        """Accept a personal agent issuer and its keys."""
         self._registered.agents[issuer] = jwks
 
     def approve(self, user_code: str, brand_user: str, scopes: list[str]) -> None:  # type: ignore[override]
         """The person signed in at the Brand and approved ``scopes`` (maybe fewer than asked).
 
-        :class:`StopIteration` for a code it never gave."""
+        :class:`StopIteration` for a code it never gave.
+        """
         found = self._memory.records.get(("pact_code", user_code))
         if found is None:
             raise StopIteration(user_code)
@@ -719,6 +756,7 @@ class ExampleAir(PactBrand):
         self._memory.records[key] = grant.record()
 
     def step_up_uri(self, missing: tuple[str, ...]) -> str:
+        """Return the example sign-in URL asking for ``missing``."""
         return f"https://air.example/login?scopes={'+'.join(missing)}"
 
 

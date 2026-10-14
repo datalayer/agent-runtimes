@@ -337,7 +337,7 @@ async def browser_screenshot(agent: str, request: Request) -> Response:
 
 
 async def _held_browser(agent: str, request: Request) -> Browser:
-    """Its browser, for the person who took its computer over only."""
+    """Return its browser, for the person who took its computer over only."""
     app, caller = await _computer(agent, request)
     _with_browser(app)
     try:

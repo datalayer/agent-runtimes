@@ -88,6 +88,7 @@ class Message:
     _session: Optional["Session"] = field(default=None, compare=False, repr=False)
 
     def _sent_by(self) -> "Session":
+        """Return the session that sent this message, or raise."""
         if self._session is None:
             raise ValueError(f"Message {self.id} was not sent by a session.")
         return self._session
@@ -235,6 +236,7 @@ class Element:
     _session: Optional["Session"] = field(default=None, compare=False, repr=False)
 
     def _shown_by(self) -> "Session":
+        """Return the session that showed this element, or raise."""
         if self._session is None:
             raise ValueError(f"Element {self.id} was not shown by a session.")
         return self._session
@@ -329,6 +331,7 @@ class ChoiceQuestion:
     options: Tuple[str, ...]
 
     def __post_init__(self) -> None:
+        """Refuse a choice without options; keep them as a tuple."""
         if not self.options:
             raise ValueError(f"A choice needs options: {self.prompt!r} has none.")
         object.__setattr__(self, "options", tuple(self.options))
@@ -344,6 +347,7 @@ class FileQuestion:
     max_bytes: int = 20 * 1024 * 1024
 
     def __post_init__(self) -> None:
+        """Keep the accepted kinds as a tuple."""
         object.__setattr__(self, "accept", tuple(self.accept))
 
 
@@ -360,6 +364,7 @@ class FormQuestion:
     schema: Mapping[str, Any]
 
     def __post_init__(self) -> None:
+        """Refuse a form whose schema has problems."""
         from agentspecs.apps import form_problems
 
         problems = form_problems({"id": self.prompt, "schema": self.schema})
@@ -442,10 +447,12 @@ class ThreadMetadata(Dict[str, Any]):
     """
 
     def __init__(self, changed: Callable[[], None]) -> None:
+        """Start empty, calling ``changed`` after each kept change."""
         super().__init__()
         self._changed = changed
 
     def _kept(self) -> None:
+        """Refuse metadata over the size limit, then signal the change."""
         written = json.dumps(dict(self), default=str)
         if len(written) > THREAD_METADATA_LIMIT:
             raise ValueError(
@@ -455,6 +462,7 @@ class ThreadMetadata(Dict[str, Any]):
         self._changed()
 
     def _try(self, change: Callable[[], Any]) -> Any:
+        """Apply ``change``, rolling back when the result is refused."""
         before = dict(self)
         result = change()
         try:
@@ -466,27 +474,34 @@ class ThreadMetadata(Dict[str, Any]):
         return result
 
     def __setitem__(self, key: str, value: Any) -> None:
+        """Set one key, within the size limit."""
         self._try(lambda: super(ThreadMetadata, self).__setitem__(key, value))
 
     def __delitem__(self, key: str) -> None:
+        """Delete one key."""
         self._try(lambda: super(ThreadMetadata, self).__delitem__(key))
 
     def update(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override, unused-ignore]
+        """Update several keys, within the size limit."""
         self._try(lambda: super(ThreadMetadata, self).update(*args, **kwargs))
 
     def pop(self, key: str, *default: Any) -> Any:  # type: ignore[override, unused-ignore]
+        """Remove and return one key."""
         return self._try(lambda: super(ThreadMetadata, self).pop(key, *default))
 
     def setdefault(self, key: str, default: Any = None) -> Any:  # type: ignore[override, unused-ignore]
+        """Set a key when missing, within the size limit."""
         return self._try(lambda: super(ThreadMetadata, self).setdefault(key, default))
 
     def clear(self) -> None:
+        """Remove every key."""
         self._try(lambda: super(ThreadMetadata, self).clear())
 
     def replace(self, value: Mapping[str, Any]) -> None:
         """All of it at once, kept once."""
 
         def change() -> None:
+            """Clear, then write the new values."""
             super(ThreadMetadata, self).clear()
             super(ThreadMetadata, self).update(dict(value))
 
@@ -537,6 +552,7 @@ class MemoryChannel:
     _answers: Optional[asyncio.Queue[Any]] = field(default=None, init=False)
 
     def _queue(self) -> asyncio.Queue[Any]:
+        """Return the answers queue, made on first use."""
         if self._answers is None:
             self._answers = asyncio.Queue()
         return self._answers
@@ -611,6 +627,7 @@ def with_own_checks(capabilities: Sequence[Any], own: Sequence[Any]) -> List[Any
 
 
 def _now() -> datetime:
+    """Return the current UTC time."""
     return datetime.now(timezone.utc)
 
 
@@ -676,11 +693,13 @@ class ToolCallSteps(AbstractCapability[Any]):
 
 
 def _new_id() -> str:
+    """Return a new random hex id."""
     return uuid.uuid4().hex
 
 
 def _accepted(question: FileQuestion, upload: UploadedFile) -> bool:
     # The kinds a File upload block and the Appspec's uploads say (P-21).
+    """Tell whether the upload is a kind the question accepts."""
     return accepts(question.accept, upload.name, upload.media_type)
 
 
@@ -724,6 +743,7 @@ def form_values(
 
 
 def _checked(question: Question, answer: Any) -> Any:
+    """Check an answer against its question, or raise InvalidAnswer."""
     if isinstance(question, TextQuestion):
         if not isinstance(answer, str):
             raise InvalidAnswer(f"{question.prompt!r} is answered with text.")
@@ -792,6 +812,7 @@ class Session:
         capabilities: Sequence[Any] = (),
         platform: Any = None,
     ) -> None:
+        """Open a session of ``app`` over ``channel``."""
         self.app = app
         """The application, as its spec says it."""
         self._platform = platform
@@ -822,6 +843,7 @@ class Session:
     # --- Reactor, from a session (LOOP P-35) -------------------------------------
 
     def _host_platform(self) -> Any:
+        """Return the Reactor platform, or raise when none."""
         if self._platform is None:
             raise RuntimeError(
                 f"Session {self.id} has no Reactor platform: it was not opened "
@@ -872,6 +894,7 @@ class Session:
 
     @title.setter
     def title(self, value: str) -> None:
+        """Name the conversation, within the title limit."""
         said = " ".join(str(value or "").split())
         if len(said) > THREAD_TITLE_LIMIT:
             raise ValueError(f"A title is at most {THREAD_TITLE_LIMIT} characters.")
@@ -888,6 +911,7 @@ class Session:
 
     @tags.setter
     def tags(self, value: Iterable[Any]) -> None:
+        """Tag the conversation."""
         self._tags = thread_tags(value)
         self._named()
 
@@ -900,6 +924,7 @@ class Session:
 
     @metadata.setter
     def metadata(self, value: Mapping[str, Any]) -> None:
+        """Replace the conversation's metadata."""
         self._metadata.replace(value)
 
     def _named(self) -> None:
@@ -919,6 +944,7 @@ class Session:
         return dict(self._settings)
 
     def _update_settings(self, values: Mapping[str, Any]) -> Dict[str, Any]:
+        """Merge and check new settings; return them."""
         updated = form_values(self.app.interface.settings, {**self._settings, **values})
         self._settings = updated
         return dict(updated)
@@ -1024,6 +1050,7 @@ class Session:
         return message
 
     def _own(self, message: Message) -> None:
+        """Refuse a message of another session or one removed."""
         if message.session_id != self.id:
             raise ValueError(
                 f"Message {message.id} is session {message.session_id}'s, not {self.id}'s."
@@ -1493,18 +1520,21 @@ class Session:
         return self._agent
 
     async def _allowed(self, sentence: str) -> bool:
+        """Ask the person to allow or refuse; True when allowed."""
         answer = await self.ask(ChoiceQuestion(sentence, (ALLOW, REFUSE)))
         return bool(answer == ALLOW)
 
     async def _ask_rule(
         self, tool: str, arguments: Dict[str, Any], decision: Decision
     ) -> None:
+        """Ask before a rule's guarded call; raise when refused."""
         if not await self._allowed(sentence_of(decision)):
             raise AppRuleBlockedError(decision)
 
     async def _ask_check(
         self, tool: str, arguments: Dict[str, Any], sentence: str
     ) -> None:
+        """Ask before a check's guarded call; raise when refused."""
         if not await self._allowed(sentence):
             raise AppCheckBlockedError(sentence)
 

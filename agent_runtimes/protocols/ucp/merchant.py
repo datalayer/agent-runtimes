@@ -43,6 +43,7 @@ CATALOG = {
 
 
 def _meta(**extra: Any) -> dict[str, Any]:
+    """Return the ``ucp`` metadata block of an answer."""
     return {
         "version": UCP_VERSION,
         "capabilities": {CHECKOUT_CAPABILITY: [{"version": UCP_VERSION}]},
@@ -92,6 +93,7 @@ def profile(base: str) -> dict[str, Any]:
 
 
 def _refuse(status: int, code: str, content: str) -> JSONResponse:
+    """Answer a UCP error with its status and code."""
     return JSONResponse(
         {
             "ucp": {"version": UCP_VERSION, "status": "error"},
@@ -112,6 +114,7 @@ class ExampleStore:
     """The store's state and its routes."""
 
     def __init__(self, base: str = "https://store.example") -> None:
+        """Start the example store with no checkouts or orders."""
         self.base = base
         self.checkouts: dict[str, dict[str, Any]] = {}
         self.orders: list[dict[str, Any]] = []
@@ -120,6 +123,7 @@ class ExampleStore:
         self._replies: dict[str, tuple[str, int, dict[str, Any]]] = {}
 
     def _check_agent(self, request: Request) -> JSONResponse | None:
+        """Refuse a request without a valid UCP-Agent header."""
         header = request.headers.get("ucp-agent")
         if not header:
             return _refuse(400, "missing_ucp_agent", "UCP-Agent is required")
@@ -139,6 +143,7 @@ class ExampleStore:
         return None
 
     async def _idempotent(self, request: Request, handler: Any) -> JSONResponse:
+        """Run a write once per idempotency key."""
         refused = self._check_agent(request)
         if refused:
             return refused
@@ -161,6 +166,7 @@ class ExampleStore:
         return JSONResponse(reply, status_code=status)
 
     def _render(self, checkout: dict[str, Any]) -> dict[str, Any]:
+        """Render a checkout as UCP answers it."""
         from ucp_sdk.models.schemas.shopping.checkout import Checkout
 
         lines = []
@@ -228,6 +234,7 @@ class ExampleStore:
     def _create(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Create a checkout from its line items."""
         lines = []
         for line in body.get("line_items", []):
             item = line.get("item", {}).get("id")
@@ -257,6 +264,7 @@ class ExampleStore:
     def _update(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Update an open checkout."""
         checkout = self.checkouts[request.path_params["id"]]
         if checkout["status"] not in ("incomplete", "ready_for_complete"):
             return 409, self._render(checkout)
@@ -272,6 +280,7 @@ class ExampleStore:
     def _complete(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Complete a ready checkout and place its order."""
         checkout = self.checkouts[request.path_params["id"]]
         if checkout["status"] != "ready_for_complete":
             return 200, self._render(checkout)
@@ -309,6 +318,7 @@ class ExampleStore:
         return 200, rendered
 
     def _render_order(self, order_id: str) -> dict[str, Any]:
+        """Render a placed order as UCP answers it."""
         from ucp_sdk.models.schemas.shopping.order import Order
 
         placed = self.placed[order_id]
@@ -337,16 +347,21 @@ class ExampleStore:
     def _cancel(
         self, body: dict[str, Any], request: Request
     ) -> tuple[int, dict[str, Any]]:
+        """Cancel a checkout that is not completed."""
         checkout = self.checkouts[request.path_params["id"]]
         if checkout["status"] != "completed":
             checkout["status"] = "canceled"
         return 200, self._render(checkout)
 
     def app(self) -> Starlette:
+        """Return the Starlette app serving the store's routes."""
+
         async def well_known(request: Request) -> JSONResponse:
+            """Serve the store's UCP profile."""
             return JSONResponse(profile(self.base))
 
         async def search(request: Request) -> JSONResponse:
+            """Search the catalog."""
             from ucp_sdk.models.schemas.shopping.catalog_search import SearchResponse
 
             refused = self._check_agent(request)
@@ -382,6 +397,7 @@ class ExampleStore:
             return JSONResponse(reply)
 
         async def get(request: Request) -> JSONResponse:
+            """Return one checkout."""
             refused = self._check_agent(request)
             if refused:
                 return refused
@@ -391,6 +407,7 @@ class ExampleStore:
             return JSONResponse(self._render(checkout))
 
         async def order(request: Request) -> JSONResponse:
+            """Return one placed order."""
             refused = self._check_agent(request)
             if refused:
                 return refused
@@ -399,15 +416,19 @@ class ExampleStore:
             return JSONResponse(self._render_order(request.path_params["id"]))
 
         async def create(request: Request) -> JSONResponse:
+            """Create a checkout."""
             return await self._idempotent(request, self._create)
 
         async def update(request: Request) -> JSONResponse:
+            """Update a checkout."""
             return await self._idempotent(request, self._update)
 
         async def complete(request: Request) -> JSONResponse:
+            """Complete a checkout."""
             return await self._idempotent(request, self._complete)
 
         async def cancel(request: Request) -> JSONResponse:
+            """Cancel a checkout."""
             return await self._idempotent(request, self._cancel)
 
         prefix = "/ucp/v1"

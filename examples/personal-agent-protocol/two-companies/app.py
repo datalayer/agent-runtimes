@@ -35,7 +35,8 @@ PAIRWISE = "usr_ada_at_ledgerly_00000000"
 
 def _last(page: Any, what: str) -> Any:
     """The page's last event carrying a `message` (or an `error`): SDK 0.10 ends a
-    page with the conversation's state, so it is not always the last event."""
+    page with the conversation's state, so it is not always the last event.
+    """
     return next(
         getattr(event, what)
         for event in reversed(page.events)

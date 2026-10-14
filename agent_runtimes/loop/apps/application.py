@@ -133,7 +133,8 @@ Handler = Callable[..., Any]
 
 class NoPayload(BaseModel):
     """What an action that declares no payload is pressed with: nothing
-    (REACTOR_UI RU-5) — a press with anything is refused."""
+    (REACTOR_UI RU-5) — a press with anything is refused.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -212,6 +213,7 @@ class Contributed:
 
 
 def _point(point: Union[str, ContributionPoint[Any]]) -> ContributionPoint[Any]:
+    """Return the contribution point, defined from its name when given one."""
     return define_contribution_point(point) if isinstance(point, str) else point
 
 
@@ -265,6 +267,7 @@ class Application:
         protocols: Sequence[str] = (),
         ui: Sequence[str] = (),
     ) -> None:
+        """Start an app's declaration with its id and kind."""
         document: Dict[str, Any] = {
             "schema": "loop.app/v1",
             "id": id,
@@ -439,6 +442,7 @@ class Application:
         return document
 
     def _declare(self, section: str, item: Any, *, under: Optional[str] = None) -> None:
+        """Append ``item`` to a section of the app's document."""
         target = self._document
         if under is not None:
             target = target.setdefault(under, {})
@@ -718,6 +722,7 @@ class Application:
             self._commands[name] = ReactorCommandRun(run)
 
         def decorate(handler: Handler) -> Handler:
+            """Declare the handler as the command's code."""
             if prompt or run:
                 raise ValueError(
                     f"The command /{name} sends its prompt or runs {run or 'a command'}: "
@@ -853,7 +858,8 @@ class Application:
         """What its code decides of the Personal Agent Protocol (U-06): each
         company it works with (``pap company <domain>``), its company role
         (``pap company-role``) and each operation it declares (``pap operation
-        <action>``), with the builder or tool that decides it and its line."""
+        <action>``), with the builder or tool that decides it and its line.
+        """
         return list(self._pap_marks)
 
     def _pap_mark(self, moment: str, handler: str) -> None:
@@ -867,6 +873,7 @@ class Application:
         )
 
     def _pap(self) -> Dict[str, Any]:
+        """Return the app's ``pap`` block, made on first use."""
         from agentspecs.apps import PAP_PROFILES
 
         # A `pap` block names the profile it is written for (PAP_DATALAYER S-03).
@@ -1017,7 +1024,9 @@ class Application:
         """Declare an operation that gives a standing permission once the person
         confirms it (``pap.company.operations[].allows``, PAP_DATALAYER R-07, the
         Ledgerly pattern): this application may then confirm, at one of its own
-        companies and in the person's account there, what stays within the bounds::
+        companies and in the person's account there, what stays within the bounds.
+
+        For example::
 
             app.company_connection("bank", "northwind.example", access="write",
                                    scopes=["payments:write"])
@@ -1085,7 +1094,9 @@ class Application:
     ) -> Callable[[Handler], Handler]:
         """Declare what a personal agent may ask the company to do for the person,
         done by one of the application's own tools once the person confirms its
-        exact terms (``pap.company.operations``, the ``operations`` extension)::
+        exact terms (``pap.company.operations``, the ``operations`` extension).
+
+        For example::
 
             app.as_company(scopes=["orders:read", "orders:write"],
                            extensions=["operations"])
@@ -1116,6 +1127,7 @@ class Application:
         from agentspecs.apps import AppPapOperation
 
         def decorate(function: Handler) -> Handler:
+            """Declare the tool as the company operation's code."""
             name = function.__name__
             if self._tools.get(name) is not function:
                 raise ValueError(
@@ -1564,6 +1576,7 @@ class Application:
         """
 
         def decorate(function: Handler) -> Handler:
+            """Declare the function as the page's code."""
             signature = page_signature(function)
             page = self._page()
             form = page["inputs"]
@@ -1597,6 +1610,7 @@ class Application:
     # --- reactions -------------------------------------------------------------
 
     def _on(self, event: str, handler: Handler) -> Handler:
+        """Declare ``handler`` as the app's reaction to ``event``."""
         if event in self._handlers:
             raise ValueError(
                 f"{self.id} already reacts to {event} with "
@@ -1724,6 +1738,7 @@ class Application:
             )
 
         def decorate(handler: Handler) -> Handler:
+            """Declare the handler as the action's code."""
             if name in self._actions:
                 raise ValueError(f"{self.id} already has an action {name!r}.")
             said = description or (inspect.getdoc(handler) or "").split("\n\n")[0]
@@ -1775,6 +1790,7 @@ class Application:
         """
 
         def decorate(handler: Handler) -> Handler:
+            """Declare the handler as the schedule's code."""
             name = handler.__name__
             if name in self._schedules:
                 raise ValueError(f"{self.id} already has a schedule {name!r}.")
@@ -1926,6 +1942,7 @@ class Application:
             )
 
         def decorate(function: Handler) -> Handler:
+            """Declare the function as one of the app's tools."""
             from pydantic_ai import Tool
 
             name = function.__name__
@@ -1990,6 +2007,7 @@ class Application:
             )
 
         def decorate(function: Handler) -> Handler:
+            """Declare the function as one of the app's checks."""
             name = function.__name__
             if name in self._checks:
                 raise ValueError(f"{self.id} already has a check {name!r}.")
@@ -2035,6 +2053,7 @@ class Application:
         """
 
         def decorate(function: Handler) -> Handler:
+            """Declare the function as one of the app's tests."""
             name = function.__name__
             if name in self._tests:
                 raise ValueError(f"{self.id} already has a test {name!r}.")
@@ -2089,7 +2108,8 @@ class Application:
     @property
     def action_payloads(self) -> Dict[str, Type[BaseModel]]:
         """What each action is pressed with, its pydantic model, by name
-        (`NoPayload` for one that takes nothing); a copy."""
+        (`NoPayload` for one that takes nothing); a copy.
+        """
         return dict(self._action_payloads)
 
     @property
@@ -2138,6 +2158,7 @@ class Application:
         )
 
     def _dependencies(self) -> List[str]:
+        """Return the names of the plugins the app uses."""
         names = [manifest.name for manifest, _ in self._used_plugins]
         for extension in self._used_extensions:
             names.extend(manifest.name for manifest, _ in extension.plugins)
@@ -2378,6 +2399,7 @@ class Application:
             raise ValueError(f"{self.id} already has the command {command_id}.")
 
         def decorate(handler: Handler) -> Handler:
+            """Contribute the handler as a Reactor command."""
             said = dict(presentation)
             said.setdefault("description", _first_line(handler))
             self._reactor_commands.append(
@@ -2416,6 +2438,7 @@ class Application:
             raise ValueError(f"A route's path starts with '/', not {path!r}.")
 
         def decorate(endpoint: Handler) -> Handler:
+            """Declare the endpoint for the route's methods."""
             for method in methods:
                 said = method.upper()
                 if any(
@@ -2518,6 +2541,7 @@ def _first_line(function: Handler) -> str:
 
 
 async def _answer(session: Session, text: str) -> None:
+    """Stream the agent's answer to ``text`` into the session."""
     await session.stream(session.agent.stream(text))
 
 
@@ -2560,6 +2584,7 @@ class AppHost:
         agent_maker: Optional[Callable[[Session], AppAgent]] = None,
         platform: Optional[PluginPlatform] = None,
     ) -> None:
+        """Host ``app`` over ``channel``."""
         self.app = app
         self._owns_platform = platform is None
         self.platform = platform if platform is not None else PluginPlatform()
@@ -2579,6 +2604,7 @@ class AppHost:
     def _session(self, **kwargs: Any) -> Session:
         # What its code adds to its agent (LOOP P-06): its tools, and its
         # checks at their stages — what the platform holds for each now.
+        """Make a session with the app's tools and checks."""
         tools = {tool.name: self._tool(tool.name) for tool in self.spec.tools}
         checks = {
             check.name: self._reaction("check", check.name)
@@ -2601,6 +2627,7 @@ class AppHost:
         )
 
     def _reaction(self, reaction: str, name: str = "") -> Optional[Handler]:
+        """Return the app's handler for a reaction, or None."""
         return reaction_of(self.spec.id, reaction, name, self.platform)
 
     def _tool(self, name: str) -> Optional[Handler]:
@@ -2619,6 +2646,7 @@ class AppHost:
             self.platform.stop()
 
     def _open(self, session: Session) -> None:
+        """Refuse a session that has ended."""
         if session.id in self._ended:
             raise ValueError(f"Session {session.id} has ended.")
 
@@ -2771,6 +2799,7 @@ class AppHost:
         shown: Dict[str, Any] = {}
 
         async def show(session: Session) -> None:
+            """Run the page and show its outputs."""
             result = await run_page(function, session, values)
             shown.update(page_outputs(self.spec, result))
             await session.channel.deliver(PageShown(session.id, values, dict(shown)))

@@ -68,6 +68,7 @@ def a2a_parts(result: Any) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
 
     def parts(value: Any) -> None:
+        """Collect the dict parts of a message."""
         for part in (value or {}).get("parts") or []:
             if isinstance(part, dict):
                 found.append(part)
@@ -115,6 +116,7 @@ class A2AApplication:
         http_client: httpx.AsyncClient,
         credential: Callable[[str], Awaitable[str | None]] | None = None,
     ) -> None:
+        """Reach the application at ``url`` with ``http_client``."""
         self.url = url.rstrip("/") + "/"
         self.http = http_client
         self.credential = credential
@@ -147,6 +149,7 @@ class A2AApplication:
 
 
 def _scopes(company: Any) -> tuple[str, ...]:
+    """Return the company's scopes, or the default read scope."""
     return tuple(str(scope) for scope in company.scopes) or ("poppy:read",)
 
 
@@ -154,16 +157,19 @@ class ApplicationCompanyAgent:
     """``pap.company.agent``: the application answers each turn."""
 
     def __init__(self, company: Any, application: A2AApplication) -> None:
+        """Answer for ``company`` through ``application``."""
         self.company = company
         self.application = application
 
     def _declared(self, action: str) -> Any:
+        """Return the company's operation for ``action``, or None."""
         for operation in self.company.operations:
             if operation.action == action:
                 return operation
         return None
 
     async def respond(self, turn: Turn) -> Sequence[Reply]:
+        """Answer a turn, asking to sign in when needed."""
         scopes = list(_scopes(self.company))
         if turn.account_id is None and not self.company.signed_out:
             return [Reply(authorization=("sign_in_required", " ".join(scopes)))]
@@ -226,15 +232,18 @@ class MemoryOperationTickets:
     """One-use tickets for confirmed operations, kept in this process."""
 
     def __init__(self, lifetime: float = TICKET_LIFETIME_SECONDS) -> None:
+        """Keep tickets in memory for ``lifetime`` seconds."""
         self.lifetime = lifetime
         self._tickets: dict[str, tuple[float, dict[str, Any]]] = {}
 
     def issue(self, record: dict[str, Any]) -> str:
+        """Issue a ticket for ``record``."""
         ticket = secrets.token_urlsafe(32)
         self._tickets[ticket] = (time.monotonic() + self.lifetime, dict(record))
         return ticket
 
     async def redeem(self, ticket: str, credential: str) -> dict[str, Any] | None:
+        """Redeem a ticket once; None when unknown or expired."""
         held = self._tickets.pop(ticket, None)
         if held is None or held[0] < time.monotonic():
             return None
@@ -255,12 +264,14 @@ class ApplicationOperationExecutor:
         application: A2AApplication,
         tickets: MemoryOperationTickets,
     ) -> None:
+        """Perform a declared operation through the application."""
         self.action = str(declared.action)
         self.tool = str(declared.tool)
         self.application = application
         self.tickets = tickets
 
     async def perform(self, operation: Operation, account_id: str) -> OperationResult:
+        """Perform the operation for the account with a ticket."""
         ticket = self.tickets.issue(
             {
                 "action": self.action,
@@ -300,17 +311,23 @@ class RegisteredAgents:
     """``pap.company.clientPolicy``: only the personal agents the Appspec registers."""
 
     def __init__(self, client_ids: Iterable[str]) -> None:
+        """Accept the given client ids."""
         self.client_ids = frozenset(client_ids)
 
     async def allows(self, client_id: str) -> bool:
+        """Tell whether ``client_id`` is registered."""
         return client_id in self.client_ids
 
 
 class _CompanyPlugin:
+    """The plugin contributing a company's accounts and operations."""
+
     def __init__(self, capability: PapCompanyCapability) -> None:
+        """Keep the capability."""
         self.capability = capability
 
     def provide_contributions(self, contributions: Any) -> None:
+        """Contribute the company's host pieces."""
         capability = self.capability
         company = capability.company
         contribute = contributions.contribute
@@ -341,10 +358,14 @@ class _CompanyPlugin:
 
 
 class _TicketsPlugin:
+    """The plugin contributing the operation tickets."""
+
     def __init__(self, tickets: MemoryOperationTickets) -> None:
+        """Keep the tickets."""
         self.tickets = tickets
 
     def provide_contributions(self, contributions: Any) -> None:
+        """Contribute the operation tickets."""
         contributions.contribute(
             OPERATION_TICKETS, self.tickets, contribution_id="local-company", order=50
         )
@@ -372,6 +393,7 @@ class PapCompanyCapability:
         plugins: Iterable[tuple[PluginManifest, object]] = (),
         address_resolver: Any = resolve_addresses,
     ) -> None:
+        """Configure the company's name, domain and application."""
         if not company.enabled:
             raise ValueError("The Appspec does not enable pap.company")
         interfaces = {str(getattr(i, "value", i)) for i in company.interfaces}

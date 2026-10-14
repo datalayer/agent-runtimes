@@ -110,23 +110,36 @@ async def sign_request(
 
     Parameters
     ----------
-    method, url, headers, body
-        The request as it will be sent. A body is covered through its
+    method : str
+        The request's method, as it will be sent.
+    url : str
+        The request's URL, as it will be sent.
+    headers : Mapping[str, str] or None
+        The request's headers, as they will be sent.
+    body : bytes or None
+        The request's body. A body is covered through its
         ``Content-Digest``, added here.
-    signer
+    signer : HttpSigner
         The host's signer (``protocols.httpSigner``): its ``keyid`` is the
         key's thumbprint.
-    agent
+    agent : str
         Where the key directory is: the agent's origin (``directory``), or a
         JWKS (``jwks_uri``) or client metadata document (``cimd``) URL.
-    label
+    discovery : str
+        How ``agent`` is read: ``directory``, ``jwks_uri`` or ``cimd``.
+    label : str
         The signature's label; the ``Signature-Agent`` member has the same.
-    components
+    components : Sequence[str]
         Covered besides the ``Signature-Agent`` member (always covered).
-    created, lifetime, expires, nonce
-        ``created`` defaults to now; ``expires`` to ``created + lifetime``.
-        A nonce is generated unless given.
-    max_lifetime
+    created : int or None
+        When the signature is created; defaults to now.
+    lifetime : int
+        Seconds the signature lives when ``expires`` is not given.
+    expires : int or None
+        When the signature expires; defaults to ``created + lifetime``.
+    nonce : str or None
+        The signature's nonce; one is generated unless given.
+    max_lifetime : int or None
         The longest life allowed, 24 hours by default as the draft
         recommends; ``None`` for none (its test vectors expire in 2124).
     """

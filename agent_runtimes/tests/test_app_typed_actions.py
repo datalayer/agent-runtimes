@@ -33,7 +33,7 @@ SESSIONS = "/api/v1/apps/sessions"
 
 
 def _opened(local: Any, uid: str) -> Dict[str, Any]:  # noqa: F811
-    """customer-interview opened, consented and told its goal: what it is now."""
+    """Open customer-interview, consent and tell its goal: what it is now."""
     from agentspecs.apps import dump_app, get_app
 
     events = events_of(

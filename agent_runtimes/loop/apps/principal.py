@@ -136,7 +136,8 @@ def is_held_principal(claims: Mapping[str, Any]) -> bool:
     """Whether a token's claims are those of a principal this runtime acts as, for the
     same deployment: its `agent_uid` and the deployment's live grant (`task_grant_uid`)
     those of a token held here. What ai-agents sends a kept deployment's agent a
-    company's turn with (PAP_DATALAYER B-04) — never a person's, never another's."""
+    company's turn with (PAP_DATALAYER B-04) — never a person's, never another's.
+    """
     from agent_runtimes.loop.apps.callers import _unverified_claims  # noqa: PLC0415
 
     agent = str(claims.get("agent_uid") or "")
