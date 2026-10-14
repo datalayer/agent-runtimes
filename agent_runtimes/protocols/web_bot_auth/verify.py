@@ -49,6 +49,9 @@ MAX_DIRECTORY_BYTES = 64 * 1024
 MAX_DIRECTORY_KEYS = 32
 #: How long a directory that could not be fetched is not asked again.
 NEGATIVE_TTL_SECONDS = 300
+#: A key a cached directory does not list (the agent rotated: its new key signs at once) reads
+#: the directory again, no sooner than this after the last read of it.
+UNKNOWN_KEY_REFETCH_SECONDS = 10
 
 
 @dataclass(frozen=True)
@@ -213,13 +216,16 @@ class JwksUriDiscovery:
 class DirectoryResolver:
     """Keys by (agent URL, keyid), through the discovery of the member's type, cached.
 
-    A failed read keeps what was cached and is not tried again for five
-    minutes; a type with no discovery answers nothing (unverified).
+    A ``keyid`` the cached directory does not list reads it again (an agent's
+    rotated key signs at once), no sooner than ``UNKNOWN_KEY_REFETCH_SECONDS``
+    after the last read. A failed read keeps what was cached and is not tried
+    again for five minutes; a type with no discovery answers nothing (unverified).
     """
 
     discoveries: Mapping[str, KeyDiscovery]
     ttl_seconds: int = 3600
-    _cache: dict[tuple[str, str], tuple[int, dict[str, PublicKey]]] = field(
+    #: (discovery, agent) -> (expires at, read at, keys by keyid)
+    _cache: dict[tuple[str, str], tuple[int, int, dict[str, PublicKey]]] = field(
         default_factory=dict
     )
     _failed: dict[tuple[str, str], int] = field(default_factory=dict)
@@ -237,7 +243,7 @@ class DirectoryResolver:
         )
 
     async def keys(
-        self, agent: str, discovery: str, now: int
+        self, agent: str, discovery: str, now: int, keyid: str | None = None
     ) -> dict[str, PublicKey] | None:
         found_by = self.discoveries.get(discovery)
         if found_by is None:
@@ -245,18 +251,20 @@ class DirectoryResolver:
         key = (discovery, agent)
         cached = self._cache.get(key)
         if cached and cached[0] > now:
-            return cached[1]
+            unknown = keyid is not None and keyid not in cached[2]
+            if not unknown or now < cached[1] + UNKNOWN_KEY_REFETCH_SECONDS:
+                return cached[2]
         if self._failed.get(key, 0) > now:
-            return cached[1] if cached else None
+            return cached[2] if cached else None
         try:
             keys = await found_by.keys(agent, now)
         except PermissionError:
             raise
         except Exception:  # noqa: BLE001 - a failed fetch keeps what was cached
             self._failed[key] = now + NEGATIVE_TTL_SECONDS
-            return cached[1] if cached else None
+            return cached[2] if cached else None
         found = {public.keyid: public for public in keys}
-        self._cache[key] = (now + self.ttl_seconds, found)
+        self._cache[key] = (now + self.ttl_seconds, now, found)
         self._failed.pop(key, None)
         return found
 
@@ -350,7 +358,7 @@ async def verify_request(
                 agent=agent,
             )
         try:
-            keys = await resolver.keys(agent, discovery, now)
+            keys = await resolver.keys(agent, discovery, now, keyid)
         except PermissionError as error:
             return Verification(outcome="unverified", reason=str(error), agent=agent)
         if keys is None:

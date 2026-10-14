@@ -325,6 +325,56 @@ async def test_end_to_end_with_rotation(algorithm):
 
 
 @pytest.mark.asyncio
+async def test_a_key_rotated_after_the_directory_was_cached_is_read_again():
+    """An agent's rotated key signs at once (a Datalayer application's owner's Rotate): a
+    verifier holding its directory reads it again for a keyid it does not list, no sooner
+    than ten seconds after its last read, and keeps a known key's directory cached."""
+    import time
+
+    old, new, stranger = (LocalSigner.generate() for _ in range(3))
+    published = [old]
+    agent = httpx.AsyncClient(transport=httpx.ASGITransport(app=_agent_app(published)))
+    calls = []
+
+    async def fetch(url):
+        calls.append(url)
+        response = await agent.get(url)
+        return response.status_code, dict(response.headers), response.content
+
+    resolver = DirectoryResolver.with_fetch(fetch)
+    url = "https://shop.test/products"
+
+    async def outcome(signer, at):
+        signed = await sign_request(
+            method="GET", url=url, signer=signer, agent="https://agent.test", created=at
+        )
+        found = await verify_request(
+            method="GET", url=url, headers=signed.as_dict(), resolver=resolver, now=at
+        )
+        return found.outcome, found.reason
+
+    t = int(time.time())
+    assert (await outcome(old, t))[0] == "verified"
+    assert len(calls) == 1
+    published.append(new)  # rotated: the new key signs from now
+    assert (await outcome(new, t + 11))[0] == "verified"
+    assert len(calls) == 2
+    # A keyid nobody published: read again at most once in ten seconds.
+    assert (await outcome(stranger, t + 12)) == (
+        "unverified",
+        "the key is not in the agent's directory",
+    )
+    assert (await outcome(stranger, t + 20))[0] == "unverified"
+    assert len(calls) == 2
+    assert (await outcome(stranger, t + 21))[0] == "unverified"
+    assert len(calls) == 3
+    # Known keys are answered from the cache.
+    assert (await outcome(old, t + 22))[0] == "verified"
+    assert (await outcome(new, t + 60))[0] == "verified"
+    assert len(calls) == 3
+
+
+@pytest.mark.asyncio
 async def test_a_body_is_bound_by_its_digest():
     signer = LocalSigner.generate()
     signed = await sign_request(
