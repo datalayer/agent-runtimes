@@ -23,12 +23,8 @@ import { iamStore } from '@datalayer/core/lib/state/substates/IAMState';
 import { coreStore } from '@datalayer/core/lib/state/substates/CoreState';
 import { appPreset } from '../apps/AppRenderer';
 import { coverOf, BEHAVIOUR_WORDS } from '../apps/rules';
-import {
-  RUN_END_WORDS,
-  entryOf,
-  entrySaid,
-  sessionSentence,
-} from '../apps/records';
+import { entryOf, entrySaid, sessionSentence } from '../apps/records';
+import { RUN_END_WORDS } from '../../portable/records';
 import { SAVE_TOOL, SAVE_WORDS, draftOfApproval } from '../apps/saved';
 import { LoopSlots } from '../core';
 import { APP_CATALOGUE } from '../../specs/apps';

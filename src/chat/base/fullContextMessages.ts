@@ -14,7 +14,7 @@
  * kept in the record for the builder and never shown to the person.
  */
 
-import { askedOf } from '../../apps/apps/records';
+import { askedOf } from '../../portable/records';
 import type { ChatMessage } from '../../types/messages';
 
 export function extractChatMessagesFromFullContext(

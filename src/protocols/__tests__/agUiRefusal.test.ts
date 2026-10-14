@@ -17,7 +17,7 @@ import {
   agUiRefusal,
   refusalBody,
   refusalDetail,
-} from '../agUiRefusal';
+} from '../../portable/agUiRefusal';
 
 describe('what the page says of an AG-UI refusal (F-15)', () => {
   it('says the agent is not on this runtime, never the bare status, on a 404', () => {

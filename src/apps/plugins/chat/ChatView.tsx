@@ -164,12 +164,8 @@ import {
 } from '../shell/editorChoice';
 import type { ChatMessage } from '../../../types/messages';
 import { generateMessageId } from '../../../types/messages';
-import {
-  deploymentOfPayload,
-  openThread,
-  THREAD_WORDS,
-  threadOfVisit,
-} from '../../apps/threads';
+import { deploymentOfPayload, threadOfVisit } from '../../apps/threads';
+import { openThread, THREAD_WORDS } from '../../../portable/thread';
 import type { ResumedThread, ToolCallMessage } from '../../../types/chat';
 import {
   FaceDrawing,

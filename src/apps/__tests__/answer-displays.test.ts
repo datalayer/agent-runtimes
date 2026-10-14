@@ -17,7 +17,7 @@ import {
   type UiOp,
 } from '@datalayer/reactor/ui';
 import { withUiOp } from '../../chat/base/uiOps';
-import { messagesOfThread } from '../embed/embedSession';
+import { messagesOfThread } from '../../portable/thread';
 import type { ChatMessage } from '../../types/messages';
 
 const display = (

@@ -13,13 +13,17 @@ import type { ProtocolAdapterConfig, AGUI } from '../types';
 import type { ChatMessage, ContentPart } from '../types/messages';
 import type { ToolDefinition, ToolExecutionResult } from '../types/tools';
 import { generateMessageId, createAssistantMessage } from '../types/messages';
-import { agUiRefusal, refusalBody } from './agUiRefusal';
+import { agUiRefusal, refusalBody } from '../portable/agUiRefusal';
+import {
+  AgUiFrames,
+  type AgUiEvent,
+  endsRun,
+  REACTOR_UI_NAME,
+  RUN_CUT_SHORT,
+  toolResultOf,
+  UI_ON_RUN,
+} from '../portable/agui';
 import { BaseProtocolAdapter } from './BaseProtocolAdapter';
-import { AGUI_NAME } from '@datalayer/reactor/ui';
-
-/** What the page says when a run's stream closes before the run said how it ended. */
-export const RUN_CUT_SHORT =
-  'The run stopped before it finished, without an answer or an error: send it again.';
 
 /**
  * AG-UI specific configuration
@@ -596,7 +600,10 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     }
 
     const decoder = new TextDecoder();
-    let buffer = '';
+    // The stream's frames, read as every client reads them (portable/agui).
+    const frames = new AgUiFrames(data =>
+      console.warn('[AGUIAdapter] Failed to parse event data:', data),
+    );
 
     // Always start fresh — each turn gets its own message bubble.
     // Continuations will naturally appear AFTER the tool calls in the
@@ -625,60 +632,42 @@ export class AGUIAdapter extends BaseProtocolAdapter {
     // that is not coming (a Preview gave no answer for minutes, 2026-10-12).
     let ended = false;
 
+    const handle = (events: AgUiEvent[]) => {
+      for (const event of events) {
+        if (endsRun(event)) {
+          ended = true;
+        }
+        this.handleAGUIEvent(event, {
+          getCurrentMessageId: () => currentMessageId,
+          setCurrentMessageId: id => {
+            currentMessageId = id;
+          },
+          getCurrentContent: () => currentContent,
+          appendContent: content => {
+            currentContent += content;
+          },
+          resetContent: () => {
+            currentContent = '';
+          },
+          appendTurnContent: content => {
+            currentTurnContent += content;
+          },
+          getCurrentTurnContent: () => currentTurnContent,
+        });
+      }
+    };
+
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          handle(frames.end());
           if (!ended) {
             throw new Error(RUN_CUT_SHORT);
           }
           break;
         }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
-            // Event type (currently unused)
-            // const eventType = line.slice(7);
-            // Handle event type if needed
-          } else if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-
-            try {
-              const event = JSON.parse(data) as AGUI.Event;
-              const kind = (event as { type?: unknown }).type;
-              if (kind === 'RUN_FINISHED' || kind === 'RUN_ERROR') {
-                ended = true;
-              }
-              this.handleAGUIEvent(
-                event as unknown as Record<string, unknown>,
-                {
-                  getCurrentMessageId: () => currentMessageId,
-                  setCurrentMessageId: id => {
-                    currentMessageId = id;
-                  },
-                  getCurrentContent: () => currentContent,
-                  appendContent: content => {
-                    currentContent += content;
-                  },
-                  resetContent: () => {
-                    currentContent = '';
-                  },
-                  appendTurnContent: content => {
-                    currentTurnContent += content;
-                  },
-                  getCurrentTurnContent: () => currentTurnContent,
-                },
-              );
-            } catch (e) {
-              // Non-JSON data, might be raw content
-              console.warn('[AGUIAdapter] Failed to parse event data:', e);
-            }
-          }
-        }
+        handle(frames.push(decoder.decode(value, { stream: true })));
       }
     } finally {
       reader.releaseLock();
@@ -701,9 +690,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
   private refuseUiOnRun(): void {
     this.emit({
       type: 'error',
-      error: new Error(
-        'A reactor.ui op came on the run stream: it comes over the ui socket (REACTOR_UI RU-W).',
-      ),
+      error: new Error(UI_ON_RUN),
       timestamp: new Date(),
     });
   }
@@ -880,40 +867,18 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         // AG-UI uses camelCase (toolCallId)
         const toolCallId =
           (event.toolCallId as string) || (event.tool_call_id as string);
-        let content = event.content as unknown;
-
-        // Parse JSON content if it's a string
-        if (typeof content === 'string') {
-          try {
-            content = JSON.parse(content);
-          } catch {
-            // Keep as string if not valid JSON
-          }
-        }
 
         if (toolCallId) {
-          // Check for execution errors in the result
-          // ExecutionResult format: { execution_ok, execution_error, code_error, ... }
-          const contentObj = content as Record<string, unknown> | undefined;
-          const isError =
-            contentObj?.execution_ok === false ||
-            contentObj?.code_error != null ||
-            (contentObj?.error != null && !contentObj?.success);
-          const errorMessage =
-            (contentObj?.execution_error as string) ||
-            (contentObj?.error as string) ||
-            (contentObj?.code_error
-              ? `${(contentObj.code_error as { name?: string })?.name || 'Error'}: ${(contentObj.code_error as { value?: string })?.value || ''}`
-              : undefined);
-
-          // Emit tool result event with the actual content
+          // Read as every client reads it (portable/agui): JSON when it is,
+          // failed when the execution result says so.
+          const said = toolResultOf(event.content);
           this.emit({
             type: 'tool-result',
             toolResult: {
               toolCallId,
-              success: !isError,
-              result: content,
-              error: isError ? errorMessage : undefined,
+              success: said.success,
+              result: said.result,
+              error: said.error,
             },
             timestamp: new Date(),
           });
@@ -951,7 +916,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
         // `reactor.ui` ops come over the conversation's ui socket, never
         // the run stream (REACTOR_UI RU-W): one here is refused. Any other
         // activity is nobody's here.
-        if (event.activityType === AGUI_NAME) {
+        if (event.activityType === REACTOR_UI_NAME) {
           this.refuseUiOnRun();
         }
         break;
@@ -959,7 +924,7 @@ export class AGUIAdapter extends BaseProtocolAdapter {
 
       case 'CUSTOM': {
         const name = event.name as string | undefined;
-        if (name === AGUI_NAME) {
+        if (name === REACTOR_UI_NAME) {
           this.refuseUiOnRun();
           break;
         }

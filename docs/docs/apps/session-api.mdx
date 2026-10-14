@@ -496,6 +496,36 @@ This is what an embedded application uses after its page reloads (LOOP D-13,
 session's uid in the page's storage, reads the conversation with the visit's
 token, and the chat draws it again and continues the thread.
 
+## From a native app
+
+`@datalayer/agent-runtimes/lib/portable` is what a client with no DOM — Datalayer
+Mobile — drives these routes with. Every module it reaches at run time is in
+that folder, and none imports React, Reactor, Jupyter or Node (its test holds
+it to that):
+
+- `appSessionsClient({ baseUrl, getAccessToken, fetch })` — start, message,
+  settings change, resume (each streamed), stop, end, `describe` and
+  `messages`; a refusal is a `RuntimeRefusal` with its status and the
+  runtime's sentence. `agentRunClient` runs a standalone agent over
+  `/api/v1/ag-ui/{agent}/` and terminates its thread.
+- `readRunStream` reads a stream as it arrives, with the `fetch` given — on a
+  phone, one whose body streams (`expo/fetch`); it is also how the web chat's
+  `AGUIAdapter` reads frames, and a stream that closes before `RUN_FINISHED`
+  or `RUN_ERROR` is `RUN_CUT_SHORT` on both.
+- `reduceConversation` builds the conversation a native client draws: one
+  message streamed in place, tool calls and steps as collapsed rows, the
+  question the application asks (`RUN_FINISHED`'s `result.asking`, or
+  `loop.session`'s), and a turn that ended without a word said by how it
+  ended (`RUN_END_WORDS`). It is bounded: the newest 400 rows, an answer's
+  first 100,000 characters, a tool's arguments and result 4,000 each, and an
+  event it does not draw kept by its type and name only.
+- `openThread` and `messagesOfThread` — the same reading of a thread the web
+  chat opens, without the runtime-only `<asked-for>…</asked-for>` preamble.
+
+A native client answers a text or choice question with a message and a form
+with a settings change, as any client of these routes does; what the ui
+socket shows is not drawn there yet.
+
 ## End and sign out
 
 **End** closes the conversation for good: the turn is cancelled, a Python

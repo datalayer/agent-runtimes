@@ -11,14 +11,13 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { answerIdOf, sendFeedback } from '../apps/feedback';
+import { deploymentOfPayload, threadOfVisit } from '../apps/threads';
 import {
-  deploymentOfPayload,
   openThread,
   snapshotOfStream,
   THREAD_WORDS,
-  threadOfVisit,
-} from '../apps/threads';
-import { askedOf } from '../apps/records';
+} from '../../portable/thread';
+import { askedOf } from '../../portable/records';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {

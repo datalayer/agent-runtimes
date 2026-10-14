@@ -21,7 +21,7 @@
  * Pure, so the hook, the adapter and the tests read a refusal the same way
  * (the repo's jest/vitest rule: rules live outside components).
  *
- * @module protocols/agUiRefusal
+ * @module portable/agUiRefusal
  */
 
 /** What the page says when an agent's AG-UI address answers nothing. */

@@ -43,12 +43,12 @@ import {
   WINDOW_NOT_YET,
   embedSessionKey,
   forgetSessionsInMemory,
-  messagesOfThread,
   reattachSession,
   sessionGoneSentence,
   sessionKeeper,
   visitOfToken,
 } from '../embed/embedSession';
+import { messagesOfThread } from '../../portable/thread';
 
 /** An embed token as Spacer issues one: its claims readable, its signature not checked here. */
 function tokenFor(claims: Record<string, unknown>): string {

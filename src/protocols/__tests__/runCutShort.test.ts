@@ -15,7 +15,8 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { AGUIAdapter, RUN_CUT_SHORT } from '../AGUIAdapter';
+import { AGUIAdapter } from '../AGUIAdapter';
+import { RUN_CUT_SHORT } from '../../portable/agui';
 
 /** A `fetch` answering one SSE stream made of `events`, then closing. */
 function streamingFetch(events: Record<string, unknown>[]) {

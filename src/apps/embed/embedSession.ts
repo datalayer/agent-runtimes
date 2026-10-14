@@ -27,8 +27,7 @@
 
 import type { ChatMessage } from '../../types/messages';
 import { windowTurnErrorOf } from '../../chat/base/loopWindow';
-import { AGUI_NAME } from '@datalayer/reactor/ui';
-import { askedOf } from '../apps/records';
+import { messagesOfThread } from '../../portable/thread';
 
 /** Where a visit's session is kept in the host's storage: `<prefix>:<app>:<visit>`. */
 export const EMBED_SESSION_KEY_PREFIX = 'datalayer-app:session';
@@ -130,52 +129,6 @@ export function sessionKeeper({
 /** Forget what this page holds in memory (a test). */
 export function forgetSessionsInMemory(): void {
   IN_MEMORY.clear();
-}
-
-/**
- * A session's conversation as the chat draws it, from the AG-UI messages
- * the runtime says (`GET …/sessions/{uid}/messages`): what was said and
- * answered, in words. What its messages showed comes on the conversation's
- * ui socket once the chat opens it (REACTOR_UI RU-W), never here: a
- * `reactor.ui` activity in a thread is refused.
- */
-export function messagesOfThread(messages: unknown): ChatMessage[] {
-  if (!Array.isArray(messages)) {
-    return [];
-  }
-  const drawn: ChatMessage[] = [];
-  for (const message of messages) {
-    if (!message || typeof message !== 'object') {
-      continue;
-    }
-    const { id, role, content, activityType } = message as {
-      id?: unknown;
-      role?: unknown;
-      content?: unknown;
-      activityType?: unknown;
-    };
-    if (role === 'activity' && activityType === AGUI_NAME) {
-      throw new Error(
-        `Activity ${String(id)}: what a message showed comes on the ui socket (REACTOR_UI RU-W)`,
-      );
-    }
-    if (
-      (role === 'user' || role === 'assistant') &&
-      typeof id === 'string' &&
-      typeof content === 'string' &&
-      content.trim()
-    ) {
-      // A turn a personal agent asked: what the runtime told the application
-      // before the person's words is never shown to them (decided 2026-10-14).
-      drawn.push({
-        id,
-        role,
-        content: role === 'user' ? askedOf(content) : content,
-        createdAt: new Date(),
-      });
-    }
-  }
-  return drawn;
 }
 
 /** What asking for a kept session found. */

@@ -59,7 +59,7 @@ import { DEFAULT_SERVICE_URLS } from '@datalayer/core/lib/api/constants';
 import { useChatStore } from '../../stores/chatStore';
 import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
-import { askedOf } from '../../apps/apps/records';
+import { askedOf } from '../../portable/records';
 import { extractChatMessagesFromFullContext } from './fullContextMessages';
 import {
   generateMessageId,

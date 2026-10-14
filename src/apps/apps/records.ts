@@ -14,6 +14,8 @@
  * @module apps/apps/records
  */
 
+import { RUN_END_WORDS } from '../../portable/records';
+
 /** What a record entry is. */
 export type RecordKind =
   | 'session'
@@ -81,17 +83,6 @@ export function entryOf(raw: Record<string, unknown>): RecordEntry {
   };
 }
 
-/**
- * How a run ended, in the `output` entry every run ends with, kept whatever
- * the application's `record.include` says (PAP_DATALAYER R-01): its words
- * only when it keeps `outputs`.
- */
-export const RUN_END_WORDS: Record<string, string> = {
-  answered: 'Answered',
-  stopped: 'Stopped',
-  gone: 'Its client went before the answer',
-};
-
 /** How the run an entry ends ended: `answered`, `stopped`, `gone`; `''` for any other entry. */
 export function runEndOf(entry: RecordEntry): string {
   const status = entry.kind === 'output' ? entry.payload.status : undefined;
@@ -101,34 +92,6 @@ export function runEndOf(entry: RecordEntry): string {
 /** An entry in words: its summary, or how its run ended when its words are not kept. */
 export function entrySaid(entry: RecordEntry): string {
   return entry.summary || RUN_END_WORDS[runEndOf(entry)] || '';
-}
-
-/**
- * The mark around what the runtime tells an application of a turn a personal
- * agent asked over PAP or PACT, before the request (`asked_for_said`,
- * `ASKED_FOR_TAG` in agent_runtimes.loop.apps.pap_company).
- */
-export const ASKED_FOR_TAG = 'asked-for';
-
-/**
- * What a person asked, as they are shown it: without what the runtime told
- * the application before their words (PAP_DATALAYER, decided 2026-10-14).
- * The record keeps it for the application's builder; the person never wrote
- * it, so *Your conversations* and a thread opened again leave it out.
- */
-export function askedOf(text: string): string {
-  const open = `<${ASKED_FOR_TAG}>`;
-  const close = `</${ASKED_FOR_TAG}>`;
-  if (!text.startsWith(open)) {
-    return text;
-  }
-  const end = text.indexOf(close);
-  if (end < 0) {
-    throw new Error(
-      `What was asked opens <${ASKED_FOR_TAG}> and never closes it.`,
-    );
-  }
-  return text.slice(end + close.length).trimStart();
 }
 
 /** A session in a sentence: how many calls, what stopped it, how it ended. */

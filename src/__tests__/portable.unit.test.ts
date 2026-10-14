@@ -3,11 +3,6 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
-/*
- * Copyright (c) 2026 Datalayer, Inc.
- * Distributed under the terms of the Modified BSD License.
- */
-
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -80,7 +75,6 @@ describe('messageOfApproval', () => {
   });
 });
 
-
 /** Every module the portable entry reaches at run time, through its relative imports. */
 function reachedFrom(entry: string): Map<string, string> {
   const reached = new Map<string, string>();
@@ -95,7 +89,9 @@ function reachedFrom(entry: string): Map<string, string> {
       /^(?:import|export)\s+(?!type\b)[^;]*?from\s+'(\.[^']+)'/gms,
     )) {
       const base = join(dirname(file), path);
-      const next = [`${base}.ts`, `${base}.tsx`, join(base, 'index.ts')].find(existsSync);
+      const next = [`${base}.ts`, `${base}.tsx`, join(base, 'index.ts')].find(
+        existsSync,
+      );
       if (next) {
         visit(next);
       }
@@ -106,18 +102,26 @@ function reachedFrom(entry: string): Map<string, string> {
 }
 
 describe('the portable entry', () => {
-  it('reaches no React, DOM, Jupyter or Node module, whatever it re-exports', () => {
-    const entry = join(__dirname, '..', 'portable', 'index.ts');
-    for (const [file, source] of reachedFrom(entry)) {
+  const folder = join(__dirname, '..', 'portable');
+  const reached = reachedFrom(join(folder, 'index.ts'));
+
+  it('reaches no module outside its folder at run time', () => {
+    // A phone's Metro graph takes lib/portable/* and nothing else of Agent
+    // Runtimes (MOBILE M-006): a module it reaches elsewhere is refused there.
+    for (const file of reached.keys()) {
+      expect(dirname(file), file).toBe(folder);
+    }
+    expect(reached.size).toBeGreaterThan(5);
+  });
+
+  it('reaches no package at run time: no React, DOM, Jupyter, Reactor or Node module', () => {
+    for (const [file, source] of reached) {
       const runtime = [
-        ...source.matchAll(/^(?:import|export)\s+(?!type\b)[^;]*?from\s+'([^.'][^']*)'/gms),
-      ].map(match => match[1]);
-      expect(
-        runtime.filter(path =>
-          /^(react|react-dom|@jupyterlab\/|@lumino\/|@jupyter\/|node:)/.test(path),
+        ...source.matchAll(
+          /^(?:import|export)\s+(?!type\b)[^;]*?from\s+'([^.'][^']*)'/gms,
         ),
-        file,
-      ).toEqual([]);
+      ].map(match => match[1]);
+      expect(runtime, file).toEqual([]);
     }
   });
 });

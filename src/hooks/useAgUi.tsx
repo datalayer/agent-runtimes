@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { agUiRefusal, refusalBody } from '../protocols/agUiRefusal';
+import { agUiRefusal, refusalBody } from '../portable/agUiRefusal';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
