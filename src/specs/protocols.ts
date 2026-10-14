@@ -156,13 +156,13 @@ export const TAP_PROTOCOL_0_0_1: ProtocolSpec = {
   version: '0.0.1',
   name: 'Trusted Agent Protocol',
   description:
-    "An agent-recognition profile over Web Bot Auth for merchants: a signature tagged agent-browser-auth to browse or agent-payer-auth to pay. Built as a draft from Visa's public Merchant Specifications (2026-10-13) in agent-runtimes; planned for applications until Visa confirms it.",
+    "An agent-recognition profile over Web Bot Auth for merchants: a signature tagged agent-browser-auth to browse or agent-payer-auth to pay. Still a draft profile, built from Visa's public Merchant Specifications (2026-10-13) until Visa confirms it. In applications at test merchants only (decided 2026-10-14): the MCP gateway signs each UCP or ACP purchase with agent-payer-auth under the application's own key, and the test merchants verify it; browsing stays Web Bot Auth.",
   publisher: 'Visa',
   layer: 'identity',
   specUrl:
     'https://developer.visa.com/capabilities/trusted-agent-protocol/trusted-agent-protocol-specifications',
   specVersion: 'draft (Merchant Specifications, read 2026-10-13)',
-  status: 'planned',
+  status: 'shipped',
   connects: 'Merchants that recognise an agent by its signature',
   packages: {
     python: ['agent-runtimes'],

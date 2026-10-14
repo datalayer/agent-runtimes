@@ -14,6 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { APP_CATALOGUE, APP_SOURCES } from '../../specs/apps';
+import { PROTOCOL_CATALOGUE } from '../../specs/protocols';
 import type { AppSpec } from '../../types/agentspecs';
 import {
   APPSPEC_KEY_ORDER,
@@ -376,14 +377,28 @@ describe('writing an Appspec', () => {
     expect(said({ protocols: ['mcp', 'mcp'] })).toEqual([
       "It lists the protocol 'mcp' twice.",
     ]);
-    expect(said({ protocols: ['tap'] })[0]).toMatch(/planned, not shipped/);
+    // TAP is shipped (a draft at test merchants, 14 October 2026): no protocol is planned any more.
+    expect(said({ protocols: ['ucp', 'tap'] })).toEqual([]);
     expect(
-      said({
-        protocols: ['tap'],
-        enabled: false,
-        unavailable_because: 'Later.',
-      }),
+      Object.values(PROTOCOL_CATALOGUE).filter(
+        spec => spec.status === 'planned',
+      ),
     ).toEqual([]);
+    // The rule, held on TAP made planned for the test.
+    const shipped = PROTOCOL_CATALOGUE.tap;
+    PROTOCOL_CATALOGUE.tap = { ...shipped, status: 'planned' };
+    try {
+      expect(said({ protocols: ['tap'] })[0]).toMatch(/planned, not shipped/);
+      expect(
+        said({
+          protocols: ['tap'],
+          enabled: false,
+          unavailable_because: 'Later.',
+        }),
+      ).toEqual([]);
+    } finally {
+      PROTOCOL_CATALOGUE.tap = shipped;
+    }
     expect(
       said({
         pap: {
