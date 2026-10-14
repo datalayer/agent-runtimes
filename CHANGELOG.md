@@ -15,6 +15,14 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.14
+
+On agentspecs 0.0.91.
+
+- **A proposal does not end a company's turn** (AGENT_PROTOCOLS PI-42): a declared operation proposed in a personal agent's turn skips its tool with the sentence as its result, so the model tells the person (Exchange Desk answered "could not answer just now").
+- **A sign-in card hears one return** (PAP_DATALAYER P-04): a denied attempt's card no longer sends *check again* into the next sign-in's run.
+- **A run's end is always recorded** (PAP_DATALAYER R-01, decided 2026-10-13): `AppRecorder.ended` keeps `{status, ended_at, trace_id}` whatever `record.include` says; the answer's words stay opt-in under `outputs`.
+
 ## 1.5.13
 
 On agentspecs 0.0.91.
