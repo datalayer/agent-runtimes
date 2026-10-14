@@ -15,6 +15,12 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.16
+
+On agentspecs 0.0.92.
+
+- **A shipped application's page draws a personal agent's question in the person's words** (PAP_DATALAYER, decided 2026-10-14): the opened conversation, read from the agent's full context and from the prompt history, goes through `askedOf` like a thread (`src/chat/base/fullContextMessages.ts`).
+
 ## 1.5.15
 
 On agentspecs 0.0.92.
