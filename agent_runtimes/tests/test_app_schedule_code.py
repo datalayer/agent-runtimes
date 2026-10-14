@@ -704,7 +704,10 @@ def test_a_woken_session_running_code_keeps_its_run_turn_and_output(
             "TICK-HANDLER-RAN",
         )
         assert entries[3]["summary"] == "TICK-HANDLER-RAN"
-        assert entries[3]["payload"] == {"length": 16, "schedule": "tick"}
+        # A run's end is always recorded, with its status and when it ended (8f5a2f9e).
+        end = entries[3]["payload"]
+        assert end.pop("ended_at")
+        assert end == {"length": 16, "schedule": "tick", "status": "answered"}
         # Every body says what woke it, as an agent's turn would.
         assert all(
             body["woken_by"]["position"] == 1

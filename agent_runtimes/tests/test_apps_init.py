@@ -23,6 +23,7 @@ from agent_runtimes.loop.apps.scaffold import (
     BLANK_AGENT,
     BLANK_PYTHON_AGENT,
     InitRefused,
+    catalogue,
     examples,
     init,
 )
@@ -108,9 +109,9 @@ def test_every_example_starts_an_application_under_the_new_id(
 ) -> None:
     written = init("mine", tmp_path, example=example, python=python)
     has_code = (written.folder / "app.py").exists()
-    assert has_code == (
-        python or example in ("customer-interview", "report-from-a-file")
-    )
+    # An example written in Python (its code beside its spec in the catalogue:
+    # Customer Interview, Report from a File, Exchange Desk) starts with its code.
+    assert has_code == (python or (catalogue() / example / "app.py").is_file())
     spec = _spec(written.folder)
     assert spec["id"] == "mine"
     if has_code:

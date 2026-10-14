@@ -121,5 +121,5 @@ async def main(session: Session, text: str) -> None:
 
 
 @app.action("take_action")
-async def take_action(session: Session, payload: dict) -> None:
+async def take_action(session: Session) -> None:
     await session.send("Contacting shipping carrier...")

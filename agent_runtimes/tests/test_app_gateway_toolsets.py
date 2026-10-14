@@ -67,10 +67,16 @@ async def test_a_previews_run_reaches_the_gateway_with_its_narrowed_token(
 
 
 @pytest.mark.asyncio
-async def test_a_preview_without_a_token_reaches_it_with_none(seen: list) -> None:
+async def test_a_preview_without_a_token_leaves_the_gateway_out(seen: list) -> None:
+    # Nobody to reach it in the name of: never an empty Bearer (e0280f71), and
+    # never the process's own server, with the runtime's key, in its place.
     remember_app_instance(AGENT, {"app_uid": "01APP"})
-    await gateway_toolsets_of_the_run(AGENT, [SimpleNamespace(id="datalayer")], None)
-    assert seen == [{"Authorization": "Bearer "}]
+    chart = SimpleNamespace(id="chart")
+    toolsets = await gateway_toolsets_of_the_run(
+        AGENT, [chart, SimpleNamespace(id="datalayer")], None
+    )
+    assert toolsets == [chart]
+    assert seen == []
 
 
 @pytest.mark.asyncio

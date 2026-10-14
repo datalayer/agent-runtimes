@@ -148,18 +148,20 @@ async def test_the_model_reads_the_display_s_model_view_only(
     assert isinstance(back, ToolReturn)
     read = json.dumps(back.return_value)
     assert OPEN not in read and CODE not in read and "user_code" not in read
-    assert back.return_value == {
-        "type": "application/vnd.datalayer.pap.sign-in+json",
-        "text": (
-            "Sign in at manzanita.example: open its sign-in page, shown here, "
-            "and enter the code shown with it."
-        ),
-        "data": {
-            "mode": "device",
-            "expires_at": "2026-10-11T12:15:00Z",
-            "sent_to": None,
-        },
-    }
+    assert back.return_value["type"] == "application/vnd.datalayer.pap.sign-in+json"
+    assert back.return_value["text"] == (
+        "Sign in at manzanita.example: open its sign-in page, shown here, "
+        "and enter the code shown with it."
+    )
+    # The model view's fields, never the page's (open, code); a newer PAP
+    # (0.23: company, needs) adds its own beside them.
+    data = back.return_value["data"]
+    assert "open" not in data and "code" not in data
+    assert (data["mode"], data["expires_at"], data["sent_to"]) == (
+        "device",
+        "2026-10-11T12:15:00Z",
+        None,
+    )
     # The page's: the whole display.
     display = back.metadata[DISPLAY_META_KEY]
     assert display["type"] == "application/vnd.datalayer.pap.sign-in+json"
