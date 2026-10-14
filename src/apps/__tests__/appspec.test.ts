@@ -424,10 +424,14 @@ describe('writing an Appspec', () => {
     expect(dumpAppspec(emptyAppspec('chat'))).not.toHaveProperty('ui');
     const said = (document: Record<string, unknown>) =>
       parseAppspec({ kind: 'chat', ...document }).problems;
-    // The old shape — a renderer named as a UI — is refused.
-    expect(said({ ui: ['a2ui'] })[0]).toMatch(
-      /no UI plugin named 'a2ui'.*'a2ui' is a UI renderer/,
-    );
+    // The old shape — a bare id, a renderer named as a UI — is refused, never read as a plugin.
+    expect(said({ ui: ['a2ui'] })).toEqual([
+      '`ui` lists UI plugins, each as `{plugin, renderer}`: "a2ui" is not one ("a2ui" is a UI renderer: name the plugin it renders, and say it as its `renderer`).',
+    ]);
+    expect(said({ ui: ['chat'] })).toEqual([
+      '`ui` lists UI plugins, each as `{plugin, renderer}`: "chat" is not one.',
+    ]);
+    expect(parseAppspec({ kind: 'chat', ui: ['chat'] }).app.ui).toEqual([]);
     expect(said({ ui: [{ plugin: 'nope' }] })[0]).toMatch(
       /no UI plugin named 'nope'/,
     );

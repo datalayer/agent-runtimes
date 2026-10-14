@@ -199,25 +199,33 @@ const records = (value: unknown): Data[] =>
 
 /**
  * An application's UI plugins as its document says them (AGENTIC_UI R8):
- * `{plugin, renderer}` each. A bare id — the old shape, a renderer named as a
- * UI — is read as the plugin it names, which `uiProblems` refuses.
+ * `{plugin, renderer}` each. Anything else — a bare id, the old shape — is
+ * not read as a plugin: `parseAppspec` refuses it (`uiShapeProblems`).
  */
 const uiChoices = (value: unknown): UiChoice[] =>
   Array.isArray(value)
-    ? value.flatMap((item): UiChoice[] =>
-        typeof item === 'string'
-          ? [{ plugin: item }]
-          : isData(item)
-            ? [
-                {
-                  plugin: text(item.plugin),
-                  ...(text(item.renderer)
-                    ? { renderer: text(item.renderer) }
-                    : {}),
-                },
-              ]
-            : [],
-      )
+    ? value.filter(isData).map(item => ({
+        plugin: text(item.plugin),
+        ...(text(item.renderer) ? { renderer: text(item.renderer) } : {}),
+      }))
+    : [];
+
+/**
+ * An entry of `ui` that is not `{plugin, renderer}`, in agentspecs' sentence
+ * (`ui_choices_problems`): a bare id is refused, never read as the plugin it
+ * names, and one naming a renderer says how to write it.
+ */
+const uiShapeProblems = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value
+        .filter(item => !isData(item))
+        .map(
+          item =>
+            `\`ui\` lists UI plugins, each as \`{plugin, renderer}\`: ${JSON.stringify(item)} is not one` +
+            (typeof item === 'string' && UI_RENDERER_CATALOGUE[item]
+              ? ` (${JSON.stringify(item)} is a UI renderer: name the plugin it renders, and say it as its \`renderer\`).`
+              : '.'),
+        )
     : [];
 
 /**
@@ -1273,6 +1281,7 @@ export function parseAppspec(document: unknown): ParsedAppspec {
       problems.push(`\`${key}\` is not a field of the spec.`);
     }
   }
+  problems.push(...uiShapeProblems(data.ui));
   const schema = text(data.schema, APP_SCHEMA);
   if (schema !== APP_SCHEMA) {
     problems.push(
