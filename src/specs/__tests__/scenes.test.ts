@@ -34,9 +34,14 @@ const HOME_SCENES: Record<string, [string, string[]]> = {
 
 describe('the scene catalogue', () => {
   it('holds the four scenes of the home page, each with a face of its own', () => {
-    expect(Object.keys(SCENE_CATALOGUE).sort()).toEqual(
-      Object.keys(HOME_SCENES).sort(),
-    );
+    // The teams staged; the scripted scenes (`kind: scripted`, AGENT_PROTOCOLS)
+    // are lines written out, with no team.
+    expect(
+      listSceneSpecs()
+        .filter(scene => scene.kind === 'team')
+        .map(scene => scene.id)
+        .sort(),
+    ).toEqual(Object.keys(HOME_SCENES).sort());
     const faces = listSceneSpecs().map(scene => scene.emoji);
     expect(new Set(faces).size).toBe(faces.length);
     expect(faces).not.toContain('👀');
@@ -90,7 +95,7 @@ describe('the scene catalogue', () => {
   });
 
   it('says each beat’s cue, its moves and what it shows', () => {
-    for (const scene of listSceneSpecs()) {
+    for (const scene of listSceneSpecs().filter(s => s.kind === 'team')) {
       expect(scene.script).toHaveLength(4);
       for (const beat of scene.script) {
         expect(beat.cue.say).toBeTruthy();

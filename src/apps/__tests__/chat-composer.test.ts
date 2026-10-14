@@ -50,8 +50,10 @@ describe('sending a message', () => {
     // The early return on an unhandled outcome has to come first, or the
     // clear runs on the failing path too.
     const handler = sendHandler();
+    // (Words sent elsewhere, `sendInstead`, are cleared in their own branch
+    // above, only when sent: the turn's clear is the first after the refusal.)
     const refused = handler.indexOf('if (!outcome.handled)');
-    const cleared = handler.indexOf("setDraft('')");
+    const cleared = handler.indexOf("setDraft('')", refused);
     expect(refused).toBeGreaterThan(-1);
     expect(cleared).toBeGreaterThan(refused);
     expect(handler.slice(refused, cleared)).toContain('return;');

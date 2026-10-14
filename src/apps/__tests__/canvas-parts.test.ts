@@ -95,7 +95,8 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     );
     // Every protocol and UI of the catalogue, a planned one offered but not enabled (PS-04).
     expect(ids).toContain('protocol:pap');
-    expect(parts.find(part => part.id === 'protocol:ucp')?.enabled).toBe(false);
+    expect(parts.find(part => part.id === 'protocol:ucp')?.enabled).toBe(true);
+    expect(parts.find(part => part.id === 'protocol:tap')?.enabled).toBe(false);
     expect(ids).toContain('ui:a2ui');
     expect(ids).toContain('character:paperclip');
     expect(CANVAS_PART_PLUGINS.map(plugin => plugin.name)).toEqual(

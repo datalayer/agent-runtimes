@@ -72,8 +72,8 @@ describe('what an in-page agent can reach', () => {
     // run, and the chat runs the one it calls (STUDIO D-10).
     const source = readFileSync(join(PLUGINS, 'chat/ChatView.tsx'), 'utf8');
     const handed = source.match(/frontendTools=\{[^}]*\}/g) ?? [];
-    expect(handed).toEqual([
-      'frontendTools={inPage ? undefined : chatExtras.frontendTools}',
-    ]);
+    expect(handed).toEqual(['frontendTools={inPage ? undefined : pageTools}']);
+    // The page's tools are the host's, with the tool bundles it hands added.
+    expect(source).toContain('const own = chatExtras.frontendTools ?? [];');
   });
 });

@@ -13,6 +13,15 @@ import { describe, expect, it, vi } from 'vitest';
 import type { FileRef } from '@datalayer/reactor/ui';
 import { blobOfDataUrl, namesFiles, withUploadedFiles } from '../uiFiles';
 
+/** A Blob's text, read as jsdom can: its Blob has no `text()`. */
+const textOf = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+
 const held = (name: string, type: string, text: string) => ({
   name,
   type,
@@ -62,7 +71,7 @@ describe('withUploadedFiles', () => {
     });
     expect(JSON.stringify(sent)).not.toContain('data:');
     const [[uploaded]] = upload.mock.calls;
-    expect(await uploaded.text()).toBe('a,b\n1,2\n');
+    expect(await textOf(uploaded)).toBe('a,b\n1,2\n');
     expect(namesFiles({ loop: {} })).toBe(false);
     expect(namesFiles(undefined)).toBe(false);
   });
@@ -90,6 +99,6 @@ describe('withUploadedFiles', () => {
     const blob = blobOfDataUrl('data:text/plain,hello%20there', 'a.txt');
     expect(blob.name).toBe('a.txt');
     expect(blob.type).toBe('text/plain');
-    expect(await blob.text()).toBe('hello there');
+    expect(await textOf(blob)).toBe('hello there');
   });
 });

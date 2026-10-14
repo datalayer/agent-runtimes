@@ -47,8 +47,8 @@ describe('the expired-key panel', () => {
     // their notebook and their transcript back as they left them.
     const root = workspaceRoot();
     const panel = root.slice(root.indexOf('{keyExpired ? ('));
-    expect(panel).toContain("position: 'absolute'");
-    expect(panel).toContain('inset: 0');
+    expect(panel).toContain('position="absolute"');
+    expect(panel).toContain('inset={0}');
     // And the root is what it is positioned against.
     expect(root).toContain("position: 'relative'");
   });

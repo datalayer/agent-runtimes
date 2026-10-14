@@ -21,6 +21,7 @@ import {
   inPageAgentRefusal,
   resolveAgentspec,
 } from '../apps/agent';
+import { browserSandboxNote, runsCodeInSandbox } from '../apps/browserSandbox';
 
 const blueprintOf = (plugin: ReturnType<typeof defineAppPlugin>) =>
   (plugin.contributes ?? []).find(
@@ -28,6 +29,13 @@ const blueprintOf = (plugin: ReturnType<typeof defineAppPlugin>) =>
   ) as unknown as {
     value: { specId: string; instructions?: string; model?: string };
   };
+
+/**
+ * What follows the application's instructions when its agent computes in
+ * the page's sandbox (STUDIO E-11): where its code runs and its documents are.
+ */
+const sandboxNote = (app: (typeof APP_CATALOGUE)[string]) =>
+  runsCodeInSandbox(app) ? `\n\n${browserSandboxNote(app)}` : '';
 
 /** What the page tells an application's agent, as ChatView builds it. */
 const inPage = (app: (typeof APP_CATALOGUE)[string]) => {
@@ -66,19 +74,22 @@ describe('an application’s agent in the page', () => {
     const cog = getCog('cog-customer-interviewer')!.spec;
     const { instructions } = inPage(interview);
     expect(instructions).toBe(
-      `${cog.systemPrompt!.trim()}\n\n${interview.instructions.trim()}`,
+      `${cog.systemPrompt!.trim()}\n\n${interview.instructions.trim()}${sandboxNote(interview)}`,
     );
   });
 
   it('runs on the application’s model when it names one', () => {
     const research = APP_CATALOGUE['web-research'];
-    const { model, instructions } = inPage({
+    const app = {
       ...research,
       model: 'openai:gpt-4.1',
       instructions: 'Answer in French.',
-    });
+    };
+    const { model, instructions } = inPage(app);
     expect(model).toBe('openai:gpt-4.1');
-    expect(instructions?.endsWith('Answer in French.')).toBe(true);
+    expect(instructions?.endsWith(`Answer in French.${sandboxNote(app)}`)).toBe(
+      true,
+    );
   });
 
   it('refuses an agent that resolves to nothing, in a sentence', () => {

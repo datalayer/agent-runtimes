@@ -77,8 +77,9 @@ describe('the chat split', () => {
     // The header only shows when a plugin took the point (and the host did
     // not hide it).
     expect(source).toContain(
-      'showHeader={!config?.hideHeader && !!HeaderComponent}',
+      'const headerShown = !config?.hideHeader && !!HeaderComponent;',
     );
+    expect(source).toContain('showHeader={headerShown}');
   });
 });
 

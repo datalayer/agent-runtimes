@@ -160,6 +160,19 @@ describe('the three dots', () => {
   });
 });
 
+/**
+ * The balloon's words as the eye reads them: without the whole words a screen
+ * reader is given beside a cut (H-21, `data-balloon-words-whole`) or the
+ * announcer that says them once written.
+ */
+const drawnWords = (): string => {
+  const drawn = document
+    .querySelector('[data-balloon-current-text]')!
+    .cloneNode(true) as HTMLElement;
+  drawn.querySelectorAll('[data-balloon-words-whole]').forEach(n => n.remove());
+  return drawn.textContent ?? '';
+};
+
 describe('words cut to fit', () => {
   it('show whole with more, and fold back with less', async () => {
     const whole = `Two invoices are open: ${'Ada owes 1,200 EUR, '.repeat(12)}and that is all.`;
@@ -170,13 +183,13 @@ describe('words cut to fit', () => {
     const toggle = document.querySelector<HTMLElement>('[data-balloon-whole]')!;
     expect(toggle.textContent).toBe('more');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(document.body.textContent).not.toContain('and that is all.');
+    expect(drawnWords()).not.toContain('and that is all.');
     await act(async () => toggle.click());
-    expect(document.body.textContent).toContain('and that is all.');
+    expect(drawnWords()).toContain('and that is all.');
     expect(toggle.textContent).toBe('less');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     await act(async () => toggle.click());
-    expect(document.body.textContent).not.toContain('and that is all.');
+    expect(drawnWords()).not.toContain('and that is all.');
   });
 
   it('offer no more when nothing was cut', async () => {

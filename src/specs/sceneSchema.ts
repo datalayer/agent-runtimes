@@ -293,8 +293,11 @@ export const SCENE_SCHEMA: JsonSchema = {
       properties: {
         kind: {
           $ref: '#/$defs/SceneCardKind',
+          description:
+            'What the card is: a find, a sign-in, an approval, a done, a record',
         },
         title: {
+          description: 'Its title, on top',
           title: 'Title',
           type: 'string',
         },
