@@ -15,6 +15,15 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 - **TAP, a draft profile over Web Bot Auth** (AGENT_PROTOCOLS PR-24, decided 2026-10-13): `sign_tap_request` / `signTapRequest` and `verify_tap_request` / `verifyTapRequest` — Visa's agent-recognition signature as its public Merchant Specifications say it (`@authority` and `@path`, `created`, `keyid`, `alg="Ed25519"`, `expires`, `nonce`, `tag` `agent-browser-auth` or `agent-payer-auth`, at most 8 minutes, a nonce a replay for 8 minutes), keys by `keyid`; not confirmed by Visa. Vectors computed here (`web_bot_auth/fixtures/tap.json`) and reproduced by Cloudflare's `http-message-sig` (now a direct dependency, `0.3.0`) — [Web Bot Auth](https://agent-runtimes.datalayer.tech/protocols/web-bot-auth#tap-a-draft-profile).
 
+## 1.5.17
+
+On agentspecs 0.0.93.
+
+- **UI specs are the Reactor plugins; A2UI, MCP Apps and MCP UI their own `ui-renderers`** (AGENTIC_UI F-03..F-05, F-07): `src/specs/ui.ts` and the new `uiRenderers.ts`, an app's `ui: [{plugin, renderer?}]`, the old shape refused; the canvas toolbox offers a part per UI plugin.
+- **A deployment's page opens each visitor's own conversation, never the runtime agent's** (PAP_DATALAYER release gate); what a deployment's agent holds is nobody's to read or decide on its runtime.
+- **CI green again**: mypy clean, numpydoc and interrogate pass, stale tests and one stale example brought to the code, the docs build.
+- `@datalayer/personal-agent-protocol` `^0.23.0`.
+
 ## 1.5.16
 
 On agentspecs 0.0.92.
