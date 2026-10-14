@@ -48,6 +48,11 @@ import type {
 } from '../types/agents-lifecycle';
 import { ServiceManager } from '@jupyterlab/services/lib/manager';
 import { disposeSandboxServiceManagers } from '../services/sandboxServiceManagers';
+import {
+  agentDeletionUrl,
+  launchesOwnRoutesOnly,
+  runtimeStatusUrl,
+} from './ownRoutes';
 import { runtimeUrl, runtimesUrl } from '../runtimes/lifecycle';
 
 import {
@@ -299,6 +304,11 @@ export interface AgentSandboxConnectionInfo {
   agentId?: string;
   agentBaseUrl?: string;
   runtimeEnvironment?: RuntimeEnvironmentDetails;
+  /**
+   * The runtime answers only the application's own routes (OwnRoutesOnly):
+   * its agent's status is not asked, and the ingress given is used.
+   */
+  ownRoutesOnly?: boolean;
 }
 
 export interface RuntimeEnvironmentDetails {
@@ -472,26 +482,23 @@ export async function createServiceManagerFromAgentSandbox(
     .replace(/\/$/, '');
   const agentId = String(info.agentId || '').trim();
   const bearer = String(authToken || '').trim();
-  if (agentBaseUrl && agentId && bearer) {
-    const statusCandidates = [
-      `${agentBaseUrl}/api/v1/runtime/status?agent_id=${encodeURIComponent(agentId)}`,
-    ];
-    for (const statusUrl of statusCandidates) {
-      try {
-        const response = await fetch(statusUrl, {
-          headers: {
-            Authorization: `Bearer ${bearer}`,
-          },
-        });
-        if (!response.ok) {
-          continue;
-        }
-        const payload = (await response
-          .json()
-          .catch(() => null)) as SandboxStatusResponse | null;
-        if (!payload) {
-          continue;
-        }
+  const statusUrl =
+    agentBaseUrl && agentId && bearer
+      ? runtimeStatusUrl(agentBaseUrl, agentId, Boolean(info.ownRoutesOnly))
+      : undefined;
+  if (statusUrl) {
+    try {
+      const response = await fetch(statusUrl, {
+        headers: {
+          Authorization: `Bearer ${bearer}`,
+        },
+      });
+      const payload = response.ok
+        ? ((await response
+            .json()
+            .catch(() => null)) as SandboxStatusResponse | null)
+        : null;
+      if (payload) {
         payloadFromStatus = payload;
         const ingressFromStatus = resolveSandboxIngress(payload);
         if (ingressFromStatus) {
@@ -507,10 +514,9 @@ export async function createServiceManagerFromAgentSandbox(
           }
         }
         tokenFromStatus = resolveSandboxToken(payload);
-        break;
-      } catch {
-        // Keep fallback ingress/token when status endpoint is unavailable.
       }
+    } catch {
+      // Keep fallback ingress/token when status endpoint is unavailable.
     }
   }
 
@@ -637,6 +643,9 @@ export function useAgentRuntimes(
   // Both vocabularies funnel into one value here, so no branch below has to
   // remember that the old names exist.
   const variant = toAgentRuntimeVariant(variantOption ?? runtimeCreationTarget);
+  // Launched for a deployment, its runtime answers only the application's
+  // own routes (OwnRoutesOnly): nothing else is asked of it.
+  const ownRoutesOnly = launchesOwnRoutesOnly(appLaunch);
 
   const { configuration } = useCoreStore();
 
@@ -878,16 +887,18 @@ export function useAgentRuntimes(
   const teardown = useCallback(async () => {
     const agentId = runtime?.agentId;
     const agentBaseUrl = runtime?.agentBaseUrl;
-    if (agentId && agentBaseUrl) {
+    // A deployment's runtime keeps its agent: nobody outside deletes it.
+    const deletion =
+      agentId && agentBaseUrl
+        ? agentDeletionUrl(agentBaseUrl, agentId, ownRoutesOnly)
+        : undefined;
+    if (deletion) {
       try {
         const { token } = await getAuthHeaders();
-        await fetch(
-          `${agentBaseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`,
-          {
-            method: 'DELETE',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
+        await fetch(deletion, {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
       } catch {
         // Best-effort teardown: ignore network / 404 errors.
       }
@@ -898,7 +909,7 @@ export function useAgentRuntimes(
     setLifecycleStatus('idle');
     setLifecycleError(null);
     agentRuntimeStore.getState().reset();
-  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders]);
+  }, [runtime?.agentId, runtime?.agentBaseUrl, getAuthHeaders, ownRoutesOnly]);
 
   // ─── Auto-create agent when runtime is ready (connect mode) ───────
 

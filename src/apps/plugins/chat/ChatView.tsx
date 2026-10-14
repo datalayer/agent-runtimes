@@ -113,6 +113,7 @@ import {
   type SandboxFile,
 } from '../../apps/browserSandbox';
 import { useConfig } from '../../../hooks/useConfig';
+import { runtimeModelsUrl } from '../../../hooks/ownRoutes';
 import { useSkills, useSkillActions } from '../../../hooks/useSkills';
 import type {
   AgentSuggestion,
@@ -1823,12 +1824,17 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     if (inPage || agentServerUrl === undefined) {
       return undefined;
     }
+    // A deployment's runtime does not answer it (OwnRoutesOnly): nothing to
+    // offer, as when a runtime does not answer, and its selector is hidden.
+    const modelsUrl = runtimeModelsUrl(agentServerUrl, agentId, ownRoutesOnly);
+    if (!modelsUrl) {
+      setCatalogModels([]);
+      return undefined;
+    }
     let cancelled = false;
     // The agent's own models (its model and model_additionals), each saying
     // whether its inference serves it.
-    void fetch(
-      `${agentServerUrl}/api/v1/configure/models?agent_id=${encodeURIComponent(agentId)}`,
-    )
+    void fetch(modelsUrl)
       .then(response => (response.ok ? response.json() : null))
       .then(payload => {
         if (!cancelled) {
@@ -1851,7 +1857,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [agentServerUrl, agentId, inPage]);
+  }, [agentServerUrl, agentId, inPage, ownRoutesOnly]);
 
   /*
    * What to offer when the server has no catalogue of its own.
