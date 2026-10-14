@@ -643,10 +643,18 @@ async def _page_socket(port: int) -> str:
     """The DevTools address of the browser's one page."""
     import httpx
 
+    deadline = asyncio.get_running_loop().time() + START_TIMEOUT
     async with httpx.AsyncClient(timeout=5) as client:
-        for _ in range(int(START_TIMEOUT / 0.1)):
-            listed = (await client.get(f"http://127.0.0.1:{port}/json/list")).json()
-            for target in listed:
+        while asyncio.get_running_loop().time() < deadline:
+            try:
+                answer = await client.get(f"http://127.0.0.1:{port}/json/list")
+            except httpx.TransportError:
+                # Still starting: its DevTools port is written before it
+                # answers there, and a first start on a fresh machine took
+                # longer than one request's wait (seen on GitHub's runners).
+                await asyncio.sleep(0.1)
+                continue
+            for target in answer.json():
                 if target.get("type") == "page":
                     return str(target["webSocketDebuggerUrl"])
             await asyncio.sleep(0.1)
