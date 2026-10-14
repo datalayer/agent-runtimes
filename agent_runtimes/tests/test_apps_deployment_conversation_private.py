@@ -120,7 +120,8 @@ def test_a_deployments_history_is_read_changed_and_cleared_by_nobody(
         "/api/v1/history", params={"agent_id": SHIPPED}, json={"messages": []}
     )
     assert posted.status_code == 404
-    assert get_usage_tracker().get_agent_stats(SHIPPED).message_history == TURN
+    shipped = get_usage_tracker().get_agent_stats(SHIPPED)
+    assert shipped is not None and shipped.message_history == TURN
     # A Preview's own conversation is read as before.
     preview = client.get("/api/v1/history", params={"agent_id": PREVIEW}).json()[
         "messages"
@@ -130,7 +131,9 @@ def test_a_deployments_history_is_read_changed_and_cleared_by_nobody(
 
 def test_default_never_resolves_to_a_deployments_agent(agents: None) -> None:
     tracker = get_usage_tracker()
-    tracker.get_agent_stats(PREVIEW).message_history = []
+    preview_stats = tracker.get_agent_stats(PREVIEW)
+    assert preview_stats is not None
+    preview_stats.message_history = []
     app = FastAPI()
     app.include_router(history_router, prefix="/api/v1")
     answer = TestClient(app).get("/api/v1/history")

@@ -186,7 +186,10 @@ def test_an_application_refuses_a_renderer_named_as_its_ui() -> None:
 
     with pytest.raises(Exception, match="UI renderer"):
         Application(
-            "speaker", "chat", agent="example-blank:0.0.1", ui=["a2ui"]
+            "speaker",
+            "chat",
+            agent="example-blank:0.0.1",
+            ui=["a2ui"],  # type: ignore[list-item]  # the old shape, refused
         ).spec
 
 
