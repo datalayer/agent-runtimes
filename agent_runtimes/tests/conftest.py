@@ -58,6 +58,28 @@ def _a_ui_hub_per_test(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 @pytest.fixture(autouse=True)
+def _app_instances_kept() -> Iterator[None]:
+    """Each test leaves the application instances its runtime serves as it found them.
+
+    A runtime one of whose agents serves a deployment answers only the
+    application's own routes (`principal.a_deployment_is_served`): a test that
+    configured a deployment and left it remembered would have every later
+    test's other routes answer 404.
+
+    Yields
+    ------
+    None
+        While the test runs; the instances are put back after.
+    """
+    from agent_runtimes.models import models
+
+    kept = dict(models._APP_INSTANCES)
+    yield
+    models._APP_INSTANCES.clear()
+    models._APP_INSTANCES.update(kept)
+
+
+@pytest.fixture(autouse=True)
 def _logging_levels_kept() -> Iterator[None]:
     """Each test leaves the loggers' levels as it found them.
 
