@@ -2390,7 +2390,7 @@ export const APPSPEC_SCHEMA: JsonSchema = {
           $ref: '#/$defs/VoiceInput',
           default: 'push_to_talk',
           description:
-            '`off`, `push_to_talk` (hold a key or the microphone, speak, let go) or `hands_free`',
+            '`off` or `push_to_talk` (click the microphone or hold it, speak; it stops when let go or once the person stops speaking)',
         },
         output: {
           $ref: '#/$defs/VoiceOutput',
@@ -2713,8 +2713,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     VoiceInput: {
       description:
-        'How a person talks to the application (VOICE.md VO-10, VO-12).',
-      enum: ['off', 'push_to_talk', 'hands_free'],
+        'How a person talks to the application (VOICE.md VO-10).\n\n`hands_free` (VO-12) is not one yet: it is refused in a sentence until it\nis built, never taken for click-to-talk.',
+      enum: ['off', 'push_to_talk'],
       title: 'VoiceInput',
       type: 'string',
     },

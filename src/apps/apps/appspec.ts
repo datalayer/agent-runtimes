@@ -977,6 +977,13 @@ function parseSurface(data: Data): AppSurfaceSpec {
   };
 }
 
+/**
+ * Why `interface.voice.input: hands_free` is refused until VOICE.md VO-12 is
+ * built (decided 14 October 2026): never taken for click-to-talk.
+ */
+export const HANDS_FREE_NOT_BUILT =
+  'hands_free is not built yet (VOICE.md VO-12): say push_to_talk — click the microphone or hold it, speak, and it stops when let go or once the person stops speaking';
+
 /** An application's voice (VOICE.md VO-41): off unless said. */
 export const DEFAULT_VOICE: AppVoiceSpec = {
   enabled: false,
@@ -993,7 +1000,7 @@ function parseVoice(data: unknown): AppVoiceSpec {
     enabled: voice.enabled === true,
     input: oneOf(
       voice.input,
-      ['off', 'push_to_talk', 'hands_free'] as const,
+      ['off', 'push_to_talk'] as const,
       DEFAULT_VOICE.input,
     ),
     output: oneOf(

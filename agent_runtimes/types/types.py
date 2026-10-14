@@ -1716,7 +1716,8 @@ class AppVoiceSpec(BaseModel):
 
     enabled: bool = False
     input: str = Field(
-        default="push_to_talk", description="`off`, `push_to_talk` or `hands_free`"
+        default="push_to_talk",
+        description="`off` or `push_to_talk`; `hands_free` (VO-12) is refused until built",
     )
     output: str = Field(
         default="on_request", description="`off`, `on_request` or `always`"

@@ -62,8 +62,7 @@ export interface ChatVoicePlace {
  * - **Listening**: a microphone in the composer — click it and speak, the
  *   words written in the box as they are heard, stopped by a second click
  *   or when the person stops speaking; or held, and let go (VO-10, VO-11).
- *   `hands_free` (VO-12) is not built: it listens as that microphone does,
- *   a turn at a time, and never sends on its own.
+ *   `hands_free` (VO-12) is not built: `checkAppspec` refuses it.
  * - **Speaking**: its answers said by Datalayer's speech service, on request
  *   or always (VO-20, VO-21); refused here when its host says no service.
  */

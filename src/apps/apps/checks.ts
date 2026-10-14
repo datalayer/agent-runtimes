@@ -50,6 +50,7 @@ import { pluginsOffSetupNotes } from '../plugins/canvas-blocks';
 import {
   APP_THEME_MODES,
   APP_THEME_VARIANTS,
+  HANDS_FREE_NOT_BUILT,
   isAssistantCharacterId,
   PAGE_OUTPUT_SHOWS,
   parseAppspec,
@@ -868,6 +869,9 @@ const ENUMS = {
   visibility: ['private', 'invited', 'organization', 'link', 'public'],
   mode: ['inline', 'bubble', 'panel', 'assistant'],
   balloon: ['history', 'current'],
+  voiceInput: ['off', 'push_to_talk'],
+  voiceOutput: ['off', 'on_request', 'always'],
+  voiceWhere: ['auto', 'device', 'server'],
   themeVariant: APP_THEME_VARIANTS,
   themeMode: APP_THEME_MODES,
   trigger: ['schedule', 'event', 'once'],
@@ -1037,6 +1041,16 @@ export function documentShapeProblems(document: unknown): string[] {
         'names a character by the id a plugin contributes it under, lowercase words joined by a hyphen: `paperclip`, `acme-owl`',
       );
     }
+    // Its voice (VOICE.md VO-41); hands-free refused until it is built (VO-12).
+    mapping(ui.voice, 'interface.voice', voice => {
+      if (voice.input === 'hands_free') {
+        at('interface.voice.input', HANDS_FREE_NOT_BUILT);
+      } else {
+        oneOf(voice.input, ENUMS.voiceInput, 'interface.voice.input');
+      }
+      oneOf(voice.output, ENUMS.voiceOutput, 'interface.voice.output');
+      oneOf(voice.where, ENUMS.voiceWhere, 'interface.voice.where');
+    });
     text(ui.welcome, 'interface.welcome');
     texts(ui.components, 'interface.components');
     const starter = (item: Raw, where: string) => {

@@ -419,10 +419,6 @@ describe('a chat’s voice from its spec (VO-41, VO-49)', () => {
       consentKey: 'app-1',
     });
     expect(voice.engines).toBe(DATALAYER_VOICE_ENGINES);
-    // Hands-free is not built: it listens as the microphone does, a turn at a time.
-    expect(chatVoiceOf(spec({ input: 'hands_free' }), place)!.input).toBe(
-      'push_to_talk',
-    );
   });
 
   it('refuses answers heard with no speech service', () => {
