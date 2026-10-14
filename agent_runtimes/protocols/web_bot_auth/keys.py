@@ -43,6 +43,7 @@ def _unb64url(text: str) -> bytes:
 def jwk_thumbprint(jwk: Mapping[str, Any]) -> str:
     """The base64url SHA-256 thumbprint of a public JWK (RFC 7638, RFC 8037)."""
     kty = jwk.get("kty")
+    members: tuple[str, ...]
     if kty == "OKP":
         members = ("crv", "kty", "x")
     elif kty == "EC":

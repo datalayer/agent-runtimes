@@ -120,7 +120,7 @@ async def test_what_the_profile_does_not_allow_is_refused() -> None:
     browse = TAP["vectors"][0]
     store = _Remembering()
 
-    async def check(**changes):  # type: ignore[no-untyped-def]
+    async def check(**changes):
         asked = {
             "method": browse["method"],
             "url": browse["url"],

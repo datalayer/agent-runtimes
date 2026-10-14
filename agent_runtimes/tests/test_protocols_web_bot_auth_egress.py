@@ -11,6 +11,7 @@ anything is sent, a redirect is not followed, and the body is bounded.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 import pytest
@@ -22,7 +23,7 @@ from agent_runtimes.protocols.web_bot_auth.verify import (
     resolving_fetch,
 )
 
-JWKS = {"keys": []}
+JWKS: dict[str, list[Any]] = {"keys": []}
 INSIDE = ["10.0.0.5", "127.0.0.1", "172.20.0.10", "10.96.0.1", "169.254.169.254"]
 
 

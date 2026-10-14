@@ -29,15 +29,15 @@ def secrets(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     approve = ExampleAir.approve
     put = InMemoryDelegationStore.put
 
-    async def pap_approved(self, user_code, **kwargs):  # type: ignore[no-untyped-def]
+    async def pap_approved(self, user_code, **kwargs):
         seen.append(user_code)
         return await approve_device(self, user_code, **kwargs)
 
-    def pact_approved(self, user_code, brand_user, scopes):  # type: ignore[no-untyped-def]
+    def pact_approved(self, user_code, brand_user, scopes):
         seen.append(user_code)
         return approve(self, user_code, brand_user, scopes)
 
-    async def held(self, brand, user, token, scopes):  # type: ignore[no-untyped-def]
+    async def held(self, brand, user, token, scopes):
         seen.append(token)
         return await put(self, brand, user, token, scopes)
 

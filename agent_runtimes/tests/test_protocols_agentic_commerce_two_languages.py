@@ -36,7 +36,7 @@ VITEST = next(
 SPEC = "src/protocols/agentic-commerce/acpSeller.integration.test.ts"
 
 
-def _example_module():  # type: ignore[no-untyped-def]
+def _example_module():
     path = ROOT / "examples" / "protocols" / "agentic_commerce" / "seller_server.py"
     spec = importlib.util.spec_from_file_location("acp_seller_server", path)
     assert spec and spec.loader
@@ -52,7 +52,7 @@ def _free_port() -> int:
 
 
 @pytest.fixture
-def seller():  # type: ignore[no-untyped-def]
+def seller():
     import uvicorn
 
     port = _free_port()
@@ -72,7 +72,7 @@ def seller():  # type: ignore[no-untyped-def]
     thread.join(timeout=10)
 
 
-def test_the_seller_answers_its_discovery_at_its_own_address(seller) -> None:  # type: ignore[no-untyped-def]
+def test_the_seller_answers_its_discovery_at_its_own_address(seller) -> None:
     profile = httpx.get(f"{seller.base}/.well-known/acp.json").json()
     assert seller.base in json_text(profile)
 
@@ -86,7 +86,7 @@ def json_text(value: object) -> str:
 @pytest.mark.skipif(
     VITEST is None, reason="the package's node modules are not installed"
 )
-def test_the_typescript_buyer_at_the_python_seller(seller) -> None:  # type: ignore[no-untyped-def]
+def test_the_typescript_buyer_at_the_python_seller(seller) -> None:
     done = subprocess.run(
         [str(VITEST), "run", "--project=integration", SPEC],
         cwd=ROOT,

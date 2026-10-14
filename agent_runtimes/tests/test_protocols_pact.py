@@ -216,7 +216,7 @@ class _Says:
     def __init__(self) -> None:
         self.turns: list = []
 
-    async def answer(self, turn):  # type: ignore[no-untyped-def]
+    async def answer(self, turn):
         from agent_runtimes.protocols.pact.provider import BrandAnswer
 
         self.turns.append(turn)
@@ -229,7 +229,7 @@ class _Says:
         )
 
 
-def _brand(scopes: dict[str, str] | None = None):  # type: ignore[no-untyped-def]
+def _brand(scopes: dict[str, str] | None = None):
     from agent_runtimes.protocols.pact.provider import (
         InMemoryBrandStore,
         PactBrand,
@@ -240,7 +240,7 @@ def _brand(scopes: dict[str, str] | None = None):  # type: ignore[no-untyped-def
     key = LocalSigner.generate("ecdsa-p256-sha256")
     published = {"keys": [{**key.public_jwk, "alg": "ES256", "use": "sig"}]}
 
-    async def jwks():  # type: ignore[no-untyped-def]
+    async def jwks():
         return published
 
     signer = LocalSigner.generate("ecdsa-p256-sha256")
@@ -270,7 +270,7 @@ def _brand(scopes: dict[str, str] | None = None):  # type: ignore[no-untyped-def
         transport=httpx.ASGITransport(app=brand.app()), base_url=brand.base
     )
 
-    def agent_with(issuer: str, key_of_agent):  # type: ignore[no-untyped-def]
+    def agent_with(issuer: str, key_of_agent):
         return PactPersonalAgent(
             card_url=f"{brand.interface_url}/.well-known/agent-card.json",
             issuer=issuer,
@@ -376,9 +376,9 @@ def test_a_brand_signs_es256_only():
             scopes={},
             audience="a",
             signer=LocalSigner.generate("ed25519"),
-            jwks=None,  # type: ignore[arg-type]
+            jwks=None,
             issuers=None,
             store=None,
             agent=None,
-            verification_uri="https://d.example/v",  # type: ignore[arg-type]
+            verification_uri="https://d.example/v",
         )

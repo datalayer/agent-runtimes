@@ -28,6 +28,7 @@ from agent_runtimes.loop.apps import AppHost, Application, sessions
 from agent_runtimes.loop.apps.callers import Caller
 from agent_runtimes.loop.apps.components import ANSWER_DISPLAY_TYPE, AnswerShows
 from agent_runtimes.loop.apps.record import AppRecorder
+from agent_runtimes.loop.apps.session import Session
 
 
 class Row(BaseModel):
@@ -61,6 +62,12 @@ async def hosted(uid: str) -> tuple[sessions.LiveSession, List[Any]]:
     live.host = AppHost(application, live, recorder=live.recorder)
     live.session = await live.host.open(id=live.uid)
     return live, pressed
+
+
+def opened(live: sessions.LiveSession) -> Session:
+    """The session a live session holds, once it is open."""
+    assert live.session is not None
+    return live.session
 
 
 def events_of(chunks: List[str]) -> List[Dict[str, Any]]:
@@ -113,7 +120,7 @@ async def test_a_button_is_offered_with_a_token_for_its_display() -> None:
     sessions.forget_sessions()
     live, _ = await hosted("session-ru2-1")
     queue = live._open_stream()
-    sent = await live.session.send("Done.", show=button(live.session, "again"))
+    sent = await opened(live).send("Done.", show=button(opened(live), "again"))
 
     # Nothing of it on the run stream: the text only.
     assert {e["type"] for e in drained(queue)} <= {
@@ -138,7 +145,7 @@ async def test_a_press_checked_on_the_socket_runs_once_in_the_run_naming_it() ->
     sessions.forget_sessions()
     live, pressed = await hosted("session-ru2-2")
     live._open_stream()
-    await live.session.send("Done.", show=button(live.session, "again"))
+    await opened(live).send("Done.", show=button(opened(live), "again"))
     live._end_stream()
     waiting = live.press_up(ADA, press_of(shown(live.uid), idempotency_id="p-1"))
     assert waiting == {"press": "p-1"}
@@ -173,7 +180,7 @@ async def test_a_press_not_offered_is_refused_before_anything_runs(
     sessions.forget_sessions()
     live, pressed = await hosted(f"session-ru2-{status}-{len(change)}")
     live._open_stream()
-    await live.session.send("Done.", show=button(live.session, "again"))
+    await opened(live).send("Done.", show=button(opened(live), "again"))
 
     with pytest.raises(UiActionError) as refused:
         live.press_up(ADA, press_of(shown(live.uid), **change))
@@ -187,7 +194,7 @@ async def test_a_press_by_somebody_else_or_of_another_session_is_refused() -> No
     first, _ = await hosted("session-ru2-a")
     second, pressed = await hosted("session-ru2-b")
     first._open_stream()
-    await first.session.send("Done.", show=button(first.session, "again"))
+    await opened(first).send("Done.", show=button(opened(first), "again"))
     press = press_of(shown(first.uid))
 
     with pytest.raises(UiActionError) as other_session:
@@ -204,7 +211,7 @@ async def test_a_run_carrying_a_displays_press_itself_is_refused() -> None:
     sessions.forget_sessions()
     live, pressed = await hosted("session-ru2-d")
     live._open_stream()
-    await live.session.send("Done.", show=button(live.session, "again"))
+    await opened(live).send("Done.", show=button(opened(live), "again"))
     display = shown(live.uid)
     for loop in (
         {
@@ -230,4 +237,4 @@ async def test_a_button_for_an_action_the_code_has_not_is_refused_as_it_is_sent(
     live._open_stream()
 
     with pytest.raises(ValueError, match="no @app.action"):
-        await live.session.send("Done.", show=button(live.session, "missing"))
+        await opened(live).send("Done.", show=button(opened(live), "missing"))

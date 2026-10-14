@@ -36,7 +36,7 @@ VITEST = next(
 SPEC = "src/protocols/mcp/mcpServer.integration.test.ts"
 
 
-def _example_module():  # type: ignore[no-untyped-def]
+def _example_module():
     path = ROOT / "examples" / "protocols" / "mcp" / "fixture_server.py"
     spec = importlib.util.spec_from_file_location("mcp_fixture_server", path)
     assert spec and spec.loader
@@ -52,7 +52,7 @@ def _free_port() -> int:
 
 
 @pytest.fixture
-def server_url():  # type: ignore[no-untyped-def]
+def server_url():
     import uvicorn
 
     example = _example_module()

@@ -66,14 +66,15 @@ async def asking(
         recorder=AppRecorder(app=application.spec, send=_ignore),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    session = await live.host.open(id=live.uid)
+    live.session = session
     got: List[Any] = []
 
     async def work() -> None:
         if question == "rule":
-            got.append(await live.session._allowed("Send the mail to Bob?"))
+            got.append(await session._allowed("Send the mail to Bob?"))
         else:
-            got.append(await live.session.ask(question))
+            got.append(await session.ask(question))
 
     chunks = [chunk async for chunk in live._start_turn(work, wraps_run=True)]
     return live, got, events_of(chunks)

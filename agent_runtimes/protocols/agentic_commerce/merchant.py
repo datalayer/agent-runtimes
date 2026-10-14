@@ -239,7 +239,7 @@ class ExampleOutfitters:
                     "message": f"No product {line['id']}",
                 }
         declared = set((body.get("capabilities") or {}).get("extensions") or [])
-        session = {
+        session: dict[str, Any] = {
             "id": f"cs_{uuid.uuid4().hex[:12]}",
             "status": "not_ready_for_payment",
             "lines": _counted(body["line_items"]),

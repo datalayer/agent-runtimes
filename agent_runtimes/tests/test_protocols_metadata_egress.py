@@ -91,8 +91,8 @@ async def test_a_merchant_whose_name_points_inside_is_refused_unsent(
         issuer="https://agent.example",
         audience="https://provider.example/a2a",
         signer=None,
-        delegations=None,
-        receipts=None,
+        delegations=None,  # type: ignore[arg-type]
+        receipts=None,  # type: ignore[arg-type]
         metadata=_fetch([address], {}, sent),
     )
     with pytest.raises(PersonalAgentProtocolError) as refused:
@@ -162,8 +162,8 @@ def test_the_default_is_the_single_egress_path() -> None:
         issuer="https://agent.example",
         audience="https://provider.example/a2a",
         signer=None,
-        delegations=None,
-        receipts=None,
+        delegations=None,  # type: ignore[arg-type]
+        receipts=None,  # type: ignore[arg-type]
     )
     for client in (ucp, acp, pact):
         assert client.metadata.__qualname__ == "metadata_fetch.<locals>.fetch"

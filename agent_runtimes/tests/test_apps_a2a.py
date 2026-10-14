@@ -242,7 +242,7 @@ class TestTheCard:
         from agent_runtimes.loop.apps.loading import load_app
         from agent_runtimes.protocols.a2a import find_extension
 
-        gift = {
+        gift: dict[str, Any] = {
             "uri": "https://shop.example/extensions/gift-wrap/v1",
             "description": "Wraps an order as a gift.",
             "params": {"papers": ["red", "gold"]},
@@ -273,7 +273,8 @@ class TestTheCard:
             False,
             gift["params"],
         )
-        assert find_extension(card, "urn:example:loyalty").required is True
+        loyalty = find_extension(card, "urn:example:loyalty")
+        assert loyalty is not None and loyalty.required is True
 
     @pytest.mark.asyncio
     async def test_the_browsers_fixture_is_the_card_the_runtime_serves(

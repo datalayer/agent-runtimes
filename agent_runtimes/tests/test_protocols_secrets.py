@@ -128,9 +128,9 @@ async def test_pact_the_codes_and_the_delegation_token(seen: Seen) -> None:
     device_code = agent._pending[sign_in.reference]
     provider.approve(sign_in.user_code, "jane-4471", ["bookings:read"])
     await agent.finish_sign_in(pact.USER, sign_in, interval=0)
-    token, _ = await delegation_store_of(platform).get(
-        agent.card.interface_url, pact.USER
-    )
+    held = await delegation_store_of(platform).get(agent.card.interface_url, pact.USER)
+    assert held is not None
+    token, _ = held
     await agent.send(pact.USER, "When is my booking?")
     # The user code is the person's to type at the Brand: shown to them, never logged.
     seen.assert_holds_none_of(device_code, token)

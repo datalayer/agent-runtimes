@@ -163,7 +163,7 @@ class DisplayMCPToolset(MCPToolset):
                     caught.append(display)
             return result
 
-        self.client.call_tool = call_tool  # type: ignore[method-assign]
+        self.client.call_tool = call_tool
 
     async def __aenter__(self) -> "DisplayMCPToolset":
         try:

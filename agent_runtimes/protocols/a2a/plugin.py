@@ -25,7 +25,7 @@ Points:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional, Protocol, runtime_checkable
+from typing import Any, Iterable, Mapping, Optional, Protocol, runtime_checkable
 
 from reactor import PluginManifest, PluginPlatform, define_contribution_point, hookimpl
 
@@ -177,7 +177,7 @@ def _providers(platform: PluginPlatform) -> list[A2AExtension]:
 def card_extensions(
     platform: PluginPlatform,
     context: CardContext,
-    declared: list[CardExtension | Mapping[str, Any]] | None = None,
+    declared: Iterable[CardExtension | Mapping[str, Any]] | None = None,
 ) -> list[CardExtension]:
     """What one agent's card publishes: what is contributed, then what the card declares.
 

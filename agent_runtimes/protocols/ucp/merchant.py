@@ -244,7 +244,7 @@ class ExampleStore:
                     ],
                 }
             lines.append({"id": item, "quantity": int(line.get("quantity", 1))})
-        checkout = {
+        checkout: dict[str, Any] = {
             "id": f"chk_{uuid.uuid4().hex[:12]}",
             "status": "incomplete",
             "lines": lines,

@@ -123,7 +123,7 @@ def agent_over(toolset: DisplayMCPToolset, tool: str, seen: list[Any]) -> Agent:
 
     @agent.tool_plain(name=f"manzanita__{tool}")
     async def call() -> Any:
-        return await toolset.call_tool(tool, {}, None, TOOL)  # type: ignore[arg-type]
+        return await toolset.call_tool(tool, {}, None, TOOL)
 
     return agent
 
@@ -143,7 +143,7 @@ def tool_return(messages: list[ModelMessage]) -> ToolReturnPart:
 async def test_the_model_reads_the_display_s_model_view_only(
     gateway: DisplayMCPToolset,
 ) -> None:
-    back = await gateway.call_tool("pap_sign_in", {}, None, TOOL)  # type: ignore[arg-type]
+    back = await gateway.call_tool("pap_sign_in", {}, None, TOOL)
 
     assert isinstance(back, ToolReturn)
     read = json.dumps(back.return_value)
@@ -170,7 +170,7 @@ async def test_the_model_reads_the_display_s_model_view_only(
 async def test_a_result_without_a_display_passes_through(
     gateway: DisplayMCPToolset,
 ) -> None:
-    back = await gateway.call_tool("plain", {}, None, TOOL)  # type: ignore[arg-type]
+    back = await gateway.call_tool("plain", {}, None, TOOL)
 
     assert back == PLAIN
 
@@ -342,6 +342,7 @@ async def test_a_reloaded_history_draws_the_display_the_model_never_read(
     assert json.loads(kept["content"])["type"] == PapSignIn.display_type
 
     (tool,) = [m for m in _convert_to_chat_messages(stored, "a1") if m.role == "tool"]
+    assert isinstance(tool.content, str)
     page = json.loads(tool.content)
     display = page["_meta"][DISPLAY_META_KEY]
     assert display["data"]["open"] == OPEN and display["data"]["code"] == CODE

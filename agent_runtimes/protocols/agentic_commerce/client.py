@@ -125,7 +125,7 @@ def items_of(items: list[Mapping[str, Any]]) -> list[dict[str, str]]:
     the specification's examples send one: the schema is normative here, so
     a quantity of two is the item twice, and the seller counts them.
     """
-    out = []
+    out: list[dict[str, str]] = []
     for item in items:
         out.extend({"id": str(item["id"])} for _ in range(int(item.get("quantity", 1))))
     return out

@@ -40,7 +40,7 @@ from agent_runtimes.protocols.mcp.reading import (
 ROOT = Path(__file__).parents[2]
 
 
-def _example():  # type: ignore[no-untyped-def]
+def _example():
     path = ROOT / "examples" / "protocols" / "mcp" / "fixture_server.py"
     spec = importlib.util.spec_from_file_location("mcp_fixture_server", path)
     assert spec and spec.loader

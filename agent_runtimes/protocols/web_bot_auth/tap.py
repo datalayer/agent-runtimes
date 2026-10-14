@@ -61,7 +61,8 @@ VISA_JWKS = "https://mcp.visa.com/.well-known/jwks"
 #: The tag of a browsing request, and of a payment.
 BROWSE_TAG = "agent-browser-auth"
 PAY_TAG = "agent-payer-auth"
-TAGS = {"browse": BROWSE_TAG, "pay": PAY_TAG}
+Intent = Literal["browse", "pay"]
+TAGS: dict[Intent, str] = {"browse": BROWSE_TAG, "pay": PAY_TAG}
 #: Covered by every TAP signature.
 REQUIRED_COMPONENTS = ("@authority", "@path")
 #: Every TAP signature's parameters.
@@ -70,8 +71,6 @@ REQUIRED_PARAMS = ("created", "keyid", "alg", "expires", "nonce", "tag")
 ALG = "Ed25519"
 #: The longest window, and how long a nonce is remembered.
 MAX_WINDOW_SECONDS = 8 * 60
-
-Intent = Literal["browse", "pay"]
 
 
 @dataclass(frozen=True)
@@ -165,7 +164,7 @@ async def verify_tap_request(
         signatures = parse_signatures(lowered["signature-input"], lowered["signature"])
     except (ValueError, SignatureBaseError) as error:
         return TapVerification(False, f"the signature does not parse: {error}")
-    intents = {tag: intent for intent, tag in TAGS.items()}
+    intents: dict[str, Intent] = {tag: intent for intent, tag in TAGS.items()}
     tap = [entry for entry in signatures if entry[1].get("tag") in intents]
     if not tap:
         return TapVerification(False, "no signature carries a TAP tag")

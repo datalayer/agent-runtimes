@@ -43,7 +43,7 @@ def app() -> AppSpec:
 
 
 @pytest.fixture(autouse=True)
-def clean():  # type: ignore[no-untyped-def]
+def clean():
     pap_connections.forget()
     yield
     pap_connections.forget()
@@ -123,7 +123,7 @@ async def test_the_rules_decide_a_companys_tools_by_what_they_do() -> None:
 @pytest.mark.asyncio
 async def test_a_company_tools_decision_is_recorded_with_what_it_was_taken_on(
     monkeypatch,
-) -> None:  # type: ignore[no-untyped-def]
+) -> None:
     """R-01: the Rules evaluator decides a company's tool, and the record keeps the inputs the
     runtime holds — the company, its protocol, the connection's level and in whose account it
     acts, whether that level gives the tool — beside what it does, the Rule and the narrowest

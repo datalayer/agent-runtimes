@@ -12,6 +12,8 @@ made; made only in the turn its confirmation was redeemed for, with the
 confirmed terms, once. Outside such a turn the rules decide as always.
 """
 
+from typing import Any
+
 import pytest
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import SkipToolExecution
@@ -67,7 +69,7 @@ def company() -> AppSpec:
 
 
 @pytest.fixture
-def turn():  # type: ignore[no-untyped-def]
+def turn():
     current = PapTurn()
     token = enter_pap_turn(current)
     yield current
@@ -184,8 +186,10 @@ async def test_a_tool_the_appspec_does_not_declare_for_the_action_is_not_made(
 
 def test_a_message_names_its_company_turn_and_a_ticket_only_when_performing() -> None:
     assert pap_turn_of({"other": {}}) is None
-    assert pap_turn_of({"pap": {"account": "a", "client_id": "c"}}).ticket == ""
-    assert pap_turn_of({"pap": {"perform": {"ticket": "t-9"}}}).ticket == "t-9"
+    reading = pap_turn_of({"pap": {"account": "a", "client_id": "c"}})
+    assert reading is not None and reading.ticket == ""
+    performing = pap_turn_of({"pap": {"perform": {"ticket": "t-9"}}})
+    assert performing is not None and performing.ticket == "t-9"
     assert summary_of("Send {subject} to {to}", {"to": "x"}) == "Send ? to x"
 
 
@@ -208,7 +212,9 @@ def test_a_turn_asked_of_its_pact_business_says_who_asks_for_whom_and_what_was_g
         f"<asked-for>Asked over PACT by the personal agent {ISSUER} for a person signed in with Datalayer, "
         "their account 01ADA, who granted it: profile:read.</asked-for>"
     )
-    alone = {"pact": {"personal_agent": ISSUER, "person": None, "scopes": []}}
+    alone: dict[str, Any] = {
+        "pact": {"personal_agent": ISSUER, "person": None, "scopes": []}
+    }
     assert asked_for_said(alone) == (
         f"<asked-for>Asked over PACT by the personal agent {ISSUER}, as itself: "
         "no person signed in here, so it holds no permission for anyone.</asked-for>"
@@ -318,10 +324,10 @@ async def test_a_run_over_a2a_is_offered_the_tools_of_the_applications_code(
     application = load_application_source(source.read_text(), "app.py")
     assert sessions.agent_code_toolset("a2a-desk") is None
 
-    async def gateway(agent_id, toolsets, user_token):  # type: ignore[no-untyped-def]
+    async def gateway(agent_id, toolsets, user_token):
         return list(toolsets)
 
-    async def runtime_toolsets():  # type: ignore[no-untyped-def]
+    async def runtime_toolsets():
         return ["mcp"]
 
     monkeypatch.setattr(principal, "gateway_toolsets_of_the_run", gateway)

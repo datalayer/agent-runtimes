@@ -430,7 +430,7 @@ def test_an_action_is_typed_in_its_appspec():
     assert actions[1].payload is None
     assert app.document["interface"]["actions"][0]["payload"]["required"] == ["values"]
     with pytest.raises(TypeError, match="is a pydantic model"):
-        app.action("bad", payload=dict)  # type: ignore[arg-type]
+        app.action("bad", payload=dict)
     with pytest.raises(ValueError, match="already has an action 'price'"):
         app.action("price")(price)
 

@@ -159,8 +159,8 @@ def code_marks(application: Application, source: str = "app.py") -> List[CodeMar
             )
     # The Personal Agent Protocol its builders decide (PAP_DATALAYER U-06): read-only
     # on the Studio's cards, each a link to its line.
-    for moment, handler, line in application.pap_marks:
-        marks.append(CodeMark(moment, handler, f"{source}:{line}" if line else source))
+    for moment, decider, line in application.pap_marks:
+        marks.append(CodeMark(moment, decider, f"{source}:{line}" if line else source))
     return marks
 
 

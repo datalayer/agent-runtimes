@@ -35,7 +35,7 @@ VITEST = next(
 SPEC = "src/protocols/ucp/ucpMerchant.integration.test.ts"
 
 
-def _example_module():  # type: ignore[no-untyped-def]
+def _example_module():
     path = ROOT / "examples" / "protocols" / "ucp" / "merchant_server.py"
     spec = importlib.util.spec_from_file_location("ucp_merchant_server", path)
     assert spec and spec.loader
@@ -51,7 +51,7 @@ def _free_port() -> int:
 
 
 @pytest.fixture
-def merchant():  # type: ignore[no-untyped-def]
+def merchant():
     import uvicorn
 
     port = _free_port()
@@ -71,7 +71,7 @@ def merchant():  # type: ignore[no-untyped-def]
     thread.join(timeout=10)
 
 
-def test_the_store_answers_its_profile_at_its_own_address(merchant) -> None:  # type: ignore[no-untyped-def]
+def test_the_store_answers_its_profile_at_its_own_address(merchant) -> None:
     profile = httpx.get(f"{merchant.base}/.well-known/ucp").json()
     assert merchant.base in json_text(profile)
 
@@ -85,7 +85,7 @@ def json_text(value: object) -> str:
 @pytest.mark.skipif(
     VITEST is None, reason="the package's node modules are not installed"
 )
-def test_the_typescript_client_at_the_python_store(merchant) -> None:  # type: ignore[no-untyped-def]
+def test_the_typescript_client_at_the_python_store(merchant) -> None:
     done = subprocess.run(
         [str(VITEST), "run", "--project=integration", SPEC],
         cwd=ROOT,

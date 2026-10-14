@@ -36,7 +36,7 @@ VITEST = next(
 SPEC = "src/protocols/pact/pactProvider.integration.test.ts"
 
 
-def _example_module():  # type: ignore[no-untyped-def]
+def _example_module():
     path = ROOT / "examples" / "protocols" / "pact" / "provider_server.py"
     spec = importlib.util.spec_from_file_location("pact_provider_server", path)
     assert spec and spec.loader
@@ -52,7 +52,7 @@ def _free_port() -> int:
 
 
 @pytest.fixture
-def provider_url():  # type: ignore[no-untyped-def]
+def provider_url():
     import uvicorn
 
     example = _example_module()
@@ -79,7 +79,7 @@ def provider_url():  # type: ignore[no-untyped-def]
     thread.join(timeout=10)
 
 
-def test_the_example_routes_refuse_what_they_cannot_read(provider_url) -> None:  # type: ignore[no-untyped-def]
+def test_the_example_routes_refuse_what_they_cannot_read(provider_url) -> None:
     base, _ = provider_url
     assert httpx.post(f"{base}/example/register", json={}).status_code == 400
     assert (
@@ -95,7 +95,7 @@ def test_the_example_routes_refuse_what_they_cannot_read(provider_url) -> None: 
 @pytest.mark.skipif(
     VITEST is None, reason="the package's node modules are not installed"
 )
-def test_the_typescript_personal_agent_at_the_python_provider(provider_url) -> None:  # type: ignore[no-untyped-def]
+def test_the_typescript_personal_agent_at_the_python_provider(provider_url) -> None:
     base, provider = provider_url
     done = subprocess.run(
         [str(VITEST), "run", "--project=integration", SPEC],

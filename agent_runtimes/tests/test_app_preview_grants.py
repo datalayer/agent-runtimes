@@ -249,7 +249,7 @@ def test_its_companies_are_asked_for_with_its_spaces(
     """PAP_DATALAYER P-01, found in a Preview on r1: its token named no company, so
     the gateway refused every call of its `pap` toolset. The Preview asks for the
     companies its Appspec works with beside its Spaces."""
-    shop = {
+    shop: dict[str, Any] = {
         **DESK,
         "protocols": ["pap"],
         "pap": {
@@ -339,7 +339,7 @@ def test_its_businesses_and_merchants_are_asked_for_too(
         "sites": [{"id": "verifier", "site": "verify.examples.datalayer.run"}]
     }
     # A business added is a token asked again, never the one narrowed to the list before.
-    plain = {"permissions": {"spaces": []}}
+    plain: dict[str, Any] = {"permissions": {"spaces": []}}
     assert preview_key("app-1", "ada", {**plain, "pact": asked["pact"]}) != preview_key(
         "app-1", "ada", plain
     )

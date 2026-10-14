@@ -173,11 +173,11 @@ def verify_directory_response(
         expires = params.get("expires")
         if isinstance(expires, int) and expires < now:
             continue
-        key = keys.get(str(params.get("keyid")))
-        if key is None:
+        signer = keys.get(str(params.get("keyid")))
+        if signer is None:
             continue
-        if key.verify(signature, signature_base(params, response)):
-            proven.append(key)
+        if signer.verify(signature, signature_base(params, response)):
+            proven.append(signer)
     if not proven:
         raise ValueError("no key of the directory signs its response")
     return proven
