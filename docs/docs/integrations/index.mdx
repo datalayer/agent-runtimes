@@ -28,10 +28,15 @@ We chose Pydantic AI as our foundation because it provides:
 
 ```python
 from pydantic_ai import Agent
-from agent_runtimes.mcp import get_mcp_toolsets
+from agent_runtimes.mcp import (
+    get_config_mcp_toolsets,
+    initialize_config_mcp_toolsets,
+)
 
-# Get pre-loaded MCP toolsets
-mcp_toolsets = get_mcp_toolsets()
+# Start the MCP servers of mcp.json (the agent-runtimes server does this at startup)
+await initialize_config_mcp_toolsets()
+# The toolsets that started, ready for Pydantic AI
+mcp_toolsets = get_config_mcp_toolsets()
 
 # Create an agent with MCP tools
 agent = Agent(
@@ -43,56 +48,51 @@ agent = Agent(
 
 ## UI Integration Examples
 
-### Notebook AI Assistant
+### Notebook and document AI assistants
 
-```tsx
-import { NotebookAgentsRuntime } from '@datalayer/agent-runtimes';
+The `NotebookAgentsRuntime` and `DocumentAgentRuntime` components this page used to show are gone. A notebook or a document beside a chat is now a page the agent-runtimes server serves for one agent:
 
-<NotebookAgentsRuntime
-    notebookId={notebookId}
-    environmentName="python-simple"
-    runtimeName={runtimeName}
-    serviceManager={serviceManager}
-/>
+```text
+http://localhost:8765/static/agent-notebook.html?agentId=<agent-id>
+http://localhost:8765/static/agent-document.html?agentId=<agent-id>
 ```
 
-### Document Editor AI
-
-```tsx
-import { DocumentAgentRuntime } from '@datalayer/agent-runtimes';
-
-<DocumentAgentRuntime
-    documentId={documentId}
-    environmentName="python-simple"
-    runtimeName={runtimeName}
-    serviceManager={serviceManager}
-/>
-```
+The notebook page also takes `jupyterBaseUrl` and `jupyterToken`. In your own React application, put the [Chat](../chat) component beside your editor and register the editor's tools with `useFrontendTool` (see [Hooks](../hooks)).
 
 ### Custom Agent Deployment
 
+There is no `AgentRuntimesApp` class. The server is the FastAPI application `create_app()` returns (what `agent-runtimes serve` runs); an agent built in Python is wrapped for Agent Runtimes and registered with a transport:
+
 ```python
-from agent_runtimes import AgentRuntimesApp
+import uvicorn
 from pydantic_ai import Agent
 
+from agent_runtimes import create_app
+from agent_runtimes.adapters import PydanticAIAdapter
+from agent_runtimes.routes.agui import register_agui_agent
+from agent_runtimes.transports import AGUITransport
+
 agent = Agent(
-        model='anthropic:claude-sonnet-4-5',
+    model='anthropic:claude-sonnet-4-5',
     instructions='You are a helpful assistant.',
 )
 
-app = AgentRuntimesApp()
-app.add_agent(agent, name='my-agent', transport='ag-ui')
-app.run(port=8000)
+app = create_app()
+adapter = PydanticAIAdapter(agent, name='my-agent', agent_id='my-agent')
+register_agui_agent('my-agent', AGUITransport(adapter, agent_id='my-agent'))
+uvicorn.run(app, port=8765)
 ```
+
+An agent described by an [agentspec](../agentspecs) needs no code: `agent-runtimes serve --agent-id <spec-id>` creates it and registers it with every transport.
 
 ## Runtime Lifecycle Management
 
 Use runtime hooks to launch or attach compute resources and auto-create agents:
 
 ```typescript
-import { useAgentRuntime } from '@datalayer/agent-runtimes/lib/runtime';
+import { useAgentRuntimes } from '@datalayer/agent-runtimes/lib/hooks';
 
-const { isReady, endpoint, tools, launchRuntime } = useAgentRuntime({
+const { isReady, endpoint, status, launchRuntime } = useAgentRuntimes({
     autoCreateAgent: true,
     agentConfig: {
         model: 'anthropic:claude-sonnet-4-5',
