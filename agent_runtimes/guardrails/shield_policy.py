@@ -180,7 +180,13 @@ def policies_in_force(
         On a managed runtime whose documents cannot be read and hold no
         unexpired copy (decision 11): the caller refuses in the sentence.
     """
-    return policies_of(app, lent, managed=runtime_policies().in_force(token))
+    policies = runtime_policies()
+    managed = policies.in_force(token)
+    # Every reader keeps the runtime watching: a pydantic-ai application's
+    # budget reads the documents at each model request, and the poll keeps the
+    # copy fresh for it as for a harness (a change reaches it within a minute).
+    policies.ensure_watching()
+    return policies_of(app, lent, managed=managed)
 
 
 def harness_refusal(policies: Sequence[Policy], harness_id: str) -> Optional[str]:

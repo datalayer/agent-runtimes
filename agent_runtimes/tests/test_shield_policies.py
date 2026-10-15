@@ -184,6 +184,20 @@ class TestManagedFromIam:
             policies_in_force()
         managed_policies.use_source(None)
 
+    @pytest.mark.asyncio
+    async def test_any_reader_on_a_managed_runtime_keeps_it_watching(
+        self, managed: FakeIam
+    ) -> None:
+        policies_in_force()
+        watcher = runtime_policies()._watcher
+        assert watcher is not None and not watcher.done()
+        managed.answer = served(ORGANIZATION.model_copy(update={"version": 5}))
+        await asyncio.sleep(0.2)
+        assert policies_in_force()[0].version == 5, (
+            "the poll keeps the copy fresh for every reader"
+        )
+        runtime_policies().stop_watching()
+
     def test_an_unmanaged_runtime_decides_with_the_rules_and_the_default_alone(
         self, unmanaged: None
     ) -> None:

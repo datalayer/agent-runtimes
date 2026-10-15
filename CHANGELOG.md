@@ -7,6 +7,10 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.37
+
+Every reader of the policies in force keeps a managed runtime polling IAM (SHIELD SH-50): a pydantic-ai application's budget reads the documents at each model request, and the thirty-second poll keeps the copy fresh for it as for a harness, so an administrator's change reaches it within a minute.
+
 ## 1.5.36
 
 On agentspecs 0.0.103 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the policy side (SH-50, SH-31, SH-32, SH-54, SH-35), documented at `docs/docs/shield`.
