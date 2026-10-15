@@ -1180,7 +1180,8 @@ class CreateAgentRequest(BaseModel):
     def _carries_no_code(cls, data: Any) -> Any:
         """Refuse `app_code`: a deployment's code is read from the deployment
         by the runtime (LOOP R-14), never taken from the request that makes
-        its agent and run in its principal's name."""
+        its agent and run in its principal's name.
+        """
         if isinstance(data, dict) and ("app_code" in data or "appCode" in data):
             raise ValueError(APP_CODE_REFUSED)
         return data

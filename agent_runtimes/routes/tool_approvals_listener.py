@@ -75,7 +75,8 @@ def unregister_remote_to_local(remote_id: str) -> None:
 def is_narrowed(jwt: str) -> bool:
     """Whether ai-agents reads this token as narrowed, as its ``narrowed_kind``
     does: claims carrying ``authorization_details``, or a task grant. Read
-    unverified: it only chooses how the approvals are watched."""
+    unverified: it only chooses how the approvals are watched.
+    """
     parts = jwt.split(".")
     if len(parts) != 3:
         return False
@@ -104,7 +105,8 @@ async def _watch_approvals(
     jwt: str, ai_agents_url: str, client: httpx.AsyncClient | None = None
 ) -> None:
     """A narrowed token's approvals, each read at ai-agents until it is decided
-    (``GET /tool-approvals/{id}``): the approvals forwarded with this token only."""
+    (``GET /tool-approvals/{id}``): the approvals forwarded with this token only.
+    """
     from agent_runtimes.routes.tool_approvals import _REMOTE_APPROVAL_REGISTRY
 
     url = f"{_service_base(ai_agents_url)}/api/ai-agents/v1/tool-approvals"

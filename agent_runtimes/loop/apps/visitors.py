@@ -238,7 +238,8 @@ def or_visitors_key(otherwise: Any) -> Any:
     """The key a deployment's model call is made with: in a visitor's turn on
     the runtime it is kept on, the visitor's own token, as on the visitors'
     runtime (R-30, decided 14 October 2026); else ``otherwise()``, its
-    principal's. Read as each call is made."""
+    principal's. Read as each call is made.
+    """
 
     async def key() -> str:
         token = _TURN_TOKEN.get()

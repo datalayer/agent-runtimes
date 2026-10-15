@@ -333,8 +333,9 @@ class _Bearing(_DummyRequest):
 
 
 def _reading(codes: Dict[str, Any]) -> List[tuple]:
-    """ai-agents answering each deployment's code from ``codes`` (an
-    exception is raised as it would be refused); what was asked, kept."""
+    """Answer each deployment's code from ``codes``, as ai-agents would (an
+    exception is raised as it would be refused); what was asked, kept.
+    """
     asked: List[tuple] = []
 
     async def read(deployment: str, version: int, bearer: Any) -> Any:

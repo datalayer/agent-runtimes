@@ -1,7 +1,7 @@
 {
   "name": "Accounting",
   "description": "Answers requests for financial reports, such as open invoices, aged balances, a trial balance or a customer's ledger, from the Odoo books, which it only reads.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "supportedInterfaces": [
     {
       "protocolBinding": "JSONRPC",

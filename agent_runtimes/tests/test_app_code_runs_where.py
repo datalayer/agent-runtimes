@@ -124,7 +124,7 @@ def test_a_hosted_deployment_not_kept_runs_its_own_code(
                         "version": 3,
                     },
                 ),
-                request,  # type: ignore[arg-type]
+                request,
             )
         )
         assert asked == [("dep-hosted", 3, "visitor")]

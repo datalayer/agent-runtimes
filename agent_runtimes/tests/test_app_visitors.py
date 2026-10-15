@@ -433,7 +433,13 @@ class Address:
 
 @pytest.fixture()
 def address(monkeypatch: pytest.MonkeyPatch) -> Iterator[Address]:
-    """An address the visitors' runtime resolves."""
+    """An address the visitors' runtime resolves.
+
+    Yields
+    ------
+    Address
+        The resolver in use, removed after the test.
+    """
     monkeypatch.setenv(visitors.VISITORS_ENV, "notes-assistant")
     found = Address()
     use_address_resolver(found.resolve, found.make)
@@ -642,7 +648,8 @@ def kept_runtime(
 ) -> Iterator[Tuple[TestClient, Address]]:
     """The runtime deployment dep-1 is kept on: its agent made by the keeper,
     visitors told apart by their token, addresses made as the create route
-    makes them."""
+    makes them.
+    """
     from agent_runtimes.app import create_app
 
     monkeypatch.delenv(visitors.VISITORS_ENV, raising=False)

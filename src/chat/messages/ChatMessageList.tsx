@@ -1077,6 +1077,9 @@ export function ChatMessageList({
       }
     }
 
+    // The host's footer, asked once: a row only when it draws something.
+    const messageFooter = renderMessageFooter?.(message);
+
     return (
       <Box
         key={message.id}
@@ -1327,7 +1330,7 @@ export function ChatMessageList({
                 )}
               </Box>
             ) : null}
-            {renderMessageFooter?.(message) ? (
+            {messageFooter ? (
               <Box
                 display="flex"
                 gap={2}
@@ -1336,7 +1339,7 @@ export function ChatMessageList({
                 flexWrap="wrap"
                 flexDirection={isUser ? 'row-reverse' : 'row'}
               >
-                {renderMessageFooter!(message)}
+                {messageFooter}
               </Box>
             ) : null}
           </Box>
