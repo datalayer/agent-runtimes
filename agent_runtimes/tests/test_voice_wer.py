@@ -54,9 +54,16 @@ def test_every_fixture_is_there_and_licensed():
         for model in SPEECH_MODEL_CATALOGUE.values()
         if model["task"] == "stt" and "device" in model["where"]
         for language in model["languages"]
+    ]
+    # The server's models, measured on the fixtures' two languages (VO-47).
+    + [
+        (model["id"], language)
+        for model in SPEECH_MODEL_CATALOGUE.values()
+        if model["task"] == "stt" and model["where"] == ["server"]
+        for language in ("en", "fr")
     ],
 )
-def test_each_device_model_hears_within_two_points_of_its_baseline(model, language):
+def test_each_model_hears_within_two_points_of_its_baseline(model, language):
     heard = measured(f"stt-{model}.json")["languages"][language]["clips"]
     assert {clip["id"] for clip in heard} == {
         i for i, c in FIXTURES.items() if c["language"] == language

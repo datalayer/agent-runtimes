@@ -361,6 +361,45 @@ SPEECH_MODEL_CATALOGUE: Dict[str, Dict[str, Any]] = {
             },
         ],
     },
+    "whisper-small": {
+        "id": "whisper-small",
+        "version": "0.0.1",
+        "name": "Whisper Small",
+        "description": "Speech to text on Datalayer's servers for short spoken turns, on CPU: OpenAI's Whisper small (244M parameters, 99 languages), converted to CTranslate2 and run by faster-whisper, its weights quantized to 8 bits when loaded. About four times faster than large-v3-turbo; on the fixtures it hears English as well (3.3% against 2.4%) and French less well (16.1% against 2.6%). Recordings longer than a turn go to large-v3-turbo.",
+        "provider": "openai",
+        "task": "stt",
+        "engine": "faster-whisper",
+        "dtype": "float16",
+        "languages": ["en", "fr", "es", "it", "pt", "de", "nl", "ja", "zh", "hi"],
+        "where": ["server"],
+        "streaming": False,
+        "licence": {"weights": "MIT", "code": "MIT"},
+        "attribution": "",
+        "upstream": "https://huggingface.co/openai/whisper-small",
+        "revision": "536b0662742c02347bc0e980a01041f333bce120",
+        "files": [
+            {
+                "path": "config.json",
+                "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828",
+                "size": 2370,
+            },
+            {
+                "path": "tokenizer.json",
+                "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+                "size": 2203239,
+            },
+            {
+                "path": "vocabulary.txt",
+                "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913",
+                "size": 459861,
+            },
+            {
+                "path": "model.bin",
+                "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+                "size": 483546902,
+            },
+        ],
+    },
 }
 
 

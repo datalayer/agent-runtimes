@@ -1,0 +1,136 @@
+{
+  "model": "whisper-large-v3-turbo",
+  "runtime": "faster-whisper, int8 on the CPU, 4 threads",
+  "languages": {
+    "en": {
+      "load_ms": 3189,
+      "clips": [
+        {
+          "id": "en-6930-75918-0000",
+          "heard": "Concord returned to its place amidst the tents.",
+          "ms": 4317,
+          "audio_s": 3.5
+        },
+        {
+          "id": "en-6930-75918-0002",
+          "heard": "Congratulations were poured in upon the princess everywhere during her journey.",
+          "ms": 4272,
+          "audio_s": 5.03
+        },
+        {
+          "id": "en-6930-75918-0006",
+          "heard": "this has indeed been a harassing day continued the young man his eyes fixed upon his friend",
+          "ms": 4305,
+          "audio_s": 5.85
+        },
+        {
+          "id": "en-6930-75918-0007",
+          "heard": "You will be frank with me. I always am.",
+          "ms": 4229,
+          "audio_s": 3.31
+        },
+        {
+          "id": "en-6930-75918-0008",
+          "heard": "Can you imagine why Buckingham has been so violent? I suspect.",
+          "ms": 4383,
+          "audio_s": 4.79
+        },
+        {
+          "id": "en-6930-75918-0009",
+          "heard": "It is you who are mistaken, Raoul. I have read his distress in his eyes, in his every gesture and action the whole day.",
+          "ms": 4490,
+          "audio_s": 7.28
+        },
+        {
+          "id": "en-6930-75918-0010",
+          "heard": "I can perceive love clearly enough.",
+          "ms": 4168,
+          "audio_s": 3.04
+        },
+        {
+          "id": "en-6930-75918-0011",
+          "heard": "I am convinced of what I say, said the count.",
+          "ms": 4369,
+          "audio_s": 3.19
+        },
+        {
+          "id": "en-6930-75918-0013",
+          "heard": "In those very terms I even added more.",
+          "ms": 4206,
+          "audio_s": 2.94
+        },
+        {
+          "id": "en-6930-75918-0015",
+          "heard": "thus it is that the honor of three is saved our country our masters and our own",
+          "ms": 4411,
+          "audio_s": 6.38
+        }
+      ]
+    },
+    "fr": {
+      "load_ms": 3189,
+      "clips": [
+        {
+          "id": "fr-1406_1028_000002",
+          "heard": "la nuit suivante appela sa soeur quand il en fut temps si vous ne dormez pas ma soeur lui dit-elle je vous prie en attendant le jour qui paraîtra bientôt de continuer le conte du pêcheur",
+          "ms": 4698,
+          "audio_s": 12.66
+        },
+        {
+          "id": "fr-1406_1028_000003",
+          "heard": "à l'aspect d'un monstre d'une grandeur si démesurée le pêcheur voulut prendre la fuite mais il se trouva si troublé et si effrayé qu'il ne put marcher salomon",
+          "ms": 4862,
+          "audio_s": 10.67
+        },
+        {
+          "id": "fr-1406_1028_000010",
+          "heard": "je te dis repartit le génie de me parler plus civilement avant que je te tue et pourquoi me tueriez-vous répliqua le pêcheur je viens de vous mettre en liberté l'avez-vous déjà oublié",
+          "ms": 4710,
+          "audio_s": 12.78
+        },
+        {
+          "id": "fr-1406_1028_000013",
+          "heard": "ce discours affligea fort le pêcheur je suis bien malheureux s'écria-t-il d'être venu en cet endroit rendre un si grand service à un ingrat",
+          "ms": 4614,
+          "audio_s": 10.27
+        },
+        {
+          "id": "fr-1406_1028_000014",
+          "heard": "le sultan de son côté témoignait de l'impatience d'apprendre quel démêler le génie avait eu avec salomon c'est pourquoi scheherazade poursuivit ainsi le comte du pêcheur",
+          "ms": 4860,
+          "audio_s": 11.1
+        },
+        {
+          "id": "fr-1406_1028_000016",
+          "heard": "sire il y avait autrefois un pêcheur fort âgé et si pauvre qu'à peine il pouvait-il gagner de quoi faire subsister sa femme et trois enfants dont sa famille était composée",
+          "ms": 4541,
+          "audio_s": 11.8
+        },
+        {
+          "id": "fr-1406_1028_000019",
+          "heard": "y consentit et scheherazade reprenant son discours poursuivit de cette manière histoire du pêcheur",
+          "ms": 4586,
+          "audio_s": 10.0
+        },
+        {
+          "id": "fr-1406_1028_000020",
+          "heard": "sire le pêcheur n'eut pas sitôt entendu les paroles que le génie avait prononcées qu'il se rassura et lui dit esprit superbe que dites-vous",
+          "ms": 4507,
+          "audio_s": 10.11
+        },
+        {
+          "id": "fr-1406_1028_000022",
+          "heard": "tu prends plaisir à maltraiter les honnêtes gens et à laisser de grands hommes dans l'obscurité tandis que tu favorises les méchants et que tu élèves ceux qui n'ont aucune vertu qui les rendent recommandables",
+          "ms": 4643,
+          "audio_s": 11.5
+        },
+        {
+          "id": "fr-1406_1028_000025",
+          "heard": "le pêcheur ayant fini cette prière jeta ses filets pour la quatrième fois quand il jugea qu'il devait y avoir du poisson il y tira comme auparavant avec assez de peine",
+          "ms": 4585,
+          "audio_s": 12.5
+        }
+      ]
+    }
+  }
+}

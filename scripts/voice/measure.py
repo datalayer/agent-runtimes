@@ -92,6 +92,67 @@ def transcribe(
     return json.loads(done.stdout.strip().splitlines()[-1])
 
 
+def measure_server(
+    store: Path,
+    voices: Any,
+    fixtures: List[Dict[str, Any]],
+    wavs: Dict[str, Path],
+    measured: Path,
+    threads: int,
+) -> None:
+    """Each server speech-to-text model on the fixtures, as the speech service runs it (VO-47).
+
+    faster-whisper, 8-bit on the CPU with ``threads`` threads, told the
+    language, one clip at a time: what it heard and how long it took.
+    """
+    from faster_whisper import WhisperModel  # the speech image's own
+
+    for model in voices.SPEECH_MODEL_CATALOGUE.values():
+        if model["task"] != "stt" or model["where"] != ["server"]:
+            continue
+        started = time.monotonic()
+        whisper = WhisperModel(
+            str(store / model["provider"] / model["id"]),
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=threads,
+        )
+        load_ms = round((time.monotonic() - started) * 1000)
+        by_language = {}
+        for language in ("en", "fr"):
+            clips = [clip for clip in fixtures if clip["language"] == language]
+            print(f"{model['id']} on {len(clips)} {language} clips", flush=True)
+            results = []
+            for clip in clips:
+                samples, _ = sf.read(wavs[clip["id"]], dtype="float32")
+                started = time.monotonic()
+                parts, _ = whisper.transcribe(
+                    samples, language=language, vad_filter=True
+                )
+                text = " ".join(part.text.strip() for part in parts).strip()
+                results.append(
+                    {
+                        "id": clip["id"],
+                        "heard": text,
+                        "ms": round((time.monotonic() - started) * 1000),
+                        "audio_s": round(len(samples) / 16000, 2),
+                    }
+                )
+            by_language[language] = {"load_ms": load_ms, "clips": results}
+        (measured / f"stt-{model['id']}.json").write_text(
+            json.dumps(
+                {
+                    "model": model["id"],
+                    "runtime": f"faster-whisper, int8 on the CPU, {threads} threads",
+                    "languages": by_language,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--store", type=Path, required=True)
@@ -100,6 +161,14 @@ def main() -> int:
         type=Path,
         default=None,
         help="Where @huggingface/transformers is installed, when not in this checkout",
+    )
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        help="Measure the server's speech-to-text models instead, with faster-whisper (in the speech image)",
+    )
+    parser.add_argument(
+        "--threads", type=int, default=4, help="CPU threads for --server"
     )
     args = parser.parse_args()
     voices = catalogue()
@@ -124,6 +193,11 @@ def main() -> int:
                 wav = Path(scratch) / f"{clip['id']}.wav"
                 sf.write(wav, resample(samples, rate), 16000, subtype="PCM_16")
                 wavs[clip["id"]] = wav
+            if args.server:
+                measure_server(
+                    args.store, voices, fixtures, wavs, measured, args.threads
+                )
+                return 0
             # --- speech to text, on the device's models ---------------------------------
             for model in voices.SPEECH_MODEL_CATALOGUE.values():
                 if model["task"] != "stt" or "device" not in model["where"]:
