@@ -282,8 +282,9 @@ Two pages of the examples app (`npm run examples`, then the *Shield* group):
   organization's document typed by `@datalayer/agent-shield`, what it decides
   by class, the tool kinds classed, the limits soft then hard, decisions in
   `describeDecision`'s words. Needs nothing running. `@datalayer/agent-shield`
-  is imported as the monorepo's workspace link to `ai/agent-shield` (its
-  `lib/`), not from npm, where the latest is still an old scaffold. Held by
+  is not on npm yet, so the page reads it from the sibling checkout
+  `ai/agent-shield` beside agent-runtimes (Vite's `import.meta.glob`), and
+  says so when it is not there. Held by
   the same test, which checks every row against the package.
 
 ## See also
