@@ -1,0 +1,144 @@
+---
+sidebar_position: 11
+title: Harnesses
+---
+
+# Harnesses
+
+A **harness** is an agent program driven over the
+[Agent Client Protocol](https://agentclientprotocol.com) (ACP): a coding agent
+such as Claude Code, Codex, Gemini CLI, goose, OpenCode or OpenHands, or any
+agent a framework exposes over ACP (fast-agent, LangChain's Deep Agents,
+LlamaIndex's `workflows-acp`, …). Agent Runtimes drives one as it drives its
+own agents: it launches the program in the runtime, speaks ACP to it over
+stdio, lends it tools through the MCP gateway, writes the application's skills
+into its workspace in its own format, and serves it over every protocol the
+runtime serves — A2A, AG-UI, the session API, the embed. The harness has no
+face of its own and reaches nothing the runtime did not lend.
+
+This page says what is built today and what is not. The plan is `SHIELD.md`
+in the landing's `plans/`; the boxes named below are its.
+
+## The spec (built: agentspecs 0.0.100, SH-01)
+
+A harness is a spec kind of agentspecs, one YAML per harness under
+`agentspecs/harnesses/`. An agent spec names one with `harness:` where it says
+`pydantic-ai` or `vercel-ai` today:
+
+```yaml
+# agentspecs/harnesses/claude-code.yaml
+id: claude-code
+version: 0.0.1
+name: Claude Code
+description: Anthropic's coding agent, driven over ACP through the Agent Client Protocol project's adapter.
+docs: https://github.com/agentclientprotocol/claude-agent-acp
+acp:
+  command: npx
+  args: ["-y", "@agentclientprotocol/claude-agent-acp@0.91.0"]   # pinned
+  protocol_version: 1
+  load_session: true            # read from initialize, refused if it lies
+  mcp: lend                     # lend | own | none
+  modes: [default, plan, acceptEdits, bypassPermissions]
+requires:
+  secrets: [ANTHROPIC_API_KEY]  # ids of env-vars/, declared as skills declare theirs
+  binaries: [node, git]
+terms:
+  served_to_third_parties: api_key_only   # subscription credentials refused
+  licence: Apache-2.0 (adapter); Anthropic Commercial Terms of Service (the agent)
+skills:
+  format: skill-md              # SKILL.md folders, the agentskills.io specification
+  dir: .claude/skills
+honours:
+  model: true                   # takes the agent's `model:`
+  subagents: false              # has its own: `subagents:` is refused
+instructions_file: CLAUDE.md
+```
+
+```yaml
+# an agent on it
+id: coder
+name: Coder
+harness: claude-code
+model: bedrock:us.anthropic.claude-sonnet-4-6
+```
+
+`acp` says how it is launched and driven; `requires` what it needs in the pod
+(secrets as ids of the env-vars catalogue, executables on the path, one the
+image installs for it pinned as `name@version`); `honours` and `skills` what of
+an agent spec it can take; `instructions_file` where the application's
+instructions are written for it (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
+`.goosehints`); `terms` the terms it is served under. Nothing in the fields is
+specific to coding: a framework's agent over ACP is described the same way.
+
+The catalogue: `claude-code`, `codex`, `gemini-cli`, `goose`, `opencode`,
+`openhands`, one framework over ACP, `fast-agent`, and **`custom`** — the one
+harness with no `acp` block, whose command an organization's own harness spec
+names; the shared catalogue refuses it to any agent. The reference page of
+every harness, generated from the specs, is
+[agentspecs.datalayer.tech/harnesses](https://agentspecs.datalayer.tech/harnesses).
+
+`make specs` generates the Python and TypeScript catalogues as for every kind:
+`agent_runtimes/specs/harnesses.py` (`HARNESS_CATALOGUE`, `get_harness`,
+`list_harnesses`) and `src/specs/harnesses.ts` (`getHarness`,
+`listHarnesses`), typed by `HarnessSpec` in `agent_runtimes.types` and
+`src/types/agentspecs.ts`.
+
+### Refused at load
+
+A spec that asks what its harness cannot do is refused at load, in a sentence,
+wherever `harness:` is read — the generated catalogue (`generate_agents.py`
+refuses it at generation), `Agentspec` (a `ValidationError` as the spec is
+built), the Studio's instant checks (`checkAppspec`) and the variant vocabulary
+(`src/runtimes/variants.ts`):
+
+- `There is no harness named 'x': one of pydantic-ai, vercel-ai, claude-code, …`
+- `The harness 'custom' names no command: an organization's own harness spec names it, and is never typed into a form.`
+- `The harness 'claude-code' has its own subagents: drop `subagents:`.`
+- `The harness 'x' does not take a model: drop `model:`.` and `The harness 'x' reads no skills: drop `skills:`.` — for a harness whose `honours.model` is false or whose `skills.format` is `none`; none of the catalogue's seven is, an organization's own may be.
+
+`harness_problems(harness_id, model=, subagents=, skills=)` in
+`agent_runtimes.types` says them; `unservedHarnessProblem(spec)` in
+`src/runtimes/variants.ts` is the TypeScript side.
+
+## The register (built: SH-04's part in agentspecs)
+
+`agentspecs/harnesses/register.yaml` is the register of SHIELD §3.3: every
+harness of the catalogue with its adapter, the version pinned, its licence,
+the agent's terms, the credential it takes, whether serving it to third
+parties is permitted, its tier restrictions and the binaries it needs — each
+with where it was read, on 15 October 2026. A harness without an entry, or
+whose spec disagrees with its entry, does not load; a harness whose terms are
+unknown is not in the catalogue. The entries, in short:
+
+| Harness | Adapter, pinned | Credential | Third parties | Why |
+| --- | --- | --- | --- | --- |
+| Claude Code | `@agentclientprotocol/claude-agent-acp` 0.91.0, Apache-2.0, Node 22 | `ANTHROPIC_API_KEY` | API key only | Anthropic's [legal page](https://code.claude.com/docs/en/legal-and-compliance): each end user authenticates with their own key; developers may not route requests through Free, Pro or Max plan credentials for their users |
+| Codex | `@agentclientprotocol/codex-acp` 2.2.2, Apache-2.0 | `OPENAI_API_KEY` | API key only | OpenAI's [authentication page](https://learn.chatgpt.com/docs/auth) recommends API keys for automation; a ChatGPT login needs a browser |
+| Gemini CLI | `@google/gemini-cli` 0.64.0 `--experimental-acp`, Apache-2.0, Node 20+ | `GEMINI_API_KEY`, or a Google login on Code Assist Standard or Enterprise | API key only | The individuals tier [stopped being served on 18 June 2026](https://developers.google.com/gemini-code-assist/resources/privacy-notice-gemini-code-assist-individuals) |
+| goose | `goose acp`, goose 1.54.0, Apache-2.0 | the provider's key (`GOOSE_PROVIDER`) | permitted | Open source, no vendor terms of its own |
+| OpenCode | `opencode-ai` 1.19.0 `acp`, MIT | the provider's key | permitted | Open source |
+| OpenHands | `openhands` 1.16.0 `acp --override-with-envs`, MIT | `LLM_API_KEY` | permitted | Open source |
+| fast-agent | `fast-agent-acp` 0.10.45 (uvx), Apache-2.0 | the provider's key | permitted | Open source; each agent it defines is an ACP mode |
+| custom | the organization's own | the organization's own | the organization's own | Not launchable from the shared catalogue |
+
+Reviewed by counsel: not yet. The register's engine side — the Shield reading
+it to refuse a credential kind — is SH-04's part in `agent-shield`.
+
+## Not built yet
+
+- **The adapter** (SH-10): `ACPAgent(BaseAgent)` launching the harness over
+  stdio in the runtime. Today an agent whose spec names a catalogue harness is
+  **refused at creation** — `POST /agents` answers `501 The harness
+  'claude-code' is not served yet: SHIELD SH-10. Nothing runs this agent in its
+  place.` — and the Studio says the same of an application on such an agent.
+  Nothing falls back to pydantic-ai.
+- **The stdio ACP channel** (SH-02) and the proxy, `agent-shield run` (SH-08),
+  in the `agent-shield` package.
+- **The adapters in the runtime image** (SH-05), installed at build and never
+  fetched at first run.
+- **Every transport** for a harness agent — A2A, AG-UI, the session API, the
+  embed, with `diff` and `terminal` displays (SH-11 to SH-21); **skills
+  written in the harness's format** and the instructions file (SH-21).
+- **The Shield**: the file and shell policy, the stateful limits, the audit,
+  the report, the policies from IAM (SH-30 to SH-39, SH-50 to SH-54).
+- **The long tail** of ACP agents as a listed tier of the register (SH-57).

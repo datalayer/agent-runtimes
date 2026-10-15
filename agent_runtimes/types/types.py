@@ -415,6 +415,202 @@ class ProtocolSpec(BaseModel):
     )
 
 
+#: The harnesses agent-runtimes runs itself, named by `harness:` before the kind existed.
+BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
+
+#: The one harness whose command an organization's own spec supplies.
+CUSTOM_HARNESS = "custom"
+
+
+class HarnessAcpSpec(BaseModel):
+    """How a harness is launched and driven over ACP."""
+
+    command: str = Field(..., description="The executable, as the runtime image has it")
+    args: List[str] = Field(
+        default_factory=list, description="Its arguments, the adapter's version pinned"
+    )
+    protocol_version: int = Field(default=1, description="The ACP protocol version")
+    load_session: bool = Field(
+        default=False, description="Whether it answers session/load"
+    )
+    mcp: str = Field(..., description="lend, own or none")
+    modes: List[str] = Field(
+        default_factory=list, description="The session modes it advertises"
+    )
+    env: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Plain variables the launch needs, never a secret",
+    )
+
+
+class HarnessRequiresSpec(BaseModel):
+    """What a harness needs in the pod."""
+
+    secrets: List[str] = Field(
+        default_factory=list, description="Ids of the env-vars catalogue"
+    )
+    binaries: List[str] = Field(
+        default_factory=list, description="Executables on the path"
+    )
+
+
+class HarnessTermsSpec(BaseModel):
+    """The terms a harness is served under, as the register says them."""
+
+    served_to_third_parties: str = Field(
+        ..., description="api_key_only, permitted, refused or organizations_own"
+    )
+    licence: str = Field(
+        default="", description="The adapter's licence, and the agent's terms"
+    )
+    tier_restrictions: Optional[str] = Field(
+        default=None, description="The tiers it may be served under, when restricted"
+    )
+
+
+class HarnessSkillsSpec(BaseModel):
+    """Where the Shield writes an application's skills for a harness (SHIELD §4.10)."""
+
+    format: str = Field(..., description="skill-md, or none")
+    dir: str = Field(
+        default="", description="The workspace directory it reads skills from"
+    )
+
+
+class HarnessHonoursSpec(BaseModel):
+    """What of an agent spec a harness can honour; the rest is refused at load."""
+
+    model: bool = Field(..., description="Whether it takes the agent's `model:`")
+    subagents: bool = Field(
+        ..., description="Whether it takes `subagents:`; false with its own"
+    )
+
+
+class HarnessRegisterEntry(BaseModel):
+    """The register's line for a harness (SHIELD §3.3): what was checked, and where."""
+
+    adapter: str = Field(default="", description="The adapter or binary")
+    version: str = Field(default="", description="The version pinned")
+    licence_source: str = Field(default="", description="Where the licence was read")
+    terms_source: str = Field(default="", description="Where the terms were read")
+    credential: str = Field(default="", description="The credential it takes")
+    binaries: str = Field(
+        default="", description="What it needs on the path, with versions"
+    )
+    note: str = Field(default="")
+
+
+class HarnessSpec(BaseModel):
+    """An agent program driven over the Agent Client Protocol (`agentspecs/harnesses`,
+    SHIELD.md SH-01). An agent spec's `harness:` names one beside `pydantic-ai`
+    and `vercel-ai`.
+    """
+
+    id: str = Field(..., description="What `harness:` names (e.g. 'claude-code')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What it is")
+    enabled: bool = Field(
+        default=True, description="Whether the shared catalogue offers it"
+    )
+    tags: List[str] = Field(default_factory=list)
+    docs: str = Field(default="", description="Where its ACP use is documented")
+    acp: Optional[HarnessAcpSpec] = Field(
+        default=None, description="Absent only on `custom`"
+    )
+    requires: HarnessRequiresSpec = Field(default_factory=HarnessRequiresSpec)
+    terms: HarnessTermsSpec
+    skills: HarnessSkillsSpec
+    honours: HarnessHonoursSpec
+    instructions_file: str = Field(
+        default="", description="The workspace file it reads its instructions from"
+    )
+    registered: HarnessRegisterEntry = Field(default_factory=HarnessRegisterEntry)
+
+
+def harness_problems(
+    harness_id: str,
+    *,
+    model: Optional[str] = None,
+    subagents: Any = None,
+    skills: Any = None,
+) -> List[str]:
+    """
+    What is wrong with an agent spec that names this harness, in sentences.
+
+    Nothing for a builtin harness. Otherwise: a harness the catalogue does not
+    know, `custom` in the shared catalogue, a `model:` the harness does not
+    take, `subagents:` when it has its own, `skills:` when it reads none
+    (SHIELD.md SH-01: refused at load, in a sentence).
+
+    Parameters
+    ----------
+    harness_id : str
+        What the spec's `harness:` says.
+    model : str, optional
+        The spec's `model:`.
+    subagents : Any, optional
+        The spec's `subagents:`.
+    skills : Any, optional
+        The spec's `skills:`.
+
+    Returns
+    -------
+    List[str]
+        The problems, each a sentence; empty when the harness honours the spec.
+    """
+    if harness_id in BUILTIN_HARNESSES:
+        return []
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    spec = HARNESS_CATALOGUE.get(harness_id)
+    if spec is None:
+        known = ", ".join([*BUILTIN_HARNESSES, *sorted(HARNESS_CATALOGUE)])
+        return [f"There is no harness named {harness_id!r}: one of {known}."]
+    if harness_id == CUSTOM_HARNESS:
+        return [
+            "The harness 'custom' names no command: an organization's own harness "
+            "spec names it, and is never typed into a form."
+        ]
+    problems: List[str] = []
+    if model and not spec.honours.model:
+        problems.append(
+            f"The harness {harness_id!r} does not take a model: drop `model:`."
+        )
+    if subagents and not spec.honours.subagents:
+        problems.append(
+            f"The harness {harness_id!r} has its own subagents: drop `subagents:`."
+        )
+    if skills and spec.skills.format == "none":
+        problems.append(f"The harness {harness_id!r} reads no skills: drop `skills:`.")
+    return problems
+
+
+def unserved_harness_problem(harness_id: str) -> Optional[str]:
+    """
+    Why an agent on this harness cannot be created today, or None.
+
+    A catalogue harness is described and refused at load, and not served:
+    the ACP adapter is SHIELD SH-10. Nothing falls back to pydantic-ai.
+
+    Parameters
+    ----------
+    harness_id : str
+        What the spec's `harness:` says.
+
+    Returns
+    -------
+    Optional[str]
+        The sentence, or None for a builtin harness.
+    """
+    if harness_id in BUILTIN_HARNESSES:
+        return None
+    return (
+        f"The harness {harness_id!r} is not served yet: SHIELD SH-10. "
+        "Nothing runs this agent in its place."
+    )
+
+
 class FrameGuardSpec(BaseModel):
     """A check a Frame requires of the output of work done under it."""
 
@@ -1818,6 +2014,19 @@ class Agentspec(BaseModel):
         if value is None or value == "":
             return "local"
         return value
+
+    @model_validator(mode="after")
+    def _harness_honours_the_spec(self) -> "Agentspec":
+        """A harness the catalogue does not know, or what it cannot honour, is refused (SHIELD SH-01)."""
+        problems = harness_problems(
+            self.harness,
+            model=self.model,
+            subagents=self.subagents,
+            skills=self.skills,
+        )
+        if problems:
+            raise ValueError(" ".join(problems))
+        return self
 
     mcp_servers: List[MCPServer] = Field(
         default_factory=list,

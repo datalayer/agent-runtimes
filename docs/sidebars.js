@@ -46,6 +46,7 @@ const sidebars = {
     { type: 'doc', id: 'cli/index', label: 'Loop CLI' },
     { type: 'doc', id: 'plugins/index', label: 'Plugins' },
     { type: 'doc', id: 'protocols/index', label: 'Protocols' },
+    { type: 'doc', id: 'harnesses/index', label: 'Harnesses' },
     { type: 'doc', id: 'identity/index', label: 'Identity' },
     { type: 'doc', id: 'integrations/index', label: 'Integrations' },
     { type: 'doc', id: 'hooks/index', label: 'Hooks' },

@@ -38,6 +38,7 @@
  * @module runtimes/variants
  */
 
+import { getHarness } from '../specs/harnesses';
 import type { Agentspec } from '../types/agentspecs';
 
 /** Where the agent's loop runs. */
@@ -88,6 +89,30 @@ export const HARNESS_BY_SPEC_HARNESS: Record<string, AgentHarness> = {
   'pydantic-ai': 'pydanticai',
   'vercel-ai': 'vercelai',
 };
+
+/**
+ * Why no variant runs an agent on this harness today, in a sentence, or
+ * undefined when one does.
+ *
+ * A harness of the catalogue (`agentspecs/harnesses`, SHIELD.md SH-01) — Claude
+ * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is
+ * described and refused, not served: its ACP adapter is SHIELD SH-10. Nothing
+ * runs such an agent in its place, and no location overrides it as the browser
+ * overrides `pydantic-ai`. A harness neither built in nor of the catalogue is
+ * refused too.
+ */
+export function unservedHarnessProblem(
+  spec: Pick<Agentspec, 'id' | 'harness'>,
+): string | undefined {
+  const harness = spec.harness ?? '';
+  if (!harness || harness in HARNESS_BY_SPEC_HARNESS) {
+    return undefined;
+  }
+  if (getHarness(harness)) {
+    return `The agent “${spec.id}” runs on the harness “${harness}”, which Datalayer does not serve yet (SHIELD SH-10).`;
+  }
+  return `The agent “${spec.id}” runs on “${harness}”, which is no harness.`;
+}
 
 /**
  * The names the two original ways to start an agent went by.
@@ -210,6 +235,10 @@ export function variantSupportsSpecHarness(
   variant: AgentRuntimeVariant,
   specHarness: string | undefined | null,
 ): boolean {
+  if (specHarness && !(specHarness in HARNESS_BY_SPEC_HARNESS)) {
+    // A catalogue harness, or none at all: no location runs it (SHIELD SH-10).
+    return false;
+  }
   if (runsInBrowser(variant)) {
     return true;
   }
@@ -260,7 +289,14 @@ export function legacyTargetOf(
  * that says nothing is run by the framework that has always run it. That
  * default is what lets every spec written before this field stay correct.
  */
-export function specHarnessOf(spec: Pick<Agentspec, 'harness'>): AgentHarness {
+export function specHarnessOf(
+  spec: Pick<Agentspec, 'id' | 'harness'>,
+): AgentHarness {
+  const problem = unservedHarnessProblem(spec);
+  if (problem) {
+    // Never pydantic-ai in its place: said, and refused (SHIELD SH-01).
+    throw new Error(problem);
+  }
   return HARNESS_BY_SPEC_HARNESS[spec.harness ?? ''] ?? 'pydanticai';
 }
 
@@ -285,10 +321,17 @@ export function variantsForSpec(
  * the browser without every caller having to know that is where it belongs.
  */
 export function defaultVariantForSpec(
-  spec: Pick<Agentspec, 'harness'>,
+  spec: Pick<Agentspec, 'id' | 'harness'>,
 ): AgentRuntimeVariant {
   if (variantSupportsSpecHarness(DEFAULT_AGENT_RUNTIME_VARIANT, spec.harness)) {
     return DEFAULT_AGENT_RUNTIME_VARIANT;
   }
-  return variantsForSpec(spec)[0] ?? DEFAULT_AGENT_RUNTIME_VARIANT;
+  const [first] = variantsForSpec(spec);
+  if (!first) {
+    throw new Error(
+      unservedHarnessProblem(spec) ??
+        `No variant runs the agent “${spec.id}” on “${spec.harness}”.`,
+    );
+  }
+  return first;
 }

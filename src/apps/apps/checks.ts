@@ -40,6 +40,7 @@ import { getSkillSpec } from '../../specs/skills';
 import { getTeamSpec } from '../../specs/teams';
 import { getBackendToolSpec } from '../../specs/backendTools';
 import { getTrack } from '../../specs/tracks';
+import { unservedHarnessProblem } from '../../runtimes/variants';
 import type {
   ActionClass,
   AppPageOutputComponent,
@@ -531,6 +532,13 @@ function referenceProblems(
     problems.push(`There is no ${what} named “${ref}”.`);
   if (app.agent && !getAgentspecs(idOf(app.agent)) && !getCog(app.agent)) {
     missing('agent or Cog', app.agent);
+  }
+  // An agent on a catalogue harness is refused, not run on pydantic-ai in
+  // its place (SHIELD SH-01; its adapter is SH-10).
+  const agent = app.agent ? getAgentspecs(idOf(app.agent)) : undefined;
+  const unserved = agent ? unservedHarnessProblem(agent) : undefined;
+  if (unserved) {
+    problems.push(unserved);
   }
   if (app.team && !getTeamSpec(idOf(app.team))) {
     missing('team', app.team);

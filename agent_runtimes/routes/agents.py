@@ -78,7 +78,13 @@ except Exception:  # pragma: no cover - compatibility fallback during regen drif
 from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
-from ..types import Agentspec, AgentSuggestion, MCPServer, SubAgentsConfig
+from ..types import (
+    Agentspec,
+    AgentSuggestion,
+    MCPServer,
+    SubAgentsConfig,
+    unserved_harness_problem,
+)
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
 from .agui import get_agui_app, register_agui_agent, unregister_agui_agent
@@ -1433,6 +1439,13 @@ async def create_agent(
             logger.info(
                 f"Using library spec '{request.agent_spec_id}' for agent '{agent_id}'"
             )
+            # A catalogue harness (SHIELD SH-01) is described and refused, not
+            # served: the ACP adapter is SH-10. Nothing runs it in its place.
+            unserved = unserved_harness_problem(
+                str(getattr(library_spec, "harness", "") or "pydantic-ai")
+            )
+            if unserved:
+                raise HTTPException(status_code=501, detail=unserved)
             # Apply spec defaults — only override fields the caller did not set.
             if (
                 request.system_prompt == "You are a helpful AI assistant."

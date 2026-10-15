@@ -28,10 +28,46 @@ import {
   runsInBrowser,
   specHarnessOf,
   toAgentRuntimeVariant,
+  unservedHarnessProblem,
   variantForLocation,
   variantSupportsSpecHarness,
   variantsForSpec,
 } from '../variants';
+
+describe('a harness of the catalogue (SHIELD SH-01)', () => {
+  const coder = { id: 'coder', harness: 'claude-code' };
+
+  it('is refused in a sentence, and never run on pydantic-ai in its place', () => {
+    expect(unservedHarnessProblem(coder)).toBe(
+      'The agent “coder” runs on the harness “claude-code”, which Datalayer does not serve yet (SHIELD SH-10).',
+    );
+    expect(() => specHarnessOf(coder)).toThrow('SHIELD SH-10');
+    expect(variantsForSpec(coder)).toEqual([]);
+    expect(() => defaultVariantForSpec(coder)).toThrow('SHIELD SH-10');
+    for (const variant of AGENT_RUNTIME_VARIANTS) {
+      expect(variantSupportsSpecHarness(variant, 'claude-code')).toBe(false);
+    }
+  });
+
+  it('refuses a harness that is neither built in nor of the catalogue', () => {
+    expect(unservedHarnessProblem({ id: 'x', harness: 'nope' })).toBe(
+      'The agent “x” runs on “nope”, which is no harness.',
+    );
+    expect(() => specHarnessOf({ id: 'x', harness: 'nope' })).toThrow(
+      'no harness',
+    );
+  });
+
+  it('says nothing of the built-in harnesses', () => {
+    expect(
+      unservedHarnessProblem({ id: 'a', harness: 'pydantic-ai' }),
+    ).toBeUndefined();
+    expect(
+      unservedHarnessProblem({ id: 'b', harness: 'vercel-ai' }),
+    ).toBeUndefined();
+    expect(unservedHarnessProblem({ id: 'c' })).toBeUndefined();
+  });
+});
 
 describe('variant shape', () => {
   it('splits every variant into a location and a harness', () => {

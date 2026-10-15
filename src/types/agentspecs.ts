@@ -218,6 +218,69 @@ export interface ProtocolSpec {
   appspecBlock?: 'pap' | 'pact' | 'a2a' | 'signed_fetch';
 }
 
+/** How a harness is launched and driven over ACP (SHIELD.md §3.1). */
+export interface HarnessAcpSpec {
+  /** The executable, as the runtime image has it. */
+  command: string;
+  /** Its arguments, the adapter's version pinned among them. */
+  args: string[];
+  protocolVersion: number;
+  /** Whether it answers `session/load`. */
+  loadSession: boolean;
+  /** `lend`: the Shield lends MCP servers through the gateway; `own`; or `none`. */
+  mcp: 'lend' | 'own' | 'none';
+  /** The session modes it advertises, as it names them. */
+  modes: string[];
+  /** Plain variables the launch needs, never a secret. */
+  env: Record<string, string>;
+}
+
+/**
+ * An agent program driven over the Agent Client Protocol
+ * (`agentspecs/harnesses`, SHIELD.md SH-01). An agent spec's `harness:` names
+ * one beside `pydantic-ai` and `vercel-ai`; none is served by a runtime yet
+ * (SHIELD SH-10).
+ */
+export interface HarnessSpec {
+  /** What `harness:` names (e.g. 'claude-code'). */
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  /** Whether the shared catalogue offers it: `custom` is not. */
+  enabled: boolean;
+  tags: string[];
+  /** Where its ACP use is documented. */
+  docs: string;
+  /** Absent only on `custom`, whose command an organization's own spec names. */
+  acp?: HarnessAcpSpec;
+  /** What it needs in the pod: secrets as ids of the env-vars catalogue, executables. */
+  requires: { secrets: string[]; binaries: string[] };
+  /** The terms it is served under, as the register says them (§3.3). */
+  terms: {
+    servedToThirdParties:
+      'api_key_only' | 'permitted' | 'refused' | 'organizations_own';
+    licence: string;
+    tierRestrictions?: string;
+  };
+  /** Where the Shield writes an application's skills for it (§4.10). */
+  skills: { format: 'skill-md' | 'none'; dir: string };
+  /** What of an agent spec it can honour; the rest is refused at load. */
+  honours: { model: boolean; subagents: boolean };
+  /** The workspace file it reads its instructions from. */
+  instructionsFile: string;
+  /** The register's line: what was checked, and where. */
+  registered: {
+    adapter: string;
+    version: string;
+    licenceSource: string;
+    termsSource: string;
+    credential: string;
+    binaries: string;
+    note: string;
+  };
+}
+
 /** A check a Frame requires of the output of work done under it. */
 export interface FrameGuardSpec {
   id: string;

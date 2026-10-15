@@ -304,6 +304,7 @@ def load_yaml_specs(specs_dir: Path) -> List[tuple[str, Dict[str, Any]]]:
 
     check_model_additionals(resolved, load_model_ids(specs_dir))
     check_protocols(resolved, load_protocol_ids(specs_dir))
+    check_harnesses(resolved, load_harnesses(specs_dir))
     check_voices(resolved)
     return resolved
 
@@ -359,6 +360,60 @@ def check_protocols(
         if unknown:
             problems.append(
                 f"{spec.get('id')}: protocols names what the catalogue does not know: {', '.join(unknown)}"
+            )
+    if problems:
+        raise SystemExit("\n".join(problems))
+
+
+BUILTIN_HARNESSES = ("pydantic-ai", "vercel-ai")
+
+
+def load_harnesses(specs_dir: Path) -> dict[str, dict[str, Any]]:
+    """Every harness of the catalogue (`agentspecs/harnesses`, SHIELD.md SH-01), by id."""
+    harnesses: dict[str, dict[str, Any]] = {}
+    for yaml_file in sorted((specs_dir.parent / "harnesses").glob("*.yaml")):
+        if yaml_file.name == "register.yaml":
+            continue
+        harness = yaml.safe_load(yaml_file.read_text()) or {}
+        if harness.get("id"):
+            harnesses[str(harness["id"])] = harness
+    return harnesses
+
+
+def check_harnesses(
+    specs: List[tuple[str, Dict[str, Any]]], harnesses: dict[str, dict[str, Any]]
+) -> None:
+    """Refuse an agent naming a harness the catalogue does not know, or asking what it cannot honour (SH-01)."""
+    problems = []
+    for _, spec in specs:
+        harness_id = str(spec.get("harness") or BUILTIN_HARNESSES[0])
+        if harness_id in BUILTIN_HARNESSES:
+            continue
+        harness = harnesses.get(harness_id)
+        if harness is None:
+            problems.append(
+                f"{spec.get('id')}: there is no harness named {harness_id!r}: one of "
+                f"{', '.join([*BUILTIN_HARNESSES, *sorted(harnesses)])}"
+            )
+            continue
+        if harness_id == "custom":
+            problems.append(
+                f"{spec.get('id')}: the harness 'custom' names no command: an organization's "
+                "own harness spec names it"
+            )
+            continue
+        honours = harness.get("honours") or {}
+        if spec.get("model") and not honours.get("model"):
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} does not take a model"
+            )
+        if spec.get("subagents") and not honours.get("subagents"):
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} has its own subagents"
+            )
+        if spec.get("skills") and (harness.get("skills") or {}).get("format") == "none":
+            problems.append(
+                f"{spec.get('id')}: the harness {harness_id!r} reads no skills"
             )
     if problems:
         raise SystemExit("\n".join(problems))
@@ -1726,6 +1781,7 @@ export * from './uiRenderers';
 export * from './protocols';
 export * from './frames';
 export * from './cogs';
+export * from './harnesses';
 export * from './guards';
 export * from './gates';
 export * from './tracks';

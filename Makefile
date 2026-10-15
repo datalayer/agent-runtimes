@@ -181,6 +181,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/protocols.py \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
+	agent_runtimes/specs/harnesses.py \
 	agent_runtimes/specs/guards.py \
 	agent_runtimes/specs/gates.py \
 	agent_runtimes/specs/tracks.py \
@@ -527,6 +528,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	else \
 	  echo "Skipping Cog specifications: $(AGENTSPECS_DIR)/agentspecs/cogs not found (agentspecs < 0.0.12)"; \
 	fi
+	$(call step,Generating harness specifications)
+	python scripts/codegen/generate_harnesses.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/harnesses \
+	  --python-output agent_runtimes/specs/harnesses.py \
+	  --typescript-output src/specs/harnesses.ts
 	$(call step,Generating Guard specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/guards" ]; then \
 	  python scripts/codegen/generate_ops.py --kind guards \
