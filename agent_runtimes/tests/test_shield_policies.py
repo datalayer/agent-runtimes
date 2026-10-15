@@ -247,6 +247,23 @@ class TestManagedFromIam:
             "policy is held, so nothing is decided (SHIELD decision 11)."
         )
 
+    def test_without_a_token_and_without_iams_url_the_runtime_is_unmanaged_and_quiet(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A scene rehearsed in process, a test, a terminal with nothing of the
+        platform's: the Rules and decision 5's default alone, and nothing in the
+        log about it."""
+        managed_policies.use_source(None)
+        monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
+        monkeypatch.delenv("DATALAYER_USER_TOKEN", raising=False)
+        with caplog.at_level(
+            "WARNING", logger="agent_runtimes.guardrails.managed_policies"
+        ):
+            assert [p.scope for p in policies_in_force()] == ["session"]
+        assert runtime_policies().is_managed is False
+        assert not [r for r in caplog.records if "unmanaged" in r.getMessage()]
+        managed_policies.use_source(None)
+
     def test_a_token_without_iams_url_runs_unmanaged_and_says_so(
         self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
