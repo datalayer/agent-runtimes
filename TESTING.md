@@ -121,18 +121,18 @@ npm run test:pictures:accept
   other themes use whatever face they resolve on the machine that takes them.
   Baselines are taken on Linux: another system draws text differently and
   accepts its own.
-- **In CI, not yet.** `.github/workflows/pictures.yaml` runs the same
-  comparison on `ubuntu-latest` with the runner's Chrome, by hand
-  (`gh workflow run pictures.yaml`, or `-f accept=true` to upload CI-taken
-  baselines as the `pictures-baselines` artifact; a failed comparison uploads
-  `pictures-differences`). Its first run (15 Oct 2026, about 10 minutes)
-  failed 104 of 118 pictures, and not only by font hinting: CI installs the
-  published `@datalayer/primer-addons`, while the baselines here were taken
-  against the monorepo's unreleased loop theme, so links, corners and spacing
-  differ too. The pictures with no text (the assistant's idle, thinking,
-  working and paused states, the characters) passed. Once the packages the
-  pictures draw with are released and pinned, take CI's baselines with
-  `accept`, commit them, and give the workflow its pull-request trigger.
+- **In CI.** `.github/workflows/pictures.yaml` runs the same comparison on
+  `ubuntu-latest` with the runner's Chrome, on a pull request that changes what
+  is pictured (and by hand: `gh workflow run pictures.yaml`, `-f accept=true`
+  to upload new baselines as the `pictures-baselines` artifact). A failed
+  comparison uploads `pictures-differences`: each picture's expected, actual
+  and diff. **The baselines are CI's** (15 Oct 2026, with
+  `@datalayer/primer-addons` 1.0.40): a picture changed on purpose is
+  accepted by committing its `-actual.png` from that artifact under its
+  baseline's name, or by the `accept` run once the workflow is on `main`. A
+  run takes about ten minutes and is not cancelled by the next push.
+  Taken on this laptop, the pictures differ from CI's by the fonts'
+  rasterization: compare locally against locally-taken baselines only.
 
 ## The Cloudflare model specs against Cloudflare's listing
 
