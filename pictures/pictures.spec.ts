@@ -126,12 +126,14 @@ for (const mode of MODES) {
           await expect(stage).not.toHaveAttribute('data-assistant-aside', /.+/);
         }
         if (picture === 'current') {
-          // Current (T-23): only what it does now, the tool it calls.
+          // Current (T-23): only what it does now, the tool it calls — the
+          // chat's own tool card since the balloon draws with the chat's
+          // components (48e6c666).
           await expect(
             page.locator(
-              '[data-balloon-display="current"] [data-balloon-tool="running"]',
+              '[data-balloon-display="current"] [data-balloon-tool="running"] [data-tool-call="list_invoices"]',
             ),
-          ).toHaveText('Using list_invoices…');
+          ).toBeVisible();
         }
         await expect(page).toHaveScreenshot(`assistant-${picture}-${mode}.png`);
       });
