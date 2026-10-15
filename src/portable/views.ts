@@ -61,7 +61,9 @@ export type QuestionCardProps = {
 
 /**
  * A protocol display under its tool row (MOBILE M-037): what it shows is
- * `displayLine`'s and the display's own; what the person does goes out
+ * `displayLine`'s and the display's own — a coding agent's `diff` as a
+ * unified diff in the file's language (`unifiedDiffLines`), its `terminal`
+ * as the command and the output kept (SHIELD §4.3); what the person does goes out
  * through the host — a sign-in page opened outside the conversation, an
  * operation answered where approvals are, *I have signed in* said as their
  * next message. Nothing is answered from the card itself.

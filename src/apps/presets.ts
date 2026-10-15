@@ -50,6 +50,7 @@ import {
 import { ChatHeaderPlugin } from './plugins/chat-header';
 import { A2uiSurfacePlugin } from './plugins/a2ui-surface';
 import { PapSignInPlugin } from './plugins/pap-sign-in';
+import { ShieldDisplaysPlugin } from './plugins/shield-displays';
 import { ChatViewPlugin } from './plugins/chat-view';
 import { DocumentViewPlugin } from './plugins/document-view';
 import { InputPromptPlugin } from './plugins/input-prompt';
@@ -369,6 +370,9 @@ export function loopPlugins(options: LoopPresetOptions = {}): PluginRef[] {
     // *Sign in at a company*, where the gateway's `pap_sign_in` answers: its
     // own renderer and binding, beside the surfaces rather than inside them.
     PapSignInPlugin,
+    // A coding agent's diff and terminal, where its tool results carry them
+    // (SHIELD §4.3): two renderers, no binding — the display says what it is.
+    ShieldDisplaysPlugin,
     // One footer icon per view, in the composer where the writing hand
     // already is. Each editor's icon withdraws while its editor is not
     // contributed, so mounting these unconditionally costs an absent editor

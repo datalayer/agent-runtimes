@@ -156,7 +156,16 @@ export {
   replyAuthor,
   type ActionClass,
   type ProtocolDisplay,
+  // A coding agent's diff and terminal (SHIELD §4.3, SH-16).
+  DIFF_LINES_LIMIT,
+  SHIELD_DIFF_TYPE,
+  SHIELD_TERMINAL_TYPE,
+  languageOf,
+  unifiedDiffLines,
+  unifiedDiffText,
+  type DiffLine,
 } from './displays';
+export { shieldDisplayFixtures } from './fixtures';
 export {
   isPapSignInTool,
   PAP_SIGN_IN_WORDS,

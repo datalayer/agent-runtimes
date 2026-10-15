@@ -16,9 +16,13 @@ import {
   displayLine,
   displayOfToolResult,
   emptyConversation,
+  languageOf,
   protocolDisplayOf,
   reduceConversation,
   replyAuthor,
+  shieldDisplayFixtures,
+  unifiedDiffLines,
+  unifiedDiffText,
   type AgUiEvent,
 } from '..';
 
@@ -263,5 +267,122 @@ describe('protocol displays (M-037)', () => {
     expect(tool.kind === 'tool' && tool.result).not.toContain(
       'reactor.ui/display',
     );
+  });
+
+  it('reads a coding agent’s diff and draws it as a unified diff in the file’s language (SHIELD SH-16)', () => {
+    const { diff } = shieldDisplayFixtures();
+    const read = protocolDisplayOf(diff);
+    expect(read).toEqual({
+      kind: 'diff',
+      id: 'c1-diff',
+      path: 'hello.py',
+      oldText: 'print("hi")\n',
+      newText: 'def hello():\n    print("hi, shield")\n',
+      language: 'python',
+    });
+    if (!read || read.kind !== 'diff') throw new Error('not a diff');
+    expect(displayLine(read)).toBe('Changed hello.py (+2 −1 lines)');
+    expect(unifiedDiffLines(read.oldText, read.newText)).toEqual([
+      { kind: 'remove', text: 'print("hi")' },
+      { kind: 'add', text: 'def hello():' },
+      { kind: 'add', text: '    print("hi, shield")' },
+    ]);
+    expect(unifiedDiffText(read)).toBe(
+      '--- a/hello.py\n+++ b/hello.py\n-print("hi")\n+def hello():\n+    print("hi, shield")',
+    );
+    // A new file: from /dev/null, every line added; the language from the path when unsaid.
+    const written = protocolDisplayOf({
+      ...diff,
+      data: { path: 'src/x.tsx', old_text: null, new_text: 'a\nb\n' },
+    });
+    if (!written || written.kind !== 'diff') throw new Error('not a diff');
+    expect(written.language).toBe('tsx');
+    expect(displayLine(written)).toBe('Wrote src/x.tsx (2 lines)');
+    expect(unifiedDiffText(written)).toBe(
+      '--- /dev/null\n+++ b/src/x.tsx\n+a\n+b',
+    );
+    // Kept lines stay context; a change in the middle is one remove and one add.
+    expect(unifiedDiffLines('a\nb\nc\n', 'a\nB\nc\n')).toEqual([
+      { kind: 'context', text: 'a' },
+      { kind: 'remove', text: 'b' },
+      { kind: 'add', text: 'B' },
+      { kind: 'context', text: 'c' },
+    ]);
+    expect(languageOf('Dockerfile')).toBe('dockerfile');
+    expect(languageOf('notes')).toBe('text');
+    // What does not read is unknown, never a partial card.
+    expect(protocolDisplayOf({ ...diff, data: { path: 'x' } })).toMatchObject({
+      kind: 'unknown',
+    });
+    expect(
+      protocolDisplayOf({ ...diff, data: { path: '', new_text: 'x' } }),
+    ).toMatchObject({ kind: 'unknown' });
+  });
+
+  it('reads a coding agent’s terminal with the output kept after release', () => {
+    const { terminal } = shieldDisplayFixtures();
+    const read = protocolDisplayOf(terminal);
+    expect(read).toEqual({
+      kind: 'terminal',
+      id: 'c3-terminal',
+      terminalId: 'term_1',
+      command: 'pytest -q',
+      output: '3 passed in 0.12s\n',
+      exitCode: 0,
+      released: true,
+    });
+    if (!read || read.kind !== 'terminal') throw new Error('not a terminal');
+    expect(displayLine(read)).toBe('Ran `pytest -q`: exit 0');
+    const running = protocolDisplayOf({
+      ...terminal,
+      data: { terminal_id: 'term_2' },
+    });
+    expect(running).toMatchObject({
+      kind: 'terminal',
+      command: '',
+      exitCode: null,
+      released: false,
+    });
+    if (!running || running.kind !== 'terminal')
+      throw new Error('not a terminal');
+    expect(displayLine(running)).toBe('Terminal term_2: running');
+    expect(
+      protocolDisplayOf({
+        ...terminal,
+        data: { terminal_id: 't', exit_code: 'zero' },
+      }),
+    ).toMatchObject({ kind: 'unknown' });
+    expect(protocolDisplayOf({ ...terminal, data: {} })).toMatchObject({
+      kind: 'unknown',
+    });
+  });
+
+  it('keeps a coding agent’s diff on its tool row from the stream', () => {
+    const { diff } = shieldDisplayFixtures();
+    const events: AgUiEvent[] = [
+      { type: 'RUN_STARTED' },
+      {
+        type: 'TOOL_CALL_START',
+        toolCallId: 'c1',
+        toolCallName: 'Edit hello.py',
+      },
+      {
+        type: 'TOOL_CALL_RESULT',
+        toolCallId: 'c1',
+        content: JSON.stringify({
+          result: null,
+          status: 'completed',
+          display: [{ display: 'diff', path: 'hello.py' }],
+          _meta: { 'reactor.ui/display': diff },
+        }),
+      },
+      { type: 'RUN_FINISHED' },
+    ];
+    const state = events.reduce(reduceConversation, emptyConversation());
+    const [tool] = state.items;
+    expect(tool).toMatchObject({
+      kind: 'tool',
+      display: { kind: 'diff', path: 'hello.py', language: 'python' },
+    });
   });
 });

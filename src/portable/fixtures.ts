@@ -16,6 +16,46 @@ import { emptyConversation, type ConversationState } from './conversation';
 import { RUN_END_WORDS } from './records';
 
 /** A fresh copy of the fixture conversation. */
+/**
+ * A coding agent's diff and terminal, as the runtime sends them beside a tool
+ * result (`_meta["reactor.ui/display"]`, SHIELD §4.3, SH-16): what the phone
+ * draws for MOBILE M-037, read by `protocolDisplayOf`.
+ */
+export function shieldDisplayFixtures(): {
+  diff: Record<string, unknown>;
+  terminal: Record<string, unknown>;
+} {
+  return {
+    diff: {
+      type: 'application/vnd.datalayer.shield.diff+json',
+      version: 1,
+      id: 'c1-diff',
+      text: 'Changed hello.py (+2 −1 lines)',
+      data: {
+        path: 'hello.py',
+        old_text: 'print("hi")\n',
+        new_text: 'def hello():\n    print("hi, shield")\n',
+        language: 'python',
+      },
+      actions: [],
+    },
+    terminal: {
+      type: 'application/vnd.datalayer.shield.terminal+json',
+      version: 1,
+      id: 'c3-terminal',
+      text: 'Ran `pytest -q`: exit 0',
+      data: {
+        terminal_id: 'term_1',
+        command: 'pytest -q',
+        output: '3 passed in 0.12s\n',
+        exit_code: 0,
+        released: true,
+      },
+      actions: [],
+    },
+  };
+}
+
 export function conversationFixture(): ConversationState {
   return {
     ...emptyConversation(),
