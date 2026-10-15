@@ -22,6 +22,7 @@ import { useContributions, useSignalValue } from '@datalayer/reactor/react';
 import type { AppSpec } from '../../types/agentspecs';
 import { LoopChatTurn, LoopPromptPanel, type ChatTurnSnapshot } from '../core';
 import { beforeFirstMessage } from './kept';
+import { ASSISTANT_CLEARANCE_VAR } from '../../chat/assistant/clearance';
 
 export const APP_KEPT_PLUGIN_NAME = '@datalayer/loop-plugin-app-kept';
 
@@ -35,7 +36,12 @@ export function AppKept({ says }: { says: string }): JSX.Element | null {
     return null;
   }
   return (
-    <div role="note" style={{ padding: '4px 8px' }}>
+    // Clear of the floating assistant in its corner, at a phone's width too
+    // (REVIEWS Q-08).
+    <div
+      role="note"
+      style={{ padding: `4px var(${ASSISTANT_CLEARANCE_VAR}, 8px) 4px 8px` }}
+    >
       <Text sx={{ fontSize: 0, color: 'fg.muted' }}>{says}</Text>
     </div>
   );

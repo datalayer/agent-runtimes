@@ -67,6 +67,7 @@ import {
   type BalloonSuggestion,
 } from './SpeechBalloon';
 import { conversationHeaderText } from './BalloonParts';
+import { ASSISTANT_CLEARANCE_VAR } from './clearance';
 import {
   AssistantContextMenu,
   LONG_PRESS_MS,
@@ -801,6 +802,23 @@ export function AssistantStage({
       detailing !== null ||
       stayPut,
   );
+  // What it covers in its corner, for a line written under a prompt there
+  // (REVIEWS Q-08).
+  const cornerRight =
+    place.left === undefined && place.top === undefined
+      ? pixels(place.right)
+      : undefined;
+  const cornerBottom = pixels(place.bottom);
+  useEffect(() => {
+    if (aside || cornerRight === undefined || cornerBottom === undefined) {
+      return;
+    }
+    const root = document.documentElement;
+    root.style.setProperty(ASSISTANT_CLEARANCE_VAR, `${cornerRight + size}px`);
+    return () => {
+      root.style.removeProperty(ASSISTANT_CLEARANCE_VAR);
+    };
+  }, [aside, cornerRight, cornerBottom, size]);
   useMouth(stageRef, mouthLevel, state === 'speaking');
   // A decision being asked, or its answer, keeps the balloon up.
   const [deciding, setDeciding] = useState(false);

@@ -21,6 +21,7 @@ import {
   type AssistantStageProps,
 } from '../assistant/AssistantStage';
 import { ASSISTANT_WORDS, POINTER_CALM_MS } from '../assistant/state';
+import { ASSISTANT_CLEARANCE_VAR } from '../assistant/clearance';
 
 const mounted: Array<() => void> = [];
 
@@ -60,6 +61,17 @@ const balloon = (container: HTMLElement) =>
   container.querySelector('[data-speech-balloon]');
 
 describe('the floating assistant', () => {
+  it('says what it covers in a bottom corner, for a line written there (REVIEWS Q-08)', async () => {
+    const root = document.documentElement;
+    await render({ place: { right: '24px', bottom: '24px' }, size: 88 });
+    expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('112px');
+    mounted.splice(0).forEach(unmount => unmount());
+    expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('');
+    // Moved anywhere else, it covers no corner.
+    await render({ place: { left: 10, top: 10 } });
+    expect(root.style.getPropertyValue(ASSISTANT_CLEARANCE_VAR)).toBe('');
+  });
+
   it('acts out its state, drawn as the chosen character', async () => {
     const { container } = await render({ state: 'working' });
     expect(
