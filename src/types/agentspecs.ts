@@ -253,7 +253,7 @@ export interface PolicySpec {
   description: string;
   enabled: boolean;
   tags: string[];
-  /** The Shield's document: scope, version, rules, limits, network, mcp, harnesses. */
+  /** The Shield's document: scope, version, rules, limits, network, mcp, harnesses, authorize, authorizer. */
   policy: {
     scope: 'organization' | 'team' | 'session';
     version?: number;
@@ -275,6 +275,17 @@ export interface PolicySpec {
       admit?: string[];
       credentials?: 'account' | 'platform' | 'either';
     };
+    /** The classes that need an authorizer's allow beside the Rules (SHIELD §6.11). */
+    authorize?: Array<'read' | 'write' | 'send' | 'buy' | 'delete' | 'execute'>;
+    /** The standalone Shield's decision point: exactly one of these. */
+    authorizer?: {
+      local?: {
+        grants?: Array<{ subject: string; relation: string; object: string }>;
+      };
+      openfga?: { url: string; store: string; model?: string | null };
+      authzen?: { url: string; headers?: Record<string, string> };
+      opa?: { url: string; package?: string; headers?: Record<string, string> };
+    } | null;
   };
 }
 
