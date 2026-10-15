@@ -73,6 +73,48 @@ export {
   type TurnEnd,
 } from './conversation';
 
+// What an application is doing, in the words beside its face (LOOP T-08).
+export {
+  PRESENCE_LINES,
+  presenceOfConversation,
+  presenceState,
+  presenceToolOf,
+  type PresenceState,
+  type PresenceTool,
+} from './presence';
+
+// One contract for every renderer of a conversation's components.
+export {
+  ANSWER_BELOW,
+  ANSWER_COMPLETE,
+  composerOf,
+  droppedWords,
+  ENDED_WORDS,
+  messageLabel,
+  OPENING_WORDS,
+  presenceLine,
+  showsQuestion,
+  stepLine,
+  TOOL_STATUS_WORDS,
+  toolLabel,
+  type ComposerProps,
+  type ComposerState,
+  type ConversationViewProps,
+  type ErrorItem,
+  type ErrorRowProps,
+  type MessageItem,
+  type MessageRowProps,
+  type PresenceLineProps,
+  type QuestionCardProps,
+  type StepItem,
+  type StepRowProps,
+  type ToolItem,
+  type ToolRowProps,
+  type TurnEndItem,
+  type TurnEndRowProps,
+} from './views';
+export { conversationFixture } from './fixtures';
+
 // The runtime's routes a native client drives.
 export {
   agentRunClient,

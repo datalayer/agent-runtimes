@@ -18,7 +18,8 @@ import type { ReactNode } from 'react';
 import { Box } from '@datalayer/primer-addons';
 import { Text } from '@primer/react';
 import { FluentEmoji } from '@datalayer/core/lib/components/emoji';
-import { PRESENCE_LINES, type PresenceState } from './presenceStatus';
+import { presenceLine, type PresenceLineProps } from '../../portable/views';
+import type { PresenceState } from './presenceStatus';
 
 const ACCENT = 'var(--theme-accent)';
 
@@ -99,7 +100,8 @@ export function PresenceFace({
   );
 }
 
-export function PresenceLine({ state }: { state: PresenceState }) {
+/** The line beside its face: `portable/views`' contract, as Datalayer Mobile draws it too. */
+export function PresenceLine({ state }: PresenceLineProps) {
   return (
     <Text
       role="status"
@@ -113,7 +115,7 @@ export function PresenceLine({ state }: { state: PresenceState }) {
         flexShrink: 0,
       }}
     >
-      {PRESENCE_LINES[state]}
+      {presenceLine({ state })}
     </Text>
   );
 }
