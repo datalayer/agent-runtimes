@@ -592,6 +592,28 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
                     adapter = ACPTransport(agent)
                     _adapters[session_id] = adapter
 
+            # ACP spec method: authenticate. A browser opens a websocket with
+            # no header of its own, so a notebook's panel (SHIELD SH-49) says
+            # who it is in a message, as agent-shield's `serve` takes it:
+            # methodId `bearer`, the token in `_meta.token` — never in the
+            # address. The token is the connection's from then on, as the
+            # `Authorization` header's would be.
+            elif message.method == "authenticate":
+                try:
+                    websocket_user_jwt_token = _authenticated_token(
+                        message.params or {}
+                    )
+                except ValueError as refused:
+                    await _send_error(
+                        websocket, message.id, ACPErrorCode.INVALID_PARAMS, str(refused)
+                    )
+                    continue
+                await websocket.send_json(
+                    ACPMessage(
+                        jsonrpc=ACP_JSONRPC_VERSION, id=message.id, result={}
+                    ).model_dump()
+                )
+
             # ACP spec method: session/new
             elif message.method == "session/new":
                 response = await _handle_new_session(
@@ -794,6 +816,28 @@ async def websocket_endpoint(websocket: WebSocket, agent_id: str) -> None:
             del _adapters[session_id]
 
 
+#: The one authentication method the route takes in a message (SH-49), as
+#: agent-shield's ``serve`` names it: the token in ``_meta.token``.
+AUTH_METHOD = "bearer"
+
+
+def _authenticated_token(params: dict[str, Any]) -> str:
+    """The token an ``authenticate`` carries; a ``ValueError`` saying why when it carries none."""
+    if params.get("methodId") != AUTH_METHOD:
+        raise ValueError(
+            f"The route authenticates with methodId {AUTH_METHOD!r} "
+            f"only, not {params.get('methodId')!r}."
+        )
+    meta = params.get("_meta")
+    token = meta.get("token") if isinstance(meta, dict) else None
+    extracted = extract_jwt_token(token) if isinstance(token, str) else None
+    if not extracted:
+        raise ValueError(
+            "`authenticate` needs the person's token, a JWT, in `_meta.token`."
+        )
+    return extracted
+
+
 async def _handle_initialize(
     websocket: WebSocket,
     message: ACPMessage,
@@ -828,6 +872,15 @@ async def _handle_initialize(
     # Build ACP-compliant response
     result = {
         "protocolVersion": ACP_PROTOCOL_VERSION,
+        # A client with no header of its own (a browser) authenticates in a
+        # message (SH-49); a client that sent `Authorization` need not.
+        "authMethods": [
+            {
+                "id": AUTH_METHOD,
+                "name": "Bearer token",
+                "description": "The person's Datalayer token in `_meta.token`.",
+            }
+        ],
         "agentCapabilities": {
             # The Datalayer orchestration extension (O2-05): a prompt may name
             # its execution and resume from a checkpoint, a `session/cancel`
@@ -921,9 +974,14 @@ async def _handle_new_session(
     await sessions.save_session(session)
 
     # ACP-compliant response
-    result = {
+    result: dict[str, Any] = {
         "sessionId": session_id,
     }
+    if harness_workspace is not None:
+        # Where the harness works (SH-49): a notebook's panel shows the
+        # harness's edits against the runtime's files, so it is told the
+        # workspace its paths are in, which is not the cwd it sent.
+        result["_meta"] = {"datalayer": {"workspace": str(harness_workspace)}}
 
     await websocket.send_json(
         ACPMessage(
