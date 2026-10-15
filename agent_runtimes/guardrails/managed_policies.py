@@ -142,6 +142,7 @@ class RuntimePolicies:
         """Use a source in IAM's place (a test's fake); ``None`` reads the environment again."""
         self._source_override = source
         self._managed = None
+        self._said_unmanaged = False
         self.stop_watching()
 
     def use_socket(self, url: Optional[str]) -> None:
