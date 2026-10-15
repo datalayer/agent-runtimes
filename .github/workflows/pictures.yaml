@@ -35,9 +35,12 @@ on:
         type: boolean
         default: false
 
+# A run is not cancelled by the next push: a busy pull request would never
+# finish one (ten minutes each). The newest push waits, and replaces any
+# other waiting.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   npm_config_fetch_retries: '5'
