@@ -3,7 +3,8 @@
 
 # Publishes the release a tag names, to PyPI and npm, with no stored token:
 # both registries trust this workflow file (OIDC trusted publishing).
-# See RELEASE.md.
+# Nothing is built before the tests (py-tests.yaml, called here) pass on
+# the tagged commit. See RELEASE.md.
 
 name: Release
 
@@ -26,7 +27,16 @@ env:
   npm_config_fetch_retry_maxtimeout: '120000'
 
 jobs:
+  # The tests first, through the Py Tests workflow itself (every supported
+  # Python, the PAP examples): a tag whose tests fail builds and publishes
+  # nothing. 1.5.35 reached PyPI unimportable because the tag was published
+  # without waiting for them.
+  tests:
+    uses: ./.github/workflows/py-tests.yaml
+    secrets: inherit
+
   build:
+    needs: tests
     runs-on: ubuntu-latest
     env:
       NODE_OPTIONS: '--max-old-space-size=8192'

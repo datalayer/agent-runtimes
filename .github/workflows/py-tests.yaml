@@ -24,6 +24,9 @@ on:
 
   workflow_dispatch:
 
+  # Called by the Release workflow: a tag publishes nothing until these pass.
+  workflow_call:
+
 # A newer push to the same pull request makes the older run worthless.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
