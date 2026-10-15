@@ -101,6 +101,13 @@ class TestAGUI:
         assert any(
             r["display"] and r["display"][0]["display"] == "diff" for r in results
         )
+        # The page's display beside the result, as every protocol display
+        # travels (SHIELD §4.3, SH-16).
+        shown = [r["_meta"]["reactor.ui/display"] for r in results if "_meta" in r]
+        assert shown and all(
+            s["type"] == "application/vnd.datalayer.shield.diff+json" for s in shown
+        )
+        assert any(s["data"]["new_text"] == "hello, shield\n" for s in shown)
         customs = [e for e in events if e.type.value == "CUSTOM"]
         assert any(
             c.name == "datalayer.harness.tool_call"
@@ -299,14 +306,27 @@ class TestTheRuntimeStartedWithAHarness:
             assert isinstance(agent, ACPAgent) and agent.started
             assert info.protocol == "ag-ui"
             process = agent.channel.process
-            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://runtime") as client:
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://runtime"
+            ) as client:
                 answer = await client.post(
                     "/api/v1/ag-ui/chat/",
-                    json={"threadId": "t", "runId": "r", "messages": [{"role": "user", "content": "hello"}]},
+                    json={
+                        "threadId": "t",
+                        "runId": "r",
+                        "messages": [{"role": "user", "content": "hello"}],
+                    },
                 )
             assert answer.status_code == 200
-            lines = [json.loads(line[6:]) for line in answer.text.splitlines() if line.startswith("data: ")]
-            assert any(line["type"] == "TEXT_MESSAGE_CONTENT" and line["delta"] == "done" for line in lines)
+            lines = [
+                json.loads(line[6:])
+                for line in answer.text.splitlines()
+                if line.startswith("data: ")
+            ]
+            assert any(
+                line["type"] == "TEXT_MESSAGE_CONTENT" and line["delta"] == "done"
+                for line in lines
+            )
             assert lines[-1]["type"] == "RUN_FINISHED"
             await agents_route.delete_agent("chat")
             assert "chat" not in agents_route._agents

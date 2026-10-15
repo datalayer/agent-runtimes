@@ -411,6 +411,82 @@ class TestEveryUpdateKind:
             await agent.cleanup()
 
 
+class TestTheDisplays:
+    """SHIELD §4.3, SH-16: a diff and a terminal beside the result, as the page reads every display."""
+
+    @pytest.mark.asyncio
+    async def test_an_edit_carries_its_diff_for_the_page_and_the_record(
+        self, workspace: Path
+    ) -> None:
+        recorder = Recorder()
+        agent = an_agent(workspace, recorder=recorder)
+        try:
+            events = await turn(agent, "edit", session="s")
+        finally:
+            await agent.cleanup()
+        written = next(r for r in of(events, "tool_result") if r["id"] == "c1")
+        shown = written["_meta"]["reactor.ui/display"]
+        assert shown["type"] == "application/vnd.datalayer.shield.diff+json"
+        assert shown["version"] == 1 and shown["id"] == "c1-diff"
+        assert shown["text"] == "Changed hello.txt (+1 −0 lines)"
+        assert shown["data"] == {
+            "path": "hello.txt",
+            "old_text": "",
+            "new_text": "hello, shield\n",
+            "language": "text",
+        }
+        # The Shield's own write row says the same, its old text none.
+        own = next(
+            r
+            for r in of(events, "tool_result")
+            if r["name"].startswith("Write hello.txt")
+        )
+        assert own["_meta"]["reactor.ui/display"]["text"] == "Wrote hello.txt (1 lines)"
+        kept = [
+            p for k, s, p in recorder.entries if k == "tool_call" and p.get("display")
+        ]
+        assert any(p["display"]["data"]["path"] == "hello.txt" for p in kept)
+        assert any(p["tool_call_id"] == "c1" for p in kept)
+
+    @pytest.mark.asyncio
+    async def test_a_command_carries_its_terminal_with_the_output_kept(
+        self, workspace: Path
+    ) -> None:
+        agent = an_agent(workspace, approvals=Approvals())
+        try:
+            events = await turn(agent, "run echo hi")
+        finally:
+            await agent.cleanup()
+        result = next(r for r in of(events, "tool_result") if r["id"] == "c3")
+        shown = result["_meta"]["reactor.ui/display"]
+        assert shown["type"] == "application/vnd.datalayer.shield.terminal+json"
+        assert shown["text"] == "Ran `echo hi`: exit 0"
+        assert shown["data"]["command"] == "echo hi"
+        assert shown["data"]["output"] == "hi\n" and shown["data"]["exit_code"] == 0
+        assert shown["data"]["terminal_id"] and shown["data"]["released"] is True
+
+    def test_languages_and_lines(self) -> None:
+        from agent_runtimes.adapters.harness_displays import (
+            DiffDisplay,
+            TerminalDisplay,
+            display_meta_of,
+            language_of,
+        )
+
+        assert language_of("src/a.py") == "python" and language_of("x.tsx") == "tsx"
+        assert (
+            language_of("Dockerfile") == "dockerfile" and language_of("notes") == "text"
+        )
+        assert DiffDisplay(path="a.md", old_text="x\ny\n", new_text="x\n").text() == (
+            "Changed a.md (+1 −2 lines)"
+        )
+        assert TerminalDisplay(terminal_id="t1").text() == "Terminal t1: running"
+        assert (
+            display_meta_of([{"display": "text", "text": "hi"}], tool_call_id="c")
+            is None
+        )
+
+
 class TestPermissionsAreRules:
     pytestmark = pytest.mark.asyncio
 

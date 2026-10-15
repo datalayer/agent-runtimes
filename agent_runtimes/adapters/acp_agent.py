@@ -100,6 +100,7 @@ from .base import (
     ToolDefinition,
     ToolResult,
 )
+from .harness_displays import display_meta_of
 from .harness_skills import LentFiles, write_lent_files
 
 logger = logging.getLogger(__name__)
@@ -433,6 +434,19 @@ class RecordAudit:
                 },
             )
             return
+        if event == "display":
+            # The diff or the terminal a tool result carried, as the page
+            # draws it: the session API's record carries it (SH-16).
+            recorder.add(
+                "tool_call",
+                f"{title}: shown",
+                {
+                    "tool": title,
+                    "tool_call_id": fields.get("tool_call_id"),
+                    "display": fields.get("display"),
+                },
+            )
+            return
         if event in ("tool_call", "fs_read", "fs_write", "terminal"):
             what = str(fields.get("status") or fields.get("what") or "done")
             recorder.add(
@@ -550,6 +564,13 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._runtime_of: dict[str, str] = {}
         self._titles: dict[str, str] = {}
         self._kinds: dict[str, str] = {}
+        #: What each call said it runs, and the displays it carried so far:
+        #: a terminal's reference arrives in progress, its output at the end.
+        self._commands: dict[str, str] = {}
+        self._shown: dict[str, list[dict[str, Any]]] = {}
+        #: The command each terminal runs, learnt from the Shield's own row
+        #: (which says its command) for the harness's row (which may not).
+        self._terminal_commands: dict[str, str] = {}
         self._replayed: dict[str, int] = {}
         self._cancelled: dict[str, asyncio.Event] = {}
         self._failures: dict[str, str] = {}
@@ -1026,6 +1047,29 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._failures[session.session_id] = sentence
         await ShieldProxy.fail_turn(self, session, sentence)
 
+    def _terminal_output_of(
+        self, session_id: str, output: Any, terminal_ids: Sequence[str]
+    ) -> dict[str, Any] | None:
+        """A terminal's output and exit: the harness's raw output when it reported them, else the Shield's own terminal's, kept after release."""
+        if isinstance(output, dict) and ("output" in output or "exit" in output):
+            return dict(output)
+        session = self.sessions.get(session_id)
+        terminals = getattr(session, "terminals", None) if session else None
+        if terminals is None:
+            return None
+        for terminal_id in terminal_ids:
+            try:
+                run = terminals.get(terminal_id)
+            except KeyError:
+                continue
+            return {
+                "output": run.output.decode("utf-8", "replace"),
+                "exit": run.exit_code,
+                "released": True,
+                "command": run.shown(),
+            }
+        return None
+
     def _events_of(self, event: Event, session_id: str) -> list[StreamEvent]:
         """Map one neutral event onto the runtime's ``StreamEvent``(s) (§4.1's table)."""
         if isinstance(event, TextDelta):
@@ -1039,6 +1083,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
         if isinstance(event, ToolCallSaid):
             self._titles[event.tool_call_id] = event.title
             self._kinds[event.tool_call_id] = event.kind
+            if isinstance(event.input, dict) and event.input.get("command"):
+                self._commands[event.tool_call_id] = str(event.input["command"])
+            if event.displays:
+                self._shown[event.tool_call_id] = [
+                    item.model_dump() for item in event.displays
+                ]
             decision = (
                 self.sessions[session_id].decisions.get(event.tool_call_id)
                 if session_id in self.sessions
@@ -1068,7 +1118,50 @@ class ACPAgent(BaseAgent, ShieldProxy):
             )
             displays = [item.model_dump() for item in event.displays]
             kind = event.kind or self._kinds.get(event.tool_call_id, "other")
+            if displays:
+                self._shown[event.tool_call_id] = displays
+            own_command = self._commands.get(event.tool_call_id, "")
+            terminal_ids = [
+                str(item.get("terminal_id") or "")
+                for item in displays
+                if item.get("display") == "terminal"
+            ]
+            if own_command:
+                for terminal_id in terminal_ids:
+                    self._terminal_commands[terminal_id] = own_command
             if event.status in ("completed", "failed"):
+                # The page's display of the result (§4.3, SH-16): the diff,
+                # or the terminal with its output kept after release.
+                shown = self._shown.pop(event.tool_call_id, displays)
+                terminals = [
+                    str(item.get("terminal_id") or "")
+                    for item in shown
+                    if item.get("display") == "terminal"
+                ]
+                meta = display_meta_of(
+                    shown,
+                    tool_call_id=event.tool_call_id,
+                    command=own_command
+                    or next(
+                        (
+                            self._terminal_commands[t]
+                            for t in terminals
+                            if t in self._terminal_commands
+                        ),
+                        "",
+                    ),
+                    output=self._terminal_output_of(
+                        session_id, event.output, terminals
+                    ),
+                )
+                if meta is not None:
+                    self.audit.write(
+                        "display",
+                        session=session_id,
+                        tool_call_id=event.tool_call_id,
+                        title=title,
+                        display=meta["reactor.ui/display"],
+                    )
                 return [
                     StreamEvent(
                         type="tool_result",
@@ -1079,6 +1172,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                             "kind": kind,
                             "status": event.status,
                             "display": displays,
+                            **({"_meta": meta} if meta is not None else {}),
                             **(
                                 {"error": self._failures.get(session_id) or "failed"}
                                 if event.status == "failed"
