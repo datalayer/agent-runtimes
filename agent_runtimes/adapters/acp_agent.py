@@ -44,7 +44,7 @@ import sys
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from acp import text_block
 from acp.exceptions import RequestError
@@ -76,19 +76,29 @@ from agent_shield.acp.events import (
     UserText,
 )
 from agent_shield.acp.proxy import REFUSED, SessionState, ShieldProxy
+from agent_shield.audit import diff_summary, redacted_row
 from agent_shield.config import harness_bin, harness_prefix
-from agent_shield.policy import Action, Decision, LoadedPolicy, Policy
+from agent_shield.policy import Action, Decision, LoadedPolicy, Policy, Rule
 from agent_shield.register import EXECUTABLES
+from agent_shield.tracing import observe, trace_headers, turn_span
 
 from agent_runtimes._version import __version__
-from agent_runtimes.guardrails.shield_policy import VERDICT_BEHAVIOUR, policies_of
+from agent_runtimes.guardrails.managed_policies import runtime_policies
+from agent_runtimes.guardrails.session_rules import session_rules
+from agent_runtimes.guardrails.shield_policy import (
+    VERDICT_BEHAVIOUR,
+    PolicyUnavailable,
+    harness_refusal,
+    policies_in_force,
+    policies_of,
+)
 from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalManager,
     ToolApprovalRejectedError,
     ToolApprovalTimeoutError,
 )
 from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
-from agent_runtimes.mcp.lent_stdio import hold, release
+from agent_runtimes.mcp.lent_stdio import carry, hold, release
 from agent_runtimes.types import HarnessSpec
 
 from .base import (
@@ -329,19 +339,31 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
 
 
 class RecordAudit:
-    """The Shield's audit rows as the application's record (SHIELD §6.4, SH-18).
+    """The Shield's audit rows as the application's record (SHIELD §6.4, SH-18, SH-34).
 
     The proxy writes one row per decision, action and answer, in the
     package's vocabulary (A-01's with ACP's kinds); here each becomes an
-    entry of the record the session API and Activity read — a ``decision``
-    for what a policy decided, a ``tool_call`` for what was done, an
-    ``approval`` for what the person answered — and the record keeps what
-    its ``record.include`` names. Without a recorder (``loop --harness``
-    outside an application) the rows are logged and kept here for the
-    terminal.
+    entry of the record the session API, Activity and ``/apps/activity``
+    read — a ``decision`` for what a policy or a limit decided, a
+    ``tool_call`` for what was done (its kind, path or command, diff or
+    terminal), an ``approval`` for what the person answered, a ``step`` for
+    the session's and the turn's events and the plan — and the record keeps
+    what its ``record.include`` names. A diff is kept whole only when the
+    include names ``diffs``, a terminal's output only when it names
+    ``terminals``; otherwise a hash and a size, a command and an exit. Every
+    row is redacted at the row (``agent_shield.audit.redacted_row``) before
+    it is kept here, logged, recorded, or counted over OTEL
+    (``agent_shield.tracing.observe``). Without a recorder (``loop
+    --harness`` outside an application) the rows are logged and kept here
+    for the terminal.
     """
 
     KEPT = 500
+
+    #: The rows that are what was done, kept as ``tool_call`` entries.
+    ACTIONS = ("tool_call", "fs_read", "fs_write", "terminal", "fetch")
+    #: The rows that are the session's and the turn's events, kept as ``step`` entries.
+    STEPS = ("session", "turn", "plan", "policy")
 
     def __init__(
         self,
@@ -352,30 +374,74 @@ class RecordAudit:
         self.recorder = recorder
         self.runtime_session_of = runtime_session_of
         self.rows: list[dict[str, Any]] = []
+        #: Each call's title, from the row that said it, for the rows that do not (a completion, an exit).
+        self._titles: dict[str, str] = {}
 
     def write(self, event: str, **fields: Any) -> dict[str, Any]:
-        """Write one audit row: kept here, logged, and recorded when a recorder is."""
-        row = {"event": event, **{k: v for k, v in fields.items() if v is not None}}
+        """Write one audit row: redacted, kept here, logged, recorded when a recorder is, counted."""
+        call_id = str(fields.get("tool_call_id") or "")
+        if call_id and fields.get("title"):
+            self._titles[call_id] = str(fields["title"])
+            if len(self._titles) > self.KEPT:
+                for stale in list(self._titles)[: len(self._titles) - self.KEPT]:
+                    self._titles.pop(stale, None)
+        elif call_id and call_id in self._titles and not fields.get("title"):
+            fields["title"] = self._titles[call_id]
+        row = redacted_row(
+            {"event": event, **{k: v for k, v in fields.items() if v is not None}}
+        )
         self.rows.append(row)
         del self.rows[: -self.KEPT]
         logger.info(
             "shield %s: %s",
             event,
-            fields.get("sentence") or fields.get("title") or fields.get("what") or "",
+            row.get("sentence") or row.get("title") or row.get("what") or "",
         )
+        observe(row)
         if self.recorder is None:
             return row
-        session = self.runtime_session_of(str(fields.get("session") or ""))
+        session = self.runtime_session_of(str(row.get("session") or ""))
         if not session:
             return row
         from agent_runtimes.loop.apps.record import _SESSION
 
         token = _SESSION.set(session)
         try:
-            self._record(event, fields)
+            self._record(event, row)
         finally:
             _SESSION.reset(token)
         return row
+
+    def _kept_whole(self, kind: str) -> bool:
+        """Whether the record names ``diffs`` or ``terminals``: fail closed without a recorder that says."""
+        kept = getattr(self.recorder, "kept", None)
+        return bool(kept(kind)) if callable(kept) else False
+
+    def _display_for_record(self, display: Any) -> Any:
+        """A diff or a terminal as the record keeps it: whole when named, else its summary."""
+        if not isinstance(display, dict):
+            return display
+        shown = display.get("display")
+        if shown == "diff" and not self._kept_whole("diff"):
+            summary = diff_summary(
+                str(display.get("path") or ""),
+                str(display.get("new_text") or ""),
+                display.get("old_text"),
+            )
+            return {"display": "diff", "language": display.get("language"), **summary}
+        if shown == "terminal" and not self._kept_whole("terminal"):
+            output = display.get("output")
+            return {
+                "display": "terminal",
+                "terminal_id": display.get("terminal_id"),
+                "command": display.get("command"),
+                "exit_code": display.get("exit_code"),
+                "bytes": len(str(output).encode("utf-8"))
+                if output is not None
+                else None,
+                "released": display.get("released"),
+            }
+        return display
 
     def _record(self, event: str, fields: dict[str, Any]) -> None:
         """Write the row as the record's entry of the matching kind."""
@@ -384,7 +450,8 @@ class RecordAudit:
             fields.get("title") or fields.get("command") or fields.get("name") or event
         )
         decision = fields.get("decision")
-        if event == "permission" and fields.get("by") == "person":
+        by = fields.get("by")
+        if event == "permission" and by == "person":
             recorder.answered(
                 title,
                 str(fields.get("sentence") or ""),
@@ -405,10 +472,31 @@ class RecordAudit:
                 },
             )
             return
+        if event == "limit":
+            recorder.add(
+                "decision",
+                str(
+                    fields.get("sentence") or f"{title}: {fields.get('limit')} reached"
+                ),
+                {
+                    "tool": title,
+                    "behaviour": VERDICT_BEHAVIOUR.get(
+                        str(decision), VERDICT_BEHAVIOUR["deny"]
+                    ),
+                    "because": "limit",
+                    "classes": [fields["class"]] if fields.get("class") else [],
+                    **{
+                        key: fields[key]
+                        for key in ("limit", "threshold", "count", "kind")
+                        if fields.get(key) is not None
+                    },
+                },
+            )
+            return
         if (
             decision in VERDICT_BEHAVIOUR
-            and fields.get("by") in ("policy", "shield", None)
-            and (fields.get("sentence") or event == "mcp")
+            and by in ("policy", "shield", None)
+            and (fields.get("sentence") or event in ("mcp", "permission"))
         ):
             recorder.add(
                 "decision",
@@ -428,6 +516,9 @@ class RecordAudit:
                             "status",
                             "path",
                             "command",
+                            "url",
+                            "chosen",
+                            "server",
                         )
                         if fields.get(key) is not None
                     },
@@ -436,18 +527,18 @@ class RecordAudit:
             return
         if event == "display":
             # The diff or the terminal a tool result carried, as the page
-            # draws it: the session API's record carries it (SH-16).
+            # draws it (SH-16): whole only when the record names it (§6.4).
             recorder.add(
                 "tool_call",
                 f"{title}: shown",
                 {
                     "tool": title,
                     "tool_call_id": fields.get("tool_call_id"),
-                    "display": fields.get("display"),
+                    "display": self._display_for_record(fields.get("display")),
                 },
             )
             return
-        if event in ("tool_call", "fs_read", "fs_write", "terminal"):
+        if event in self.ACTIONS:
             what = str(fields.get("status") or fields.get("what") or "done")
             recorder.add(
                 "tool_call",
@@ -459,15 +550,44 @@ class RecordAudit:
                         for key in (
                             "tool_call_id",
                             "kind",
+                            "class",
                             "status",
                             "what",
                             "diff",
+                            "bytes",
                             "terminal_id",
                             "exit_code",
                             "signal",
                             "cwd",
                             "path",
                             "command",
+                            "url",
+                            "by",
+                        )
+                        if fields.get(key) is not None
+                    },
+                },
+            )
+            return
+        if event in self.STEPS:
+            recorder.add(
+                "step",
+                f"{event}: {fields.get('what') or title}",
+                {
+                    "event": event,
+                    **{
+                        key: fields[key]
+                        for key in (
+                            "what",
+                            "mode",
+                            "stop_reason",
+                            "blocks",
+                            "steps",
+                            "status",
+                            "scopes",
+                            "rule",
+                            "sentence",
+                            "by",
                         )
                         if fields.get(key) is not None
                     },
@@ -540,6 +660,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         name: str = "",
         description: str = "",
         state_store: Any = None,
+        policy_maker: Callable[[list[Policy]], list[Policy]] | None = None,
     ) -> None:
         """Build the agent on a harness, its command resolved, its policies given."""
         self._agent_id = agent_id
@@ -582,6 +703,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
             LoadedPolicy(policy=policy, origin=_origin_of(policy))
             for policy in (policies if policies is not None else policies_of(None))
         ]
+        #: How the policies are made again when IAM's documents change (SH-50):
+        #: given the managed documents, the full set in force.
+        self.policy_maker: Callable[[list[Policy]], list[Policy]] | None = policy_maker
+        self._stop_listening: Callable[[], None] | None = None
         ShieldProxy.__init__(
             self,
             list(command),
@@ -590,6 +715,37 @@ class ACPAgent(BaseAgent, ShieldProxy):
             workspace=workspace,
             agent_env=dict(environment or {}),
         )
+
+    # -- the policies while running (SH-50, SH-54) ---------------------------------------
+
+    def _listen_for_policies(self) -> None:
+        """Be told of IAM's changed documents, and of an outage, while this agent runs."""
+        if self.policy_maker is None or self._stop_listening is not None:
+            return
+        policies = runtime_policies()
+        if not policies.is_managed:
+            return
+
+        def changed(managed: list[Policy]) -> None:
+            self.replace_policies(
+                [
+                    LoadedPolicy(policy=policy, origin=_origin_of(policy))
+                    for policy in self.policy_maker(managed)  # type: ignore[misc]
+                ]
+            )
+
+        self._stop_listening = policies.listen(changed, self.refuse_all)
+
+    def _rules_from(self, runtime_session: str) -> Callable[[], list[Rule]]:
+        """The rules a person added to the runtime's session, read at every decision (SH-54)."""
+        return lambda: session_rules().of(runtime_session)
+
+    def rules_in_force_of(self, runtime_session: str) -> dict[str, Any] | None:
+        """What decides the runtime's session, or ``None`` when the harness holds no session for it."""
+        acp_session = self._acp_of.get(runtime_session)
+        if not acp_session or acp_session not in self.sessions:
+            return None
+        return self.rules_in_force(acp_session)
 
     # -- BaseAgent ---------------------------------------------------------------------
 
@@ -638,6 +794,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         """Launch the harness and negotiate; refuse what its spec asked that it lacks."""
         if self.started:
             return
+        self._listen_for_policies()
         try:
             channel = await self.start_agent()
         except (OSError, RuntimeError) as exc:
@@ -681,6 +838,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self.sessions.clear()
         self.advertised = None
         self._release_lent()
+        if self._stop_listening is not None:
+            self._stop_listening()
+            self._stop_listening = None
 
     async def run(self, prompt: str, context: AgentContext) -> AgentResponse:
         """One turn, collected: the text, the tool calls and their results."""
@@ -746,7 +906,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             for event in opening:
                 yield event
             turn = asyncio.create_task(
-                ShieldProxy.prompt(self, [text_block(prompt)], acp_session),
+                self._traced_prompt(prompt, acp_session, runtime_session),
                 name=f"harness.{self._agent_id}.{acp_session}",
             )
             turn.add_done_callback(lambda _: queue.put_nowait(_TURN_ENDED))
@@ -788,6 +948,32 @@ class ACPAgent(BaseAgent, ShieldProxy):
             if self.recorder is not None:
                 await self._record_end(runtime_session, prompt, "".join(said), status)
 
+    async def _traced_prompt(
+        self, prompt: str, acp_session: str, runtime_session: str
+    ) -> PromptResponse:
+        """The turn as a span of the trace the face arrived on (§6.8, SH-51).
+
+        A child of whatever is current — the A2A or AG-UI request's span,
+        which carries the caller's ``traceparent`` — so one trace runs from
+        the caller through this turn to the harness (handed the context in
+        the prompt's ``_meta.traceparent``) and the lent gateway tools. The
+        audit's rows are its events; nothing without OpenTelemetry.
+        """
+        with turn_span(
+            acp_session,
+            **{
+                "shield.harness": self.harness.id,
+                "shield.agent": self._agent_id,
+                "shield.runtime_session": runtime_session,
+            },
+        ):
+            # The stdio shims send this turn's trace to the gateway from now on.
+            traceparent = trace_headers().get("traceparent")
+            for handle in self._handles:
+                with contextlib.suppress(ValueError, OSError):
+                    carry(handle, traceparent)
+            return await ShieldProxy.prompt(self, [text_block(prompt)], acp_session)
+
     # -- sessions (§4.8) -----------------------------------------------------------------
 
     async def _session_for(
@@ -821,6 +1007,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             await self._channel_drain(kept)
             self._acp_of[runtime_session] = kept
             self._replayed.pop(kept, None)
+            self.sessions[kept].rules_from = self._rules_from(runtime_session)
             # What the agent replayed is for the comparison, never the new
             # turn's answer: counted, then let go.
             replayed = 0
@@ -860,6 +1047,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         acp_session = answer.session_id
         self._acp_of[runtime_session] = acp_session
         self._runtime_of[acp_session] = runtime_session
+        self.sessions[acp_session].rules_from = self._rules_from(runtime_session)
         await self._keep_session(runtime_session, acp_session)
         return acp_session, [_said(sentence)] if sentence else []
 
@@ -931,7 +1119,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         name=item.name,
                         url=item.url,
                         headers=[
-                            HttpHeader(name="Authorization", value=f"Bearer {bearer}")
+                            HttpHeader(name="Authorization", value=f"Bearer {bearer}"),
+                            # The trace the session opens on, to the gateway
+                            # (§6.8): a harness that honours `_meta.traceparent`
+                            # sends its own per turn; one that does not sends this.
+                            *(
+                                HttpHeader(name=name, value=value)
+                                for name, value in trace_headers().items()
+                            ),
                         ],
                     )
                 )
@@ -1456,15 +1651,29 @@ def harness_agent(
         )
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
+    lent_names = [item.name for item in lent]
+    # The policies in force (§6.7, SH-50): IAM's documents for the account —
+    # fail closed, in a sentence naming IAM, when none can be read —, the
+    # application's Rules, decision 5's default; the harness admitted by them.
+    try:
+        policies = policies_in_force(app, lent_names, token=credential or None)
+    except PolicyUnavailable as unavailable:
+        raise HarnessRefused(
+            f"The harness {harness_id!r} is refused: {unavailable}."
+        ) from None
+    refused = harness_refusal(policies, harness_id)
+    if refused is not None:
+        raise HarnessRefused(refused)
     # The application's skills and instructions, in the harness's format,
     # before it starts (§4.10, SH-21).
-    lent_files = write_lent_files(root, harness, app, [item.name for item in lent])
+    lent_files = write_lent_files(root, harness, app, lent_names)
     return ACPAgent(
         agent_id=agent_id,
         harness=harness,
         command=launch_command(harness),
         workspace=root,
-        policies=policies_of(app, [item.name for item in lent]),
+        policies=policies,
+        policy_maker=lambda managed: policies_of(app, lent_names, managed=managed),
         environment=harness_environment(harness, environment),
         lent=lent,
         credential=credential,

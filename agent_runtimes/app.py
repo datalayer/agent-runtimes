@@ -28,7 +28,7 @@ from typing import Any, AsyncGenerator
 
 from code_sandboxes import CodeSandboxClient
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -1544,6 +1544,12 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
     from .loop.apps.visitors import OwnRoutesOnly
 
     app.add_middleware(OwnRoutesOnly)
+
+    # A caller's trace continued into the request (SHIELD §6.8, SH-51):
+    # inside OwnRoutesOnly, so a refused request opens no span.
+    from .monitoring.otel import TraceContextMiddleware
+
+    app.add_middleware(TraceContextMiddleware)
 
     # Add CORS middleware - outermost
     # Allow all origins for development and cross-origin agent runtimes

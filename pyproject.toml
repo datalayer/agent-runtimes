@@ -47,7 +47,7 @@ dependencies = [
     # The scene spec (LOOP A-11): agentspecs.scenes; components in answers (STUDIO H-02).
     # An Appspec's `samples` (STUDIO E-06, E-11): an older one refuses the field.
     # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
-    "agentspecs>=0.0.101",
+    "agentspecs>=0.0.102",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -65,7 +65,7 @@ dependencies = [
     # (PyPI refused `agent-shield`); 0.1.1 is the first real release (the ACP
     # channel and proxy, the policy, the register, the audit), published from
     # the v0.1.1 tag on 15 October 2026.
-    "datalayer-agent-shield>=0.1.1,<0.2",
+    "datalayer-agent-shield>=0.1.2,<0.2",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0;

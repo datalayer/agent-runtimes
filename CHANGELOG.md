@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.35
+
+On agentspecs 0.0.102 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the audit and the trace (SH-34, SH-51; the pod's boundary of SH-30 is the Operator's, services operator 1.0.94).
+
+- **The Shield's audit in the record** (§6.4, SH-34): `RecordAudit` writes every Shield row in A-01's vocabulary extended with ACP's kinds — a tool call the policy decided as a `decision` (kind, class, path or command, verdict, rule, scope, who decided), what was done as a `tool_call` (a read with its path and bytes, a write with its diff's hash and size, a terminal with its command and exit, a completion named after its call), a person's answer as an `approval` with what was chosen, a limit reached and a refusal as `decision`s, the session's and the turn's events and the plan as `step`s. A diff is kept whole only when `record.include` names `diffs` (agentspecs 0.0.102), a terminal's output only when it names `terminals`; otherwise hash and size, command and exit (`INCLUDED_BY`). Every row is redacted at the row (`agent_shield.audit.redacted_row`) before it is kept, logged, recorded or counted. The landing's record kinds take `step`.
+- **One trace across the chain** (§6.8, SH-51): `TraceContextMiddleware` makes a request's `traceparent` its span (a request without one opens none); the harness's turn is a `shield.turn` span under it with the audit's rows as its events and counts (`shield.actions`, `shield.decisions`, `shield.refusals`, `shield.limits`, drawn by the OTEL service's *Shield* dashboard); the harness is handed the context in the prompt's `_meta.traceparent`; the lent gateway gets it as a header of the HTTP server and, over the stdio shim, per call of the current turn (`lent_stdio.carry`, read per request). Proved through the A2A face with the fake agent: one trace id on the turn, in the harness's `_meta` and on the shim's header. Docs: `docs/docs/shield`.
+
 ## 1.5.34
 
 On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1.

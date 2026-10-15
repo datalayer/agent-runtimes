@@ -66,7 +66,7 @@ from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.tools import ToolDefinition
 
-from agent_runtimes.mcp.tracing import trace_headers
+from agent_runtimes.mcp.tracing import TRACE_HEADERS, trace_headers
 
 try:
     from datalayer_core.otel.emitter import OTelEmitter
@@ -638,3 +638,51 @@ def _recording() -> bool:
     """
     span = _current_span()
     return span is not None and span.is_recording()
+
+
+class TraceContextMiddleware:
+    """Continue the trace a caller sent (W3C ``traceparent``) into the request (SHIELD §6.8, SH-51).
+
+    Nothing instruments the server itself, so without this an A2A or AG-UI
+    request arrives with a ``traceparent`` header nobody reads, fasta2a
+    captures an invalid span for its worker, and the harness's turn starts a
+    trace of its own. With it, a request that carries a context runs inside a
+    server span whose parent is the caller's; a request without one gets no
+    span — no trace, no header, and never an invented one. Pure ASGI, so it
+    wraps the mounted A2A and AG-UI apps as well as the routes.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in scope.get("headers") or []
+        }
+        if "traceparent" not in headers:
+            await self.app(scope, receive, send)
+            return
+        try:
+            from opentelemetry import context as otel_context
+            from opentelemetry import trace as otel_trace
+            from opentelemetry.propagate import extract
+        except Exception:  # noqa: BLE001 - telemetry is optional
+            await self.app(scope, receive, send)
+            return
+        parent = extract({k: headers[k] for k in TRACE_HEADERS if k in headers})
+        token = otel_context.attach(parent)
+        try:
+            with otel_trace.get_tracer(ORCHESTRATION_SERVICE).start_as_current_span(
+                f"{scope.get('method', 'HTTP')} {scope.get('path', '')}",
+                attributes={
+                    "http.request.method": str(scope.get("method", "")),
+                    "url.path": str(scope.get("path", "")),
+                },
+            ):
+                await self.app(scope, receive, send)
+        finally:
+            otel_context.detach(token)

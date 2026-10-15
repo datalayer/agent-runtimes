@@ -425,3 +425,85 @@ async def test_an_orchestrator_delegates_to_the_harness_and_gets_the_diff_back(
     )
     assert "differs" not in diff.artifact.summary
     assert (workspace / "hello.txt").read_text() == "hello, shield\n"
+
+
+@pytest.mark.asyncio
+async def test_one_trace_from_the_a2a_caller_to_the_harness_and_the_lent_gateway(
+    state: SqliteProtocolStateStore,
+    workspace: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SHIELD §6.8, SH-51: the caller's ``traceparent`` is the turn's trace, the harness's ``_meta.traceparent``, and the shim's header.
+
+    What the A2A face establishes on the request (`TraceContextMiddleware`,
+    tested on its own) is what `InMemoryBroker.run_task` captures for the
+    worker: here the broker is called inside that trace, as the face would.
+    """
+    from agent_shield import tracing
+    from agent_shield.acp.channel import StdioACPChannel
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    from agent_runtimes.adapters.acp_agent import lent_toolsets
+    from agent_runtimes.guardrails.shield_policy import policies_of
+    from agent_runtimes.mcp import lent_stdio
+    from agent_runtimes.tests.test_acp_agent import connecting
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(otel_trace, "get_tracer_provider", lambda: provider)
+    monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
+    traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+
+    handed: list[dict[str, Any] | None] = []
+    earlier_prompt = StdioACPChannel.prompt
+
+    async def prompt_seen(
+        self: Any, session_id: str, prompt: Any, meta: Any = None
+    ) -> Any:
+        handed.append(meta)
+        return await earlier_prompt(self, session_id, prompt, meta=meta)
+
+    monkeypatch.setattr(StdioACPChannel, "prompt", prompt_seen)
+    carried: list[tuple[str, str | None]] = []
+    earlier_carry = lent_stdio.carry
+
+    def carry_seen(handle: str, value: str | None, **kwargs: Any) -> None:
+        carried.append((handle, value))
+        earlier_carry(handle, value, **kwargs)
+
+    monkeypatch.setattr("agent_runtimes.adapters.acp_agent.carry", carry_seen)
+
+    app = connecting("earthdata")
+    agent = ACPAgent(
+        agent_id="fake",
+        harness=fake_harness(),
+        command=[sys.executable, str(FAKE)],
+        workspace=workspace,
+        policies=policies_of(app, ["earthdata"]),
+        lent=lent_toolsets(fake_harness(), app),
+        credential="tok-caller",
+    )
+    with tracing.continued(traceparent):
+        _, events, _ = await _run(state, agent, _message("mcp"))
+    assert any("earthdata:stdio" in _text(artifact) for artifact in _artifacts(events))
+    trace_id = "0af7651916cd43dd8448eb211c80319c"
+    turns = [s for s in exporter.get_finished_spans() if s.name == "shield.turn"]
+    assert len(turns) == 1 and format(turns[0].context.trace_id, "032x") == trace_id
+    assert turns[0].attributes["shield.harness"] == "fake"
+    # The session's `mcp` rows are written as it opens, before the turn; the turn's own rows are its events.
+    assert "shield.turn" in {event.name for event in turns[0].events}
+    # The harness was handed the same trace in the key ACP reserves.
+    assert (
+        handed
+        and handed[0]
+        and str(handed[0]["traceparent"]).startswith(f"00-{trace_id}-")
+    )
+    # The stdio shim sends it to the gateway on every call of this turn.
+    assert carried and carried[0][1] and carried[0][1].startswith(f"00-{trace_id}-")

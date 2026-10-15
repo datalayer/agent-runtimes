@@ -31,7 +31,7 @@ from typing import Any
 
 from agent_shield.config import home
 
-__all__ = ["LENT_DIR", "held", "hold", "lent_dir", "release", "serve"]
+__all__ = ["LENT_DIR", "carry", "held", "hold", "lent_dir", "release", "serve"]
 
 #: Where the runtime holds what it lent, under the Shield's home.
 LENT_DIR = "lent"
@@ -85,6 +85,33 @@ def hold(name: str, url: str, token: str, *, base: Path | None = None) -> str:
     with os.fdopen(descriptor, "w", encoding="utf-8") as kept:
         json.dump({"name": name, "url": url, "token": token}, kept)
     return handle
+
+
+def carry(handle: str, traceparent: str | None, *, base: Path | None = None) -> None:
+    """
+    Carry the turn's trace to the shim: the ``traceparent`` it sends the gateway from now on (SHIELD §6.8, SH-51).
+
+    The shim is one process for the session, so what it sends per call is
+    read from the handle at each call; the runtime writes the current turn's
+    context here before each prompt. ``None`` clears it: no trace, no header,
+    never an invented one.
+
+    Parameters
+    ----------
+    handle : str
+        The handle the shim was given.
+    traceparent : str | None
+        The W3C trace context of the turn, or nothing.
+    base : Path, optional
+        The Shield's home, for a test.
+    """
+    kept = held(handle, base=base)
+    if traceparent:
+        kept["traceparent"] = traceparent
+    else:
+        kept.pop("traceparent", None)
+    path = lent_dir(base) / handle
+    path.write_text(json.dumps(kept), encoding="utf-8")
 
 
 def held(handle: str, *, base: Path | None = None) -> dict[str, str]:
@@ -151,6 +178,21 @@ async def serve(handle: str, *, base: Path | None = None) -> None:
     http_client = create_mcp_http_client(
         headers={"Authorization": f"Bearer {lent['token']}"}
     )
+
+    async def with_turn_trace(request: Any) -> None:
+        # The turn's trace, as the runtime carried it to the handle (SH-51):
+        # read per request, since the turn changes while this process does not.
+        try:
+            traceparent = held(handle, base=base).get("traceparent")
+        except ValueError:
+            return
+        if traceparent and "traceparent" not in request.headers:
+            request.headers["traceparent"] = traceparent
+
+    http_client.event_hooks["request"] = [
+        *http_client.event_hooks.get("request", []),
+        with_turn_trace,
+    ]
     async with streamable_http_client(lent["url"], http_client=http_client) as streams:
         async with ClientSession(streams[0], streams[1]) as gateway:
             await gateway.initialize()

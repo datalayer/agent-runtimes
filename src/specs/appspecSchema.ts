@@ -2641,6 +2641,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
         'outputs',
         'feedback',
         'audio',
+        'diffs',
+        'terminals',
       ],
       title: 'RecordItem',
       type: 'string',
