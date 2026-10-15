@@ -16,6 +16,13 @@ boundaries of the durable worker it will run inside (O1-03). The session
 identifier on the attempt is what makes that possible, and it is why every
 observation that learns one carries it back.
 
+A harness's file edits come back as artifacts (SHIELD SH-45, §4.2's mapping
+on the client side): every ``diff`` content of the turn's tool calls —
+``{path, oldText, newText}`` — is registered once per file at the turn's end
+as a ``text/x-diff`` artifact named by its path, the unified diff hashed in
+its provenance, as the A2A worker publishes them; a file changed twice is
+one diff from what it first held to what it last holds.
+
 Two things this module is honest about rather than quiet about.
 
 The first is what ACP does not have: no acceptance short of the first
@@ -55,7 +62,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
 import shlex
 from abc import ABC, abstractmethod
@@ -109,6 +115,7 @@ from agent_runtimes.orchestration.adapter import (
 )
 from agent_runtimes.orchestration.budget import budget_refusal, delegation_meta
 from agent_runtimes.subagents.a2a import caller_token
+from agent_runtimes.transports.a2a import DIFF_MEDIA_TYPE, unified_diff
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +236,9 @@ ACP_CAPABILITIES = AdapterCapabilities(
         _NO_CHECKPOINTED,
         _STEER_IS_A_TURN,
         "No artifacts in ACP: the turn's answer is registered as one "
-        "artifact, and file edits stay tool-call content until O1-10.",
+        "artifact, and each file a tool call's diff content changed as a "
+        "text/x-diff artifact, both registered at the turn's end and "
+        "committed by O1-10.",
         "A permission request is reported on the execution and, with no "
         "approval responder configured, refused rather than left hanging; "
         "answering it is the control plane's (O1-08).",
@@ -584,6 +593,7 @@ class ACPWorkerAdapter(WorkerAdapter):
         timeout_seconds: float = 600.0,
         credential: str | None = None,
         account_uid: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         """
         Hold how to connect, who approves, how long a turn may take, and the execution's credential and account.
@@ -602,7 +612,16 @@ class ACPWorkerAdapter(WorkerAdapter):
         account_uid : str | None
             The account the execution belongs to, named to an agent that
             speaks the extension, which asks for its children in it (O2-06).
+        workspace : str | None
+            The directory a session works in, absolute as ACP requires its
+            ``cwd`` to be: a Shield in front of the agent refuses a session
+            outside the workspace it guards (SH-45). This process's
+            directory by default; a runtime's ACP route answers in its own.
         """
+        import os
+        from pathlib import Path
+
+        self._workspace = str(Path(workspace or os.getcwd()).resolve())
         self._connect = connect or ShieldChannel.connect
         self._approvals = approvals
         self._timeout_seconds = timeout_seconds
@@ -736,6 +755,8 @@ class ACPWorkerAdapter(WorkerAdapter):
             extended = EXTENSION_URI in worker.capabilities.extensions
             channel = await self._open(_endpoint(worker))
             answer: list[str] = []
+            # Each file the turn's tool calls changed, by path (SH-45).
+            diffs: dict[str, tuple[str | None, str]] = {}
             try:
                 try:
                     session_id = await self._session(channel, worker, attempt)
@@ -781,6 +802,7 @@ class ACPWorkerAdapter(WorkerAdapter):
                         message = await queue.get()
                         if message is _DONE:
                             break
+                        _collect_diffs(message, session_id, diffs)
                         async for observation in self._translate(
                             channel,
                             session_id,
@@ -817,6 +839,12 @@ class ACPWorkerAdapter(WorkerAdapter):
                         session_id=session_id,
                     )
                     return
+                for path, (old_text, new_text) in diffs.items():
+                    text = unified_diff(path, old_text, new_text)
+                    yield Observation.produced(
+                        diff_artifact_of(execution, attempt, path, text),
+                        data={"text": text, "path": path},
+                    )
                 for observation in self._ending(
                     turn.result(),
                     execution,
@@ -892,7 +920,9 @@ class ACPWorkerAdapter(WorkerAdapter):
                 await channel.request(
                     AGENT_METHODS["session_load"],
                     LoadSessionRequest(
-                        session_id=attempt.session_id, cwd=".", mcp_servers=[]
+                        session_id=attempt.session_id,
+                        cwd=self._workspace,
+                        mcp_servers=[],
                     ).model_dump(by_alias=True, exclude_none=True),
                 )
             finally:
@@ -1242,13 +1272,13 @@ class ACPWorkerAdapter(WorkerAdapter):
             await channel.request(
                 AGENT_METHODS["session_load"],
                 LoadSessionRequest(
-                    session_id=attempt.session_id, cwd=".", mcp_servers=[]
+                    session_id=attempt.session_id, cwd=self._workspace, mcp_servers=[]
                 ).model_dump(by_alias=True, exclude_none=True),
             )
             return attempt.session_id
         response = await channel.request(
             AGENT_METHODS["session_new"],
-            NewSessionRequest(cwd=".", mcp_servers=[]).model_dump(
+            NewSessionRequest(cwd=self._workspace, mcp_servers=[]).model_dump(
                 by_alias=True, exclude_none=True
             ),
         )
@@ -1687,6 +1717,75 @@ def _session_of(params: Mapping[str, Any]) -> str | None:
     """
     session = params.get("sessionId") or params.get("session_id")
     return str(session) if session else None
+
+
+def _collect_diffs(
+    message: Any, session_id: str, diffs: dict[str, tuple[str | None, str]]
+) -> None:
+    """
+    Keep the ``diff`` contents of a session's tool calls, by path (SH-45).
+
+    A file changed twice keeps what it first held and what it last holds.
+
+    Parameters
+    ----------
+    message : Any
+        A raw JSON-RPC message from the agent.
+    session_id : str
+        The session dispatched; another's updates are not this turn's.
+    diffs : dict
+        Where they are kept: path → (old text, new text).
+    """
+    if not isinstance(message, Mapping):
+        return
+    if message.get("method") != CLIENT_METHODS["session_update"]:
+        return
+    params = message.get("params") or {}
+    if _session_of(params) not in (None, session_id):
+        return
+    update = params.get("update")
+    if not isinstance(update, Mapping) or update.get("sessionUpdate") not in {
+        "tool_call",
+        "tool_call_update",
+    }:
+        return
+    for block in update.get("content") or []:
+        if not isinstance(block, Mapping) or block.get("type") != "diff":
+            continue
+        path = str(block.get("path") or "")
+        if not path:
+            continue
+        old = block.get("oldText")
+        first = diffs.get(path, (None if old is None else str(old), ""))[0]
+        diffs[path] = (first, str(block.get("newText") or ""))
+
+
+def diff_artifact_of(
+    execution: Execution, attempt: Attempt, path: str, text: str
+) -> Any:
+    """
+    One file a harness changed, registered as a ``text/x-diff`` artifact named by its path.
+
+    Parameters
+    ----------
+    execution : Execution
+        The execution.
+    attempt : Attempt
+        The attempt whose turn changed it.
+    path : str
+        The file, as the agent named it.
+    text : str
+        The unified diff.
+
+    Returns
+    -------
+    Artifact
+        Registered, its provenance carrying the diff's hash.
+    """
+    artifact = answer_artifact(execution, attempt, text, name=path)
+    return artifact.model_copy(
+        update={"media_type": DIFF_MEDIA_TYPE, "summary": f"Changed {path}"}
+    )
 
 
 def _read_update(params: Mapping[str, Any]) -> tuple[str, str]:
