@@ -58,6 +58,13 @@ dependencies = [
     # even a patch bump, hence the one-release-wide pin until then); the
     # field-name constants it exports are the ones 0.0.3 made public.
     "agent-teams>=1.0.0,<2",
+    # Agent Shield: the Shield's engine (plans/SHIELD.md §5.1, decision 14) —
+    # the policy model and `decide`, the ACP channel and proxy, the audit
+    # vocabulary, the SaaS client. agent-runtimes hosts it; it never imports
+    # agent-runtimes. Distribution `datalayer-agent-shield`, import `agent_shield`
+    # (PyPI refused `agent-shield`). Resolves once 0.1.0 is published from the
+    # datalayer/agent-shield tag (its pending publisher is the user's to register).
+    "datalayer-agent-shield>=0.1.0,<0.2",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0;
