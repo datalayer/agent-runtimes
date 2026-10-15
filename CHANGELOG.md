@@ -7,6 +7,14 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.25
+
+On agentspecs 0.0.96.
+
+- **An application that asks the person says so on its record** (MOBILE M-023): an `asked` entry, always kept, by the question's kind and when — never its words; ai-agents tells whoever opened the session, on their phone too.
+- **Protocol displays from the stream in `lib/portable`** (MOBILE M-037): `portable/displays` reads the PAP SDK's sign-in, confirm, outcome and replies displays from a tool result's `_meta["reactor.ui/display"]`, a plain `pap_sign_in`/`pact_sign_in` answer and a `pap_handoff` answer, strictly — anything else is `unknown`, with its type and model-safe text only. The conversation reducer keeps it on the tool row; `ProtocolDisplayProps` is the renderers' contract. The sign-in reader moves to `portable/signIn` (the web plugin re-exports it).
+- **A Direct Conversation in `lib/portable`** (PAP_DATALAYER P-08, MOBILE M-038): `portable/direct` is the one client for the person's own words to a company (IAM's one-use ticket, then the gateway; replies read from the cursor) with the linked sub-conversation's state, shared by the Studio's chat and Datalayer Mobile.
+
 ## 1.5.24
 
 On agentspecs 0.0.96.
