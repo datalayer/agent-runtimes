@@ -222,6 +222,27 @@ def harness_environment(
     return given
 
 
+#: Where the pod's `datalayer-harnesses` sidecar listens, when the operator added one (SH-40).
+SIDECAR_VARIABLE = "AGENT_RUNTIMES_HARNESS_SIDECAR_URL"
+
+
+def sidecar_url(environment: Mapping[str, str] | None = None) -> str | None:
+    """The sidecar bridge's base URL (``ws://127.0.0.1:8788``), or ``None`` when the harness runs here.
+
+    A value that is not a ``ws://`` or ``wss://`` URL is refused: the bridge
+    is reached over the WebSocket channel and nothing else.
+    """
+    source = os.environ if environment is None else environment
+    named = source.get(SIDECAR_VARIABLE, "").strip().rstrip("/")
+    if not named:
+        return None
+    if not named.startswith(("ws://", "wss://")):
+        raise HarnessRefused(
+            f"{SIDECAR_VARIABLE}={named!r} is not a ws:// or wss:// URL, so the sidecar bridge cannot be reached."
+        )
+    return named
+
+
 def harness_workspace(environment: Mapping[str, str] | None = None) -> Path:
     """The workspace a harness runs in: ``AGENT_RUNTIMES_WORKSPACE_ROOT``, a directory that exists."""
     source = os.environ if environment is None else environment
@@ -661,8 +682,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         description: str = "",
         state_store: Any = None,
         policy_maker: Callable[[list[Policy]], list[Policy]] | None = None,
+        connect_url: str | None = None,
     ) -> None:
-        """Build the agent on a harness, its command resolved, its policies given."""
+        """Build the agent on a harness, its command resolved (or the sidecar's URL), its policies given."""
         self._agent_id = agent_id
         self.harness = harness
         self._name = name or harness.name
@@ -714,6 +736,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             audit=RecordAudit(recorder, self._runtime_of.get),
             workspace=workspace,
             agent_env=dict(environment or {}),
+            connect_url=connect_url,
         )
 
     # -- the policies while running (SH-50, SH-54) ---------------------------------------
@@ -798,8 +821,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
         try:
             channel = await self.start_agent()
         except (OSError, RuntimeError) as exc:
+            where = self.connect_url or (self.command[0] if self.command else "?")
             raise HarnessRefused(
-                f"{self.harness.name} did not start ({self.command[0]}): {exc}"
+                f"{self.harness.name} did not start ({where}): {exc}"
             ) from None
         try:
             answer = await channel.initialize(
@@ -1667,10 +1691,16 @@ def harness_agent(
     # The application's skills and instructions, in the harness's format,
     # before it starts (§4.10, SH-21).
     lent_files = write_lent_files(root, harness, app, lent_names)
+    # The sidecar bridge (SHIELD §5, SH-40): with the pod's `datalayer-harnesses`
+    # container beside this one, the harness runs there, reached over the
+    # WebSocket channel at `<url>/acp/<harness>`; the Shield here decides the
+    # same. Without it, the adapter is launched in this container.
+    sidecar = sidecar_url(environment)
     return ACPAgent(
         agent_id=agent_id,
         harness=harness,
-        command=launch_command(harness),
+        command=[] if sidecar else launch_command(harness),
+        connect_url=f"{sidecar}/acp/{harness.id}" if sidecar else None,
         workspace=root,
         policies=policies,
         policy_maker=lambda managed: policies_of(app, lent_names, managed=managed),
@@ -1691,6 +1721,7 @@ __all__ = [
     "MCP_MODES",
     "REFUSED",
     "RUNTIME_CLIENT_INFO",
+    "SIDECAR_VARIABLE",
     "WORKSPACE_VARIABLE",
     "ACPAgent",
     "HarnessRefused",
@@ -1703,4 +1734,5 @@ __all__ = [
     "harness_workspace",
     "launch_command",
     "lent_toolsets",
+    "sidecar_url",
 ]

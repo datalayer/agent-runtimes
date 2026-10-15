@@ -1307,3 +1307,36 @@ async def test_claude_code_live(tmp_path: Path) -> None:
         await agent.cleanup()
     assert of(events, "done")[0]["stop_reason"] == "end_turn"
     assert (tmp_path / "hello.txt").exists()
+
+
+# -- the sidecar bridge (SHIELD §5, SH-40) -------------------------------------------------
+
+
+def test_the_sidecar_url_is_read_from_the_environment_and_must_be_a_websocket_one():
+    from agent_runtimes.adapters.acp_agent import (
+        SIDECAR_VARIABLE,
+        HarnessRefused,
+        sidecar_url,
+    )
+
+    assert sidecar_url({}) is None
+    assert sidecar_url({SIDECAR_VARIABLE: "ws://127.0.0.1:8788/"}) == "ws://127.0.0.1:8788"
+    with pytest.raises(HarnessRefused, match="not a ws:// or wss:// URL"):
+        sidecar_url({SIDECAR_VARIABLE: "http://127.0.0.1:8788"})
+
+
+def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
+    from agent_runtimes.adapters.acp_agent import ACPAgent
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    harness = HARNESS_CATALOGUE["claude-code"]
+    agent = ACPAgent(
+        agent_id="shielded",
+        harness=harness,
+        command=[],
+        connect_url="ws://127.0.0.1:1/acp/claude-code",
+        workspace=tmp_path,
+        policies=[],
+    )
+    assert agent.connect_url == "ws://127.0.0.1:1/acp/claude-code" and agent.command == []
+    assert not agent.started

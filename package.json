@@ -1,6 +1,6 @@
 {
     "name": "@datalayer/agent-runtimes",
-    "version": "1.5.37",
+    "version": "1.5.38",
     "type": "module",
     "workspaces": [
         ".",
@@ -137,6 +137,7 @@
         "watch:lib:res": "gulp resources-to-lib-watch",
         "watch:lib:src": "tsc -b -w"
     },
+    "//": "@datalayer/agent-shield (SHIELD SH-53: the policy types, the decisions' sentences, the diff and terminal displays, the report renderer) is not depended on yet: npm holds the scaffold's 1.1.3 as latest, which blocks the real 0.1.x until the user unpublishes it; add \"@datalayer/agent-shield\": \"^0.1.7\" here once it resolves.",
     "dependencies": {
         "@a2a-js/sdk": "^1.3.0",
         "@a2ui/markdown-it": "0.2.0",
