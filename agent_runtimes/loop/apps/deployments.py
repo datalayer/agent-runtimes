@@ -471,6 +471,7 @@ def kept_payload(
     deployment_uid: str,
     version: int,
     organization_uid: str = "",
+    spend_limit: float = 0.0,
 ) -> dict[str, Any]:
     """What creates a deployment's agent on the runtime it is kept on
     (LOOP R-33): the payload the hosted page sends (`AppRenderer`'s
@@ -479,10 +480,18 @@ def kept_payload(
     chat finds the agent it would have made, already there. Never with code:
     the runtime reads the version's ``app.py`` from the deployment (R-14).
 
+    `spend_limit` is the deployment's, in credits a day (the keeper's
+    `limit_of`): above zero, it travels in the instance, and the runtime
+    holds each session to it as a `team` document's `limits.spend` (SHIELD
+    SH-32) while the keeper holds the day.
+
     `AppNotRunnable` when the runtime's own loader refuses the Appspec;
     `DeployRefused` for an application run by a team, which is not kept yet.
     """
     from agent_runtimes.loop.apps.loading import agent_id_of, load_app
+
+    if spend_limit < 0:
+        raise DeployRefused(f"A spend limit of {spend_limit} credits is below zero.")
 
     app = load_app(spec)
     if not app.agent:
@@ -502,6 +511,7 @@ def kept_payload(
             "deployment_uid": deployment_uid,
             "version": int(version),
             **({"organization_uid": organization_uid} if organization_uid else {}),
+            **({"spend_limit": float(spend_limit)} if spend_limit > 0 else {}),
         },
     }
 

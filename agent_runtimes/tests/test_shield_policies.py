@@ -850,6 +850,110 @@ class TestTheModelBudget:
         assert budget.spent("a") == {"model_tokens": 0, "spend": 0}
 
 
+class TestTheDeploymentsSpendLimit:
+    """A deployment's spend limit, handed by ai-agents' keeper in its instance,
+    held for each session as a ``team`` document's ``limits.spend`` and said
+    apart from the keeper's day (SH-32)."""
+
+    def test_it_is_a_team_document_soft_at_the_keepers_warning_share(self) -> None:
+        from agent_runtimes.guardrails.shield_policy import (
+            deployment_spend_limit,
+            deployment_spend_policy,
+            policies_of,
+        )
+
+        assert deployment_spend_limit({"app_uid": "a", "spend_limit": 500}) == 500.0
+        assert deployment_spend_limit(None) == 0.0
+        assert deployment_spend_limit({"app_uid": "a"}) == 0.0
+        with pytest.raises(ValueError, match="below zero"):
+            deployment_spend_limit({"spend_limit": -1})
+        with pytest.raises(ValueError, match="not a number of credits"):
+            deployment_spend_limit({"spend_limit": "lots"})
+        document = deployment_spend_policy(500)
+        assert document.scope == "team"
+        assert (document.limits.spend.soft, document.limits.spend.hard) == (400, 500)
+        assert document.rules == [] and document.limits.model_tokens is None
+        with_limit = policies_of(None, spend_limit=500)
+        assert [p.scope for p in with_limit] == ["team", "session"]
+        assert [p.scope for p in policies_of(None)] == ["session"]
+
+    @pytest.mark.asyncio
+    async def test_the_sentence_tells_the_sessions_limit_from_the_keepers_day(
+        self,
+    ) -> None:
+        from agent_runtimes.guardrails.shield_policy import (
+            deployment_said,
+            policies_of,
+        )
+
+        asked: List[str] = []
+
+        async def ask(sentence: str) -> None:
+            asked.append(sentence)
+
+        recorded: List[Dict[str, Any]] = []
+        budget = ShieldBudgetCapability(
+            policies=lambda: policies_of(None, spend_limit=500),
+            session=lambda: "s",
+            ask=ask,
+            record=recorded.append,
+            said=lambda d, c, tokens, cost: deployment_said(
+                d, c, tokens=tokens, cost=cost, spend_limit=500
+            ),
+        )
+        state = budget.state_of("s")
+        state.limits.spend, state.last_credits = 350, 60  # would reach 410: past 400
+        await budget.before_model_request(None, "request")
+        assert len(asked) == 1
+        assert asked[0].startswith(
+            "a model request: ask me first — the session's credits spent would reach 410, past the soft limit of 400"
+        )
+        assert (
+            "the deployment's spend limit of 500 credits a day, held here for this session; its keeper "
+            "holds the same 500 across the day and stops its computer when a day's spending reaches it"
+            in asked[0]
+        )
+        state.limits.spend = 450  # would reach 510: over 500
+        with pytest.raises(ShieldBudgetExceeded) as refused:
+            await budget.before_model_request(None, "request")
+        said = str(refused.value)
+        assert (
+            "over the hard limit of 500 — the deployment's spend limit of 500 credits a day"
+            in said
+        )
+        assert said.endswith(
+            "the owner raising the limit under Ship, or a person's word, would let it go on"
+        )
+        assert "in the team policy" not in said
+        assert recorded[-1]["sentence"] == said and recorded[-1]["limit"] == "spend"
+
+    @pytest.mark.asyncio
+    async def test_a_stricter_organization_limit_keeps_its_own_words(self) -> None:
+        from agent_runtimes.guardrails.shield_policy import (
+            deployment_said,
+            policies_of,
+        )
+
+        organization = Policy(
+            scope="organization", limits=Limits(spend=Threshold(soft=100, hard=200))
+        )
+        budget = ShieldBudgetCapability(
+            policies=lambda: policies_of(None, managed=[organization], spend_limit=500),
+            session=lambda: "s",
+            said=lambda d, c, tokens, cost: deployment_said(
+                d, c, tokens=tokens, cost=cost, spend_limit=500
+            ),
+        )
+        state = budget.state_of("s")
+        state.limits.spend, state.last_credits = 190, 60
+        with pytest.raises(ShieldBudgetExceeded) as refused:
+            await budget.before_model_request(None, "request")
+        assert "over the hard limit of 200 in the organization policy" in str(
+            refused.value
+        )
+        assert "deployment" not in str(refused.value)
+
+
 async def _allow(sentence: str) -> None:
     return None
 

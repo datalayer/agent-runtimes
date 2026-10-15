@@ -746,8 +746,14 @@ class LiveSession:
                     "managed": runtime_policies().is_managed,
                     **answered,
                 }
+        from agent_runtimes.guardrails.shield_policy import deployment_spend_limit
+        from agent_runtimes.models.models import app_instance_of
+
         try:
-            policies = policies_in_force(self.app)
+            policies = policies_in_force(
+                self.app,
+                spend_limit=deployment_spend_limit(app_instance_of(self.agent_id)),
+            )
             unavailable = None
         except Exception as refused:  # noqa: BLE001 - said, not hidden: nothing is decided (decision 11)
             policies, unavailable = [], str(refused)

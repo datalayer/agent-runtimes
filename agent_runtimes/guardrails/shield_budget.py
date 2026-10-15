@@ -99,6 +99,12 @@ class ShieldBudgetCapability(AbstractCapability[Any]):
     record: Optional[Callable[[Dict[str, Any]], None]] = None
     """Told of each decision past a threshold, for the application's record."""
 
+    said: Optional[Callable[[Any, Context, int, int], str]] = None
+    """The decision's sentence as the person reads it: given the decision, the
+    context and the estimate (tokens, credits); the engine's own when unsaid.
+    A deployment's spend limit is told apart from the session's here
+    (``shield_policy.deployment_said``)."""
+
     states: Dict[str, BudgetState] = field(default_factory=dict, init=False, repr=False)
 
     # -- the state -----------------------------------------------------------------------
@@ -140,14 +146,23 @@ class ShieldBudgetCapability(AbstractCapability[Any]):
                 f"a model request: refused — the price of {state.unpriced} is unknown, so the spend "
                 "limit cannot be held; a priced model, or a policy without a spend limit, would let it go on"
             )
+        context = Context(workspace="", session_id=session or None, state=state.limits)
         decision = decide_budget(
-            Context(workspace="", session_id=session or None, state=state.limits),
+            context,
             policies,
             tokens=state.last_tokens,
             cost=state.last_credits,
         )
         if decision.verdict == "allow":
             return request_context
+        if self.said is not None:
+            decision = decision.model_copy(
+                update={
+                    "sentence": self.said(
+                        decision, context, state.last_tokens, state.last_credits
+                    )
+                }
+            )
         if self.record is not None:
             self.record(
                 {

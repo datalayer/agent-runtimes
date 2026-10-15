@@ -183,14 +183,27 @@ def app_capabilities(
     from agent_runtimes.guardrails.shield_budget import ShieldBudgetCapability
     from agent_runtimes.guardrails.shield_policy import (
         VERDICT_BEHAVIOUR,
+        deployment_said,
+        deployment_spend_limit,
         policies_in_force,
     )
     from agent_runtimes.loop.apps.record import current_session
+    from agent_runtimes.models.models import app_instance_of
+
+    # The deployment's spend limit, as ai-agents' keeper handed it in the
+    # instance it launched the agent with: held for each session here, and
+    # said apart from the keeper's day (SH-32). Read at every request, as the
+    # instance is remembered once the agent is made.
+    def spend_limit() -> float:
+        return deployment_spend_limit(app_instance_of(agent_id))
 
     budget = ShieldBudgetCapability(
-        policies=lambda: policies_in_force(app),
+        policies=lambda: policies_in_force(app, spend_limit=spend_limit()),
         session=current_session,
         agent_id=agent_id,
+        said=lambda decision, context, tokens, cost: deployment_said(
+            decision, context, tokens=tokens, cost=cost, spend_limit=spend_limit()
+        ),
         # A threshold crossed is a decision of the record (LOOP R-07), in the
         # shape every other decision is written in.
         record=lambda said: recorder.decided(
