@@ -165,8 +165,18 @@ def policies_of(
         own = rules_policy(app, lent)
         if own is not None:
             policies.append(own)
-    policies.append(default_policy())
+    policies.append(datalayer_default())
     return policies
+
+
+def datalayer_default() -> Policy:
+    """Decision 5's default as Datalayer runs it (SHIELD §6.11): the classes the
+    platform writes relationships for need the authorizer's allow beside the Rules."""
+    from agent_runtimes.guardrails.shield_authorizer import DATALAYER_AUTHORIZE  # noqa: PLC0415
+
+    document = default_policy()
+    document.authorize = list(DATALAYER_AUTHORIZE)  # type: ignore[assignment]
+    return document
 
 
 def policies_in_force(

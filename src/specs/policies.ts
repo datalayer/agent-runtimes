@@ -158,12 +158,13 @@ export const ORGANIZATION_BASELINE_POLICY_0_0_1: PolicySpec = {
   version: '0.0.1',
   name: "An organization's baseline",
   description:
-    "An example of the organization scope an administrator writes in IAM (SHIELD.md §6.7): running a command asks, nothing is deleted, nothing outside the workspace; the limits of §6.3 with a model budget of 200 000 then 400 000 tokens and a spend limit of 5 then 10 USD (500 then 1 000 credits); fetches to *.datalayer.io alone; Claude Code and Codex admitted, each on the account's own key.",
+    "An example of the organization scope an administrator writes in IAM (SHIELD.md §6.7): running a command asks, nothing is deleted, nothing outside the workspace; the limits of §6.3 with a model budget of 200 000 then 400 000 tokens and a spend limit of 5 then 10 USD (500 then 1 000 credits); fetches to *.datalayer.io alone; Claude Code and Codex admitted, each on the account's own key; reading, writing, running a command, sending and buying need a permission beside the Rules (§6.11).",
   enabled: true,
   tags: ['policy', 'organization', 'example'],
   policy: {
     scope: 'organization',
     version: 1,
+    authorize: ['read', 'write', 'execute', 'send', 'buy'],
     rules: [
       {
         name: 'running a command asks',

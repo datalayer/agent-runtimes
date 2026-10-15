@@ -97,6 +97,7 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalRejectedError,
     ToolApprovalTimeoutError,
 )
+from agent_runtimes.guardrails.shield_authorizer import companies_of
 from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
 from agent_runtimes.mcp.lent_stdio import carry, hold, release
 from agent_runtimes.types import HarnessSpec
@@ -353,6 +354,19 @@ def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
                 url=f"{gateway_url()}?{query}" if query else gateway_url(),
             )
         )
+    # The companies the application works with as a personal agent (SHIELD §6.10,
+    # SH-70): each a gateway toolset of its protocol at that company
+    # (``?only=pap&pap-company=<domain>``), reached with the execution credential
+    # as any other — the harness calls pap_sign_in, pap_ask, pap_propose as tools
+    # and never speaks PAP; custody, identity and the record are the gateway's.
+    from agent_runtimes.loop.apps import pap_connections  # noqa: PLC0415
+
+    for sid in pap_connections.remember(app) if app is not None else []:
+        if sid in {item.name for item in lent}:
+            continue
+        query = pap_connections.gateway_query(sid)
+        if query:
+            lent.append(LentToolset(name=sid, url=f"{gateway_url()}?{query}"))
     return lent
 
 
@@ -683,6 +697,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         state_store: Any = None,
         policy_maker: Callable[[list[Policy]], list[Policy]] | None = None,
         connect_url: str | None = None,
+        companies: Sequence[str] = (),
     ) -> None:
         """Build the agent on a harness, its command resolved (or the sidecar's URL), its policies given."""
         self._agent_id = agent_id
@@ -729,6 +744,13 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: given the managed documents, the full set in force.
         self.policy_maker: Callable[[list[Policy]], list[Policy]] | None = policy_maker
         self._stop_listening: Callable[[], None] | None = None
+        # The authorizer and the subject (SHIELD §6.11, SH-72, SH-75): IAM's AuthZen
+        # route with the run's credential, the deployment or the account the run
+        # acts as; the lent tools of a company classed by agentspecs' table, the
+        # companies named so that a fetch to one is refused (§6.10).
+        from agent_runtimes.guardrails import shield_authorizer  # noqa: PLC0415
+
+        self.companies: list[str] = list(companies)
         ShieldProxy.__init__(
             self,
             list(command),
@@ -737,6 +759,10 @@ class ACPAgent(BaseAgent, ShieldProxy):
             workspace=workspace,
             agent_env=dict(environment or {}),
             connect_url=connect_url,
+            authorizer=shield_authorizer.runtime_authorizer(credential),
+            subject=shield_authorizer.runtime_subject(credential, shield_authorizer.deployment_of_token(credential)),
+            tool_class=shield_authorizer.lent_tool_class,
+            companies=self.companies,
         )
 
     # -- the policies while running (SH-50, SH-54) ---------------------------------------
@@ -1713,6 +1739,7 @@ def harness_agent(
         name=name,
         description=description,
         state_store=state_store,
+        companies=companies_of(app) if app is not None else (),
     )
 
 

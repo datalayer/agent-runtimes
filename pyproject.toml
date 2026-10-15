@@ -49,7 +49,8 @@ dependencies = [
     # An Appspec's `a2a` extensions (AGENT_PROTOCOLS PR-02): an older one refuses the field.
     # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SHIELD SH-50).
     # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SHIELD SH-60).
-    "agentspecs>=0.0.104",
+    # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SHIELD SH-74).
+    "agentspecs>=0.0.105",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -69,7 +70,8 @@ dependencies = [
     # the v0.1.1 tag on 15 October 2026.
     # 0.1.6: agent_shield.conformance and agent_shield.report, the evidence map and the
     # conformance report ai-agents serves (SHIELD SH-61, SH-62).
-    "datalayer-agent-shield>=0.1.6,<0.2",
+    # 0.2.0: the authorizer port, the PAP classes and the company role (SHIELD SH-74, SH-70, SH-71).
+    "datalayer-agent-shield>=0.2.0,<0.3",
     # `CodeExecutionOutcome.outputs` — the mime bundles the A2UI converter
     # draws from — arrived in 1.3.0; `code_sandboxes.environments`, the models
     # the environments client is typed with (PLAN_ENV.md, D-14), in 1.5.0;
