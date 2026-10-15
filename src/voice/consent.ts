@@ -36,3 +36,16 @@ export function consent(app: string): void {
 /** The sentence said before the first use: where the audio goes (VO-61). */
 export const CONSENT_SENTENCE =
   'What you say is transcribed on this device: the sound never leaves it, and is not kept. The words go in the message box, for you to send.';
+
+/**
+ * The sentence said before the first use when what is said is heard on
+ * Datalayer's servers (VO-34, VO-61): asked apart from the device's, since
+ * a yes to one is not a yes to the other.
+ */
+export const SERVER_CONSENT_SENTENCE =
+  'What you say is sent to Datalayer’s servers to be transcribed: the sound and the words are not kept there. The words go in the message box, for you to send.';
+
+/** Whose consent is remembered for hearing in a place: the application's, apart for the server. */
+export function consentKeyFor(app: string, where: 'device' | 'server'): string {
+  return where === 'server' ? `${app}:server` : app;
+}

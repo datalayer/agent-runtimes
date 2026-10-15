@@ -89,6 +89,7 @@ export function chatVoiceOf(
     speechUrl: place.speechUrl,
     token: place.token,
     consentKey: place.consentKey,
+    where: spec.where ?? 'auto',
   };
 }
 

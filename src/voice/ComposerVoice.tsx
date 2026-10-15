@@ -19,7 +19,8 @@
 
 import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
-import { DeviceHearing } from './hearing';
+import { DeviceHearing, type Hearing } from './hearing';
+import { ServerHearing, hearingPlace } from './serverHearing';
 import { VoiceInput } from './VoiceInput';
 import { VoiceMenu } from './VoiceMenu';
 import type { SettledVoice } from './chatVoice';
@@ -75,13 +76,30 @@ export function ComposerVoice({
   onInterimChange,
   answers = false,
 }: ComposerVoiceProps): JSX.Element | null {
-  const hearing = useMemo(
-    () =>
-      voice.input !== 'off'
-        ? new DeviceHearing(voice.modelsUrl, voice.engines)
-        : undefined,
-    [voice.input, voice.modelsUrl, voice.engines],
-  );
+  // In the browser, or on Datalayer's servers where the application, the
+  // language or the person's detection asks for it (§5, VO-14, VO-34).
+  const place = hearingPlace(voice);
+  const hearing = useMemo((): Hearing | undefined => {
+    if (voice.input === 'off') {
+      return undefined;
+    }
+    const device = new DeviceHearing(voice.modelsUrl, voice.engines);
+    return place === 'server' && voice.speechUrl
+      ? new ServerHearing(device, {
+          speechUrl: voice.speechUrl,
+          token: voice.token,
+          detect: voice.detect,
+        })
+      : device;
+  }, [
+    voice.input,
+    voice.modelsUrl,
+    voice.engines,
+    place,
+    voice.speechUrl,
+    voice.token,
+    voice.detect,
+  ]);
   // What the box held when the microphone opened: the words heard go after it.
   const base = useRef('');
   const afterBase = (words: string) =>

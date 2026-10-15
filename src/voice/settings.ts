@@ -58,6 +58,11 @@ export interface VoiceSettings {
    * speech service, so answers are spoken only if the browser can do it.
    */
   onDeviceOnly?: boolean;
+  /**
+   * Let Whisper find the language they speak (VO-14): what they say is
+   * heard on Datalayer's servers, which detect it, rather than in the browser.
+   */
+  detectLanguage?: boolean;
 }
 
 function clamp(
@@ -100,6 +105,9 @@ export function saneVoiceSettings(
   }
   if (typeof kept.onDeviceOnly === 'boolean') {
     sane.onDeviceOnly = kept.onDeviceOnly;
+  }
+  if (typeof kept.detectLanguage === 'boolean') {
+    sane.detectLanguage = kept.detectLanguage;
   }
   return sane;
 }
@@ -256,6 +264,9 @@ export function voiceForPerson(
   if (chosen.microphoneId) {
     next.microphoneId = chosen.microphoneId;
   }
+  if (chosen.detectLanguage) {
+    next.detect = true;
+  }
   if (chosen.onDeviceOnly) {
     // Nothing is asked of the speech service: no token, no origin. Answers
     // are said by that service only (decision 1: no voice made in the
@@ -263,6 +274,8 @@ export function voiceForPerson(
     next.speechUrl = undefined;
     next.token = undefined;
     next.output = 'off';
+    next.where = 'device';
+    next.detect = false;
   }
   return next;
 }

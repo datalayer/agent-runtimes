@@ -66,6 +66,7 @@ export function VoiceMenu({
     value: VoiceSettings[K] | undefined,
   ) => keep(withVoiceSetting(settings, key, value, catalogueVoiceSpeaks));
   const onDevice = Boolean(settings.onDeviceOnly);
+  const detect = Boolean(settings.detectLanguage);
   const voices = voicesSpeaking(voice.language);
   const named = devices.filter(device => device.label);
   return (
@@ -193,6 +194,19 @@ export function VoiceMenu({
                 Sent as soon as it is heard, not left in the box.
               </ActionList.Description>
             </ActionList.Item>
+            {voice.speechUrl && !onDevice ? (
+              <ActionList.Item
+                selected={detect}
+                onSelect={() => choose('detectLanguage', !detect)}
+                data-voice-detect=""
+              >
+                Detect the language I speak
+                <ActionList.Description variant="block">
+                  Heard on Datalayer’s servers by Whisper, which finds the
+                  language; nothing is kept there.
+                </ActionList.Description>
+              </ActionList.Item>
+            ) : null}
             <ActionList.Item
               selected={onDevice}
               onSelect={() => choose('onDeviceOnly', !onDevice)}

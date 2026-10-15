@@ -10,7 +10,10 @@
  * read from Datalayer's CDN with its own CORS header (VO-49), the words
  * written in the box as they are heard and greyed until final (VO-11), the
  * microphone stopping by itself after the silence (VO-10), nothing sent; the
- * person's voice menu beside it (VO-30).
+ * person's voice menu beside it (VO-30). With *Detect the language I speak*
+ * chosen, the same words are heard on Datalayer's servers instead (VO-34,
+ * VO-14): asked apart, the recording sent to the speech service, the
+ * language found there.
  *
  *   E2E_STATE=<signed-in storage state> E2E_VOICE_APP=<app id> \
  *     npx playwright test -c e2e/playwright.config.ts voice.spec.ts
@@ -130,5 +133,63 @@ test.describe('voice in the composer (VO-53)', () => {
       expect(model.status).toBeLessThan(300);
       expect(model.cors).toBe('*');
     }
+  });
+
+  test('with detection chosen, hears the fixture on Datalayer’s servers and finds its language (VO-34, VO-14)', async ({
+    page,
+    context,
+  }) => {
+    const heard: { status: number; language?: string; length: number }[] = [];
+    await context.route('**/api/**', route =>
+      ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
+        ? route.abort()
+        : route.continue(),
+    );
+    // The person's choice, as the voice menu keeps it.
+    await context.addInitScript(() =>
+      window.localStorage.setItem(
+        'datalayer-voice-settings',
+        JSON.stringify({ detectLanguage: true }),
+      ),
+    );
+    page.on('response', async response => {
+      if (response.url().includes('/speech/transcriptions')) {
+        const body = await response.json().catch(() => ({}));
+        heard.push({
+          status: response.status(),
+          language: body.language,
+          length: response.request().postDataBuffer()?.length ?? 0,
+        });
+      }
+    });
+    await page.goto(
+      `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
+    );
+    const card = page.locator('#app-voice');
+    await expect(card).toBeVisible({ timeout: 180_000 });
+    if (
+      !['on', 'true'].includes(
+        (await card.getAttribute('data-app-voice')) ?? '',
+      )
+    ) {
+      await card.locator('input[type=checkbox]').click();
+    }
+    await page.locator('text=Compose >> visible=true').first().click();
+    const mic = page.locator('[data-voice-mic]').first();
+    await expect(mic).toBeEnabled({ timeout: 120_000 });
+    await mic.click();
+    // Asked apart from the device's: the sound goes to Datalayer's servers.
+    await expect(page.getByText('sent to Datalayer’s servers')).toBeVisible();
+    await page.locator('[data-voice-consent-yes]').click();
+    const box = page.locator('[contenteditable=true]').first();
+    await expect(page.locator('[data-voice-input="idle"]')).toHaveCount(1, {
+      timeout: 180_000,
+    });
+    await expect(box).toHaveText(/weather like in/i, { timeout: 120_000 });
+    expect(heard).toHaveLength(1);
+    expect(heard[0].status).toBe(200);
+    expect(heard[0].language).toBe('en');
+    // A WAV of the speech only: the silence around it stays in the browser.
+    expect(heard[0].length).toBeGreaterThan(44);
   });
 });

@@ -30,8 +30,14 @@ import { Box } from '@datalayer/primer-addons';
 import { MicrophoneIcon } from '@datalayer/icons-react';
 import { MuteIcon } from '@primer/octicons-react';
 import { MicrophoneRefused, openMicrophone, type Capture } from './capture';
-import { CONSENT_SENTENCE, consent, consented } from './consent';
-import type { DeviceHearing } from './hearing';
+import {
+  CONSENT_SENTENCE,
+  SERVER_CONSENT_SENTENCE,
+  consent,
+  consentKeyFor,
+  consented,
+} from './consent';
+import type { Hearing } from './hearing';
 import type { Transcript } from './types';
 
 /** What the microphone is doing, said in words (VO-67, VO-68). */
@@ -63,7 +69,7 @@ export const LONGEST_MS = 60_000;
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export interface VoiceInputProps {
-  hearing: DeviceHearing;
+  hearing: Hearing;
   /** The language listened to, BCP 47. */
   language: string;
   /** What was said, once heard. */
@@ -133,7 +139,7 @@ export function VoiceInput({
     if (disabled || stateRef.current !== 'idle') {
       return;
     }
-    if (!consented(consentKey)) {
+    if (!consented(consentKeyFor(consentKey, hearing.where))) {
       setState('asking');
       return;
     }
@@ -447,7 +453,9 @@ export function VoiceInput({
           zIndex={10}
         >
           <Text as="p" sx={{ fontSize: 1, mb: 2 }}>
-            {CONSENT_SENTENCE}
+            {hearing.where === 'server'
+              ? SERVER_CONSENT_SENTENCE
+              : CONSENT_SENTENCE}
           </Text>
           <Box display="flex" gap={2} justifyContent="flex-end">
             <Button size="small" onClick={() => setState('idle')}>
@@ -458,7 +466,7 @@ export function VoiceInput({
               variant="primary"
               data-voice-consent-yes=""
               onClick={() => {
-                consent(consentKey);
+                consent(consentKeyFor(consentKey, hearing.where));
                 // Asked, and said yes: listen now, without another press.
                 stateRef.current = 'idle';
                 setState('idle');

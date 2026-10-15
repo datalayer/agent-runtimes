@@ -20,6 +20,7 @@ export * from './sentences';
 export * from './pinned';
 export * from './capture';
 export * from './hearing';
+export * from './serverHearing';
 export * from './speaker';
 export * from './consent';
 export * from './settings';
@@ -77,8 +78,17 @@ export interface ChatVoice {
    * (VO-10, VO-69): 1,500 when unsaid; longer for a person who pauses.
    */
   silenceMs?: number;
-  /** ai-agents, whose speech service says the answers. */
+  /** ai-agents, whose speech service says the answers, and hears where the browser does not. */
   speechUrl?: string;
+  /**
+   * Where what is said is heard (§5): `device`, the browser; `server`,
+   * Datalayer's speech service; `auto`, the default, the browser where a
+   * model there hears the language, else the server. The Appspec's
+   * `interface.voice.where`.
+   */
+  where?: 'auto' | 'device' | 'server';
+  /** The person asked for their language to be found by Whisper on the server (VO-14). */
+  detect?: boolean;
   /** The token the speech service is asked with. */
   token?: string;
   /** Send what is said at once, rather than put it in the composer. */

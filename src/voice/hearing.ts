@@ -51,6 +51,21 @@ export interface HeardSoFar {
   silentMs: number;
 }
 
+/**
+ * What hears a press, wherever it runs (§5): in the page (`DeviceHearing`)
+ * or on Datalayer's servers (`ServerHearing`).
+ */
+export interface Hearing {
+  /** Where the sound is heard: what the consent says, and a transcript's `where`. */
+  readonly where: 'device' | 'server';
+  /** Load what hears a language, saying how far it has come. */
+  ready(language: string, progress?: HearingProgress): Promise<void>;
+  /** What was said so far while the microphone stays open (VO-11). */
+  hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar>;
+  /** What was said in a press, or `undefined` when nothing was. */
+  hear(audio: Float32Array, language: string): Promise<Transcript | undefined>;
+}
+
 /** Joins the speech a VAD found, in order. */
 export function joinSegments(segments: Float32Array[]): Float32Array {
   const out = new Float32Array(segments.reduce((n, s) => n + s.length, 0));
@@ -66,7 +81,8 @@ export function joinSegments(segments: Float32Array[]): Float32Array {
  * The page's hearing: loaded once, on first use, from Datalayer's origin
  * (`modelsUrl`), every file checked against its pin.
  */
-export class DeviceHearing {
+export class DeviceHearing implements Hearing {
+  readonly where = 'device' as const;
   private recognizers = new Map<string, Promise<SpeechRecognizer>>();
   private vad?: Promise<{
     run: (
@@ -101,6 +117,26 @@ export class DeviceHearing {
   /** Load what hears a language, saying how far it has come. */
   async ready(language: string, progress?: HearingProgress): Promise<void> {
     await Promise.all([this.recognizer(language, progress), this.activity()]);
+  }
+
+  /** Load only what finds speech (Silero VAD): what hearing on the server needs here. */
+  async readyToFindSpeech(progress?: HearingProgress): Promise<void> {
+    const total = downloadSize('silero-vad');
+    progress?.(0, total);
+    await this.activity();
+    progress?.(total, total);
+  }
+
+  /** The speech in what was heard, and how long it has been silent since it last ended, in ms. */
+  async findSpeech(
+    audio: Float32Array,
+  ): Promise<{ speech: Float32Array; silentMs: number }> {
+    const { speech, lastEnd } = await this.speechIn(audio);
+    const heardMs = (audio.length / HEARING_RATE) * 1000;
+    return {
+      speech,
+      silentMs: lastEnd === undefined ? 0 : Math.max(0, heardMs - lastEnd),
+    };
   }
 
   private recognizer(
@@ -220,9 +256,7 @@ export class DeviceHearing {
    * since the speech ended — what stops a click to talk (VO-10).
    */
   async hearSoFar(audio: Float32Array, language: string): Promise<HeardSoFar> {
-    const { speech, lastEnd } = await this.speechIn(audio);
-    const heardMs = (audio.length / HEARING_RATE) * 1000;
-    const silentMs = lastEnd === undefined ? 0 : Math.max(0, heardMs - lastEnd);
+    const { speech, silentMs } = await this.findSpeech(audio);
     if (speech.length < HEARING_RATE * 0.2) {
       return { text: '', spoke: false, silentMs };
     }

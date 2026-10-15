@@ -26,6 +26,7 @@ import {
   withVoiceSetting,
 } from '../settings';
 import { settledVoice } from '../chatVoice';
+import { hearingPlace } from '../serverHearing';
 import { VoiceMenu } from '../VoiceMenu';
 import { ComposerVoice } from '../ComposerVoice';
 import { InputPrompt } from '../../chat/prompt/InputPrompt';
@@ -213,6 +214,20 @@ describe('the composer’s voice menu (VO-14, VO-21, VO-25, VO-30)', () => {
     await pick('[data-voice-on-device]');
     expect(heard()).toBe('en-US off kokoro-af-heart');
     expect(settledVoice(SPEAKS).speechUrl).toBeUndefined();
+  });
+
+  it('offers detection where the server hears, and the chat then hears there (VO-14)', async () => {
+    draw(SPEAKS, true);
+    await open();
+    await pick('[data-voice-detect]');
+    expect(heldVoiceSettings().detectLanguage).toBe(true);
+    expect(settledVoice(SPEAKS).detect).toBe(true);
+    expect(hearingPlace(settledVoice(SPEAKS))).toBe('server');
+    // Without the speech service, nothing to detect with: not offered.
+    keepVoiceSettings({});
+    draw({ ...SPEAKS, output: 'off', speechUrl: undefined }, false);
+    await open();
+    expect(document.querySelector('[data-voice-detect]')).toBeNull();
   });
 
   it('gives every choice back to the application', async () => {
