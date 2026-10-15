@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.27
+
+On agentspecs 0.0.96.
+
+- **The web chat's conversation is the shared reducer** (MOBILE M-030): `ChatBase` keeps no message state of its own — every protocol adapter's events (AG-UI, Vercel AI, A2A, ACP, the in-page agent) go through `portable/adapterEvents`' `conversationEventsOf` into `reduceConversation`, the phone's reducer; a conversation read again is one `snapshotOfMessages`. `chat/base/conversationItems` draws its rows with what only the web holds (Reactor UI displays and authors, an application's steps). The reducer grows to what the chat needed: arguments as an object, results as values when kept whole, what a running call waits for (an approval, the person), sandbox and code errors and exit codes, tool calls restored from a snapshot, the device's bounds (`DEVICE_LIMITS`, `BROWSER_LIMITS`) and `withoutItems`. A protocol error is now also said in the conversation; a stopped call says *Stopped*, as on the phone.
+- **ACP tool results reach the chat**: a `tool_call_update` names its call and is a result only once it completed or failed.
+
 ## 1.5.26
 
 On agentspecs 0.0.96.
