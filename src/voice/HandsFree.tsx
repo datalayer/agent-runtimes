@@ -47,7 +47,6 @@ import {
   bargedIn,
   handsFreeState,
   turnEnded,
-  type HandsFreeState,
 } from './handsFree';
 import type { Hearing } from './hearing';
 import { INTERIM_MS } from './VoiceInput';

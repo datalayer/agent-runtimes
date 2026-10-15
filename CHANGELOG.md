@@ -7,9 +7,11 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## 1.5.29
+## 1.5.30
 
-On agentspecs 0.0.99.
+On agentspecs 0.0.99. (1.5.29 was tagged and did not publish: its build refused an unused import; this carries it.)
+
+- **`loop --voice` and `--speak`** (VOICE.md VO-15, VO-16, VO-17): `/voice`, `Ctrl`+`T` its shortcut, listens with the machine's microphone (the `voice` extra, sounddevice) and puts the words on the prompt line; `--speak` says each answer; heard on the machine with faster-whisper and the pinned `whisper-small`, else on Datalayer's servers with the person's token; no microphone, no extra or no token refused in a sentence. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
 
 - **Hands-free and barge-in** (VOICE.md VO-12, VO-13): where an Appspec's voice says `input: hands_free`, *Talk with it* beside the microphone — a turn sent by itself after 700 ms of silence, the answer said as it is written, listening on, the state shown at all times; speaking over the agent stops its voice and its run, the answer marked *interrupted*. No longer refused by `checkAppspec`. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
 - `<datalayer-app>` reads a visitor's address at ai-agents' address, not Spacer's (found on datalayer.ai, VOICE.md VO-18).
