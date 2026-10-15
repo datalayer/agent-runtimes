@@ -7,9 +7,11 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## 1.5.32
+## 1.5.33
 
-On agentspecs 0.0.100 and `datalayer-agent-shield` 0.1.1. 1.5.31 was tagged minutes before with everything below but the harness's key; this carries it.
+On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1. 1.5.31 and 1.5.32 were tagged minutes before with everything below but the catalogue's agent; this carries them.
+
+- **A Claude Code Agent** (`example-harness-claude-code`, agentspecs 0.0.101): the first catalogue agent on a harness, off in the shared catalogue because it needs the account's own `ANTHROPIC_API_KEY`; what the r1 drill of SHIELD SH-10 runs.
 
 - **A harness's declared secrets reach its process** (SHIELD.md §6.1, SH-10): an agent on a catalogue harness declares the harness spec's `requires.secrets` (Claude Code's `ANTHROPIC_API_KEY`) as the runtime's, so the companion fetches them from IAM for `configure-from-spec` and the harness is given them by name — and an account without them is refused in a sentence, as for an MCP server's. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
 
