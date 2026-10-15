@@ -55,7 +55,7 @@ export const EMBED_ATTRIBUTES = {
   font: 'A CSS font family for the application’s text; Inter, then the system’s sans-serif, by default.',
   server:
     'An agent-runtimes server the application’s agent runs on; a Datalayer runtime by default.',
-  api: 'Datalayer’s API, where an application is read with its token; the platform’s by default.',
+  api: 'Datalayer’s API: where an application is read with its token (Spacer), and where a visitor’s address is read (ai-agents); the platform’s by default.',
   height: 'The height of an inline application, in pixels; 640 by default.',
   resume:
     'true or false: whether a visit’s conversation is picked up again after the page reloads, kept in the page’s storage; true by default.',

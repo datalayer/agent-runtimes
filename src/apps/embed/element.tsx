@@ -482,7 +482,7 @@ export function defineDatalayerAppElement(
         // A public application, as a visitor without an account (D-07):
         // an example kept warm or an address open to visitors, run on the
         // visitors' runtime; a decision framed; a refusal said.
-        const visitor = await readVisitorApp({ api: this.api(), app });
+        const visitor = await readVisitorApp({ api: this.agents(), app });
         if (visitor.kind === 'decision') {
           return { kind: 'frame', src: frameSrcOf(this.origin(), visitor.app) };
         }
@@ -510,12 +510,26 @@ export function defineDatalayerAppElement(
       return this.spoken;
     }
 
-    /** Datalayer's services: the `api` attribute, else the platform's, else prod1's. */
+    /**
+     * ai-agents, where a visitor's address is read and beside which the
+     * visitors' runtime and ai-inference answer: the `api` attribute, else
+     * the platform's, else r1's. Not Spacer's address (`api()`), which lives
+     * on another plane.
+     */
+    private agents(): string {
+      return (
+        this.getAttribute('api') ||
+        coreStore.getState().configuration?.aiAgentsUrl ||
+        DEFAULT_API
+      ).replace(/\/+$/, '');
+    }
+
+    /** Spacer, where an application is read with its embed token: the `api` attribute, else the platform's, else prod1's. */
     private api(): string {
       return (
         this.getAttribute('api') ||
         coreStore.getState().configuration?.spacerUrl ||
-        DEFAULT_API
+        'https://prod1.datalayer.run'
       ).replace(/\/+$/, '');
     }
 

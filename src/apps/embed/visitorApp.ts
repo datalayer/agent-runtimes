@@ -58,8 +58,15 @@ export const VISITOR_EXAMPLES: readonly string[] = [
 /** The key of an application at its address, as a visitor's token names it. */
 export const AT_PREFIX = 'at:';
 
-/** Datalayer's services, where the element names none (`api`). */
-export const DEFAULT_API = 'https://prod1.datalayer.run';
+/**
+ * Datalayer's services for a visitor, where the element names none (`api`)
+ * and the platform's configuration says none: ai-agents, where an address is
+ * read, and beside it the visitors' runtime and ai-inference, which mints the
+ * visitor's token. Not Spacer's address, which reads an application with its
+ * embed token: the two live on different planes (ai-agents on r1, Spacer on
+ * prod1), found 15 October 2026 on datalayer.ai's embed.
+ */
+export const DEFAULT_API = 'https://r1.datalayer.run';
 
 /** An application's id on Datalayer: a ULID. */
 export const isAppUid = (value: string): boolean =>
