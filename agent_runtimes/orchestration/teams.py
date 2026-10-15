@@ -148,7 +148,7 @@ def member_protocol(team: TeamSpec, member: TeamAgentspec) -> AgentProtocol:
         ``ACP`` when the member is a harness and a member links to it over
         ``acp``; ``A2A`` otherwise.
     """
-    if getattr(member, "harness", "") and any(
+    if member.harness and any(
         link.member == member.id and link.over == "acp"
         for other in team.agents
         for link in (other.talks_to or [])
@@ -236,7 +236,7 @@ def registration(seat: TeamSeat) -> dict[str, Any]:
         and transport.
     """
     team, member = seat.team, seat.member
-    if member is not None and getattr(member, "harness", ""):
+    if member is not None and member.harness:
         # A harness (SH-45): the agent program itself, over ACP behind the
         # Shield; its goal in this team is what each delegation's objective
         # says, never a system prompt it would not read.

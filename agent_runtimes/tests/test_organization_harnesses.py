@@ -31,7 +31,7 @@ from agent_runtimes.tests.test_acp_agent import FAKE, Approvals
 from agent_runtimes.tests.test_shield_policies import FakeIam, served
 
 ORG = "org1"
-SPEC = {
+SPEC: dict[str, Any] = {
     "id": "org-acme-fake",
     "version": "0.0.1",
     "name": "Acme's own agent",

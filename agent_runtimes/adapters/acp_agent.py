@@ -1731,8 +1731,8 @@ def harness_agent(
             harness, admitted_as = organization_harness(
                 harness_id, organization_uid=organization_uid, read=read_organization
             )
-        except OrganizationHarnessRefused as refused:
-            raise HarnessRefused(str(refused)) from None
+        except OrganizationHarnessRefused as unread:
+            raise HarnessRefused(str(unread)) from None
     if harness is None:
         listed = listed_refusal(harness_id)
         raise HarnessRefused(
