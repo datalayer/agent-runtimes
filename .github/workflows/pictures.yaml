@@ -6,24 +6,19 @@ name: Pictures
 # pictures/baselines/. A difference fails and uploads the baseline, the new
 # picture and the diff.
 #
-# The baselines are CI's: run this workflow by hand with `accept` to take
-# them again, download the `pictures-baselines` artifact and commit it to
-# pictures/baselines/.
+# To take the baselines in CI: run this workflow by hand with `accept`,
+# download the `pictures-baselines` artifact and commit it to
+# pictures/baselines/ (gh workflow run pictures.yaml -f accept=true).
 
+# By hand only, for now. The first CI run (15 Oct 2026) failed 104 of 118
+# pictures, and not only by font hinting: CI installs the published
+# @datalayer/primer-addons 1.0.39, while the baselines were taken against the
+# monorepo's unreleased loop theme (feat/loop-theme-next) — links, corners and
+# spacing differ. Once those packages are released and pinned here, take CI's
+# baselines with `accept`, commit them, and add a pull_request trigger
+# (pictures/**, html/pictures.html, src/stories/loop/**, src/chat/**,
+# src/apps/plugins/assistant*/**, style/**, vite*.ts, package.json).
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'pictures/**'
-      - 'html/pictures.html'
-      - 'src/stories/loop/**'
-      - 'src/chat/**'
-      - 'src/apps/plugins/assistant*/**'
-      - 'style/**'
-      - 'vite.config.ts'
-      - 'vite.pictures.config.ts'
-      - 'package.json'
-      - '.github/workflows/pictures.yaml'
   workflow_dispatch:
     inputs:
       accept:
