@@ -20,6 +20,17 @@ text stays on screen.
   on its own unless *Send what I say* is on. The sound never leaves the page,
   and is forgotten once heard. No microphone, a refused permission or a model
   that cannot load is said in a sentence beside it.
+- **Heard on Datalayer's servers, when asked.** Where the application's voice
+  says `where: server`, where it says `auto` and no model in the browser hears
+  the language, or where the person chose *Detect the language I speak* in the
+  voice menu, the browser still finds the speech and the silence, and sends
+  only the speech, as a recording, to the speech service
+  (`POST /api/ai-agents/v1/speech/transcriptions`). There Whisper large-v3-turbo
+  writes it, finding the language itself when asked to detect it. Its words
+  come once the person stops, not while they speak. The first use asks apart
+  for this, in its own sentence: the sound goes to Datalayer's servers, and
+  neither it nor the words are kept there. *Keep speech on this device* turns
+  all of it off.
 - **Read aloud, on request.** With `output: on_request`, the default of an
   Appspec, each answer the agent has finished has *Read aloud* under it. It
   stops whatever the voice was saying and reads that answer from its start, a
@@ -50,7 +61,7 @@ interface:
     output: always           # off | on_request | always
     voice: kokoro-af-heart   # a voice of the catalogue
     language: en-US          # BCP 47; the person's when unsaid
-    where: auto              # auto | device | server
+    where: auto              # auto | device | server: where what is said is heard
 ```
 
 `POST /api/v1/apps/configure` and `GET /api/v1/apps/current` answer the
@@ -66,12 +77,14 @@ tool and no rule.
 
 Its voice is asked of the speech service with the token its conversation
 already has. A visitor without an account is heard in the browser, and its
-answers are asked with the visitor's token from ai-inference, under the
-visitors' daily ceiling (zero until it is raised: the page then says the answer
-isn't spoken without an account). An embedded application's answers are asked
-with its embed token for the deployment the page runs. ai-agents checks that
-the page may open that deployment, as a runtime does, and counts the speech
-against the deployment's spend limit. The owner pays.
+answers are asked with the visitor's token from ai-inference: each visitor
+hears **120 seconds of spoken answers a day**, recordings heard on the server
+counted in the same 120 seconds, and is then told in a sentence to sign in to
+hear more. An embedded application's answers are asked with its embed token,
+for the deployment **the token names** — the page names none, and a token
+naming none is refused. ai-agents checks that the page may open that
+deployment, as a runtime does, and counts the speech against the deployment's
+spend limit. The owner pays.
 
 `<datalayer-app>` is drawn in the host's page, so the page's
 `Permissions-Policy` decides whether the microphone may be asked for. The
@@ -210,5 +223,19 @@ a CPU (in Node, not the browser):
 | `kokoro-bf-emma`, said and heard back | 16.2% | 0.30 |
 | `kokoro-ff-siwis`, said and heard back | 13.6% | 0.24 |
 
-French heard in the browser is weak with Whisper base. Hearing on the server
-(faster-whisper) is planned for the next phase.
+French heard in the browser is weak with Whisper base. On the server,
+Whisper large-v3-turbo (faster-whisper, 8-bit on the CPU) heard the English
+fixture word for word; on r1's CPUs a 9-second recording takes about 16
+seconds to hear (33 when it also detects the language), so the browser stays
+the default where it hears the language.
+
+### Streaming to the server
+
+`WS /api/ai-agents/v1/speech/transcriptions/stream` hears speech as it is
+said. The first message says who asks, never the address:
+`{"token": "…", "language": "en", "format": "pcm16"}`. Then come binary
+frames of 16-bit mono PCM at 16 kHz. Every 2 seconds of new sound, what was
+said so far is sent back (`{"type": "partial"}`), and the whole at the end
+(`{"type": "final", "why"}`): when the page sends `{"type": "end"}`, after
+10 seconds of silence, when the principal's seconds are spent, or after
+5 minutes. A refusal is `{"type": "refused", "detail"}` in a sentence.
