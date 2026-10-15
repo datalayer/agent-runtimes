@@ -1211,6 +1211,16 @@ def main_callback(
             "asked; exits non-zero when a line errors."
         ),
     ),
+    voice: bool = typer.Option(
+        False,
+        "--voice",
+        help="Listen with this machine's microphone: Ctrl+T (or /voice) starts and stops, the words go on the prompt line (VOICE.md VO-15; needs agent-runtimes[voice]).",
+    ),
+    speak: bool = typer.Option(
+        False,
+        "--speak",
+        help="Say the answers through this machine's speaker, by Datalayer's speech service (VO-15).",
+    ),
 ) -> None:
     """Agent Runtimes Chat assistant.
 
@@ -1597,6 +1607,8 @@ def main_callback(
                             extra_suggestions=extra_suggestions,
                             startup_message=startup_message,
                             where=cloud_launch.label if cloud_launch else None,
+                            voice=voice,
+                            speak=speak,
                         )
                     )
                 finally:

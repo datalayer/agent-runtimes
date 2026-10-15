@@ -60,6 +60,25 @@ text stays on screen.
   application's record keeps the turn as its transcript, marked `spoken`.
   Audio is never kept.
 
+## At the terminal
+
+`loop --voice` listens with the machine's microphone: **`Ctrl`+`T`** (or
+`/voice`) starts listening — *Listening… (Ctrl+T or /voice to stop)* — and
+the next press stops it and hears what was said; the words go **on the prompt
+line**, to edit or send. With `--speak`, each answer is said through the
+machine's speaker, by Datalayer's speech service. A terminal sees no key
+release, so there is no holding: a press starts, a press stops, and one
+press listens a minute at most.
+
+It needs the `voice` extra — `pip install 'agent-runtimes[voice]'`
+(sounddevice, MIT) — which is never a default dependency. What is said is
+heard **on the machine** when `faster-whisper` is installed beside it and the
+pinned store (`DATALAYER_SPEECH_MODELS_DIR`, `~/.cache/voice-work/store` by
+default) holds `openai/whisper-small`; otherwise **on Datalayer's servers**
+with your token (`DATALAYER_TOKEN` or `DATALAYER_API_KEY`). No microphone, no
+extra, no token: voice is refused in a sentence naming what was found, and
+the session goes on by typing.
+
 ## An application's voice
 
 An Appspec says it under `interface.voice`. Voice is off unless the spec turns

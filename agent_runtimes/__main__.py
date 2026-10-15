@@ -371,6 +371,20 @@ def main_callback(
             "printed), then stop. Repeatable, run in order in one session."
         ),
     ),
+    voice: bool = typer.Option(
+        False,
+        "--voice",
+        help=(
+            "Listen with this machine's microphone (chat mode): Ctrl+T or /voice "
+            "starts and stops, the words go on the prompt line (VOICE.md VO-15; "
+            "needs agent-runtimes[voice])."
+        ),
+    ),
+    speak: bool = typer.Option(
+        False,
+        "--speak",
+        help="Say the answers through this machine's speaker (chat mode, VOICE.md VO-15).",
+    ),
 ) -> None:
     """Main callback to handle global options."""
     overrides = {
@@ -487,6 +501,10 @@ def main_callback(
             chat_args.append("--keep")
         for prompt in prompts or []:
             chat_args.extend(["--prompt", prompt])
+        if voice:
+            chat_args.append("--voice")
+        if speak:
+            chat_args.append("--speak")
         # Forward any additional CLI args to chat so `loop --<chat-option>`
         # behaves like `loop chat --<chat-option>`.
         chat_args.extend(ctx.args)

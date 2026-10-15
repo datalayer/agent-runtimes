@@ -136,6 +136,8 @@ class CliTux:
         extra_suggestions: Optional[list[str]] = None,
         startup_message: Optional[str] = None,
         where: Optional[str] = None,
+        voice: bool = False,
+        speak: bool = False,
     ):
         """Initialize the TUX.
 
@@ -148,6 +150,8 @@ class CliTux:
             extra_suggestions: Additional suggestions provided via --suggestions flag
             startup_message: Optional startup summary line shown right after banner
             where: Where the agent runs when it is not this machine, in words
+            voice: Listen with this machine's microphone, Ctrl+T to start and stop (VOICE.md VO-15)
+            speak: Say the answers through this machine's speaker (VO-15)
                 (a cloud runtime on Datalayer, reached through ``server_url``)
         """
         self.agent_url = agent_url
@@ -182,6 +186,11 @@ class CliTux:
         )
         self._executor = TuxExecutionGateway(agent_id, server_url=self.server_url)
         self.startup_message = startup_message
+        # Voice at the terminal (VOICE.md VO-15): the microphone on Ctrl+T,
+        # the answers said with --speak; made on first use.
+        self.voice = voice
+        self.speak = speak
+        self._voice_session: Any = None
 
         # Initialize slash commands. The registry is the source of truth —
         # built-ins plus whatever the installed plugins contributed — and
@@ -593,6 +602,16 @@ class CliTux:
         if turns:
             self.console.print()
 
+    def voice_session(self) -> Any:
+        """Voice for this session (VO-15), made on first use."""
+        if self._voice_session is None:
+            from agent_runtimes.voice.cli import Speaker, VoiceSession
+
+            self._voice_session = VoiceSession(
+                speaker=Speaker() if self.speak else None
+            )
+        return self._voice_session
+
     async def show_prompt(self) -> str:
         """Display the prompt and get user input with slash command completion."""
         # Initialize prompt session lazily (after commands are registered)
@@ -612,10 +631,13 @@ class CliTux:
 
         try:
             # Use prompt_toolkit's async prompt method
+            # What the microphone heard goes on the prompt line, to edit or send (VO-15).
+            heard = self._voice_session.take_prefill() if self._voice_session else None
             return (
                 await self.prompt_session.prompt_async(
                     HTML("<ansicyan>❯ </ansicyan>"),
                     complete_while_typing=True,
+                    default=heard or "",
                 )
             ).strip()
         except EOFError:
@@ -1057,6 +1079,11 @@ class CliTux:
             # second time as something the browser did.
             self.sync.note_local(response_text)
 
+            # Said through this machine's speaker (--speak, VO-15); a refusal
+            # is a sentence, the answer stays written.
+            if self.speak and response_text:
+                await self._say(response_text)
+
             # Show token usage line
             usage_line = Text()
             usage_line.append("─" * 80, style=STYLE_MUTED)
@@ -1117,6 +1144,19 @@ class CliTux:
             "\\[/tools-last for details]",
             style=Style(color="rgb(89,89,92)", italic=True),
         )
+
+    async def _say(self, text: str) -> None:
+        from agent_runtimes.voice.cli import VoiceRefused
+
+        speaker = self.voice_session().speaker
+        if speaker is None:
+            return
+        try:
+            await asyncio.to_thread(speaker.say, text)
+        except VoiceRefused as refused:
+            self._failed(str(refused))
+        except Exception as error:  # noqa: BLE001 - the speaker's own words
+            self._failed(f"The answer could not be said: {error}")
 
     async def run_line(self, line: str) -> bool:
         """Run one line as typed at the prompt: whether it ran without error.
@@ -1181,6 +1221,20 @@ class CliTux:
         await _models_cmd.prefetch(self)
 
         self.show_welcome()
+        if self.voice:
+            # No microphone, no voice: said once, in a sentence (VO-17).
+            problem = self.voice_session().problem()
+            if problem:
+                self._failed(problem)
+            else:
+                from agent_runtimes.voice.cli import microphone_name
+
+                self.console.print(
+                    f"● Voice: Ctrl+T to listen with {microphone_name()}, heard "
+                    f"{'on this machine' if self.voice_session().hearing.where == 'local' else 'on Datalayer’s servers'}"
+                    f"{'; answers said aloud' if self.speak else ''}.",
+                    style=STYLE_MUTED,
+                )
         if self.startup_message:
             # The message carries raw ANSI color codes; parse them so Rich
             # renders the colors instead of printing the escape sequences.
@@ -1216,6 +1270,8 @@ async def run_tux(
     extra_suggestions: Optional[list[str]] = None,
     startup_message: Optional[str] = None,
     where: Optional[str] = None,
+    voice: bool = False,
+    speak: bool = False,
 ) -> None:
     """Run theLoop assistant TUX.
 
@@ -1238,5 +1294,7 @@ async def run_tux(
         extra_suggestions=extra_suggestions,
         startup_message=startup_message,
         where=where,
+        voice=voice,
+        speak=speak,
     )
     await tux.run()

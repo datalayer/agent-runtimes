@@ -190,6 +190,13 @@ a2a = [
 acp = [
     "agent-client-protocol>=0.7.1",
 ]
+# Voice at the terminal (VOICE.md VO-16): the microphone and speaker of the
+# machine; never a default dependency. faster-whisper, installed beside it
+# with the pinned model in the store, hears on the machine; without it, the
+# person's token hears on Datalayer's servers.
+voice = [
+    "sounddevice>=0.5.0",
+]
 ui = [
     "ag-ui-protocol>=0.1.19",
     "agent-client-protocol>=0.7.1",

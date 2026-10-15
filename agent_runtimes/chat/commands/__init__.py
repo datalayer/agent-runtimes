@@ -123,6 +123,7 @@ def build_registry(
         surface,
         tools,
         tools_last,
+        voice,
     )
 
     # Core commands always registered
@@ -149,6 +150,7 @@ def build_registry(
         browser_notebook,
         browser_document,
         suggestions,
+        voice,
     ]
 
     # Conditionally add egg commands
