@@ -3989,6 +3989,10 @@ function ChatBaseInner({
     ownVoice.speaker,
   );
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
+  // Answers spoken over, hands-free (VOICE.md VO-13): marked *interrupted*.
+  const [interruptedIds, setInterruptedIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const stopSpeaking =
     onStopSpeaking ?? (ownVoice.speaker ? ownVoice.stop : undefined);
   const readAnswerAloud =
@@ -4889,14 +4893,27 @@ function ChatBaseInner({
               !isToolCallMessage(item) && item.role === 'assistant',
           )?.id
       : undefined;
-  const readAloudFooter = readAnswerAloud
-    ? (message: ChatMessage) => {
-        const text = getMessageText(message);
-        return readsAloud(message, text, writingId) ? (
-          <ReadAloud onRead={() => readAnswerAloud(text)} />
-        ) : null;
-      }
-    : undefined;
+  const readAloudFooter =
+    readAnswerAloud || interruptedIds.size
+      ? (message: ChatMessage) => {
+          const text = getMessageText(message);
+          return (
+            <>
+              {interruptedIds.has(message.id) ? (
+                <Text
+                  sx={{ fontSize: 0, color: 'fg.muted', fontStyle: 'italic' }}
+                  data-interrupted=""
+                >
+                  interrupted
+                </Text>
+              ) : null}
+              {readAnswerAloud && readsAloud(message, text, writingId) ? (
+                <ReadAloud onRead={() => readAnswerAloud(text)} />
+              ) : null}
+            </>
+          );
+        }
+      : undefined;
 
   const messagesContent = children ? (
     children
@@ -4968,6 +4985,15 @@ function ChatBaseInner({
         disabled={disabled || launching}
         speaking={speakingNow}
         onStopSpeaking={stopSpeaking}
+        // Hands-free (VO-12, VO-13): the run in progress, stopped when the
+        // person speaks over it, and the answer marked interrupted.
+        running={isLoading}
+        onStopRun={handleStop}
+        onInterrupted={() => {
+          if (writingId) {
+            setInterruptedIds(ids => new Set([...ids, writingId]));
+          }
+        }}
         onInterimChange={setVoiceInterim}
         // The menu offers when answers are heard where the application
         // lets them be (VO-21, VO-30).

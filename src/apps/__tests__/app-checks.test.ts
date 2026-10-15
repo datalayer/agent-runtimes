@@ -11,12 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
 import { themeVariants } from '@datalayer/primer-addons';
-import {
-  APP_THEME_VARIANTS,
-  HANDS_FREE_NOT_BUILT,
-  dumpAppspec,
-  parseAppspec,
-} from '../apps/appspec';
+import { APP_THEME_VARIANTS, dumpAppspec, parseAppspec } from '../apps/appspec';
 import {
   NEEDS_ATTENTION,
   NOT_READY,
@@ -446,20 +441,18 @@ describe('the instant checks', () => {
     ).toContain('interface.balloon: is one of history, current.');
   });
 
-  it('refuses hands-free until it is built, in a sentence, never taken for click-to-talk (VOICE.md VO-12)', () => {
+  it('takes hands-free, built 15 October 2026, and refuses a way to talk that is not one (VOICE.md VO-12)', () => {
     const said = (voice: unknown) =>
       checkAppspec({ ...BASE, interface: { voice } }).problems;
-    expect(said({ enabled: true, input: 'hands_free' })).toContain(
-      `interface.voice.input: ${HANDS_FREE_NOT_BUILT}.`,
-    );
-    expect(HANDS_FREE_NOT_BUILT).toMatch(/^hands_free is not built yet/);
-    expect(
-      said({ enabled: true, input: 'push_to_talk' }).filter(problem =>
-        problem.startsWith('interface.voice'),
-      ),
-    ).toEqual([]);
+    for (const input of ['push_to_talk', 'hands_free']) {
+      expect(
+        said({ enabled: true, input }).filter(problem =>
+          problem.startsWith('interface.voice'),
+        ),
+      ).toEqual([]);
+    }
     expect(said({ enabled: true, input: 'shout' })).toContain(
-      'interface.voice.input: is one of off, push_to_talk.',
+      'interface.voice.input: is one of off, push_to_talk, hands_free.',
     );
     expect(said({ enabled: true, output: 'loud' })).toContain(
       'interface.voice.output: is one of off, on_request, always.',

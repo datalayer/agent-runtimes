@@ -1,0 +1,325 @@
+/*
+ * Copyright (c) 2025-2026 Datalayer, Inc.
+ * Distributed under the terms of the Modified BSD License.
+ */
+
+/**
+ * A conversation by voice, hands-free (VOICE.md VO-12, VO-13): the states,
+ * the turn ended by the silence and sent by itself, the answer spoken over.
+ * The microphone and the hearing are stand-ins built on the real
+ * interfaces (`Capture`, `Hearing`).
+ */
+
+import React, { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HEARING_RATE, openMicrophone } from '../capture';
+import { consent, consentKeyFor } from '../consent';
+import {
+  HANDS_FREE_WORDS,
+  TURN_SILENCE_MS,
+  bargedIn,
+  handsFreeState,
+  turnEnded,
+} from '../handsFree';
+import { HandsFree } from '../HandsFree';
+import { chatVoiceOf } from '../chatVoice';
+import type { HeardSoFar, Hearing } from '../hearing';
+import type { Transcript } from '../types';
+
+vi.mock('../capture', async original => ({
+  ...(await original<typeof import('../capture')>()),
+  openMicrophone: vi.fn(),
+}));
+
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
+describe('what hands-free is doing (VO-12)', () => {
+  it('is off, paused, speaking, thinking or listening, in that order of precedence', () => {
+    const off = { on: false, paused: false, speaking: true, running: true };
+    expect(handsFreeState(off)).toBe('off');
+    expect(handsFreeState({ ...off, on: true })).toBe('speaking');
+    expect(handsFreeState({ ...off, on: true, paused: true })).toBe('paused');
+    expect(
+      handsFreeState({
+        on: true,
+        paused: false,
+        speaking: false,
+        running: true,
+      }),
+    ).toBe('thinking');
+    expect(
+      handsFreeState({
+        on: true,
+        paused: false,
+        speaking: false,
+        running: false,
+      }),
+    ).toBe('listening');
+    expect(HANDS_FREE_WORDS.listening).toBe('Listening…');
+  });
+
+  it('ends a turn after the silence once the person spoke, 700 ms unless said', () => {
+    expect(TURN_SILENCE_MS).toBe(700);
+    expect(turnEnded({ spoke: true, silentMs: 699 })).toBe(false);
+    expect(turnEnded({ spoke: true, silentMs: 700 })).toBe(true);
+    expect(turnEnded({ spoke: false, silentMs: 5000 })).toBe(false);
+    expect(turnEnded({ spoke: true, silentMs: 400 }, 300)).toBe(true);
+  });
+
+  it('is barged in when the person speaks while the agent thinks or speaks (VO-13)', () => {
+    const spoke = { spoke: true, silentMs: 0 };
+    expect(bargedIn('speaking', spoke)).toBe(true);
+    expect(bargedIn('thinking', spoke)).toBe(true);
+    expect(bargedIn('listening', spoke)).toBe(false);
+    expect(bargedIn('speaking', { spoke: false, silentMs: 0 })).toBe(false);
+  });
+
+  it('implies the answers heard as they are written, from an Appspec', () => {
+    const voice = chatVoiceOf(
+      {
+        enabled: true,
+        input: 'hands_free',
+        output: 'on_request',
+        voice: '',
+        language: 'en-US',
+        where: 'auto',
+      },
+      { speechUrl: 'https://r1.example', consentKey: 'desk' },
+    );
+    expect(voice).toMatchObject({ input: 'hands_free', output: 'always' });
+  });
+});
+
+/** A hearing whose words are whatever the test says next (`Hearing`). */
+class StandInHearing implements Hearing {
+  readonly where = 'device' as const;
+  heard: HeardSoFar = { text: '', spoke: false, silentMs: 0 };
+  whole = 'What is the weather like in Paris today?';
+  readied = 0;
+  async ready() {
+    this.readied += 1;
+  }
+  async hearSoFar(): Promise<HeardSoFar> {
+    return this.heard;
+  }
+  async hear(audio: Float32Array, language: string): Promise<Transcript> {
+    return {
+      text: this.whole,
+      metadata: {
+        input: 'voice',
+        language,
+        engine: 'stand-in',
+        where: 'device',
+      },
+      seconds: audio.length / HEARING_RATE,
+      ms: 1,
+    };
+  }
+}
+
+function microphone() {
+  const capture = {
+    open: true,
+    level: () => 0.3,
+    peek: () => new Float32Array(HEARING_RATE),
+    stop: async () => {
+      capture.open = false;
+      return new Float32Array(HEARING_RATE);
+    },
+    cancel: () => {
+      capture.open = false;
+    },
+  };
+  return capture;
+}
+
+async function until(check: () => boolean, ms = 4000): Promise<void> {
+  const started = Date.now();
+  while (!check()) {
+    if (Date.now() - started > ms) {
+      throw new Error('Never came.');
+    }
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+  }
+}
+
+describe('Talk with it (VO-12, VO-13)', () => {
+  let root: Root;
+  let container: HTMLDivElement;
+  const opened: ReturnType<typeof microphone>[] = [];
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    opened.length = 0;
+    vi.mocked(openMicrophone).mockImplementation(async () => {
+      const mic = microphone();
+      opened.push(mic);
+      return mic;
+    });
+    consent(consentKeyFor('desk', 'device'));
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    window.localStorage.clear();
+  });
+
+  const state = () =>
+    container
+      .querySelector('[data-hands-free-state]')
+      ?.getAttribute('data-hands-free-state');
+
+  it('listens on, sends a turn after the silence, shows every state, and is paused by Esc', async () => {
+    const hearing = new StandInHearing();
+    const sent: string[] = [];
+    const interim: string[] = [];
+    let running = false;
+    let speaking = false;
+    const draw = () =>
+      act(() =>
+        root.render(
+          <HandsFree
+            hearing={hearing}
+            language="en-US"
+            consentKey="desk"
+            turnSilenceMs={300}
+            send={text => sent.push(text)}
+            onInterim={text => interim.push(text)}
+            running={running}
+            speaking={speaking}
+          />,
+        ),
+      );
+    draw();
+    expect(container.textContent).toContain('Talk with it');
+    expect(state()).toBeUndefined();
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    expect(state()).toBe('listening');
+    expect(hearing.readied).toBe(1);
+    // The person speaks: the words come as they are heard (VO-11).
+    hearing.heard = { text: 'What is the', spoke: true, silentMs: 0 };
+    await until(() => interim.includes('What is the'));
+    expect(sent).toEqual([]);
+    // Then is silent for the turn's silence: the turn is sent by itself.
+    hearing.heard = { text: 'What is the weather', spoke: true, silentMs: 300 };
+    await until(() => sent.length === 1);
+    expect(sent).toEqual(['What is the weather like in Paris today?']);
+    expect(interim[interim.length - 1]).toBe('');
+    // The microphone is opened anew for the next turn.
+    await until(() => opened.length === 2);
+    expect(opened[0].open).toBe(false);
+    // The agent answers: Thinking, then Speaking.
+    hearing.heard = { text: '', spoke: false, silentMs: 0 };
+    running = true;
+    draw();
+    expect(state()).toBe('thinking');
+    speaking = true;
+    draw();
+    expect(state()).toBe('speaking');
+    expect(container.textContent).toContain('Speaking…');
+    // Esc pauses it; Resume listens again.
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(state()).toBe('paused');
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-resume]') as HTMLElement
+      ).click();
+    });
+    expect(state()).toBe('speaking');
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    expect(state()).toBeUndefined();
+    expect(opened.every(mic => !mic.open)).toBe(true);
+  });
+
+  it('stops the voice and the run when the person speaks over the agent, and marks the answer (VO-13)', async () => {
+    const hearing = new StandInHearing();
+    const stopped = { voice: 0, run: 0, marked: 0 };
+    const draw = (running: boolean, speaking: boolean) =>
+      act(() =>
+        root.render(
+          <HandsFree
+            hearing={hearing}
+            language="en-US"
+            consentKey="desk"
+            send={() => undefined}
+            running={running}
+            speaking={speaking}
+            onStopSpeaking={() => (stopped.voice += 1)}
+            onStopRun={() => (stopped.run += 1)}
+            onInterrupted={() => (stopped.marked += 1)}
+          />,
+        ),
+      );
+    draw(false, false);
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    // The agent speaks while still writing: the microphone is opened anew
+    // so what it holds is the person's.
+    draw(true, true);
+    await until(() => opened.length === 2);
+    expect(state()).toBe('speaking');
+    // Nothing said: nothing stopped.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+    });
+    expect(stopped).toEqual({ voice: 0, run: 0, marked: 0 });
+    // The person speaks over it.
+    hearing.heard = { text: 'Wait', spoke: true, silentMs: 0 };
+    await until(() => stopped.voice >= 1);
+    expect(stopped.run).toBeGreaterThanOrEqual(1);
+    expect(stopped.marked).toBeGreaterThanOrEqual(1);
+  });
+
+  it('asks for the microphone first, in the device’s sentence, and listens once said yes', async () => {
+    window.localStorage.clear();
+    const hearing = new StandInHearing();
+    act(() =>
+      root.render(
+        <HandsFree
+          hearing={hearing}
+          language="en-US"
+          consentKey="desk"
+          send={() => undefined}
+        />,
+      ),
+    );
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-toggle]') as HTMLElement
+      ).click();
+    });
+    expect(container.querySelector('[data-hands-free-consent]')).not.toBeNull();
+    expect(container.textContent).toContain('transcribed on this device');
+    expect(opened.length).toBe(0);
+    act(() => {
+      (
+        container.querySelector('[data-hands-free-consent-yes]') as HTMLElement
+      ).click();
+    });
+    await until(() => opened.length === 1);
+    expect(state()).toBe('listening');
+  });
+});

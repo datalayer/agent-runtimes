@@ -1030,7 +1030,7 @@ export interface AppPageSpec {
 export interface AppVoiceSpec {
   enabled: boolean;
   /** `hands_free` (VO-12) is refused until it is built. */
-  input: 'off' | 'push_to_talk';
+  input: 'off' | 'push_to_talk' | 'hands_free';
   output: 'off' | 'on_request' | 'always';
   voice: string;
   language: string;

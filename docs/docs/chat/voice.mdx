@@ -31,6 +31,18 @@ text stays on screen.
   for this, in its own sentence: the sound goes to Datalayer's servers, and
   neither it nor the words are kept there. *Keep speech on this device* turns
   all of it off.
+- **Talk with it, hands-free.** Where the application's voice says
+  `input: hands_free`, *Talk with it* sits beside the microphone. On, the
+  microphone stays open: the words are written as they are heard, and once
+  you have spoken and been silent for 700 ms (`turnSilenceMs`), what you
+  said is heard whole and **sent by itself**. The answer is said as it is
+  written (hands-free implies `output: always`), and listening goes on
+  through it. What it is doing is shown at all times: *Listening…*,
+  *Thinking…*, *Speaking…*, *Paused*. **Speak over it** and its voice stops
+  at once; while the answer is still being written, the run is stopped too,
+  the answer is marked *interrupted* in the conversation, and what you said
+  starts the next turn. `Esc` or *Pause* pauses it; five quiet minutes
+  pause it too; the toggle again turns it off.
 - **Read aloud, on request.** With `output: on_request`, the default of an
   Appspec, each answer the agent has finished has *Read aloud* under it. It
   stops whatever the voice was saying and reads that answer from its start, a
@@ -57,7 +69,7 @@ it on:
 interface:
   voice:
     enabled: true
-    input: push_to_talk      # off | push_to_talk (hands_free is refused until it is built)
+    input: push_to_talk      # off | push_to_talk | hands_free
     output: always           # off | on_request | always
     voice: kokoro-af-heart   # a voice of the catalogue
     language: en-US          # BCP 47; the person's when unsaid

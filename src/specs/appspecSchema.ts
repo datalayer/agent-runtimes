@@ -2713,8 +2713,8 @@ export const APPSPEC_SCHEMA: JsonSchema = {
     },
     VoiceInput: {
       description:
-        'How a person talks to the application (VOICE.md VO-10).\n\n`hands_free` (VO-12) is not one yet: it is refused in a sentence until it\nis built, never taken for click-to-talk.',
-      enum: ['off', 'push_to_talk'],
+        'How a person talks to the application (VOICE.md VO-10, VO-12).\n\n`push_to_talk`: the microphone in the composer, clicked or held.\n`hands_free`: a conversation by voice — the composer offers *Talk with\nit*; a turn ends after a short silence and is sent, the answer is said,\nand listening goes on; speaking over the agent stops its voice (VO-13).\nHands-free implies answers said as they are written (`output: always`).',
+      enum: ['off', 'push_to_talk', 'hands_free'],
       title: 'VoiceInput',
       type: 'string',
     },

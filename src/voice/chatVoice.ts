@@ -62,7 +62,8 @@ export interface ChatVoicePlace {
  * - **Listening**: a microphone in the composer — click it and speak, the
  *   words written in the box as they are heard, stopped by a second click
  *   or when the person stops speaking; or held, and let go (VO-10, VO-11).
- *   `hands_free` (VO-12) is not built: `checkAppspec` refuses it.
+ *   `hands_free` (VO-12): the microphone, and *Talk with it* beside it; it
+ *   implies answers said as they are written.
  * - **Speaking**: its answers said by Datalayer's speech service, on request
  *   or always (VO-20, VO-21); refused here when its host says no service.
  */
@@ -81,8 +82,9 @@ export function chatVoiceOf(
   const language = spec.language || place.language || 'en-US';
   return {
     language,
-    input: spec.input === 'off' ? 'off' : 'push_to_talk',
-    output: spec.output,
+    input: spec.input,
+    // Hands-free implies the answers heard as they are written (VO-12).
+    output: spec.input === 'hands_free' ? 'always' : spec.output,
     voice: spec.voice || voiceFor(language)?.id || '',
     modelsUrl: place.modelsUrl || DATALAYER_SPEECH_MODELS_URL,
     engines: DATALAYER_VOICE_ENGINES,

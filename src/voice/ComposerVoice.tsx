@@ -12,7 +12,9 @@
  * person to edit and send — or sent at once with *Send what I say*. While
  * the words are still being heard the host is told (`onInterimChange`), to
  * grey them until they are final (VO-11). Beside the microphone, the
- * person's voice menu (`VoiceMenu`, VO-30).
+ * person's voice menu (`VoiceMenu`, VO-30). Where the application's voice
+ * says `hands_free`, *Talk with it* too (`HandsFree`, VO-12, VO-13): a turn
+ * is sent by itself and the agent's answer may be spoken over.
  *
  * @module voice/ComposerVoice
  */
@@ -20,6 +22,7 @@
 import type { JSX } from 'react';
 import { useMemo, useRef } from 'react';
 import { DeviceHearing, type Hearing } from './hearing';
+import { HandsFree } from './HandsFree';
 import { ServerHearing, hearingPlace } from './serverHearing';
 import { VoiceInput } from './VoiceInput';
 import { VoiceMenu } from './VoiceMenu';
@@ -41,6 +44,12 @@ export interface ComposerVoiceProps {
   speaking?: boolean;
   /** Stops the agent's voice, also when the microphone opens (VO-13). */
   onStopSpeaking?: () => void;
+  /** The agent is answering: a run is in progress (hands-free, VO-12). */
+  running?: boolean;
+  /** Stops the run while the answer is still being written (barge-in, VO-13). */
+  onStopRun?: () => void;
+  /** The answer being written was spoken over: marked in the conversation (VO-13). */
+  onInterrupted?: () => void;
   /**
    * The words in the box are still being heard (`true`), or final
    * (`false`): the host greys them until they are (VO-11).
@@ -73,6 +82,9 @@ export function ComposerVoice({
   disabled = false,
   speaking = false,
   onStopSpeaking,
+  running = false,
+  onStopRun,
+  onInterrupted,
   onInterimChange,
   answers = false,
 }: ComposerVoiceProps): JSX.Element | null {
@@ -113,6 +125,30 @@ export function ComposerVoice({
       style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
     >
       <VoiceMenu voice={voice} answers={answers} disabled={disabled} />
+      {voice.input === 'hands_free' ? (
+        <HandsFree
+          hearing={hearing}
+          language={voice.language}
+          consentKey={voice.consentKey ?? 'chat'}
+          microphoneId={voice.microphoneId}
+          turnSilenceMs={voice.turnSilenceMs}
+          disabled={disabled}
+          running={running}
+          speaking={speaking}
+          onStopSpeaking={onStopSpeaking}
+          onStopRun={onStopRun}
+          onInterrupted={onInterrupted}
+          onInterim={(words: string) => {
+            setInput(words ? afterBase(words) : base.current);
+            onInterimChange?.(words !== '');
+          }}
+          send={(text, metadata) => {
+            onInterimChange?.(false);
+            setInput(base.current);
+            send(text, metadata);
+          }}
+        />
+      ) : null}
       <VoiceInput
         hearing={hearing}
         language={voice.language}

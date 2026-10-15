@@ -21,6 +21,8 @@ export * from './pinned';
 export * from './capture';
 export * from './hearing';
 export * from './serverHearing';
+export * from './handsFree';
+export { HandsFree, type HandsFreeProps } from './HandsFree';
 export * from './speaker';
 export * from './consent';
 export * from './settings';
@@ -60,8 +62,14 @@ export type { VoiceSpeaker } from './useVoiceSpeaker';
 export interface ChatVoice {
   /** The language listened to and spoken, BCP 47. */
   language: string;
-  /** `push_to_talk`: the microphone in the composer; `off`: none. Hands-free is Phase V3. */
-  input: 'off' | 'push_to_talk';
+  /**
+   * `push_to_talk`: the microphone in the composer; `hands_free`: that, and
+   * *Talk with it* beside it — a conversation by voice (VO-12, VO-13);
+   * `off`: none.
+   */
+  input: 'off' | 'push_to_talk' | 'hands_free';
+  /** The silence after speech that ends a hands-free turn, in ms (VO-12): 700 when unsaid. */
+  turnSilenceMs?: number;
   /**
    * When answers are heard: `always`, as they are written; `on_request`, a
    * *Read aloud* under each answer (VO-21); or `off`, the default.
