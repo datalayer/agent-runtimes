@@ -74,6 +74,11 @@ export type ProtocolDisplayProps = {
   onOpenApproval: (approvalId: string) => void;
   /** The person says they signed in (`PAP_SIGN_IN_WORDS.checkMessage`). */
   onSignedIn: (words: string) => void;
+  /**
+   * Open a Direct Conversation under the conversation a company answered in
+   * (`portable/direct`, MOBILE M-038); absent where none can be opened.
+   */
+  onOpenDirect?: (company: string, conversationId: string) => void;
 };
 
 /** The line beside the application's face. */
