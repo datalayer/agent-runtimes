@@ -1225,6 +1225,7 @@ class TestResolvingACatalogueHarness:
         from agent_runtimes.specs.harnesses import get_harness
 
         claude = get_harness("claude-code")
+        assert claude is not None
         monkeypatch.setattr(shutil, "which", lambda name: None)
         with pytest.raises(
             HarnessRefused, match="agent-shield setup --harness claude-code"
@@ -1246,6 +1247,7 @@ class TestResolvingACatalogueHarness:
             "/usr/local/bin/claude-agent-acp"
         ]
         gemini = get_harness("gemini-cli")
+        assert gemini is not None
         assert launch_command(gemini, home=tmp_path / "elsewhere") == [
             "/usr/local/bin/gemini",
             "--experimental-acp",
@@ -1255,6 +1257,7 @@ class TestResolvingACatalogueHarness:
         from agent_runtimes.specs.harnesses import get_harness
 
         claude = get_harness("claude-code")
+        assert claude is not None
         with pytest.raises(
             HarnessRefused, match="needs ANTHROPIC_API_KEY in the environment"
         ):
@@ -1262,7 +1265,9 @@ class TestResolvingACatalogueHarness:
         assert harness_environment(
             claude, {"ANTHROPIC_API_KEY": "k", "OTHER": "x"}
         ) == {"ANTHROPIC_API_KEY": "k"}
-        assert harness_environment(get_harness("codex"), {"OPENAI_API_KEY": "k"}) == {
+        codex = get_harness("codex")
+        assert codex is not None
+        assert harness_environment(codex, {"OPENAI_API_KEY": "k"}) == {
             "NO_BROWSER": "1",
             "OPENAI_API_KEY": "k",
         }
@@ -1296,7 +1301,7 @@ async def test_claude_code_live(tmp_path: Path) -> None:
     agent = harness_agent(
         "claude",
         "claude-code",
-        approvals=Approvals(),
+        approvals=Approvals(),  # type: ignore[arg-type] - a test's double of the manager
         environment={**os.environ, WORKSPACE_VARIABLE: str(tmp_path)},
     )
     await agent.initialize()

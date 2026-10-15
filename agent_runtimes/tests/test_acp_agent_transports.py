@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -36,7 +37,7 @@ def workspace(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def an_agent(workspace: Path, **kwargs: object) -> ACPAgent:
+def an_agent(workspace: Path, **kwargs: Any) -> ACPAgent:
     return ACPAgent(
         agent_id="fake",
         harness=fake_harness(),

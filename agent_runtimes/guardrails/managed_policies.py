@@ -78,7 +78,7 @@ SOCKET_RETRY_SECONDS = 15.0
 
 
 def ai_agents_socket_url(ai_agents_url: str, token: str) -> str:
-    """ai-agents' ``/ws`` for ``ai_agents_url``, with the token as the approvals send it."""
+    """The ``/ws`` of ai-agents at ``ai_agents_url``, with the token as the approvals send it."""
     from urllib.parse import urlencode
 
     base = ai_agents_url.strip().rstrip("/")
