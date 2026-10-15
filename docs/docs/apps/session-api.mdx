@@ -297,7 +297,15 @@ refused (409), as is anything but `resume` on a stopped session.
   words, and whose `data` holds `message_id`, `title` and `surface`, the
   A2UI messages that draw it (`createSurface`, `updateComponents` and, with
   data, `updateDataModel`; the surface's id is the display's). The model
-  reads the text, never the surface. There is no tool call. A page reloaded
+  reads the text, never the surface. There is no tool call. **A coding
+  agent's** tool results (an application on a harness, SHIELD §4.3) carry
+  their displays the same way, beside the result in `_meta["reactor.ui/display"]`:
+  `application/vnd.datalayer.shield.diff+json` (`{path, old_text, new_text,
+  language}`, drawn as a unified diff in the file's language) and
+  `application/vnd.datalayer.shield.terminal+json` (`{terminal_id, command,
+  output, exit_code, released}`, the output kept after release); the session's
+  record keeps each as a `tool_call` entry *shown* with the display
+  ([Served over every protocol](../harnesses/transports#ag-ui-the-session-api-the-embed-the-phone-43-sh-16--the-web-built-the-phones-contract-given)). A page reloaded
   gets it again from the socket (the ops the session keeps are replayed on
   a fresh hello); a resume shows it again on the socket; `GET …/messages`
   and a resume's snapshot are the conversation's text only. The run's record keeps it as an `output` entry

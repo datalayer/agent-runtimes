@@ -75,6 +75,21 @@ both languages.
 | Security | bearer | the card's Bearer scheme; an application's route gated (`loop/apps/a2a.py`); signed requests verified (Web Bot Auth) | bearer |
 | Extensions | the orchestration extension's routes | `A2A-Extensions` negotiated, required extensions checked; card extensions from the A2A plugin's points and the Appspec ([Agent protocols](./agent-protocols#a2a-card-extensions)) | `A2A-Extensions` header |
 
+### A harness over A2A (SHIELD SH-15)
+
+An application whose agent is a [harness](../harnesses/transports#a2a-42-sh-15--built)
+(Claude Code, Codex, any ACP agent) is served by the same worker, plus: its
+plan as one artifact replaced as it progresses; each file it changed as a
+`text/x-diff` artifact named by its path, with the orchestration extension's
+`artifactProvenance` (`sha256:` of the body, when, from what); its tool calls
+as `working` statuses carrying `{kind, title, status}`; a permission as
+`input-required` carrying `approvalRequest {toolCall, options, expiresAt}`,
+answered on the same task by a message naming it — `datalayer.approval
+{optionId}`, or one whole word (*yes*, *no*, *always*, an option's name) from a
+caller without the extension; reasoning never an artifact. The card's skills
+come from the harness spec, `text/x-diff` among its output modes. The
+extension's schema describes these three fields since 15 October 2026.
+
 ## Gaps
 
 1. **No MCP server** in agent-runtimes; an application is reached over A2A,
