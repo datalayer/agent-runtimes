@@ -233,6 +233,7 @@ describe('the conversation a run builds', () => {
       status: 'error',
       result: '{"error":"denied"}',
       error: 'denied',
+      display: null,
     });
   });
 

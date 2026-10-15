@@ -66,6 +66,7 @@ describe('presence (M-030)', () => {
           status: 'running' as const,
           result: '',
           error: '',
+          display: null,
         },
       ],
     };

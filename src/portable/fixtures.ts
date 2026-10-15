@@ -35,6 +35,7 @@ export function conversationFixture(): ConversationState {
         status: 'complete',
         result: 'Shipped on Monday.',
         error: '',
+        display: null,
       },
       {
         kind: 'tool',
@@ -44,6 +45,7 @@ export function conversationFixture(): ConversationState {
         status: 'error',
         result: '',
         error: 'Refused by its rule.',
+        display: null,
       },
       {
         kind: 'step',

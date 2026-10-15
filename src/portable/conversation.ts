@@ -32,6 +32,7 @@ import {
   UI_ON_RUN,
   type AgUiEvent,
 } from './agui';
+import { displayOfToolResult, type ProtocolDisplay } from './displays';
 import { RUN_END_WORDS } from './records';
 import { messagesOfThread } from './thread';
 
@@ -70,6 +71,8 @@ export type ConversationItem =
       /** Its result in words, cut at its limit. */
       result: string;
       error: string;
+      /** The protocol display its result carries, read strictly (`portable/displays`, MOBILE M-037). */
+      display: ProtocolDisplay | null;
     }
   | {
       kind: 'step';
@@ -133,6 +136,20 @@ const appended = (kept: string, delta: string, limit: number): string => {
   }
   return cut(kept + delta, limit);
 };
+
+/** A result as the model read it: the page's `_meta` (its display) is the card's, not words. */
+function withoutMeta(result: unknown): unknown {
+  if (
+    result &&
+    typeof result === 'object' &&
+    !Array.isArray(result) &&
+    '_meta' in result
+  ) {
+    const { _meta: _page, ...view } = result as Record<string, unknown>;
+    return view;
+  }
+  return result;
+}
 
 /** A result in words. */
 function said(result: unknown): string {
@@ -353,6 +370,7 @@ export function reduceConversation(
             status: 'running',
             result: '',
             error: '',
+            display: null,
           },
         ],
         1,
@@ -382,8 +400,9 @@ export function reduceConversation(
             ? {
                 ...item,
                 status: result.success ? 'complete' : 'error',
-                result: cut(said(result.result), TOOL_TEXT_LIMIT),
+                result: cut(said(withoutMeta(result.result)), TOOL_TEXT_LIMIT),
                 error: result.error ?? '',
+                display: displayOfToolResult(item.name, result.result, item.id),
               }
             : item,
         ) ?? noted(state, event)

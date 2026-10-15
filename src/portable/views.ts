@@ -21,6 +21,7 @@ import type {
   ConversationQuestion,
   ConversationState,
 } from './conversation';
+import type { ProtocolDisplay } from './displays';
 import { PRESENCE_LINES, type PresenceState } from './presence';
 
 export type MessageItem = Extract<ConversationItem, { kind: 'message' }>;
@@ -56,6 +57,23 @@ export type QuestionCardProps = {
   onChoose: (option: string) => void;
   /** A form, answered by a settings change. */
   onForm: (values: Record<string, unknown>) => void;
+};
+
+/**
+ * A protocol display under its tool row (MOBILE M-037): what it shows is
+ * `displayLine`'s and the display's own; what the person does goes out
+ * through the host — a sign-in page opened outside the conversation, an
+ * operation answered where approvals are, *I have signed in* said as their
+ * next message. Nothing is answered from the card itself.
+ */
+export type ProtocolDisplayProps = {
+  display: ProtocolDisplay;
+  /** Open a sign-in page, `https` only, outside the conversation. */
+  onOpenSignIn: (url: string) => void;
+  /** Open the approval an operation stands for. */
+  onOpenApproval: (approvalId: string) => void;
+  /** The person says they signed in (`PAP_SIGN_IN_WORDS.checkMessage`). */
+  onSignedIn: (words: string) => void;
 };
 
 /** The line beside the application's face. */

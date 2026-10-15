@@ -105,6 +105,7 @@ export {
   type MessageItem,
   type MessageRowProps,
   type PresenceLineProps,
+  type ProtocolDisplayProps,
   type QuestionCardProps,
   type StepItem,
   type StepRowProps,
@@ -114,6 +115,29 @@ export {
   type TurnEndRowProps,
 } from './views';
 export { conversationFixture } from './fixtures';
+
+// The protocol displays a run's tool results carry (MOBILE M-037).
+export {
+  DISPLAY_META_KEY,
+  displayLine,
+  displayOfToolResult,
+  PAP_CONFIRM_TYPE,
+  PAP_HANDOFF_TOOL,
+  PAP_OUTCOME_TYPE,
+  PAP_REPLIES_TYPE,
+  PAP_SIGN_IN_TYPE,
+  protocolDisplayOf,
+  replyAuthor,
+  type ActionClass,
+  type ProtocolDisplay,
+} from './displays';
+export {
+  isPapSignInTool,
+  PAP_SIGN_IN_WORDS,
+  readPapSignIn,
+  safeSignInUrl,
+  type PapSignInWaiting,
+} from './signIn';
 
 // The runtime's routes a native client drives.
 export {
