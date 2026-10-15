@@ -432,7 +432,15 @@ class TestNothingSecret:
 class TestTheTrace:
     @pytest.fixture
     def recording(self, monkeypatch: pytest.MonkeyPatch):
-        """Spans and points collected without touching the process-wide providers (as test_orchestration_tracing does)."""
+        """Collect spans and points without touching the process-wide providers.
+
+        As test_orchestration_tracing does.
+
+        Yields
+        ------
+        tuple
+            The span exporter and the metric reader.
+        """
         from opentelemetry import metrics as otel_metrics
 
         exporter = InMemorySpanExporter()

@@ -2538,7 +2538,7 @@ async def create_agent(
                     ),
                 )
             usage_limits = None
-            approval_tool_ids = []
+            approval_tool_ids: list[str] = []
             agent = await _harness_agent_of(
                 agent_id, harness_id, request, running_app, http_request
             )

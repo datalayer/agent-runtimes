@@ -85,6 +85,10 @@ OWN = {
     ("POST", "/api/v1/apps/sessions/{uid}/end"),
     ("POST", "/api/v1/apps/sessions/logout"),
     ("POST", "/api/v1/apps/sessions/{uid}/resume"),
+    # A person's rules on their running session (SHIELD SH-54).
+    ("GET", "/api/v1/apps/sessions/{uid}/rules"),
+    ("POST", "/api/v1/apps/sessions/{uid}/rules"),
+    ("DELETE", "/api/v1/apps/sessions/{uid}/rules/{name}"),
     ("POST", "/api/v1/apps/agents/{agent}/ag-ui/"),
     ("WS", "/api/v1/apps/ui"),
     ("POST", "/api/v1/apps/agents/{agent}/files"),

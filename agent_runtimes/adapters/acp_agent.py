@@ -804,7 +804,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         return []
 
     @property
-    def client(self) -> Any:  # type: ignore[override]
+    def client(self) -> Any:
         """The face the inner client answers to: the runtime's, not an ACP client."""
         return self._face
 
@@ -1077,7 +1077,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
 
     # -- what was written for it is read-only to it (§4.10, SH-21) ------------------------------
 
-    def decide(  # type: ignore[override]
+    def decide(
         self, session: SessionState, action: Action, *, count_as: str | None = None
     ) -> Decision:
         """The policies' decision, after one of the runtime's: the lent files are not the agent's to write."""
@@ -1261,7 +1261,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             return
         queue.put_nowait(event)
 
-    async def fail_turn(self, session: SessionState, sentence: str) -> None:  # type: ignore[override]
+    async def fail_turn(self, session: SessionState, sentence: str) -> None:
         """End the turn with the sentence, kept for the ``done`` event."""
         self._failures[session.session_id] = sentence
         await ShieldProxy.fail_turn(self, session, sentence)

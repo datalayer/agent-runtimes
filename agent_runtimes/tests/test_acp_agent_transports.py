@@ -277,7 +277,8 @@ class TestShieldChannel:
 
 class TestTheRuntimeStartedWithAHarness:
     """``loop --harness`` (SH-19): the runtime makes the harness's agent at startup
-    through the create route, serves it over AG-UI, and ends its process with it."""
+    through the create route, serves it over AG-UI, and ends its process with it.
+    """
 
     pytestmark = pytest.mark.asyncio
 

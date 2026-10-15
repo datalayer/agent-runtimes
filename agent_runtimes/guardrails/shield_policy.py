@@ -121,8 +121,8 @@ def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
         rules.append(
             Rule(
                 name=spec.action,
-                decision=verdict,  # type: ignore[arg-type]
-                classes=list(classes),  # type: ignore[arg-type]
+                decision=verdict,
+                classes=list(classes),
                 reason=(
                     "the application's rule; read as ask me first"
                     if spec.behaviour == IF_ASKED

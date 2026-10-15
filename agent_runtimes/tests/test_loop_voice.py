@@ -4,7 +4,8 @@
 """Voice at the terminal (VOICE.md VO-15, VO-16, VO-17): ``loop --voice`` and
 ``/voice``, where what is said is heard, and the refusals in a sentence. The
 microphone, the speaker and the speech service are stand-ins on the real
-shapes; nothing here needs sounddevice."""
+shapes; nothing here needs sounddevice.
+"""
 
 from __future__ import annotations
 

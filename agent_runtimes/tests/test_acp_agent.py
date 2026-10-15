@@ -1142,6 +1142,7 @@ class TestSkillsLentInTheHarnessFormat:
         from agent_runtimes.specs.skills import get_skill_spec
 
         crawl = get_skill_spec("crawl")
+        assert crawl is not None
         text = skill_markdown(crawl, reading_skills())
         assert "It needs TAVILY_API_KEY, which Datalayer holds" in text
         assert "do not write it anywhere" in text
@@ -1320,7 +1321,9 @@ def test_the_sidecar_url_is_read_from_the_environment_and_must_be_a_websocket_on
     )
 
     assert sidecar_url({}) is None
-    assert sidecar_url({SIDECAR_VARIABLE: "ws://127.0.0.1:8788/"}) == "ws://127.0.0.1:8788"
+    assert (
+        sidecar_url({SIDECAR_VARIABLE: "ws://127.0.0.1:8788/"}) == "ws://127.0.0.1:8788"
+    )
     with pytest.raises(HarnessRefused, match="not a ws:// or wss:// URL"):
         sidecar_url({SIDECAR_VARIABLE: "http://127.0.0.1:8788"})
 
@@ -1338,5 +1341,7 @@ def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
         workspace=tmp_path,
         policies=[],
     )
-    assert agent.connect_url == "ws://127.0.0.1:1/acp/claude-code" and agent.command == []
+    assert (
+        agent.connect_url == "ws://127.0.0.1:1/acp/claude-code" and agent.command == []
+    )
     assert not agent.started

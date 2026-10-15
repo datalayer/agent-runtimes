@@ -20,6 +20,15 @@ next request says so rather than spending unmeasured.
 
 The state is per session — ``record.current_session()`` names the one the run
 belongs to on a runtime — so a session's budget is its own, and gone with it.
+
+Every path counts. A response is counted when it is whole (after the
+request); a run that ends before a response is whole — a client that leaves
+the stream as soon as the answer's text has ended, before the provider's
+usage chunk, a cancelled turn — has what pydantic-ai itself counted for the
+run (``ctx.usage``) reconciled into the session at the run's end, so what a
+session spent never stays below what its runs are known to have spent
+(found on r1, 15 October 2026: an abandoned stream's response was never
+counted).
 """
 
 from __future__ import annotations
@@ -44,6 +53,9 @@ CREDITS_PER_USD = 100
 #: What a model request is called in the approvals it raises.
 MODEL_REQUEST = "model_request"
 
+#: How many runs a session remembers the count of, for the reconciliation.
+RUNS_REMEMBERED = 256
+
 
 class ShieldBudgetExceeded(GuardrailBlockedError):
     """A model request the limits refuse, or a person refused: the run ends with the sentence."""
@@ -60,6 +72,9 @@ class BudgetState:
     usd_pending: float = 0.0
     #: The model whose price is unknown, when one was met; "" otherwise.
     unpriced: str = ""
+    #: What each run of the session counted so far, by run id: reconciled
+    #: against the run's own usage when it ends.
+    counted_in_run: Dict[str, int] = field(default_factory=dict)
 
 
 Ask = Callable[[str], Awaitable[None]]
@@ -179,10 +194,73 @@ class ShieldBudgetCapability(AbstractCapability[Any]):
             if whole:
                 credits = whole
                 state.usd_pending -= whole / CREDITS_PER_USD
+        self._count(state, session, self._run_of(ctx), tokens, credits)
+        return response
+
+    async def after_run(self, ctx: RunContext[Any], *, result: Any) -> Any:
+        self._reconcile(ctx)
+        return result
+
+    async def on_run_error(self, ctx: RunContext[Any], *, error: BaseException) -> Any:
+        self._reconcile(ctx)
+        raise error
+
+    # -- counting ----------------------------------------------------------------------
+
+    @staticmethod
+    def _run_of(ctx: RunContext[Any]) -> str:
+        return str(getattr(ctx, "run_id", "") or "")
+
+    def _count(
+        self, state: BudgetState, session: str, run: str, tokens: int, credits: int
+    ) -> None:
         state.limits.spent(tokens=tokens, cost=credits)
         state.last_tokens = tokens
         state.last_credits = credits
-        return response
+        if run:
+            state.counted_in_run[run] = state.counted_in_run.get(run, 0) + tokens
+        logger.info(
+            "Shield budget: session %s spent %d tokens and %d credits on a model request; "
+            "the session's total is %d tokens, %d credits",
+            session or "-",
+            tokens,
+            credits,
+            state.limits.model_tokens,
+            state.limits.spend,
+        )
+
+    def _reconcile(self, ctx: RunContext[Any]) -> None:
+        """Count what the run spent that no whole response was counted for.
+
+        pydantic-ai counts a run's usage as each response is committed, the
+        partial response of an abandoned stream among them; what it knows
+        above what this capability counted for the run is counted now, in
+        tokens (a partial response has no price to read).
+        """
+        session = self.session()
+        state = self.state_of(session)
+        run = self._run_of(ctx)
+        usage = getattr(ctx, "usage", None)
+        known = int(getattr(usage, "input_tokens", 0) or 0) + int(
+            getattr(usage, "output_tokens", 0) or 0
+        )
+        counted = state.counted_in_run.get(run, 0) if run else 0
+        missing = known - counted
+        if missing <= 0:
+            return
+        # Once: a run whose end is told twice (pydantic-ai 2.40 tells a left
+        # stream's end to both run-end hooks) is reconciled once.
+        if run:
+            state.counted_in_run[run] = known
+            while len(state.counted_in_run) > RUNS_REMEMBERED:
+                state.counted_in_run.pop(next(iter(state.counted_in_run)))
+        logger.info(
+            "Shield budget: session %s's run ended with %d tokens no whole response was "
+            "counted for (a stream left early); counted now",
+            session or "-",
+            missing,
+        )
+        self._count(state, session, "", missing, 0)
 
     def spent(self, session: str) -> Dict[str, int]:
         """What a session spent so far, for the panel."""

@@ -13,6 +13,7 @@ every face, the same answer.
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
@@ -154,6 +155,80 @@ class TestManagedFromIam:
         policies_in_force()
         assert managed.calls == 1, "the copy is honoured until it expires"
 
+    @pytest.mark.asyncio
+    async def test_a_change_pushed_over_ai_agents_socket_reaches_the_runtime_at_once(
+        self, managed: FakeIam
+    ) -> None:
+        """SH-50's push: ai-agents broadcasts ``shield_policy_changed`` on the
+        account's channel when IAM wrote a document; the runtime pulls IAM at
+        once, without waiting for the poll."""
+        import socket as sockets
+
+        from websockets.asyncio.server import serve
+
+        from agent_runtimes.guardrails.managed_policies import (
+            SOCKET_EVENT,
+            ai_agents_socket_url,
+            runtime_policies,
+        )
+
+        assert ai_agents_socket_url(
+            "https://r1.datalayer.run/api/ai-agents/v1", "t"
+        ) == ("wss://r1.datalayer.run/api/ai-agents/v1/ws?token=t")
+        connected: asyncio.Event = asyncio.Event()
+        sockets_seen: List[Any] = []
+
+        async def ai_agents(connection: Any) -> None:
+            sockets_seen.append(connection)
+            connected.set()
+            async for _ in connection:
+                pass
+
+        with sockets.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        async with serve(ai_agents, "127.0.0.1", port):
+            policies = runtime_policies()
+            policies.poll_seconds = 3600.0  # the poll cannot be the one that told it
+            policies.use_socket(f"ws://127.0.0.1:{port}/api/ai-agents/v1/ws?token=t")
+            changed: List[List[Policy]] = []
+            stop = policies.listen(
+                lambda got: changed.append(list(got)), lambda _: None
+            )
+            try:
+                assert [p.limits for p in policies.in_force()] == [ORGANIZATION.limits]
+                await asyncio.wait_for(connected.wait(), 5.0)
+                tightened = Policy(
+                    scope="organization",
+                    limits=Limits(model_tokens=Threshold(soft=1, hard=5)),
+                )
+                managed.answer = served(tightened)
+                await sockets_seen[0].send(
+                    json.dumps(
+                        {
+                            "channel": "user:acct",
+                            "event": SOCKET_EVENT,
+                            "data": {
+                                "scope": "organization",
+                                "subject_uid": "o",
+                                "version": 2,
+                            },
+                        }
+                    )
+                )
+                for _ in range(100):
+                    if changed:
+                        break
+                    await asyncio.sleep(0.05)
+                assert changed and [p.limits for p in changed[0]] == [
+                    tightened.limits
+                ], "told within a second, not the poll"
+                assert policies.pushed == 1
+                assert [p.limits for p in policies.in_force()] == [tightened.limits]
+            finally:
+                stop()
+                policies.use_socket(None)
+
     def test_without_iam_and_without_a_copy_the_harness_is_refused_naming_iam(
         self, managed: FakeIam, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -172,16 +247,23 @@ class TestManagedFromIam:
             "policy is held, so nothing is decided (SHIELD decision 11)."
         )
 
-    def test_a_token_without_iams_url_is_refused_never_run_unmanaged(
-        self, monkeypatch: pytest.MonkeyPatch
+    def test_a_token_without_iams_url_runs_unmanaged_and_says_so(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
     ) -> None:
+        """A developer's shell or CI holds a token for the platform's services and no
+        IAM URL: the Rules decide, as the proxy's file does, and the log says it once
+        (1.5.37 refused every application run there)."""
         managed_policies.use_source(None)
         monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
         monkeypatch.setenv("DATALAYER_USER_TOKEN", "x.eyJ1aWQiOiAiYWNjdDEifQ.y")
-        with pytest.raises(
-            PolicyUnavailable, match="has a token but no DATALAYER_IAM_URL"
+        with caplog.at_level(
+            "WARNING", logger="agent_runtimes.guardrails.managed_policies"
         ):
+            assert [p.scope for p in policies_in_force()] == ["session"]
+            assert runtime_policies().is_managed is False
             policies_in_force()
+        said = [r for r in caplog.records if "runs unmanaged here" in r.getMessage()]
+        assert len(said) == 1 and "DATALAYER_IAM_URL" in said[0].getMessage()
         managed_policies.use_source(None)
 
     @pytest.mark.asyncio
@@ -616,6 +698,78 @@ class TestTheModelBudget:
             in str(refused.value)
         )
         assert len(asked) == 1, "the soft threshold asks once"
+
+    @pytest.mark.asyncio
+    async def test_a_stream_the_client_leaves_early_is_still_counted_at_the_runs_end(
+        self,
+    ) -> None:
+        """The streaming path, left as soon as the answer's text begins (as a
+        terminal does), before the response is whole: what pydantic-ai
+        counted for the run reaches the session's total at the run's end,
+        and the third request is refused by the hard limit (SH-32, r1 drill
+        of 15 October 2026)."""
+        import json
+
+        from pydantic_ai.messages import (
+            PartDeltaEvent,
+            TextPartDelta,
+        )
+        from pydantic_ai.models.function import DeltaToolCall
+
+        async def stream(messages: Any, info: Any) -> Any:
+            last = messages[-1]
+            if any(getattr(p, "part_kind", "") == "tool-return" for p in last.parts):
+                for _ in range(10):
+                    yield "the answer "
+            else:
+                yield {
+                    0: DeltaToolCall(name="decide", json_args=json.dumps({"q": "x"}))
+                }
+
+        asked: List[str] = []
+
+        async def ask(sentence: str) -> None:
+            asked.append(sentence)
+
+        organization = Policy(
+            scope="organization",
+            limits=Limits(model_tokens=Threshold(soft=1, hard=250)),
+        )
+        budget = ShieldBudgetCapability(
+            policies=lambda: [organization], session=lambda: "s", ask=ask
+        )
+        agent = Agent(
+            FunctionModel(_model, stream_function=stream), capabilities=[budget]
+        )
+
+        @agent.tool_plain
+        def decide(q: str) -> str:
+            return "yes"
+
+        async def leave_early(prompt: str) -> None:
+            async with agent.run_stream_events(prompt) as events:
+                async for event in events:
+                    if isinstance(event, PartDeltaEvent) and isinstance(
+                        event.delta, TextPartDelta
+                    ):
+                        break
+
+        await leave_early("one")
+        first = budget.spent("s")["model_tokens"]
+        assert first > 0, (
+            "the tool call's response and the left stream's text are counted"
+        )
+        assert budget.state_of("s").counted_in_run == {} or all(
+            v > 0 for v in budget.state_of("s").counted_in_run.values()
+        )
+        await leave_early("two")
+        second = budget.spent("s")["model_tokens"]
+        assert second > first, "the second run's requests are counted onto the session"
+        assert asked and asked[0].startswith(
+            "a model request: ask me first — the session's model tokens spent would reach"
+        )
+        with pytest.raises(ShieldBudgetExceeded, match="over the hard limit of 250"):
+            await leave_early("three")
 
     @pytest.mark.asyncio
     async def test_a_person_refusing_at_the_soft_threshold_ends_the_run_in_the_sentence(

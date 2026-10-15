@@ -63,18 +63,23 @@ class TestTheHarnessCatalogue:
             assert spec.registered.terms_source.startswith("https://")
 
     def test_the_register_says_who_may_be_served(self) -> None:
-        assert (
-            get_harness("claude-code").terms.served_to_third_parties == "api_key_only"
-        )
-        assert get_harness("codex").terms.served_to_third_parties == "api_key_only"
-        assert "18 June 2026" in get_harness("gemini-cli").terms.tier_restrictions
-        assert (
-            get_harness("custom").terms.served_to_third_parties == "organizations_own"
-        )
+        def harness(harness_id: str) -> HarnessSpec:
+            spec = get_harness(harness_id)
+            assert spec is not None, harness_id
+            return spec
 
-    def test_every_catalogue_agent_names_a_built_in_harness_today(self) -> None:
+        assert harness("claude-code").terms.served_to_third_parties == "api_key_only"
+        assert harness("codex").terms.served_to_third_parties == "api_key_only"
+        assert "18 June 2026" in (harness("gemini-cli").terms.tier_restrictions or "")
+        assert harness("custom").terms.served_to_third_parties == "organizations_own"
+
+    def test_every_catalogue_agent_names_a_harness_the_catalogue_knows(self) -> None:
+        """A built-in one (pydantic-ai, vercel-ai) or a harness of the catalogue
+        (agentspecs 0.0.101's example-harness-claude-code names claude-code)."""
         for spec in list_agentspecs():
-            assert spec.harness in ("pydantic-ai", "vercel-ai"), spec.id
+            assert spec.harness in ("pydantic-ai", "vercel-ai", *HARNESS_CATALOGUE), (
+                spec.id
+            )
 
 
 class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
@@ -149,9 +154,13 @@ class TestAHarnessAgentIsServedByTheAdapter:
 class TestTheGenerator:
     def test_refuses_an_agent_asking_what_its_harness_cannot_do(self) -> None:
         sys.path.insert(0, str(CODEGEN))
+        import agentspecs
         from generate_agents import check_harnesses, load_harnesses  # noqa: E402
 
-        harnesses = load_harnesses(REPO / "agentspecs" / "agentspecs" / "agents")
+        # The installed package's catalogue: CI has no nested agentspecs clone.
+        harnesses = load_harnesses(
+            Path(agentspecs.__file__).resolve().parent / "agents"
+        )
         assert set(harnesses) == set(HARNESS_CATALOGUE)
         check_harnesses(
             [("", {"id": "ok", "harness": "claude-code", "model": "x"})], harnesses
