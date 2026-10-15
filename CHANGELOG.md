@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.24
+
+On agentspecs 0.0.96.
+
+- **Presence and the conversation's component contracts in `lib/portable`** (MOBILE M-030, M-032): `portable/presence` (the states and words beside an application's face, which the web chat re-exports, and `presenceOfConversation` over `reduceConversation`'s state); `portable/views` (each conversation row's props, words and screen-reader labels, the message box's rule — when a person may type, Send or Stop — and the question card's), one contract for the web and Datalayer Mobile's native renderers; `conversationFixture`, the conversation every renderer is tested against. The web `PresenceLine` takes `PresenceLineProps`.
+
 ## 1.5.23
 
 On agentspecs 0.0.96.
