@@ -1355,7 +1355,8 @@ def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
 class TestPapThroughTheShield:
     """SHIELD §6.10, SH-70, SH-72: the companies an application works with are lent
     as the gateway's ``pap`` toolset; their tools classed by agentspecs' table and
-    naming the company; the run's subject and IAM's authorizer on the Shield."""
+    naming the company; the run's subject and IAM's authorizer on the Shield.
+    """
 
     GATEWAY = "https://mcp.datalayer.run/mcp"
 

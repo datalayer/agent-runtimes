@@ -129,7 +129,7 @@ def test_heard_on_the_machine_when_the_model_is_here_else_on_the_servers(
     monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
     hearing = voice.Hearing(models_dir=tmp_path, token=None)
     assert hearing.where == "server"
-    assert "needs you signed in" in hearing.problem()
+    assert "needs you signed in" in (hearing.problem() or "")
     with pytest.raises(voice.VoiceRefused, match="signed in"):
         hearing.hear(b"\x00\x00" * voice.RATE)
     asked: list[dict[str, Any]] = []
