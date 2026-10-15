@@ -292,10 +292,11 @@ async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None
         recorder=AppRecorder(app=application.spec, send=send),
     )
     live.host = AppHost(application, live, recorder=live.recorder)
-    live.session = await live.host.open(id=live.uid)
+    session = await live.host.open(id=live.uid)
+    live.session = session
 
     async def work() -> None:
-        await live.session.ask(ChoiceQuestion("May this be recorded?", ("Yes", "No")))
+        await session.ask(ChoiceQuestion("May this be recorded?", ("Yes", "No")))
 
     [chunk async for chunk in live._start_turn(work, wraps_run=True)]
     await live.recorder.settled(live.uid)

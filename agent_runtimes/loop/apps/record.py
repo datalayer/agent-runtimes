@@ -794,7 +794,8 @@ class AppRecorder:
         """Say that the application asked the person and waits for the answer
         (`loop.ask`), and send it now: ai-agents tells whoever opened the
         session — on their phone too (MOBILE M-023). Its kind only, never the
-        question's words, which the conversation keeps."""
+        question's words, which the conversation keeps.
+        """
         _SESSION.set(session)
         self.add(
             "asked",
