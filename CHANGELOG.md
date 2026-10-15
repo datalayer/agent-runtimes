@@ -7,6 +7,17 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.36
+
+On agentspecs 0.0.103 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the policy side (SH-50, SH-31, SH-32, SH-54, SH-35), documented at `docs/docs/shield`.
+
+- **Managed from IAM** (§6.7, SH-50; decisions 10 and 11): `guardrails/managed_policies.py` pulls the organization's and the teams' Shield documents for the account from IAM (`GET /mcp-policies/shield/accounts/{uid}`, the runtime's token, `DATALAYER_IAM_URL`), keeps them until the `expires` IAM stamped, and polls every thirty seconds while an agent listens — a change an administrator saves reaches a running harness within a minute (`ACPAgent.replace_policies`, every open session). **Fail closed**: a managed runtime whose documents cannot be read and hold no unexpired copy refuses the harness at creation in a sentence naming IAM, and refuses every further action of a running one until IAM answers; a token without `DATALAYER_IAM_URL` is refused, never run unmanaged. A runtime with no token (the terminal's `loop`, a test) is unmanaged: the application's Rules and decision 5's default alone. `policies_in_force(app, lent, token=)` is the one builder; the `harnesses` section is honoured (`harness_refusal`: a harness the organization does not admit, or a `platform` credentials rule this runtime cannot keep, decision 3).
+- **Three levels, nothing loosening below the organization's** (§6.3, SH-31): IAM's documents first, the Appspec's Rules as the `team` scope, decision 5's default as the session's; proved in every order.
+- **The model budget and the spend limit, soft then hard** (SH-32): `guardrails/shield_budget.py`, a capability on every application's agent — before each model request `agent_shield.policy.decide_budget` against `limits.model_tokens` and `limits.spend` of the policies in force (read at every request); past a soft threshold the person is asked once through the tool approvals, past a hard one the run ends in a sentence saying what would let it go on; what each response spent counted from its usage and its price (a model nobody priced cannot be held to a spend limit, said on the next request); per session.
+- **A rule on a running session** (SH-54, decision 7): `GET|POST /apps/sessions/{uid}/rules`, `DELETE /apps/sessions/{uid}/rules/{name}` — a person adds or tightens a Shield rule on a session from the panel, in force at once (a harness session reads it at every decision through the Shield's own state; a pydantic-ai session's calls are tightened in `AppRulesCapability.decide`, *Your rule for this session “…”*), gone with the session, refused in a sentence when it would permit more than the organization's documents; `GET` answers the policies in force strictest first, the session's rules, and the sentence when nothing can be decided.
+- **The conformance table** (SH-35): the same action over MCP, A2A, ACP, AG-UI and the embed gets the same answer from the one agent.
+- The `policies/` catalogue generated (`agent_runtimes/specs/policies.py`, `src/specs/policies.ts`, `PolicySpec`); `make specs` runs `generate_policies.py`.
+
 ## 1.5.35
 
 On agentspecs 0.0.102 and `datalayer-agent-shield` 0.1.2. SHIELD.md Phase 2, the audit and the trace (SH-34, SH-51; the pod's boundary of SH-30 is the Operator's, services operator 1.0.94).

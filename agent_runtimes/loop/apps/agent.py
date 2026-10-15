@@ -175,9 +175,40 @@ def app_capabilities(
         # What the Required Frame Guard reads at a session's start (R-06).
         organization=organization,
     )
+    # The model budget and the spend limit of the policies in force, soft then
+    # hard, on every model request (SHIELD SH-32): the organization's from
+    # IAM, the application's Rules, the session's; read at every request.
+    from types import SimpleNamespace
+
+    from agent_runtimes.guardrails.shield_budget import ShieldBudgetCapability
+    from agent_runtimes.guardrails.shield_policy import (
+        VERDICT_BEHAVIOUR,
+        policies_in_force,
+    )
+    from agent_runtimes.loop.apps.record import current_session
+
+    budget = ShieldBudgetCapability(
+        policies=lambda: policies_in_force(app),
+        session=current_session,
+        agent_id=agent_id,
+        # A threshold crossed is a decision of the record (LOOP R-07), in the
+        # shape every other decision is written in.
+        record=lambda said: recorder.decided(
+            SimpleNamespace(
+                decision=SimpleNamespace(
+                    tool=said["what"],
+                    behaviour=VERDICT_BEHAVIOUR[said["decision"]],
+                    because=f"shield_limit:{said['limit']}",
+                    classes=(),
+                    rule=str(said.get("limit") or ""),
+                )
+            )
+        ),
+    )
     capabilities: List[Any] = [
         rules,
         checks,
+        budget,
         AppRecordCapability(recorder=recorder),
         *(given or []),
     ]

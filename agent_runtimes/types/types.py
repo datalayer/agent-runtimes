@@ -486,6 +486,24 @@ class HarnessHonoursSpec(BaseModel):
     )
 
 
+class PolicySpec(BaseModel):
+    """A Shield policy document the platform ships or shows (`agentspecs/policies`,
+    SHIELD.md SH-50): the catalogue's fields around a document of
+    `agent_shield.policy`, whose schema agentspecs carries verbatim.
+    """
+
+    id: str = Field(..., description="The entry's id (e.g. 'default')")
+    version: str = Field(default="0.0.1", description="Specification version")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What it says")
+    enabled: bool = Field(default=True)
+    tags: List[str] = Field(default_factory=list)
+    policy: Dict[str, Any] = Field(
+        ...,
+        description="The Shield's policy document: scope, rules, limits, network, mcp, harnesses",
+    )
+
+
 class HarnessRegisterEntry(BaseModel):
     """The register's line for a harness (SHIELD §3.3): what was checked, and where."""
 

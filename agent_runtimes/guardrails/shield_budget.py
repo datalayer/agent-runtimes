@@ -1,0 +1,194 @@
+# Copyright (c) 2025-2026 Datalayer, Inc.
+# Distributed under the terms of the Modified BSD License.
+
+"""The model budget and the spend limit, soft then hard, on every model request (SHIELD §6.3, SH-32, SH-54).
+
+The limits are the Shield's — ``limits.model_tokens`` (the budget, in tokens)
+and ``limits.spend`` (credits, 100 a USD) of the policies in force: the
+organization's from IAM, the application's, the session's — and the engine's
+:func:`agent_shield.policy.decide_budget` decides each request against them,
+strictest scope first. Before a model request, what the last one cost is
+taken as what this one will: within every limit it is done; past a **soft**
+threshold the person is asked once (through the runtime's tool approvals,
+the same path a Rule asks on), and a refusal ends the run in the sentence;
+past a **hard** threshold the run ends in a sentence that says what would let
+it go on — a cheaper model, a wider budget, a person's word. After the
+response, what it spent is counted: its tokens from the response's usage,
+its credits from the model's price (``genai-prices``, as pydantic-ai prices
+it); a model whose price is unknown cannot be held to a spend limit and the
+next request says so rather than spending unmeasured.
+
+The state is per session — ``record.current_session()`` names the one the run
+belongs to on a runtime — so a session's budget is its own, and gone with it.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence
+
+from agent_shield.policy import Context, LimitState, Policy, decide_budget
+from pydantic_ai import RunContext
+from pydantic_ai.capabilities import AbstractCapability
+
+from agent_runtimes.guardrails.common import GuardrailBlockedError
+
+logger = logging.getLogger(__name__)
+
+__all__ = ["BudgetState", "ShieldBudgetCapability", "ShieldBudgetExceeded"]
+
+#: One credit is one hundredth of a USD (STUDIO's pricing, 100 credits a USD).
+CREDITS_PER_USD = 100
+
+#: What a model request is called in the approvals it raises.
+MODEL_REQUEST = "model_request"
+
+
+class ShieldBudgetExceeded(GuardrailBlockedError):
+    """A model request the limits refuse, or a person refused: the run ends with the sentence."""
+
+
+@dataclass
+class BudgetState:
+    """What one session's model requests spent, and what the last one cost."""
+
+    limits: LimitState = field(default_factory=LimitState)
+    last_tokens: int = 0
+    last_credits: int = 0
+    #: USD not yet counted as a whole credit.
+    usd_pending: float = 0.0
+    #: The model whose price is unknown, when one was met; "" otherwise.
+    unpriced: str = ""
+
+
+Ask = Callable[[str], Awaitable[None]]
+
+
+@dataclass
+class ShieldBudgetCapability(AbstractCapability[Any]):
+    """Hold every model request to the model limits of the policies in force."""
+
+    policies: Callable[[], Sequence[Policy]]
+    """The policies in force now: read at every request, so a change from IAM is in force at once."""
+
+    session: Callable[[], str]
+    """Which session the current run belongs to (``record.current_session``)."""
+
+    ask: Optional[Ask] = None
+    """How the person is asked past a soft threshold; the tool-approval path when unsaid."""
+
+    agent_id: Optional[str] = None
+    """The runtime's id of the agent, for the tool-approval path."""
+
+    record: Optional[Callable[[Dict[str, Any]], None]] = None
+    """Told of each decision past a threshold, for the application's record."""
+
+    states: Dict[str, BudgetState] = field(default_factory=dict, init=False, repr=False)
+
+    # -- the state -----------------------------------------------------------------------
+
+    def state_of(self, session: str) -> BudgetState:
+        return self.states.setdefault(session, BudgetState())
+
+    def forget(self, session: str) -> None:
+        self.states.pop(session, None)
+
+    # -- asking ------------------------------------------------------------------------
+
+    async def _ask(self, sentence: str) -> None:
+        if self.ask is not None:
+            await self.ask(sentence)
+            return
+        from agent_runtimes.guardrails.tool_approvals import (
+            ToolApprovalConfig,
+            ToolApprovalManager,
+        )
+
+        config = ToolApprovalConfig.from_env()
+        config.agent_id = self.agent_id or config.agent_id
+        manager = ToolApprovalManager(config)
+        await manager.request_and_wait(
+            tool_name=MODEL_REQUEST, tool_args={"_rule": sentence, "sentence": sentence}
+        )
+
+    # -- the hooks ---------------------------------------------------------------------
+
+    async def before_model_request(
+        self, ctx: RunContext[Any], request_context: Any
+    ) -> Any:
+        session = self.session()
+        state = self.state_of(session)
+        policies = list(self.policies())
+        if state.unpriced and any(p.limits.spend is not None for p in policies):
+            raise ShieldBudgetExceeded(
+                f"a model request: refused — the price of {state.unpriced} is unknown, so the spend "
+                "limit cannot be held; a priced model, or a policy without a spend limit, would let it go on"
+            )
+        decision = decide_budget(
+            Context(workspace="", session_id=session or None, state=state.limits),
+            policies,
+            tokens=state.last_tokens,
+            cost=state.last_credits,
+        )
+        if decision.verdict == "allow":
+            return request_context
+        if self.record is not None:
+            self.record(
+                {
+                    "what": MODEL_REQUEST,
+                    "decision": decision.verdict,
+                    "limit": decision.rule,
+                    "scope": decision.scope,
+                    "sentence": decision.sentence,
+                }
+            )
+        if decision.verdict == "deny":
+            raise ShieldBudgetExceeded(decision.sentence)
+        if decision.scope and decision.rule:
+            state.limits.soft_asked.add((decision.scope, decision.rule))
+        try:
+            await self._ask(decision.sentence)
+        except GuardrailBlockedError as refused:
+            raise ShieldBudgetExceeded(
+                f"{decision.sentence}; the person did not allow it ({refused})"
+            ) from None
+        return request_context
+
+    async def after_model_request(
+        self, ctx: RunContext[Any], *, request_context: Any, response: Any
+    ) -> Any:
+        session = self.session()
+        state = self.state_of(session)
+        usage = getattr(response, "usage", None)
+        tokens = int(getattr(usage, "input_tokens", 0) or 0) + int(
+            getattr(usage, "output_tokens", 0) or 0
+        )
+        credits = 0
+        try:
+            priced = response.cost()
+            state.usd_pending += float(priced.total_price)
+        except LookupError:
+            # A model nobody priced: the next request says so when a spend limit holds.
+            state.unpriced = str(getattr(response, "model_name", "") or "the model")
+        except Exception as error:  # noqa: BLE001 - a price that cannot be read is an unpriced model
+            logger.warning("The model's price could not be read: %s", error)
+            state.unpriced = str(getattr(response, "model_name", "") or "the model")
+        else:
+            whole = int(state.usd_pending * CREDITS_PER_USD)
+            if whole:
+                credits = whole
+                state.usd_pending -= whole / CREDITS_PER_USD
+        state.limits.spent(tokens=tokens, cost=credits)
+        state.last_tokens = tokens
+        state.last_credits = credits
+        return response
+
+    def spent(self, session: str) -> Dict[str, int]:
+        """What a session spent so far, for the panel."""
+        state = self.state_of(session)
+        return {"model_tokens": state.limits.model_tokens, "spend": state.limits.spend}
+
+
+def budget_states(capabilities: Sequence[Any]) -> List[ShieldBudgetCapability]:
+    return [item for item in capabilities if isinstance(item, ShieldBudgetCapability)]

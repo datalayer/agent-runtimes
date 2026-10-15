@@ -23,7 +23,11 @@ the platform's default policy of decision 5 beneath them:
 - the ``session`` scope holds the platform's default (decision 5): read and
   edit inside the workspace done, delete and execute and anything outside
   asked, flagged commands asked with the command shown, fetch refused with
-  no allow-list.
+  no allow-list;
+- above them all, on a managed runtime, the **organization's and the teams'
+  documents from IAM** (``guardrails.managed_policies``, SH-50): pulled for
+  the account, kept until they expire, refreshed while the runtime runs;
+  with none readable and no unexpired copy, nothing is decided (decision 11).
 
 ACP's tool ``kind`` is classed by :func:`agent_shield.policy.class_of`
 (``KIND_CLASS``: ``other`` → write, fail closed); the table-driven test in
@@ -40,10 +44,14 @@ from agent_shield.policy import (
     Mcp,
     Policy,
     Rule,
+    admits,
     class_of,
+    credentials_rule,
     default_policy,
 )
+from agent_shield.saas import PolicyUnavailable
 
+from agent_runtimes.guardrails.managed_policies import runtime_policies
 from agent_runtimes.loop.apps.rules import (
     ASK_FIRST,
     DEFAULT_BEHAVIOURS,
@@ -127,8 +135,13 @@ def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
     return Policy(scope="team", rules=rules, mcp=Mcp(allow=list(lent)))
 
 
-def policies_of(app: Any = None, lent: Sequence[str] = ()) -> List[Policy]:
-    """The policies in force for a harness run by ``app``: its Rules, then decision 5's default.
+def policies_of(
+    app: Any = None,
+    lent: Sequence[str] = (),
+    *,
+    managed: Optional[Sequence[Policy]] = None,
+) -> List[Policy]:
+    """The policies in force for a harness run by ``app``: IAM's, its Rules, then decision 5's default.
 
     Parameters
     ----------
@@ -136,14 +149,18 @@ def policies_of(app: Any = None, lent: Sequence[str] = ()) -> List[Policy]:
         The application; none for an agent run outside one (``loop --harness``).
     lent : Sequence[str]
         The gateway toolsets it connects, by name (``mcp.allow``).
+    managed : Sequence[Policy], optional
+        IAM's documents for the account (the organization's, the teams'),
+        placed first: the engine sorts by scope and keeps their order within
+        one, so IAM's ``team`` document decides before the Appspec's.
 
     Returns
     -------
     list[Policy]
-        Strictest first as the engine sorts them anyway: the ``team`` policy
-        of the Rules when any, and the ``session`` default.
+        Strictest first as the engine sorts them anyway: IAM's documents, the
+        ``team`` policy of the Rules when any, and the ``session`` default.
     """
-    policies: List[Policy] = []
+    policies: List[Policy] = list(managed or [])
     if app is not None or lent:
         own = rules_policy(app, lent)
         if own is not None:
@@ -152,12 +169,51 @@ def policies_of(app: Any = None, lent: Sequence[str] = ()) -> List[Policy]:
     return policies
 
 
+def policies_in_force(
+    app: Any = None, lent: Sequence[str] = (), *, token: Optional[str] = None
+) -> List[Policy]:
+    """The policies in force on this runtime now: IAM's pulled or kept, the Rules, the default.
+
+    Raises
+    ------
+    PolicyUnavailable
+        On a managed runtime whose documents cannot be read and hold no
+        unexpired copy (decision 11): the caller refuses in the sentence.
+    """
+    return policies_of(app, lent, managed=runtime_policies().in_force(token))
+
+
+def harness_refusal(policies: Sequence[Policy], harness_id: str) -> Optional[str]:
+    """Why the policies in force refuse ``harness_id`` on this runtime, or ``None``.
+
+    The ``harnesses`` section of the strictest scope that says anything: a
+    harness not admitted, or a credentials rule this runtime cannot keep —
+    a runtime lends a harness the account's own declared secret (decision
+    3), never the platform's key, so ``platform`` refuses every harness
+    here until that path exists.
+    """
+    refused = admits(policies, harness_id)
+    if refused is not None:
+        return f"The harness {harness_id!r} is refused: {refused}."
+    rule = credentials_rule(policies)
+    if rule == "platform":
+        return (
+            f"The harness {harness_id!r} is refused: the policy runs harnesses on the "
+            "platform's credentials, and this runtime lends only the account's own "
+            "declared secret (SHIELD decision 3)."
+        )
+    return None
+
+
 __all__ = [
     "BEHAVIOUR_VERDICT",
     "KIND_CLASS",
     "SHARED_CLASSES",
     "VERDICT_BEHAVIOUR",
+    "PolicyUnavailable",
     "class_of",
+    "harness_refusal",
+    "policies_in_force",
     "policies_of",
     "rules_policy",
 ]

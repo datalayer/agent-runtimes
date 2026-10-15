@@ -114,6 +114,7 @@ from agent_runtimes.loop.apps.rules import (
     DO_IT,
     IF_ASKED,
     LEAVE_TO_ME,
+    SESSION_RULE,
     UNCLASSED,
     Decision,
     decision_for,
@@ -392,8 +393,31 @@ class AppRulesCapability(AbstractCapability[Any]):
         What reaches the outside world is resolved first — an MCP tool, the
         tool `call_tool` calls, the tools code names — so that nothing the
         session says of a tool (`extra_classes`) can grant a connection the
-        application does not have.
+        application does not have. Last, the rules a person added to the
+        running session tighten it (SHIELD SH-54): the strictest of the
+        application's behaviour and theirs on the call's classes.
         """
+        return self._tightened(self._decide_app(tool_name, args))
+
+    def _tightened(self, enforced: Enforced) -> Enforced:
+        from agent_runtimes.guardrails.session_rules import tightened
+        from agent_runtimes.loop.apps.record import current_session
+
+        decision = enforced.decision
+        behaviour, by = tightened(
+            current_session(), decision.classes, decision.behaviour
+        )
+        if by is None:
+            return enforced
+        return replace(
+            enforced,
+            decision=replace(
+                decision, behaviour=behaviour, because=SESSION_RULE, rule=by
+            ),
+        )
+
+    def _decide_app(self, tool_name: str, args: Mapping[str, Any]) -> Enforced:
+        """The application's own decision, before the session's rules."""
         if tool_name == "call_tool":
             requested = args.get("tool_name") or args.get("tool")
             inner = args.get("arguments")

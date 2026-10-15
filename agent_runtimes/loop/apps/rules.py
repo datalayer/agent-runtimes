@@ -355,6 +355,8 @@ RULE_ON_TOOL = "rule_on_tool"
 UNCLASSED = "unclassed"
 RULE_ON_CLASS = "rule_on_class"
 BY_DEFAULT = "default"
+#: A rule a person added to the running session tightened it (SHIELD SH-54).
+SESSION_RULE = "session_rule"
 
 
 @dataclass(frozen=True)
@@ -389,6 +391,8 @@ class Decision:
         if self.because == UNCLASSED:
             return f"Nobody has said what `{self.tool}` does, so it is left to you."
         said = _SAYS[self.behaviour]
+        if self.because == SESSION_RULE and self.rule:
+            return f"Your rule for this session “{self.rule}”: {said}."
         if self.rule:
             return f"Your rule “{self.rule}”: {said}."
         return f"`{self.tool}` can {does}, and no rule covers that: {said}."

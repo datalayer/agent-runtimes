@@ -713,6 +713,85 @@ class LiveSession:
         """Whether its application's code reacts to it."""
         return self.host is not None
 
+    # --- the rules while running (SHIELD §6.3, SH-54) --------------------------------
+
+    def _shield(self) -> Any:
+        """The harness this session's agent runs on, when it is one (an ``ACPAgent``)."""
+        from agent_runtimes.adapters.acp_agent import ACPAgent
+        from agent_runtimes.routes.agents import _agents
+
+        held = _agents.get(self.agent_id)
+        agent = held[0] if held else None
+        return agent if isinstance(agent, ACPAgent) else None
+
+    def rules_in_force(self) -> Dict[str, Any]:
+        """What decides this session now: the policies strictest first, and the person's own rules.
+
+        A harness session answers from the Shield's own state (its documents
+        from IAM, the application's, the session's with every rule a person
+        added); any other session answers the policies the runtime holds and
+        the rules of this session.
+        """
+        from agent_runtimes.guardrails.managed_policies import runtime_policies
+        from agent_runtimes.guardrails.session_rules import session_rules
+        from agent_runtimes.guardrails.shield_policy import policies_in_force
+
+        shield = self._shield()
+        if shield is not None:
+            answered = shield.rules_in_force_of(self.uid)
+            if answered is not None:
+                return {
+                    "uid": self.uid,
+                    "harness": shield.harness.id,
+                    "managed": runtime_policies().is_managed,
+                    **answered,
+                }
+        try:
+            policies = policies_in_force(self.app)
+            unavailable = None
+        except Exception as refused:  # noqa: BLE001 - said, not hidden: nothing is decided (decision 11)
+            policies, unavailable = [], str(refused)
+        return {
+            "uid": self.uid,
+            "harness": None,
+            "managed": runtime_policies().is_managed,
+            "policies": [
+                json.loads(policy.model_dump_json(exclude_none=True))
+                for policy in policies
+            ],
+            "session_rules": session_rules().as_values(self.uid),
+            "unavailable": unavailable,
+        }
+
+    def add_rule(self, data: Any) -> Dict[str, Any]:
+        """A rule the person adds or tightens on this session: in force at once, gone with it."""
+        from agent_runtimes.guardrails.session_rules import (
+            SessionRuleRefused,
+            rule_from,
+            session_rules,
+        )
+
+        try:
+            session_rules().add(self.uid, rule_from(data))
+        except SessionRuleRefused as refused:
+            raise SessionRefused(422, str(refused)) from None
+        except Exception as refused:  # noqa: BLE001 - IAM unreadable: nothing is tightened under nothing (decision 11)
+            raise SessionRefused(503, str(refused)) from None
+        return self.rules_in_force()
+
+    def remove_rule(self, name: str) -> Dict[str, Any]:
+        """Take a session rule back."""
+        from agent_runtimes.guardrails.session_rules import (
+            SessionRuleRefused,
+            session_rules,
+        )
+
+        try:
+            session_rules().remove(self.uid, name)
+        except SessionRuleRefused as refused:
+            raise SessionRefused(404, str(refused)) from None
+        return self.rules_in_force()
+
     def describe(self) -> Dict[str, Any]:
         """The session as the API says it."""
         return {
@@ -1793,6 +1872,7 @@ class LiveSession:
         _SESSIONS.pop(self.uid, None)
         UI_HUB.forget(self.uid)
         UI_FILES.discard(self.uid)
+        _forget_rules(self.uid)
 
     async def logout(self) -> None:
         """The person signed out: the code's ``logout`` runs, then the session ends (LOOP P-14)."""
@@ -1803,6 +1883,7 @@ class LiveSession:
         _SESSIONS.pop(self.uid, None)
         UI_HUB.forget(self.uid)
         UI_FILES.discard(self.uid)
+        _forget_rules(self.uid)
 
     async def _close(self) -> None:
         """Cancel the turn and the question waited on, and end the stream."""
@@ -2180,6 +2261,13 @@ FILES_PREFIX = "/api/v1/apps/files"
 MAX_PRESSES = 16
 
 
+def _forget_rules(session: str) -> None:
+    """The person's rules of a session go with it (SHIELD decision 7)."""
+    from agent_runtimes.guardrails.session_rules import session_rules
+
+    session_rules().forget(session)
+
+
 def session_of(uid: str) -> Optional[LiveSession]:
     """A session of this runtime, by uid, or None."""
     return _SESSIONS.get(uid)
@@ -2193,6 +2281,9 @@ def forget_sessions() -> None:
     _SESSIONS.clear()
     _SERVED.clear()
     _AGENT_CODE.clear()
+    from agent_runtimes.guardrails.session_rules import session_rules
+
+    session_rules().clear()
 
 
 def agent_app(agent_id: str) -> Tuple[AppSpec, Dict[str, Any]]:

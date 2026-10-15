@@ -182,6 +182,7 @@ RUFF_TARGETS = \
 	agent_runtimes/specs/frames.py \
 	agent_runtimes/specs/cogs.py \
 	agent_runtimes/specs/harnesses.py \
+	agent_runtimes/specs/policies.py \
 	agent_runtimes/specs/guards.py \
 	agent_runtimes/specs/gates.py \
 	agent_runtimes/specs/tracks.py \
@@ -533,6 +534,11 @@ specs-generate: ## generate all Python and TypeScript specs from YAML
 	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/harnesses \
 	  --python-output agent_runtimes/specs/harnesses.py \
 	  --typescript-output src/specs/harnesses.ts
+	$(call step,Generating policy specifications)
+	python scripts/codegen/generate_policies.py \
+	  --specs-dir $(AGENTSPECS_DIR)/agentspecs/policies \
+	  --python-output agent_runtimes/specs/policies.py \
+	  --typescript-output src/specs/policies.ts
 	$(call step,Generating Guard specifications)
 	@if [ -d "$(AGENTSPECS_DIR)/agentspecs/guards" ]; then \
 	  python scripts/codegen/generate_ops.py --kind guards \

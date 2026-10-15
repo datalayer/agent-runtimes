@@ -1066,6 +1066,26 @@ class SessionSettingsRequest(BaseModel):
     values: Dict[str, Any] = Field(..., description="The settings changed, by id")
 
 
+class SessionRuleRequest(BaseModel):
+    """A rule a person adds to a running session (SHIELD §6.3, SH-54): the Shield's rule shape.
+
+    ``name`` and ``decision`` (``allow``, ``ask``, ``deny``) with what it
+    names: ``classes`` (read, write, send, buy, delete, execute), ``kinds``
+    (a harness's ACP kinds), ``where`` (inside, outside, any), ``paths``,
+    ``commands``, a ``reason``. It may only tighten: one that would permit
+    more than the organization's policy is refused in a sentence.
+    """
+
+    name: str = Field(..., description="A short name; every sentence quotes it")
+    decision: str = Field(..., description="allow, ask or deny")
+    classes: List[str] = Field(default_factory=list)
+    kinds: List[str] = Field(default_factory=list)
+    where: str = Field(default="any")
+    paths: List[str] = Field(default_factory=list)
+    commands: List[str] = Field(default_factory=list)
+    reason: Optional[str] = None
+
+
 class SessionWindowRequest(BaseModel):
     """A message from the page the application sits in (LOOP P-25)."""
 
@@ -1582,6 +1602,46 @@ async def session_page(uid: str, body: SessionPageRequest, request: Request) -> 
     live, _ = await _held(uid, request)
     try:
         return _stream(live.run_page(body.inputs, head=live.session_event()))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.get("/sessions/{uid}/rules")
+async def session_rules_in_force(uid: str, request: Request) -> Dict[str, Any]:
+    """What decides this session now (SHIELD §6.3): the policies in force,
+    strictest first — the organization's from IAM, the application's, the
+    session's — and the rules the person added to it; ``unavailable`` the
+    sentence when no policy can be read (decision 11).
+    """
+    live, _ = await _held(uid, request)
+    return live.rules_in_force()
+
+
+@router.post("/sessions/{uid}/rules")
+async def add_session_rule(
+    uid: str, body: SessionRuleRequest, request: Request
+) -> Dict[str, Any]:
+    """Add or tighten a rule on the running session (SH-54): in force at once,
+    gone with the session, never below the organization's — a rule that
+    would permit more is a 422 in a sentence. Answers what is in force now.
+    """
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        return live.add_rule(body.model_dump(exclude_none=True))
+    except SessionRefused as refused:
+        raise _refused(refused) from None
+
+
+@router.delete("/sessions/{uid}/rules/{name}")
+async def remove_session_rule(uid: str, name: str, request: Request) -> Dict[str, Any]:
+    """Take a session rule back. Answers what is in force now."""
+    from agent_runtimes.loop.apps.sessions import SessionRefused
+
+    live, _ = await _held(uid, request)
+    try:
+        return live.remove_rule(name)
     except SessionRefused as refused:
         raise _refused(refused) from None
 

@@ -241,6 +241,43 @@ export interface HarnessAcpSpec {
  * one beside `pydantic-ai` and `vercel-ai`; the Datalayer runtime serves it
  * through its ACP adapter, `ACPAgent` (SHIELD SH-10), never the browser.
  */
+/**
+ * A Shield policy document the platform ships or shows (`agentspecs/policies`,
+ * SHIELD.md SH-50): the catalogue's fields around a document of
+ * `@datalayer/agent-shield`'s `Policy`, whose schema agentspecs carries verbatim.
+ */
+export interface PolicySpec {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  tags: string[];
+  /** The Shield's document: scope, version, rules, limits, network, mcp, harnesses. */
+  policy: {
+    scope: 'organization' | 'team' | 'session';
+    version?: number;
+    expires?: string | null;
+    rules?: Array<{
+      name: string;
+      decision: 'allow' | 'ask' | 'deny';
+      classes?: string[];
+      kinds?: string[];
+      where?: 'inside' | 'outside' | 'any';
+      paths?: string[];
+      commands?: string[];
+      reason?: string | null;
+    }>;
+    limits?: Record<string, { soft: number; hard: number } | null>;
+    network?: { fetch?: string[] };
+    mcp?: { allow?: string[] };
+    harnesses?: {
+      admit?: string[];
+      credentials?: 'account' | 'platform' | 'either';
+    };
+  };
+}
+
 export interface HarnessSpec {
   /** What `harness:` names (e.g. 'claude-code'). */
   id: string;
