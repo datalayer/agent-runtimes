@@ -25,6 +25,7 @@ import type { AppRuleSpec, AppSpec } from '../../../types/agentspecs';
 import { agentServerOf, type LoopWorkspaceContext } from '../../core';
 import { BEHAVIOUR_WORDS, coverOf } from '../../apps/rules';
 import {
+  FILE_AND_SHELL_RULES,
   SESSION_RULES_WORDS,
   SESSION_RULE_CLASSES,
   SESSION_RULE_DECISIONS,
@@ -342,6 +343,30 @@ export function SessionRules({
         <Button size="small" disabled={busy} onClick={add}>
           {SESSION_RULES_WORDS.add}
         </Button>
+      </Box>
+      <Box
+        display="flex"
+        gap={1}
+        mt={1}
+        flexWrap="wrap"
+        data-testid="session-rules-file-and-shell"
+      >
+        {FILE_AND_SHELL_RULES.map(rule => (
+          <Button
+            key={rule.name}
+            size="small"
+            variant="invisible"
+            disabled={busy}
+            title={sessionRuleInWords(rule)}
+            onClick={() =>
+              void act(() =>
+                addSessionRule(agentServerUrl, token, sessionUid, rule),
+              )
+            }
+          >
+            {rule.name}
+          </Button>
+        ))}
       </Box>
       {problem ? (
         <Text as="p" role="alert" sx={{ fontSize: 0, m: 0, mt: 1 }}>

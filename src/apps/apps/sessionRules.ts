@@ -94,14 +94,82 @@ export const SESSION_RULES_WORDS = {
     `Nothing is decided right now: ${sentence}`,
 } as const;
 
-/** A rule in words: *writing, sending: leave it to me*. */
+/** Where a file rule holds, in words (SHIELD decision 5). */
+export const WHERE_WORDS: Record<'inside' | 'outside', string> = {
+  inside: 'inside the workspace',
+  outside: 'outside the workspace',
+};
+
+/**
+ * A rule in words: *writing, sending: leave it to me*; with decision 5's file
+ * and shell wording when it says where or what (SHIELD SH-43) — *writing
+ * inside the workspace (src/**): do it*, *running `git push`: ask me first*.
+ */
 export function sessionRuleInWords(rule: SessionRule): string {
   const classes = (rule.classes ?? []).map(
     item => SESSION_RULES_WORDS.classes[item as SessionRuleClass] ?? item,
   );
-  const covers = classes.length > 0 ? classes.join(', ') : 'everything';
+  let covers = classes.length > 0 ? classes.join(', ') : 'everything';
+  if (rule.where === 'inside' || rule.where === 'outside') {
+    covers = `${covers} ${WHERE_WORDS[rule.where]}`;
+  }
+  if (rule.paths && rule.paths.length > 0) {
+    covers = `${covers} (${rule.paths.join(', ')})`;
+  }
+  if (rule.commands && rule.commands.length > 0) {
+    covers = `${covers} matching ${rule.commands.map(command => `\`${command}\``).join(' or ')}`;
+  }
   return `${covers}: ${SESSION_RULES_WORDS.decisions[rule.decision]}`;
 }
+
+/**
+ * Decision 5's file and shell rules, offered on a running session in the
+ * Shield's own words: each one a rule a person adds as it stands, and the
+ * runtime refuses one that would loosen what the organization says
+ * (SHIELD §6.2, §6.3).
+ */
+export const FILE_AND_SHELL_RULES: readonly SessionRule[] = [
+  {
+    name: 'Edit inside the workspace',
+    decision: 'allow',
+    classes: ['write'],
+    where: 'inside',
+  },
+  {
+    name: 'Ask before deleting a file',
+    decision: 'ask',
+    classes: ['delete'],
+  },
+  {
+    name: 'Ask before running a command',
+    decision: 'ask',
+    classes: ['execute'],
+  },
+  {
+    name: 'Leave files outside the workspace to me',
+    decision: 'deny',
+    classes: ['read', 'write', 'delete'],
+    where: 'outside',
+  },
+  {
+    name: 'Ask before git push',
+    decision: 'ask',
+    classes: ['execute'],
+    commands: ['^git\\s+push\\b'],
+  },
+  {
+    name: 'Ask before installing a package',
+    decision: 'ask',
+    classes: ['execute'],
+    commands: ['\\b(pip|npm|uv|yarn|apt(-get)?)\\s+(install|add)\\b'],
+  },
+  {
+    name: 'Leave sudo to me',
+    decision: 'deny',
+    classes: ['execute'],
+    commands: ['^sudo\\b'],
+  },
+];
 
 /** What the person typed, as the rule the runtime takes; a sentence when it cannot be one. */
 export function sessionRuleOf(input: {

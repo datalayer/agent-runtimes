@@ -16,6 +16,7 @@ import { defineContributionPoint } from '@datalayer/reactor';
 
 /** The kinds of part an agent is built from on the Canvas. */
 export type CanvasPartKind =
+  | 'agent'
   | 'connection'
   | 'rule'
   | 'skill'
@@ -44,6 +45,12 @@ export type CanvasPartContribution = {
   /** One line of what it is. */
   says: string;
   emoji?: string;
+  /**
+   * The harness it runs on, for an agent part (SHIELD SH-43): the catalogue
+   * harness's id, whose terms, credential and what it honours the Properties
+   * panel reads from `specs/harnesses`.
+   */
+  harness?: string;
   /**
    * What it arrives with, spelled as the Appspec's text spells it: a
    * connection's, a rule's, a test's or an event's object, a skill's, a

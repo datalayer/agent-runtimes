@@ -21,6 +21,8 @@ import {
   type ReactorPlugin,
 } from '@datalayer/reactor';
 import { MCP_SERVER_LIBRARY } from '../../../specs/mcpServers';
+import { listAgentspecs } from '../../../specs/agents';
+import { listHarnesses } from '../../../specs/harnesses';
 import { listChatModels } from '../../../specs/models';
 import { getSkillSpecs } from '../../../specs/skills';
 import { listProtocolSpecs } from '../../../specs/protocols';
@@ -39,6 +41,7 @@ type PartsReader = {
 
 /** The short ids an organization turns off, and the plugin each names. */
 export const CANVAS_PART_SOURCES = [
+  'agents',
   'connections',
   'skills',
   'models',
@@ -68,6 +71,31 @@ const partsPlugin = (
     contributes: parts.map(part =>
       contribution(LoopCanvasPart, part, { id: part.id }),
     ),
+  });
+
+/**
+ * The catalogue's harnesses as the agent (SHIELD SH-43): each harness an
+ * agent program over ACP behind the Shield, offered by the catalogue agent
+ * that runs on it — dropped on the surface, it is the application's agent.
+ * A harness no agent of the catalogue runs yet is offered off, and says so;
+ * `custom` is an organization's own and never offered here.
+ */
+export const AGENT_PARTS: CanvasPartContribution[] = listHarnesses()
+  .filter(harness => harness.id !== 'custom')
+  .map(harness => {
+    const agent = listAgentspecs().find(spec => spec.harness === harness.id);
+    return {
+      id: `agent:${harness.id}`,
+      kind: 'agent' as const,
+      label: harness.name,
+      says: agent
+        ? `${agent.name}: ${harness.description}`
+        : `${harness.description} No agent of the catalogue runs on it yet.`,
+      emoji: '🛡️',
+      harness: harness.id,
+      example: agent?.id ?? '',
+      enabled: Boolean(agent) && harness.enabled,
+    };
   });
 
 /** A connection to each server of the catalogue: read-only, as its owner, every tool. */
@@ -264,6 +292,7 @@ export const CANVAS_PART_PLUGINS: ReactorPlugin<
   unknown,
   unknown
 >[] = [
+  partsPlugin('agents', 'Agents', AGENT_PARTS),
   partsPlugin('connections', 'Connections', CONNECTION_PARTS),
   partsPlugin('skills', 'Skills', SKILL_PARTS),
   partsPlugin('models', 'Models', MODEL_PARTS),

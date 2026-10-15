@@ -45,6 +45,9 @@ function withPart(part: CanvasPartContribution): Record<string, unknown> {
   if (part.kind === 'model') {
     return { ...data, model: part.example };
   }
+  if (part.kind === 'agent') {
+    return { ...data, agent: part.example };
+  }
   if (part.kind === 'character') {
     const face = (data.interface ?? {}) as Record<string, unknown>;
     return { ...data, interface: { ...face, assistant: part.example } };
@@ -96,6 +99,7 @@ describe('the toolbox is what the enabled plugins contribute', () => {
     }
     expect(new Set(parts.map(part => part.kind))).toEqual(
       new Set([
+        'agent',
         'connection',
         'skill',
         'model',
@@ -121,6 +125,15 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       plugin: 'chat',
     });
     expect(ids).toContain('character:paperclip');
+    // The catalogue's harnesses as the agent (SHIELD SH-43): Claude Code by
+    // the agent that runs on it; a harness no agent runs yet offered off.
+    const claude = parts.find(part => part.id === 'agent:claude-code');
+    expect(claude?.harness).toBe('claude-code');
+    expect(claude?.example).toBe('example-harness-claude-code');
+    const codex = parts.find(part => part.id === 'agent:codex');
+    expect(codex?.enabled).toBe(false);
+    expect(codex?.says).toContain('No agent of the catalogue runs on it yet.');
+    expect(ids).not.toContain('agent:custom');
     expect(CANVAS_PART_PLUGINS.map(plugin => plugin.name)).toEqual(
       CANVAS_PART_SOURCES.map(canvasPartsPluginName),
     );

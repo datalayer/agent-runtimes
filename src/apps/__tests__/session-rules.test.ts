@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  FILE_AND_SHELL_RULES,
   SESSION_RULES_WORDS,
   addSessionRule,
   readSessionRules,
@@ -132,5 +133,45 @@ describe('a rule on a running session', () => {
     expect(
       SESSION_RULES_WORDS.unavailable('IAM at x could not be reached'),
     ).toContain('Nothing is decided right now');
+  });
+});
+
+describe('the file and shell rules of decision 5 (SHIELD SH-43)', () => {
+  it('says where and what in the Shield’s words', () => {
+    const words = Object.fromEntries(
+      FILE_AND_SHELL_RULES.map(rule => [rule.name, sessionRuleInWords(rule)]),
+    );
+    expect(words['Edit inside the workspace']).toBe(
+      'writing inside the workspace: do it',
+    );
+    expect(words['Ask before git push']).toBe(
+      'running a command matching `^git\\s+push\\b`: ask me first',
+    );
+    expect(words['Leave files outside the workspace to me']).toBe(
+      'reading, writing, deleting outside the workspace: leave it to me',
+    );
+    expect(
+      sessionRuleInWords({
+        name: 'src',
+        decision: 'allow',
+        classes: ['write'],
+        where: 'inside',
+        paths: ['src/**'],
+      }),
+    ).toBe('writing inside the workspace (src/**): do it');
+  });
+  it('holds rules the runtime takes, each command a regular expression', () => {
+    for (const rule of FILE_AND_SHELL_RULES) {
+      expect(rule.classes?.length).toBeGreaterThan(0);
+      for (const command of rule.commands ?? []) {
+        expect(() => new RegExp(command)).not.toThrow();
+      }
+    }
+    expect(
+      new RegExp(
+        FILE_AND_SHELL_RULES.find(rule => rule.name === 'Ask before git push')!
+          .commands![0],
+      ).test('git push origin main'),
+    ).toBe(true);
   });
 });
