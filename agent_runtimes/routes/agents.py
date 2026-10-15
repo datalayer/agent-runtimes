@@ -1446,6 +1446,11 @@ async def _harness_agent_of(
             name=request.name,
             description=request.description or "",
             state_store=protocol_state_store(),
+            # An organization's own harness is read for the organization the
+            # application belongs to (SHIELD SH-46).
+            organization_uid=str(
+                (request.app_instance or {}).get("organization_uid") or ""
+            ).strip(),
         )
         await agent.initialize()
     except HarnessRefused as refused:

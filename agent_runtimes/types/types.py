@@ -623,6 +623,11 @@ def harness_problems(
 
     spec = HARNESS_CATALOGUE.get(harness_id)
     if spec is None:
+        from agentspecs.harnesses import listed_refusal
+
+        listed = listed_refusal(harness_id)
+        if listed is not None:
+            return [listed]
         known = ", ".join([*BUILTIN_HARNESSES, *sorted(HARNESS_CATALOGUE)])
         return [f"There is no harness named {harness_id!r}: one of {known}."]
     if harness_id == CUSTOM_HARNESS:
@@ -3491,7 +3496,7 @@ class TeamLinkSpec(BaseModel):
     """One member asking another directly, over a protocol (agentspecs `TeamLink`)."""
 
     member: str = Field(..., description="The member asked, by its id in the team")
-    over: Literal["a2a", "mcp"] = Field(
+    over: Literal["a2a", "mcp", "acp"] = Field(
         default="a2a",
         description="The protocol: `a2a` to an agent or an application, `mcp` to a server member",
     )
@@ -3523,6 +3528,14 @@ class TeamAgentspec(BaseModel):
             "MCP server catalogue reference, in place of `ref` and `app`: the "
             "member is that server, a system of the scene the others reach over "
             "MCP (LOOP A-04)"
+        ),
+    )
+    harness: str = Field(
+        default="",
+        description=(
+            "Harness catalogue id, in place of `ref`, `app` and `server`: the member "
+            "is that agent program over ACP behind the Shield, asked over A2A or ACP "
+            "with a budget, a deadline and a manifest (SHIELD SH-45)"
         ),
     )
     runs_in: Optional[Literal["browser", "runtime"]] = Field(

@@ -345,6 +345,27 @@ export interface StandardSpec {
   controls: StandardControl[];
 }
 
+/**
+ * A harness of the register's *listed* tier (SHIELD SH-57): known to speak ACP,
+ * its documented command, licence, terms and credential read and cited; not
+ * drilled, so offered by nothing — naming one is refused *listed, not drilled yet*.
+ */
+export interface ListedHarness {
+  id: string;
+  name: string;
+  docs: string;
+  adapter: string;
+  version: string;
+  /** The launch command its project documents; null when undocumented. */
+  command: string | null;
+  licence: string;
+  licenceSource: string;
+  termsSource: string;
+  credential: string;
+  servedToThirdParties: 'api_key_only' | 'permitted' | 'refused' | 'unknown';
+  note: string;
+}
+
 export interface HarnessSpec {
   /** What `harness:` names (e.g. 'claude-code'). */
   id: string;

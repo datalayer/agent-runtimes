@@ -153,6 +153,8 @@ def _generate_team_agent_py(agent: Dict[str, Any]) -> str:
         lines.append(f'            app="{agent["app"]}",')
     if agent.get("server"):
         lines.append(f'            server="{agent["server"]}",')
+    if agent.get("harness"):
+        lines.append(f'            harness="{agent["harness"]}",')
     if agent.get("runs_in"):
         lines.append(f'            runs_in="{agent["runs_in"]}",')
     links = agent.get("talks_to") or []
@@ -223,6 +225,7 @@ def _generate_team_agent_ts(agent: Dict[str, Any]) -> str:
     application = (
         (f"\n      app: '{agent['app']}'," if agent.get("app") else "")
         + (f"\n      server: '{agent['server']}'," if agent.get("server") else "")
+        + (f"\n      harness: '{agent['harness']}'," if agent.get("harness") else "")
         + (f"\n      runsIn: '{agent['runs_in']}'," if agent.get("runs_in") else "")
         + (
             "\n      talksTo: ["

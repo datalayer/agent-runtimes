@@ -209,7 +209,22 @@ def _t(value: Any) -> str:
     return json.dumps(" ".join(str(value or "").split()), ensure_ascii=False)
 
 
-def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
+def load_listed(specs_dir: Path) -> list[dict[str, Any]]:
+    """The register's listed tier (SH-57): known to speak ACP, not drilled, offered by nothing."""
+    register = yaml.safe_load((specs_dir / REGISTER).read_text()) or {}
+    return sorted(
+        (
+            entry
+            for entry in register.get("entries") or []
+            if entry.get("tier") == "listed"
+        ),
+        key=lambda entry: str(entry["harness"]),
+    )
+
+
+def generate_typescript_code(
+    specs: list[dict[str, Any]], listed: list[dict[str, Any]] = ()
+) -> str:
     lines = [
         "/*",
         " * Copyright (c) 2025-2026 Datalayer, Inc.",
@@ -225,7 +240,7 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         " * DO NOT EDIT MANUALLY - run 'make specs' to regenerate.",
         " */",
         "",
-        "import type { HarnessSpec } from '../types/agentspecs';",
+        "import type { HarnessSpec, ListedHarness } from '../types/agentspecs';",
     ]
     for spec in specs:
         acp = spec.get("acp")
@@ -307,6 +322,27 @@ def generate_typescript_code(specs: list[dict[str, Any]]) -> str:
         "  return Object.values(HARNESS_CATALOGUE);",
         "}",
         "",
+        "/**",
+        " * The register's listed tier (SH-57): agents known to speak ACP, registered",
+        " * with their documented command and their terms, not drilled — offered by",
+        " * nothing until moved to the catalogue.",
+        " */",
+        "export const LISTED_HARNESSES: ListedHarness[] = [",
+        *[
+            "  {"
+            + f" id: {_t(entry['harness'])}, name: {_t(entry.get('name'))}, docs: {_t(entry.get('docs'))},"
+            + f" adapter: {_t(entry.get('adapter'))}, version: {_t(entry.get('version'))},"
+            + f" command: {_t(entry['command']) if entry.get('command') else 'null'},"
+            + f" licence: {_t(entry.get('licence'))}, licenceSource: {_t(entry.get('licence_source'))},"
+            + f" termsSource: {_t(entry.get('terms_source'))}, credential: {_t(entry.get('credential'))},"
+            + f" servedToThirdParties: {_t(entry.get('served_to_third_parties'))}, note: {_t(entry.get('note'))} }},"
+            for entry in listed
+        ],
+        "];",
+        "",
+        "/** The sentence a listed harness is refused in (agentspecs' LISTED_NOT_DRILLED). */",
+        "export const LISTED_NOT_DRILLED = 'listed, not drilled yet';",
+        "",
     ]
     return "\n".join(lines)
 
@@ -319,7 +355,9 @@ def main() -> None:
     args = parser.parse_args()
     specs = load_harness_specs(args.specs_dir)
     args.python_output.write_text(generate_python_code(specs))
-    args.typescript_output.write_text(generate_typescript_code(specs))
+    args.typescript_output.write_text(
+        generate_typescript_code(specs, load_listed(args.specs_dir))
+    )
     print(
         f"Generated {len(specs)} harnesses: {args.python_output}, {args.typescript_output}"
     )

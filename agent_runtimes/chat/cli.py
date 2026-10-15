@@ -1984,8 +1984,12 @@ def _prepare_harness(harness_id: str) -> None:
 
     spec = HARNESS_CATALOGUE.get(harness_id)
     if spec is None:
+        from agentspecs.harnesses import listed_refusal
+
+        # The long tail is registered and not offered until drilled (SH-57).
         raise ValueError(
-            f"There is no harness named {harness_id!r}: one of "
+            listed_refusal(harness_id)
+            or f"There is no harness named {harness_id!r}: one of "
             f"{', '.join(sorted(HARNESS_CATALOGUE))} (`loop harnesses`)."
         )
     os.environ.setdefault(WORKSPACE_VARIABLE, os.getcwd())

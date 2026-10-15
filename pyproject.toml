@@ -50,7 +50,8 @@ dependencies = [
     # 1.5.36 with agentspecs 0.0.103: the policies/ kind (SHIELD SH-50).
     # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SHIELD SH-60).
     # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SHIELD SH-74).
-    "agentspecs>=0.0.105",
+    # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
+    "agentspecs>=0.0.107",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than

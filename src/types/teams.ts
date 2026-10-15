@@ -76,7 +76,7 @@ export interface TeamLinkSpec {
   /** The member asked, by its id in the team. */
   member: string;
   /** The protocol: `a2a` to an agent or an application, `mcp` to a server member. */
-  over: 'a2a' | 'mcp';
+  over: 'a2a' | 'mcp' | 'acp';
 }
 
 export interface TeamAgentspec {
@@ -102,6 +102,12 @@ export interface TeamAgentspec {
    * (LOOP A-04). It asks nobody.
    */
   server?: string;
+  /**
+   * Harness catalogue id, in place of `ref`, `app` and `server`: the member is
+   * that agent program over ACP behind the Shield — Claude Code, Codex, an
+   * organization's own — asked over A2A or ACP (SHIELD SH-45).
+   */
+  harness?: string;
   /** Where its loop turns: in the person's `browser`, or on a `runtime`. */
   runsIn?: 'browser' | 'runtime';
   /** The members it asks directly while it works, and over what. */

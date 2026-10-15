@@ -587,6 +587,78 @@ export const AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1: TeamSpec = {
   },
 };
 
+export const CODING_AGENTS_TEAM_SPEC_0_0_1: TeamSpec = {
+  id: 'coding-agents',
+  version: '0.0.1',
+  name: 'Coding Agents',
+  description: `Claude Code writes the change and Codex reviews it, each behind the Shield: a supervisor delegates to them over ACP with a budget, a deadline and the files it may touch, and reads back their plans and their diffs.`,
+  tags: ['coding', 'harness', 'review'],
+  enabled: true,
+  icon: 'code',
+  emoji: '🛡️',
+  color: '#1F6FEB',
+  agentSpecId: '',
+  orchestrationProtocol: 'datalayer',
+  executionMode: 'sequential',
+  supervisor: {
+    name: 'Lead',
+    ref: '',
+    model: 'bedrock:us.anthropic.claude-sonnet-4-6',
+    goal: `Split the request into a change and its review: hand the change to the Coder with the files it may touch, then the diff to the Reviewer, and answer with the change and what the review found.`,
+    instructions: `You lead two coding agents. Hand the change to the Coder with the files it may touch and a deadline, wait for its diff, hand the diff to the Reviewer, and answer with the change and the review. Never edit a file yourself.`,
+    approval: 'auto',
+    canTerminate: true,
+  },
+  routingInstructions: ``,
+  suggestions: [
+    {
+      text: 'Add a test for the function in the open file, then review it.',
+      summary: 'A change and its review',
+      icon: 'code',
+      emoji: '🧪',
+    },
+  ],
+  delegation: {
+    maxDepth: 2,
+    allowPeerDelegation: false,
+    includeGeneralPurpose: false,
+  },
+  context: { sharing: 'shared' },
+  validation: undefined,
+  agents: [
+    {
+      id: 'coder',
+      name: 'Coder',
+      ref: '',
+      harness: 'claude-code',
+      role: 'contributor',
+      goal: `Make the change asked, inside the workspace, in the files the manifest names; answer with what changed and why.`,
+      dependsOn: [],
+      subagents: [],
+      model: '',
+      mcpServer: '',
+      tools: [],
+      trigger: '',
+      approval: 'auto',
+    },
+    {
+      id: 'reviewer',
+      name: 'Reviewer',
+      ref: '',
+      harness: 'codex',
+      role: 'reviewer',
+      goal: `Read the Coder's diff and say what is wrong with it, file by file; edit nothing.`,
+      dependsOn: ['coder'],
+      subagents: [],
+      model: '',
+      mcpServer: '',
+      tools: [],
+      trigger: '',
+      approval: 'auto',
+    },
+  ],
+};
+
 export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   id: 'comprehensive-sales-analytics',
   version: '0.0.1',
@@ -720,9 +792,9 @@ export const COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1: TeamSpec = {
   },
 };
 
-export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
+export const CROP_MONITORING_TEAM_SPEC_0_0_2: TeamSpec = {
   id: 'crop-monitoring',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Crop Monitoring',
   description: `One agent, its data: Crop Monitoring follows crop vigour and growth over a season from the satellite imagery NASA Earthdata holds, and flags the fields that need attention.`,
   tags: [
@@ -797,9 +869,9 @@ export const CROP_MONITORING_TEAM_SPEC_0_0_1: TeamSpec = {
   ],
 };
 
-export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1: TeamSpec = {
+export const DISASTER_ASSESSMENT_TEAM_SPEC_0_0_2: TeamSpec = {
   id: 'disaster-assessment',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Disaster Assessment',
   description: `An event desk in the browser that gets the area a disaster affected and the damage from Disaster Assessment, and what changed on the ground from Change detection, each on a runtime over A2A, each reading NASA Earthdata. Event response takes the event and reports; the two others read the imagery and answer.`,
   tags: [
@@ -1136,9 +1208,9 @@ export const JUPYTER_TEAM_SPEC_0_0_1: TeamSpec = {
   },
 };
 
-export const MONTH_END_CLOSE_TEAM_SPEC_0_0_1: TeamSpec = {
+export const MONTH_END_CLOSE_TEAM_SPEC_0_0_2: TeamSpec = {
   id: 'month-end-close',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Month-end Close',
   description: `One agent, its data: Month-end Close drives the close from the Odoo books, which it only reads — the checklist, the accruals to book, the reconciliation gaps that remain.`,
   tags: ['example', 'scene', 'accounting', 'finance', 'odoo', 'a2a'],
@@ -1743,9 +1815,9 @@ export const PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1: TeamSpec = {
   },
 };
 
-export const SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1: TeamSpec = {
+export const SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_2: TeamSpec = {
   id: 'sales-and-accounting',
-  version: '0.0.1',
+  version: '0.0.2',
   name: 'Sales and Accounting',
   description: `A sales desk in the browser that gets financial reports from an accounting application on a runtime, over A2A. Sales takes the request and reports the answer; Accounting reads the Odoo books and answers.`,
   tags: ['example', 'sales', 'accounting', 'finance', 'a2a', 'odoo'],
@@ -1968,17 +2040,18 @@ export const TEAM_SPECS: Record<string, TeamSpec> = {
   'audit-inventory-levels': AUDIT_INVENTORY_LEVELS_TEAM_SPEC_0_0_1,
   'automate-regulatory-reporting':
     AUTOMATE_REGULATORY_REPORTING_TEAM_SPEC_0_0_1,
+  'coding-agents': CODING_AGENTS_TEAM_SPEC_0_0_1,
   'comprehensive-sales-analytics':
     COMPREHENSIVE_SALES_ANALYTICS_TEAM_SPEC_0_0_1,
-  'crop-monitoring': CROP_MONITORING_TEAM_SPEC_0_0_1,
-  'disaster-assessment': DISASTER_ASSESSMENT_TEAM_SPEC_0_0_1,
+  'crop-monitoring': CROP_MONITORING_TEAM_SPEC_0_0_2,
+  'disaster-assessment': DISASTER_ASSESSMENT_TEAM_SPEC_0_0_2,
   jupyter: JUPYTER_TEAM_SPEC_0_0_1,
-  'month-end-close': MONTH_END_CLOSE_TEAM_SPEC_0_0_1,
+  'month-end-close': MONTH_END_CLOSE_TEAM_SPEC_0_0_2,
   'notebook-benchmark': NOTEBOOK_BENCHMARK_TEAM_SPEC_0_0_1,
   'optimize-grid-operations': OPTIMIZE_GRID_OPERATIONS_TEAM_SPEC_0_0_1,
   'process-citizen-requests': PROCESS_CITIZEN_REQUESTS_TEAM_SPEC_0_0_1,
   'process-clinical-trial-data': PROCESS_CLINICAL_TRIAL_DATA_TEAM_SPEC_0_0_1,
-  'sales-and-accounting': SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_1,
+  'sales-and-accounting': SALES_AND_ACCOUNTING_TEAM_SPEC_0_0_2,
   'sync-crm-contacts': SYNC_CRM_CONTACTS_TEAM_SPEC_0_0_1,
 };
 

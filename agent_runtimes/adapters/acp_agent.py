@@ -760,7 +760,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
             agent_env=dict(environment or {}),
             connect_url=connect_url,
             authorizer=shield_authorizer.runtime_authorizer(credential),
-            subject=shield_authorizer.runtime_subject(credential, shield_authorizer.deployment_of_token(credential)),
+            subject=shield_authorizer.runtime_subject(
+                credential, shield_authorizer.deployment_of_token(credential)
+            ),
             tool_class=shield_authorizer.lent_tool_class,
             companies=self.companies,
         )
@@ -1676,8 +1678,16 @@ def harness_agent(
     environment: Mapping[str, str] | None = None,
     workspace: Path | None = None,
     state_store: Any = None,
+    organization_uid: str = "",
+    read_organization: Any = None,
 ) -> ACPAgent:
     """An ``ACPAgent`` on a catalogue harness, resolved here: not yet started.
+
+    An ``org-…`` harness is the organization's own (SH-46): read from IAM for
+    ``organization_uid`` with ``credential`` (``read_organization`` stands in
+    for IAM in tests), served only once the policies in force admit its
+    reviewed command (``<id>@<digest>``). A harness of the register's listed
+    tier is refused *listed, not drilled yet* (SH-57).
 
     Parameters
     ----------
@@ -1694,10 +1704,40 @@ def harness_agent(
     """
     from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
 
+    from agentspecs.harnesses import listed_refusal
+
+    from agent_runtimes.guardrails.organization_harnesses import (
+        OrganizationHarnessRefused,
+        admission_refusal,
+        is_organization_harness,
+        organization_harness,
+        read_organization_harnesses,
+    )
+
     harness = HARNESS_CATALOGUE.get(harness_id)
+    admitted_as = ""
+    if harness is None and is_organization_harness(harness_id):
+        if read_organization is None:
+            from datalayer_core.utils.urls import DatalayerURLs
+
+            iam_url = DatalayerURLs.from_environment().iam_url
+
+            def read_organization(uid: str) -> Any:
+                return read_organization_harnesses(
+                    uid, iam_url=iam_url, token=credential or None
+                )
+
+        try:
+            harness, admitted_as = organization_harness(
+                harness_id, organization_uid=organization_uid, read=read_organization
+            )
+        except OrganizationHarnessRefused as refused:
+            raise HarnessRefused(str(refused)) from None
     if harness is None:
+        listed = listed_refusal(harness_id)
         raise HarnessRefused(
-            f"There is no harness named {harness_id!r}: one of {', '.join(sorted(HARNESS_CATALOGUE))}."
+            listed
+            or f"There is no harness named {harness_id!r}: one of {', '.join(sorted(HARNESS_CATALOGUE))}."
         )
     lent = lent_toolsets(harness, app)
     root = workspace or harness_workspace(environment)
@@ -1711,7 +1751,13 @@ def harness_agent(
         raise HarnessRefused(
             f"The harness {harness_id!r} is refused: {unavailable}."
         ) from None
-    refused = harness_refusal(policies, harness_id)
+    refused = (
+        admission_refusal(policies, admitted_as)
+        if admitted_as
+        else harness_refusal(policies, harness_id)
+    )
+    if refused is None and admitted_as:
+        refused = harness_refusal(policies, admitted_as)
     if refused is not None:
         raise HarnessRefused(refused)
     # The application's skills and instructions, in the harness's format,
