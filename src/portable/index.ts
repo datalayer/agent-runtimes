@@ -210,6 +210,15 @@ export {
   type ProtectedRequest,
 } from './protectedInput';
 
+// How a streamed turn went, measured without its words (MOBILE M-036).
+export {
+  failureOf,
+  otlpMetricsOf,
+  RunMeter,
+  type RunMeasure,
+  type StreamFailure,
+} from './runMeasures';
+
 // The runtime's routes a native client drives.
 export {
   agentRunClient,
