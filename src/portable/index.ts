@@ -139,6 +139,24 @@ export {
   type PapSignInWaiting,
 } from './signIn';
 
+// A Direct Conversation the person types in themselves (PAP_DATALAYER P-08, MOBILE M-038).
+export {
+  DIRECT_MAX,
+  DIRECT_WORDS,
+  directAnswerOf,
+  directAuthor,
+  directClient,
+  openDirect,
+  withDirectAnswer,
+  type DirectAnswer,
+  type DirectClient,
+  type DirectClientOptions,
+  type DirectLine,
+  type DirectOpen,
+  type DirectReply,
+  type DirectTarget,
+} from './direct';
+
 // The runtime's routes a native client drives.
 export {
   agentRunClient,
