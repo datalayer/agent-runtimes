@@ -440,6 +440,59 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
       },
     ],
   },
+  'whisper-large-v3-turbo': {
+    id: 'whisper-large-v3-turbo',
+    version: '0.0.1',
+    name: 'Whisper Large v3 Turbo',
+    description:
+      "Speech to text on Datalayer's servers, on CPU: OpenAI's Whisper large-v3-turbo (809M parameters, 99 languages), converted to CTranslate2 in half precision and run by faster-whisper, its weights quantized to 8 bits when loaded. A recording of up to a minute at a time; the language is detected when the page does not say it.",
+    provider: 'openai',
+    task: 'stt',
+    engine: 'faster-whisper',
+    dtype: 'float16',
+    languages: ['en', 'fr', 'es', 'it', 'pt', 'de', 'nl', 'ja', 'zh', 'hi'],
+    where: ['server'],
+    streaming: false,
+    licence: {
+      weights: 'MIT',
+      code: 'MIT',
+    },
+    attribution: '',
+    upstream: 'https://huggingface.co/openai/whisper-large-v3-turbo',
+    revision: '0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf',
+    files: [
+      {
+        path: 'config.json',
+        sha256:
+          'b0253ea6c0d3bea6b1e19e91a02acfd3b53f4467362efcb5a3e6b16c9b3a9b7e',
+        size: 2263,
+      },
+      {
+        path: 'preprocessor_config.json',
+        sha256:
+          '7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711',
+        size: 340,
+      },
+      {
+        path: 'tokenizer.json',
+        sha256:
+          '297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd',
+        size: 2710337,
+      },
+      {
+        path: 'vocabulary.json',
+        sha256:
+          'c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1',
+        size: 1068114,
+      },
+      {
+        path: 'model.bin',
+        sha256:
+          'e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da',
+        size: 1617884929,
+      },
+    ],
+  },
 };
 
 /** Whether a voice speaks a language: `fr` and `fr-FR` are spoken by a `fr-FR` voice. */
