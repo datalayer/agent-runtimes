@@ -110,7 +110,7 @@ def test_the_catalogue_team_seats_its_harnesses_and_binds_them_by_the_links() ->
 
 @pytest.mark.asyncio
 async def test_an_orchestrator_delegates_to_two_harness_workers_and_gets_their_diffs_back(
-    state: Any, workspace: Path, tmp_path_factory: pytest.TempPathFactory
+    state: Any, workspace: Path, tmp_path_factory: pytest.TempPathFactory  # noqa: F811 - the fixtures imported above
 ) -> None:
     """The drill: the Coder over A2A, the Reviewer over ACP behind `agent-shield run`."""
     import uvicorn
