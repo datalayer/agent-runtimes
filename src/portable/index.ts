@@ -166,6 +166,24 @@ export {
   type SignInStands,
 } from './signInStatus';
 
+// What a company asks the person to type in a mediated sign-in, sent with its one-use ticket (MOBILE M-039).
+export {
+  emptyFields,
+  fieldProblems,
+  MAX_VALUE_LENGTH,
+  PROTECTED_INPUT_WORDS,
+  protectedInputClient,
+  protectedRequestOf,
+  ProtectedRequestGone,
+  sentWords,
+  submitBody,
+  submitWords,
+  ticketComplete,
+  ticketOfPage,
+  type ProtectedField,
+  type ProtectedRequest,
+} from './protectedInput';
+
 // The runtime's routes a native client drives.
 export {
   agentRunClient,
