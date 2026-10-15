@@ -8,8 +8,9 @@
 
 On a prompt it streams a thought and an answer; when the prompt says
 ``edit``, it asks permission to edit ``hello.txt``, writes it through the
-client's ``fs/write_text_file`` and reports the diff; ``read`` reads
-``README.md`` through ``fs/read_text_file``; ``run <command>`` opens a
+client's ``fs/write_text_file`` and reports the diff; ``read [<path>]`` reads
+``README.md``, or the path named, through ``fs/read_text_file``; ``write
+<path>`` writes the path through ``fs/write_text_file``; ``run <command>`` opens a
 terminal through ``terminal/create`` and waits for it; ``push`` asks
 permission for a ``git push``; ``fetch`` says a fetch tool call; ``bad``
 sends an update ACP does not describe; ``slow`` waits until cancelled;
@@ -220,15 +221,19 @@ class FakeAgent(Agent):
                     update=update_agent_message_text(f"edit refused: {outcome}"),
                 )
         if "read" in text:
+            named = (
+                text.split("read", 1)[1].strip().split(" ")[0] if "read" in text else ""
+            )
+            path = named or "README.md"
             await say(
                 session_id=session_id,
                 update=start_tool_call(
-                    "c2", "Read README.md", kind="read", status="in_progress"
+                    "c2", f"Read {path}", kind="read", status="in_progress"
                 ),
             )
             try:
                 content = await self.client.read_text_file(
-                    session_id=session_id, path="README.md"
+                    session_id=session_id, path=path
                 )
                 await say(
                     session_id=session_id,
@@ -246,6 +251,21 @@ class FakeAgent(Agent):
                 await say(
                     session_id=session_id,
                     update=update_agent_message_text(f"read refused: {exc}"),
+                )
+        if text.startswith("write "):
+            path = text.split("write ", 1)[1].strip().split(" ")[0]
+            try:
+                await self.client.write_text_file(
+                    session_id=session_id, path=path, content="written by the agent\n"
+                )
+                await say(
+                    session_id=session_id,
+                    update=update_agent_message_text(f"written {path}"),
+                )
+            except RequestError as exc:
+                await say(
+                    session_id=session_id,
+                    update=update_agent_message_text(f"write refused: {exc}"),
                 )
         if "outside" in text:
             try:

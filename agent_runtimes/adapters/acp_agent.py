@@ -77,7 +77,7 @@ from agent_shield.acp.events import (
 )
 from agent_shield.acp.proxy import REFUSED, SessionState, ShieldProxy
 from agent_shield.config import harness_bin, harness_prefix
-from agent_shield.policy import LoadedPolicy, Policy
+from agent_shield.policy import Action, Decision, LoadedPolicy, Policy
 from agent_shield.register import EXECUTABLES
 
 from agent_runtimes._version import __version__
@@ -100,6 +100,7 @@ from .base import (
     ToolDefinition,
     ToolResult,
 )
+from .harness_skills import LentFiles, write_lent_files
 
 logger = logging.getLogger(__name__)
 
@@ -519,6 +520,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         environment: Mapping[str, str] | None = None,
         lent: Sequence[LentToolset] = (),
         credential: str = "",
+        lent_files: LentFiles | None = None,
         approvals: ToolApprovalManager | None = None,
         recorder: Any = None,
         name: str = "",
@@ -536,6 +538,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         #: The caller's token, kept for a run that carries none of its own.
         self.credential = credential
         self._handles: list[str] = []
+        #: The skills and instructions written for it (§4.10), read-only to it.
+        self.lent_files = lent_files or LentFiles()
         self.approvals = approvals
         self.recorder = recorder
         self.state_store = state_store
@@ -828,6 +832,34 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._runtime_of[acp_session] = runtime_session
         await self._keep_session(runtime_session, acp_session)
         return acp_session, [_said(sentence)] if sentence else []
+
+    # -- what was written for it is read-only to it (§4.10, SH-21) ------------------------------
+
+    def decide(  # type: ignore[override]
+        self, session: SessionState, action: Action, *, count_as: str | None = None
+    ) -> Decision:
+        """The policies' decision, after one of the runtime's: the lent files are not the agent's to write."""
+        if (
+            action.kind in ("fs_write", "edit", "delete", "move")
+            and action.path
+            and self.pinned_workspace is not None
+            and self.lent_files.protects(
+                self.pinned_workspace.place(action.path).resolved
+            )
+        ):
+            return Decision(
+                verdict="deny",
+                sentence=(
+                    f"{action.title}: leave it to me — {action.path} was written by "
+                    "Datalayer from the application (its skills and its instructions) "
+                    "and is read-only to the agent; a skill of your own goes in a "
+                    "folder of its own."
+                ),
+                scope="team",
+                rule="lent files are read-only",
+                decided_by="rule",
+            )
+        return ShieldProxy.decide(self, session, action, count_as=count_as)
 
     # -- MCP lent (§4.4, SH-14) ----------------------------------------------------------------
 
@@ -1301,15 +1333,20 @@ def harness_agent(
             f"There is no harness named {harness_id!r}: one of {', '.join(sorted(HARNESS_CATALOGUE))}."
         )
     lent = lent_toolsets(harness, app)
+    root = workspace or harness_workspace(environment)
+    # The application's skills and instructions, in the harness's format,
+    # before it starts (§4.10, SH-21).
+    lent_files = write_lent_files(root, harness, app, [item.name for item in lent])
     return ACPAgent(
         agent_id=agent_id,
         harness=harness,
         command=launch_command(harness),
-        workspace=workspace or harness_workspace(environment),
+        workspace=root,
         policies=policies_of(app, [item.name for item in lent]),
         environment=harness_environment(harness, environment),
         lent=lent,
         credential=credential,
+        lent_files=lent_files,
         approvals=approvals,
         recorder=recorder,
         name=name,
@@ -1326,6 +1363,7 @@ __all__ = [
     "WORKSPACE_VARIABLE",
     "ACPAgent",
     "HarnessRefused",
+    "LentFiles",
     "LentToolset",
     "RecordAudit",
     "advertised_problems",

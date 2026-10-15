@@ -34,6 +34,12 @@ from agent_runtimes.adapters.acp_agent import (
     lent_toolsets,
 )
 from agent_runtimes.adapters.base import AgentContext, StreamEvent
+from agent_runtimes.adapters.harness_skills import (
+    instructions_markdown,
+    skill_markdown,
+    skill_specs_of,
+    write_lent_files,
+)
 from agent_runtimes.guardrails.shield_policy import policies_of, rules_policy
 from agent_runtimes.guardrails.tool_approvals import ToolApprovalRejectedError
 from agent_runtimes.types import (
@@ -144,9 +150,9 @@ def workspace(tmp_path: Path) -> Path:
 
 def an_agent(workspace: Path, **kwargs: Any) -> ACPAgent:
     kwargs.setdefault("policies", policies_of(None))
+    kwargs.setdefault("harness", fake_harness())
     return ACPAgent(
         agent_id="fake",
-        harness=fake_harness(),
         command=[sys.executable, str(FAKE)],
         workspace=workspace,
         **kwargs,
@@ -971,6 +977,140 @@ class TestMcpLentThroughTheGateway:
             assert through_shim == names
         finally:
             release(handle)
+
+
+def reading_skills() -> HarnessSpec:
+    """The fake harness, reading skills as Claude Code does."""
+    return fake_harness(
+        skills=HarnessSkillsSpec(format="skill-md", dir=".claude/skills"),
+        instructions_file="CLAUDE.md",
+    )
+
+
+def an_app(**overrides: Any) -> SimpleNamespace:
+    """An application naming a skill, with instructions and one Rule."""
+    fields: dict[str, Any] = dict(
+        id="coder",
+        name="Coder",
+        description="Writes the code the person asks for.",
+        instructions="Be brief. Never touch the tests.",
+        skills=["crawl"],
+        rules=[
+            AppRuleSpec(
+                action="delete anything", applies_to=["delete"], behaviour="leave_to_me"
+            )
+        ],
+        connections=[],
+    )
+    fields.update(overrides)
+    return SimpleNamespace(**fields)
+
+
+class TestSkillsLentInTheHarnessFormat:
+    """SHIELD §4.10, SH-21: the catalogue's enabled skills as SKILL.md folders, the Appspec as the instructions file."""
+
+    def test_the_skills_are_written_in_the_harness_format_read_only(
+        self, tmp_path: Path
+    ) -> None:
+        lent = write_lent_files(tmp_path, reading_skills(), an_app(), ["earthdata"])
+        [page] = lent.skills
+        assert page == tmp_path / ".claude" / "skills" / "crawl" / "SKILL.md"
+        assert (page.stat().st_mode & 0o777) == 0o444
+        text = page.read_text()
+        assert text.startswith("---\nname: crawl\ndescription: Web crawling")
+        assert "lent-to: fake" in text and "module: agent_skills.skills.crawl" in text
+        assert "## When to use it" in text and "## Instructions" in text
+        # The package's own page is its instructions; nothing of a secret.
+        assert "run_skill_script" in text and "fetch_page" in text
+        assert lent.instructions == tmp_path / "CLAUDE.md"
+        instructions = lent.instructions.read_text()
+        assert instructions.startswith("# Coder\n\nWrites the code")
+        assert "Be brief. Never touch the tests." in instructions
+        assert "- delete anything (delete): leave it to the person." in instructions
+        assert "earthdata" in instructions and "`.claude/skills/`" in instructions
+        assert lent.protects(page) and lent.protects(tmp_path / "CLAUDE.md")
+        assert not lent.protects(tmp_path / "notes.md")
+        # Written again: the read-only file is replaced, not refused.
+        write_lent_files(tmp_path, reading_skills(), an_app(instructions="Terse."))
+        assert "Terse." in (tmp_path / "CLAUDE.md").read_text()
+
+    def test_a_skill_with_secrets_says_datalayer_holds_them(self) -> None:
+        from agent_runtimes.specs.skills import get_skill_spec
+
+        crawl = get_skill_spec("crawl")
+        text = skill_markdown(crawl, reading_skills())
+        assert "It needs TAVILY_API_KEY, which Datalayer holds" in text
+        assert "do not write it anywhere" in text
+
+    def test_an_unknown_or_disabled_skill_is_refused_at_load(self) -> None:
+        with pytest.raises(
+            HarnessRefused, match="no skill named 'nope' in the catalogue"
+        ):
+            skill_specs_of(an_app(skills=["nope"]), reading_skills())
+        with pytest.raises(
+            HarnessRefused, match="'events' is not enabled in the catalogue"
+        ):
+            skill_specs_of(an_app(skills=["crawl", "events:0.0.1"]), reading_skills())
+        with pytest.raises(HarnessRefused, match="Fake agent reads no skills"):
+            skill_specs_of(an_app(), fake_harness())
+        assert skill_specs_of(an_app(skills=[]), fake_harness()) == []
+
+    def test_a_harness_with_no_instructions_file_gets_none(
+        self, tmp_path: Path
+    ) -> None:
+        harness = fake_harness(
+            skills=HarnessSkillsSpec(format="skill-md", dir=".agents/skills")
+        )
+        lent = write_lent_files(tmp_path, harness, an_app())
+        assert lent.instructions is None
+        assert lent.skills == [tmp_path / ".agents" / "skills" / "crawl" / "SKILL.md"]
+        assert write_lent_files(tmp_path, harness, None) == write_lent_files(
+            tmp_path, harness, None
+        )
+        assert (
+            instructions_markdown(an_app(skills=[]), reading_skills()).count("### ")
+            == 1
+        )
+
+    @pytest.mark.asyncio
+    async def test_the_agent_reads_them_and_may_not_write_them(
+        self, workspace: Path
+    ) -> None:
+        harness = reading_skills()
+        lent = write_lent_files(workspace, harness, an_app())
+        agent = an_agent(workspace, harness=harness, lent_files=lent)
+        try:
+            read = await turn(agent, "read CLAUDE.md")
+            # The fake shows the first forty characters of what it read.
+            assert "# Coder" in str(of(read, "tool_result"))
+            skill = await turn(agent, "read .claude/skills/crawl/SKILL.md")
+            assert "name: crawl" in str(of(skill, "tool_result"))
+            refused = await turn(agent, "write CLAUDE.md")
+            own = await turn(agent, "write notes/own-skill.md")
+        finally:
+            await agent.cleanup()
+        assert "write refused" in texts(refused)
+        assert "read-only to the agent" in texts(refused)
+        assert "Be brief." in (workspace / "CLAUDE.md").read_text()
+        assert "written notes/own-skill.md" in texts(own)
+        assert (
+            workspace / "notes" / "own-skill.md"
+        ).read_text() == "written by the agent\n"
+        rows = [r for r in agent.audit.rows if r.get("decision") == "deny"]
+        assert any("lent files are read-only" == r.get("rule") for r in rows)
+
+    def test_harness_agent_writes_them_before_the_start(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from agent_runtimes.specs import harnesses
+
+        monkeypatch.setitem(harnesses.HARNESS_CATALOGUE, "fake", reading_skills())
+        agent = harness_agent("a1", "fake", app=an_app(), workspace=tmp_path)
+        assert (tmp_path / "CLAUDE.md").is_file()
+        assert (tmp_path / ".claude" / "skills" / "crawl" / "SKILL.md").is_file()
+        assert agent.lent_files.instructions == tmp_path / "CLAUDE.md"
+        with pytest.raises(HarnessRefused, match="no skill named 'nope'"):
+            harness_agent("a1", "fake", app=an_app(skills=["nope"]), workspace=tmp_path)
 
 
 class TestResolvingACatalogueHarness:
