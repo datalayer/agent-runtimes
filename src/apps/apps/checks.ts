@@ -533,8 +533,9 @@ function referenceProblems(
   if (app.agent && !getAgentspecs(idOf(app.agent)) && !getCog(app.agent)) {
     missing('agent or Cog', app.agent);
   }
-  // An agent on a catalogue harness is refused, not run on pydantic-ai in
-  // its place (SHIELD SH-01; its adapter is SH-10).
+  // An agent on a catalogue harness is served by the runtime's ACP adapter
+  // (SHIELD SH-10); `custom` and a harness that is none are refused, not run
+  // on pydantic-ai in their place (SH-01).
   const agent = app.agent ? getAgentspecs(idOf(app.agent)) : undefined;
   const unserved = agent ? unservedHarnessProblem(agent) : undefined;
   if (unserved) {

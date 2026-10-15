@@ -90,16 +90,21 @@ export const HARNESS_BY_SPEC_HARNESS: Record<string, AgentHarness> = {
   'vercel-ai': 'vercelai',
 };
 
+/** The one catalogue harness whose command an organization's own spec supplies. */
+export const CUSTOM_HARNESS = 'custom';
+
 /**
- * Why no variant runs an agent on this harness today, in a sentence, or
- * undefined when one does.
+ * Why no variant runs an agent on this harness, in a sentence, or undefined
+ * when one does.
  *
  * A harness of the catalogue (`agentspecs/harnesses`, SHIELD.md SH-01) — Claude
- * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is
- * described and refused, not served: its ACP adapter is SHIELD SH-10. Nothing
- * runs such an agent in its place, and no location overrides it as the browser
- * overrides `pydantic-ai`. A harness neither built in nor of the catalogue is
- * refused too.
+ * Code, Codex, Gemini CLI, goose, OpenCode, OpenHands, fast-agent — is served
+ * by the Datalayer runtime through its ACP adapter (`ACPAgent`, SHIELD SH-10):
+ * the runtime launches the harness as its subprocess, so the runtime's
+ * locations run it and the browser, which has no process to launch, does not.
+ * Two are refused: `custom`, which names no command in the shared catalogue
+ * (an organization's own harness spec names it), and a harness neither built
+ * in nor of the catalogue. Nothing runs such an agent in its place.
  */
 export function unservedHarnessProblem(
   spec: Pick<Agentspec, 'id' | 'harness'>,
@@ -108,10 +113,26 @@ export function unservedHarnessProblem(
   if (!harness || harness in HARNESS_BY_SPEC_HARNESS) {
     return undefined;
   }
-  if (getHarness(harness)) {
-    return `The agent “${spec.id}” runs on the harness “${harness}”, which Datalayer does not serve yet (SHIELD SH-10).`;
+  const catalogued = getHarness(harness);
+  if (!catalogued) {
+    return `The agent “${spec.id}” runs on “${harness}”, which is no harness.`;
   }
-  return `The agent “${spec.id}” runs on “${harness}”, which is no harness.`;
+  if (harness === CUSTOM_HARNESS) {
+    return `The agent “${spec.id}” runs on the harness “custom”, which names no command: an organization's own harness spec names it, and is never typed into a form.`;
+  }
+  return undefined;
+}
+
+/**
+ * Whether a harness id names a harness the Datalayer runtime serves through
+ * its ACP adapter: one of the catalogue, launchable, so not `custom`.
+ */
+export function isServedCatalogueHarness(harness: string): boolean {
+  return (
+    harness !== CUSTOM_HARNESS &&
+    !(harness in HARNESS_BY_SPEC_HARNESS) &&
+    getHarness(harness) !== undefined
+  );
 }
 
 /**
@@ -218,7 +239,7 @@ export function variantForLocation(
  * An agentspec says which framework it *prefers* — `harness:` is where the
  * agent normally runs, not a demand — and a variant says which framework a
  * location can actually provide. Where they disagree the location wins, which
- * is why the browser accepts any spec:
+ * is why the browser accepts any spec built for a framework:
  *
  *     harness: pydantic-ai  +  browser  →  runs, with the Vercel AI SDK
  *
@@ -230,14 +251,23 @@ export function variantForLocation(
  * The remote locations are stricter: a spec built for the browser harness
  * assumes frontend tools and no server, so running it on a runtime would be
  * running something else.
+ *
+ * A harness of the catalogue (Claude Code, Codex, …) is a program, not a
+ * framework: the Datalayer runtime launches it as its subprocess and serves it
+ * through its ACP adapter (SHIELD SH-10), so the runtime's locations run it
+ * and the browser does not — the page has no process to launch, and nothing
+ * is run in the harness's place.
  */
 export function variantSupportsSpecHarness(
   variant: AgentRuntimeVariant,
   specHarness: string | undefined | null,
 ): boolean {
   if (specHarness && !(specHarness in HARNESS_BY_SPEC_HARNESS)) {
-    // A catalogue harness, or none at all: no location runs it (SHIELD SH-10).
-    return false;
+    // A catalogue harness runs where a runtime can launch it; `custom` and a
+    // harness that is none run nowhere.
+    return (
+      isServedCatalogueHarness(specHarness) && needsRuntimeService(variant)
+    );
   }
   if (runsInBrowser(variant)) {
     return true;
@@ -253,9 +283,10 @@ export function variantSupportsSpecHarness(
  * The variants that could run an agent with this declared harness.
  *
  * What a host offers a person choosing where to run something. The browser is
- * always among them — it can run anything, because it overrides the harness —
- * while an agent built for the browser is not offered a remote runtime that
- * would be running something else.
+ * among them for any framework — it can run those, because it overrides the
+ * harness — while an agent built for the browser is not offered a remote
+ * runtime that would be running something else, and an agent on a catalogue
+ * harness is offered the runtimes alone, which launch it.
  */
 export function variantsForSpecHarness(
   specHarness: string | undefined | null,
@@ -283,21 +314,24 @@ export function legacyTargetOf(
 }
 
 /**
- * The harness a spec asks for, in the variant spelling.
+ * The harness a spec asks for: a framework in the variant spelling
+ * (`pydanticai`, `vercelai`), or a catalogue harness by its id (`claude-code`).
  *
  * Defaulted rather than optional: every agent is run by something, and a spec
  * that says nothing is run by the framework that has always run it. That
- * default is what lets every spec written before this field stay correct.
+ * default is what lets every spec written before this field stay correct. A
+ * catalogue harness keeps its own id, because no variant spells it: the
+ * variant that serves it is the Datalayer runtime's, whose own loop is
+ * pydantic-ai's and whose ACP adapter turns the harness's.
  */
-export function specHarnessOf(
-  spec: Pick<Agentspec, 'id' | 'harness'>,
-): AgentHarness {
+export function specHarnessOf(spec: Pick<Agentspec, 'id' | 'harness'>): string {
   const problem = unservedHarnessProblem(spec);
   if (problem) {
     // Never pydantic-ai in its place: said, and refused (SHIELD SH-01).
     throw new Error(problem);
   }
-  return HARNESS_BY_SPEC_HARNESS[spec.harness ?? ''] ?? 'pydanticai';
+  const harness = spec.harness ?? '';
+  return HARNESS_BY_SPEC_HARNESS[harness] ?? (harness || 'pydanticai');
 }
 
 /**
@@ -305,7 +339,8 @@ export function specHarnessOf(
  *
  * What a host offers when someone picks where to run something: an agent built
  * for the browser harness should not be offered a cloud runtime that cannot
- * turn its loop, and a server-side agent should not be offered the page.
+ * turn its loop, a server-side agent should not be offered the page, and an
+ * agent on a catalogue harness is offered the runtimes that launch it.
  */
 export function variantsForSpec(
   spec: Pick<Agentspec, 'harness'>,

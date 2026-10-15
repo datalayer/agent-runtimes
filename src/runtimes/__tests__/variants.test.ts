@@ -22,6 +22,7 @@ import {
   defaultVariantForSpec,
   harnessOf,
   isAgentRuntimeVariant,
+  isServedCatalogueHarness,
   legacyTargetOf,
   locationOf,
   needsRuntimeService,
@@ -34,19 +35,34 @@ import {
   variantsForSpec,
 } from '../variants';
 
-describe('a harness of the catalogue (SHIELD SH-01)', () => {
+describe('a harness of the catalogue (SHIELD SH-01, SH-10)', () => {
   const coder = { id: 'coder', harness: 'claude-code' };
 
-  it('is refused in a sentence, and never run on pydantic-ai in its place', () => {
-    expect(unservedHarnessProblem(coder)).toBe(
-      'The agent “coder” runs on the harness “claude-code”, which Datalayer does not serve yet (SHIELD SH-10).',
+  it('is served by the Datalayer runtime, which launches it, and never by the page', () => {
+    expect(unservedHarnessProblem(coder)).toBeUndefined();
+    expect(specHarnessOf(coder)).toBe('claude-code');
+    expect(variantsForSpec(coder)).toEqual([
+      'local-pydanticai',
+      'cloud-pydanticai',
+    ]);
+    expect(defaultVariantForSpec(coder)).toBe(DEFAULT_AGENT_RUNTIME_VARIANT);
+    expect(variantSupportsSpecHarness('browser-vercelai', 'claude-code')).toBe(
+      false,
     );
-    expect(() => specHarnessOf(coder)).toThrow('SHIELD SH-10');
-    expect(variantsForSpec(coder)).toEqual([]);
-    expect(() => defaultVariantForSpec(coder)).toThrow('SHIELD SH-10');
-    for (const variant of AGENT_RUNTIME_VARIANTS) {
-      expect(variantSupportsSpecHarness(variant, 'claude-code')).toBe(false);
+    for (const harness of ['codex', 'gemini-cli', 'goose', 'opencode']) {
+      expect(isServedCatalogueHarness(harness)).toBe(true);
     }
+  });
+
+  it('refuses custom in the shared catalogue, and never runs pydantic-ai in its place', () => {
+    const own = { id: 'own', harness: 'custom' };
+    expect(unservedHarnessProblem(own)).toBe(
+      "The agent “own” runs on the harness “custom”, which names no command: an organization's own harness spec names it, and is never typed into a form.",
+    );
+    expect(() => specHarnessOf(own)).toThrow('names no command');
+    expect(variantsForSpec(own)).toEqual([]);
+    expect(() => defaultVariantForSpec(own)).toThrow('names no command');
+    expect(isServedCatalogueHarness('custom')).toBe(false);
   });
 
   it('refuses a harness that is neither built in nor of the catalogue', () => {
@@ -56,6 +72,9 @@ describe('a harness of the catalogue (SHIELD SH-01)', () => {
     expect(() => specHarnessOf({ id: 'x', harness: 'nope' })).toThrow(
       'no harness',
     );
+    expect(variantsForSpec({ harness: 'nope' })).toEqual([]);
+    expect(isServedCatalogueHarness('nope')).toBe(false);
+    expect(isServedCatalogueHarness('pydantic-ai')).toBe(false);
   });
 
   it('says nothing of the built-in harnesses', () => {

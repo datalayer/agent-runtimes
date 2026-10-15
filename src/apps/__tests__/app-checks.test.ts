@@ -8,7 +8,7 @@
  * validate` says them, computed in the page with no model call.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { APP_SOURCES } from '../../specs/apps';
 import { themeVariants } from '@datalayer/primer-addons';
 import { APP_THEME_VARIANTS, dumpAppspec, parseAppspec } from '../apps/appspec';
@@ -20,6 +20,27 @@ import {
   componentNamed,
   isOrganizationFrame,
 } from '../apps/checks';
+
+// Two agents the catalogue does not have: one on Claude Code, one on the
+// `custom` harness (SHIELD SH-01, SH-10), both otherwise the mail triage agent.
+vi.mock('../../specs/agents', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../specs/agents')>();
+  const onHarness = (id: string, harness: string) => ({
+    ...actual.getAgentspecs('worker-mail-triage'),
+    id,
+    harness,
+    enabled: true,
+  });
+  return {
+    ...actual,
+    getAgentspecs: (id: string) =>
+      id === 'coder'
+        ? onHarness('coder', 'claude-code')
+        : id === 'own'
+          ? onHarness('own', 'custom')
+          : actual.getAgentspecs(id),
+  };
+});
 
 const BASE = {
   schema: 'loop.app/v1',
@@ -576,6 +597,15 @@ describe('what its code declares (LOOP P-06)', () => {
     expect(written.checks).toEqual(DECLARED.checks);
     expect(written.tests).toEqual(DECLARED.tests);
     expect(checkAppspec(DECLARED).problems).toEqual([]);
+  });
+
+  it('passes an agent on a catalogue harness, the runtime serving it, and refuses custom (SHIELD SH-10)', () => {
+    expect(checkAppspec({ ...BASE, agent: 'coder:0.0.1' }).problems).toEqual(
+      [],
+    );
+    expect(checkAppspec({ ...BASE, agent: 'own:0.0.1' }).problems).toEqual([
+      "The agent “own” runs on the harness “custom”, which names no command: an organization's own harness spec names it, and is never typed into a form.",
+    ]);
   });
 
   it('refuses what agentspecs refuses', () => {

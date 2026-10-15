@@ -7,6 +7,16 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.31
+
+On agentspecs 0.0.100 and `datalayer-agent-shield` 0.1.1.
+
+- **A harness as a Datalayer agent** (SHIELD.md SH-10, on SH-01 and SH-11): `harness: claude-code` (or `codex`, `gemini-cli`, `goose`, `opencode`, `openhands`, `fast-agent`) in an agent spec is served by `ACPAgent(BaseAgent)` — the `agent-shield` package's proxy with the runtime as its face: the pinned adapter launched over stdio from `~/.agent-shield/harnesses/<id>@<version>` or the PATH, never fetched; `initialize` with `fs` and `terminal` on; every `session/update` an event of the runtime's; a malformed update or a refused action ending the turn in a sentence; `DELETE /agents/{id}` ending the process. Registered on `acp`, `a2a` and `ag-ui`; `vercel-ai` refused. The Studio's side (`src/runtimes/variants.ts`, `checkAppspec`) offers such an agent the Datalayer runtimes and never the page; `custom` stays refused in the shared catalogue. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
+- **Permissions as Rules** (SH-12): `session/request_permission` decided by the application's Rules read into a team-scope policy (`guardrails/shield_policy.py`) above the default — *do it* answered, *ask me first* raised through the tool approvals, *always* a session rule, `cancelled` on a cancelled turn.
+- **Files and terminals against the workspace** (SH-13): `fs/*` and `terminal/*` answered inside `AGENT_RUNTIMES_WORKSPACE_ROOT`, each a tool row with its diff or terminal display and a decision in the record; a path outside refused.
+- **Sessions and the record** (SH-18): the Shield's audit written to the application's record; the harness's session kept in the protocol state store and loaded when the harness advertises it, a start-over said otherwise.
+- **`loop --harness <id>` and `loop harnesses`** (SH-19); the orchestration adapter on the package's stdio and WebSocket channels (SH-02).
+
 ## 1.5.30
 
 On agentspecs 0.0.99. (1.5.29 was tagged and did not publish: its build refused an unused import; this carries it.)

@@ -238,8 +238,8 @@ export interface HarnessAcpSpec {
 /**
  * An agent program driven over the Agent Client Protocol
  * (`agentspecs/harnesses`, SHIELD.md SH-01). An agent spec's `harness:` names
- * one beside `pydantic-ai` and `vercel-ai`; none is served by a runtime yet
- * (SHIELD SH-10).
+ * one beside `pydantic-ai` and `vercel-ai`; the Datalayer runtime serves it
+ * through its ACP adapter, `ACPAgent` (SHIELD SH-10), never the browser.
  */
 export interface HarnessSpec {
   /** What `harness:` names (e.g. 'claude-code'). */
