@@ -136,6 +136,33 @@ unknown is not in the catalogue. The entries, in short:
 Reviewed by counsel: not yet. The register's engine side — the Shield reading
 it to refuse a credential kind — is SH-04's part in `agent-shield`.
 
+## What each harness honours (SH-20)
+
+What the runtime may ask of each harness, read from its spec in the
+catalogue (`agent_runtimes.specs.harnesses`, generated from agentspecs): how
+its connections are given, whether a session is reloaded after a restart,
+whether it takes the application's model and helpers, where its skills and
+instructions are written, and the modes it advertises. A spec asking what its
+harness does not honour is refused at load, in a sentence (above).
+
+| Harness | Connections | Reloads a session | Takes the model | Takes helpers | Skills written to | Instructions file | Modes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | lent | yes | yes | no, its own | `.claude/skills` | `CLAUDE.md` | default, plan, acceptEdits, bypassPermissions |
+| Codex | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | read-only, workspace-write, agent, agent-full-access |
+| Gemini CLI | lent | no | yes | no, its own | `.gemini/skills` | `GEMINI.md` | default, auto_edit, yolo, plan |
+| goose | lent | no | yes | no, its own | `.agents/skills` | `.goosehints` | — |
+| OpenCode | lent | no | yes | no, its own | `.opencode/skills` | `AGENTS.md` | — |
+| OpenHands | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | always-ask, always-approve, llm-approve |
+| fast-agent | lent | yes | yes | no, its own | `.agents/skills` | `AGENTS.md` | each agent it defines |
+| custom | — | — | — | — | — | — | refused in the shared catalogue |
+
+*Lent* is `acp.mcp: lend`: the gateway's toolsets the application connects,
+with the run's credential, never a key of the harness's own
+([transports](./transports)). A harness that reloads no session is started
+over after a restart, and says so. A mode such as `bypassPermissions` changes
+what the harness asks, never what the Shield decides: the Shield decides
+every action whether or not the harness asked (SHIELD §6.2).
+
 ## The adapter (built: SH-10's adapter, SH-11, SH-12's runtime side, SH-13, SH-18, SH-19's `loop`; 15 October 2026)
 
 `agent_runtimes/adapters/acp_agent.py` is `ACPAgent(BaseAgent)`, the harness
@@ -281,6 +308,25 @@ image pruner's keep-list know the tags.
   keeper's relaunch (SH-18), and a kept application's permissions decided
   from the page (SH-12).
 
+## Examples (SH-23)
+
+Runnable from the repository's [`examples/shield`](https://github.com/datalayer/agent-runtimes/tree/main/examples/shield),
+each on the ACP SDK's fake agent (no model, no key), each with its output as
+printed in the folder's README and run by `test_the_shield_examples.py`:
+
+| Script | What it shows |
+| --- | --- |
+| `harness_on_the_runtime.py` | what `loop --harness <id>` starts — the runtime, the harness made at startup, one AG-UI turn — with the Shield's decisions and the diff; `--harness claude-code` with the adapter and a funded key; `--serve` for the web chat |
+| `proxy_from_python.py` | `agent-shield run` driven from Python as an editor drives it: an edit done, a push asked and refused, a read outside refused, the audit read back |
+| `session_rule.py` | a rule added to a running session holding from the next action, one that would loosen the organization's refused, the rule taken back |
+| `audit_read_back.py` | the application's record of a turn: the decisions, the approval, the diff and the terminal kept whole, a key redacted everywhere |
+| `delegate_to_a_harness.py` | an orchestrator delegating to the harness over A2A and reading the `text/x-diff` artifact, its hash checked |
+
+In the examples app, the *Shield* group: **Shield Harness** (the web chat on
+`harness_on_the_runtime.py --serve`: diffs, terminals, the approval banner)
+and **Shield Policy** (`@datalayer/agent-shield`'s types and
+`describeDecision`).
+
 ## Not built yet
 
 - **Claude Code live** through the adapter (SH-10's marked test, SH-03): the
@@ -300,7 +346,8 @@ image pruner's keep-list know the tags.
   end to end waits on the key (SH-21). Still open: the web chat's own transport
   (`vercel-ai`) for a harness; a harness's question (`elicitation/create`)
   answered from the page — declined today, in a sentence.
-- **The Shield**: the file and shell policy from IAM, the stateful limits
-  beyond decision 5's, the audit's export, the report (SH-30 to SH-39, SH-50
-  to SH-54).
+- **The Shield** around a harness is built — the organization's rules from
+  IAM, the limits soft then hard, the session's rules, the record and the
+  trace: see [The Shield](../shield/). Open there: the Shield report (SH-36),
+  the bypass drills that need a funded key (SH-37).
 - **The long tail** of ACP agents as a listed tier of the register (SH-57).

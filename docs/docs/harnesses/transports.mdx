@@ -7,11 +7,13 @@ title: Served over every protocol
 
 A harness is one `BaseAgent` (the [adapter](./index#the-adapter-built-sh-10s-adapter-sh-11-sh-12s-runtime-side-sh-13-sh-18-sh-19s-loop-15-october-2026)),
 so every transport the runtime serves gets it without a mapping of its own.
-This page is SHIELD §4 as built on 15 October 2026 — the normalisation
-once, then what each face adds — with the boxes that built it. Everything
-below is drilled on the ACP SDK's fake agent
-(`agent_runtimes/tests/fixtures/acp_fake_agent.py`); Claude Code's live turn
-still waits on a funded key.
+This page is SHIELD §4 as built (read again on 16 October 2026, agent-runtimes
+1.5.42) — the normalisation once, the permissions as Rules, then what each
+face adds — with the boxes that built it. Everything below is drilled on the
+ACP SDK's fake agent (`agent_runtimes/tests/fixtures/acp_fake_agent.py`);
+Claude Code's live turn still waits on a funded key. Each face has a runnable
+example in [`examples/shield`](https://github.com/datalayer/agent-runtimes/tree/main/examples/shield),
+named below.
 
 ## The normalisation, once (§4.1)
 
@@ -28,6 +30,46 @@ ACP's `session/update`s become the `StreamEvent`s every transport reads:
 | `session/request_permission` | `tool_call` with `awaiting: approval`, the approval raised (§4.5) | Waiting for you; A2A's `input-required`; the IDE's own prompt |
 | `fs/*`, `terminal/*` | Answered by the runtime (§4.6), each **also** a `tool_call` row of kind `read` / `edit` / `execute` and a decision | Visible, decided, recorded |
 | a malformed update, a refused action | `text` (`[Shield] …`), then `done {stop_reason: refusal, sentence}` | The sentence, the turn over |
+
+## Permissions are Rules (§4.5, SH-11, SH-12 — built)
+
+ACP's tool `kind` is classed by the package's one table
+(`agent_shield.policy.class_of`, `KIND_CLASS` in `@datalayer/agent-shield`),
+and the class is decided by the policies in force (the organization's, the
+application's Rules, the session's — [The Shield](../shield/)):
+
+| ACP `kind` | Class decided |
+| --- | --- |
+| `read`, `search`, `fetch` | read |
+| `edit`, `move` | write |
+| `delete` | delete |
+| `execute` | execute |
+| `other` | write (fail closed) |
+| `think`, `switch_mode` | nothing to decide |
+
+| Decision | Answer to `session/request_permission` |
+| --- | --- |
+| *do it* | `allow_once`, without asking anyone |
+| *ask me first* | the approval raised (Waiting for you, A2A's `input-required`, the IDE's prompt); what the person chose — *always* is `allow_always`, a rule of the session gone with it |
+| *leave it to me* | `reject_once`, with the sentence |
+| the turn cancelled while it waits | `cancelled` |
+
+The decision does not depend on the harness asking: its own `tool_call`
+notifications are classed and recorded, and `fs/*` and `terminal/*` are the
+runtime's to answer (§4.6). A notification that carries no path is decided
+without one — the cautious answer is written beside it, and the read or write
+itself is decided again with its path when the runtime answers it
+(`harness_on_the_runtime.py` shows both rows).
+
+## Sessions, the sidecar, `loop` (§4.8, §4.9, §5 — SH-18, SH-19, SH-40 — built)
+
+The harness's session is kept in the protocol state store; a restarted
+runtime loads it when the harness advertises `loadSession`, and otherwise
+**says** it starts over. `loop --harness <id>` runs a harness on this machine
+(`harness_on_the_runtime.py` starts the same runtime from Python); with the
+operator's `AGENT_RUNTIMES_HARNESS_SIDECAR_URL` (1.5.38, the operator's flag
+off by default) the harness runs in the pod's `datalayer-harnesses` sidecar
+and the runtime reaches it over the WebSocket channel, deciding the same.
 
 ## MCP, lent through the gateway (§4.4, SH-14 — built)
 
@@ -80,7 +122,8 @@ differs from the body it received. The extension schema
 (`orchestration/extension_schema.py`) now describes `approvalRequest`,
 `approval` and `artifactProvenance`; three proposed fields stay off the wire.
 Drilled: the orchestrator delegating over HTTP to the worker on the fake agent
-and getting the diff back with its provenance (`test_a2a_harness_worker.py`).
+and getting the diff back with its provenance (`test_a2a_harness_worker.py`;
+runnable as `examples/shield/delegate_to_a_harness.py`).
 
 ## AG-UI, the session API, the embed, the phone (§4.3, SH-16 — the web built, the phone's contract given)
 
@@ -104,6 +147,9 @@ each as a `tool_call` entry *shown* with the display; the phone reads the same
 contract (`protocolDisplayOf`, `displayLine`, `shieldDisplayFixtures()` as its
 fixture, MOBILE M-037) — drawing it there is the mobile plan's. Streaming a
 terminal's output while it runs is open: it is read when the agent asks.
+The examples app's *Shield Harness* page is the web chat on a harness runtime
+(`examples/shield/harness_on_the_runtime.py --serve`), drawing both; not yet
+seen in a browser.
 
 ## ACP in, ACP out (§4.7, SH-17 — built, proved with the SDK's client)
 
@@ -130,7 +176,9 @@ Proved with a real ACP client — agent-shield's WebSocket channel on the SDK's
 `Connection` — against the route served by uvicorn: the edit done without the
 IDE, the push asked of it, its filesystem never touched
 (`test_acp_route_harness.py`). Zed or `vscode-acp` against a runtime on r1 is
-not yet drilled.
+not yet drilled. The standalone Shield is the same proxy without a runtime:
+`examples/shield/proxy_from_python.py` drives `agent-shield run` from Python
+as an editor would.
 
 ## Skills, in the harness's format (§4.10, SH-21 — built on the fake agent)
 

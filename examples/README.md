@@ -47,6 +47,10 @@ These examples demonstrate the Datalayer Client and runtime workflows.
 
 - 🔀 [One Objective, Two Protocols](./orchestration/README.md): a parent delegates the same notebook analysis to an A2A worker and an ACP worker over one code path, with the descriptor as the only difference. Both workers are real protocol servers and need no model, so `python orchestration/orchestrate.py` runs anywhere.
 
+## The Shield
+
+- 🛡️ [A coding agent behind the Shield](./shield/README.md): on the local runtime (`loop --harness`), the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff — each on a fake agent with no key, Claude Code the same with one.
+
 ## Additional Examples
 
 ### Python Examples

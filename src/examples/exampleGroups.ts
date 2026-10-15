@@ -18,6 +18,7 @@ export const EXAMPLE_GROUP_ORDER = [
   'A2A',
   'Personal Agent Protocol',
   'Agent protocols',
+  'Shield',
   'AG-UI',
   'Chat',
   'Document',
@@ -44,6 +45,8 @@ export const getExampleGroup = (id: string): string => {
   if (id.startsWith('Pap')) return 'Personal Agent Protocol';
   // The other agent protocols' examples: signed requests, commerce (AGENT_PROTOCOLS EX-10).
   if (id.startsWith('Protocol')) return 'Agent protocols';
+  // The Shield: a coding agent behind it, and its policy (SHIELD.md SH-23).
+  if (id.startsWith('Shield')) return 'Shield';
   if (id.startsWith('AgUi')) return 'AG-UI';
   if (id.startsWith('CopilotKit')) return 'CopilotKit';
   // Each remaining Agent* example demonstrates one capability of the

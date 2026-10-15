@@ -15,6 +15,12 @@ this reads the code blocks and checks:
 - each relative link to another page (``./x.mdx``, ``../chat/presence``)
   points at a page that exists.
 
+And the examples the pages point a reader at (``EXAMPLE_FOLDERS``, SHIELD
+SH-23): every script of the folder is named in its README (``python
+<script>``), every script the README names exists, and each name a script
+imports from ``agent_runtimes`` exists — the scripts themselves are run by
+the tests (``test_the_shield_examples.py``).
+
 Run from the repository's root: ``python docs/scripts/check_examples.py``.
 It reads files only, imports nothing, and exits 1 when a page drifted,
 naming each problem. Drift already known is listed in ``known_drift.txt``.
@@ -34,6 +40,9 @@ SRC = ROOT / "src"
 PY = ROOT / "agent_runtimes"
 GENERATED = ("typescript_api", "python_api")
 KNOWN = Path(__file__).with_name("known_drift.txt")
+#: Folders of runnable examples, each with a README naming its scripts.
+EXAMPLE_FOLDERS = (ROOT / "examples" / "shield",)
+README_RUNS = re.compile(r"python (?P<script>[\w-]+\.py)")
 
 FENCE = re.compile(r"^```(\w*)[^\n]*\n(.*?)^```", re.S | re.M)
 TS_IMPORT = re.compile(
@@ -171,6 +180,45 @@ def page_exists(origin: Path, target: str) -> bool:
     return any(c.is_file() for c in candidates)
 
 
+def python_import_problems(code: str) -> list[str]:
+    """The names a Python text imports from ``agent_runtimes`` that do not exist."""
+    problems: list[str] = []
+    for match in PY_IMPORT.finditer(code):
+        module = match["module"]
+        source = py_module(module)
+        # A namespace package (a folder, no __init__.py) holds submodules only.
+        namespace = source is None and ROOT.joinpath(*module.split(".")).is_dir()
+        if source is None and not namespace:
+            problems.append(f"{module}: no such module")
+            continue
+        defined = py_names(source) if source is not None else frozenset()
+        names = re.sub(r"#[^\n]*", "", match["names"])
+        for item in names.strip().strip("()").split(","):
+            name = item.split(" as ")[0].strip()
+            if not name or name == "*":
+                continue
+            if name not in defined and py_module(f"{module}.{name}") is None:
+                problems.append(f"{module}: has no {name}")
+    return problems
+
+
+def check_example_folder(folder: Path) -> list[str]:
+    """A folder of examples: its README names every script, and only scripts that exist."""
+    readme = folder / "README.md"
+    if not readme.is_file():
+        return ["no README.md"]
+    named = set(README_RUNS.findall(readme.read_text(encoding="utf8")))
+    scripts = {p.name for p in folder.glob("*.py")}
+    problems = [f"README runs {name}, which is not here" for name in sorted(named - scripts)]
+    # A module the scripts import (no `if __name__` of its own) is not an example.
+    for name in sorted(scripts - named):
+        if "__main__" in (folder / name).read_text(encoding="utf8"):
+            problems.append(f"{name} is not named in the README")
+    for name in sorted(scripts):
+        problems += [f"{name}: {p}" for p in python_import_problems((folder / name).read_text(encoding="utf8"))]
+    return problems
+
+
 def check(page: Path) -> list[str]:
     text = page.read_text(encoding="utf8")
     problems: list[str] = []
@@ -187,22 +235,7 @@ def check(page: Path) -> list[str]:
                     if name not in exported:
                         problems.append(f"{module}: does not export {name}")
         elif lang in ("py", "python"):
-            for match in PY_IMPORT.finditer(code):
-                module = match["module"]
-                source = py_module(module)
-                if source is None:
-                    problems.append(f"{module}: no such module")
-                    continue
-                names = re.sub(r"#[^\n]*", "", match["names"])
-                for item in names.strip().strip("()").split(","):
-                    name = item.split(" as ")[0].strip()
-                    if not name or name == "*":
-                        continue
-                    if (
-                        name not in py_names(source)
-                        and py_module(f"{module}.{name}") is None
-                    ):
-                        problems.append(f"{module}: has no {name}")
+            problems += python_import_problems(code)
     prose = FENCE.sub("", text)
     for match in LINK.finditer(prose):
         if not page_exists(page, match["target"]):
@@ -225,6 +258,10 @@ def main() -> int:
         f"{page.relative_to(ROOT)}: {problem}"
         for page in pages
         for problem in check(page)
+    } | {
+        f"{folder.relative_to(ROOT)}: {problem}"
+        for folder in EXAMPLE_FOLDERS
+        for problem in check_example_folder(folder)
     }
     new = sorted(found - known)
     gone = sorted(known - found)
@@ -233,7 +270,7 @@ def main() -> int:
     for line in gone:
         print(f"no longer drifts, remove it from {KNOWN.name}: {line}")
     print(
-        f"{len(pages)} pages checked: {len(new)} new problem(s), "
+        f"{len(pages)} pages and {len(EXAMPLE_FOLDERS)} example folder(s) checked: {len(new)} new problem(s), "
         f"{len(found & known)} known in {KNOWN.name}."
     )
     return 1 if new or gone else 0

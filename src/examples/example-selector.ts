@@ -357,6 +357,19 @@ export const EXAMPLE_ENTRIES: ExampleEntry[] = [
     () => import('./ProtocolUcpCheckoutExample'),
     'A UCP checkout at a test store in the page: the exact purchase proposed, approved on a card once, bought once.',
   ),
+  // The Shield (SHIELD.md SH-23): a coding agent behind it, and its policy's types.
+  makeEntry(
+    'ShieldHarnessExample',
+    () => import('./ShieldHarnessExample'),
+    'A coding agent behind the Shield in the web chat: its changes as diffs, its commands as terminals, what a rule asks first in the approval banner. Needs `python examples/shield/harness_on_the_runtime.py --serve` (the fake agent, no key).',
+    ['example', 'shield', 'harness', 'acp', 'ag-ui', 'chat'],
+  ),
+  makeEntry(
+    'ShieldPolicyExample',
+    () => import('./ShieldPolicyExample'),
+    'The Shield’s policy from TypeScript: an organization’s document typed by @datalayer/agent-shield, what it decides by class, the tool kinds classed, the limits soft then hard, decisions in describeDecision’s words.',
+    ['example', 'shield', 'policy'],
+  ),
   makeEntry(
     'PapCompanyDiscoveryExample',
     () => import('./PapCompanyDiscoveryExample'),
