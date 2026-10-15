@@ -21,6 +21,17 @@ export {
   type MessageAsked,
 } from './approvals';
 
+// An approval as every card says it (MOBILE M-016).
+export {
+  actionOf,
+  APPROVAL_CARD_WORDS,
+  approvalCardOf,
+  argumentsShown,
+  type ApprovalCard,
+  type ApprovalCardProps,
+  type ApprovalCardSource,
+} from './approvalCard';
+
 // A run's stream, read as every client reads it.
 export {
   AgUiFrames,
@@ -54,7 +65,9 @@ export {
 
 // A conversation as its stream builds it, for a native client.
 export {
+  BROWSER_LIMITS,
   CUT_MARK,
+  DEVICE_LIMITS,
   DIAGNOSTIC_LIMIT,
   emptyConversation,
   formFieldsOf,
@@ -65,13 +78,26 @@ export {
   reduceConversation,
   TOOL_TEXT_LIMIT,
   withError,
+  withoutItems,
   withPrompt,
   withTurnEnded,
   type ConversationItem,
+  type ConversationLimits,
   type ConversationQuestion,
   type ConversationState,
+  type ToolAwaiting,
+  type ToolCodeError,
   type TurnEnd,
 } from './conversation';
+
+// What every protocol adapter says, as the conversation reads it (M-030).
+export {
+  conversationEventsOf,
+  sanitizeAssistantContent,
+  snapshotOfMessages,
+  type AdapterEvent,
+  type SaidMessage,
+} from './adapterEvents';
 
 // What an application is doing, in the words beside its face (LOOP T-08).
 export {

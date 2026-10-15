@@ -107,7 +107,10 @@ export function presenceOfConversation(
   for (let index = state.items.length - 1; index >= 0; index -= 1) {
     const item = state.items[index];
     if (item.kind === 'tool') {
-      tool = { open: item.status === 'running', pendingApproval: false };
+      tool = {
+        open: item.status === 'running',
+        pendingApproval: item.awaiting === 'approval',
+      };
       break;
     }
   }

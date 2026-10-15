@@ -230,9 +230,15 @@ describe('the conversation a run builds', () => {
       id: 't1',
       name: 'search',
       args: '{"q":"x"}',
+      input: { q: 'x' },
       status: 'error',
+      awaiting: null,
       result: '{"error":"denied"}',
+      value: { error: 'denied' },
       error: 'denied',
+      executionError: '',
+      codeError: null,
+      exitCode: null,
       display: null,
     });
   });
