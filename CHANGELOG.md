@@ -7,6 +7,15 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.28
+
+On agentspecs 0.0.97.
+
+- **Heard on Datalayer's servers from the page** (VOICE.md VO-34, VO-14, §5): `ServerHearing` — the browser's VAD finds the speech, the speech service's Whisper large-v3-turbo writes it (`POST /api/ai-agents/v1/speech/transcriptions`). Used where an Appspec's voice says `where: server`, where it says `auto` and no model in the browser hears the language (`hearingPlace`), and where the person chose *Detect the language I speak* (`detectLanguage`); asked apart from the device's consent. [Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)
+- **`<datalayer-app>` runs the deployment its embed token names** (VOICE.md decision 16): no `deployment` attribute; a token naming none is refused in a sentence before anything is drawn; the chat's voice sends no deployment of the page's. [Embedding](https://agent-runtimes.datalayer.tech/docs/apps/embedding)
+- The voice catalogue of agentspecs 0.0.97 (`whisper-large-v3-turbo`, on the server only).
+- The floating assistant leaves its corner's words free (REVIEWS Q-08); pictures in CI on a pull request (REVIEWS Q-09).
+
 ## 1.5.27
 
 On agentspecs 0.0.96.
