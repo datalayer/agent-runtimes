@@ -1053,6 +1053,36 @@ class ServerConfig(BaseModel):
     api_prefix: str = "/api/v1"
 
 
+async def _create_harness_agent(app: FastAPI, harness_id: str, api_prefix: str) -> None:
+    """Make the agent of a catalogue harness through the runtime's own create
+    route, in process (as `loop/apps/mounting.create_agent` mounts an
+    application); what refuses it is raised, so the runtime does not start
+    without the agent it was started for.
+    """
+    from starlette.requests import Request
+
+    from agent_runtimes.routes.agents import CreateAgentRequest, create_agent
+
+    agent_name = os.environ.get("AGENT_RUNTIMES_AGENT_NAME", "default")
+    scope = {
+        "type": "http",
+        "app": app,
+        "method": "POST",
+        "path": f"{api_prefix}/agents",
+        "headers": [],
+        "query_string": b"",
+        "scheme": "http",
+        "server": ("127.0.0.1", int(os.environ.get("AGENT_RUNTIMES_PORT") or 0)),
+    }
+    request = CreateAgentRequest(
+        name=agent_name,
+        agent_spec={"id": harness_id, "name": harness_id, "harness": harness_id},
+        transport="ag-ui",
+    )
+    made = await create_agent(request, Request(scope))
+    logger.info("The harness %s is served as agent '%s'", harness_id, made.id)
+
+
 def create_app(config: ServerConfig | None = None) -> FastAPI:
     """
     Create and configure the FastAPI application.
@@ -1169,6 +1199,13 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
 
         # Set app reference for dynamic A2A route mounting
         set_a2a_app(app, config.api_prefix)
+
+        # A harness named by `loop --harness` (SHIELD §4.9): its agent made
+        # at startup through the create route, as any agent is, so the
+        # Shield decides its actions and a refusal is the route's sentence.
+        harness_id = os.environ.get("AGENT_RUNTIMES_HARNESS")
+        if harness_id:
+            await _create_harness_agent(app, harness_id, config.api_prefix)
 
         # Register default agent if specified via CLI (--agent-id flag)
         default_agent_id = os.environ.get("AGENT_RUNTIMES_DEFAULT_AGENT")

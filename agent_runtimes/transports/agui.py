@@ -271,6 +271,13 @@ class AGUITransport(BaseTransport):
         Returns:
             Starlette application implementing the AG-UI protocol.
         """
+        if self._app is None and not hasattr(self.agent, "_agent"):
+            # An agent that is not pydantic-ai's — a harness driven over ACP
+            # (SHIELD SH-10) — is served from its own stream.
+            from .agui_stream import agui_app_of
+
+            self._app = agui_app_of(self.agent, self._agent_id)
+            return self._app
         if self._app is None:
             from typing import TYPE_CHECKING
 

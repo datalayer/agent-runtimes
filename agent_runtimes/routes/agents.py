@@ -79,11 +79,11 @@ from ..node_mode import is_node_enabled
 from ..specs.models import DEFAULT_MODEL
 from ..transports import AGUITransport, MCPUITransport, VercelAITransport
 from ..types import (
+    BUILTIN_HARNESSES,
     Agentspec,
     AgentSuggestion,
     MCPServer,
     SubAgentsConfig,
-    unserved_harness_problem,
 )
 from .a2a import A2AAgentCard, register_a2a_agent, unregister_a2a_agent
 from .acp import AgentCapabilities, AgentInfo, _agents, register_agent, unregister_agent
@@ -1371,6 +1371,89 @@ class AgentListResponse(BaseModel):
     agents: list[dict[str, Any]]
 
 
+def _keep_app_recorder(
+    agent_id: str, running_app: Any, request: "CreateAgentRequest"
+) -> Any:
+    """The record of the application this agent runs (LOOP R-07), kept for it."""
+    from agent_runtimes.loop.apps.record import AppRecorder, keep_agent_recorder
+    from agent_runtimes.routes.apps import keep_running
+
+    serving = request.app_instance or {}
+    # What it did, session by session, kept by ai-agents (R-07).
+    recorder = AppRecorder(
+        app=running_app,
+        app_uid=str(serving.get("app_uid") or ""),
+        deployment_uid=str(serving.get("deployment_uid") or ""),
+        version=int(serving.get("version") or 0),
+        purpose=str(serving.get("purpose") or ""),
+        launch_uid=str(serving.get("launch_uid") or ""),
+        # What woke it, when nobody opened it (R-14).
+        woken_by=dict(serving.get("woken_by") or {}),
+        # Only visitors without an account talk to it (R-30).
+        visitors=bool(serving.get("visitor_app")),
+    )
+    # The session API writes a session's start to it (R-04).
+    keep_agent_recorder(agent_id, recorder)
+    # The runtime knows the application this agent runs: what is asked of
+    # "the runtime's application" — its feedback, its rules — is answered on
+    # a kept runtime too (LOOP P-24).
+    keep_running(agent_id, running_app)
+    return recorder
+
+
+async def _harness_agent_of(
+    agent_id: str,
+    harness_id: str,
+    request: "CreateAgentRequest",
+    running_app: Any,
+    http_request: Request,
+) -> Any:
+    """An agent on a catalogue harness, launched and negotiated (SHIELD SH-10).
+
+    Its permissions are raised through the runtime's tool approvals with the
+    caller's token (SH-12); its record is the application's (SH-18); its
+    sessions are kept in the protocol state store so a restarted runtime
+    loads them (§4.8). What refuses it — an adapter not installed, a
+    declared secret missing, no workspace, an agent that lacks what its spec
+    asked — is a 422 in a sentence.
+    """
+    from ..adapters.acp_agent import HarnessRefused, harness_agent
+    from ..guardrails.tool_approvals import ToolApprovalManager
+    from ..protocol_state.store import protocol_state_store
+
+    recorder = (
+        _keep_app_recorder(agent_id, running_app, request)
+        if running_app is not None
+        else None
+    )
+    approval_config = ToolApprovalConfig.from_env()
+    approval_config.agent_id = agent_id
+    _auth_hdr = http_request.headers.get("Authorization", "")
+    if _auth_hdr.lower().startswith("bearer "):
+        _request_jwt = _auth_hdr[7:].strip()
+        if _request_jwt:
+            approval_config.user_jwt_token = _request_jwt
+    try:
+        agent = harness_agent(
+            agent_id,
+            harness_id,
+            app=running_app,
+            recorder=recorder,
+            approvals=ToolApprovalManager(approval_config),
+            name=request.name,
+            description=request.description or "",
+            state_store=protocol_state_store(),
+        )
+        await agent.initialize()
+    except HarnessRefused as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from None
+    remember_app_instance(
+        agent_id, request.app_instance if running_app is not None else None
+    )
+    logger.info("Agent '%s' runs on the harness %s", agent_id, harness_id)
+    return agent
+
+
 @router.post("", response_model=CreateAgentResponse)
 async def create_agent(
     request: CreateAgentRequest, http_request: Request
@@ -1439,13 +1522,6 @@ async def create_agent(
             logger.info(
                 f"Using library spec '{request.agent_spec_id}' for agent '{agent_id}'"
             )
-            # A catalogue harness (SHIELD SH-01) is described and refused, not
-            # served: the ACP adapter is SH-10. Nothing runs it in its place.
-            unserved = unserved_harness_problem(
-                str(getattr(library_spec, "harness", "") or "pydantic-ai")
-            )
-            if unserved:
-                raise HTTPException(status_code=501, detail=unserved)
             # Apply spec defaults — only override fields the caller did not set.
             if (
                 request.system_prompt == "You are a helpful AI assistant."
@@ -2439,8 +2515,31 @@ async def create_agent(
                 final_system_prompt + "\n\n" + running_app.instructions.strip()
             )
 
-        # Create the agent based on the library
-        if request.agent_library == "pydantic-ai":
+        # Create the agent based on the library — or the harness (SHIELD SH-10):
+        # an agent whose spec names a catalogue harness is launched over ACP
+        # in this runtime, the Shield deciding its actions by the
+        # application's Rules and decision 5's default; nothing of pydantic-ai
+        # runs in its place.
+        harness_id = str(
+            _spec_value("harness")
+            or (getattr(library_spec, "harness", "") if library_spec else "")
+            or "pydantic-ai"
+        )
+        if harness_id not in BUILTIN_HARNESSES:
+            if request.transport == "vercel-ai":
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"The harness {harness_id!r} is served over ag-ui, acp and a2a; "
+                        "the vercel-ai transport reads a pydantic-ai agent (SHIELD SH-16)."
+                    ),
+                )
+            usage_limits = None
+            approval_tool_ids = []
+            agent = await _harness_agent_of(
+                agent_id, harness_id, request, running_app, http_request
+            )
+        elif request.agent_library == "pydantic-ai":
             # First create the underlying Pydantic AI Agent
             # NOTE: We don't pass MCP toolsets here. They will be dynamically
             # fetched at run time by the adapter to reflect current server state.
@@ -2520,10 +2619,6 @@ async def create_agent(
             # default approvals: asking twice for one call is not a rule.
             if running_app is not None:
                 from agent_runtimes.loop.apps.agent import app_capabilities
-                from agent_runtimes.loop.apps.record import (
-                    AppRecorder,
-                    keep_agent_recorder,
-                )
                 from agent_runtimes.notifications import NotificationsCapability
 
                 capabilities = _without_approval_capabilities(capabilities)
@@ -2534,28 +2629,7 @@ async def create_agent(
                     for capability in capabilities
                     if not isinstance(capability, NotificationsCapability)
                 ]
-                serving = request.app_instance or {}
-                # What it did, session by session, kept by ai-agents (R-07).
-                recorder = AppRecorder(
-                    app=running_app,
-                    app_uid=str(serving.get("app_uid") or ""),
-                    deployment_uid=str(serving.get("deployment_uid") or ""),
-                    version=int(serving.get("version") or 0),
-                    purpose=str(serving.get("purpose") or ""),
-                    launch_uid=str(serving.get("launch_uid") or ""),
-                    # What woke it, when nobody opened it (R-14).
-                    woken_by=dict(serving.get("woken_by") or {}),
-                    # Only visitors without an account talk to it (R-30).
-                    visitors=bool(serving.get("visitor_app")),
-                )
-                # The session API writes a session's start to it (R-04).
-                keep_agent_recorder(agent_id, recorder)
-                # The runtime knows the application this agent runs: what is
-                # asked of "the runtime's application" — its feedback, its
-                # rules — is answered on a kept runtime too (LOOP P-24).
-                from agent_runtimes.routes.apps import keep_running
-
-                keep_running(agent_id, running_app)
+                recorder = _keep_app_recorder(agent_id, running_app, request)
                 # And runs its sessions with the deployment's code (R-14).
                 from agent_runtimes.loop.apps.sessions import serve_agent_code
 
@@ -3425,6 +3499,12 @@ async def delete_agent(
 
     # Note: MCP servers are managed at server level (started on server startup,
     # stopped on server shutdown), so no cleanup needed per-agent.
+
+    # What the agent holds — a harness's process (SHIELD §4.8) — ends with it.
+    try:
+        await _agents[agent_id][0].cleanup()
+    except Exception as e:
+        logger.warning(f"Could not clean up agent {agent_id}: {e}")
 
     # Unregister from all protocols
     try:

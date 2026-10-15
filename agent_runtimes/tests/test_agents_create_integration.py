@@ -465,3 +465,100 @@ async def test_create_agent_disable_tool_approvals_runtime_default(
     pydantic_kwargs = creation_spy["pydantic_kwargs"]
     assert isinstance(pydantic_kwargs, dict)
     assert "output_type" not in pydantic_kwargs
+
+
+class _DummyHarnessAgent:
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = kwargs
+        self.initialized = False
+        self.cleaned = False
+        self.name = str(kwargs.get("name") or "harness")
+
+    async def initialize(self) -> None:
+        self.initialized = True
+
+    async def cleanup(self) -> None:
+        self.cleaned = True
+
+
+@pytest.mark.asyncio
+async def test_create_agent_on_a_harness_launches_the_acp_agent(
+    monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
+) -> None:
+    """SHIELD SH-10: the route builds the ACP adapter, not a pydantic-ai agent."""
+    import agent_runtimes.adapters.acp_agent as acp_agent
+
+    made: list[_DummyHarnessAgent] = []
+
+    def harness_agent(
+        agent_id: str, harness_id: str, **kwargs: object
+    ) -> _DummyHarnessAgent:
+        agent = _DummyHarnessAgent(agent_id=agent_id, harness_id=harness_id, **kwargs)
+        made.append(agent)
+        return agent
+
+    monkeypatch.setattr(acp_agent, "harness_agent", harness_agent)
+    request = CreateAgentRequest(
+        name="Coder",
+        agent_spec={"id": "coder", "harness": "claude-code", "protocol": "a2a"},
+        transport="a2a",
+    )
+    http_request = _DummyRequest()
+    http_request.headers = {"Authorization": "Bearer person-token"}
+    response = await create_agent(request, http_request)
+    try:
+        assert response.id == "coder" and response.transport == "a2a"
+        [agent] = made
+        assert agent.initialized
+        assert (
+            agent.kwargs["agent_id"] == "coder"
+            and agent.kwargs["harness_id"] == "claude-code"
+        )
+        assert agent.kwargs["approvals"].config.agent_id == "coder"
+        assert agent.kwargs["approvals"].config.user_jwt_token == "person-token"
+        assert agent.kwargs["app"] is None and agent.kwargs["recorder"] is None
+        # Nothing of pydantic-ai was built in its place.
+        assert creation_spy["pydantic_model"] is None
+    finally:
+        agents_route._agents.pop("coder", None)
+        agents_route._agentspecs.pop("coder", None)
+
+
+@pytest.mark.asyncio
+async def test_create_agent_on_a_harness_refuses_vercel_ai_and_says_what_refused_it(
+    monkeypatch: pytest.MonkeyPatch, creation_spy: dict[str, object]
+) -> None:
+    from fastapi import HTTPException
+
+    import agent_runtimes.adapters.acp_agent as acp_agent
+
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(
+            CreateAgentRequest(
+                name="Coder", agent_spec={"id": "coder", "harness": "codex"}
+            ),
+            _DummyRequest(),
+        )
+    assert refused.value.status_code == 422 and "SHIELD SH-16" in refused.value.detail
+
+    def refusing(agent_id: str, harness_id: str, **kwargs: object) -> object:
+        raise acp_agent.HarnessRefused(
+            "Codex needs OPENAI_API_KEY in the environment, and it is not set."
+        )
+
+    monkeypatch.setattr(acp_agent, "harness_agent", refusing)
+    with pytest.raises(HTTPException) as refused:
+        await create_agent(
+            CreateAgentRequest(
+                name="Coder",
+                agent_spec={"id": "coder", "harness": "codex"},
+                transport="acp",
+            ),
+            _DummyRequest(),
+        )
+    assert refused.value.status_code == 422
+    assert (
+        refused.value.detail
+        == "Codex needs OPENAI_API_KEY in the environment, and it is not set."
+    )
+    assert "coder" not in agents_route._agents

@@ -6,8 +6,8 @@
 An agent program driven over ACP, generated from agentspecs 0.0.100. An
 agent spec names one with `harness:` beside `pydantic-ai` and `vercel-ai`;
 what the harness cannot honour is refused at load, in a sentence; and an
-agent on a catalogue harness is refused at creation, not run on pydantic-ai
-in its place, until the ACP adapter exists (SHIELD SH-10).
+agent on a catalogue harness is served by the ACP adapter (SHIELD SH-10,
+`test_acp_agent.py`), never run on pydantic-ai in its place.
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ from agent_runtimes.specs.harnesses import (
     list_harnesses,
 )
 from agent_runtimes.types import (
+    BUILTIN_HARNESSES,
     Agentspec,
     HarnessSpec,
     harness_problems,
-    unserved_harness_problem,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -135,23 +135,15 @@ class TestWhatAHarnessCannotHonourIsRefusedAtLoad:
         )
 
 
-class TestAHarnessAgentIsNotServedYet:
-    def test_the_create_route_refuses_it_and_nothing_falls_back(self) -> None:
-        assert unserved_harness_problem("pydantic-ai") is None
-        assert unserved_harness_problem("vercel-ai") is None
-        assert unserved_harness_problem("codex") == (
-            "The harness 'codex' is not served yet: SHIELD SH-10. Nothing runs this agent in its place."
-        )
-
-    def test_the_route_raises_501(self) -> None:
+class TestAHarnessAgentIsServedByTheAdapter:
+    def test_the_create_route_branches_on_the_harness_and_nothing_falls_back(
+        self,
+    ) -> None:
         source = (REPO / "agent_runtimes" / "routes" / "agents.py").read_text()
-        assert "unserved_harness_problem(" in source
-        assert "HTTPException(status_code=501, detail=unserved)" in source
-        with pytest.raises(HTTPException) as refused:
-            raise HTTPException(
-                status_code=501, detail=unserved_harness_problem("claude-code")
-            )
-        assert "SHIELD SH-10" in refused.value.detail
+        assert "if harness_id not in BUILTIN_HARNESSES:" in source
+        assert "_harness_agent_of(" in source
+        assert "not served yet" not in source
+        assert BUILTIN_HARNESSES == ("pydantic-ai", "vercel-ai")
 
 
 class TestTheGenerator:

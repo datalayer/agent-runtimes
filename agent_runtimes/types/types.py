@@ -586,31 +586,6 @@ def harness_problems(
     return problems
 
 
-def unserved_harness_problem(harness_id: str) -> Optional[str]:
-    """
-    Why an agent on this harness cannot be created today, or None.
-
-    A catalogue harness is described and refused at load, and not served:
-    the ACP adapter is SHIELD SH-10. Nothing falls back to pydantic-ai.
-
-    Parameters
-    ----------
-    harness_id : str
-        What the spec's `harness:` says.
-
-    Returns
-    -------
-    Optional[str]
-        The sentence, or None for a builtin harness.
-    """
-    if harness_id in BUILTIN_HARNESSES:
-        return None
-    return (
-        f"The harness {harness_id!r} is not served yet: SHIELD SH-10. "
-        "Nothing runs this agent in its place."
-    )
-
-
 class FrameGuardSpec(BaseModel):
     """A check a Frame requires of the output of work done under it."""
 

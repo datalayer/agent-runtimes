@@ -355,6 +355,20 @@ def _run_agent_runtime_server(
         if agent_spec.sandbox_variant:
             sandbox_variant = agent_spec.sandbox_variant
 
+    if os.environ.get("AGENT_RUNTIMES_HARNESS"):
+        # A harness (SHIELD §4.9): the runtime makes its agent at startup
+        # from the catalogue, named `chat`; no library agent, no codemode.
+        os.environ["AGENT_RUNTIMES_AGENT_NAME"] = DEFAULT_RUNTIME_AGENT_NAME
+        serve_server(
+            host=host,
+            port=actual_port,
+            log_level=LogLevel.debug if debug_mode else LogLevel.critical,
+            no_config_mcp_servers=True,
+            codemode=False,
+            protocol=protocol,
+        )
+        return
+
     serve_server(
         host=host,
         port=actual_port,
@@ -1211,6 +1225,15 @@ def main_callback(
             "asked; exits non-zero when a line errors."
         ),
     ),
+    harness: Optional[str] = typer.Option(
+        None,
+        "--harness",
+        help=(
+            "Run a harness of the catalogue (claude-code, codex, …) on this machine "
+            "over ACP, in the directory you run from, with decision 5's policy and "
+            "the record in the terminal (SHIELD.md §4.9); `loop harnesses` lists them."
+        ),
+    ),
     voice: bool = typer.Option(
         False,
         "--voice",
@@ -1259,6 +1282,23 @@ def main_callback(
     if show_version:
         _show_version()
         raise typer.Exit(0)
+
+    # A harness runs on this machine, in this directory (SHIELD §4.9):
+    # resolved here, before anything starts, so a refusal is a sentence in
+    # this terminal rather than a runtime that never answers.
+    if harness:
+        if cloud or runtime or agentspec_id:
+            raise typer.BadParameter(
+                "--harness runs on this machine, in this directory (SHIELD §4.9): "
+                "drop --cloud, --runtime and --agentspec-id."
+            )
+        try:
+            _prepare_harness(harness)
+        except ValueError as refused:
+            print(f"{GREEN_DARK}[ERROR]{RESET} {refused}", file=sys.stderr)
+            raise typer.Exit(1)
+        local = True
+        agentspec_id = harness
 
     if prompts:
         if query:
@@ -1921,6 +1961,69 @@ async def _remote_chat_loop_ag_ui(url: str) -> None:
         print(f"{GRAY}Make sure the agent server is running.{RESET}", file=sys.stderr)
     except Exception as e:
         print(f"{GREEN_DARK}[ERROR]{RESET} Connection error: {e}", file=sys.stderr)
+
+
+def _prepare_harness(harness_id: str) -> None:
+    """Resolve a catalogue harness for this machine, or refuse in a sentence.
+
+    What the runtime would refuse at creation is refused here first, by the
+    same functions (`agent_runtimes.adapters.acp_agent`), so the sentence
+    reaches the terminal: the adapter not installed, a declared secret
+    missing, no workspace. The workspace is the directory `loop` runs in.
+    """
+    import os
+
+    from agent_runtimes.adapters.acp_agent import (
+        WORKSPACE_VARIABLE,
+        HarnessRefused,
+        harness_environment,
+        harness_workspace,
+        launch_command,
+    )
+    from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
+
+    spec = HARNESS_CATALOGUE.get(harness_id)
+    if spec is None:
+        raise ValueError(
+            f"There is no harness named {harness_id!r}: one of "
+            f"{', '.join(sorted(HARNESS_CATALOGUE))} (`loop harnesses`)."
+        )
+    os.environ.setdefault(WORKSPACE_VARIABLE, os.getcwd())
+    try:
+        launch_command(spec)
+        harness_environment(spec)
+        harness_workspace()
+    except HarnessRefused as refused:
+        raise ValueError(str(refused)) from None
+    os.environ["AGENT_RUNTIMES_HARNESS"] = harness_id
+
+
+@app.command()
+def harnesses() -> None:
+    """List the harnesses of the catalogue, each with its terms (SHIELD.md §4.9).
+
+    A harness is a coding agent — Claude Code, Codex, Gemini CLI, goose,
+    OpenCode, OpenHands — or any program speaking the Agent Client Protocol,
+    run with `loop --harness <id>` in the directory you run from.
+    """
+    from agent_runtimes.specs.harnesses import list_harnesses
+
+    for spec in list_harnesses():
+        if spec.acp is None:
+            continue
+        entry = spec.registered
+        print(
+            f"  {GREEN_MEDIUM}•{RESET} {BOLD}{spec.name}{RESET}  {GRAY}loop --harness {spec.id}{RESET}"
+        )
+        print(f"    {GRAY}Adapter:{RESET} {entry.adapter} {entry.version}")
+        print(f"    {GRAY}Credential:{RESET} {entry.credential}")
+        served = spec.terms.served_to_third_parties.replace("_", " ")
+        tiers = (
+            f" — {spec.terms.tier_restrictions}" if spec.terms.tier_restrictions else ""
+        )
+        print(f"    {GRAY}Serving others:{RESET} {served}{tiers}")
+        print(f"    {GRAY}Licence:{RESET} {spec.terms.licence}")
+        print()
 
 
 @app.command()

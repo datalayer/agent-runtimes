@@ -5,6 +5,7 @@
 
 from .types import (
     AGENT_CAPABILITIES,
+    BUILTIN_HARNESSES,
     A2ASubagentConfig,
     ActionConditionSpec,
     AgentCapability,
@@ -160,7 +161,6 @@ from .types import (
     UiRendererSpec,
     UISpec,
     harness_problems,
-    unserved_harness_problem,
 )
 
 __all__ = [
@@ -185,8 +185,8 @@ __all__ = [
     "HarnessSkillsSpec",
     "HarnessSpec",
     "HarnessTermsSpec",
+    "BUILTIN_HARNESSES",
     "harness_problems",
-    "unserved_harness_problem",
     "CogSpec",
     "FrameGuardSpec",
     "FramePromptSpec",

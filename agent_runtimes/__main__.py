@@ -371,6 +371,15 @@ def main_callback(
             "printed), then stop. Repeatable, run in order in one session."
         ),
     ),
+    harness: Optional[str] = typer.Option(
+        None,
+        "--harness",
+        help=(
+            "Run a harness of the catalogue (claude-code, codex, …) on this machine "
+            "over ACP, in the directory you run from (SHIELD.md §4.9); "
+            "`loop harnesses` lists them."
+        ),
+    ),
     voice: bool = typer.Option(
         False,
         "--voice",
@@ -501,6 +510,8 @@ def main_callback(
             chat_args.append("--keep")
         for prompt in prompts or []:
             chat_args.extend(["--prompt", prompt])
+        if harness:
+            chat_args.extend(["--harness", harness])
         if voice:
             chat_args.append("--voice")
         if speak:
@@ -524,6 +535,20 @@ try:
     )
 except Exception as exc:  # noqa: BLE001
     logger.warning("Chat CLI disabled at startup: %s", exc)
+
+
+@app.command("harnesses")
+def harnesses_command() -> None:
+    """List the harnesses of the catalogue, each with its terms (SHIELD.md §4.9).
+
+    A harness — Claude Code, Codex, Gemini CLI, goose, OpenCode, OpenHands,
+    or any program speaking the Agent Client Protocol — runs on this machine
+    with `loop --harness <id>`, in the directory you run from.
+    """
+    from agent_runtimes.chat.cli import harnesses
+
+    harnesses()
+
 
 # Register events command group and root aliases.
 app.add_typer(events_app)

@@ -124,21 +124,109 @@ unknown is not in the catalogue. The entries, in short:
 Reviewed by counsel: not yet. The register's engine side — the Shield reading
 it to refuse a credential kind — is SH-04's part in `agent-shield`.
 
+## The adapter (built: SH-10's adapter, SH-11, SH-12's runtime side, SH-13, SH-18, SH-19's `loop`; 15 October 2026)
+
+`agent_runtimes/adapters/acp_agent.py` is `ACPAgent(BaseAgent)`, the harness
+as a Datalayer agent, on the `agent-shield` package's engine
+(`datalayer-agent-shield` 0.1.1, `agent_shield.acp`, `policy`, `register`):
+the class **is** the package's `ShieldProxy` with the runtime as its outer face,
+so the proxy's own interception — tool calls classed and decided, `fs/*` and
+`terminal/*` answered against the workspace, the limits counted,
+`allow_always` a session rule — runs unchanged, and agent-runtimes adds only
+what needs the runtime.
+
+- **Launch and negotiate.** `initialize` resolves the harness's command from
+  its spec — an `npx` adapter is taken from `~/.agent-shield/harnesses/<id>@<version>`
+  (`agent-shield setup --harness <id>`) or from the PATH (the image's install,
+  SH-05), **never fetched at first run** — gives the process its spec's plain
+  variables and its declared secrets by name (a missing one is refused in a
+  sentence), launches it over stdio in the workspace (`AGENT_RUNTIMES_WORKSPACE_ROOT`,
+  refused when unset), runs `initialize` (protocol version 1, `fs` and
+  `terminal` on) and refuses what the spec asked that the agent did not
+  advertise (`loadSession`).
+- **The events** (§4.1's table): `agent_message_chunk` → `text`;
+  `agent_thought_chunk` → `thought`; `tool_call` → `tool_call` with `kind`,
+  `status`, `arguments`, `awaiting: approval` while pending, the policy's
+  sentence; `tool_call_update` → `tool_call` (in progress, with its displays)
+  or `tool_result` (completed or failed, the `diff` and `terminal` displays in
+  `display`); `plan` → `plan`; `available_commands_update` → `commands`;
+  `current_mode_update` → `mode`; the turn's end → `done` with the stop
+  reason. A malformed update, or an action a policy leaves to the person, ends
+  the turn with a sentence (`[Shield] …` as text, `done` with `stop_reason:
+  refusal` and the sentence).
+- **Permissions are Rules** (§4.5, SH-12). ACP's `kind` is classed by the
+  package's one table (`agent_shield.policy.class_of`: `other` → write, fail
+  closed; the table-driven test both ways is `test_acp_agent.py`). The policies
+  in force are the application's Rules on classes read into a `team`-scope
+  document (`agent_runtimes/guardrails/shield_policy.py`; `if_asked` read as
+  *ask me first*) above decision 5's default. *Do it* answers `allow_once`
+  without asking; *ask me first* raises the approval through the runtime's
+  tool approvals (Waiting for you, ai-agents `/ws`, `GET /tool-approvals/{id}`)
+  with the caller's token and answers what the person chose — a note saying
+  "always" picks `allow_always`, a session rule gone with the session; *leave
+  it to me* answers `reject_once` with the sentence; a turn cancelled while it
+  waits answers `cancelled`. A Rule of the application is never loosened by a
+  session rule (§6.3).
+- **Files and terminals** (§4.6, SH-13): `fs/read_text_file`,
+  `fs/write_text_file` and `terminal/*` are answered by the runtime against
+  the workspace, each a tool row (`Read README.md — do it`, kind `read`;
+  `Write hello.txt — do it`, kind `edit`, the diff as its display; `Run …`,
+  kind `execute`, the terminal as its display, its output and exit kept) and a
+  decision; a path outside the workspace is refused in a sentence before any
+  rule.
+- **The record** (§4.8, SH-18): the Shield's audit rows are the
+  application's record — a `decision` for what a policy decided, a `tool_call`
+  for what was done (the diff as its hash and size), an `approval` for what
+  the person answered, the `turn` and the run's end — kept as
+  `record.include` names them. The harness's session is kept in the protocol
+  state store; a restarted runtime loads it when the harness advertises
+  `loadSession` and says in a sentence when the replay and the record differ;
+  otherwise it **says** it starts over, never pretends to continue. Deleting
+  the agent (a paused deployment stops its runtime) ends the process.
+- **Served over** `ag-ui` (`transports/agui_stream.py`: `BaseAgent.stream` as
+  AG-UI events — the thinking events, `TOOL_CALL_*`, `TOOL_CALL_RESULT` with
+  the displays, `datalayer.harness.<plan|commands|mode|tool_call>` custom
+  events), `acp` and `a2a`; `vercel-ai` is refused in a sentence (it reads a
+  pydantic-ai agent, SH-16).
+- **`loop --harness <id>`** runs a harness on this machine over stdio, the
+  directory `loop` runs from as its workspace, decision 5's policy, the record
+  in the terminal; a missing adapter, secret or workspace is refused before
+  anything starts. **`loop harnesses`** lists the catalogue with each one's
+  adapter, credential, third-party serving and licence.
+- **The orchestrator's channel** (SH-02's agent-runtimes part):
+  `orchestration/adapters/acp.py` takes the package's channels as its
+  `ShieldChannel` — `stdio:<command line>` launches a local agent, `ws://`
+  connects — and no longer says *no stdio yet*; the client it was first built
+  on (`transports/clients/acp_client.py`) is out from under it.
+
+Tests: `test_acp_agent.py` (45: every update kind, the permissions, the
+kinds table both ways, sessions and the record, the resolution of a catalogue
+harness, Claude Code live as a marked test) and `test_acp_agent_transports.py`
+(9: AG-UI, the orchestrator's channel, the runtime started with a harness),
+all on the ACP SDK's fake agent (`tests/fixtures/acp_fake_agent.py`,
+agent-shield's): the only Anthropic key at hand has no credit, so Claude
+Code's first live turn through the adapter waits on a funded key.
+
 ## Not built yet
 
-- **The adapter** (SH-10): `ACPAgent(BaseAgent)` launching the harness over
-  stdio in the runtime. Today an agent whose spec names a catalogue harness is
-  **refused at creation** — `POST /agents` answers `501 The harness
-  'claude-code' is not served yet: SHIELD SH-10. Nothing runs this agent in its
-  place.` — and the Studio says the same of an application on such an agent.
-  Nothing falls back to pydantic-ai.
-- **The stdio ACP channel** (SH-02) and the proxy, `agent-shield run` (SH-08),
-  in the `agent-shield` package.
+- **Claude Code live** through the adapter (SH-10's marked test, SH-03): the
+  adapter reaches `initialize` and `session/new` through the proxy; its turn
+  waits on a funded key. The Studio's Build still refuses an application on a
+  catalogue harness (`src/runtimes/variants.ts`, `unservedHarnessProblem`):
+  the TypeScript side is not yet told the runtime serves it.
+- **Drilled on r1** (SH-12): a kept Python application whose agent is a
+  harness, its permissions decided from the page.
 - **The adapters in the runtime image** (SH-05), installed at build and never
-  fetched at first run.
-- **Every transport** for a harness agent — A2A, AG-UI, the session API, the
-  embed, with `diff` and `terminal` displays (SH-11 to SH-21); **skills
-  written in the harness's format** and the instructions file (SH-21).
-- **The Shield**: the file and shell policy, the stateful limits, the audit,
-  the report, the policies from IAM (SH-30 to SH-39, SH-50 to SH-54).
+  fetched at first run; `plane local` running a harness beside the local
+  runtime (SH-19's second half).
+- **MCP lent through the gateway** (SH-14); the A2A worker's plan and diff
+  artifacts (SH-15); the `diff` and `terminal` displays drawn by the web chat,
+  the embed and the phone (SH-16); ACP in, ACP out (SH-17); the web chat's
+  own transport (`vercel-ai`) for a harness; **skills written in the
+  harness's format** and the instructions file (SH-21); a harness's question
+  (`elicitation/create`) answered from the page — declined today, in a
+  sentence.
+- **The Shield**: the file and shell policy from IAM, the stateful limits
+  beyond decision 5's, the audit's export, the report (SH-30 to SH-39, SH-50
+  to SH-54).
 - **The long tail** of ACP agents as a listed tier of the register (SH-57).
