@@ -12,24 +12,26 @@
  * hard, and decisions in the words `describeDecision` gives every card and
  * row. Needs nothing running: it reads the package only.
  *
- * `@datalayer/agent-shield` is imported as the monorepo's workspace link to
- * `ai/agent-shield` (its `lib/`, built by its own `tsc -b`), not from npm:
- * npm's latest is an old scaffold until the user unpublishes it, so
- * agent-runtimes' `package.json` does not declare it yet.
+ * `@datalayer/agent-shield` is not on npm yet: the page reads it from the
+ * sibling checkout `ai/agent-shield` beside agent-runtimes (see
+ * `shield/shieldPolicyDemo`), and says so where it is not there.
  *
  * @module examples/ShieldPolicyExample
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Heading, Text } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { ThemedProvider } from './utils/themedProvider';
 import {
+  AGENT_SHIELD_MISSING,
   ORGANIZATION_POLICY,
   classRows,
   decisionRows,
   kindRows,
   limitRows,
+  loadAgentShield,
+  type AgentShieldPolicyModule,
 } from './shield/shieldPolicyDemo';
 
 const cell = {
@@ -72,25 +74,19 @@ function Table({
   );
 }
 
-const ShieldPolicyExample: React.FC = () => (
-  <ThemedProvider>
-    <Box p={4} maxWidth="900px" mx="auto" data-testid="shield-policy-example">
-      <Heading as="h1" sx={{ fontSize: 4, mb: 2 }}>
-        The Shield's policy, typed
-      </Heading>
-      <Text as="p" sx={{ color: 'fg.muted', mb: 4 }}>
-        An organization's document as `@datalayer/agent-shield` types it, and
-        what it decides. Three levels decide every action — the organization's,
-        the application's, the session's — strictest first; a lower level only
-        tightens.
-      </Text>
-
+function Tables({
+  shield,
+}: {
+  shield: AgentShieldPolicyModule;
+}): React.JSX.Element {
+  return (
+    <>
       <Heading as="h2" sx={{ fontSize: 2, mb: 2 }}>
         By class
       </Heading>
       <Table
         head={['Class', `The ${ORGANIZATION_POLICY.scope}'s document says`]}
-        rows={classRows().map(row => [row.actionClass, row.says])}
+        rows={classRows(shield).map(row => [row.actionClass, row.says])}
       />
 
       <Heading as="h2" sx={{ fontSize: 2, mb: 2 }}>
@@ -98,7 +94,7 @@ const ShieldPolicyExample: React.FC = () => (
       </Heading>
       <Table
         head={['ACP kind', 'Decided as']}
-        rows={kindRows().map(row => [row.kind, row.actionClass])}
+        rows={kindRows(shield).map(row => [row.kind, row.actionClass])}
       />
 
       <Heading as="h2" sx={{ fontSize: 2, mb: 2 }}>
@@ -106,7 +102,7 @@ const ShieldPolicyExample: React.FC = () => (
       </Heading>
       <Table
         head={['Limit', 'Soft: asks once', 'Hard: refuses']}
-        rows={limitRows().map(row => [row.limit, row.soft, row.hard])}
+        rows={limitRows(shield).map(row => [row.limit, row.soft, row.hard])}
       />
 
       <Heading as="h2" sx={{ fontSize: 2, mb: 2 }}>
@@ -114,10 +110,48 @@ const ShieldPolicyExample: React.FC = () => (
       </Heading>
       <Table
         head={['The Shield said', 'describeDecision']}
-        rows={decisionRows().map(row => [row.sentence, row.words])}
+        rows={decisionRows(shield).map(row => [row.sentence, row.words])}
       />
-    </Box>
-  </ThemedProvider>
-);
+    </>
+  );
+}
+
+const ShieldPolicyExample: React.FC = () => {
+  // `undefined` while reading, `null` without the sibling checkout.
+  const [shield, setShield] = useState<
+    AgentShieldPolicyModule | null | undefined
+  >(undefined);
+  useEffect(() => {
+    let live = true;
+    void loadAgentShield().then(loaded => live && setShield(loaded));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return (
+    <ThemedProvider>
+      <Box p={4} maxWidth="900px" mx="auto" data-testid="shield-policy-example">
+        <Heading as="h1" sx={{ fontSize: 4, mb: 2 }}>
+          The Shield's policy, typed
+        </Heading>
+        <Text as="p" sx={{ color: 'fg.muted', mb: 4 }}>
+          An organization's document in `@datalayer/agent-shield`'s shape, and
+          what it decides. Three levels decide every action — the
+          organization's, the application's, the session's — strictest first; a
+          lower level only tightens.
+        </Text>
+        {shield === undefined ? (
+          <Text as="p">Reading @datalayer/agent-shield…</Text>
+        ) : shield === null ? (
+          <Text as="p" sx={{ color: 'attention.fg' }}>
+            {AGENT_SHIELD_MISSING}
+          </Text>
+        ) : (
+          <Tables shield={shield} />
+        )}
+      </Box>
+    </ThemedProvider>
+  );
+};
 
 export default ShieldPolicyExample;

@@ -14,7 +14,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
-import { describeDecision } from '@datalayer/agent-shield';
 
 import { EXAMPLES, getExampleEntries } from '../example-selector';
 import { getExampleGroup } from '../exampleGroups';
@@ -24,6 +23,7 @@ import {
   decisionRows,
   kindRows,
   limitRows,
+  loadAgentShield,
 } from '../shield/shieldPolicyDemo';
 import {
   SHIELD_HARNESS_AGENT,
@@ -31,6 +31,9 @@ import {
 } from '../shield/shieldHarness';
 
 const ROOT = join(__dirname, '..', '..', '..');
+
+/** `@datalayer/agent-shield` from the sibling checkout; absent in agent-runtimes' own CI. */
+const shield = await loadAgentShield();
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');
 
 describe('the Shield examples', () => {
@@ -41,47 +44,6 @@ describe('the Shield examples', () => {
       expect(EXAMPLES[id], id).toBeTypeOf('function');
       expect(getExampleGroup(id)).toBe('Shield');
     }
-  });
-
-  it('draws the organization’s document by class, strictest words first', () => {
-    const rows = Object.fromEntries(
-      classRows().map(row => [row.actionClass, row.says]),
-    );
-    expect(rows.execute).toBe("ask me first — 'commands ask'");
-    expect(rows.delete).toBe(
-      "leave it to me — 'nothing deleted outside' (outside the workspace)",
-    );
-    expect(rows.read).toBe('nothing said: the next level decides');
-  });
-
-  it('classes the tool kinds as the Shield does', () => {
-    const kinds = Object.fromEntries(
-      kindRows().map(row => [row.kind, row.actionClass]),
-    );
-    expect(kinds).toMatchObject({
-      fetch: 'read',
-      move: 'write',
-      other: 'write',
-      think: 'nothing to decide',
-    });
-  });
-
-  it('says the limits soft then hard, in the sentences’ words', () => {
-    expect(limitRows()).toEqual([
-      { limit: 'tool calls', soft: '200', hard: '400' },
-      { limit: 'model tokens spent', soft: '200000', hard: '500000' },
-      { limit: 'credits spent', soft: '500', hard: '1000' },
-    ]);
-  });
-
-  it('says each decision in describeDecision’s words', () => {
-    expect(decisionRows().map(row => row.words)).toEqual(
-      DECISIONS.map(describeDecision),
-    );
-    expect(decisionRows()[1].words).toBe(
-      "ask me first — organization rule 'commands ask'",
-    );
-    expect(decisionRows()[3].words).toBe('ask me first — nothing names it');
   });
 
   it('connects to what the runtime example serves, and offers what the fake agent answers', () => {
@@ -101,3 +63,51 @@ describe('the Shield examples', () => {
     }
   });
 });
+
+describe.skipIf(shield === null)(
+  'the policy page, on @datalayer/agent-shield from the sibling checkout',
+  () => {
+    it('draws the organization’s document by class, strictest words first', () => {
+      const rows = Object.fromEntries(
+        classRows(shield!).map(row => [row.actionClass, row.says]),
+      );
+      expect(rows.execute).toBe("ask me first — 'commands ask'");
+      expect(rows.delete).toBe(
+        "leave it to me — 'nothing deleted outside' (outside the workspace)",
+      );
+      expect(rows.read).toBe('nothing said: the next level decides');
+    });
+
+    it('classes the tool kinds as the Shield does', () => {
+      const kinds = Object.fromEntries(
+        kindRows(shield!).map(row => [row.kind, row.actionClass]),
+      );
+      expect(kinds).toMatchObject({
+        fetch: 'read',
+        move: 'write',
+        other: 'write',
+        think: 'nothing to decide',
+      });
+    });
+
+    it('says the limits soft then hard, in the sentences’ words', () => {
+      expect(limitRows(shield!)).toEqual([
+        { limit: 'tool calls', soft: '200', hard: '400' },
+        { limit: 'model tokens spent', soft: '200000', hard: '500000' },
+        { limit: 'credits spent', soft: '500', hard: '1000' },
+      ]);
+    });
+
+    it('says each decision in describeDecision’s words', () => {
+      expect(decisionRows(shield!).map(row => row.words)).toEqual(
+        DECISIONS.map(decision => shield!.describeDecision(decision)),
+      );
+      expect(decisionRows(shield!)[1].words).toBe(
+        "ask me first — organization rule 'commands ask'",
+      );
+      expect(decisionRows(shield!)[3].words).toBe(
+        'ask me first — nothing names it',
+      );
+    });
+  },
+);

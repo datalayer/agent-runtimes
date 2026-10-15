@@ -3,6 +3,8 @@
  * Distributed under the terms of the Modified BSD License.
  */
 
+/// <reference types="vite/client" />
+
 /**
  * What `ShieldPolicyExample` draws, as data (SHIELD §5.1, SH-53; SH-23).
  *
@@ -10,29 +12,74 @@
  * document's types generated from the schema the Python package publishes,
  * the classes and the verdicts, ACP's tool kinds mapped to the classes, the
  * limits' words, and `describeDecision` — the one place a decision's words
- * are written. It is not on npm yet (npm's latest is an old scaffold): this
- * imports it as the monorepo's workspace link to `ai/agent-shield`, built
- * by its own `tsc -b` (`lib/`), and agent-runtimes' `package.json` does not
- * declare it until it resolves from npm.
+ * are written. It is not on npm yet (npm's latest is an old scaffold), so
+ * agent-runtimes does not depend on it: this page reads it from the sibling
+ * checkout, `ai/agent-shield/src/policy.ts` beside `ai/agent-runtimes`, the
+ * way the monorepo lays them out — through Vite's `import.meta.glob`, which
+ * finds nothing (and the page says so) where the sibling is not there, as in
+ * agent-runtimes' own CI. The shapes below name only what the page reads;
+ * the types themselves are the package's.
  *
  * @module examples/shield/shieldPolicyDemo
  */
 
-import {
-  ACTION_CLASSES,
-  KIND_CLASS,
-  LIMIT_NAMES,
-  LIMIT_WORDS,
-  TOOL_KINDS,
-  VERDICT_WORDS,
-  describeDecision,
-  type ActionClass,
-  type Decision,
-  type Policy,
-} from '@datalayer/agent-shield';
+export type Verdict = 'allow' | 'ask' | 'deny';
 
-/** An organization's document, typed by the schema: what an administrator writes. */
-export const ORGANIZATION_POLICY: Policy = {
+/** A decision as the Shield returns it (the package's `Decision`). */
+export type Decision = {
+  verdict: Verdict;
+  sentence: string;
+  scope?: 'organization' | 'team' | 'session' | null;
+  rule?: string | null;
+  decided_by: 'rule' | 'limit' | 'network' | 'default';
+};
+
+/** The part of a policy document the page draws (the package's `Policy`). */
+export type PolicyDocument = {
+  scope: 'organization' | 'team' | 'session';
+  rules?: Array<{
+    name: string;
+    decision: Verdict;
+    classes?: string[];
+    commands?: string[];
+    where?: 'inside' | 'outside' | 'any';
+    reason?: string;
+  }>;
+  limits?: Record<string, { soft: number; hard: number } | null | undefined>;
+  harnesses?: {
+    admit?: string[];
+    credentials?: 'account' | 'platform' | 'either';
+  };
+};
+
+/** What the page reads from `@datalayer/agent-shield`'s `policy.ts`. */
+export type AgentShieldPolicyModule = {
+  ACTION_CLASSES: readonly string[];
+  TOOL_KINDS: readonly string[];
+  KIND_CLASS: Record<string, string | null>;
+  LIMIT_NAMES: readonly string[];
+  LIMIT_WORDS: Record<string, string>;
+  VERDICT_WORDS: Record<Verdict, string>;
+  describeDecision: (decision: Decision) => string;
+};
+
+/** The sibling checkout's module, when it is there. */
+const SIBLING = import.meta.glob<AgentShieldPolicyModule>(
+  '../../../../agent-shield/src/policy.ts',
+);
+
+/** What the page says when the sibling checkout is not beside this one. */
+export const AGENT_SHIELD_MISSING =
+  'This page reads @datalayer/agent-shield from the sibling checkout ai/agent-shield, which is not beside this one: clone github.com/datalayer/agent-shield next to agent-runtimes (the package is not on npm yet).';
+
+/** `@datalayer/agent-shield`'s policy module, or `null` without the sibling checkout. */
+export async function loadAgentShield(): Promise<AgentShieldPolicyModule | null> {
+  const load = Object.values(SIBLING)[0];
+  return load ? load() : null;
+}
+
+/** An organization's document, in the package's shape: what an administrator writes. */
+export const ORGANIZATION_POLICY: PolicyDocument = {
   scope: 'organization',
   rules: [
     {
@@ -62,50 +109,53 @@ export const ORGANIZATION_POLICY: Policy = {
 };
 
 /** One row per class: what the organization's document decides for it, in words. */
-export type ClassRow = { actionClass: ActionClass; says: string };
-
-export function classRows(policy: Policy = ORGANIZATION_POLICY): ClassRow[] {
-  return ACTION_CLASSES.map(actionClass => {
+export function classRows(
+  shield: AgentShieldPolicyModule,
+  policy: PolicyDocument = ORGANIZATION_POLICY,
+): Array<{ actionClass: string; says: string }> {
+  return shield.ACTION_CLASSES.map(actionClass => {
     const rule = (policy.rules ?? []).find(item =>
       (item.classes ?? []).includes(actionClass),
     );
     return {
       actionClass,
       says: rule
-        ? `${VERDICT_WORDS[rule.decision]} — '${rule.name}'${rule.where && rule.where !== 'any' ? ` (${rule.where} the workspace)` : ''}`
+        ? `${shield.VERDICT_WORDS[rule.decision]} — '${rule.name}'${rule.where && rule.where !== 'any' ? ` (${rule.where} the workspace)` : ''}`
         : 'nothing said: the next level decides',
     };
   });
 }
 
-/** ACP's tool kinds and the class each is decided as (§4.5); `null` is nothing to decide. */
-export function kindRows(): Array<{ kind: string; actionClass: string }> {
-  return TOOL_KINDS.map(kind => ({
+/** ACP's tool kinds and the class each is decided as (§4.5). */
+export function kindRows(
+  shield: AgentShieldPolicyModule,
+): Array<{ kind: string; actionClass: string }> {
+  return shield.TOOL_KINDS.map(kind => ({
     kind,
-    actionClass: KIND_CLASS[kind] ?? 'nothing to decide',
+    actionClass: shield.KIND_CLASS[kind] ?? 'nothing to decide',
   }));
 }
 
 /** The limits a document sets, soft then hard, in the sentences' words. */
 export function limitRows(
-  policy: Policy = ORGANIZATION_POLICY,
+  shield: AgentShieldPolicyModule,
+  policy: PolicyDocument = ORGANIZATION_POLICY,
 ): Array<{ limit: string; soft: string; hard: string }> {
-  return LIMIT_NAMES.flatMap(name => {
+  return shield.LIMIT_NAMES.flatMap(name => {
     const threshold = policy.limits?.[name];
-    if (!threshold) {
-      return [];
-    }
-    return [
-      {
-        limit: LIMIT_WORDS[name],
-        soft: threshold.soft == null ? '—' : String(threshold.soft),
-        hard: threshold.hard == null ? '—' : String(threshold.hard),
-      },
-    ];
+    return threshold
+      ? [
+          {
+            limit: shield.LIMIT_WORDS[name],
+            soft: String(threshold.soft),
+            hard: String(threshold.hard),
+          },
+        ]
+      : [];
   });
 }
 
-/** Decisions as the Shield returns them, and their words through `describeDecision`. */
+/** Decisions as the Shield returns them. */
 export const DECISIONS: Decision[] = [
   {
     verdict: 'allow',
@@ -134,9 +184,12 @@ export const DECISIONS: Decision[] = [
   },
 ];
 
-export function decisionRows(): Array<{ sentence: string; words: string }> {
+/** Each decision and its words through `describeDecision`. */
+export function decisionRows(
+  shield: AgentShieldPolicyModule,
+): Array<{ sentence: string; words: string }> {
   return DECISIONS.map(decision => ({
     sentence: decision.sentence,
-    words: describeDecision(decision),
+    words: shield.describeDecision(decision),
   }));
 }
