@@ -278,6 +278,73 @@ export interface PolicySpec {
   };
 }
 
+/**
+ * One control of a standard, as its spec carries it (`agentspecs/standards`).
+ */
+export interface StandardControl {
+  id: string;
+  title: string;
+  domain: string;
+  application: 'mandatory' | 'optional';
+  retired: boolean;
+  retired_in?: string | null;
+  url?: string;
+  cadence_months?: number | null;
+  type?: 'preventative' | 'detective' | null;
+  summary?: string;
+  keywords?: string[];
+  capabilities?: string[];
+  activities?: Array<{ required: 'core' | 'supplemental'; activity: string }>;
+  evidence?: Array<{
+    id: string;
+    kind:
+      | 'documentation'
+      | 'config'
+      | 'logs'
+      | 'evals'
+      | 'report'
+      | 'demonstration'
+      | 'retired';
+    title: string;
+    required: 'core' | 'supplemental';
+    category?: string;
+    locations?: string[];
+    description?: string;
+  }>;
+  /** Framework id → the references of that framework this control maps to. */
+  crosswalks?: Record<string, string[]>;
+  /** For a standard that maps to another: that standard's controls covering this one, and how far. */
+  covered_by?: string[] | null;
+  coverage?: 'full' | 'partial' | 'none' | null;
+  coverage_note?: string;
+}
+
+/**
+ * A standard a conformance report answers (`agentspecs/standards`, SHIELD.md
+ * SH-60, §6.9): its version, domains and controls, carried whole.
+ */
+export interface StandardSpec {
+  id: string;
+  /** The standard's own version (2026.4, 2023). */
+  version: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  tags: string[];
+  publishedBy: string;
+  url: string;
+  releasedOn: string;
+  nextReleaseOn: string | null;
+  /** The day the spec was read from the published pages (decision 16). */
+  readOn: string;
+  certificateValidMonths: number;
+  mapsTo: string | null;
+  evidenceKinds: Record<string, string>;
+  frameworks: Record<string, string>;
+  domains: Array<{ id: string; name: string; url?: string }>;
+  controls: StandardControl[];
+}
+
 export interface HarnessSpec {
   /** What `harness:` names (e.g. 'claude-code'). */
   id: string;

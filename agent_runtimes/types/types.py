@@ -504,6 +504,46 @@ class PolicySpec(BaseModel):
     )
 
 
+class StandardSpec(BaseModel):
+    """A standard a conformance report answers (`agentspecs/standards`,
+    SHIELD.md SH-60, §6.9): its version, domains and controls, each control
+    carried whole — id, title, application, cadence, evidence items,
+    crosswalks — so a screen names nothing by hand.
+    """
+
+    id: str = Field(..., description="The standard's id (e.g. 'aiuc-1')")
+    version: str = Field(..., description="The standard's own version (2026.4, 2023)")
+    name: str = Field(..., description="Display name")
+    description: str = Field(default="", description="What it is")
+    enabled: bool = Field(default=True)
+    tags: List[str] = Field(default_factory=list)
+    published_by: str = Field(default="")
+    url: str = Field(default="")
+    released_on: str = Field(
+        ..., description="When this version was released, ISO date"
+    )
+    next_release_on: Optional[str] = Field(
+        default=None, description="When the next is due; None when not scheduled"
+    )
+    read_on: str = Field(
+        ...,
+        description="The day the spec was read from the published pages (decision 16)",
+    )
+    certificate_valid_months: int = Field(default=12)
+    maps_to: Optional[str] = Field(
+        default=None, description="The standard whose controls cover this one's clauses"
+    )
+    evidence_kinds: Dict[str, str] = Field(default_factory=dict)
+    frameworks: Dict[str, str] = Field(
+        default_factory=dict, description="Framework id → name, for the crosswalks"
+    )
+    domains: List[Dict[str, Any]] = Field(default_factory=list)
+    controls: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Each control as the spec carries it: id, title, domain, application, retired, cadence_months, evidence, crosswalks",
+    )
+
+
 class HarnessRegisterEntry(BaseModel):
     """The register's line for a harness (SHIELD §3.3): what was checked, and where."""
 
