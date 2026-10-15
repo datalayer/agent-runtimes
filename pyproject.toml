@@ -206,7 +206,7 @@ voice = [
     "sounddevice>=0.5.0",
 ]
 ui = [
-    "ag-ui-protocol>=0.1.19",
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SHIELD SH-10)
     "agent-client-protocol>=0.7.1",
     "mcp-ui-server>=1.0.0,<1.1.0",
 ]
@@ -257,7 +257,7 @@ examples = [
 ]
 cli = [
     # The CLI talks to its agent over AG-UI (`CliTux.send_message`).
-    "ag-ui-protocol>=0.1.19",
+    "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SHIELD SH-10)
     "agent-client-protocol>=0.7.1",
     "jupyter-nbmodel-client",
     "pillow",

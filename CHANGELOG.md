@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.34
+
+On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1.
+
+- **`ag-ui-protocol` capped below 1** (SHIELD SH-10, found on r1 in runtime image 0.0.44): 1.0.0 (17 September 2026) dropped `ThinkingEndEvent` and the thinking events `transports/agui_stream.py` writes, so an image built on the uncapped floor served a harness over `acp` and `a2a` and silently never mounted its AG-UI route (*Could not register with AG-UI*, then a 404 for every turn). The drill that found it, with 0.1.19 in the pod: Claude Code launched from the image's prefix, `session/new` answered, the first turn ending with Anthropic's refusal as the Shield's sentence (*Claude Code refused the turn: Internal error: Credit balance is too low*). [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
+
 ## 1.5.33
 
 On agentspecs 0.0.101 and `datalayer-agent-shield` 0.1.1. 1.5.31 and 1.5.32 were tagged minutes before with everything below but the catalogue's agent; this carries them.
