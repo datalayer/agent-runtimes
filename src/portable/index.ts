@@ -157,6 +157,15 @@ export {
   type DirectTarget,
 } from './direct';
 
+// How a sign-in under way stands, asked by the person's own client (MOBILE M-039).
+export {
+  SIGN_IN_POLL_MS,
+  SIGN_IN_STATUS_PATH,
+  signInStandsOf,
+  signInStatusClient,
+  type SignInStands,
+} from './signInStatus';
+
 // The runtime's routes a native client drives.
 export {
   agentRunClient,
