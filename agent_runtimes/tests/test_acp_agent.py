@@ -315,6 +315,34 @@ class TestEveryUpdateKind:
         done = next(r for r in of(events, "tool_result") if r["id"] == "c2")
         assert done["display"] == [{"display": "text", "text": "# A readme\nread me\n"}]
 
+    async def test_a_write_outside_the_workspace_is_refused_in_a_sentence(
+        self, workspace: Path, tmp_path: Path
+    ) -> None:
+        """SHIELD SH-37's drill: a write outside the workspace through the Shield's ``fs/write_text_file``."""
+        elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
+        elsewhere.mkdir()
+        agent = an_agent(workspace)
+        try:
+            events = await turn(agent, f"write {elsewhere / 'planted.txt'}")
+        finally:
+            await agent.cleanup()
+        assert "write refused" in texts(events)
+        assert "outside the workspace" in texts(events)
+        assert not (elsewhere / "planted.txt").exists()
+        failed = [r for r in of(events, "tool_result") if r["status"] == "failed"]
+        assert failed and failed[0]["id"].startswith("shield_")
+        refused = [
+            r
+            for r in agent.audit.rows
+            if r["event"] == "fs_write" and r.get("decision") == "deny"
+        ]
+        assert (
+            refused
+            and refused[0]["rule"] == "workspace"
+            and "planted.txt" in refused[0]["path"]
+        )
+
+    @pytest.mark.asyncio
     async def test_a_read_outside_the_workspace_is_refused_in_a_sentence(
         self, workspace: Path
     ) -> None:
