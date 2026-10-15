@@ -17,7 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from agent_shield.policy import KIND_CLASS, Context, class_of, decide
@@ -1301,7 +1301,7 @@ async def test_claude_code_live(tmp_path: Path) -> None:
     agent = harness_agent(
         "claude",
         "claude-code",
-        approvals=Approvals(),  # type: ignore[arg-type]  # a test's double of the manager
+        approvals=cast(Any, Approvals()),  # a test's double of the manager
         environment={**os.environ, WORKSPACE_VARIABLE: str(tmp_path)},
     )
     await agent.initialize()
