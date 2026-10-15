@@ -270,3 +270,36 @@ async def test_a_file_is_answered_by_the_ref_its_upload_answered() -> None:
     assert live.describe()["files"][-1]["name"] == "orders.csv"
     patch = sessions.UI_HUB.ops(live.uid)[-1].op.model_dump(mode="json")
     assert patch["body"][1] == {"op": "replace", "path": "/actions", "value": []}
+
+
+async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None:
+    """MOBILE M-023: the record says the application waits for an answer, whatever
+    `record.include` keeps, and ai-agents tells whoever opened the session; the
+    question's words stay in the conversation."""
+    sent: List[Dict[str, Any]] = []
+
+    async def send(body: Dict[str, Any]) -> None:
+        sent.append(body)
+
+    application = Application(id="notes-assistant", agent="example-simple")
+    live = sessions.LiveSession(
+        uid="session-ask-record",
+        agent_id="notes-assistant",
+        app=application.spec,
+        instance={},
+        opened_by=ADA,
+        acts_as={"kind": "person", "uid": "ada"},
+        recorder=AppRecorder(app=application.spec, send=send),
+    )
+    live.host = AppHost(application, live, recorder=live.recorder)
+    live.session = await live.host.open(id=live.uid)
+
+    async def work() -> None:
+        await live.session.ask(ChoiceQuestion("May this be recorded?", ("Yes", "No")))
+
+    [chunk async for chunk in live._start_turn(work, wraps_run=True)]
+    await live.recorder.settled(live.uid)
+    asked = [e for body in sent for e in body.get("entries", []) if e.get("kind") == "asked"]
+    assert len(asked) == 1
+    assert asked[0]["payload"]["kind"] == "choice" and asked[0]["payload"]["asked_at"]
+    assert "May this be recorded" not in json.dumps(asked)

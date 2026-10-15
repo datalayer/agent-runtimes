@@ -1231,6 +1231,9 @@ class LiveSession:
             )
         )
         self.state = "waiting"
+        # Its record says it waits: whoever opened it is told (MOBILE M-023).
+        self.recorder.start(self.uid)
+        self.recorder.asked(self.uid, question_of(question).get("kind", ""))
         self._end_stream()
         return await future
 

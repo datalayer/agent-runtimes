@@ -107,9 +107,10 @@ INCLUDED_BY = {
 }
 
 #: Kept whatever `record.include` says: a session's start, a run's start
-#: (what Activity reads as in progress, LOOP R-15), and what its channels were
-#: sent (LOOP R-37).
-ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread"})
+#: (what Activity reads as in progress, LOOP R-15), what its channels were
+#: sent (LOOP R-37), and that it asked the person and waits (`asked`, what
+#: ai-agents tells them of, MOBILE M-023).
+ALWAYS_KEPT = frozenset({"session", "run", "notification", "thread", "asked"})
 
 #: How a run ended, in the `output` entry that ends it (`AppRecorder.ended`):
 #: it answered, it stopped (a rule, a check, an error), or its client went
@@ -787,6 +788,22 @@ class AppRecorder:
         """
         _SESSION.set(session)
         self.add("run", f"{self.app.name} is working", {})
+        send_later(session, self.flush(session))
+
+    def asked(self, session: str, kind: str) -> None:
+        """Say that the application asked the person and waits for the answer
+        (`loop.ask`), and send it now: ai-agents tells whoever opened the
+        session — on their phone too (MOBILE M-023). Its kind only, never the
+        question's words, which the conversation keeps."""
+        _SESSION.set(session)
+        self.add(
+            "asked",
+            "It asked and waits for the answer",
+            {
+                "kind": kind,
+                "asked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            },
+        )
         send_later(session, self.flush(session))
 
     def ended(
