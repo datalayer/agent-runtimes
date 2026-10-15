@@ -50,7 +50,6 @@ export function useVoiceSpeaker(
             voice: voice.voice,
             language: voice.language,
             token: voice.token,
-            deployment: voice.deployment,
             rate: voice.rate,
             volume: voice.volume,
             onState: setState,
@@ -64,7 +63,6 @@ export function useVoiceSpeaker(
       voice: voice?.voice,
       language: voice?.language,
       token: voice?.token,
-      deployment: voice?.deployment,
       rate: voice?.rate,
       volume: voice?.volume,
     });
@@ -73,7 +71,6 @@ export function useVoiceSpeaker(
     voice?.voice,
     voice?.language,
     voice?.token,
-    voice?.deployment,
     voice?.rate,
     voice?.volume,
   ]);

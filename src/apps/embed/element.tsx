@@ -78,9 +78,11 @@ import {
   EMBED_HOST_VARIABLES,
   EMBED_OBSERVED_ATTRIBUTES,
   EMBED_TAG,
+  EMBED_TOKEN_NAMES_NO_DEPLOYMENT,
   EmbedAttributeError,
   adoptPropertiesSetEarly,
   embedLookOf,
+  embedTokenDeployment,
   inlineHeightOf,
   languageOf,
   resumeOf,
@@ -216,9 +218,15 @@ export async function readEmbeddedApp({
     return { kind: 'frame', src: frameSrcOf(origin, app, token) };
   }
   const spec = runnable(parseAppspec(definition.spec));
-  return spec.kind === 'decision'
-    ? { kind: 'frame', src: frameSrcOf(origin, app, token) }
-    : { kind: 'spec', app: spec };
+  if (spec.kind === 'decision') {
+    return { kind: 'frame', src: frameSrcOf(origin, app, token) };
+  }
+  // The visit runs the deployment its token names, and no other (VOICE.md
+  // decision 16): a token naming none is refused before anything is drawn.
+  if (!embedTokenDeployment(token)) {
+    return { kind: 'said', text: EMBED_TOKEN_NAMES_NO_DEPLOYMENT };
+  }
+  return { kind: 'spec', app: spec };
 }
 
 export type DatalayerAppElementOptions = {

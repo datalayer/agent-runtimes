@@ -32,10 +32,11 @@ export interface SpeakerOptions {
   /** The voice of the catalogue. */
   voice: string;
   language: string;
-  /** The person's token, an application's principal's, a visitor's or an embed's. */
+  /**
+   * The person's token, an application's principal's, a visitor's or an
+   * embed's — whose deployment is the one it names (VO-19, decision 16).
+   */
   token?: string;
-  /** The deployment an embed's page speaks for (VO-19): sent with each sentence. */
-  deployment?: string;
   /**
    * How fast it speaks, as a multiplier of the voice's own pace (VO-25,
    * VO-30). Applied here rather than asked of the service: `POST
@@ -173,14 +174,7 @@ export class ServerSpeaker {
   }
 
   private async fetch(text: string): Promise<ArrayBuffer | string> {
-    const {
-      speechUrl,
-      voice,
-      language,
-      token,
-      deployment,
-      fetcher = fetch,
-    } = this.options;
+    const { speechUrl, voice, language, token, fetcher = fetch } = this.options;
     try {
       const answered = await fetcher(
         `${speechUrl.replace(/\/+$/, '')}${SYNTHESES_PATH}`,
@@ -195,7 +189,6 @@ export class ServerSpeaker {
             voice,
             language,
             format: 'opus',
-            ...(deployment ? { deployment } : {}),
           }),
         },
       );

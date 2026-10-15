@@ -81,11 +81,6 @@ export interface ChatVoice {
   speechUrl?: string;
   /** The token the speech service is asked with. */
   token?: string;
-  /**
-   * The deployment an embedded application's page speaks for (VO-19): what
-   * the speech service checks an embed token against, and counts its spend on.
-   */
-  deployment?: string;
   /** Send what is said at once, rather than put it in the composer. */
   sendWhatISay?: boolean;
   /**

@@ -66,6 +66,11 @@ vi.mock('../../hooks/useAgentRuntimes', () => ({
 
 import { AppEmbed, AppFloating } from '../embed/AppEmbed';
 import {
+  EMBED_ATTRIBUTES,
+  EMBED_TOKEN_NAMES_NO_DEPLOYMENT,
+  embedTokenDeployment,
+} from '../embed/embedConfig';
+import {
   appspecOfText,
   defineDatalayerAppElement,
   frameInLanguage,
@@ -741,13 +746,24 @@ describe('reading an application on Datalayer with its token', () => {
         ),
     ) as unknown as typeof fetch;
 
+  /** A token as Spacer issues one: its claims readable, its signature the services'. */
+  const tokenNaming = (claims: Record<string, unknown>) =>
+    [
+      'eyJhbGciOiJIUzI1NiJ9',
+      btoa(JSON.stringify(claims))
+        .replace(/=+$/, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_'),
+      'signature',
+    ].join('.');
+
   it('draws a chat from its spec, and frames a decision', async () => {
     const spec = dumpAppspec(chatApp());
     const chat = await readEmbeddedApp({
       api: 'https://prod1.datalayer.run/',
       origin: 'https://datalayer.app',
       app: '01M',
-      token: 't',
+      token: tokenNaming({ app_uid: '01M', deployment_uid: '01DEP' }),
       fetcher: answer({ spec }),
     });
     expect(chat.kind).toBe('spec');
@@ -761,6 +777,29 @@ describe('reading an application on Datalayer with its token', () => {
     expect(decision).toEqual({
       kind: 'frame',
       src: 'https://datalayer.app/public/apps/01M/run?embed=1#token=t',
+    });
+  });
+
+  it('runs the deployment its token names, and refuses a token naming none (VOICE.md decision 16)', async () => {
+    expect(
+      embedTokenDeployment(tokenNaming({ deployment_uid: '01K?>_dep' })),
+    ).toBe('01K?>_dep');
+    expect(embedTokenDeployment(tokenNaming({ app_uid: '01M' }))).toBe(
+      undefined,
+    );
+    expect(embedTokenDeployment('not-a-token')).toBe(undefined);
+    expect(embedTokenDeployment('a.%%%.b')).toBe(undefined);
+    expect(EMBED_ATTRIBUTES).not.toHaveProperty('deployment');
+    const refused = await readEmbeddedApp({
+      api: 'https://prod1.datalayer.run',
+      origin: 'https://datalayer.app',
+      app: '01M',
+      token: tokenNaming({ app_uid: '01M' }),
+      fetcher: answer({ spec: dumpAppspec(chatApp()) }),
+    });
+    expect(refused).toEqual({
+      kind: 'said',
+      text: EMBED_TOKEN_NAMES_NO_DEPLOYMENT,
     });
   });
 

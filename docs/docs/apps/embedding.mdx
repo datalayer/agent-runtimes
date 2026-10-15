@@ -206,15 +206,27 @@ In every mode the conversation talks to the application's agent through its
 ## Private applications
 
 A private application is embedded with an **embed token** scoped to that one
-application. The host's server is issued one for each visit, with the owner's
-API key, which stays on the server (`POST …/api/spacer/v1/apps/<id>/embed-token`).
-The element reads the application with the token and raises `token-expired`
-when the token lapses. The host then sets a new one.
+application and **the deployment the visit runs**. The host's server is issued
+one for each visit, with the owner's API key, which stays on the server:
+
+```bash
+curl -X POST "https://prod1.datalayer.run/api/spacer/v1/apps/<id>/embed-token" \
+  -H "Authorization: Bearer $DATALAYER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"ttlSeconds": 3600, "visit": "<your visit id>", "deployment": "<its embedded deployment uid>"}'
+```
+
+The deployment is the token's alone: the element has no attribute for it,
+and a token that names none is refused in a sentence before anything is
+drawn (*the embed token names no deployment…*). Its spoken answers, when its
+Appspec gives it a voice, are said for that deployment and counted against
+its spend limit. The element reads the application with the token and raises
+`token-expired` when the token lapses. The host then sets a new one.
 
 **What is not ready yet:**
 
-- The app embed token is **built but not deployed** (Spacer on prod1,
-  ai-inference on r1). No private embed works until it is (LOOP D-14).
+- The app embed token is issued by Spacer on prod1 (naming its deployment
+  since 15 October 2026).
 - The token reads the application, asks a decision's typed questions, and
   **runs a session of its deployment** (LOOP R-20): on the host's own
   agent-runtimes server (`server`), the element hands the visit's token to

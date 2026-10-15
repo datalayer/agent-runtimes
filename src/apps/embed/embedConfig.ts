@@ -46,7 +46,7 @@ export const EMBED_ATTRIBUTES = {
   origin:
     'Where Datalayer is; the origin the script was loaded from by default.',
   token:
-    'An embed token for an application that is not public, issued to your server for each visit.',
+    'An embed token for an application that is not public, issued to your server for each visit; it names the embedded deployment the visit runs, which nothing else on the page names.',
   spec: 'The address of an Appspec (YAML or JSON) to run, in place of `app`.',
   mode: 'inline, bubble, panel or assistant; the Appspec’s `deployment.embedded.mode` by default, then inline.',
   accent:
@@ -66,6 +66,34 @@ export const EMBED_ATTRIBUTES = {
 } as const;
 
 export type EmbedAttribute = keyof typeof EMBED_ATTRIBUTES;
+
+/**
+ * The deployment an embed token names (VOICE.md decision 16): the embedded
+ * deployment its owner's server asked it for. Read without vouching for it —
+ * the services that take the token verify it — and the only place the
+ * element learns its deployment: it takes no attribute for one.
+ */
+export function embedTokenDeployment(token: string): string | undefined {
+  const payload = token.split('.')[1];
+  if (!payload) {
+    return undefined;
+  }
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const claims = JSON.parse(
+      atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')),
+    ) as { deployment_uid?: unknown };
+    return typeof claims.deployment_uid === 'string' && claims.deployment_uid
+      ? claims.deployment_uid
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** What an embed token naming no deployment is told (VOICE.md decision 16). */
+export const EMBED_TOKEN_NAMES_NO_DEPLOYMENT =
+  'datalayer-app: the embed token names no deployment. Your server asks for one naming the application’s embedded deployment: POST …/api/spacer/v1/apps/<id>/embed-token with {"deployment": "<its uid>"}.';
 
 /** Every attribute the element watches. */
 export const EMBED_OBSERVED_ATTRIBUTES = Object.keys(

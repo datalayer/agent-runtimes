@@ -96,24 +96,19 @@ export function chatVoiceOf(
  * A chat's voice asked of the speech service as the chat itself speaks to
  * its runtime (VO-37, VO-19): the token its host gave, else the chat's own —
  * a visitor's token minted from ai-inference, an embed's token, or the
- * person's — and the deployment it runs, which an embed's token is checked
- * against. One token for the conversation and its voice, never a second.
+ * person's. One token for the conversation and its voice, never a second.
+ * An embed's deployment is the one its token names (decision 16): the page
+ * says none.
  */
 export function voiceAskedAs(
   voice: ChatVoice | undefined,
   token: string | undefined,
-  deployment: string | undefined,
 ): ChatVoice | undefined {
   if (!voice) {
     return undefined;
   }
   const asked = voice.token || token;
-  const runs = voice.deployment || deployment;
-  return {
-    ...voice,
-    ...(asked ? { token: asked } : {}),
-    ...(runs ? { deployment: runs } : {}),
-  };
+  return asked ? { ...voice, token: asked } : { ...voice };
 }
 
 /** A chat's voice with every place said: what the chat reads. */

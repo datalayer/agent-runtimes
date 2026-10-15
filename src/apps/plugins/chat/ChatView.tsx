@@ -1632,11 +1632,11 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   /*
    * Its voice asked of the speech service as this chat speaks to its runtime
    * (VOICE.md VO-37, VO-19): the host's token, else this one — a visitor's,
-   * an embed's or the person's — and the deployment it runs.
+   * an embed's or the person's; an embed's names its deployment (decision 16).
    */
   const askedVoice = useMemo(
-    () => voiceAskedAs(config?.voice, iamToken || undefined, deploymentUid),
-    [config?.voice, iamToken, deploymentUid],
+    () => voiceAskedAs(config?.voice, iamToken || undefined),
+    [config?.voice, iamToken],
   );
   /*
    * A deployment's runtime, and the visitors', answer only the application's
