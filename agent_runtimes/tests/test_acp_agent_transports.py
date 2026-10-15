@@ -214,6 +214,7 @@ class TestShieldChannel:
             opened = await channel.request(
                 AGENT_METHODS["session_new"], {"cwd": str(workspace), "mcpServers": []}
             )
+            assert opened is not None
             session_id = opened["sessionId"]
             heard: list[dict] = []
             stop = channel.listen(heard.append)
@@ -239,7 +240,7 @@ class TestShieldChannel:
             )
             await answering
             stop()
-            assert result["stopReason"] == "end_turn"
+            assert result is not None and result["stopReason"] == "end_turn"
             updates = [m for m in heard if m.get("method") == "session/update"]
             assert any("option_id='reject'" in json.dumps(m["params"]) for m in updates)
             assert all("direction" not in m for m in heard)
@@ -272,7 +273,7 @@ class TestShieldChannel:
                 endpoint=f"stdio:{sys.executable} {FAKE}",
             )
         )
-        assert worker.endpoint.startswith("stdio:")
+        assert worker.endpoint is not None and worker.endpoint.startswith("stdio:")
         assert worker.details.get("loadSession") is True
 
 

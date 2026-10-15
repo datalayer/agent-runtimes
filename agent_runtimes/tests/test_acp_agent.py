@@ -1301,7 +1301,7 @@ async def test_claude_code_live(tmp_path: Path) -> None:
     agent = harness_agent(
         "claude",
         "claude-code",
-        approvals=Approvals(),  # type: ignore[arg-type] - a test's double of the manager
+        approvals=Approvals(),  # type: ignore[arg-type]  # a test's double of the manager
         environment={**os.environ, WORKSPACE_VARIABLE: str(tmp_path)},
     )
     await agent.initialize()
@@ -1350,3 +1350,156 @@ def test_an_agent_on_the_sidecar_connects_instead_of_launching(tmp_path):
         agent.connect_url == "ws://127.0.0.1:1/acp/claude-code" and agent.command == []
     )
     assert not agent.started
+
+
+class TestPapThroughTheShield:
+    """SHIELD §6.10, SH-70, SH-72: the companies an application works with are lent
+    as the gateway's ``pap`` toolset; their tools classed by agentspecs' table and
+    naming the company; the run's subject and IAM's authorizer on the Shield."""
+
+    GATEWAY = "https://mcp.datalayer.run/mcp"
+
+    def test_the_companies_are_lent_as_the_gateways_pap_toolset(self) -> None:
+        from agent_runtimes.loop.apps import pap_connections
+
+        app = SimpleNamespace(
+            connections=[SimpleNamespace(server="earthdata")],
+            rules=[],
+            pap=SimpleNamespace(
+                connections=[
+                    {
+                        "id": "orders",
+                        "company": "Manzanita.examples.datalayer.run",
+                        "access": "write",
+                    }
+                ]
+            ),
+        )
+        lent = lent_toolsets(fake_harness(), app)
+        sid = pap_connections.server_id("manzanita.examples.datalayer.run")
+        assert lent == [
+            LentToolset("earthdata", f"{self.GATEWAY}?only=earthdata"),
+            LentToolset(
+                sid,
+                f"{self.GATEWAY}?only=pap&pap-company=manzanita.examples.datalayer.run",
+            ),
+        ]
+        # A harness lent no MCP is refused an application that connects a company.
+        with pytest.raises(HarnessRefused, match="lent no MCP"):
+            lent_toolsets(
+                fake_harness(
+                    acp=HarnessAcpSpec(
+                        command="x", args=[], mcp="none", load_session=True
+                    )
+                ),
+                SimpleNamespace(
+                    connections=[SimpleNamespace(server="earthdata")],
+                    rules=[],
+                    pap=app.pap,
+                ),
+            )
+
+    def test_a_companys_tool_is_classed_by_agentspecs_table_and_names_the_company(
+        self,
+    ) -> None:
+        from agent_runtimes.guardrails import shield_authorizer
+        from agent_runtimes.loop.apps import pap_connections
+
+        app = SimpleNamespace(
+            pap=SimpleNamespace(
+                connections=[{"id": "o", "company": "acme.example", "access": "read"}]
+            )
+        )
+        sid = pap_connections.remember(app)[0]
+        assert shield_authorizer.lent_tool_class(f"{sid}_pap_confirm") == (
+            "buy",
+            "connection:acme.example",
+        )
+        assert shield_authorizer.lent_tool_class(f"{sid}__pap_ask") == (
+            "send",
+            "connection:acme.example",
+        )
+        assert shield_authorizer.lent_tool_class(f"{sid}_pap_read") == (
+            "read",
+            "connection:acme.example",
+        )
+        assert shield_authorizer.lent_tool_class("read_notebook") is None
+        assert shield_authorizer.companies_of(app) == ["acme.example"]
+
+    def test_the_runs_subject_and_authorizer(self, monkeypatch) -> None:
+        import base64
+        import json
+
+        from agent_runtimes.guardrails import shield_authorizer
+
+        def token(claims: dict) -> str:
+            body = (
+                base64.urlsafe_b64encode(json.dumps(claims).encode())
+                .decode()
+                .rstrip("=")
+            )
+            return f"eyJhbGciOiJIUzI1NiJ9.{body}.sig"
+
+        person = token({"user": {"uid": "u-1"}})
+        principal = token(
+            {
+                "user": {"uid": "a-1"},
+                "task_id": "deployment:d-1:01X",
+                "task_grant_uid": "g-1",
+            }
+        )
+        assert (
+            shield_authorizer.deployment_of_token(person) == ""
+            and shield_authorizer.deployment_of_token(principal) == "d-1"
+        )
+        assert shield_authorizer.runtime_subject(person).model_dump() == {
+            "type": "account",
+            "id": "u-1",
+            "properties": {},
+        }
+        assert shield_authorizer.runtime_subject(principal, "d-1").model_dump() == {
+            "type": "deployment",
+            "id": "d-1",
+            "properties": {},
+        }
+        assert shield_authorizer.runtime_subject("").id == "local"
+        monkeypatch.delenv("DATALAYER_IAM_URL", raising=False)
+        assert shield_authorizer.runtime_authorizer(person) is None
+        monkeypatch.setenv("DATALAYER_IAM_URL", "https://prod1.datalayer.run")
+        authorizer = shield_authorizer.runtime_authorizer(person)
+        assert authorizer is not None and authorizer.name == "openfga-through-iam"
+        assert authorizer.url == "https://prod1.datalayer.run/api/iam/v1/authz/evaluate"
+        assert shield_authorizer.runtime_authorizer("") is None
+
+    def test_datalayers_default_needs_the_authorizer_for_send_and_buy(self) -> None:
+        from agent_runtimes.guardrails.shield_policy import (
+            datalayer_default,
+            policies_of,
+        )
+
+        document = datalayer_default()
+        assert document.scope == "session" and document.authorize == ["send", "buy"]
+        assert policies_of(None, [])[-1].authorize == ["send", "buy"]
+        # With no authorizer on the Shield a send is refused, never let through (§6.11).
+        from agent_shield.policy import Action, Context, decide
+
+        refused = decide(
+            Action(kind="other", title="pap_ask", **{"class": "send"}),
+            Context(workspace="/w"),
+            [document],
+        )
+        assert (
+            refused.verdict == "deny"
+            and "no authorizer is configured" in refused.sentence
+        )
+        # And a read is the Rules' alone.
+        assert (
+            decide(
+                Action(
+                    kind="read", title="r", path="a", inside=True, **{"class": "read"}
+                ),
+                Context(workspace="/w"),
+                [document],
+            ).verdict
+            == "allow"
+        )

@@ -176,6 +176,7 @@ async def test_the_plan_and_each_diff_are_artifacts_with_provenance(
     # Kept with the task, for tasks/get.
     task_id = events[0]["status_update"]["task_id"]
     kept = await storage.load_task(task_id)
+    assert kept is not None and kept.get("artifacts") is not None
     names = [a.get("name") for a in kept["artifacts"]]
     assert "plan" in names and "hello.txt" in names and "result" in names
     # Reasoning is not an artifact, nor a message (decision 8).
@@ -312,6 +313,7 @@ async def test_the_card_takes_its_skills_and_output_modes_from_the_harness(
     )
     try:
         registration = a2a_routes._a2a_agents["fake-card"]
+        assert registration.card.skills is not None
         assert registration.card.skills[0]["id"] == "fake"
         assert "acp" in registration.card.skills[0]["tags"]
         assert registration.card.default_output_modes == [
@@ -320,6 +322,7 @@ async def test_the_card_takes_its_skills_and_output_modes_from_the_harness(
             "application/json",
         ]
         served = registration.app
+        assert served is not None
         async with (
             served.router.lifespan_context(served),
             httpx.AsyncClient(
@@ -414,11 +417,17 @@ async def test_an_orchestrator_delegates_to_the_harness_and_gets_the_diff_back(
         a2a_routes.set_a2a_app(None, "/api/v1")
         await agent.cleanup()
     produced = [o for o in observations if getattr(o, "artifact", None) is not None]
-    diffs = [o for o in produced if o.artifact.media_type == DIFF_MEDIA_TYPE]
+    diffs = [
+        o
+        for o in produced
+        if o.artifact is not None and o.artifact.media_type == DIFF_MEDIA_TYPE
+    ]
     assert diffs, f"no diff came back: {[str(o)[:120] for o in observations]}"
     [diff] = diffs
+    assert diff.artifact is not None and diff.data is not None
     assert diff.artifact.name == "hello.txt"
     assert "+hello, shield" in diff.data["text"]
+    assert diff.artifact.provenance is not None
     [provenance] = diff.artifact.provenance
     assert provenance.content_hash == (
         "sha256:" + hashlib.sha256(diff.data["text"].encode()).hexdigest()
