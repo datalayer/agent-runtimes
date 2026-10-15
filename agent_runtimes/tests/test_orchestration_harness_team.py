@@ -130,10 +130,9 @@ async def test_an_orchestrator_delegates_to_two_harness_workers_and_gets_their_d
     from agent_runtimes.subagents.a2a import A2ARemoteAgent
     from agent_runtimes.tests.orchestration_records import an_attempt
 
-    found = shutil.which("agent-shield")
-    if found is None:
+    shield = shutil.which("agent-shield") or ""
+    if not shield:
         pytest.skip("agent-shield is not installed")
-    shield: str = found
 
     team = get_team_spec("coding-agents")
     assert team is not None
