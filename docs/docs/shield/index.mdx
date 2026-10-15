@@ -65,6 +65,30 @@ The W3C trace context arrives with the face — an A2A or AG-UI request's `trace
 
 Proved locally through the A2A face with the ACP SDK's fake agent: one trace id on the turn's span, in the harness's `_meta.traceparent` and on the shim's outgoing header. On r1 the runtime's spans reach prod1's ingest under the deployment's account; the gateway's own spans do not leave r1 (its collector address exists on prod1 only — a plane setting).
 
+## The policies: three levels, from IAM
+
+The Shield decides with **three documents of one schema** (agentspecs' `policies/` kind, the `agent-shield` package's schema carried verbatim), strictest first, the first decision winning (SHIELD.md §6.3):
+
+1. the **organization's** (and its teams'), written in IAM as the `shield` rule of the organization's policy layer (`PUT /mcp-policies/organization/{uid}` with `{"shield": {...}}`), validated by the Shield's own model — a team's refused when it would permit more than its organization's, in the engine's sentences;
+2. the **application's** Rules, read into the `team` scope (`guardrails/shield_policy.py`);
+3. the **session's**: decision 5's default plus what a person allows or tightens while it runs.
+
+A managed runtime pulls the organization's documents for the account at the agent's creation (`GET /mcp-policies/shield/accounts/{account_uid}` with the runtime's token; `guardrails/managed_policies.py`), keeps them until the `expires` IAM stamped (ten minutes), and polls every thirty seconds while an agent listens: an administrator's change reaches a running harness within a minute (`ACPAgent.replace_policies`). It **fails closed** (decision 11): with IAM unreachable and no unexpired copy the harness is refused at creation in a sentence naming IAM, and every further action of a running one is refused until IAM answers; a token without `DATALAYER_IAM_URL` is refused, never run unmanaged. A runtime with no token at all — the terminal's `loop`, a test — is unmanaged and decides with the application's Rules and the default alone. The `harnesses` section is honoured: a harness the organization does not admit is refused, and so is a `platform` credentials rule (a runtime lends the account's own declared secret, decision 3).
+
+**The limits** (SH-32): beside tool calls, terminals and bytes written, `limits.model_tokens` (the model budget) and `limits.spend` (credits, 100 a USD), each soft then hard. `guardrails/shield_budget.py` holds every model request of an application's agent to them: past a soft threshold the person is asked once through the tool approvals, past a hard one the run ends in a sentence saying what would let it go on; what each response spent is counted from its usage and its price, per session.
+
+**A rule on a running session** (SH-54, decision 7) — the contract the page and the phone share:
+
+| Route | Body | Answer |
+|---|---|---|
+| `GET /api/v1/apps/sessions/{uid}/rules` | — | `{uid, harness, managed, policies: [documents strictest first], session_rules: [rules], unavailable: sentence or null}` |
+| `POST /api/v1/apps/sessions/{uid}/rules` | `{name, decision: allow\|ask\|deny, classes?: [read\|write\|send\|buy\|delete\|execute], kinds?, where?, paths?, commands?, reason?}` | the same, with the rule in force; `422` with the sentence when it would permit more than the organization's |
+| `DELETE /api/v1/apps/sessions/{uid}/rules/{name}` | — | the same; `404` for a name that is no rule |
+
+The caller is the session's (its bearer, as every session route). A harness session reads the rules at every decision through the Shield's own state; a pydantic-ai application's calls are tightened in `AppRulesCapability.decide` (*Your rule for this session “…”: leave it to you*). The rules are gone with the session and never written to the deployment. The web's Rules card (`src/apps/plugins/app-rules`, the *This session* section) speaks to these routes with `@datalayer/agent-runtimes`' `apps/sessionRules`.
+
+**The conformance table** (SH-35): `test_shield_policies.py` and the package's `test_conformance.py` hold the same action, over MCP, A2A, ACP, AG-UI and the embed, to the same answer from the one agent.
+
 ## What is not built yet
 
-The Shield report (SH-36), the conformance table (SH-35), the bypass drills that need a funded harness key (`git push`, a sub-agent's MCP write under a read-only manifest; SH-37), and the standalone proxy's `serve` (SH-52).
+The Shield report (SH-36), the deployment's own spend limit read into `limits.spend` (today the organization's holds; SH-32), the Admin's screen editing the organization's document (today an owner writes it through IAM's API; SH-50), the r1 drills of a policy change reaching a running runtime and of a budget crossed softly then hard (proved in tests; SH-50, SH-54), the bypass drills that need a funded harness key (`git push`, a sub-agent's MCP write under a read-only manifest; SH-37), and the standalone proxy's `serve` (SH-52).

@@ -15,7 +15,7 @@ import type { JSX } from 'react';
 import { definePlugin, type ReactorPlugin } from '@datalayer/reactor';
 import { ShieldCheckIcon } from '@primer/octicons-react';
 import type { AppSpec } from '../../../types/agentspecs';
-import { LoopSlots } from '../../core';
+import { LoopSlots, type LoopWorkspaceContext } from '../../core';
 import { AppRulesCard } from './AppRulesCard';
 
 export const APP_RULES_PLUGIN_NAME = '@datalayer/loop-plugin-app-rules';
@@ -25,8 +25,8 @@ export function defineAppRulesPlugin(
   app: AppSpec,
 ): ReactorPlugin<Record<string, never>, unknown, unknown> {
   // One component per plugin: the slot keeps it, and the application with it.
-  function Card(): JSX.Element {
-    return <AppRulesCard app={app} />;
+  function Card(props: { workspace?: LoopWorkspaceContext }): JSX.Element {
+    return <AppRulesCard app={app} workspace={props.workspace} />;
   }
   const plugin = definePlugin({
     name: `${APP_RULES_PLUGIN_NAME}-${app.id}`,
@@ -55,9 +55,15 @@ export function defineAppRulesPlugin(
 
 export {
   AppRulesCard,
+  SessionRules,
   APP_RULES_WORDS,
   ruleInWords,
   ruleOfApproval,
   approvalsOfApp,
 } from './AppRulesCard';
+export {
+  SESSION_RULES_WORDS,
+  sessionRuleInWords,
+  sessionRuleOf,
+} from '../../apps/sessionRules';
 export default defineAppRulesPlugin;

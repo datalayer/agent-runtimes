@@ -17,12 +17,24 @@
  */
 
 import type { JSX } from 'react';
-import { useMemo } from 'react';
-import { Button, Heading, Label, Text } from '@primer/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Heading, Label, Select, Text, TextInput } from '@primer/react';
 import { Box } from '@datalayer/primer-addons';
 import { useIAMStore } from '@datalayer/core/lib/state/substates/IAMState';
 import type { AppRuleSpec, AppSpec } from '../../../types/agentspecs';
+import { agentServerOf, type LoopWorkspaceContext } from '../../core';
 import { BEHAVIOUR_WORDS, coverOf } from '../../apps/rules';
+import {
+  SESSION_RULES_WORDS,
+  SESSION_RULE_CLASSES,
+  SESSION_RULE_DECISIONS,
+  addSessionRule,
+  readSessionRules,
+  removeSessionRule,
+  sessionRuleInWords,
+  sessionRuleOf,
+  type RulesInForce,
+} from '../../apps/sessionRules';
 import { SAVE_WORDS, draftOfApproval, type Draft } from '../../apps/saved';
 import {
   useApproveToolRequest,
@@ -190,8 +202,173 @@ function Approvals({ app }: { app: AppSpec }): JSX.Element {
   );
 }
 
-export function AppRulesCard({ app }: { app: AppSpec }): JSX.Element {
-  const signedIn = Boolean(useIAMStore(state => state.token));
+/**
+ * The rules of the running session (SHIELD §6.3, SH-54): what decides it now,
+ * the rules the person added, and a rule to add — in force at once, gone with
+ * the session, never below the organization's.
+ */
+export function SessionRules({
+  agentServerUrl,
+  sessionUid,
+  token,
+}: {
+  agentServerUrl: string;
+  sessionUid: string;
+  token: string;
+}): JSX.Element {
+  const [inForce, setInForce] = useState<RulesInForce | null>(null);
+  const [problem, setProblem] = useState('');
+  const [name, setName] = useState('');
+  const [decision, setDecision] = useState<string>('ask');
+  const [kind, setKind] = useState<string>('send');
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(() => {
+    let cancelled = false;
+    readSessionRules(agentServerUrl, token, sessionUid).then(
+      value => !cancelled && setInForce(value),
+      (error: unknown) =>
+        !cancelled &&
+        setProblem(error instanceof Error ? error.message : String(error)),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [agentServerUrl, token, sessionUid]);
+  useEffect(refresh, [refresh]);
+  const act = async (work: () => Promise<RulesInForce>) => {
+    setBusy(true);
+    setProblem('');
+    try {
+      setInForce(await work());
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const add = () => {
+    const rule = sessionRuleOf({ name, decision, classes: [kind] });
+    if (typeof rule === 'string') {
+      setProblem(rule);
+      return;
+    }
+    void act(() =>
+      addSessionRule(agentServerUrl, token, sessionUid, rule),
+    ).then(() => setName(''));
+  };
+  return (
+    <Box data-testid="session-rules" mt={3}>
+      <Heading as="h4" sx={{ fontSize: 1, mb: 1 }}>
+        {SESSION_RULES_WORDS.title}
+      </Heading>
+      {inForce?.unavailable ? (
+        <Text as="p" role="alert" sx={{ fontSize: 0, m: 0, mb: 1 }}>
+          {SESSION_RULES_WORDS.unavailable(inForce.unavailable)}
+        </Text>
+      ) : null}
+      {inForce && inForce.session_rules.length === 0 ? (
+        <Text as="p" sx={{ fontSize: 1, color: 'fg.muted', m: 0 }}>
+          {SESSION_RULES_WORDS.none}
+        </Text>
+      ) : (
+        <Box as="ul" listStyle="none" p={0} m={0}>
+          {(inForce?.session_rules ?? []).map(rule => (
+            <Box
+              as="li"
+              key={rule.name}
+              py={1}
+              fontSize={1}
+              display="flex"
+              gap={2}
+              alignItems="center"
+            >
+              <Text sx={{ fontWeight: 'semibold' }}>{rule.name}</Text>
+              <Text sx={{ color: 'fg.muted', fontSize: 0 }}>
+                {sessionRuleInWords(rule)}
+              </Text>
+              <Button
+                size="small"
+                variant="invisible"
+                disabled={busy}
+                onClick={() =>
+                  void act(() =>
+                    removeSessionRule(
+                      agentServerUrl,
+                      token,
+                      sessionUid,
+                      rule.name,
+                    ),
+                  )
+                }
+              >
+                {SESSION_RULES_WORDS.remove}
+              </Button>
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Box display="flex" gap={1} mt={1} flexWrap="wrap" alignItems="center">
+        <TextInput
+          size="small"
+          value={name}
+          placeholder={SESSION_RULES_WORDS.namePlaceholder}
+          aria-label="The rule's name"
+          onChange={event => setName(event.target.value)}
+        />
+        <Select
+          size="small"
+          value={kind}
+          aria-label="What it covers"
+          onChange={event => setKind(event.target.value)}
+        >
+          {SESSION_RULE_CLASSES.map(item => (
+            <Select.Option key={item} value={item}>
+              {SESSION_RULES_WORDS.classes[item]}
+            </Select.Option>
+          ))}
+        </Select>
+        <Select
+          size="small"
+          value={decision}
+          aria-label="What it says"
+          onChange={event => setDecision(event.target.value)}
+        >
+          {SESSION_RULE_DECISIONS.map(item => (
+            <Select.Option key={item} value={item}>
+              {SESSION_RULES_WORDS.decisions[item]}
+            </Select.Option>
+          ))}
+        </Select>
+        <Button size="small" disabled={busy} onClick={add}>
+          {SESSION_RULES_WORDS.add}
+        </Button>
+      </Box>
+      {problem ? (
+        <Text as="p" role="alert" sx={{ fontSize: 0, m: 0, mt: 1 }}>
+          {problem}
+        </Text>
+      ) : null}
+      <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mt: 1, mb: 0 }}>
+        {SESSION_RULES_WORDS.goneWithSession}
+      </Text>
+    </Box>
+  );
+}
+
+export function AppRulesCard({
+  app,
+  workspace,
+}: {
+  app: AppSpec;
+  /** The workspace the card sits in, when the slot gives it: names the session running. */
+  workspace?: LoopWorkspaceContext;
+}): JSX.Element {
+  const token = useIAMStore(state => state.token) ?? '';
+  const signedIn = Boolean(token);
+  const agentServerUrl = workspace
+    ? agentServerOf(workspace.sandbox, workspace.serverUrl)
+    : undefined;
+  const sessionUid = workspace?.conversationId;
   return (
     <Box data-testid="app-rules" mb={4}>
       <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>
@@ -224,6 +401,19 @@ export function AppRulesCard({ app }: { app: AppSpec }): JSX.Element {
           {APP_RULES_WORDS.signedOut}
         </Text>
       )}
+      {signedIn && agentServerUrl ? (
+        sessionUid ? (
+          <SessionRules
+            agentServerUrl={agentServerUrl}
+            sessionUid={sessionUid}
+            token={token}
+          />
+        ) : (
+          <Text as="p" sx={{ fontSize: 0, color: 'fg.muted', mt: 3, mb: 0 }}>
+            {SESSION_RULES_WORDS.noSession}
+          </Text>
+        )
+      ) : null}
     </Box>
   );
 }
