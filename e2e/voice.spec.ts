@@ -13,7 +13,10 @@
  * person's voice menu beside it (VO-30). With *Detect the language I speak*
  * chosen, the same words are heard on Datalayer's servers instead (VO-34,
  * VO-14): asked apart, the recording sent to the speech service, the
- * language found there.
+ * language found there. With *Talking to it* set to hands-free, *Talk with
+ * it* sends the turn by itself after the silence, the answer is said, and
+ * the fixture, which Chrome's fake microphone plays again and again, speaks
+ * over the answer: barge-in (VO-12, VO-13).
  *
  *   E2E_STATE=<signed-in storage state> E2E_VOICE_APP=<app id> \
  *     npx playwright test -c e2e/playwright.config.ts voice.spec.ts
@@ -24,9 +27,7 @@
  * browser: the Preview's voice is turned on for the page only.
  *
  * Without a signed-in state or an application, or without the landing, the
- * cases skip with a sentence. Hands-free is not built (VO-12), so it is not
- * driven here; barge-in as it is built — the microphone opening stops the
- * agent's voice — is the units' (`listening.test.tsx`).
+ * cases skip with a sentence.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -191,5 +192,79 @@ test.describe('voice in the composer (VO-53)', () => {
     expect(heard[0].language).toBe('en');
     // A WAV of the speech only: the silence around it stays in the browser.
     expect(heard[0].length).toBeGreaterThan(44);
+  });
+
+  test('hands-free: the turn sent by itself after the silence, the answer said, and the voice stopped when spoken over (VO-12, VO-13)', async ({
+    page,
+    context,
+  }) => {
+    const runs: string[] = [];
+    const syntheses: number[] = [];
+    await context.route('**/api/**', route =>
+      ['PUT', 'PATCH', 'DELETE'].includes(route.request().method())
+        ? route.abort()
+        : route.continue(),
+    );
+    page.on('request', request => {
+      if (
+        request.method() === 'POST' &&
+        /\/(chat|runs?|messages|ag-ui|assistant)\b/.test(request.url())
+      ) {
+        runs.push(request.url());
+      }
+    });
+    page.on('response', response => {
+      if (response.url().includes('/speech/syntheses')) {
+        syntheses.push(response.status());
+      }
+    });
+    await page.goto(
+      `${landingUrl()}/studio/apps/${process.env.E2E_VOICE_APP}?section=face&try=1`,
+    );
+    const card = page.locator('#app-voice');
+    await expect(card).toBeVisible({ timeout: 180_000 });
+    if (
+      !['on', 'true'].includes(
+        (await card.getAttribute('data-app-voice')) ?? '',
+      )
+    ) {
+      await card.locator('input[type=checkbox]').click();
+    }
+    // The page's own choice, never saved: hands-free, answers always said.
+    await card.getByLabel('Talking to it').selectOption('hands_free');
+    await page.locator('text=Compose >> visible=true').first().click();
+    const toggle = page.locator('[data-hands-free-toggle]').first();
+    await expect(toggle).toBeEnabled({ timeout: 120_000 });
+    await toggle.click();
+    const yes = page.locator('[data-hands-free-consent-yes]');
+    if (await yes.isVisible().catch(() => false)) {
+      await yes.click();
+    }
+    const state = page.locator('[data-hands-free-state]').first();
+    await expect(state).toHaveAttribute('data-hands-free-state', 'listening', {
+      timeout: 120_000,
+    });
+    // The fixture is said, then silence: the turn goes by itself (VO-12).
+    await expect
+      .poll(() => runs.length, { timeout: 120_000 })
+      .toBeGreaterThan(0);
+    await expect(state).toHaveAttribute(
+      'data-hands-free-state',
+      /thinking|speaking/,
+      { timeout: 30_000 },
+    );
+    // The answer is said as it is written (hands-free implies always).
+    await expect
+      .poll(() => syntheses.length, { timeout: 120_000 })
+      .toBeGreaterThan(0);
+    // The fixture plays again while it speaks: barge-in stops the voice and
+    // the run, and the answer is marked (VO-13).
+    await expect(page.locator('[data-interrupted]').first()).toBeVisible({
+      timeout: 120_000,
+    });
+    await toggle.click();
+    await expect(page.locator('[data-hands-free-state]')).toHaveCount(0);
+    expect(syntheses.every(status => status === 200)).toBe(true);
+    expect(runs.length).toBeLessThanOrEqual(5);
   });
 });
