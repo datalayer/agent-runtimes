@@ -299,7 +299,9 @@ async def test_a_question_asked_is_said_on_the_record_by_its_kind_only() -> None
 
     [chunk async for chunk in live._start_turn(work, wraps_run=True)]
     await live.recorder.settled(live.uid)
-    asked = [e for body in sent for e in body.get("entries", []) if e.get("kind") == "asked"]
+    asked = [
+        e for body in sent for e in body.get("entries", []) if e.get("kind") == "asked"
+    ]
     assert len(asked) == 1
     assert asked[0]["payload"]["kind"] == "choice" and asked[0]["payload"]["asked_at"]
     assert "May this be recorded" not in json.dumps(asked)

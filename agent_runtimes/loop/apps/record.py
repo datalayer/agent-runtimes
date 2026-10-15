@@ -801,7 +801,9 @@ class AppRecorder:
             "It asked and waits for the answer",
             {
                 "kind": kind,
-                "asked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "asked_at": datetime.now(timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z"),
             },
         )
         send_later(session, self.flush(session))
