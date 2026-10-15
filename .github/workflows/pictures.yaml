@@ -1,0 +1,100 @@
+name: Pictures
+
+# The reference pictures as tests (LOOP T-16, TESTING.md "Pictures as tests"):
+# the four reference screens in every theme and mode and the floating
+# assistant's states, taken in the runner's Chrome and compared with
+# pictures/baselines/. A difference fails and uploads the baseline, the new
+# picture and the diff.
+#
+# The baselines are CI's: run this workflow by hand with `accept` to take
+# them again, download the `pictures-baselines` artifact and commit it to
+# pictures/baselines/.
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'pictures/**'
+      - 'html/pictures.html'
+      - 'src/stories/loop/**'
+      - 'src/chat/**'
+      - 'src/apps/plugins/assistant*/**'
+      - 'style/**'
+      - 'vite.config.ts'
+      - 'vite.pictures.config.ts'
+      - 'package.json'
+      - '.github/workflows/pictures.yaml'
+  workflow_dispatch:
+    inputs:
+      accept:
+        description: 'Accept what changed as the new baselines (uploaded as the pictures-baselines artifact)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_mintimeout: '20000'
+  npm_config_fetch_retry_maxtimeout: '120000'
+  # The runner's own Chrome takes the pictures: no browser is downloaded.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  PUPPETEER_SKIP_DOWNLOAD: '1'
+
+jobs:
+  pictures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+
+      - name: Cache npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-22.x-${{ hashFiles('**/package.json') }}
+          restore-keys: npm-${{ runner.os }}-22.x-
+
+      - name: Install dependencies
+        run: npm install --workspaces --include-workspace-root --no-audit --no-fund
+
+      - name: Find Chrome
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable)"
+          "$chrome" --version
+          echo "PICTURES_CHROME=$chrome" >> "$GITHUB_ENV"
+
+      - name: Compare the pictures
+        if: ${{ !inputs.accept }}
+        run: npm run test:pictures
+
+      - name: Accept the pictures as the new baselines
+        if: ${{ inputs.accept }}
+        run: npm run test:pictures:accept
+
+      - name: Upload the differences
+        if: ${{ failure() && !inputs.accept }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pictures-differences
+          path: pictures/test-results/
+          retention-days: 14
+
+      - name: Upload the new baselines
+        if: ${{ always() && inputs.accept }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pictures-baselines
+          path: pictures/baselines/
+          retention-days: 14
