@@ -7,9 +7,11 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
-## 1.5.31
+## 1.5.32
 
-On agentspecs 0.0.100 and `datalayer-agent-shield` 0.1.1.
+On agentspecs 0.0.100 and `datalayer-agent-shield` 0.1.1. 1.5.31 was tagged minutes before with everything below but the harness's key; this carries it.
+
+- **A harness's declared secrets reach its process** (SHIELD.md §6.1, SH-10): an agent on a catalogue harness declares the harness spec's `requires.secrets` (Claude Code's `ANTHROPIC_API_KEY`) as the runtime's, so the companion fetches them from IAM for `configure-from-spec` and the harness is given them by name — and an account without them is refused in a sentence, as for an MCP server's. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
 
 - **A harness as a Datalayer agent** (SHIELD.md SH-10, on SH-01 and SH-11): `harness: claude-code` (or `codex`, `gemini-cli`, `goose`, `opencode`, `openhands`, `fast-agent`) in an agent spec is served by `ACPAgent(BaseAgent)` — the `agent-shield` package's proxy with the runtime as its face: the pinned adapter launched over stdio from `~/.agent-shield/harnesses/<id>@<version>` or the PATH, never fetched; `initialize` with `fs` and `terminal` on; every `session/update` an event of the runtime's; a malformed update or a refused action ending the turn in a sentence; `DELETE /agents/{id}` ending the process. Registered on `acp`, `a2a` and `ag-ui`; `vercel-ai` refused. The Studio's side (`src/runtimes/variants.ts`, `checkAppspec`) offers such an agent the Datalayer runtimes and never the page; `custom` stays refused in the shared catalogue. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **Permissions as Rules** (SH-12): `session/request_permission` decided by the application's Rules read into a team-scope policy (`guardrails/shield_policy.py`) above the default — *do it* answered, *ask me first* raised through the tool approvals, *always* a session rule, `cancelled` on a cancelled turn.

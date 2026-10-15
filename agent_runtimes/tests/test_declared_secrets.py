@@ -203,6 +203,20 @@ def test_a_subagent_by_reference_declares_what_its_agentspec_does() -> None:
     assert declared.runtime == {"R19_SERVER_TOKEN", "R19_SKILL_TOKEN"}
 
 
+def test_an_agent_on_a_harness_declares_the_key_its_harness_requires() -> None:
+    # SHIELD §6.1: the harness spec's declared secrets reach the process from
+    # IAM through the companion, so a runtime made for a Claude Code agent is
+    # given ANTHROPIC_API_KEY — and refused when the account has none.
+    coder = Agentspec(id="r19-coder", name="coder", harness="claude-code")
+    declared = declared_secrets(coder)
+    assert declared.consumers["the harness claude-code"] == {"ANTHROPIC_API_KEY"}
+    assert "ANTHROPIC_API_KEY" in declared.runtime
+    assert "ANTHROPIC_API_KEY" not in declared.kernel
+    [sentence] = declared.missing(lambda name: False, "Coder")
+    assert "the harness claude-code needs ANTHROPIC_API_KEY" in sentence
+    assert declared_secrets(Agentspec(id="r19-plain", name="plain")).consumers == {}
+
+
 def test_a_missing_secret_is_said_in_a_sentence() -> None:
     [sentence] = declared_secrets(BARE_AGENT, mcp_servers=[PROBE_SERVER]).missing(
         lambda name: False, "Crop Monitoring"

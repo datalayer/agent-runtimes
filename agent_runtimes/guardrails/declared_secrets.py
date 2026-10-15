@@ -12,6 +12,10 @@ given is what the specs it is configured from **declare**, read off them:
 - each skill its agent runs — the skill's ``envvars``;
 - a subagent the agent *is* by reference (``ref``), the same, read off that
   agentspec;
+- the harness its agent runs on (``harness: claude-code``, SHIELD §6.1) — the
+  harness spec's ``requires.secrets`` (Claude Code's ``ANTHROPIC_API_KEY``),
+  given to the harness's process by name and to nothing else of the runtime's
+  (``adapters.acp_agent.harness_environment``), never to the sandbox;
 - a deployment that takes a signed user (D-21) — its user secret,
   ``DATALAYER_APP_USER_SECRET_<UID>``;
 - what the code an MCP server's tools write reads in the code sandbox — its
@@ -122,6 +126,16 @@ def _catalog_server(server_id: str) -> Any:
     from agent_runtimes.mcp.catalog_mcp_servers import get_catalog_server
 
     return get_catalog_server(server_id)
+
+
+def _harness_env_names(harness_id: str) -> FrozenSet[str]:
+    """The secrets a catalogue harness requires, by name; none for a builtin or unknown one."""
+    from agent_runtimes.specs.harnesses import get_harness
+
+    harness = get_harness(harness_id)
+    if harness is None:
+        return frozenset()
+    return frozenset(str(name) for name in harness.requires.secrets)
 
 
 def _skill_env_names(skill_ref: Any) -> FrozenSet[str]:
@@ -293,6 +307,11 @@ def declared_secrets(
             )
         for skill in _get(spec, "skills") or []:
             add_skill(skill)
+        harness_id = str(_get(spec, "harness") or "")
+        if harness_id:
+            names = _harness_env_names(harness_id)
+            if names:
+                consumers.setdefault(f"the harness {harness_id}", set()).update(names)
         subagents = _get(spec, "subagents")
         for sub in (_get(subagents, "subagents") or []) if subagents else []:
             if _get(sub, "a2a"):
