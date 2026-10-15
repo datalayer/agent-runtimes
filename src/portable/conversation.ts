@@ -754,7 +754,8 @@ export function reduceConversation(
     }
 
     case 'TOOL_CALL_DONE': {
-      // A call's result as a value, by an adapter (or the page) that has it.
+      // A call's result as a value, by an adapter (or the page) that has it;
+      // `answered` when it is the person's answer.
       const id = required(event, 'toolCallId');
       if (typeof event.success !== 'boolean') {
         throw new Error(
@@ -772,7 +773,14 @@ export function reduceConversation(
       return (
         changed(state, id, item =>
           item.kind === 'tool'
-            ? withResult(item, result, limits.toolText)
+            ? withResult(
+                item,
+                result,
+                limits.toolText,
+                // The person's own answer (an approval decided, steps
+                // confirmed): nothing waits after it.
+                event.answered === true,
+              )
             : item,
         ) ?? noted(state, event)
       );

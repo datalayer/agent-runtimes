@@ -61,11 +61,7 @@ import { useConversationStore } from '../../stores/conversationStore';
 import type { ChatMessage } from '../../types/messages';
 import { askedOf } from '../../portable/records';
 import { extractChatMessagesFromFullContext } from './fullContextMessages';
-import {
-  generateMessageId,
-  createUserMessage,
-  createAssistantMessage,
-} from '../../types/messages';
+import { generateMessageId, createUserMessage } from '../../types/messages';
 import type { ProtocolConfig, ProtocolEvent } from '../../types/protocol';
 import type { BaseProtocolAdapter } from '../../protocols';
 import type {
@@ -90,11 +86,33 @@ import {
   internalQueryClient,
   isToolCallMessage,
   getMessageText,
-  convertHistoryToDisplayItems,
   createProtocolAdapter,
   getApiBaseFromConfig,
   sanitizeAssistantContent,
 } from '../../utils';
+import {
+  BROWSER_LIMITS,
+  emptyConversation,
+  reduceConversation,
+  withError,
+  withoutItems,
+  withPrompt,
+  withTurnEnded,
+  type ConversationState,
+} from '../../portable/conversation';
+import {
+  conversationEventsOf,
+  snapshotOfMessages,
+} from '../../portable/adapterEvents';
+import type { AgUiEvent } from '../../portable/agui';
+import {
+  conversationDrawer,
+  emptyChatLayer,
+  rowIdOf,
+  toolCallOf,
+  type ChatLayer,
+  type MessageExtras,
+} from './conversationItems';
 import {
   useConfig,
   useSkills,
@@ -1681,7 +1699,108 @@ function ChatBaseInner({
   const isA2AProtocol = protocol?.type === 'a2a';
 
   // ---- Component state ----
-  const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
+  /*
+   * The conversation (MOBILE M-030): `reduceConversation`'s, as on the phone,
+   * whatever protocol the agent speaks — its adapter's events normalised by
+   * `conversationEventsOf`. Kept in a ref as each change lands, so the events
+   * of one network chunk each read the last, and drawn on the next render
+   * with what only the web holds beside it (`ChatLayer`).
+   */
+  const [conversation, setConversation] = useState<ConversationState>(() =>
+    emptyConversation(BROWSER_LIMITS),
+  );
+  const conversationRef = useRef(conversation);
+  // Whether anything has changed it yet: a store is not written over by the
+  // empty conversation a chat mounts with.
+  const conversationTouchedRef = useRef(false);
+  const changeConversation = useCallback(
+    (change: (state: ConversationState) => ConversationState) => {
+      const next = change(conversationRef.current);
+      if (next === conversationRef.current) return;
+      conversationRef.current = next;
+      conversationTouchedRef.current = true;
+      setConversation(next);
+    },
+    [],
+  );
+  const [layer, setLayer] = useState<ChatLayer>(emptyChatLayer);
+  const layerRef = useRef(layer);
+  const changeLayer = useCallback((change: (layer: ChatLayer) => ChatLayer) => {
+    const next = change(layerRef.current);
+    if (next === layerRef.current) return;
+    layerRef.current = next;
+    setLayer(next);
+  }, []);
+  /** The conversation and what the web held beside it, gone: a new one. */
+  const resetConversation = useCallback(() => {
+    changeConversation(() => emptyConversation(BROWSER_LIMITS));
+    changeLayer(() => emptyChatLayer());
+  }, [changeConversation, changeLayer]);
+  /** A conversation read again: its messages, its tool calls and their results. */
+  const restoreConversation = useCallback(
+    (messages: ChatMessage[]) => {
+      let restored: ConversationState;
+      try {
+        restored = reduceConversation(
+          emptyConversation(BROWSER_LIMITS),
+          snapshotOfMessages(messages),
+        );
+      } catch (failure) {
+        console.error('[ChatBase] Conversation not read again:', failure);
+        setError(
+          failure instanceof Error ? failure : new Error(String(failure)),
+        );
+        return;
+      }
+      const extras = new Map<string, MessageExtras>();
+      for (const message of messages) {
+        const {
+          id,
+          role: _role,
+          content: _content,
+          toolCalls: _calls,
+          ...rest
+        } = message;
+        extras.set(id, rest);
+      }
+      changeLayer(() => ({ ...emptyChatLayer(), extras }));
+      changeConversation(() => restored);
+    },
+    [changeConversation, changeLayer],
+  );
+  /** One more input of the reducer. */
+  const reduce = useCallback(
+    (event: AgUiEvent) =>
+      changeConversation(state => reduceConversation(state, event)),
+    [changeConversation],
+  );
+  /** A tool call as its card draws it now, or `undefined`. */
+  const toolCardNow = useCallback((toolCallId: string) => {
+    const row = conversationRef.current.items.find(
+      item => item.kind === 'tool' && item.id === toolCallId,
+    );
+    return row && row.kind === 'tool' ? toolCallOf(row) : undefined;
+  }, []);
+  /** Every tool call as its card draws it now. */
+  const toolCardsNow = useCallback(
+    () =>
+      conversationRef.current.items.flatMap(item =>
+        item.kind === 'tool' ? [toolCallOf(item)] : [],
+      ),
+    [],
+  );
+  const chatTextRef = useRef(chatText);
+  chatTextRef.current = chatText;
+  const drawConversation = useMemo(
+    () => conversationDrawer(text => chatTextRef.current.error(text)),
+    [],
+  );
+  const displayItems = useMemo(
+    () => drawConversation(conversation, layer),
+    [drawConversation, conversation, layer],
+  );
+  const displayItemsRef = useRef(displayItems);
+  displayItemsRef.current = displayItems;
   /*
    * What the harness itself reported, for an agent with no server behind it.
    *
@@ -2170,9 +2289,7 @@ function ChatBaseInner({
   // ---- Refs ----
   const adapterRef = useRef<BaseProtocolAdapter | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const toolCallsRef = useRef<Map<string, ToolCallMessage>>(new Map());
   const pendingToolExecutionsRef = useRef(0);
-  const currentAssistantMessageRef = useRef<ChatMessage | null>(null);
   const respondedApprovalIdsRef = useRef<Set<string>>(new Set());
   const defaultSkillsBootstrapRef = useRef<Set<string>>(new Set());
   const defaultMcpToolsBootstrapRef = useRef<Set<string>>(new Set());
@@ -2208,7 +2325,6 @@ function ChatBaseInner({
   const uiSocketRef = useRef<{ socket: UiSocket; scope: string } | null>(null);
   const parkedUiOpsRef = useRef<UiOp[]>([]);
   const historyStepsRef = useRef<Set<string>>(new Set());
-  const displayItemsRef = useRef<DisplayItem[]>([]);
   const uiSocketUrl = protocol?.uiSocket;
   const uiSocketTokenRef = useRef(protocol?.authToken);
   uiSocketTokenRef.current = protocol?.authToken;
@@ -2232,23 +2348,58 @@ function ChatBaseInner({
     [uiFilesUrl],
   );
 
+  /** The messages as a ui op reads them: their ids, what they show, who said them. */
+  const messageStubs = useCallback(() => {
+    const kept = layerRef.current;
+    return conversationRef.current.items.flatMap(item =>
+      item.kind === 'message' || item.kind === 'error'
+        ? [
+            {
+              id: item.id,
+              displays: kept.displays.get(item.id),
+              speaker: kept.speakers.get(item.id),
+            },
+          ]
+        : [],
+    );
+  }, []);
+
+  /*
+   * A ui op on the messages: what they show and who said them are the web's
+   * (`ChatLayer`); a message taken back leaves the conversation.
+   */
   const applyToMessages = useCallback(
     (op: UiOp) => {
-      const apply = <T extends DisplayItem | ChatMessage>(items: T[]): T[] => {
-        try {
-          return withUiOp(items, op);
-        } catch (error) {
-          console.error('[ChatBase] reactor.ui op not applied:', error);
-          return items;
+      const stubs = messageStubs();
+      let next: typeof stubs;
+      try {
+        next = withUiOp(stubs, op);
+      } catch (error) {
+        console.error('[ChatBase] reactor.ui op not applied:', error);
+        return;
+      }
+      const left = new Set(next.map(stub => stub.id));
+      const removed = stubs
+        .filter(stub => !left.has(stub.id))
+        .map(stub => stub.id);
+      changeLayer(kept => {
+        const displays = new Map(kept.displays);
+        const speakers = new Map(kept.speakers);
+        for (const stub of next) {
+          if (stub.displays) displays.set(stub.id, stub.displays);
+          if (stub.speaker) speakers.set(stub.id, stub.speaker);
         }
-      };
-      setDisplayItems(prev => apply(prev));
-      if (useStoreMode) {
-        const store = useChatStore.getState();
-        store.setMessages(apply(store.messages));
+        for (const id of removed) {
+          displays.delete(id);
+          speakers.delete(id);
+        }
+        return { ...kept, displays, speakers };
+      });
+      if (removed.length > 0) {
+        changeConversation(state => withoutItems(state, removed));
       }
     },
-    [useStoreMode],
+    [messageStubs, changeLayer, changeConversation],
   );
 
   const applySocketOp = useCallback(
@@ -2283,12 +2434,30 @@ function ChatBaseInner({
       } else if (routed.to === 'step') {
         // A step of its code, drawn as it runs (LOOP P-16).
         const step = routed.step;
-        setDisplayItems(prev => withLoopStep(prev, step));
+        changeLayer(kept => {
+          const anchors = new Map(
+            kept.steps.map(row => [row.item.id, row.after] as const),
+          );
+          const last = conversationRef.current.items.at(-1)?.id ?? null;
+          const items = withLoopStep(
+            kept.steps.map(row => row.item),
+            step,
+          ) as ToolCallMessage[];
+          return {
+            ...kept,
+            steps: items.map(item => ({
+              item,
+              after: anchors.has(item.id)
+                ? (anchors.get(item.id) ?? null)
+                : last,
+            })),
+          };
+        });
       } else if (routed.to === 'element') {
         // In a side panel or on a page of its own (LOOP P-18).
         uiElementsRef.current.add(routed.change.id);
         applyLoopElement(routed.change);
-      } else if (!placeable(displayItemsRef.current, routed.op)) {
+      } else if (!placeable(messageStubs(), routed.op)) {
         const under =
           routed.op.op === 'show' || routed.op.op === 'ask'
             ? routed.op.body.data?.message_id
@@ -2296,19 +2465,13 @@ function ChatBaseInner({
         if (history && typeof under === 'string') {
           // Shown in the past under a message that said nothing: the
           // thread did not draw it, the chat draws it for what it showed.
-          const placeholder: ChatMessage = {
-            id: under,
+          reduce({
+            type: 'MESSAGE_SAID',
+            messageId: under,
             role: 'assistant',
-            content: '',
-            createdAt: new Date(),
-          };
-          displayItemsRef.current = [...displayItemsRef.current, placeholder];
-          setDisplayItems(prev =>
-            prev.some(item => item.id === under)
-              ? prev
-              : [...prev, placeholder],
-          );
-          if (useStoreMode) useChatStore.getState().addMessage(placeholder);
+            text: '',
+            streaming: false,
+          });
           applyToMessages(routed.op);
         } else {
           parkedUiOpsRef.current.push(routed.op);
@@ -2317,30 +2480,23 @@ function ChatBaseInner({
         applyToMessages(routed.op);
       }
     },
-    [applyToMessages, useStoreMode],
+    [applyToMessages, messageStubs, changeLayer, reduce],
   );
   const applySocketOpRef = useRef(applySocketOp);
   applySocketOpRef.current = applySocketOp;
 
   // What waited for its message, applied once the message is here.
   useEffect(() => {
-    displayItemsRef.current = displayItems;
     if (parkedUiOpsRef.current.length === 0) return;
     const parked = parkedUiOpsRef.current.splice(0);
-    let items: DisplayItem[] = displayItems;
     for (const op of parked) {
-      if (!placeable(items, op)) {
+      if (!placeable(messageStubs(), op)) {
         parkedUiOpsRef.current.push(op);
         continue;
       }
-      try {
-        items = withUiOp(items, op);
-      } catch {
-        // Said by `applyToMessages`, which refuses it the same way.
-      }
       applyToMessages(op);
     }
-  }, [displayItems, applyToMessages]);
+  }, [conversation, applyToMessages, messageStubs]);
 
   /** The conversation's ui socket, opened for its thread when it is not yet. */
   const ensureUiSocket = useCallback((): UiSocket | null => {
@@ -2444,7 +2600,7 @@ function ChatBaseInner({
         if (!respond) return;
         const normalize = (name?: string) =>
           (name ?? '').toLowerCase().replace(/[-_]/g, '');
-        const calls = Array.from(toolCallsRef.current.values());
+        const calls = toolCardsNow();
         // By the approval id the tool result carries, else by the tool
         // name of a call still waiting — the same two matches the card makes.
         const call =
@@ -2484,7 +2640,7 @@ function ChatBaseInner({
 
       let targetToolCallId = approval.tool_call_id;
       if (!targetToolCallId) {
-        for (const [tcId, tc] of toolCallsRef.current.entries()) {
+        for (const tc of toolCardsNow()) {
           if (tc.status !== 'inProgress' && tc.status !== 'executing') {
             continue;
           }
@@ -2494,7 +2650,7 @@ function ChatBaseInner({
             approval.tool_args ?? {},
           );
           if (tcSig === approvalSig) {
-            targetToolCallId = tcId;
+            targetToolCallId = tc.toolCallId;
             break;
           }
         }
@@ -2504,7 +2660,7 @@ function ChatBaseInner({
         return false;
       }
 
-      const target = toolCallsRef.current.get(targetToolCallId);
+      const target = toolCardNow(targetToolCallId);
       if (!target) {
         return false;
       }
@@ -3084,10 +3240,10 @@ function ChatBaseInner({
     if (useStoreMode && !runtimeId) {
       const storeMessages = useChatStore.getState().messages;
       if (storeMessages.length > 0) {
-        setDisplayItems(storeMessages);
+        restoreConversation(storeMessages);
       }
     }
-  }, [useStoreMode, runtimeId]);
+  }, [useStoreMode, runtimeId, restoreConversation]);
 
   // ---- Conversation history loading ----
   const prevHistoryScopeRef = useRef<string | undefined>(undefined);
@@ -3104,8 +3260,7 @@ function ChatBaseInner({
         historyRetryAttemptsRef.current.set(historyScopeId, 0);
       }
       prevHistoryScopeRef.current = historyScopeId;
-      setDisplayItems([]);
-      toolCallsRef.current.clear();
+      resetConversation();
       if (!historyScopeId) return;
     }
 
@@ -3123,7 +3278,7 @@ function ChatBaseInner({
         useConversationStore
           .getState()
           .setMessages(historyScopeId, given.messages);
-        setDisplayItems(convertHistoryToDisplayItems(given.messages));
+        restoreConversation(given.messages);
         useConversationStore.getState().markFetched(historyScopeId);
         setHistoryLoaded(true);
       }
@@ -3136,8 +3291,7 @@ function ChatBaseInner({
         // The transcript changed on the server outside a run — a rewind to a
         // checkpoint. Forget what is shown and load what the agent now has.
         useConversationStore.getState().clearMessages(historyScopeId);
-        setDisplayItems([]);
-        toolCallsRef.current.clear();
+        resetConversation();
         historyRetryAttemptsRef.current.set(historyScopeId, 0);
         freshSnapshotRef.current = true;
       }
@@ -3153,7 +3307,9 @@ function ChatBaseInner({
     // state — put over a live conversation, it erased its tool cards, a
     // pending approval among them, at the socket's first retry.
     if (storedMessages.length > 0) {
-      setDisplayItems(prev => (prev.length > 0 ? prev : storedMessages));
+      if (conversationRef.current.items.length === 0) {
+        restoreConversation(storedMessages);
+      }
       setHistoryLoaded(true);
     }
 
@@ -3182,7 +3338,7 @@ function ChatBaseInner({
 
     const applyMessages = (messages: ChatMessage[]) => {
       store.setMessages(historyScopeId, messages);
-      setDisplayItems(convertHistoryToDisplayItems(messages));
+      restoreConversation(messages);
       historyRetryAttemptsRef.current.set(historyScopeId, 0);
       store.markFetched(historyScopeId);
       setHistoryLoaded(true);
@@ -3293,6 +3449,8 @@ function ChatBaseInner({
     activeAgentId,
     historyRefreshTick,
     historyVersion,
+    resetConversation,
+    restoreConversation,
   ]);
 
   // Keep in-memory store in sync with displayItems
@@ -3308,6 +3466,18 @@ function ChatBaseInner({
       }
     }
   }, [historyScopeId, displayItems]);
+
+  // A store-mode chat keeps its messages in the shared chat store, as drawn.
+  useEffect(() => {
+    if (!useStoreMode || !conversationTouchedRef.current) return;
+    useChatStore
+      .getState()
+      .setMessages(
+        displayItems.filter(
+          (item): item is ChatMessage => !isToolCallMessage(item),
+        ),
+      );
+  }, [useStoreMode, displayItems]);
 
   // ---- Derived state ----
   const messages = displayItems.filter(
@@ -3420,6 +3590,57 @@ function ChatBaseInner({
       ) {
         return;
       }
+      /*
+       * The event, as the conversation reads it (`conversationEventsOf`):
+       * one reducer whatever the protocol. What it cannot read is said.
+       */
+      const read = () => {
+        try {
+          const inputs = conversationEventsOf(event, conversationRef.current);
+          changeConversation(state =>
+            inputs.reduce(
+              (kept, input) => reduceConversation(kept, input),
+              state,
+            ),
+          );
+        } catch (failure) {
+          console.error('[ChatBase] Protocol event not read:', failure);
+          setError(
+            failure instanceof Error ? failure : new Error(String(failure)),
+          );
+        }
+      };
+      /** The conversation's latest tool row with an answer, if any said nothing. */
+      const toolResultFallback = (): void => {
+        const items = conversationRef.current.items;
+        const hasAssistantContent = items.some(
+          item =>
+            item.kind === 'message' &&
+            item.role === 'assistant' &&
+            item.text.trim().length > 0,
+        );
+        if (hasAssistantContent) {
+          return;
+        }
+        const latestCompletedTool = [...items]
+          .reverse()
+          .find(
+            item =>
+              item.kind === 'tool' &&
+              item.status === 'complete' &&
+              item.value !== undefined,
+          );
+        if (!latestCompletedTool || latestCompletedTool.kind !== 'tool') {
+          return;
+        }
+        reduce({
+          type: 'MESSAGE_SAID',
+          messageId: generateMessageId(),
+          role: 'assistant',
+          text: formatToolResultFallback(latestCompletedTool.value),
+          streaming: false,
+        });
+      };
       switch (event.type) {
         case 'message':
           if (event.usage) {
@@ -3461,109 +3682,23 @@ function ChatBaseInner({
             }
           }
 
+          // A prompt that only calls a tool shows the tool, not its words.
           if (suppressAssistantTextForToolOnlyRef.current) {
-            const suppressedMessageId = currentAssistantMessageRef.current?.id;
-            if (suppressedMessageId) {
-              setDisplayItems(prev =>
-                prev.filter(
-                  item =>
-                    isToolCallMessage(item) || item.id !== suppressedMessageId,
-                ),
-              );
-              if (useStoreMode) {
-                useChatStore.getState().deleteMessage(suppressedMessageId);
-              }
-              currentAssistantMessageRef.current = null;
-            }
             break;
           }
 
           if (event.message) {
-            const incomingId = event.message.id;
-            const currentId = currentAssistantMessageRef.current?.id;
-            const isNewMessage =
-              !currentId || (incomingId && incomingId !== currentId);
-
-            if (currentId && !isNewMessage) {
-              /*
-               * The message to write to is the one current now, as the event
-               * arrives — not whichever the ref names when React gets round
-               * to running the updater. A whole answer in one network chunk
-               * queues every delta's updater in the same task, and the turn's
-               * end clears the ref before any of them runs: read lazily, all
-               * but the first found nothing to update, and the conversation
-               * and the balloon showed only the answer's first word.
-               */
-              const rawContent = event.message.content;
-              const sanitizedContent =
-                typeof rawContent === 'string'
-                  ? sanitizeAssistantContent(rawContent)
-                  : (rawContent ?? '');
-              if (typeof sanitizedContent === 'string' && sanitizedContent) {
-                inspectAnswerRef.current = sanitizedContent;
-              }
-              setDisplayItems(prev => {
-                const newItems = [...prev];
-                const idx = newItems.findIndex(
-                  item => !isToolCallMessage(item) && item.id === currentId,
-                );
-                if (idx >= 0 && !isToolCallMessage(newItems[idx])) {
-                  newItems[idx] = {
-                    ...(newItems[idx] as ChatMessage),
-                    content: sanitizedContent,
-                  };
-                }
-                return newItems;
-              });
-              if (useStoreMode) {
-                useChatStore.getState().updateMessage(currentId, {
-                  content: sanitizedContent,
-                });
-              }
-            } else {
-              const content = event.message.content;
-              const contentStr =
-                typeof content === 'string' ? content : (content ?? '');
-              const sanitizedContent =
-                typeof contentStr === 'string'
-                  ? sanitizeAssistantContent(contentStr)
-                  : '';
-              const newMessage = createAssistantMessage(sanitizedContent);
-              newMessage.id = event.message.id || newMessage.id;
-              currentAssistantMessageRef.current = newMessage;
-              setDisplayItems(prev => {
-                const existingIdx = prev.findIndex(
-                  item => !isToolCallMessage(item) && item.id === newMessage.id,
-                );
-                if (existingIdx >= 0) {
-                  const newItems = [...prev];
-                  newItems[existingIdx] = {
-                    ...(newItems[existingIdx] as ChatMessage),
-                    content: sanitizedContent,
-                  };
-                  return newItems;
-                }
-                return [...prev, newMessage];
-              });
-              if (useStoreMode) {
-                const existingInStore = useChatStore
-                  .getState()
-                  .messages.find(m => m.id === newMessage.id);
-                if (existingInStore) {
-                  useChatStore.getState().updateMessage(newMessage.id, {
-                    content: sanitizedContent,
-                  });
-                } else {
-                  useChatStore.getState().addMessage(newMessage);
-                }
-              }
+            const content = event.message.content;
+            if (typeof content === 'string' && content) {
+              inspectAnswerRef.current = sanitizeAssistantContent(content);
             }
+            read();
           }
           break;
 
         case 'tool-call':
           if (event.toolCall && !stoppedRef.current) {
-            const toolCallId = event.toolCall.toolCallId || generateMessageId();
+            const toolCallId = event.toolCall.toolCallId;
             const toolName = event.toolCall.toolName;
             const args = event.toolCall.args || {};
             /*
@@ -3574,48 +3709,27 @@ function ChatBaseInner({
              * `false`. Without the flag, the old heuristics decide.
              */
             const argsComplete = event.toolCall.argsComplete;
+            const known = toolCardNow(toolCallId);
+            read();
+            const card = toolCardNow(toolCallId);
+            if (!card) {
+              break;
+            }
+            const frontendTool = frontendToolsRef.current?.find(
+              t => t.name === toolName,
+            );
+            const toolHandler = frontendTool?.handler;
 
-            if (toolCallsRef.current.has(toolCallId)) {
-              const existingToolCall = toolCallsRef.current.get(toolCallId);
-              if (existingToolCall) {
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  args: { ...existingToolCall.args, ...args },
-                };
-                toolCallsRef.current.set(toolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) && item.toolCallId === toolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-
-                const frontendTool = frontendToolsRef.current?.find(
-                  t => t.name === toolName,
-                );
-                const toolHandler = frontendTool?.handler;
-                if (
-                  toolHandler &&
-                  existingToolCall.status === 'executing' &&
-                  (argsComplete ?? Object.keys(args).length > 0)
-                ) {
-                  pendingToolExecutionsRef.current++;
-                  executeFrontendTool(toolHandler, updatedToolCall, toolCallId);
-                }
+            if (known) {
+              if (
+                toolHandler &&
+                known.status === 'executing' &&
+                (argsComplete ?? Object.keys(args).length > 0)
+              ) {
+                pendingToolExecutionsRef.current++;
+                executeFrontendTool(toolHandler, card, toolCallId);
               }
             } else {
-              const toolCallMsg: ToolCallMessage = {
-                id: `tool-${toolCallId}`,
-                type: 'tool-call',
-                toolCallId,
-                toolName,
-                args,
-                status: 'executing',
-              };
-              toolCallsRef.current.set(toolCallId, toolCallMsg);
-              setDisplayItems(prev => [...prev, toolCallMsg]);
-
               // Fire pre-hook for new tool calls
               onToolCallStartRef.current?.({
                 toolName,
@@ -3627,11 +3741,6 @@ function ChatBaseInner({
                 name: toolName,
                 args,
               });
-
-              const frontendTool = frontendToolsRef.current?.find(
-                t => t.name === toolName,
-              );
-              const toolHandler = frontendTool?.handler;
               // Execute when the args are complete. The protocol says so
               // when it can (`argsComplete`); without the flag, fall back
               // to the old heuristics — actual args present, or a tool
@@ -3646,7 +3755,7 @@ function ChatBaseInner({
                     !frontendToolExpectsArgs(frontendTool)))
               ) {
                 pendingToolExecutionsRef.current++;
-                executeFrontendTool(toolHandler, toolCallMsg, toolCallId);
+                executeFrontendTool(toolHandler, card, toolCallId);
               }
             }
           }
@@ -3654,155 +3763,44 @@ function ChatBaseInner({
 
         case 'tool-result':
           if (event.toolResult) {
-            const toolCallId = event.toolResult.toolCallId;
-            if (toolCallId && toolCallsRef.current.has(toolCallId)) {
-              const existingToolCall = toolCallsRef.current.get(toolCallId);
-              if (existingToolCall) {
-                const isHumanInTheLoop =
-                  existingToolCall.args &&
-                  'steps' in existingToolCall.args &&
-                  Array.isArray(existingToolCall.args.steps);
-
-                const resultData = event.toolResult.result as
-                  Record<string, unknown> | undefined;
-                let executionError: string | undefined;
-                let codeError: ToolCallMessage['codeError'] | undefined;
-                let exitCode: number | null | undefined;
-                let isPendingApproval = false;
-                let hasError = !!event.toolResult.error;
-
-                if (resultData && typeof resultData === 'object') {
-                  if (
-                    'pending_approval' in resultData &&
-                    resultData.pending_approval === true
-                  ) {
-                    isPendingApproval = true;
-                  }
-                  if (
-                    resultData.execution_error &&
-                    typeof resultData.execution_error === 'string'
-                  ) {
-                    executionError = resultData.execution_error;
-                    hasError = true;
-                  }
-                  if (
-                    resultData.code_error &&
-                    typeof resultData.code_error === 'object'
-                  ) {
-                    const ce = resultData.code_error as Record<string, unknown>;
-                    codeError = {
-                      name: (ce.name as string) || 'Error',
-                      value: (ce.value as string) || 'Unknown error',
-                      traceback: ce.traceback as string | undefined,
-                    };
-                    hasError = true;
-                  }
-                  if ('exit_code' in resultData) {
-                    const ec = resultData.exit_code;
-                    exitCode = typeof ec === 'number' ? ec : null;
-                    if (exitCode != null && exitCode !== 0) hasError = true;
-                  }
-                  if (
-                    'execution_ok' in resultData &&
-                    resultData.execution_ok === false
-                  ) {
-                    hasError = true;
-                  }
-                }
-
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  result: event.toolResult.result,
-                  status: hasError
-                    ? 'error'
-                    : isPendingApproval
-                      ? 'inProgress'
-                      : isHumanInTheLoop
-                        ? 'executing'
-                        : 'complete',
-                  error: event.toolResult.error,
-                  executionError,
-                  codeError,
-                  exitCode,
-                };
-                toolCallsRef.current.set(toolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) && item.toolCallId === toolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-
-                recorderRef.current?.recorder.toolEnded(toolCallId, {
-                  result: event.toolResult.result,
-                  error:
-                    event.toolResult.error ??
-                    (updatedToolCall.status === 'error'
-                      ? (executionError ?? 'failed')
-                      : undefined),
-                });
-                // Fire post-hook for tool results
-                onToolCallCompleteRef.current?.({
-                  toolName: existingToolCall.toolName,
-                  toolCallId,
-                  args: existingToolCall.args,
-                  result: event.toolResult.result,
-                  status: updatedToolCall.status,
-                  error: event.toolResult.error,
-                });
-              }
+            const toolCallId = event.toolResult.toolCallId ?? '';
+            const known = toolCardNow(toolCallId);
+            read();
+            const card = toolCardNow(toolCallId);
+            if (known && card) {
+              recorderRef.current?.recorder.toolEnded(toolCallId, {
+                result: event.toolResult.result,
+                error:
+                  event.toolResult.error ??
+                  (card.status === 'error'
+                    ? (card.executionError ?? 'failed')
+                    : undefined),
+              });
+              // Fire post-hook for tool results
+              onToolCallCompleteRef.current?.({
+                toolName: known.toolName,
+                toolCallId,
+                args: known.args,
+                result: event.toolResult.result,
+                status: card.status,
+                error: event.toolResult.error,
+              });
             }
           }
           break;
 
         case 'state-update':
           onStateUpdate?.(event.data);
-          if (event.data) {
-            const executingToolCalls = Array.from(
-              toolCallsRef.current.entries(),
-            ).filter(([_, tc]) => tc.status === 'executing');
-
-            if (executingToolCalls.length > 0) {
-              const [lastToolCallId, existingToolCall] =
-                executingToolCalls[executingToolCalls.length - 1];
-
-              const isHumanInTheLoop =
-                existingToolCall.args &&
-                'steps' in existingToolCall.args &&
-                Array.isArray(existingToolCall.args.steps);
-
-              if (!isHumanInTheLoop) {
-                const stateData = event.data as Record<string, unknown>;
-                const result =
-                  stateData.weather ??
-                  stateData.result ??
-                  stateData.toolResult ??
-                  stateData;
-
-                const updatedToolCall: ToolCallMessage = {
-                  ...existingToolCall,
-                  result,
-                  status: 'complete',
-                };
-                toolCallsRef.current.set(lastToolCallId, updatedToolCall);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    isToolCallMessage(item) &&
-                    item.toolCallId === lastToolCallId
-                      ? updatedToolCall
-                      : item,
-                  ),
-                );
-              }
-            }
-          }
+          // A tool that answers by setting the shared state: the newest
+          // running call is answered with it (`conversationEventsOf`).
+          read();
           break;
 
         case 'activity':
           // What the server says besides the conversation's text comes on
-          // the ui socket (REACTOR_UI RU-W); the run's other activities —
-          // `loop.session`, `loop.page` — are their readers'.
+          // the ui socket (REACTOR_UI RU-W); the run's own — `loop.session`
+          // among them — are the conversation's.
+          read();
           break;
 
         case 'done':
@@ -3845,44 +3843,11 @@ function ChatBaseInner({
             suppressAssistantTextForToolOnlyRef.current &&
             hideMessagesAfterToolUIRef.current
           ) {
-            setDisplayItems(prev => {
-              const hasAssistantContent = prev.some(
-                item =>
-                  !isToolCallMessage(item) &&
-                  item.role === 'assistant' &&
-                  String(item.content || '').trim().length > 0,
-              );
-
-              if (hasAssistantContent) {
-                return prev;
-              }
-
-              const latestCompletedTool = [...prev]
-                .reverse()
-                .find(
-                  item =>
-                    isToolCallMessage(item) &&
-                    item.status === 'complete' &&
-                    item.result !== undefined,
-                );
-
-              if (
-                !latestCompletedTool ||
-                !isToolCallMessage(latestCompletedTool)
-              ) {
-                return prev;
-              }
-
-              const fallbackMessage = createAssistantMessage(
-                formatToolResultFallback(latestCompletedTool.result),
-              );
-
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(fallbackMessage);
-              }
-
-              return [...prev, fallbackMessage];
-            });
+            toolResultFallback();
+          }
+          // A stopped turn was ended when it was stopped.
+          if (!stoppedRef.current) {
+            read();
           }
           suppressAssistantTextForToolOnlyRef.current = false;
           pendingToolExecutionsRef.current = 0;
@@ -3901,51 +3866,19 @@ function ChatBaseInner({
             /exceeded maximum retries/i.test(event.error.message) &&
             hideMessagesAfterToolUIRef.current
           ) {
-            setDisplayItems(prev => {
-              const hasAssistantContent = prev.some(
-                item =>
-                  !isToolCallMessage(item) &&
-                  item.role === 'assistant' &&
-                  String(item.content || '').trim().length > 0,
-              );
-
-              if (hasAssistantContent) {
-                return prev;
-              }
-
-              const latestCompletedTool = [...prev]
-                .reverse()
-                .find(
-                  item =>
-                    isToolCallMessage(item) &&
-                    item.status === 'complete' &&
-                    item.result !== undefined,
-                );
-
-              if (
-                !latestCompletedTool ||
-                !isToolCallMessage(latestCompletedTool)
-              ) {
-                return prev;
-              }
-
-              const fallbackMessage = createAssistantMessage(
-                formatToolResultFallback(latestCompletedTool.result),
-              );
-
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(fallbackMessage);
-              }
-
-              return [...prev, fallbackMessage];
-            });
+            toolResultFallback();
           }
+          read();
           suppressAssistantTextForToolOnlyRef.current = false;
           setError(event.error || new Error('Unknown error'));
           pendingToolExecutionsRef.current = 0;
           setIsLoading(false);
           setIsStreaming(false);
           agentRuntimeStore.getState().requestRefresh(activeAgentId);
+          break;
+
+        default:
+          read();
           break;
       }
     });
@@ -3983,38 +3916,24 @@ function ChatBaseInner({
             result,
           });
         }
-        const completedToolCall: ToolCallMessage = {
-          ...toolCallMsg,
-          result,
-          status: 'complete',
-        };
         recorderRef.current?.recorder.toolEnded(toolCallId, { result });
-        toolCallsRef.current.set(toolCallId, completedToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? completedToolCall
-              : item,
-          ),
-        );
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: true,
+          result,
+        });
       } catch (err) {
         console.error('[ChatBase] Frontend tool execution error:', err);
-        const errorToolCall: ToolCallMessage = {
-          ...toolCallMsg,
-          status: 'error',
-          error: (err as Error).message,
-        };
         recorderRef.current?.recorder.toolEnded(toolCallId, {
           error: (err as Error).message,
         });
-        toolCallsRef.current.set(toolCallId, errorToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? errorToolCall
-              : item,
-          ),
-        );
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: false,
+          error: (err as Error).message,
+        });
       } finally {
         pendingToolExecutionsRef.current--;
         if (pendingToolExecutionsRef.current < 0) {
@@ -4156,28 +4075,38 @@ function ChatBaseInner({
       );
       const allMessages = [...currentMessages, userMessage];
 
-      setDisplayItems(prev => [...prev, userMessage]);
+      {
+        const { id, role: _role, content: _content, ...extras } = userMessage;
+        changeLayer(kept => ({
+          ...kept,
+          extras: new Map(kept.extras).set(id, extras),
+        }));
+      }
+      changeConversation(state =>
+        reduceConversation(withPrompt(state, userMessage.id, messageContent), {
+          type: 'RUN_STARTED',
+        }),
+      );
       setInput('');
       setIsLoading(true);
       setIsStreaming(true);
       setError(null);
-      currentAssistantMessageRef.current = null;
-
-      if (useStoreMode) {
-        useChatStore.getState().addMessage(userMessage);
-      }
 
       try {
         if (onSendMessage) {
           if (enableStreaming) {
             const assistantMessageId = generateMessageId();
-            const assistantMessage = createAssistantMessage('');
-            assistantMessage.id = assistantMessageId;
-            setDisplayItems(prev => [...prev, assistantMessage]);
-            currentAssistantMessageRef.current = assistantMessage;
+            const said = (text: string, streaming: boolean) =>
+              reduce({
+                type: 'MESSAGE_SAID',
+                messageId: assistantMessageId,
+                role: 'assistant',
+                text,
+                streaming,
+              });
+            said('', true);
 
             if (useStoreMode) {
-              useChatStore.getState().addMessage(assistantMessage);
               useChatStore.getState().startStreaming(assistantMessageId);
             }
 
@@ -4185,50 +4114,21 @@ function ChatBaseInner({
 
             await onSendMessage(messageContent, allMessages, {
               onChunk: (chunk: string) => {
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? {
-                          ...item,
-                          content: (item as ChatMessage).content + chunk,
-                        }
-                      : item,
-                  ),
-                );
-                if (useStoreMode) {
-                  useChatStore
-                    .getState()
-                    .appendToStream(assistantMessageId, chunk);
-                }
+                reduce({
+                  type: 'TEXT_MESSAGE_CONTENT',
+                  messageId: assistantMessageId,
+                  delta: chunk,
+                });
               },
               onComplete: (fullResponse: string) => {
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? { ...item, content: fullResponse }
-                      : item,
-                  ),
-                );
+                said(fullResponse, false);
                 if (useStoreMode) {
-                  useChatStore.getState().updateMessage(assistantMessageId, {
-                    content: fullResponse,
-                  });
                   useChatStore.getState().stopStreaming();
                 }
               },
               onError: (error: Error) => {
-                const errorContent = chatText.error(error.message);
-                setDisplayItems(prev =>
-                  prev.map(item =>
-                    item.id === assistantMessageId
-                      ? { ...item, content: errorContent }
-                      : item,
-                  ),
-                );
+                said(chatText.error(error.message), false);
                 if (useStoreMode) {
-                  useChatStore.getState().updateMessage(assistantMessageId, {
-                    content: errorContent,
-                  });
                   useChatStore.getState().stopStreaming();
                 }
                 setError(error);
@@ -4238,11 +4138,13 @@ function ChatBaseInner({
           } else {
             const response = await onSendMessage(messageContent, allMessages);
             if (response) {
-              const assistantMessage = createAssistantMessage(response);
-              setDisplayItems(prev => [...prev, assistantMessage]);
-              if (useStoreMode) {
-                useChatStore.getState().addMessage(assistantMessage);
-              }
+              reduce({
+                type: 'MESSAGE_SAID',
+                messageId: generateMessageId(),
+                role: 'assistant',
+                text: response,
+                streaming: false,
+              });
             }
           }
         } else if (adapterRef.current) {
@@ -4277,10 +4179,8 @@ function ChatBaseInner({
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('[ChatBase] Send error:', err);
-          const errorMessage = createAssistantMessage(
-            chatText.error((err as Error).message),
-          );
-          setDisplayItems(prev => [...prev, errorMessage]);
+          // Said in the conversation, as the assistant's words.
+          changeConversation(state => withError(state, (err as Error).message));
           setError(err as Error);
         }
       } finally {
@@ -4290,12 +4190,14 @@ function ChatBaseInner({
         // For the non-adapter path (onSendMessage), 'done' is never
         // emitted so we reset when no adapter is present.
         if (!adapterRef.current) {
+          if (conversationRef.current.running) {
+            reduce({ type: 'RUN_FINISHED' });
+          }
           setIsLoading(false);
           setIsStreaming(false);
           agentRuntimeStore.getState().requestRefresh(activeAgentId);
         }
         suppressAssistantTextForToolOnlyRef.current = false;
-        currentAssistantMessageRef.current = null;
         abortControllerRef.current = null;
       }
     },
@@ -4314,6 +4216,9 @@ function ChatBaseInner({
       noteThreadStarted,
       chatText,
       uploadToConversation,
+      changeConversation,
+      changeLayer,
+      reduce,
     ],
   );
 
@@ -4381,29 +4286,8 @@ function ChatBaseInner({
       }
     }
 
-    // Mark in-flight tool calls as interrupted so UI doesn't remain "Executing".
-    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
-      if (toolCall.status === 'executing' || toolCall.status === 'inProgress') {
-        toolCallsRef.current.set(toolCallId, {
-          ...toolCall,
-          status: 'error',
-          error: 'Interrupted by user',
-        });
-      }
-    }
-    setDisplayItems(prev =>
-      prev.map(item => {
-        if (!isToolCallMessage(item)) return item;
-        if (item.status !== 'executing' && item.status !== 'inProgress') {
-          return item;
-        }
-        return {
-          ...item,
-          status: 'error',
-          error: 'Interrupted by user',
-        } as ToolCallMessage;
-      }),
-    );
+    // The turn ends stopped: what streamed stops, a call under way says so.
+    changeConversation(state => withTurnEnded(state, 'stopped'));
 
     if (useStoreMode) {
       useChatStore.getState().stopStreaming();
@@ -4417,7 +4301,6 @@ function ChatBaseInner({
     // own stop event arrives — if it ever does.
     agentRuntimeStore.getState().stopSubagentActivity();
     suppressAssistantTextForToolOnlyRef.current = false;
-    currentAssistantMessageRef.current = null;
 
     // Also interrupt any code running in the sandbox (best-effort).
     sandboxStatusQuery.interrupt();
@@ -4486,8 +4369,7 @@ function ChatBaseInner({
 
   // ---- handleNewChat ----
   const handleNewChat = useCallback(() => {
-    setDisplayItems([]);
-    toolCallsRef.current.clear();
+    resetConversation();
     pendingToolExecutionsRef.current = 0;
     setInput('');
     threadIdRef.current = generateMessageId();
@@ -4496,7 +4378,14 @@ function ChatBaseInner({
       useConversationStore.getState().clearMessages(historyScopeId);
     onNewChat?.();
     headerButtons?.onNewChat?.();
-  }, [clearStoreMessages, onNewChat, headerButtons, useStoreMode, runtimeId]);
+  }, [
+    clearStoreMessages,
+    onNewChat,
+    headerButtons,
+    useStoreMode,
+    runtimeId,
+    resetConversation,
+  ]);
 
   // Hand the send function to a host that owns the input box (the LOOP
   // workspace). Withdrawn on unmount so nothing holds a stale sender.
@@ -4544,33 +4433,47 @@ function ChatBaseInner({
   // ---- handleClear ----
   const handleClear = useCallback(() => {
     if (window.confirm('Clear all messages?')) {
-      setDisplayItems([]);
-      toolCallsRef.current.clear();
+      resetConversation();
       if (useStoreMode) clearStoreMessages();
       if (historyScopeId)
         useConversationStore.getState().clearMessages(historyScopeId);
       onClear?.();
       headerButtons?.onClear?.();
     }
-  }, [clearStoreMessages, onClear, headerButtons, useStoreMode, runtimeId]);
+  }, [
+    clearStoreMessages,
+    onClear,
+    headerButtons,
+    useStoreMode,
+    runtimeId,
+    resetConversation,
+  ]);
 
   // ---- Turn removal (the TurnFooter's remove action) ----
-  const handleRemoveItems = useCallback((ids: string[]) => {
-    const drop = new Set(ids);
-    setDisplayItems(prev => prev.filter(item => !drop.has(item.id)));
-    // The tool-call registry mirrors the transcript; a removed turn's calls
-    // must not linger there or a late protocol event would resurrect them.
-    for (const [toolCallId, toolCall] of toolCallsRef.current.entries()) {
-      if (drop.has(toolCall.id)) {
-        toolCallsRef.current.delete(toolCallId);
-      }
-    }
-  }, []);
+  const handleRemoveItems = useCallback(
+    (ids: string[]) => {
+      const drop = new Set(ids);
+      // The turn's rows leave the conversation, its steps the web's layer.
+      const rows = displayItemsRef.current
+        .filter(item => drop.has(item.id))
+        .map(rowIdOf);
+      changeConversation(state => withoutItems(state, rows));
+      changeLayer(kept =>
+        kept.steps.some(step => drop.has(step.item.id))
+          ? {
+              ...kept,
+              steps: kept.steps.filter(step => !drop.has(step.item.id)),
+            }
+          : kept,
+      );
+    },
+    [changeConversation, changeLayer],
+  );
 
   // ---- HITL respond handler (passed to MessageList) ----
   const handleRespond = useCallback(
     async (toolCallId: string, result: unknown) => {
-      const existingToolCall = toolCallsRef.current.get(toolCallId);
+      const existingToolCall = toolCardNow(toolCallId);
       if (
         existingToolCall &&
         (existingToolCall.status === 'executing' ||
@@ -4654,18 +4557,20 @@ function ChatBaseInner({
               return;
             }
 
-            const updatedToolCall: ToolCallMessage = {
-              ...existingToolCall,
-              result,
-              status: approved ? 'complete' : 'error',
-              error: approved ? undefined : 'Tool approval rejected by user',
-            };
-            toolCallsRef.current.set(toolCallId, updatedToolCall);
-            setDisplayItems(prev =>
-              prev.map(item =>
-                isToolCallMessage(item) && item.toolCallId === toolCallId
-                  ? updatedToolCall
-                  : item,
+            // The person's decision, said on the call; the run goes on.
+            changeConversation(state =>
+              reduceConversation(
+                reduceConversation(state, {
+                  type: 'TOOL_CALL_DONE',
+                  toolCallId,
+                  success: approved,
+                  result,
+                  answered: true,
+                  ...(approved
+                    ? {}
+                    : { error: 'Tool approval rejected by user' }),
+                }),
+                { type: 'RUN_STARTED' },
               ),
             );
 
@@ -4695,19 +4600,14 @@ function ChatBaseInner({
           return;
         }
 
-        const updatedToolCall: ToolCallMessage = {
-          ...existingToolCall,
+        // The person's answer completes the call.
+        reduce({
+          type: 'TOOL_CALL_DONE',
+          toolCallId,
+          success: true,
           result,
-          status: 'complete',
-        };
-        toolCallsRef.current.set(toolCallId, updatedToolCall);
-        setDisplayItems(prev =>
-          prev.map(item =>
-            isToolCallMessage(item) && item.toolCallId === toolCallId
-              ? updatedToolCall
-              : item,
-          ),
-        );
+          answered: true,
+        });
 
         if (adapterRef.current) {
           let responseText: string;
@@ -4745,6 +4645,7 @@ function ChatBaseInner({
 
           setIsLoading(true);
           setIsStreaming(true);
+          reduce({ type: 'RUN_STARTED' });
 
           try {
             const allMessages = displayItems.filter(
@@ -4762,7 +4663,14 @@ function ChatBaseInner({
         }
       }
     },
-    [displayItems, onApproveApproval, onRejectApproval],
+    [
+      displayItems,
+      onApproveApproval,
+      onRejectApproval,
+      toolCardNow,
+      changeConversation,
+      reduce,
+    ],
   );
   handleRespondRef.current = handleRespond;
 

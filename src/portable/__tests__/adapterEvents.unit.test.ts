@@ -788,4 +788,32 @@ describe('the edges the mutation pass found', () => {
     ].reduce(reduceConversation, emptyConversation());
     expect((state.items[0] as { input: unknown }).input).toEqual({});
   });
+
+  it('waits on nothing once the person answered the call', () => {
+    const state = [
+      {
+        type: 'TOOL_CALL_SAID',
+        toolCallId: 'c',
+        toolCallName: 'plan',
+        args: { steps: [] },
+      },
+      {
+        type: 'TOOL_CALL_DONE',
+        toolCallId: 'c',
+        success: true,
+        result: 'shown',
+      },
+      {
+        type: 'TOOL_CALL_DONE',
+        toolCallId: 'c',
+        success: true,
+        result: { accepted: true },
+        answered: true,
+      },
+    ].reduce(reduceConversation, emptyConversation());
+    expect(state.items[0]).toMatchObject({
+      status: 'complete',
+      awaiting: null,
+    });
+  });
 });
