@@ -1440,6 +1440,9 @@ async def _harness_agent_of(
             app=running_app,
             recorder=recorder,
             approvals=ToolApprovalManager(approval_config),
+            # The caller's token: what a run carrying none of its own reaches
+            # the lent gateway toolsets with (SHIELD §4.4, SH-14).
+            credential=approval_config.user_jwt_token or "",
             name=request.name,
             description=request.description or "",
             state_store=protocol_state_store(),

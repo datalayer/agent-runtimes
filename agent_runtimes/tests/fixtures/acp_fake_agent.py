@@ -12,12 +12,16 @@ client's ``fs/write_text_file`` and reports the diff; ``read`` reads
 ``README.md`` through ``fs/read_text_file``; ``run <command>`` opens a
 terminal through ``terminal/create`` and waits for it; ``push`` asks
 permission for a ``git push``; ``fetch`` says a fetch tool call; ``bad``
-sends an update ACP does not describe; ``slow`` waits until cancelled.
+sends an update ACP does not describe; ``slow`` waits until cancelled;
+``mcp`` says which MCP servers its session was given, by name and shape
+(never a header). With ``FAKE_AGENT_MCP_HTTP=1`` in its environment it
+advertises ``mcpCapabilities.http``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from typing import Any
 
@@ -43,6 +47,7 @@ from acp.schema import (
     AgentCapabilities,
     Implementation,
     LoadSessionResponse,
+    McpCapabilities,
     PermissionOption,
     PromptCapabilities,
     SetSessionModeResponse,
@@ -55,6 +60,7 @@ class FakeAgent(Agent):
     def __init__(self) -> None:
         self._client: Client | None = None
         self._sessions: dict[str, str] = {}
+        self._given: dict[str, list[str]] = {}
         self._cancelled: set[str] = set()
         self._counter = 0
 
@@ -81,6 +87,9 @@ class FakeAgent(Agent):
                 prompt_capabilities=PromptCapabilities(
                     image=False, audio=False, embedded_context=True
                 ),
+                mcp_capabilities=McpCapabilities(
+                    http=os.environ.get("FAKE_AGENT_MCP_HTTP") == "1", sse=False
+                ),
             ),
             agent_info=Implementation(
                 name="fake-agent", title="Fake agent", version="0.0.1"
@@ -94,6 +103,10 @@ class FakeAgent(Agent):
         session_id = f"fake_{self._counter}"
         self._sessions[session_id] = cwd
         names = [getattr(server, "name", "?") for server in mcp_servers]
+        self._given[session_id] = [
+            f"{name}:{'http' if getattr(server, 'type', None) == 'http' else 'stdio'}"
+            for name, server in zip(names, mcp_servers)
+        ]
         print(
             f"fake-agent: session {session_id} in {cwd} with mcp {names}",
             file=sys.stderr,
@@ -139,6 +152,13 @@ class FakeAgent(Agent):
         await say(session_id=session_id, update=update_agent_thought_text("thinking"))
         if "bad" in text:
             await say(session_id=session_id, update=start_tool_call("c0", "Mystery"))
+        if "mcp" in text:
+            await say(
+                session_id=session_id,
+                update=update_agent_message_text(
+                    f"mcp: {self._given.get(session_id, [])}"
+                ),
+            )
         if "plan" in text:
             await say(
                 session_id=session_id,

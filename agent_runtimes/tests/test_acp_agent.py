@@ -26,10 +26,12 @@ from agent_runtimes.adapters.acp_agent import (
     WORKSPACE_VARIABLE,
     ACPAgent,
     HarnessRefused,
+    LentToolset,
     harness_agent,
     harness_environment,
     harness_workspace,
     launch_command,
+    lent_toolsets,
 )
 from agent_runtimes.adapters.base import AgentContext, StreamEvent
 from agent_runtimes.guardrails.shield_policy import policies_of, rules_policy
@@ -737,6 +739,238 @@ class TestSessionsAndTheRecord:
         assert "ask me first" in approvals[0][1]["under"]
         turns = [(s, p) for k, s, p in recorder.entries if k == "turn"]
         assert turns[0] == ("edit", {"answered": "done"})
+
+
+def connecting(*servers: str) -> SimpleNamespace:
+    """An application connecting ``servers``, with no Rules."""
+    return SimpleNamespace(
+        connections=[SimpleNamespace(server=server) for server in servers], rules=[]
+    )
+
+
+class TestMcpLentThroughTheGateway:
+    """SHIELD §4.4, SH-14: ``session/new.mcpServers`` is how a harness gets tools, never a credential."""
+
+    GATEWAY = "https://mcp.datalayer.run/mcp"
+
+    def test_the_toolsets_an_application_connects_are_the_gateways(self) -> None:
+        lent = lent_toolsets(fake_harness(), connecting("earthdata", "datalayer"))
+        assert lent == [
+            LentToolset("earthdata", f"{self.GATEWAY}?only=earthdata"),
+            LentToolset("datalayer", self.GATEWAY),
+        ]
+        assert lent_toolsets(fake_harness(), None) == []
+        assert lent_toolsets(fake_harness(), connecting("earthdata:0.0.1")) == [
+            LentToolset("earthdata", f"{self.GATEWAY}?only=earthdata")
+        ]
+
+    def test_a_connection_that_is_not_the_gateway_is_refused(self) -> None:
+        with pytest.raises(
+            HarnessRefused,
+            match="'github' is not a toolset of the Datalayer MCP gateway",
+        ):
+            lent_toolsets(fake_harness(), connecting("github"))
+
+    def test_own_lends_nothing_and_none_refuses_a_connecting_application(self) -> None:
+        own = fake_harness(
+            acp=HarnessAcpSpec(command=sys.executable, args=[str(FAKE)], mcp="own")
+        )
+        assert lent_toolsets(own, connecting("earthdata")) == []
+        none = fake_harness(
+            acp=HarnessAcpSpec(command=sys.executable, args=[str(FAKE)], mcp="none")
+        )
+        assert lent_toolsets(none, None) == []
+        with pytest.raises(HarnessRefused, match="lent no MCP .* connects earthdata"):
+            lent_toolsets(none, connecting("earthdata"))
+        odd = fake_harness(
+            acp=HarnessAcpSpec(command=sys.executable, args=[str(FAKE)], mcp="all")
+        )
+        with pytest.raises(HarnessRefused, match="acp.mcp: 'all'"):
+            lent_toolsets(odd, None)
+
+    def test_the_allow_list_is_the_team_policys(self) -> None:
+        policies = policies_of(connecting("earthdata"), ["earthdata"])
+        assert [p.scope for p in policies] == ["team", "session"]
+        assert policies[0].mcp.allow == ["earthdata"] and policies[0].rules == []
+        assert policies_of(None)[0].scope == "session"
+
+    @pytest.mark.asyncio
+    async def test_lent_as_http_with_the_bearer_when_the_agent_advertises_it(
+        self, workspace: Path
+    ) -> None:
+        app = connecting("earthdata")
+        lent = lent_toolsets(fake_harness(), app)
+        agent = an_agent(
+            workspace,
+            lent=lent,
+            policies=policies_of(app, [item.name for item in lent]),
+            credential="tok-caller",
+            environment={"FAKE_AGENT_MCP_HTTP": "1"},
+        )
+        try:
+            events = await turn(agent, "mcp")
+            assert agent.lends_over_http
+            servers = agent._lent_servers("tok-run")
+            assert servers[0].type == "http" and servers[0].url.endswith(
+                "?only=earthdata"
+            )
+            assert servers[0].headers[0].name == "Authorization"
+            assert servers[0].headers[0].value == "Bearer tok-run"
+        finally:
+            await agent.cleanup()
+        assert "mcp: ['earthdata:http']" in texts(events)
+        rows = agent.audit.rows
+        assert any(r["event"] == "mcp" and r["decision"] == "allow" for r in rows)
+        assert "tok-caller" not in repr(rows)
+
+    @pytest.mark.asyncio
+    async def test_lent_over_the_stdio_shim_holding_the_token_otherwise(
+        self, workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
+        app = connecting("earthdata")
+        lent = lent_toolsets(fake_harness(), app)
+        agent = an_agent(
+            workspace,
+            lent=lent,
+            policies=policies_of(app, ["earthdata"]),
+            credential="tok-caller",
+        )
+        try:
+            events = await turn(agent, "mcp")
+            assert not agent.lends_over_http
+            [handle] = agent._handles
+            held = tmp_path / "shield" / "lent" / handle
+            assert held.is_file() and (held.stat().st_mode & 0o777) == 0o600
+            assert "tok-caller" in held.read_text()
+            servers = agent._lent_servers("tok-caller")
+            assert servers[0].command == sys.executable
+            assert servers[0].args[:3] == [
+                "-m",
+                "agent_runtimes.mcp.lent_stdio",
+                "--lent",
+            ]
+            assert (
+                "tok-caller" not in " ".join(servers[0].args) and servers[0].env == []
+            )
+        finally:
+            await agent.cleanup()
+        assert "mcp: ['earthdata:stdio']" in texts(events)
+        assert not held.exists() and agent._handles == []
+
+    @pytest.mark.asyncio
+    async def test_a_server_not_on_the_allow_list_is_cut(self, workspace: Path) -> None:
+        app = connecting("earthdata")
+        agent = an_agent(
+            workspace,
+            lent=lent_toolsets(
+                fake_harness(), connecting("earthdata", "odoo-accounting")
+            ),
+            policies=policies_of(app, ["earthdata"]),
+            credential="tok-caller",
+            environment={"FAKE_AGENT_MCP_HTTP": "1"},
+        )
+        try:
+            events = await turn(agent, "mcp")
+        finally:
+            await agent.cleanup()
+        assert "mcp: ['earthdata:http']" in texts(events)
+        cut = [
+            r
+            for r in agent.audit.rows
+            if r["event"] == "mcp" and r["decision"] == "deny"
+        ]
+        assert cut and cut[0]["name"] == "odoo-accounting"
+        assert "not on the policy's mcp.allow list" in cut[0]["sentence"]
+
+    @pytest.mark.asyncio
+    async def test_nothing_is_lent_without_a_credential(self, workspace: Path) -> None:
+        app = connecting("earthdata")
+        agent = an_agent(
+            workspace,
+            lent=lent_toolsets(fake_harness(), app),
+            policies=policies_of(app, ["earthdata"]),
+        )
+        try:
+            events = await turn(agent, "mcp")
+            assert not agent.sessions
+            # The run's own token is what a session is opened with.
+            events_with = await turn(agent, "mcp", metadata={"user_token": "tok-run"})
+        finally:
+            await agent.cleanup()
+        [error] = of(events, "error")
+        assert (
+            "carries no credential to reach the gateway with: nothing is lent" in error
+        )
+        assert "mcp: ['earthdata:stdio']" in texts(events_with)
+
+    @pytest.mark.skipif(
+        not (
+            os.environ.get("DATALAYER_LIVE_GATEWAY_TOKEN")
+            and os.environ.get("DATALAYER_MCP_SERVER_URL")
+        ),
+        reason=(
+            "the gateway drill runs under the r1 rc with its key in "
+            "DATALAYER_LIVE_GATEWAY_TOKEN (conftest scrubs DATALAYER_API_KEY)"
+        ),
+    )
+    @pytest.mark.asyncio
+    async def test_a_lent_toolset_is_real_on_the_gateway(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Read-only against the gateway: the lent toolset lists its tools, and a tool outside it is refused."""
+        import mcp.types as types
+        from mcp.client.session import ClientSession
+        from mcp.client.stdio import StdioServerParameters, stdio_client
+        from mcp.client.streamable_http import streamable_http_client
+        from mcp.shared._httpx_utils import create_mcp_http_client
+
+        from agent_runtimes.mcp.lent_stdio import hold, release
+
+        monkeypatch.setenv("AGENT_SHIELD_HOME", str(tmp_path / "shield"))
+        token = os.environ["DATALAYER_LIVE_GATEWAY_TOKEN"]
+        [lent] = lent_toolsets(fake_harness(), connecting("earthdata"))
+        assert (
+            lent.url
+            == f"{os.environ['DATALAYER_MCP_SERVER_URL'].rstrip('/')}?only=earthdata"
+        )
+        # As an HTTP server: the lent URL with the lent header.
+        http = create_mcp_http_client(headers={"Authorization": f"Bearer {token}"})
+        async with streamable_http_client(lent.url, http_client=http) as streams:
+            async with ClientSession(streams[0], streams[1]) as session:
+                await session.initialize()
+                names = {tool.name for tool in (await session.list_tools()).tools}
+                assert names and "launch_sandbox" not in names
+                outside = await session.send_request(
+                    types.CallToolRequest(
+                        method="tools/call",
+                        params=types.CallToolRequestParams(
+                            name="launch_sandbox", arguments={}
+                        ),
+                    ),
+                    types.CallToolResult,
+                )
+                assert outside.is_error
+        # Over the stdio shim: the same toolset, the token held by the shim's process.
+        handle = hold(lent.name, lent.url, token)
+        try:
+            params = StdioServerParameters(
+                command=sys.executable,
+                args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
+                env={
+                    "AGENT_SHIELD_HOME": str(tmp_path / "shield"),
+                    "PATH": os.environ["PATH"],
+                },
+            )
+            async with stdio_client(params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    through_shim = {
+                        tool.name for tool in (await session.list_tools()).tools
+                    }
+            assert through_shim == names
+        finally:
+            release(handle)
 
 
 class TestResolvingACatalogueHarness:

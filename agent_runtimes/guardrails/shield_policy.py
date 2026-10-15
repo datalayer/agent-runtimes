@@ -17,6 +17,9 @@ the platform's default policy of decision 5 beneath them:
 - ``if_asked`` (*do it if you asked*) is read as **ask me first**: the harness
   acts on its own plan within a turn, and nothing here can tell whether the
   person asked for that one action, so it fails closed (R-05);
+- the gateway toolsets the Appspec connects are the ``team`` policy's
+  ``mcp.allow`` list (SH-14): the package's ``mcpServers`` rewriting lends
+  those and cuts every other server from ``session/new``;
 - the ``session`` scope holds the platform's default (decision 5): read and
   edit inside the workspace done, delete and execute and anything outside
   asked, flagged commands asked with the command shown, fetch refused with
@@ -29,11 +32,12 @@ ACP's tool ``kind`` is classed by :func:`agent_shield.policy.class_of`
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from agent_shield.policy import (
     ACTION_CLASSES,
     KIND_CLASS,
+    Mcp,
     Policy,
     Rule,
     class_of,
@@ -70,7 +74,7 @@ SHARED_CLASSES: tuple[str, ...] = tuple(
 )
 
 
-def rules_policy(app: Any) -> Optional[Policy]:
+def rules_policy(app: Any, lent: Sequence[str] = ()) -> Optional[Policy]:
     """The Appspec's Rules on classes as a ``team``-scope policy, or ``None`` with none.
 
     Parameters
@@ -78,12 +82,16 @@ def rules_policy(app: Any) -> Optional[Policy]:
     app : AppSpec
         The application; its ``rules`` are read, each with its ``applies_to``
         classes and its ``behaviour``.
+    lent : Sequence[str]
+        The names of the gateway toolsets the application connects: the
+        policy's ``mcp.allow`` list, the only servers the harness is lent.
 
     Returns
     -------
     Policy or None
-        One rule per class the Rules name, in the Rules' order; ``None`` when
-        no Rule names a class the Shield decides.
+        One rule per class the Rules name, in the Rules' order, and the
+        allow-list; ``None`` when no Rule names a class the Shield decides and
+        nothing is lent.
     """
     rules: List[Rule] = []
     seen: set[str] = set()
@@ -114,18 +122,20 @@ def rules_policy(app: Any) -> Optional[Policy]:
                 ),
             )
         )
-    if not rules:
+    if not rules and not lent:
         return None
-    return Policy(scope="team", rules=rules)
+    return Policy(scope="team", rules=rules, mcp=Mcp(allow=list(lent)))
 
 
-def policies_of(app: Any = None) -> List[Policy]:
+def policies_of(app: Any = None, lent: Sequence[str] = ()) -> List[Policy]:
     """The policies in force for a harness run by ``app``: its Rules, then decision 5's default.
 
     Parameters
     ----------
     app : AppSpec, optional
         The application; none for an agent run outside one (``loop --harness``).
+    lent : Sequence[str]
+        The gateway toolsets it connects, by name (``mcp.allow``).
 
     Returns
     -------
@@ -134,8 +144,8 @@ def policies_of(app: Any = None) -> List[Policy]:
         of the Rules when any, and the ``session`` default.
     """
     policies: List[Policy] = []
-    if app is not None:
-        own = rules_policy(app)
+    if app is not None or lent:
+        own = rules_policy(app, lent)
         if own is not None:
             policies.append(own)
     policies.append(default_policy())

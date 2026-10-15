@@ -40,7 +40,9 @@ import contextlib
 import logging
 import os
 import shutil
+import sys
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
@@ -49,11 +51,14 @@ from acp.exceptions import RequestError
 from acp.schema import (
     AllowedOutcome,
     DeniedOutcome,
+    HttpHeader,
+    HttpMcpServer,
     Implementation,
     InitializeResponse,
     PermissionOption,
     PromptResponse,
     RequestPermissionResponse,
+    StdioMcpServer,
     ToolCallUpdate,
 )
 from agent_shield.__version__ import __version__ as shield_version
@@ -82,6 +87,8 @@ from agent_runtimes.guardrails.tool_approvals import (
     ToolApprovalRejectedError,
     ToolApprovalTimeoutError,
 )
+from agent_runtimes.mcp.datalayer_gateway import gateway_query, gateway_url
+from agent_runtimes.mcp.lent_stdio import hold, release
 from agent_runtimes.types import HarnessSpec
 
 from .base import (
@@ -234,6 +241,86 @@ def advertised_problems(harness: HarnessSpec, answer: InitializeResponse) -> lis
             f"{harness.name} advertises no loadSession, which its spec says it answers."
         )
     return problems
+
+
+# -- MCP, lent through the gateway (§4.4, SH-14) ------------------------------------------
+
+
+@dataclass(frozen=True)
+class LentToolset:
+    """A toolset of the Datalayer MCP gateway an application connects, lent to its harness."""
+
+    #: The connection's server id: what the harness sees the server named,
+    #: and what the policy's ``mcp.allow`` lists.
+    name: str
+    #: The gateway toolset's URL (``…/mcp?only=earthdata``).
+    url: str
+
+
+#: What a harness spec's ``acp.mcp`` may say.
+MCP_MODES = ("lend", "own", "none")
+
+
+def lent_toolsets(harness: HarnessSpec, app: Any = None) -> list[LentToolset]:
+    """
+    The gateway toolsets ``app`` connects, as the harness is lent them; refused where its spec says.
+
+    ``lend`` lends each connection that is a toolset of the gateway, with the
+    execution credential at session time; ``own`` leaves the agent its native
+    tools and lends none; ``none`` lends none and refuses an application that
+    connects any. A connection to a server that is not the gateway is refused:
+    a harness is lent the gateway's toolsets only, never a server of its own,
+    so the gateway's policy, approvals, custody and audit apply to every tool
+    it calls.
+
+    Parameters
+    ----------
+    harness : HarnessSpec
+        The catalogue's spec.
+    app : AppSpec, optional
+        The application; none for an agent run outside one.
+
+    Returns
+    -------
+    list[LentToolset]
+        The toolsets, in the order the application connects them, each once.
+    """
+    mode = harness.acp.mcp if harness.acp is not None else "none"
+    if mode not in MCP_MODES:
+        raise HarnessRefused(
+            f"The harness {harness.id!r} says acp.mcp: {mode!r}, which is not one of "
+            f"{', '.join(MCP_MODES)}."
+        )
+    connected: list[str] = []
+    for connection in getattr(app, "connections", None) or []:
+        server_id = str(getattr(connection, "server", "") or "").partition(":")[0]
+        if server_id and server_id not in connected:
+            connected.append(server_id)
+    if mode == "none":
+        if connected:
+            raise HarnessRefused(
+                f"{harness.name} is lent no MCP (its spec says acp.mcp: none), and the "
+                f"application connects {', '.join(connected)}: drop the connections, or "
+                "run it on a harness that takes them."
+            )
+        return []
+    if mode == "own":
+        return []
+    lent: list[LentToolset] = []
+    for server_id in connected:
+        query = gateway_query(server_id)
+        if query is None:
+            raise HarnessRefused(
+                f"The connection {server_id!r} is not a toolset of the Datalayer MCP "
+                "gateway: a harness is lent the gateway's toolsets only (SHIELD §4.4)."
+            )
+        lent.append(
+            LentToolset(
+                name=server_id,
+                url=f"{gateway_url()}?{query}" if query else gateway_url(),
+            )
+        )
+    return lent
 
 
 # -- the audit, written to the record ----------------------------------------------------
@@ -430,7 +517,8 @@ class ACPAgent(BaseAgent, ShieldProxy):
         workspace: Path,
         policies: Sequence[Policy] | None = None,
         environment: Mapping[str, str] | None = None,
-        mcp_servers: Sequence[Any] = (),
+        lent: Sequence[LentToolset] = (),
+        credential: str = "",
         approvals: ToolApprovalManager | None = None,
         recorder: Any = None,
         name: str = "",
@@ -442,7 +530,12 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self.harness = harness
         self._name = name or harness.name
         self._description = description or harness.description
-        self.mcp_servers = list(mcp_servers)
+        #: The gateway toolsets the application connects, lent at each
+        #: session with the run's credential (§4.4); nothing without one.
+        self.lent = list(lent)
+        #: The caller's token, kept for a run that carries none of its own.
+        self.credential = credential
+        self._handles: list[str] = []
         self.approvals = approvals
         self.recorder = recorder
         self.state_store = state_store
@@ -557,6 +650,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         await self.stop_agent()
         self.sessions.clear()
         self.advertised = None
+        self._release_lent()
 
     async def run(self, prompt: str, context: AgentContext) -> AgentResponse:
         """One turn, collected: the text, the tool calls and their results."""
@@ -651,6 +745,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
             sentence = f"{self.harness.name} refused the turn: {_message_of(exc)}"
             self._failures.pop(acp_session, None)
             yield StreamEvent(type="error", data=sentence)
+        except HarnessRefused as refused:
+            status = "stopped"
+            yield StreamEvent(type="error", data=str(refused))
         finally:
             self._queues.pop(acp_session, None)
             self._cancelled.pop(acp_session, None)
@@ -668,13 +765,16 @@ class ACPAgent(BaseAgent, ShieldProxy):
         if known and known in self.sessions:
             return known, []
         kept = known or await self._kept_session(runtime_session)
+        # What the session is lent: the gateway's toolsets with the run's
+        # credential, in the shape the harness takes (§4.4, SH-14).
+        servers = self._lent_servers(self._bearer_of(context))
         if kept and self.loads_sessions:
             # The agent replays what it kept; the queue holds it for the comparison.
             self._queues[kept] = queue
             self._runtime_of[kept] = runtime_session
             self._replayed[kept] = 0
             try:
-                await self.load_session(str(self.workspace), self.mcp_servers, kept)
+                await self.load_session(str(self.workspace), servers, kept)
             except RequestError as exc:
                 self.sessions.pop(kept, None)
                 self._queues.pop(kept, None)
@@ -682,6 +782,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                     runtime_session,
                     f"{self.harness.name} could not load its session {kept} ({_message_of(exc)}): "
                     "it starts over; the earlier turns of this conversation were not replayed to it.",
+                    servers,
                 )
             await self._channel_drain(kept)
             self._acp_of[runtime_session] = kept
@@ -715,18 +816,84 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 f"{self.harness.name}'s session is new: it starts over; the earlier turns of this "
                 "conversation were not replayed to it."
             )
-        return await self._new_session(runtime_session, sentence)
+        return await self._new_session(runtime_session, sentence, servers)
 
     async def _new_session(
-        self, runtime_session: str, sentence: str
+        self, runtime_session: str, sentence: str, servers: list[Any]
     ) -> tuple[str, list[StreamEvent]]:
         """Open a session in the workspace, keep its id, and say ``sentence`` first when there is one."""
-        answer = await self.new_session(str(self.workspace), self.mcp_servers)
+        answer = await self.new_session(str(self.workspace), servers)
         acp_session = answer.session_id
         self._acp_of[runtime_session] = acp_session
         self._runtime_of[acp_session] = runtime_session
         await self._keep_session(runtime_session, acp_session)
         return acp_session, [_said(sentence)] if sentence else []
+
+    # -- MCP lent (§4.4, SH-14) ----------------------------------------------------------------
+
+    @property
+    def lends_over_http(self) -> bool:
+        """Whether the harness advertised ``mcpCapabilities.http``: lent as HTTP, else over the stdio shim."""
+        capabilities = self.advertised.agent_capabilities if self.advertised else None
+        mcp = capabilities.mcp_capabilities if capabilities else None
+        return bool(mcp and mcp.http)
+
+    def _bearer_of(self, context: AgentContext) -> str:
+        """The credential this run reaches the gateway with: a deployment's principal, else the run's, else the caller's."""
+        from agent_runtimes.loop.apps.principal import deployment_of, principal_token
+        from agent_runtimes.models.models import app_instance_of
+
+        deployment = deployment_of(app_instance_of(self._agent_id))
+        if deployment:
+            held = principal_token(deployment)
+            if held:
+                return held
+        return str(context.metadata.get("user_token") or "") or self.credential
+
+    def _lent_servers(self, bearer: str) -> list[Any]:
+        """The lent toolsets as ``session/new.mcpServers``: HTTP with the bearer, or the stdio shim holding it."""
+        if not self.lent:
+            return []
+        names = ", ".join(item.name for item in self.lent)
+        if not bearer:
+            raise HarnessRefused(
+                f"{self.harness.name} is lent {names}, and this run carries no credential "
+                "to reach the gateway with: nothing is lent without one (SHIELD §4.4)."
+            )
+        servers: list[Any] = []
+        for item in self.lent:
+            if self.lends_over_http:
+                servers.append(
+                    HttpMcpServer(
+                        type="http",
+                        name=item.name,
+                        url=item.url,
+                        headers=[
+                            HttpHeader(name="Authorization", value=f"Bearer {bearer}")
+                        ],
+                    )
+                )
+                continue
+            # The credential stays in the runtime's hands: the shim reads it
+            # from the Shield's home by an opaque handle, never from the
+            # harness's arguments or environment.
+            handle = hold(item.name, item.url, bearer)
+            self._handles.append(handle)
+            servers.append(
+                StdioMcpServer(
+                    name=item.name,
+                    command=sys.executable,
+                    args=["-m", "agent_runtimes.mcp.lent_stdio", "--lent", handle],
+                    env=[],
+                )
+            )
+        return servers
+
+    def _release_lent(self) -> None:
+        """Forget what the stdio shims were lent."""
+        for handle in self._handles:
+            release(handle)
+        self._handles.clear()
 
     @property
     def loads_sessions(self) -> bool:
@@ -1104,7 +1271,7 @@ def harness_agent(
     app: Any = None,
     recorder: Any = None,
     approvals: ToolApprovalManager | None = None,
-    mcp_servers: Sequence[Any] = (),
+    credential: str = "",
     name: str = "",
     description: str = "",
     environment: Mapping[str, str] | None = None,
@@ -1113,12 +1280,18 @@ def harness_agent(
 ) -> ACPAgent:
     """An ``ACPAgent`` on a catalogue harness, resolved here: not yet started.
 
+    Parameters
+    ----------
+    credential : str
+        The caller's token, which a run that carries none of its own reaches
+        the gateway with (§4.4).
+
     Raises
     ------
     HarnessRefused
         An unknown harness, one with no launch command, an adapter not
-        installed, a declared secret missing, or no workspace — each in a
-        sentence.
+        installed, a declared secret missing, no workspace, or a connection
+        its spec's ``acp.mcp`` refuses — each in a sentence.
     """
     from agent_runtimes.specs.harnesses import HARNESS_CATALOGUE
 
@@ -1127,14 +1300,16 @@ def harness_agent(
         raise HarnessRefused(
             f"There is no harness named {harness_id!r}: one of {', '.join(sorted(HARNESS_CATALOGUE))}."
         )
+    lent = lent_toolsets(harness, app)
     return ACPAgent(
         agent_id=agent_id,
         harness=harness,
         command=launch_command(harness),
         workspace=workspace or harness_workspace(environment),
-        policies=policies_of(app),
+        policies=policies_of(app, [item.name for item in lent]),
         environment=harness_environment(harness, environment),
-        mcp_servers=mcp_servers,
+        lent=lent,
+        credential=credential,
         approvals=approvals,
         recorder=recorder,
         name=name,
@@ -1145,15 +1320,18 @@ def harness_agent(
 
 __all__ = [
     "HARNESS_SESSION_KIND",
+    "MCP_MODES",
     "REFUSED",
     "RUNTIME_CLIENT_INFO",
     "WORKSPACE_VARIABLE",
     "ACPAgent",
     "HarnessRefused",
+    "LentToolset",
     "RecordAudit",
     "advertised_problems",
     "harness_agent",
     "harness_environment",
     "harness_workspace",
     "launch_command",
+    "lent_toolsets",
 ]
