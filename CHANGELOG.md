@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.26
+
+On agentspecs 0.0.96.
+
+- **How a sign-in under way stands, for the person's own client** (MOBILE M-039): `portable/signInStatus` asks the gateway's `GET /api/mcp/v1/pap/sign-in` with the person's own sign-in and accepts an answer only bound to the application, the company and a verified issuer.
+- **A mediated sign-in's form in `lib/portable`** (PAP_DATALAYER P-03, MOBILE M-039): `portable/protectedInput` reads what a company asks with the sign-in's one-use protected ticket and sends what the person typed once to IAM; the Studio's `/pap/sign-in` and Datalayer Mobile share it.
+
 ## 1.5.25
 
 On agentspecs 0.0.96.
