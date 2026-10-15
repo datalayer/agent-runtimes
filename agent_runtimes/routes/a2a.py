@@ -223,7 +223,24 @@ def register_a2a_agent(
         # rather than being mounted after a route that still answers first.
         unregister_a2a_agent(agent_id)
 
-    from ..transports.a2a import A2AWorker, TaskCancellation
+    from ..transports.a2a import (
+        DIFF_MEDIA_TYPE,
+        A2AWorker,
+        TaskCancellation,
+        harness_card_skills,
+    )
+
+    # A harness's card: its skills from the harness spec, and what it answers
+    # in besides words — diffs and the plan (SHIELD §4.2, SH-15).
+    harness = getattr(agent, "harness", None)
+    if harness is not None:
+        if not card.skills:
+            card.skills = harness_card_skills(harness)
+        modes = list(card.default_output_modes or ["text/plain"])
+        for extra in (DIFF_MEDIA_TYPE, "application/json"):
+            if extra not in modes:
+                modes.append(extra)
+        card.default_output_modes = modes
 
     try:
         # Convert skills to fasta2a Skill format if provided

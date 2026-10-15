@@ -15,11 +15,14 @@ Rename `SPENT_FIELD` and the schema renames with it; add a field to the
 envelope and the schema does not, which is what
 `test_orchestration_extension_schema.py` fails on.
 
-Only what is actually on the wire is described. Five fields the specification
-proposes — `acknowledgement`, `attempt`, `contextManifest`,
-`artifactProvenance`, `approvalRequest` — are deliberately absent, because a
-schema that described them would tell an implementer to expect fields nothing
-sends.
+Only what is actually on the wire is described. Three fields the specification
+proposes — `acknowledgement`, `attempt`, `contextManifest` — are deliberately
+absent, because a schema that described them would tell an implementer to
+expect fields nothing sends. Two joined the wire with a harness served over A2A
+(SHIELD §4.2, SH-15): a worker's artifact carries `artifactProvenance` in its
+metadata, and a task waiting on an approval carries `approvalRequest` on its
+`input-required` status message, which the orchestrator answers on the same
+task with `approval`.
 """
 
 from __future__ import annotations
@@ -44,6 +47,17 @@ BUDGET_FIELD = "budget"
 
 #: What a worker says stopped it, which `budget.budget_refusal` reads.
 ERROR_FIELD = "error"
+
+#: What a task waiting on `input-required` waits for (SHIELD SH-15), which
+#: `transports.a2a.A2AApprovals` writes.
+APPROVAL_REQUEST_FIELD = "approvalRequest"
+
+#: The option chosen for it, which `transports.a2a.chosen_option` reads.
+APPROVAL_FIELD = "approval"
+
+#: What a worker claims of an artifact, which `transports.a2a.provenance_of`
+#: writes on a harness's diff and plan artifacts.
+ARTIFACT_PROVENANCE_FIELD = "artifactProvenance"
 
 _TOKENS = {"type": "integer", "minimum": 0}
 _CURRENCY = {"type": "string", "default": "USD"}
@@ -133,8 +147,82 @@ def extension_schema() -> dict[str, Any]:
                 "protocol has a pause; both only cancel."
             ),
         },
+        APPROVAL_FIELD: {
+            "type": "object",
+            "description": (
+                "The option chosen for the approval a task is waiting on, sent "
+                "on that task (A2A: a message naming the task; ACP: the "
+                "permission's answer). A caller without the extension answers "
+                "with one whole word instead: yes, no, always, or an option's name."
+            ),
+            "properties": {"optionId": {"type": "string"}},
+            "required": ["optionId"],
+            "additionalProperties": False,
+        },
     }
     worker_sends = {
+        APPROVAL_REQUEST_FIELD: {
+            "type": "object",
+            "description": (
+                "What a task waiting on `input-required` waits for: the tool "
+                "call, the options, and until when. ACP's "
+                "session/request_permission, given to A2A."
+            ),
+            "properties": {
+                "toolCall": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "title": {"type": "string"},
+                        "kind": {"type": "string"},
+                        "sentence": {"type": "string"},
+                    },
+                    "required": ["title", "kind"],
+                    "additionalProperties": True,
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "optionId": {"type": "string"},
+                            "name": {"type": "string"},
+                            "kind": {
+                                "type": "string",
+                                "enum": [
+                                    "allow_once",
+                                    "allow_always",
+                                    "reject_once",
+                                    "reject_always",
+                                ],
+                            },
+                        },
+                        "required": ["optionId", "name", "kind"],
+                        "additionalProperties": False,
+                    },
+                    "minItems": 1,
+                },
+                "expiresAt": {"type": "string", "format": "date-time"},
+            },
+            "required": ["toolCall", "options", "expiresAt"],
+            "additionalProperties": False,
+        },
+        ARTIFACT_PROVENANCE_FIELD: {
+            "type": "object",
+            "description": (
+                "On an artifact's metadata: what the worker claims of it — the "
+                "hash of its body, when it was produced, what it was produced "
+                "from. The orchestrator hashes the body it receives and says "
+                "when the two differ."
+            ),
+            "properties": {
+                "contentHash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "producedAt": {"type": "string", "format": "date-time"},
+                "sourceReferences": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["contentHash", "producedAt"],
+            "additionalProperties": False,
+        },
         SPENT_FIELD: _usage(
             "What this turn spent. A budget's cost is a limit, not a "
             "measurement, and nothing else records what one node of a tree "
@@ -200,11 +288,16 @@ def extension_schema() -> dict[str, Any]:
                 "acknowledgement",
                 "attempt",
                 "contextManifest",
-                "artifactProvenance",
-                "approvalRequest",
             ],
         },
     }
 
 
-__all__ = ["BUDGET_FIELD", "ERROR_FIELD", "extension_schema"]
+__all__ = [
+    "APPROVAL_FIELD",
+    "APPROVAL_REQUEST_FIELD",
+    "ARTIFACT_PROVENANCE_FIELD",
+    "BUDGET_FIELD",
+    "ERROR_FIELD",
+    "extension_schema",
+]

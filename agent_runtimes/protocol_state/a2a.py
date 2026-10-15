@@ -84,6 +84,31 @@ class DurableStorage(Storage[Any]):
     async def submit_task(self, context_id: str, message: Message) -> Task:
         from agent_runtimes.context.delegation import hold, take_credential
 
+        named = str(message.get("task_id") or "")
+        if named:
+            # A2A 1.0: a message naming a task continues it. Here that is a
+            # task waiting on the caller (`input-required`, SHIELD SH-15):
+            # the message joins its history and the worker answers the wait.
+            key = _key(self._scope, named)
+            waiting: Any = await self._store.get(TASK, key)
+            if waiting is None:
+                raise KeyError(
+                    f"Task {named} is not kept by this runtime: a message naming a task "
+                    "continues one it keeps."
+                )
+            state = str(waiting["status"]["state"])
+            if state != "input-required":
+                raise ValueError(
+                    f"Task {named} is {state}, not waiting for input: a message continues "
+                    "a task only while it waits."
+                )
+            message["context_id"] = waiting["context_id"]
+            waiting.setdefault("history", []).append(message)
+            waiting["status"] = TaskStatus(
+                state="working", timestamp=datetime.now().isoformat()
+            )
+            await self._store.put(TASK, key, waiting)
+            return waiting
         task_id = str(uuid.uuid4())
         message["task_id"] = task_id
         message["context_id"] = context_id

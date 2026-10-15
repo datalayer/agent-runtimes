@@ -549,9 +549,14 @@ class ACPAgent(BaseAgent, ShieldProxy):
         self._acp_of: dict[str, str] = {}
         self._runtime_of: dict[str, str] = {}
         self._titles: dict[str, str] = {}
+        self._kinds: dict[str, str] = {}
         self._replayed: dict[str, int] = {}
         self._cancelled: dict[str, asyncio.Event] = {}
         self._failures: dict[str, str] = {}
+        #: The approvals a run raises through: the transport's (A2A's
+        #: ``input-required``, the ACP route's relay) when the run brings
+        #: them, else the runtime's tool approvals.
+        self._approvals_of: dict[str, Any] = {}
         loaded = [
             LoadedPolicy(policy=policy, origin=_origin_of(policy))
             for policy in (policies if policies is not None else policies_of(None))
@@ -711,6 +716,9 @@ class ACPAgent(BaseAgent, ShieldProxy):
             self._queues[acp_session] = queue
             self._cancelled[acp_session] = asyncio.Event()
             self._failures.pop(acp_session, None)
+            self._approvals_of[acp_session] = (
+                context.metadata.get("approvals") or self.approvals
+            )
             if self.recorder is not None:
                 self.recorder.start(runtime_session)
                 self.recorder.ran(runtime_session)
@@ -755,6 +763,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
         finally:
             self._queues.pop(acp_session, None)
             self._cancelled.pop(acp_session, None)
+            self._approvals_of.pop(acp_session, None)
             if self.recorder is not None:
                 await self._record_end(runtime_session, prompt, "".join(said), status)
 
@@ -1029,6 +1038,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
             return []
         if isinstance(event, ToolCallSaid):
             self._titles[event.tool_call_id] = event.title
+            self._kinds[event.tool_call_id] = event.kind
             decision = (
                 self.sessions[session_id].decisions.get(event.tool_call_id)
                 if session_id in self.sessions
@@ -1057,6 +1067,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 event.tool_call_id, event.tool_call_id
             )
             displays = [item.model_dump() for item in event.displays]
+            kind = event.kind or self._kinds.get(event.tool_call_id, "other")
             if event.status in ("completed", "failed"):
                 return [
                     StreamEvent(
@@ -1065,6 +1076,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                             "id": event.tool_call_id,
                             "name": title,
                             "result": event.output,
+                            "kind": kind,
                             "status": event.status,
                             "display": displays,
                             **(
@@ -1084,7 +1096,7 @@ class ACPAgent(BaseAgent, ShieldProxy):
                         "arguments": event.input
                         if isinstance(event.input, dict)
                         else {},
-                        "kind": event.kind,
+                        "kind": kind,
                         "status": event.status or "in_progress",
                         "awaiting": None,
                         "display": displays,
@@ -1144,18 +1156,25 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 awaiting=True,
             ),
         )
-        if self.approvals is None:
+        approvals = self._approvals_of.get(session_id, self.approvals)
+        if approvals is None:
             await self.tell(
                 session_id, f"{sentence}; nobody is here to ask, so it is not done."
             )
             return _refusing(options)
         cancelled = self._cancelled.get(session_id) or asyncio.Event()
         waiting = asyncio.ensure_future(
-            self.approvals.request_and_wait(
+            approvals.request_and_wait(
                 title,
                 {
                     "kind": tool_call.kind,
                     "sentence": sentence,
+                    # The agent's own options, for a transport that offers
+                    # them as they are (A2A's approvalRequest, the ACP relay).
+                    "options": [
+                        {"option_id": o.option_id, "name": o.name, "kind": o.kind}
+                        for o in options
+                    ],
                     **(
                         tool_call.raw_input
                         if isinstance(tool_call.raw_input, dict)
@@ -1189,6 +1208,15 @@ class ACPAgent(BaseAgent, ShieldProxy):
                 session_id, f"{title}: not answered in time, so it is not done."
             )
             return _refusing(options)
+        # A transport that offered the agent's options as they are answers
+        # with the one chosen.
+        chosen = str(result.get("option_id") or "")
+        if chosen:
+            for option in options:
+                if option.option_id == chosen:
+                    return RequestPermissionResponse(
+                        outcome=AllowedOutcome(outcome="selected", option_id=chosen)
+                    )
         note = await self._note_of(result.get("id"))
         # The page's approval has approve and reject; a person who writes
         # "always" in the note chooses the agent's allow_always, which the

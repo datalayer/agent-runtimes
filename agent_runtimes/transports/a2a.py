@@ -9,11 +9,15 @@ Supports identity context for OAuth token propagation across agent boundaries.
 """
 
 import asyncio
+import difflib
+import hashlib
 import logging
+import re
 import traceback
 import uuid
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable
 
 from ..context.identities import IdentityContextManager
@@ -367,6 +371,367 @@ def _short(value: Any, limit: int = 2000) -> str:
     return text if len(text) <= limit else text[:limit] + "…"
 
 
+# -- a harness served over A2A (SHIELD §4.2, SH-15) ---------------------------------------
+
+#: The media type of a diff artifact, one per file the harness changed.
+DIFF_MEDIA_TYPE = "text/x-diff"
+
+#: What a caller answers an approval with, when it does not know the extension:
+#: one word, whole, matched against the options' ids and names and these.
+YES_WORDS = frozenset({"yes", "y", "allow", "approve", "ok", "approved"})
+ALWAYS_WORDS = frozenset({"always", "allow_always"})
+NO_WORDS = frozenset({"no", "n", "reject", "deny", "refuse", "rejected"})
+
+#: How long an A2A caller has to answer an approval, when the approvals have
+#: no timeout of their own.
+APPROVAL_TIMEOUT = 300.0
+
+
+def unified_diff(path: str, old_text: str | None, new_text: str) -> str:
+    """
+    The change to one file as a unified diff: ``a/<path>`` to ``b/<path>``, ``/dev/null`` for a new file.
+
+    Parameters
+    ----------
+    path : str
+        The file, as the harness named it.
+    old_text : str | None
+        What it held; ``None`` for a file that did not exist.
+    new_text : str
+        What it holds now.
+
+    Returns
+    -------
+    str
+        The diff, ending with a newline.
+    """
+    before = old_text.splitlines(keepends=True) if old_text is not None else []
+    after = new_text.splitlines(keepends=True)
+    lines = list(
+        difflib.unified_diff(
+            before,
+            after,
+            fromfile="/dev/null" if old_text is None else f"a/{path}",
+            tofile=f"b/{path}",
+        )
+    )
+    text = "".join(line if line.endswith("\n") else line + "\n" for line in lines)
+    return text or f"--- a/{path}\n+++ b/{path}\n"
+
+
+def provenance_of(body: str, *sources: str) -> dict[str, Any]:
+    """
+    ``artifactProvenance`` of the orchestration extension (ORCHESTRATOR 7.2): the body's hash, when, from what.
+
+    Parameters
+    ----------
+    body : str
+        The artifact's text.
+    *sources : str
+        What it was produced from (the file's path).
+
+    Returns
+    -------
+    dict[str, Any]
+        ``{"datalayer": {"artifactProvenance": {contentHash, producedAt, sourceReferences}}}``.
+    """
+    return {
+        "datalayer": {
+            "artifactProvenance": {
+                "contentHash": f"sha256:{hashlib.sha256(body.encode('utf-8')).hexdigest()}",
+                "producedAt": datetime.now(timezone.utc).isoformat(),
+                "sourceReferences": list(sources),
+            }
+        }
+    }
+
+
+def diff_artifact(
+    artifact_id: str, path: str, old_text: str | None, new_text: str
+) -> "Artifact":
+    """
+    One ``diff`` artifact: named by its path, ``text/x-diff``, with its provenance.
+
+    Parameters
+    ----------
+    artifact_id : str
+        The artifact's id, the same for every change to the path in a task.
+    path : str
+        The file.
+    old_text : str | None
+        What it held.
+    new_text : str
+        What it holds now.
+
+    Returns
+    -------
+    Artifact
+        The artifact, its one part the unified diff.
+    """
+    body = unified_diff(path, old_text, new_text)
+    return Artifact(
+        artifact_id=artifact_id,
+        name=path,
+        description=f"The change to {path}, as a unified diff.",
+        parts=[Part(text=body, media_type=DIFF_MEDIA_TYPE, filename=path)],
+        metadata=provenance_of(body, path),
+    )
+
+
+def plan_artifact(artifact_id: str, steps: list[dict[str, Any]]) -> "Artifact":
+    """
+    The ``plan`` artifact, replaced as the harness's plan progresses.
+
+    Parameters
+    ----------
+    artifact_id : str
+        The artifact's id, the same for the whole task.
+    steps : list[dict[str, Any]]
+        The plan's entries: ``content``, ``priority``, ``status``.
+
+    Returns
+    -------
+    Artifact
+        A text part (the steps ticked) and a data part (the steps as given).
+    """
+    marks = {"completed": "x", "in_progress": "~"}
+    lines = [
+        f"- [{marks.get(str(step.get('status')), ' ')}] {step.get('content', '')}"
+        + (f" ({step['priority']})" if step.get("priority") else "")
+        for step in steps
+    ]
+    body = "\n".join(lines) + ("\n" if lines else "")
+    return Artifact(
+        artifact_id=artifact_id,
+        name="plan",
+        description="The harness's plan, its steps ticked as it progresses.",
+        parts=[
+            Part(text=body, media_type="text/markdown"),
+            Part(data={"steps": steps}, media_type="application/json"),
+        ],
+        metadata=provenance_of(body),
+    )
+
+
+def harness_card_skills(harness: Any) -> list[dict[str, Any]]:
+    """
+    The agent card's skills for a harness, from its spec (§4.2).
+
+    Parameters
+    ----------
+    harness : HarnessSpec
+        The catalogue's spec.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One skill: the harness, what it answers in (words, diffs, the plan).
+    """
+    return [
+        {
+            "id": str(harness.id),
+            "name": str(harness.name),
+            "description": str(harness.description or harness.name),
+            "tags": [*(harness.tags or []), "acp"],
+            "input_modes": ["text/plain"],
+            "output_modes": ["text/plain", DIFF_MEDIA_TYPE, "application/json"],
+        }
+    ]
+
+
+def chosen_option(message: Any, options: list[dict[str, str]]) -> str | None:
+    """
+    Which option a caller's message chooses: the extension's ``approval.optionId``, else one whole word.
+
+    Parameters
+    ----------
+    message : Message
+        The caller's message on the waiting task.
+    options : list[dict[str, str]]
+        The options offered: ``option_id``, ``name``, ``kind``.
+
+    Returns
+    -------
+    str | None
+        The option's id, or ``None`` when the message chooses none.
+    """
+    meta = message.get("metadata") if isinstance(message, dict) else None
+    ours = meta.get("datalayer") if isinstance(meta, dict) else None
+    answer = ours.get("approval") if isinstance(ours, dict) else None
+    if isinstance(answer, dict) and answer.get("optionId"):
+        wanted = str(answer["optionId"])
+        return next((o["option_id"] for o in options if o["option_id"] == wanted), None)
+    words = a2a_message_text(message).strip().lower()
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]*", words):
+        return None
+    for option in options:
+        if words in (option["option_id"].lower(), option["name"].lower()):
+            return option["option_id"]
+    kinds = (
+        ("allow_always", "allow_once")
+        if words in ALWAYS_WORDS
+        else ("allow_once", "allow_always")
+        if words in YES_WORDS
+        else ("reject_once", "reject_always")
+        if words in NO_WORDS
+        else ()
+    )
+    for kind in kinds:
+        for option in options:
+            if option["kind"] == kind:
+                return option["option_id"]
+    return None
+
+
+class A2AApprovals:
+    """
+    The runtime's approvals over A2A: ``input-required`` carrying ``approvalRequest``, answered on the same task.
+
+    The harness's *ask me first* (SHIELD §4.5) reaches an A2A caller as a
+    status ``input-required`` whose message says the sentence and the options
+    in words, and carries the orchestration extension's ``approvalRequest
+    {toolCall, options, expiresAt}`` (ORCHESTRATOR 7.2) in its metadata. The
+    caller answers with a message on the same task: ``datalayer.approval
+    {optionId}`` when it knows the extension, else one whole word (*yes*,
+    *no*, *always*, or an option's name — a2acode's convention, the fallback
+    only). The task's stream ends at ``input-required`` as A2A says; the
+    caller resubscribes for the rest.
+    """
+
+    def __init__(
+        self,
+        worker: "A2AWorker",
+        task_id: str,
+        context_id: str,
+        timeout: float = APPROVAL_TIMEOUT,
+    ) -> None:
+        """Keep the task the approvals are raised on."""
+        self.worker = worker
+        self.task_id = task_id
+        self.context_id = context_id
+        self.timeout = timeout
+        self.options: list[dict[str, str]] = []
+        self.answer: asyncio.Future[str] | None = None
+
+    async def request_and_wait(
+        self, tool_name: str, tool_args: dict[str, Any], tool_call_id: str | None = None
+    ) -> dict[str, Any]:
+        """
+        Raise the approval as ``input-required`` and wait for the caller's answer.
+
+        Returns
+        -------
+        dict[str, Any]
+            ``{"status": "approved", "option_id": …}`` for an allowing option.
+
+        Raises
+        ------
+        ToolApprovalRejectedError
+            The caller chose a rejecting option.
+        ToolApprovalTimeoutError
+            Nobody answered in time.
+        """
+        from ..guardrails.tool_approvals import (
+            ToolApprovalRejectedError,
+            ToolApprovalTimeoutError,
+        )
+
+        self.options = [
+            {
+                "option_id": str(o.get("option_id") or o.get("optionId") or ""),
+                "name": str(o.get("name") or ""),
+                "kind": str(o.get("kind") or ""),
+            }
+            for o in (tool_args.get("options") or [])
+            if isinstance(o, dict)
+        ] or [
+            {"option_id": "allow", "name": "Allow", "kind": "allow_once"},
+            {"option_id": "reject", "name": "Reject", "kind": "reject_once"},
+        ]
+        sentence = str(tool_args.get("sentence") or tool_name)
+        expires = datetime.now(timezone.utc) + timedelta(seconds=self.timeout)
+        asked = _agent_message(
+            self.context_id,
+            Part(
+                text=(
+                    f"{sentence} Answer on this task with one of: "
+                    + ", ".join(f"{o['name']} ({o['option_id']})" for o in self.options)
+                    + "."
+                )
+            ),
+        )
+        asked["metadata"] = {
+            "datalayer": {
+                "approvalRequest": {
+                    "toolCall": {
+                        "id": tool_call_id or "",
+                        "title": tool_name,
+                        "kind": str(tool_args.get("kind") or "other"),
+                        "sentence": sentence,
+                        **{
+                            key: value
+                            for key, value in tool_args.items()
+                            if key not in ("options", "sentence", "kind")
+                        },
+                    },
+                    "options": [
+                        {
+                            "optionId": o["option_id"],
+                            "name": o["name"],
+                            "kind": o["kind"],
+                        }
+                        for o in self.options
+                    ],
+                    "expiresAt": expires.isoformat(),
+                }
+            }
+        }
+        loop = asyncio.get_running_loop()
+        self.answer = loop.create_future()
+        self.worker.waiting[self.task_id] = self
+        await self.worker.storage.update_task(self.task_id, state="input-required")
+        await self.worker.publish_status(
+            self.task_id, self.context_id, "input-required", asked
+        )
+        try:
+            option_id = await asyncio.wait_for(self.answer, self.timeout)
+        except asyncio.TimeoutError:
+            raise ToolApprovalTimeoutError(
+                f"{tool_name}: no answer on task {self.task_id} within {int(self.timeout)} s"
+            ) from None
+        finally:
+            self.worker.waiting.pop(self.task_id, None)
+            self.answer = None
+        await self.worker.storage.update_task(self.task_id, state="working")
+        await self.worker.publish_status(self.task_id, self.context_id, "working")
+        option = next(o for o in self.options if o["option_id"] == option_id)
+        if option["kind"].startswith("reject"):
+            raise ToolApprovalRejectedError(
+                tool_name, f"the caller chose {option['name']}"
+            )
+        return {"status": "approved", "id": None, "option_id": option_id}
+
+    def answered(self, message: Any) -> bool:
+        """
+        Take the caller's message as the answer; ``False`` when it chooses no option.
+
+        Parameters
+        ----------
+        message : Message
+            The message sent on the waiting task.
+
+        Returns
+        -------
+        bool
+            Whether the waiting run was answered.
+        """
+        option_id = chosen_option(message, self.options)
+        if option_id is None or self.answer is None or self.answer.done():
+            return False
+        self.answer.set_result(option_id)
+        return True
+
+
 @dataclass
 class A2AWorker(_FastA2AWorker):
     """Runs a `BaseAgent` for the tasks a FastA2A app receives, streaming as it goes.
@@ -394,6 +759,8 @@ class A2AWorker(_FastA2AWorker):
     #: The media types its answers come in, as its card declares them: a
     #: caller that accepts one besides words gets it as an artifact.
     output_modes: tuple[str, ...] = ()
+    #: The tasks waiting on a caller's answer to an approval (SH-15), by id.
+    waiting: dict[str, A2AApprovals] = field(default_factory=dict)
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -422,6 +789,27 @@ class A2AWorker(_FastA2AWorker):
             raise ValueError(f"Task {params['id']} not found")
         task_id = task["id"]
         context_id = task["context_id"]
+        # A message on a task waiting for an approval answers it (SH-15):
+        # the run that asked goes on under the same task; nothing new starts.
+        waiting = self.waiting.get(task_id)
+        if waiting is not None:
+            if not waiting.answered(params["message"]):
+                await self.storage.update_task(task_id, state="input-required")
+                told = _agent_message(
+                    context_id,
+                    Part(
+                        text=(
+                            "That chooses none of the options: answer with "
+                            + ", ".join(
+                                f"{o['name']} ({o['option_id']})"
+                                for o in waiting.options
+                            )
+                            + "."
+                        )
+                    ),
+                )
+                await self.publish_status(task_id, context_id, "input-required", told)
+            return
         from ..context.delegation import merged_meta, spent_meta
         from ..context.usage import TurnSpend
 
@@ -613,6 +1001,9 @@ class A2AWorker(_FastA2AWorker):
                 **({"user_token": credential} if credential else {}),
                 # What is steered into this task reaches its model within the turn.
                 "steer_run": task_id,
+                # An approval a harness asks for is raised on this task as
+                # `input-required`, and answered on it (SHIELD §4.2, SH-15).
+                "approvals": A2AApprovals(self, task_id, context_id),
             },
         )
 
@@ -620,6 +1011,12 @@ class A2AWorker(_FastA2AWorker):
         text = ""
         final_output: str | None = None
         canceled = False
+        # A harness's plan, one artifact replaced as it progresses, and its
+        # diffs, one artifact per file (SHIELD §4.2); reasoning is never an
+        # artifact (decision 8): a `thought` event is not published at all.
+        plan_id = f"plan-{task_id}"
+        plan: Artifact | None = None
+        diffs: dict[str, Artifact] = {}
         # A button of an answer's surface that would do more than read, pressed
         # by a visitor, is refused in a sentence: no model runs (STUDIO H-03).
         refused = refused_action(incoming)
@@ -650,27 +1047,46 @@ class A2AWorker(_FastA2AWorker):
                         last_chunk=False,
                     )
                 elif event.type == "tool_call":
-                    await self.publish_status(
-                        task_id,
+                    said = _agent_message(
                         context_id,
-                        "working",
-                        _agent_message(
-                            context_id,
-                            Part(data={"tool_call": _tool_call_payload(event.data)}),
-                        ),
+                        Part(data={"tool_call": _tool_call_payload(event.data)}),
                     )
+                    # A harness's tool call says its kind, title and status in
+                    # the status message's metadata (SHIELD §4.2).
+                    titled = _harness_call_meta(event.data)
+                    if titled:
+                        said["metadata"] = titled
+                    await self.publish_status(task_id, context_id, "working", said)
                 elif event.type == "tool_result":
-                    await self.publish_status(
-                        task_id,
+                    said = _agent_message(
                         context_id,
-                        "working",
-                        _agent_message(
-                            context_id,
-                            Part(
-                                data={"tool_result": _tool_result_payload(event.data)}
-                            ),
-                        ),
+                        Part(data={"tool_result": _tool_result_payload(event.data)}),
                     )
+                    titled = _harness_call_meta(event.data)
+                    if titled:
+                        said["metadata"] = titled
+                    await self.publish_status(task_id, context_id, "working", said)
+                    for shown in _displays_of(event.data):
+                        if shown.get("display") != "diff":
+                            continue
+                        path = str(shown.get("path") or "")
+                        kept = diffs.get(path)
+                        changed = diff_artifact(
+                            kept["artifact_id"] if kept else f"diff-{uuid.uuid4()}",
+                            path,
+                            shown.get("old_text"),
+                            str(shown.get("new_text") or ""),
+                        )
+                        diffs[path] = changed
+                        await self.publish_artifact(task_id, context_id, changed)
+                elif event.type == "plan":
+                    steps = (
+                        list(event.data.get("steps") or [])
+                        if isinstance(event.data, dict)
+                        else []
+                    )
+                    plan = plan_artifact(plan_id, steps)
+                    await self.publish_artifact(task_id, context_id, plan)
                 elif event.type == "output":
                     final_output = str(event.data) if event.data is not None else None
                 elif event.type == "done":
@@ -749,7 +1165,12 @@ class A2AWorker(_FastA2AWorker):
         # What it composed besides words, each an artifact of its media type.
         from ..loop.apps.pap_company import pap_artifacts
 
-        composed = [*artifacts_of(outputs), *pap_artifacts(current_pap_turn())]
+        composed = [
+            *artifacts_of(outputs),
+            *pap_artifacts(current_pap_turn()),
+            *([plan] if plan is not None else []),
+            *diffs.values(),
+        ]
         await self.storage.update_task(
             task_id,
             state="completed",
@@ -794,6 +1215,24 @@ class A2AWorker(_FastA2AWorker):
                 parts=[Part(text=str(result))],
             )
         ]
+
+
+def _harness_call_meta(data: Any) -> dict[str, Any] | None:
+    """A harness's ``{kind, title, status}`` for the status message's metadata; ``None`` for another agent's call."""
+    fields = data if isinstance(data, dict) else {}
+    if "kind" not in fields:
+        return None
+    return {
+        "kind": str(fields.get("kind") or "other"),
+        "title": str(fields.get("name") or fields.get("title") or ""),
+        "status": str(fields.get("status") or ""),
+    }
+
+
+def _displays_of(data: Any) -> list[dict[str, Any]]:
+    """The displays a harness's tool result carries (a diff, a terminal)."""
+    shown = data.get("display") if isinstance(data, dict) else None
+    return [item for item in (shown or []) if isinstance(item, dict)]
 
 
 async def _said(text: str) -> AsyncIterator[Any]:

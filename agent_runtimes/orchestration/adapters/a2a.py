@@ -1372,6 +1372,14 @@ def _notebook_part(raw: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _claimed_provenance(raw: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """The ``artifactProvenance`` a worker put on an artifact's metadata, when it did."""
+    meta = raw.get("metadata")
+    ours = meta.get("datalayer") if isinstance(meta, Mapping) else None
+    claimed = ours.get("artifactProvenance") if isinstance(ours, Mapping) else None
+    return claimed if isinstance(claimed, Mapping) else None
+
+
 def _task_artifacts(
     task: Mapping[str, Any], execution: Execution, attempt: Attempt
 ) -> list[tuple[Artifact, str]]:
@@ -1408,11 +1416,31 @@ def _task_artifacts(
         # whether it arrived on the stream or from tasks/get.
         text = notebook if notebook is not None else _artifact_text(raw)
         body = text.encode("utf-8")
+        digest = f"sha256:{hashlib.sha256(body).hexdigest()}"
         if notebook is not None:
             cells = len((notebook_of(notebook) or {}).get("cells") or [])
             summary = f"A notebook of {cells} cells"
         else:
             summary = text if len(text) <= 200 else text[:200] + "…"
+        # What the worker claims of it (the extension's `artifactProvenance`,
+        # SHIELD SH-15): the hash is computed here from the body received, and
+        # a claim that differs is said rather than taken.
+        claimed = _claimed_provenance(raw)
+        if claimed and claimed.get("contentHash") not in (None, digest):
+            summary = (
+                f"{summary} (the worker's content hash {claimed['contentHash']} "
+                f"differs from the body's {digest})"
+            )
+        # The part's own media type, when it says one: a harness's diff is
+        # `text/x-diff`, named by its path.
+        media_type = next(
+            (
+                str(part["media_type"])
+                for part in raw.get("parts") or []
+                if isinstance(part, dict) and part.get("media_type") and "text" in part
+            ),
+            "text/plain",
+        )
         registered.append(
             (
                 Artifact(
@@ -1427,7 +1455,7 @@ def _task_artifacts(
                     name=str(raw.get("name") or "artifact"),
                     media_type=NOTEBOOK_MEDIA_TYPE
                     if notebook is not None
-                    else "text/plain",
+                    else media_type,
                     size_bytes=len(body),
                     provenance=[
                         ArtifactProvenance(
@@ -1439,7 +1467,7 @@ def _task_artifacts(
                                 reference.uri
                                 for reference in execution.context.references
                             ],
-                            content_hash=f"sha256:{hashlib.sha256(body).hexdigest()}",
+                            content_hash=digest,
                             trace_id=trace_id_of(execution.trace.traceparent),
                         )
                     ],
