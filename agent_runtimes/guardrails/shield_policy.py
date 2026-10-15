@@ -269,7 +269,7 @@ def datalayer_default() -> Policy:
     from agent_runtimes.guardrails.shield_authorizer import DATALAYER_AUTHORIZE  # noqa: PLC0415
 
     document = default_policy()
-    document.authorize = list(DATALAYER_AUTHORIZE)  # type: ignore[assignment]
+    document.authorize = list(DATALAYER_AUTHORIZE)
     return document
 
 
