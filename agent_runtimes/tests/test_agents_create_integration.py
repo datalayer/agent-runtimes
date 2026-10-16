@@ -562,3 +562,39 @@ async def test_create_agent_on_a_harness_refuses_vercel_ai_and_says_what_refused
         == "Codex needs OPENAI_API_KEY in the environment, and it is not set."
     )
     assert "coder" not in agents_route._agents
+
+
+def test_an_applications_agent_never_defers_a_catalogue_tool_marked_for_approval() -> (
+    None
+):
+    """An application's Rules ask the person before a call runs: its
+    catalogue tools are not deferred to the websocket flow, whose
+    `DeferredToolRequests` output an application's agent does not take."""
+    deferred = agents_route._catalogue_tools_deferred
+    application = SimpleNamespace(id="slack-mail-approvals")
+    assert deferred(False, None) is True
+    assert deferred(True, None) is False
+    assert deferred(False, application) is False
+    assert deferred(True, application) is False
+
+
+def test_runtime_send_mail_is_registered_undeferred_when_approvals_are_the_rules() -> (
+    None
+):
+    from pydantic_ai import Agent
+    from pydantic_ai.models.test import TestModel
+
+    from agent_runtimes.services.runtime_tools import register_agent_tools
+
+    def tool_of(disabled: bool) -> object:
+        agent = Agent(TestModel())
+        names = register_agent_tools(
+            agent, ["runtime-send-mail:0.0.1"], disable_tool_approvals=disabled
+        )
+        assert names == ["runtime_send_mail"]
+        return agent._function_toolset.tools["runtime_send_mail"]
+
+    # Marked `approval: manual` in the catalogue: deferred outside an application.
+    assert getattr(tool_of(False), "requires_approval") is True
+    # An application's agent: run, its Rules having asked first.
+    assert getattr(tool_of(True), "requires_approval") is False

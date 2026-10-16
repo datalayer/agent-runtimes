@@ -209,6 +209,20 @@ def _with_subagents(
     return base.model_copy(update={"subagents": request.subagents})
 
 
+def _catalogue_tools_deferred(approvals_disabled: bool, running_app: Any) -> bool:
+    """Whether a catalogue tool marked for approval is deferred to the
+    websocket approval flow (its run's output takes ``DeferredToolRequests``).
+
+    Never for an application's agent: its Rules decide every tool call, and
+    *Ask me first* asks the person through the tool-approvals service before
+    the call runs (`loop.apps.enforcement`). Deferred, the call ended its run
+    with pydantic-ai's error instead, since an application's agent takes no
+    ``DeferredToolRequests`` (seen 16 October 2026 with ``runtime-send-mail``
+    on a hosted application).
+    """
+    return not approvals_disabled and running_app is None
+
+
 def _is_tool_approvals_disabled(request_value: bool | None = None) -> bool:
     """Resolve tool-approvals disable state from request override or runtime config."""
     if isinstance(request_value, bool):
@@ -2692,7 +2706,7 @@ async def create_agent(
             if usage_limits is not None:
                 agent_kwargs["usage_limits"] = usage_limits
             approval_tool_ids = []
-            if not tool_approvals_disabled and running_app is None:
+            if _catalogue_tools_deferred(tool_approvals_disabled, running_app):
                 approval_tool_ids = tools_requiring_approval_ids(tool_ids)
             if approval_tool_ids:
                 approval_patterns = [
@@ -2818,7 +2832,9 @@ async def create_agent(
                 pydantic_agent,
                 tool_ids,
                 agent_id=agent_id,
-                disable_tool_approvals=tool_approvals_disabled,
+                disable_tool_approvals=not _catalogue_tools_deferred(
+                    tool_approvals_disabled, running_app
+                ),
             )
 
             # Wrap with DBOS durable execution if enabled
