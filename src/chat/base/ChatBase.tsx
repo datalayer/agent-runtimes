@@ -149,6 +149,7 @@ import { settledVoice } from '../../voice/chatVoice';
 import { useVoiceSettings } from '../../voice/useVoiceSettings';
 import { useVoiceSpeaker } from '../../voice/useVoiceSpeaker';
 import { useSpokenAnswers } from '../../voice/useSpokenAnswers';
+import { saidMessageId, useSaidSentence } from '../../voice/captions';
 import { lineToSay, type VoiceActivity } from '../../voice/sayAloud';
 import { isFloatingChatViewMode } from '../viewModes';
 import {
@@ -813,6 +814,7 @@ function ChatBaseInner({
   trailingContent,
   voice,
   voiceSpeaking = false,
+  voiceSentence,
   onStopSpeaking,
   onReadAloud,
   showInformation = false,
@@ -3998,6 +4000,10 @@ function ChatBaseInner({
     ownVoice.speaker,
   );
   const speakingNow = voiceSpeaking || ownVoice.state.speaking;
+  // The sentence being said, marked in the conversation (VO-65).
+  const sentenceSaid = hostSpeaks ? voiceSentence : ownVoice.state.sentence;
+  const conversationRef = useRef<HTMLDivElement>(null);
+  useSaidSentence(conversationRef, sentenceSaid, displayItems);
   /*
    * A line the agent wants heard, not written (VO-35): a caption while the
    * run goes on, said by the speaker where answers are said by themselves.
@@ -4929,6 +4935,7 @@ function ChatBaseInner({
     : displayItems;
 
   shownItemsRef.current = welcomedItems;
+  const saidId = saidMessageId(welcomedItems, sentenceSaid);
   /*
    * *Read aloud* under each answer the agent has finished (VOICE.md VO-21),
    * when the host reads answers aloud on request.
@@ -4968,6 +4975,7 @@ function ChatBaseInner({
     children
   ) : (
     <Box
+      ref={conversationRef}
       display="flex"
       flexDirection="column"
       minHeight={0}
@@ -5003,6 +5011,7 @@ function ChatBaseInner({
         onRespond={handleRespond}
         showTurnFooters={showTurnFooter}
         renderMessageFooter={readAloudFooter}
+        saidMessageId={saidId}
         agentUsage={agentUsage}
         onRemoveItems={handleRemoveItems}
         mcpServers={filteredMcpServers}

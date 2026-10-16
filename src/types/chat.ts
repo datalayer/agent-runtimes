@@ -1294,6 +1294,12 @@ export interface ChatBaseProps {
   /** The agent is speaking: the composer offers *Stop speaking* (`Esc`). */
   voiceSpeaking?: boolean;
 
+  /**
+   * The sentence the host's speaker is saying, marked in the conversation
+   * (VOICE.md VO-65); a chat that speaks for itself marks its own.
+   */
+  voiceSentence?: string;
+
   /** Stops the agent's voice: the composer's *Stop speaking*, and the microphone opening (VO-13). */
   onStopSpeaking?: () => void;
 

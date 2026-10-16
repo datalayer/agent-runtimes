@@ -175,6 +175,12 @@ export interface ChatMessageListProps {
    */
   renderMessageFooter?: (message: ChatMessage) => ReactNode;
   /**
+   * The answer a sentence is being said from (VOICE.md VO-65): its row is
+   * marked `aria-current` and `data-voice-saying`, with a bar beside it —
+   * the sentence itself is underlined by `useSaidSentence`.
+   */
+  saidMessageId?: string;
+  /**
    * The MCP servers the agent has, with the tools each serves: a tool call is
    * drawn with the marks of the server it belongs to. Skills, frontend tools
    * and runtime tools are found in the catalogues.
@@ -784,6 +790,7 @@ export function ChatMessageList({
   agentUsage,
   onRemoveItems,
   renderMessageFooter,
+  saidMessageId,
   mcpServers,
   density = 'comfortable',
 }: ChatMessageListProps) {
@@ -1079,11 +1086,23 @@ export function ChatMessageList({
 
     // The host's footer, asked once: a row only when it draws something.
     const messageFooter = renderMessageFooter?.(message);
+    // The answer being said (VO-65): marked by a bar and for assistive tech.
+    const said = saidMessageId !== undefined && message.id === saidMessageId;
 
     return (
       <Box
         key={message.id}
         data-chat-message={message.role}
+        data-voice-saying={said ? '' : undefined}
+        aria-current={said ? 'true' : undefined}
+        sx={
+          said
+            ? {
+                boxShadow:
+                  'inset 3px 0 0 var(--borderColor-accent-emphasis, #0969da)',
+              }
+            : undefined
+        }
         display="flex"
         flexDirection="column"
         alignItems={isUser ? 'flex-end' : 'flex-start'}

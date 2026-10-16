@@ -1726,6 +1726,7 @@ export function ChatFloating({
           onRejectApproval={onRejectApproval}
           voice={voice}
           voiceSpeaking={speakerState.speaking}
+          voiceSentence={speakerState.sentence}
           onStopSpeaking={speaker ? stopSpeaking : undefined}
           onReadAloud={speaker ? readAnswerAloud : undefined}
           {...panelProps}

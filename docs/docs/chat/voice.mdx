@@ -67,6 +67,14 @@ text stays on screen.
   finished. The floating assistant's mouth moves with the sound, and while the
   conversation is closed its balloon shows the sentence being said. `Esc`, or
   *Stop speaking*, stops the voice, and so does opening the microphone.
+- **The sentence being said is marked.** While an answer is heard, its
+  sentence being said is underlined in the open conversation, and the answer
+  has a bar beside it. The mark is not a colour only: the answer is
+  `aria-current`, so a screen reader can find where the voice is, and the
+  underline follows the voice from sentence to sentence. It goes when the
+  voice stops. A browser without the CSS Custom Highlight API keeps the bar
+  and `aria-current` without the underline. It works in the chat, in the
+  floating assistant and in an application's own composer.
 - **What is kept.** A spoken message is sent as text, marked as said
   (`metadata.input: "voice"`, with its language, the model that heard it and
   where it ran). It shows a small microphone in the conversation. An
