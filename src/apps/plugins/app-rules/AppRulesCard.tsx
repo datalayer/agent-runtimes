@@ -380,6 +380,17 @@ export function SessionRules({
   );
 }
 
+/**
+ * The running session the card tightens: the conversation the host
+ * continued, else the thread the chat sent on — an application's thread is
+ * its session on the runtime. None before a message is sent.
+ */
+export function sessionUidOf(
+  workspace?: Pick<LoopWorkspaceContext, 'conversationId' | 'thread'>,
+): string | undefined {
+  return workspace?.conversationId || workspace?.thread || undefined;
+}
+
 export function AppRulesCard({
   app,
   workspace,
@@ -393,7 +404,7 @@ export function AppRulesCard({
   const agentServerUrl = workspace
     ? agentServerOf(workspace.sandbox, workspace.serverUrl)
     : undefined;
-  const sessionUid = workspace?.conversationId;
+  const sessionUid = sessionUidOf(workspace);
   return (
     <Box data-testid="app-rules" mb={4}>
       <Heading as="h3" sx={{ fontSize: 2, mb: 2 }}>

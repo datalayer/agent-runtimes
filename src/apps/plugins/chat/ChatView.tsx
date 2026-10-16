@@ -227,6 +227,20 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
   const palette = useColorPalette();
   const controlsRef = useRef<ChatControls | null>(null);
   const { setViewControls } = workspace;
+  /*
+   * Say the thread a message goes on to the workspace: an application's
+   * thread is its session on the runtime, which the Rules card's *This
+   * session* reads (SH-54). Through a ref, as the senders below are built once.
+   */
+  const setThreadRef = useRef(workspace.setThread);
+  setThreadRef.current = workspace.setThread;
+  const sayThread = useCallback(() => {
+    const thread = controlsRef.current?.thread();
+    if (thread) {
+      setThreadRef.current?.(thread);
+    }
+    return thread;
+  }, []);
   const [transient, setTransient] = useState<ReactNode>(null);
   // Read from the reactor rather than taken as a prop: the placeholder and the
   // default editor are the chat plugin's own configuration, so a host sets them
@@ -639,7 +653,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
         return;
       }
       // A new turn: whatever the panel showed is gone, this message is it.
-      turnFeedRef.current?.begin(message, controlsRef.current?.thread());
+      turnFeedRef.current?.begin(message, sayThread());
       const send = controlsRef.current?.send;
       if (!send) {
         heldForAdapter.current.push([message, forwardedProps]);
@@ -647,7 +661,7 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       }
       send(message, forwardedProps);
     },
-    [],
+    [sayThread],
   );
 
   // One writer, so neither fact can erase the other.
@@ -694,9 +708,10 @@ export default function ChatView({ workspace }: LoopViewProps): JSX.Element {
       heldForAdapter.current.length,
     );
     for (const [message, forwardedProps] of held) {
+      sayThread();
       controlsRef.current?.send(message, forwardedProps);
     }
-  }, [sendReady]);
+  }, [sendReady, sayThread]);
 
   /*
    * Fired once, on the first real send, for the life of this mounted chat —

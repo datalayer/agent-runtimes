@@ -200,6 +200,17 @@ export type LoopWorkspaceContext = {
   /** Conversation being continued, when there is one. */
   conversationId?: string;
   /**
+   * The thread the chat last sent on, once it has sent: an application's
+   * thread is its session on the runtime, so what reads a running session —
+   * the Rules card's *This session* (SH-54) — reads it here. Without it a
+   * workspace whose host named no conversation never knew its session, and
+   * the card said *Start a conversation* after one had started (16 October
+   * 2026).
+   */
+  thread?: string;
+  /** For the chat to say which thread it sends on. */
+  setThread?: (thread: string) => void;
+  /**
    * The id the notebook and the document on screen are addressed by.
    *
    * Fixed for the life of the workspace, so it survives an agent switch — see

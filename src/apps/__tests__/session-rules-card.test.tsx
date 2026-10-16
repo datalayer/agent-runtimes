@@ -13,7 +13,7 @@
 import * as React from 'react';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SessionRules } from '../plugins/app-rules/AppRulesCard';
+import { SessionRules, sessionUidOf } from '../plugins/app-rules/AppRulesCard';
 import {
   FILE_AND_SHELL_RULES,
   SESSION_RULES_WORDS,
@@ -126,5 +126,18 @@ describe('the Rules card, this session', () => {
     expect(view.getByRole('alert').textContent).toBe(
       SESSION_RULES_WORDS.unavailable('IAM did not answer'),
     );
+  });
+});
+
+describe('which session the card tightens', () => {
+  it('is the thread the chat sent on when the host named no conversation', () => {
+    // The Studio's Preview names none: before 16 October 2026 the card said
+    // *Start a conversation* after one had started.
+    expect(sessionUidOf({ thread: 'thread-0001' })).toBe('thread-0001');
+    expect(
+      sessionUidOf({ conversationId: 'continued', thread: 'thread-0001' }),
+    ).toBe('continued');
+    expect(sessionUidOf({})).toBeUndefined();
+    expect(sessionUidOf(undefined)).toBeUndefined();
   });
 });

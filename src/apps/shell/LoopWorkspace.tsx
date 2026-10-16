@@ -277,6 +277,11 @@ function WorkspaceBody({
   useEffect(() => {
     setAgentId(initialAgentId);
   }, [initialAgentId]);
+  // The thread the chat sends on, said by the chat (its session, SH-54).
+  const [thread, setThreadState] = useState<string | undefined>(undefined);
+  const setThread = useCallback((next: string) => {
+    setThreadState(current => (current === next ? current : next));
+  }, []);
 
   const [activeViewType, setActiveViewType] = useState(initialViewType ?? '');
   // Seeded by the host (a handoff carries what the terminal knew), then kept
@@ -355,6 +360,8 @@ function WorkspaceBody({
       surfaceId: surfaceIdRef.current,
       setAgentId,
       conversationId,
+      thread,
+      setThread,
       model,
       sandbox,
       setSandbox,
@@ -371,6 +378,7 @@ function WorkspaceBody({
       serverUrl,
       agentId,
       conversationId,
+      thread,
       model,
       sandbox,
       activeViewType,

@@ -465,3 +465,45 @@ describe('dispatch', () => {
     container.remove();
   });
 });
+
+describe('the thread', () => {
+  it('is said by the chat and read by every plugin of the workspace (SH-54)', async () => {
+    let seen: LoopWorkspaceContext | undefined;
+    const probe = definePlugin({
+      name: 'probe-thread',
+      contributes: [
+        contribution(
+          LoopViewType,
+          {
+            viewType: 'probe',
+            title: 'Probe',
+            load: async () => ({
+              default: ({ workspace }: LoopViewProps) => {
+                seen = workspace;
+                return <div />;
+              },
+            }),
+          },
+          { id: 'probe' },
+        ),
+      ],
+    });
+    const reactor = buildReactorFromPlugins([probe]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<LoopWorkspace serverUrl="" agentId="a" reactor={reactor} />);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(seen?.thread).toBeUndefined();
+    await act(async () => seen!.setThread!('thread-0001'));
+    expect(seen?.thread).toBe('thread-0001');
+    // The host's conversation stays its own.
+    expect(seen?.conversationId).toBeUndefined();
+    await act(async () => root.unmount());
+    container.remove();
+  });
+});
