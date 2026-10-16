@@ -417,20 +417,30 @@ async def subagent(handed: dict[str, Any]) -> None:
     from mcp import ClientSession
     from mcp import types as T
 
+    try:
+        from mcp.shared.exceptions import MCPError
+    except ImportError:  # the 1.x spelling
+        from mcp.shared.exceptions import McpError as MCPError
+
     server = handed["server"]
 
     async def calls(session: ClientSession) -> None:
         await session.initialize()
         for tool, arguments in handed["calls"]:
             # Asked raw: a refusal is text content, which the SDK's call_tool
-            # refuses for a tool with an output schema.
-            answer = await session.send_request(
-                T.CallToolRequest(
-                    method="tools/call",
-                    params=T.CallToolRequestParams(name=tool, arguments=arguments),
-                ),
-                T.CallToolResult,
-            )
+            # refuses for a tool with an output schema; a refusal may also be
+            # the call's JSON-RPC error.
+            try:
+                answer = await session.send_request(
+                    T.CallToolRequest(
+                        method="tools/call",
+                        params=T.CallToolRequestParams(name=tool, arguments=arguments),
+                    ),
+                    T.CallToolResult,
+                )
+            except MCPError as exc:
+                print(f"{tool}: refused {str(exc)[:400]}", flush=True)
+                continue
             said = " ".join(
                 c.text for c in answer.content if getattr(c, "type", None) == "text"
             )
@@ -463,8 +473,10 @@ async def subagent(handed: dict[str, Any]) -> None:
                 async with ClientSession(read, write) as session:
                     await calls(session)
     except Exception as exc:  # noqa: BLE001 - whatever stopped it is what it says
+        while getattr(exc, "exceptions", None):
+            exc = exc.exceptions[0]
         message = str(exc) or type(exc).__name__
-        print(f"error: {message[:400]}", flush=True)
+        print(f"error: {type(exc).__name__}: {message[:400]}", flush=True)
 
 
 if __name__ == "__main__":
