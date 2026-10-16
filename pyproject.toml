@@ -51,7 +51,8 @@ dependencies = [
     # 1.5.38 with agentspecs 0.0.104: the standards/ kind, aiuc-1 and iso-42001 (SHIELD SH-60).
     # 1.5.42 with agentspecs 0.0.105: the policies/ kind carries authorize: and authorizer: (SHIELD SH-74).
     # agentspecs 0.0.107: the register's listed tier, an organization's own harness, harness team members (SH-57, SH-46, SH-45).
-    "agentspecs>=0.0.107",
+    # agentspecs 0.0.110: Voice.spoken_as and where: machine, the voice extra on the person's machine (VOICE VO-16).
+    "agentspecs>=0.0.110",
     # The Datalayer orchestration extension`s wire-level constants
     # (`EXECUTION_FIELD`, `ENVELOPE_KEY`, ...), imported by
     # `context/delegation.py` and `guardrails/model_budget.py` rather than
@@ -208,15 +209,17 @@ acp = [
     "agent-client-protocol>=0.7.1",
 ]
 # Voice at the terminal (VOICE.md VO-16): the microphone and speaker of the
-# machine, and Kokoro to say answers here; never a default dependency.
-# `python -m agent_runtimes.voice.store` fills the store from Datalayer's CDN,
-# hash-checked. faster-whisper, installed beside it with the pinned model in
-# the store, hears on the machine; without them, the person's token hears and
-# says on Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
-# espeakng-loader: installed by the person on their own machine, never in a
-# browser bundle (decision 1).
+# machine, faster-whisper to hear and Kokoro to say answers here; never a
+# default dependency. `python -m agent_runtimes.voice.store` fills the store
+# (whisper-small, kokoro-82m) from Datalayer's CDN, hash-checked; without it,
+# or when `loop` runs on Datalayer, the person's token hears and says on
+# Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
+# espeakng-loader, and faster-whisper FFmpeg (LGPL) through av: installed by
+# the person on their own machine, never in a browser bundle (decision 1;
+# the register's notes, VO-01).
 voice = [
     "sounddevice>=0.5.0",
+    "faster-whisper>=1.2.1,<2",
     "kokoro-onnx>=0.6.1,<0.7",
 ]
 ui = [

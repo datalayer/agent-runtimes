@@ -20,6 +20,14 @@ service (``POST /speech/syntheses``, 16-bit PCM), and played here. The store
 is filled from Datalayer's CDN, hash-checked: ``python -m
 agent_runtimes.voice.store`` (VO-16).
 
+When ``loop`` runs its agent **on Datalayer** (``--cloud``, LOOP §10.2), what
+is said is heard and answers are said **on Datalayer's servers** with the
+person's token, whatever this machine has. Only what the catalogue says runs
+on the machine (``where: machine``) is run here, and Kokoro is first asked to
+say one word in a process of its own: an engine that cannot speak here (eSpeak
+NG's data not found, a crash inside it) is said in a sentence and the answers
+go to the speech service, never a dead terminal (VO-16).
+
 A key toggles listening (``Ctrl``+``T``, the ``/voice`` command's shortcut):
 a terminal sees no key release, so there is no holding. The transcript is
 put on the prompt line, to edit or send.
@@ -29,6 +37,8 @@ from __future__ import annotations
 
 import io
 import os
+import subprocess
+import sys
 import threading
 import wave
 from dataclasses import dataclass, field
@@ -57,6 +67,13 @@ FILL_STORE = "python -m agent_runtimes.voice.store"
 #: The model heard with on this machine, when it is there.
 LOCAL_MODEL = "whisper-small"
 LOCAL_MODEL_FOLDER = f"openai/{LOCAL_MODEL}"
+
+#: What Kokoro is asked to do in a process of its own before it is relied on:
+#: eSpeak NG, under it, can end the process it runs in (VO-16).
+KOKORO_CHECK = (
+    "import sys; from kokoro_onnx import Kokoro; "
+    "Kokoro(sys.argv[1], sys.argv[2]).create('Ready.', voice=sys.argv[3], lang=sys.argv[4])"
+)
 
 #: The voice answers are said with when the spec says none.
 DEFAULT_VOICE = "kokoro-af-heart"
@@ -198,7 +215,10 @@ class Hearing:
         token: Optional[str] = None,
         ai_agents_url: Optional[str] = None,
         post: Optional[Callable[..., Any]] = None,
+        on_datalayer: bool = False,
     ) -> None:
+        #: ``loop`` runs its agent on Datalayer: heard there, whatever is here (VO-16).
+        self.on_datalayer = on_datalayer
         self.models_dir = models_dir or Path(
             os.path.expanduser(os.getenv(MODELS_DIR_ENV) or DEFAULT_MODELS_DIR)
         )
@@ -215,6 +235,8 @@ class Hearing:
         return "local" if self._local_model_dir() else "server"
 
     def _local_model_dir(self) -> Optional[Path]:
+        if self.on_datalayer or not store.runs_on_the_machine(LOCAL_MODEL):
+            return None
         folder = self.models_dir / LOCAL_MODEL_FOLDER
         if not (folder / "model.bin").is_file():
             return None
@@ -229,6 +251,11 @@ class Hearing:
         if self.where == "local":
             return None
         if not self.token:
+            if self.on_datalayer:
+                return (
+                    "Your agent runs on Datalayer, where what you say is heard: that needs you "
+                    "signed in — datalayer login, or set DATALAYER_API_KEY."
+                )
             return (
                 "Heard on Datalayer's servers, which needs you signed in: set DATALAYER_TOKEN "
                 f"or DATALAYER_API_KEY — or install faster-whisper and fill {self.models_dir} "
@@ -305,8 +332,12 @@ class Speaker:
         play: Optional[Callable[[bytes, int], None]] = None,
         models_dir: Optional[Path] = None,
         kokoro: Optional[Callable[[str, str], Any]] = None,
+        kokoro_check: Optional[Callable[[Path, str, str], Optional[str]]] = None,
+        on_datalayer: bool = False,
     ) -> None:
         self.voice = voice
+        #: ``loop`` runs its agent on Datalayer: said there, whatever is here (VO-16).
+        self.on_datalayer = on_datalayer
         self.language = language
         self.token = token if token is not None else _token()
         self.ai_agents_url = (
@@ -318,6 +349,14 @@ class Speaker:
         # Kokoro(onnx path, voices path), kokoro-onnx's or a stand-in in a test.
         self._kokoro_factory = kokoro
         self._kokoro: Any = None
+        # Asks Kokoro to say a word in a process of its own; kokoro-onnx's own
+        # is checked, a stand-in is not unless a test says how (VO-16).
+        self._kokoro_check = kokoro_check or (
+            kokoro_problem if kokoro is None else (lambda *_: None)
+        )
+        self._checked: Optional[Path] = None
+        #: Why answers are not said here although Kokoro is installed, in a sentence.
+        self.not_here: Optional[str] = None
 
     @property
     def where(self) -> str:
@@ -325,6 +364,10 @@ class Speaker:
         return "local" if self._local_folder() else "server"
 
     def _local_folder(self) -> Optional[Path]:
+        if self.on_datalayer or self.not_here is not None:
+            return None
+        if not store.runs_on_the_machine(store.SPEAKING_MODEL):
+            return None
         folder = store.present(store.SPEAKING_MODEL, self.models_dir)
         if folder is None:
             return None
@@ -333,10 +376,22 @@ class Speaker:
                 import kokoro_onnx  # noqa: F401, PLC0415 - the voice extra's
             except ImportError:
                 return None
+        if self._checked != folder:
+            voice, language = self._voice_and_language()
+            problem = self._kokoro_check(folder, voice, language)
+            if problem:
+                self.not_here = (
+                    f"Kokoro could not speak on this machine ({problem}): "
+                    "answers are said by Datalayer's speech service."
+                )
+                return None
+            self._checked = folder
         return folder
 
     def _voice_and_language(self) -> tuple[str, str]:
         """Return Kokoro's own name for the voice, and the language it says it in."""
+        from agentspecs.speech import get_voice  # noqa: PLC0415
+
         from agent_runtimes.specs.voices import VOICE_CATALOGUE  # noqa: PLC0415
 
         spec = VOICE_CATALOGUE.get(self.voice)
@@ -345,7 +400,14 @@ class Speaker:
                 f"{self.voice} is not a Kokoro voice of the catalogue: "
                 f"{', '.join(sorted(VOICE_CATALOGUE))}."
             )
-        language = self.language or spec["languages"][0]
+        # The voice's own tag (`fr` is `fr-FR`): eSpeak NG knows `fr-fr`, not `fr`.
+        wanted = self.language or spec["languages"][0]
+        language = get_voice(self.voice).spoken_as(wanted)
+        if not language:
+            raise VoiceRefused(
+                f"The voice {self.voice} does not speak {wanted}: it speaks "
+                f"{', '.join(spec['languages'])}."
+            )
         return str(spec["voice"]), language.lower()
 
     def say(self, text: str) -> None:
@@ -358,6 +420,11 @@ class Speaker:
             self._say_here(folder, text)
             return
         if not self.token:
+            if self.not_here:
+                raise VoiceRefused(
+                    f"{self.not_here} That needs you signed in: datalayer login, "
+                    "or set DATALAYER_API_KEY."
+                )
             raise VoiceRefused(
                 "Answers are said by Datalayer's speech service, which needs you signed in: "
                 "set DATALAYER_TOKEN or DATALAYER_API_KEY — or install agent-runtimes[voice] "
@@ -408,6 +475,43 @@ class Speaker:
             (self._play or _play)(pcm.tobytes(), int(rate))
 
 
+def kokoro_problem(
+    folder: Path, voice: str, language: str, *, python: str = sys.executable
+) -> Optional[str]:
+    """Why Kokoro cannot say a word here, from a process of its own; ``None`` when it can (VO-16).
+
+    eSpeak NG, under kokoro-onnx, can end the process it runs in (its data not
+    found): asked in a child, that is a sentence instead of a dead terminal.
+    """
+    from_catalogue = [
+        item["path"] for item in store.model_spec(store.SPEAKING_MODEL)["files"]
+    ]
+    onnx = next(name for name in from_catalogue if name.endswith(".onnx"))
+    voices = next(name for name in from_catalogue if name.endswith(".bin"))
+    try:
+        done = subprocess.run(  # noqa: S603 - this interpreter, a fixed program
+            [
+                python,
+                "-c",
+                KOKORO_CHECK,
+                str(folder / onnx),
+                str(folder / voices),
+                voice,
+                language,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "it did not say a word in 2 minutes"
+    if done.returncode == 0:
+        return None
+    lines = [line.strip() for line in (done.stderr or "").splitlines() if line.strip()]
+    return lines[-1] if lines else f"it ended with code {done.returncode}"
+
+
 def _pieces(text: str, most: int = 1_800) -> List[str]:
     """The text in pieces the service takes, cut at sentence ends where it can."""
     pieces: List[str] = []
@@ -434,7 +538,17 @@ def _token() -> Optional[str]:
         value = (os.environ.get(name) or "").strip()
         if value:
             return value
-    return None
+    return _signed_in_token()
+
+
+def _signed_in_token() -> Optional[str]:
+    """The token ``datalayer login`` keeps, read as ``loop --cloud`` reads it (L-04); ``None`` when signed out."""
+    from agent_runtimes.loop.launch import NotSignedIn, make_client  # noqa: PLC0415
+
+    try:
+        return make_client()[1]
+    except NotSignedIn:
+        return None
 
 
 def _post(url: str, **kwargs: Any) -> Any:

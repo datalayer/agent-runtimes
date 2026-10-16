@@ -61,6 +61,12 @@ class Stream:
         self.closed = True
 
 
+@pytest.fixture(autouse=True)
+def _signed_out(monkeypatch):
+    """No `datalayer login` token from this machine leaks into a test: a test names its token."""
+    monkeypatch.setattr(voice, "_signed_in_token", lambda: None)
+
+
 def devices(*names: str, inputs: int = 1) -> list[dict[str, Any]]:
     return [{"name": name, "max_input_channels": inputs} for name in names]
 
@@ -556,3 +562,230 @@ def test_a_voice_that_is_not_kokoro_s_is_refused_in_a_sentence(tmp_path, monkeyp
     )
     with pytest.raises(voice.VoiceRefused, match="not a Kokoro voice"):
         speaker.say("Hello there.")
+
+
+def _kokoro_here(tmp_path: Path, monkeypatch) -> None:
+    from agent_runtimes.voice import store
+
+    contents = {"kokoro-v1.0.onnx": b"o", "voices-v1.0.bin": b"v"}
+    monkeypatch.setitem(
+        store.SPEECH_MODEL_CATALOGUE,
+        "kokoro-82m",
+        _pinned_store(tmp_path, "kokoro-82m", contents),
+    )
+    store.fill(
+        ["kokoro-82m"],
+        tmp_path,
+        "https://cdn",
+        lambda url, target: target.write_bytes(contents[url.rsplit("/", 1)[1]]),
+    )
+
+
+def _whisper_here(tmp_path: Path, monkeypatch) -> None:
+    import types
+
+    (tmp_path / "openai" / "whisper-small").mkdir(parents=True)
+    (tmp_path / "openai" / "whisper-small" / "model.bin").write_bytes(b"x")
+    monkeypatch.setitem(
+        __import__("sys").modules, "faster_whisper", types.ModuleType("faster_whisper")
+    )
+
+
+def test_on_datalayer_what_is_said_is_heard_and_said_there_whatever_is_here(
+    tmp_path, monkeypatch
+):
+    """VO-16, LOOP §10.2: `loop --cloud` hears and speaks on Datalayer, even with the extra and the store here."""
+    _kokoro_here(tmp_path, monkeypatch)
+    _whisper_here(tmp_path, monkeypatch)
+    assert voice.Hearing(models_dir=tmp_path, token="t0k").where == "local"
+    assert (
+        voice.Speaker(models_dir=tmp_path, token="t0k", kokoro=StandInKokoro).where
+        == "local"
+    )
+    asked: list[str] = []
+
+    def post(url: str, **kwargs: Any) -> Answer:
+        asked.append(url)
+        if url.endswith("/transcriptions"):
+            return Answer(200, {"text": "Hello.", "language": "en"})
+        return Answer(
+            200, content=b"\x00\x00" * 240, headers={"X-Speech-Rate": "24000"}
+        )
+
+    hearing = voice.Hearing(
+        models_dir=tmp_path,
+        token="t0k",
+        ai_agents_url="https://r1.example",
+        post=post,
+        on_datalayer=True,
+    )
+    speaker = voice.Speaker(
+        models_dir=tmp_path,
+        token="t0k",
+        ai_agents_url="https://r1.example",
+        post=post,
+        play=lambda pcm, rate: None,
+        kokoro=StandInKokoro,
+        on_datalayer=True,
+    )
+    assert hearing.where == "server" and speaker.where == "server"
+    assert hearing.hear(b"\x10\x00" * voice.RATE).where == "server"
+    speaker.say("Hello there.")
+    assert asked == [
+        "https://r1.example/api/ai-agents/v1/speech/transcriptions",
+        "https://r1.example/api/ai-agents/v1/speech/syntheses",
+    ]
+    # Signed out, on Datalayer: one sentence that says why and how.
+    signed_out = voice.Hearing(models_dir=tmp_path, token="", on_datalayer=True)
+    assert "runs on Datalayer" in (signed_out.problem() or "")
+    assert "datalayer login" in (signed_out.problem() or "")
+
+
+def test_the_terminal_on_datalayer_hears_and_speaks_there(monkeypatch):
+    """VO-16: the session's voice follows where its agent runs."""
+    here = tux()
+    here.speak = True
+    assert here.voice_session().hearing.on_datalayer is False
+    assert here.voice_session().speaker.on_datalayer is False
+    there = tux()
+    there.speak = True
+    there.where = "01m40 on Datalayer (ai-agents-env)"
+    assert there.voice_session().hearing.on_datalayer is True
+    assert there.voice_session().speaker.on_datalayer is True
+
+
+def test_a_kokoro_that_cannot_speak_here_is_a_sentence_and_the_service_says_the_answers(
+    tmp_path, monkeypatch
+):
+    """VO-16: eSpeak NG ending the process (its data not found) is found in a child, said, and routed round."""
+    _kokoro_here(tmp_path, monkeypatch)
+    checked: list[tuple[str, str]] = []
+
+    def check(folder: Path, voice_name: str, language: str) -> str:
+        checked.append((voice_name, language))
+        return "phontab: No such file or directory"
+
+    played: list[int] = []
+    speaker = voice.Speaker(
+        models_dir=tmp_path,
+        token="t0k",
+        post=lambda url, **k: Answer(
+            200, content=b"\x00\x00" * 240, headers={"X-Speech-Rate": "24000"}
+        ),
+        play=lambda pcm, rate: played.append(rate),
+        kokoro=StandInKokoro,
+        kokoro_check=check,
+    )
+    assert speaker.where == "server"
+    assert speaker.not_here == (
+        "Kokoro could not speak on this machine (phontab: No such file or directory): "
+        "answers are said by Datalayer's speech service."
+    )
+    speaker.say("Hello there.")
+    assert played == [24000] and checked == [("af_heart", "en-us")]
+    # Signed out too: the sentence says both.
+    signed_out = voice.Speaker(
+        models_dir=tmp_path, token="", kokoro=StandInKokoro, kokoro_check=check
+    )
+    with pytest.raises(
+        voice.VoiceRefused, match="could not speak on this machine.*signed in"
+    ):
+        signed_out.say("Hello there.")
+
+
+def test_kokoro_is_asked_to_speak_in_a_process_of_its_own(tmp_path, monkeypatch):
+    """VO-16: the check runs a child; its crash is the sentence's reason, its success is nothing."""
+    _kokoro_here(tmp_path, monkeypatch)
+    folder = tmp_path / "hexgrad" / "kokoro-82m"
+    dying = tmp_path / "dying-python"
+    dying.write_text(
+        "#!/bin/sh\necho 'Error processing file' >&2\n"
+        "echo '/home/runner/work/espeak-ng-data/phontab: No such file or directory.' >&2\nkill -ABRT $$\n"
+    )
+    dying.chmod(0o755)
+    assert voice.kokoro_problem(folder, "af_heart", "en-us", python=str(dying)) == (
+        "/home/runner/work/espeak-ng-data/phontab: No such file or directory."
+    )
+    speaking = tmp_path / "speaking-python"
+    speaking.write_text(
+        '#!/bin/sh\ntest "$2" = "$KOKORO_CHECK_EXPECTED" && exit 0; exit 3\n'
+    )
+    speaking.chmod(0o755)
+    monkeypatch.setenv("KOKORO_CHECK_EXPECTED", voice.KOKORO_CHECK)
+    assert (
+        voice.kokoro_problem(folder, "af_heart", "en-us", python=str(speaking)) is None
+    )
+    silent = tmp_path / "silent-python"
+    silent.write_text("#!/bin/sh\nexit 9\n")
+    silent.chmod(0o755)
+    assert (
+        voice.kokoro_problem(folder, "af_heart", "en-us", python=str(silent))
+        == "it ended with code 9"
+    )
+
+
+def test_a_voice_is_given_its_own_language_tag_not_the_person_s(tmp_path, monkeypatch):
+    """VO-16: `fr` is said as `fr-fr` (eSpeak NG refuses `fr`); a language the voice does not speak is a sentence."""
+    _kokoro_here(tmp_path, monkeypatch)
+    french = voice.Speaker(
+        voice="kokoro-ff-siwis",
+        language="fr",
+        token=None,
+        play=lambda *a: None,
+        models_dir=tmp_path,
+        kokoro=StandInKokoro,
+    )
+    french.say("Le rapport est prêt.")
+    assert french._kokoro.said[-1][1:] == ("ff_siwis", "fr-fr")
+    english = voice.Speaker(
+        voice="kokoro-ff-siwis",
+        language="en",
+        token=None,
+        play=lambda *a: None,
+        models_dir=tmp_path,
+        kokoro=StandInKokoro,
+    )
+    with pytest.raises(voice.VoiceRefused, match="does not speak en: it speaks fr-FR"):
+        english.say("The report is ready.")
+
+
+def test_only_what_the_catalogue_says_runs_on_the_machine_runs_here(
+    tmp_path, monkeypatch
+):
+    """VO-16: `where: machine` in the catalogue, or the servers."""
+    from agent_runtimes.voice import store
+
+    assert store.runs_on_the_machine("whisper-small") and store.runs_on_the_machine(
+        "kokoro-82m"
+    )
+    assert not store.runs_on_the_machine("whisper-large-v3-turbo")
+    _whisper_here(tmp_path, monkeypatch)
+    assert voice.Hearing(models_dir=tmp_path, token="t0k").where == "local"
+    monkeypatch.setitem(
+        store.SPEECH_MODEL_CATALOGUE,
+        "whisper-small",
+        {**store.model_spec("whisper-small"), "where": ["server"]},
+    )
+    assert voice.Hearing(models_dir=tmp_path, token="t0k").where == "server"
+
+
+def test_the_signed_in_token_is_used_when_no_variable_names_one(monkeypatch):
+    """VO-16: `datalayer login`'s token, as `loop --cloud` reads it, hears and says on Datalayer."""
+    monkeypatch.delenv("DATALAYER_TOKEN", raising=False)
+    monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+    monkeypatch.setattr(voice, "_signed_in_token", lambda: "from-login")
+    assert voice.Hearing().token == "from-login"
+    monkeypatch.setenv("DATALAYER_API_KEY", "from-env")
+    assert voice.Hearing().token == "from-env"
+    from agent_runtimes.loop import launch
+
+    def signed_out() -> Any:
+        raise launch.NotSignedIn("No Datalayer credentials were found.")
+
+    monkeypatch.undo()
+    monkeypatch.delenv("DATALAYER_TOKEN", raising=False)
+    monkeypatch.delenv("DATALAYER_API_KEY", raising=False)
+    monkeypatch.setattr(launch, "make_client", signed_out)
+    assert voice._signed_in_token() is None
+    monkeypatch.setattr(launch, "make_client", lambda: (object(), "kept-token"))
+    assert voice._signed_in_token() == "kept-token"

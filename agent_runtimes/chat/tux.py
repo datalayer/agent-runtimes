@@ -607,10 +607,13 @@ class CliTux:
     def voice_session(self) -> Any:
         """Voice for this session (VO-15), made on first use."""
         if self._voice_session is None:
-            from agent_runtimes.voice.cli import Speaker, VoiceSession
+            from agent_runtimes.voice.cli import Hearing, Speaker, VoiceSession
 
+            # On Datalayer (`--cloud`), heard and said there (VO-16, LOOP §10.2).
+            on_datalayer = bool(self.where)
             self._voice_session = VoiceSession(
-                speaker=Speaker() if self.speak else None
+                hearing=Hearing(on_datalayer=on_datalayer),
+                speaker=Speaker(on_datalayer=on_datalayer) if self.speak else None,
             )
         return self._voice_session
 
@@ -1259,6 +1262,10 @@ class CliTux:
                     + ".",
                     style=STYLE_MUTED,
                 )
+                speaker = self.voice_session().speaker
+                if speaker is not None and speaker.not_here:
+                    # Kokoro is installed but could not speak here (VO-16).
+                    self.console.print(f"● {speaker.not_here}", style=STYLE_MUTED)
         if self.startup_message:
             # The message carries raw ANSI color codes; parse them so Rich
             # renders the colors instead of printing the escape sequences.

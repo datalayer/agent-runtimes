@@ -12,8 +12,8 @@
  * @module specs/voices
  */
 
-/** Where a step of speech runs: the person's browser, or Datalayer's servers. */
-export type SpeechWhere = 'device' | 'server';
+/** Where a step of speech runs: the person's browser, Datalayer's servers, or the person's machine (agent-runtimes' voice extra). */
+export type SpeechWhere = 'device' | 'server' | 'machine';
 
 /** The licences a voice or a model is admitted by. */
 export interface SpeechLicence {
@@ -94,7 +94,7 @@ export const VOICE_CATALOGUE: Record<string, VoiceSpec> = {
     model: 'kokoro-82m',
     voice: 'af_heart',
     languages: ['en-US'],
-    where: ['server'],
+    where: ['server', 'machine'],
     licence: {
       weights: 'Apache-2.0',
     },
@@ -112,7 +112,7 @@ export const VOICE_CATALOGUE: Record<string, VoiceSpec> = {
     model: 'kokoro-82m',
     voice: 'bf_emma',
     languages: ['en-GB'],
-    where: ['server'],
+    where: ['server', 'machine'],
     licence: {
       weights: 'Apache-2.0',
     },
@@ -131,7 +131,7 @@ export const VOICE_CATALOGUE: Record<string, VoiceSpec> = {
     model: 'kokoro-82m',
     voice: 'ff_siwis',
     languages: ['fr-FR'],
-    where: ['server'],
+    where: ['server', 'machine'],
     licence: {
       weights: 'Apache-2.0',
       dataset: 'CC-BY-4.0',
@@ -156,7 +156,7 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     engine: 'kokoro-onnx',
     dtype: 'fp32',
     languages: ['en', 'fr', 'es', 'it', 'pt', 'hi', 'ja', 'zh'],
-    where: ['server'],
+    where: ['server', 'machine'],
     streaming: false,
     licence: {
       weights: 'Apache-2.0',
@@ -575,7 +575,7 @@ export const SPEECH_MODEL_CATALOGUE: Record<string, SpeechModelSpec> = {
     engine: 'faster-whisper',
     dtype: 'float16',
     languages: ['en', 'fr', 'es', 'it', 'pt', 'de', 'nl', 'ja', 'zh', 'hi'],
-    where: ['server'],
+    where: ['server', 'machine'],
     streaming: false,
     licence: {
       weights: 'MIT',

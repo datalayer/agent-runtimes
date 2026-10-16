@@ -68,6 +68,11 @@ def model_spec(model_id: str) -> Dict[str, Any]:
     return model
 
 
+def runs_on_the_machine(model_id: str) -> bool:
+    """Whether the catalogue says a model runs on the person's machine (``where: machine``, VO-16)."""
+    return "machine" in model_spec(model_id)["where"]
+
+
 def folder_of(model: Dict[str, Any], directory: Path) -> Path:
     """Where a model's files are in a store: ``<provider>/<id>``."""
     return directory / model["provider"] / model["id"]
