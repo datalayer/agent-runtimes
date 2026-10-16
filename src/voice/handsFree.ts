@@ -93,8 +93,10 @@ export function turnEnded(
  * At most this share of what plays is taken to come back into the
  * microphone once the browser's echo cancellation has done its part (VO-13),
  * on the meters' own scales (the microphone's `Capture.level`, the speaker's
- * `level`). A setting, not a measure yet: VO-52 measures it on a laptop's
- * own speakers.
+ * `level`). Measured on a laptop's own speakers in Chrome (VO-13): the echo
+ * left after cancellation was about 1% of the playback (0.055 at p95), and a
+ * voice over the answer passed this gate several times a second. 0.6 keeps
+ * a margin for worse speakers and rooms.
  */
 export const ECHO_SHARE = 0.6;
 
