@@ -54,11 +54,19 @@ IAM_URL_VARIABLE = "DATALAYER_IAM_URL"
 
 
 def datalayer_authorize() -> tuple[str, ...]:
-    """The classes needing the authorizer here: :data:`DATALAYER_AUTHORIZE`, and the
-    workspace's in a managed runtime pod (its workspace the operator's, an IAM named)."""
-    in_a_pod = (os.environ.get("AGENT_RUNTIMES_WORKSPACE_ROOT") or "").rstrip("/") == RUNTIME_WORKSPACE
+    """
+    Return the classes needing the authorizer here.
+
+    :data:`DATALAYER_AUTHORIZE`, and the workspace's in a managed runtime pod
+    (its workspace the operator's, an IAM named).
+    """
+    in_a_pod = (os.environ.get("AGENT_RUNTIMES_WORKSPACE_ROOT") or "").rstrip(
+        "/"
+    ) == RUNTIME_WORKSPACE
     managed = bool((os.environ.get(IAM_URL_VARIABLE) or "").strip())
-    switched_off = (os.environ.get(WORKSPACE_AUTHORIZE_VARIABLE) or "").strip().lower() == "off"
+    switched_off = (
+        os.environ.get(WORKSPACE_AUTHORIZE_VARIABLE) or ""
+    ).strip().lower() == "off"
     if in_a_pod and managed and not switched_off:
         return (*WORKSPACE_AUTHORIZE, *DATALAYER_AUTHORIZE)
     return DATALAYER_AUTHORIZE
