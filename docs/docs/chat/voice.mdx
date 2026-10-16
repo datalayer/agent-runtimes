@@ -339,7 +339,12 @@ say what only the runtime knows: `voice.settings`, right after
 `RUN_STARTED`, with the voice and language of an agent whose answers may be
 heard, and `voice.say`, the line `say_aloud` says (`{"text", "voice",
 "language"}`). The Vercel AI stream carries the same as data parts,
-`data-voice.settings` and `data-voice.say`.
+`data-voice.settings` and `data-voice.say`, which the page reads as it reads
+AG-UI's events: the line is said and captioned. Over A2A, the agent's voice
+is in the metadata of its first `working` status message
+(`metadata.voice.settings`), and each line it says aloud is a status message
+whose text is the line and whose `metadata.voice.say` names the voice and
+language.
 
 A protocol client that sends the sound itself — AG-UI's `AudioInputContent`
 in the newest user message, its data inline as base64, WAV, FLAC, Ogg or
@@ -347,6 +352,16 @@ WebM — is heard by the speech service with the caller's own token before the
 run. The message becomes the transcript, marked spoken, and the sound is not
 kept. A source given by address, another type, a missing token or the
 service's refusal is answered `422` in a sentence before the run starts.
+
+Over A2A, an agent's card lists the audio types among its `defaultInputModes`
+(an application's card, which names text, does not). A `message/send` or
+`message/stream` whose message holds a file part of one of those types, its
+`bytes` inline, is heard the same way once the caller is admitted, before the
+task is made: the agent is given the transcript, and the message's
+`metadata.voice` says it was spoken. A file given by `uri`, another type, a
+missing token or the service's refusal is answered as a JSON-RPC error
+(`-32602`) in a sentence, and no task is made.
+
 Recordings sent to `POST /speech/transcriptions` may be WAV, FLAC, Ogg Opus
 or WebM Opus (what Chrome's `MediaRecorder` writes), up to a minute.
 

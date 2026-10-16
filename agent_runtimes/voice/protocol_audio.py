@@ -6,7 +6,9 @@
 On the web the page transcribes and the runtime sees text (§5). A protocol
 client may send the sound itself — AG-UI's ``AudioInputContent`` in a user
 message (``{"type": "audio", "source": {"type": "data", "value": <base64>,
-"mime_type": "audio/wav"}}``). The runtime does not hear it: it asks ai-agents'
+"mime_type": "audio/wav"}}``), or an A2A file part of an audio type
+(``{"kind": "file", "file": {"bytes": <base64>, "mimeType": "audio/wav"}}``,
+heard by ``HearA2AAudio`` before the task is made). The runtime does not hear it: it asks ai-agents'
 speech service (``POST /api/ai-agents/v1/speech/transcriptions``, VO-34) with
 the caller's own token, and the message enters the conversation as the
 transcript, marked spoken (``input: "voice"``, ``where: "server"``, VO-27) so
@@ -23,6 +25,7 @@ from __future__ import annotations
 import base64
 import binascii
 import copy
+import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
@@ -201,12 +204,205 @@ async def hear_agui_messages(
     return heard_body, spoken
 
 
+def _a2a_sound_of(part: Dict[str, Any]) -> Optional[Tuple[bytes, str]]:
+    """An A2A file part's sound and type when it is audio; ``None`` for any other file or part."""
+    if part.get("kind") != "file" or not isinstance(part.get("file"), dict):
+        return None
+    file = part["file"]
+    kind = str(file.get("mimeType") or file.get("mime_type") or "")
+    base = kind.split(";")[0].strip().lower()
+    if not base.startswith("audio/"):
+        return None
+    if "bytes" not in file:
+        raise AudioNotHeard(
+            "Audio is heard when it is sent in the message (a file part's bytes), "
+            "not by an address: the runtime fetches no address a client names."
+        )
+    if base not in HEARD_TYPES:
+        raise AudioNotHeard(f"Audio is heard as {', '.join(HEARD_TYPES)}, not {kind}.")
+    try:
+        sound = base64.b64decode(str(file.get("bytes") or ""), validate=True)
+    except (binascii.Error, ValueError):
+        raise AudioNotHeard("The audio's bytes are not base64.") from None
+    if not sound:
+        raise AudioNotHeard("The audio part is empty.")
+    return sound, kind
+
+
+async def hear_a2a_message(
+    message: Dict[str, Any],
+    *,
+    token: str,
+    ai_agents_url: Optional[str] = None,
+    client: Optional[httpx.AsyncClient] = None,
+) -> Tuple[Dict[str, Any], Optional[SpokenInput]]:
+    """An A2A message whose file parts carry audio, with that audio heard (VO-28).
+
+    Returns the message with each audio file part replaced by its transcript,
+    as a text part, and ``metadata.voice`` saying it was spoken — or the
+    message unchanged and ``None`` when it carries no audio.
+    """
+    parts = message.get("parts")
+    if not isinstance(parts, list):
+        return message, None
+    sounds = [_a2a_sound_of(part) if isinstance(part, dict) else None for part in parts]
+    if not any(sounds):
+        return message, None
+    url = (
+        ai_agents_url if ai_agents_url is not None else os.getenv(AI_AGENTS_URL_ENV, "")
+    )
+    heard_message = copy.deepcopy(message)
+    heard_parts: List[Any] = []
+    language = ""
+    for part, sound in zip(parts, sounds):
+        if sound is None:
+            heard_parts.append(copy.deepcopy(part))
+            continue
+        heard = await hear_audio(
+            sound[0], sound[1], token=token, ai_agents_url=url, client=client
+        )
+        if not heard.text:
+            raise AudioNotHeard(
+                "Nothing was heard in the audio: say it again, or type."
+            )
+        language = language or heard.language
+        heard_parts.append({"kind": "text", "text": heard.text})
+    del sounds
+    heard_message["parts"] = heard_parts
+    spoken = SpokenInput(language=language, engine=SERVER_ENGINE, where="server")
+    metadata = heard_message.get("metadata")
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    metadata["voice"] = spoken.as_payload()
+    heard_message["metadata"] = metadata
+    return heard_message, spoken
+
+
+#: The JSON-RPC methods of A2A that carry a message to the agent.
+A2A_MESSAGE_METHODS = ("message/send", "message/stream")
+
+#: What A2A says of an argument it cannot take (JSON-RPC's invalid params).
+A2A_INVALID_PARAMS = -32602
+
+
+class HearA2AAudio:
+    """ASGI middleware: an A2A message's audio heard before the agent sees it (VO-28).
+
+    A ``message/send`` or ``message/stream`` whose message holds audio file
+    parts is heard by the speech service with the request's own bearer
+    token, and the agent is given the transcript, marked spoken. What cannot
+    be heard is answered as a JSON-RPC error, in a sentence, and nothing
+    runs. Every other request passes untouched.
+    """
+
+    def __init__(
+        self,
+        app: Any,
+        *,
+        ai_agents_url: Optional[str] = None,
+        client: Optional[httpx.AsyncClient] = None,
+    ) -> None:
+        self.app = app
+        self.ai_agents_url = ai_agents_url
+        self.client = client
+
+    async def __call__(self, scope: Dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http" or scope.get("method") != "POST":
+            await self.app(scope, receive, send)
+            return
+        chunks: List[bytes] = []
+        more = True
+        while more:
+            event = await receive()
+            if event["type"] == "http.disconnect":
+                return
+            chunks.append(event.get("body", b""))
+            more = event.get("more_body", False)
+        body = b"".join(chunks)
+        replay = body
+        try:
+            request = json.loads(body) if body else None
+        except ValueError:
+            request = None
+        if (
+            isinstance(request, dict)
+            and request.get("method") in A2A_MESSAGE_METHODS
+            and isinstance(request.get("params"), dict)
+            and isinstance(request["params"].get("message"), dict)
+        ):
+            header = ""
+            for name, value in scope.get("headers") or []:
+                if name.lower() == b"authorization":
+                    header = value.decode("latin-1")
+            token = header[7:].strip() if header.lower().startswith("bearer ") else ""
+            try:
+                heard, spoken = await hear_a2a_message(
+                    request["params"]["message"],
+                    token=token,
+                    ai_agents_url=self.ai_agents_url,
+                    client=self.client,
+                )
+            except AudioNotHeard as refused:
+                await _json_rpc_error(send, request.get("id"), str(refused))
+                return
+            except httpx.HTTPError as error:
+                await _json_rpc_error(
+                    send,
+                    request.get("id"),
+                    "The audio could not be heard: Datalayer's speech service "
+                    f"did not answer ({type(error).__name__}).",
+                )
+                return
+            if spoken is not None:
+                request["params"]["message"] = heard
+                replay = json.dumps(request).encode("utf-8")
+        headers = [
+            (name, value)
+            for name, value in scope.get("headers") or []
+            if name.lower() != b"content-length"
+        ]
+        headers.append((b"content-length", str(len(replay)).encode()))
+        sent = False
+
+        async def replayed() -> Dict[str, Any]:
+            nonlocal sent
+            if not sent:
+                sent = True
+                return {"type": "http.request", "body": replay, "more_body": False}
+            return await receive()
+
+        await self.app({**scope, "headers": headers}, replayed, send)
+
+
+async def _json_rpc_error(send: Any, request_id: Any, sentence: str) -> None:
+    body = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": A2A_INVALID_PARAMS, "message": sentence},
+        }
+    ).encode("utf-8")
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": body})
+
+
 __all__ = [
+    "A2A_MESSAGE_METHODS",
     "AI_AGENTS_URL_ENV",
     "AudioNotHeard",
     "HEARD_TYPES",
+    "HearA2AAudio",
     "HeardAudio",
     "SERVER_ENGINE",
+    "hear_a2a_message",
     "hear_agui_messages",
     "hear_audio",
 ]

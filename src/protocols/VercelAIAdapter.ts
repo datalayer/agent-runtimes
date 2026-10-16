@@ -821,6 +821,18 @@ export class VercelAIAdapter extends BaseProtocolAdapter {
                     timestamp: new Date(),
                   });
                 }
+              } else if (
+                typeof event.type === 'string' &&
+                event.type.startsWith('data-')
+              ) {
+                // What the server says besides the conversation's text, as
+                // AG-UI's custom events say it: `data-voice.say`, a line the
+                // agent says aloud, and `data-voice.settings` (VOICE.md VO-36).
+                this.emit({
+                  type: 'activity',
+                  activity: { type: event.type, data: event.data },
+                  timestamp: new Date(),
+                });
               }
             } catch (parseError) {
               console.error(

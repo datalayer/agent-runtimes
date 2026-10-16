@@ -935,6 +935,21 @@ class A2AWorker(_FastA2AWorker):
         from ..guardrails.model_budget import delegated_budget
 
         meta = incoming.get("metadata")
+        # A message said and heard (its audio by `HearA2AAudio`, or by the
+        # client itself): marked spoken for the run and the record (VO-27, VO-28).
+        from ..voice import hear, spoken_of, voice_of_agent
+
+        hear(spoken_of(meta.get("voice")) if isinstance(meta, dict) else None)
+        # The voice of an agent whose answers may be heard, said at the start
+        # in the status message's metadata, as AG-UI's `voice.settings` (VO-36).
+        voice = voice_of_agent(self.agent)
+        if voice:
+            await self.publish_status(
+                task_id,
+                context_id,
+                "working",
+                voice_settings_message(context_id, voice),
+            )
         # The model budget the delegation set on this run, when it set one:
         # the adapter applies it as the run's usage limits (O1-07).
         budget = delegated_budget(meta)
@@ -1020,6 +1035,8 @@ class A2AWorker(_FastA2AWorker):
         # A button of an answer's surface that would do more than read, pressed
         # by a visitor, is refused in a sentence: no model runs (STUDIO H-03).
         refused = refused_action(incoming)
+        # `say_aloud`'s lines, by call: said once the call has answered (VO-36).
+        say_lines: dict[str, str] = {}
         open_steering(task_id)
         try:
             async for event in (
@@ -1047,9 +1064,16 @@ class A2AWorker(_FastA2AWorker):
                         last_chunk=False,
                     )
                 elif event.type == "tool_call":
+                    called = _tool_call_payload(event.data)
+                    if called.get("name") == SAY_ALOUD_TOOL and isinstance(
+                        called.get("arguments"), dict
+                    ):
+                        say_lines[str(called.get("id"))] = str(
+                            called["arguments"].get("line") or ""
+                        )
                     said = _agent_message(
                         context_id,
-                        Part(data={"tool_call": _tool_call_payload(event.data)}),
+                        Part(data={"tool_call": called}),
                     )
                     # A harness's tool call says its kind, title and status in
                     # the status message's metadata (SHIELD §4.2).
@@ -1058,14 +1082,23 @@ class A2AWorker(_FastA2AWorker):
                         said["metadata"] = titled
                     await self.publish_status(task_id, context_id, "working", said)
                 elif event.type == "tool_result":
+                    answered = _tool_result_payload(event.data)
                     said = _agent_message(
                         context_id,
-                        Part(data={"tool_result": _tool_result_payload(event.data)}),
+                        Part(data={"tool_result": answered}),
                     )
                     titled = _harness_call_meta(event.data)
                     if titled:
                         said["metadata"] = titled
                     await self.publish_status(task_id, context_id, "working", said)
+                    line = say_lines.pop(str(answered.get("id")), "")
+                    if line and voice and not answered.get("error"):
+                        await self.publish_status(
+                            task_id,
+                            context_id,
+                            "working",
+                            voice_say_message(context_id, line, voice),
+                        )
                     for shown in _displays_of(event.data):
                         if shown.get("display") != "diff":
                             continue
@@ -1246,6 +1279,67 @@ async def _said(text: str) -> AsyncIterator[Any]:
     from types import SimpleNamespace
 
     yield SimpleNamespace(type="text", data=text)
+
+
+#: The tool an agent whose answers may be heard says a short line with (VO-35).
+SAY_ALOUD_TOOL = "say_aloud"
+
+
+def voice_settings_message(context_id: str, settings: dict[str, Any]) -> "Message":
+    """
+    The voice of an agent whose answers may be heard, as an A2A status message (VOICE.md VO-36).
+
+    AG-UI says it as the ``voice.settings`` custom event; A2A in the message's
+    ``metadata.voice.settings``, its one data part saying the same.
+
+    Parameters
+    ----------
+    context_id : str
+        The conversation.
+    settings : dict[str, Any]
+        The voice, resolved against the catalogue (``voice_of_agent``).
+
+    Returns
+    -------
+    Message
+        The agent's message.
+    """
+    said = {"settings": dict(settings)}
+    message = _agent_message(context_id, Part(data={"voice": said}))
+    message["metadata"] = {"voice": said}
+    return message
+
+
+def voice_say_message(
+    context_id: str, line: str, settings: dict[str, Any]
+) -> "Message":
+    """
+    A line the agent says aloud (``say_aloud``) as an A2A status message (VOICE.md VO-36).
+
+    AG-UI says it as the ``voice.say`` custom event; A2A as the line in a
+    text part, captioned, with ``metadata.voice.say`` naming the voice and
+    language it is said in.
+
+    Parameters
+    ----------
+    context_id : str
+        The conversation.
+    line : str
+        The line, at most 200 characters.
+    settings : dict[str, Any]
+        The agent's voice.
+
+    Returns
+    -------
+    Message
+        The agent's message.
+    """
+    from ..voice import say_aloud_event
+
+    said = dict(say_aloud_event(line, settings).value)
+    message = _agent_message(context_id, Part(text=said["text"]))
+    message["metadata"] = {"voice": {"say": said}}
+    return message
 
 
 def _agent_message(context_id: str, part: "Part") -> "Message":

@@ -242,6 +242,16 @@ def register_a2a_agent(
                 modes.append(extra)
         card.default_output_modes = modes
 
+    # It is asked in audio too — what the speech service hears, heard before
+    # the task is made and given to the agent as its transcript (VO-28,
+    # VO-36) — unless its card names what it is asked in (an application's
+    # does: text).
+    from ..voice.protocol_audio import HEARD_TYPES
+
+    hears_audio = card.default_input_modes is None
+    if hears_audio:
+        card.default_input_modes = ["application/json", *HEARD_TYPES]
+
     try:
         # Convert skills to fasta2a Skill format if provided
         skills = None
@@ -343,7 +353,12 @@ def register_a2a_agent(
         )
         _a2a_agents[agent_id] = registration
 
-        served = gate(a2a_app) if gate is not None else a2a_app
+        # Audio a caller sends is heard once the gate admits it, before the
+        # task is made (VOICE.md VO-28): the agent sees its transcript.
+        from ..voice.protocol_audio import HearA2AAudio
+
+        heard_app = HearA2AAudio(a2a_app) if hears_audio else a2a_app
+        served = gate(heard_app) if gate is not None else heard_app
         # An agent that signs its requests (Web Bot Auth, AGENT_PROTOCOLS
         # PR-23) is verified before anything else: a signature that does not
         # hold is refused; a verified one is in `scope["state"]["web_bot_auth"]`;
