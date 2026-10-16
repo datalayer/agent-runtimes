@@ -33,6 +33,12 @@ export const VOICE_SETTINGS_KEY = 'datalayer-voice-settings';
 /** How fast and how loud, as multipliers of the voice's own. */
 export const RATE_RANGE = { min: 0.5, max: 2, default: 1 } as const;
 export const VOLUME_RANGE = { min: 0, max: 1, default: 1 } as const;
+/**
+ * How much longer than usual the person pauses before they are done
+ * (VOICE.md VO-69): the silence that stops a microphone clicked on, and the
+ * one that ends a hands-free turn, times this.
+ */
+export const PAUSE_RANGE = { min: 1, max: 4, default: 1 } as const;
 
 /**
  * What a person chose for themselves. Every field is optional: an absent one
@@ -63,6 +69,8 @@ export interface VoiceSettings {
    * heard on Datalayer's servers, which detect it, rather than in the browser.
    */
   detectLanguage?: boolean;
+  /** How much longer they pause before they are done (VO-69): 1 is usual. */
+  pause?: number;
 }
 
 function clamp(
@@ -108,6 +116,9 @@ export function saneVoiceSettings(
   }
   if (typeof kept.detectLanguage === 'boolean') {
     sane.detectLanguage = kept.detectLanguage;
+  }
+  if (typeof kept.pause === 'number' && Number.isFinite(kept.pause)) {
+    sane.pause = clamp(kept.pause, PAUSE_RANGE);
   }
   return sane;
 }

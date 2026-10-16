@@ -11,6 +11,9 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatVoice } from '../index';
+import { SILENCE_MS, settledVoice } from '../chatVoice';
+import { PAUSE_CHOICES } from '../choices';
+import { TURN_SILENCE_MS } from '../handsFree';
 import {
   RATE_RANGE,
   VOICE_SETTINGS_KEY,
@@ -141,5 +144,45 @@ describe('The voice a person hears', () => {
   it('leaves “send what I say” to the application when they said nothing', () => {
     const voice = voiceForPerson({ ...APPLICATION, sendWhatISay: true }, {});
     expect(voice.sendWhatISay).toBe(true);
+  });
+});
+
+describe('A person who pauses longer before they are done (VO-69)', () => {
+  const chat: ChatVoice = {
+    input: 'hands_free',
+    output: 'off',
+    language: 'en-US',
+  };
+
+  it('keeps a pause between usual and four times as long', () => {
+    expect(saneVoiceSettings({ pause: 2 })).toEqual({ pause: 2 });
+    expect(saneVoiceSettings({ pause: 0.2 })).toEqual({ pause: 1 });
+    expect(saneVoiceSettings({ pause: 40 })).toEqual({ pause: 4 });
+    expect(saneVoiceSettings({ pause: Number.NaN })).toEqual({});
+  });
+
+  it('makes both silences longer: the microphone clicked on, and the hands-free turn', () => {
+    const usual = settledVoice(chat, {});
+    expect([usual.silenceMs, usual.turnSilenceMs]).toEqual([
+      SILENCE_MS,
+      TURN_SILENCE_MS,
+    ]);
+    const longer = settledVoice(chat, { pause: 2 });
+    expect([longer.silenceMs, longer.turnSilenceMs]).toEqual([
+      SILENCE_MS * 2,
+      TURN_SILENCE_MS * 2,
+    ]);
+    // An application's own silence is made longer too, never shorter.
+    const own = settledVoice(
+      { ...chat, silenceMs: 1000, turnSilenceMs: 900 },
+      {
+        pause: 3,
+      },
+    );
+    expect([own.silenceMs, own.turnSilenceMs]).toEqual([3000, 2700]);
+  });
+
+  it('is one of the menu’s choices, usual first', () => {
+    expect(PAUSE_CHOICES.map(choice => choice.value)).toEqual([1, 2, 3]);
   });
 });

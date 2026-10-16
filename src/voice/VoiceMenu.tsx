@@ -7,7 +7,8 @@
  * The composer's voice menu (VOICE.md VO-14, VO-21, VO-25, VO-30): beside
  * the microphone, what a person chooses for themselves — the language they
  * speak and hear, when answers are heard, the voice, its speed and loudness,
- * *Send what I say*, the microphone, and *Keep speech on this device*. Each
+ * how long they pause before they are done (VO-69), *Send what I say*, the
+ * microphone, and *Keep speech on this device*. Each
  * choice is kept in the person's settings and heard at once by every chat
  * on the page; *Use the application's* forgets them all.
  *
@@ -23,6 +24,7 @@ import { ActionList, ActionMenu, IconButton } from '@primer/react';
 import { GearIcon } from '@primer/octicons-react';
 import {
   OUTPUT_CHOICES,
+  PAUSE_CHOICES,
   RATE_CHOICES,
   VOLUME_CHOICES,
   catalogueVoiceSpeaks,
@@ -182,6 +184,24 @@ export function VoiceMenu({
               </ActionList.Group>
             </>
           ) : null}
+          <ActionList.Divider />
+          <ActionList.Group selectionVariant="single">
+            <ActionList.GroupHeading>
+              Pauses before I am done
+            </ActionList.GroupHeading>
+            {PAUSE_CHOICES.map(pause => (
+              <ActionList.Item
+                key={pause.value}
+                selected={pause.value === (settings.pause ?? 1)}
+                onSelect={() =>
+                  choose('pause', pause.value === 1 ? undefined : pause.value)
+                }
+                data-voice-pause={pause.value}
+              >
+                {pause.label}
+              </ActionList.Item>
+            ))}
+          </ActionList.Group>
           <ActionList.Divider />
           <ActionList.Group selectionVariant="multiple">
             <ActionList.Item

@@ -78,6 +78,13 @@ export const RATE_CHOICES: VoiceChoice<number>[] = [
 ];
 
 /** The loudnesses offered, 0 to 1. */
+/** How long the person pauses before they are done (VO-69): the silences, times this. */
+export const PAUSE_CHOICES: VoiceChoice<number>[] = [
+  { value: 1, label: 'Usual' },
+  { value: 2, label: 'Longer' },
+  { value: 3, label: 'Much longer' },
+];
+
 export const VOLUME_CHOICES: VoiceChoice<number>[] = [
   { value: 0.25, label: 'Quiet' },
   { value: 0.5, label: 'Half' },

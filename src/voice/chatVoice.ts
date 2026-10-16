@@ -15,8 +15,10 @@
 import { voiceFor } from '../specs/voices';
 import type { AppVoiceSpec } from '../types/agentspecs';
 import type { VoiceEngines } from './types';
+import { TURN_SILENCE_MS } from './handsFree';
 import {
   heldVoiceSettings,
+  saneVoiceSettings,
   voiceForPerson,
   type VoiceSettings,
 } from './settings';
@@ -146,14 +148,18 @@ export const SILENCE_MS = 1500;
  * in: the person's own settings first where they made some (`voiceForPerson`:
  * their language, voice, rate, volume, microphone; VO-14, VO-25, VO-30),
  * else the host's; answers not heard, the language's first voice,
- * Datalayer's models and packages, a silence of 1.5 s. Answers heard need
- * the speech service's address: refused without.
+ * Datalayer's models and packages, a silence of 1.5 s. A person who pauses
+ * longer before they are done has both silences — the one that stops a
+ * microphone clicked on, and the one that ends a hands-free turn — made
+ * longer by their choice (`pause`, VO-69). Answers heard need the speech
+ * service's address: refused without.
  */
 export function settledVoice(
   given: ChatVoice,
   person: VoiceSettings = heldVoiceSettings(),
 ): SettledVoice {
   const voice = voiceForPerson(given, person);
+  const pause = saneVoiceSettings(person).pause ?? 1;
   const output = voice.output ?? 'off';
   if (output !== 'off' && !voice.speechUrl) {
     throw new Error(
@@ -166,6 +172,7 @@ export function settledVoice(
     voice: voice.voice || voiceFor(voice.language)?.id || '',
     modelsUrl: voice.modelsUrl || DATALAYER_SPEECH_MODELS_URL,
     engines: voice.engines ?? DATALAYER_VOICE_ENGINES,
-    silenceMs: voice.silenceMs ?? SILENCE_MS,
+    silenceMs: Math.round((voice.silenceMs ?? SILENCE_MS) * pause),
+    turnSilenceMs: Math.round((voice.turnSilenceMs ?? TURN_SILENCE_MS) * pause),
   };
 }
