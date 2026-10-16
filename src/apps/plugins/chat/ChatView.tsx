@@ -196,6 +196,8 @@ type ChatControls = {
   thread: () => string;
   /** Stops the agent's voice: the chat's own speaker (VOICE.md VO-10). */
   stopSpeaking?: () => void;
+  /** How loud that speaker plays now, 0 to 1: hands-free's barge-in is gated on it (VOICE.md VO-13). */
+  voiceLevel?: () => number;
   /** Marks the answer spoken over *interrupted* (VOICE.md VO-13). */
   markInterrupted: () => void;
 };
