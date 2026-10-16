@@ -268,14 +268,15 @@ def datalayer_default() -> Policy:
     Decision 5's default as Datalayer runs it (SHIELD §6.11).
 
     The classes the platform writes relationships for need the authorizer's
-    allow beside the Rules.
+    allow beside the Rules: ``send`` and ``buy``, and in a managed runtime pod
+    ``read``, ``write`` and ``execute`` on its workspace (SH-75).
     """
     from agent_runtimes.guardrails.shield_authorizer import (
-        DATALAYER_AUTHORIZE,  # noqa: PLC0415
+        datalayer_authorize,  # noqa: PLC0415
     )
 
     document = default_policy()
-    document.authorize = list(DATALAYER_AUTHORIZE)
+    document.authorize = list(datalayer_authorize())
     return document
 
 

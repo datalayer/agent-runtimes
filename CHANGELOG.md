@@ -12,6 +12,14 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 - **The Shield's examples** (SHIELD SH-23): `examples/shield/` — a coding agent on the local runtime as `loop --harness` starts it, the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff; each on the fake agent with no key, its output in the README, run by `test_the_shield_examples.py` and held by `check_examples.py` (which now checks example folders: every script named in the README, every import existing). In the examples app, *Shield Harness* (the web chat on a harness runtime: diffs, terminals, the approval banner) and *Shield Policy* (`@datalayer/agent-shield`'s types and `describeDecision`). [Examples](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **The harnesses and Shield pages brought to what is built** (SH-20, SH-38, SH-06): the mapping tables as built, what each harness honours, the policies, the record, the trace, session rules, the budget. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses), [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
 
+## 1.5.44
+
+SHIELD, 16 October 2026 (agent-shield 0.2.2):
+
+- **A runtime pod's workspace authorized** (SH-75): in a managed runtime pod (its workspace the operator's `/mnt/shared-agent/workspace`, an IAM named) Datalayer's default document needs the authorizer's allow for `read`, `write` and `execute` beside `send` and `buy` — the operator (1.0.99) and IAM (1.1.75, a deployment's grant) write `can_execute workspace:mnt/shared-agent/workspace` at the runtime's launch, and the backfill wrote it for the runtimes and deployments already running; `DATALAYER_SHIELD_AUTHORIZE_WORKSPACE=off` keeps the workspace to the Rules alone; elsewhere (a local runtime) `send` and `buy` only. [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
+- **A dead ACP stdio agent fails at once** (SH-45's finding, agent-shield 0.2.2): the orchestration adapter's stdio channel refuses a request when the agent's process ends, naming its exit code, where it waited its timeout.
+- **Docs**: the transports page links the harnesses page by its file (`./index.mdx#…`), so the Deploy docs build no longer stops on a broken link.
+
 ## 1.5.43
 
 SHIELD Phase 3, 16 October 2026 (agentspecs 0.0.107, agent-shield 0.2.1):

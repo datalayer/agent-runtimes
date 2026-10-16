@@ -34,12 +34,34 @@ from agent_runtimes.loop.apps import pap_connections
 logger = logging.getLogger(__name__)
 
 #: The classes Datalayer's default session document needs an authorizer's allow for
-#: (§6.11): what the platform writes relationships for today — a connection granted
-#: at a company (``send``, ``buy``). ``read``, ``write`` and ``execute`` join when the
-#: workspace relationships are written at a runtime's launch (open).
+#: (§6.11) everywhere: a connection granted at a company (``send``, ``buy``).
 DATALAYER_AUTHORIZE: tuple[str, ...] = ("send", "buy")
 
+#: And in a runtime pod's workspace, where the platform writes the relationship at
+#: the runtime's launch (the operator for its account, IAM for a deployment's grant:
+#: ``can_execute workspace:mnt/shared-agent/workspace``, SH-75): reading, writing
+#: and running a command there need the authorizer's allow too.
+WORKSPACE_AUTHORIZE: tuple[str, ...] = ("read", "write", "execute")
+
+#: The workspace the operator gives a runtime pod (``AGENT_RUNTIMES_WORKSPACE_ROOT``).
+RUNTIME_WORKSPACE = "/mnt/shared-agent/workspace"
+
+#: ``off`` keeps a runtime pod's workspace to the Rules alone (the operator's switch
+#: should the relationships not be written); anything else, or unset, authorizes it.
+WORKSPACE_AUTHORIZE_VARIABLE = "DATALAYER_SHIELD_AUTHORIZE_WORKSPACE"
+
 IAM_URL_VARIABLE = "DATALAYER_IAM_URL"
+
+
+def datalayer_authorize() -> tuple[str, ...]:
+    """The classes needing the authorizer here: :data:`DATALAYER_AUTHORIZE`, and the
+    workspace's in a managed runtime pod (its workspace the operator's, an IAM named)."""
+    in_a_pod = (os.environ.get("AGENT_RUNTIMES_WORKSPACE_ROOT") or "").rstrip("/") == RUNTIME_WORKSPACE
+    managed = bool((os.environ.get(IAM_URL_VARIABLE) or "").strip())
+    switched_off = (os.environ.get(WORKSPACE_AUTHORIZE_VARIABLE) or "").strip().lower() == "off"
+    if in_a_pod and managed and not switched_off:
+        return (*WORKSPACE_AUTHORIZE, *DATALAYER_AUTHORIZE)
+    return DATALAYER_AUTHORIZE
 
 
 def runtime_subject(credential: str, deployment_uid: str = "") -> Subject:
@@ -116,6 +138,10 @@ ToolClass = Callable[[str], Optional[Tuple[str, Optional[str]]]]
 
 __all__ = [
     "DATALAYER_AUTHORIZE",
+    "RUNTIME_WORKSPACE",
+    "WORKSPACE_AUTHORIZE",
+    "WORKSPACE_AUTHORIZE_VARIABLE",
+    "datalayer_authorize",
     "IAM_URL_VARIABLE",
     "ToolClass",
     "companies_of",
