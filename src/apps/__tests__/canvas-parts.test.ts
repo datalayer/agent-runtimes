@@ -125,14 +125,27 @@ describe('the toolbox is what the enabled plugins contribute', () => {
       plugin: 'chat',
     });
     expect(ids).toContain('character:paperclip');
-    // The catalogue's harnesses as the agent (SH-43): Claude Code by
-    // the agent that runs on it; a harness no agent runs yet offered off.
+    // The catalogue's harnesses as the agent (SH-43): each by the
+    // catalogue agent that runs on it — Claude Code, Codex, Gemini CLI,
+    // goose, OpenCode, OpenHands and fast-agent alike.
     const claude = parts.find(part => part.id === 'agent:claude-code');
     expect(claude?.harness).toBe('claude-code');
     expect(claude?.example).toBe('example-harness-claude-code');
-    const codex = parts.find(part => part.id === 'agent:codex');
-    expect(codex?.enabled).toBe(false);
-    expect(codex?.says).toContain('No agent of the catalogue runs on it yet.');
+    for (const harness of [
+      'codex',
+      'gemini-cli',
+      'goose',
+      'opencode',
+      'openhands',
+      'fast-agent',
+    ]) {
+      const part = parts.find(item => item.id === `agent:${harness}`);
+      expect(part?.harness).toBe(harness);
+      expect(part?.example).toBe(`example-harness-${harness}`);
+      expect(part?.says).not.toContain(
+        'No agent of the catalogue runs on it yet.',
+      );
+    }
     expect(ids).not.toContain('agent:custom');
     expect(CANVAS_PART_PLUGINS.map(plugin => plugin.name)).toEqual(
       CANVAS_PART_SOURCES.map(canvasPartsPluginName),
