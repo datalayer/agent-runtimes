@@ -10,7 +10,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.cursor_shapes import CursorShape
@@ -191,6 +191,8 @@ class CliTux:
         self.voice = voice
         self.speak = speak
         self._voice_session: Any = None
+        # How the next message was said, sent with it (VOICE.md VO-15, VO-27).
+        self._spoken_line: Optional[Dict[str, str]] = None
 
         # Initialize slash commands. The registry is the source of truth —
         # built-ins plus whatever the installed plugins contributed — and
@@ -633,13 +635,21 @@ class CliTux:
             # Use prompt_toolkit's async prompt method
             # What the microphone heard goes on the prompt line, to edit or send (VO-15).
             heard = self._voice_session.take_prefill() if self._voice_session else None
-            return (
+            line = (
                 await self.prompt_session.prompt_async(
                     HTML("<ansicyan>❯ </ansicyan>"),
                     complete_while_typing=True,
                     default=heard or "",
                 )
             ).strip()
+            # Said, then sent: the words may have been edited, they were
+            # still said — the message carries how (VO-15, VO-27).
+            self._spoken_line = (
+                dict(self._voice_session.metadata)
+                if heard and line and not line.startswith(("/", "!"))
+                else None
+            )
+            return line
         except EOFError:
             return "/exit"
         except KeyboardInterrupt:
@@ -873,7 +883,11 @@ class CliTux:
             approval_stop = asyncio.Event()
             approval_task = asyncio.create_task(self._watch_approvals(approval_stop))
 
-            async for event in client.run(message):
+            spoken, self._spoken_line = self._spoken_line, None
+            async for event in client.run(
+                message,
+                forwarded_props={"voice": spoken} if spoken else None,
+            ):
                 # Extract token usage directly from AG-UI events when available.
                 in_tok, out_tok = self._extract_tokens_from_payload(event.data)
                 if in_tok is not None:
@@ -1232,7 +1246,17 @@ class CliTux:
                 self.console.print(
                     f"● Voice: Ctrl+T to listen with {microphone_name()}, heard "
                     f"{'on this machine' if self.voice_session().hearing.where == 'local' else 'on Datalayer’s servers'}"
-                    f"{'; answers said aloud' if self.speak else ''}.",
+                    + (
+                        "; answers said aloud "
+                        + (
+                            "on this machine"
+                            if self.voice_session().speaker.where == "local"
+                            else "by Datalayer’s speech service"
+                        )
+                        if self.speak and self.voice_session().speaker is not None
+                        else ""
+                    )
+                    + ".",
                     style=STYLE_MUTED,
                 )
         if self.startup_message:

@@ -275,3 +275,284 @@ def test_loop_voice_and_speak_reach_the_chat(monkeypatch):
     result = CliRunner().invoke(main.app, ["--cloud", "--voice", "--speak"])
     assert result.exit_code == 0, result.output
     assert forwarded and "--voice" in forwarded[0] and "--speak" in forwarded[0]
+
+
+class Prompted:
+    """prompt_toolkit's session, as `show_prompt` uses it: the line given back as typed."""
+
+    def __init__(self, typed: Any = None) -> None:
+        self.typed = typed
+
+    async def prompt_async(self, *args: Any, default: str = "", **kwargs: Any) -> str:
+        return default if self.typed is None else self.typed
+
+
+class RunRecorder:
+    """The AG-UI client, as `send_message` runs it: what each run was sent with."""
+
+    def __init__(self) -> None:
+        self.runs: list[dict[str, Any]] = []
+
+    async def run(self, message: str, **kwargs: Any):
+        self.runs.append({"message": message, **kwargs})
+        return
+        yield  # an async generator that streams nothing
+
+
+@pytest.mark.asyncio
+async def test_a_line_said_is_sent_with_how_it_was_heard_not_just_its_words():
+    """VO-15, VO-27: the prompt line's message carries input voice, the language, the engine and where."""
+    session = voice.VoiceSession(
+        hearing=voice.Hearing(models_dir=Path("/nowhere"), token="t0k")
+    )
+    session.prefill = "What is the weather like in Paris today?"
+    session.metadata = {
+        "input": "voice",
+        "language": "en",
+        "engine": "whisper",
+        "where": "server",
+    }
+    made = tux()
+    made._voice_session = session
+    made.prompt_session = Prompted()
+    recorder = RunRecorder()
+    made._agui_client = recorder
+    line = await made.show_prompt()
+    assert line == "What is the weather like in Paris today?"
+    await made.send_message(line)
+    assert recorder.runs[-1]["forwarded_props"] == {"voice": session.metadata}
+    # The next line was typed: sent as typed, nothing said about voice.
+    made.prompt_session = Prompted("and tomorrow?")
+    await made.send_message(await made.show_prompt())
+    assert recorder.runs[-1]["forwarded_props"] is None
+
+
+@pytest.mark.asyncio
+async def test_words_said_then_edited_are_still_said_but_a_command_is_not():
+    session = voice.VoiceSession(
+        hearing=voice.Hearing(models_dir=Path("/nowhere"), token="t0k")
+    )
+    session.metadata = {
+        "input": "voice",
+        "language": "fr",
+        "engine": "whisper-small",
+        "where": "local",
+    }
+    made = tux()
+    made._voice_session = session
+    session.prefill = "quel temps fait il"
+    made.prompt_session = Prompted("Quel temps fait-il à Paris ?")
+    assert await made.show_prompt() == "Quel temps fait-il à Paris ?"
+    assert made._spoken_line == session.metadata
+    session.prefill = "slash help"
+    made.prompt_session = Prompted("/help")
+    await made.show_prompt()
+    assert made._spoken_line is None
+
+
+def test_the_runtime_marks_a_run_spoken_from_its_forwarded_voice():
+    """The AG-UI endpoint `loop` talks to: forwardedProps.voice is the run's spoken input (VO-27)."""
+    from agent_runtimes.transports.agui import mark_spoken
+    from agent_runtimes.voice import heard
+
+    mark_spoken(
+        {
+            "messages": [{"role": "user", "content": "Weather?"}],
+            "forwardedProps": {
+                "voice": {
+                    "input": "voice",
+                    "language": "en",
+                    "engine": "whisper",
+                    "where": "server",
+                }
+            },
+        }
+    )
+    spoken = heard()
+    assert spoken is not None
+    assert (spoken.language, spoken.engine, spoken.where) == ("en", "whisper", "server")
+    mark_spoken({"messages": [], "forwardedProps": {}})
+    assert heard() is None
+    mark_spoken({"forwardedProps": {"voice": {"input": "typed"}}})
+    assert heard() is None
+
+
+# ---------------------------------------------------------------------------
+# VO-16: Kokoro on the machine, and the store filled from the CDN
+# ---------------------------------------------------------------------------
+
+
+def _pinned_store(tmp_path: Path, model_id: str, contents: dict[str, bytes]) -> Any:
+    """A catalogue entry pinning `contents`, swapped in for `model_id` (the real files are 300 MB)."""
+    import hashlib
+
+    from agent_runtimes.voice import store
+
+    real = store.model_spec(model_id)
+    files = [
+        {
+            "path": path,
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "size": len(data),
+        }
+        for path, data in contents.items()
+    ]
+    return {**real, "files": files}
+
+
+def test_the_store_is_filled_from_the_cdn_hash_checked_and_a_wrong_file_refused(
+    tmp_path, monkeypatch
+):
+    from agent_runtimes.voice import store
+
+    contents = {"kokoro-v1.0.onnx": b"onnx" * 10, "voices-v1.0.bin": b"voices"}
+    monkeypatch.setitem(
+        store.SPEECH_MODEL_CATALOGUE,
+        "kokoro-82m",
+        _pinned_store(tmp_path, "kokoro-82m", contents),
+    )
+    asked: list[str] = []
+
+    def download(url: str, target: Path) -> None:
+        asked.append(url)
+        target.write_bytes(contents[url.rsplit("/", 1)[1]])
+
+    assert store.present("kokoro-82m", tmp_path) is None
+    [folder] = store.fill(
+        ["kokoro-82m"], tmp_path, "https://models-speech.example/", download
+    )
+    assert folder == tmp_path / "hexgrad" / "kokoro-82m"
+    assert asked == [
+        "https://models-speech.example/hexgrad/kokoro-82m/kokoro-v1.0.onnx",
+        "https://models-speech.example/hexgrad/kokoro-82m/voices-v1.0.bin",
+    ]
+    assert store.present("kokoro-82m", tmp_path) == folder
+    # What is there and right stays: nothing asked again.
+    store.fill(["kokoro-82m"], tmp_path, "https://models-speech.example", download)
+    assert len(asked) == 2
+    # A file that is not the one pinned is refused and removed.
+    (folder / "voices-v1.0.bin").unlink()
+
+    def tampered(url: str, target: Path) -> None:
+        target.write_bytes(b"VOICES")
+
+    with pytest.raises(store.StoreRefused, match="not the file the catalogue pins"):
+        store.fill(["kokoro-82m"], tmp_path, "https://cdn", tampered)
+    assert not (folder / "voices-v1.0.bin").exists()
+    assert not (folder / "voices-v1.0.bin.partial").exists()
+    with pytest.raises(store.StoreRefused, match="no speech model nope"):
+        store.fill(["nope"], tmp_path, "https://cdn", download)
+
+
+def test_the_store_s_defaults_are_datalayer_s_cdn_and_the_two_machine_models(
+    monkeypatch,
+):
+    from agent_runtimes.voice import store
+
+    monkeypatch.delenv(store.MODELS_URL_ENV, raising=False)
+    assert store.models_url() == "https://models-speech.datalayer.tech"
+    assert store.MACHINE_MODELS == ("whisper-small", "kokoro-82m")
+    for model_id in store.MACHINE_MODELS:
+        assert all(
+            len(item["sha256"]) == 64 for item in store.model_spec(model_id)["files"]
+        )
+
+
+class StandInKokoro:
+    """kokoro-onnx's `Kokoro`, as the speaker calls it: a short tone per sentence."""
+
+    made: list[tuple[str, str]] = []
+
+    def __init__(self, onnx: str, voices: str) -> None:
+        StandInKokoro.made.append((Path(onnx).name, Path(voices).name))
+        self.said: list[tuple[str, str, str]] = []
+
+    def create(self, text: str, voice: str, lang: str):
+        import numpy as np
+
+        self.said.append((text, voice, lang))
+        return np.full(2400, 0.5, dtype=np.float32), 24000
+
+
+def test_answers_are_said_on_the_machine_by_kokoro_when_it_is_here(
+    tmp_path, monkeypatch
+):
+    """VO-16: the extra's Kokoro and the pinned model here: nothing asked of the service, no token needed."""
+    from agent_runtimes.voice import store
+
+    contents = {"kokoro-v1.0.onnx": b"onnx", "voices-v1.0.bin": b"voices"}
+    monkeypatch.setitem(
+        store.SPEECH_MODEL_CATALOGUE,
+        "kokoro-82m",
+        _pinned_store(tmp_path, "kokoro-82m", contents),
+    )
+    played: list[tuple[int, int]] = []
+
+    def post(url: str, **kwargs: Any) -> Answer:
+        raise AssertionError("the speech service was asked")
+
+    StandInKokoro.made = []
+    speaker = voice.Speaker(
+        token=None,
+        post=post,
+        play=lambda pcm, rate: played.append((len(pcm), rate)),
+        models_dir=tmp_path,
+        kokoro=StandInKokoro,
+    )
+    assert speaker.where == "server"  # the model is not here yet
+    store.fill(
+        ["kokoro-82m"],
+        tmp_path,
+        "https://cdn",
+        lambda url, target: target.write_bytes(contents[url.rsplit("/", 1)[1]]),
+    )
+    assert speaker.where == "local"
+    speaker.say("The report is ready.   I sent it to the team.")
+    assert StandInKokoro.made == [("kokoro-v1.0.onnx", "voices-v1.0.bin")]
+    assert speaker._kokoro.said == [
+        ("The report is ready. I sent it to the team.", "af_heart", "en-us")
+    ]
+    assert played == [(4800, 24000)]
+    # A French voice says French.
+    french = voice.Speaker(
+        voice="kokoro-ff-siwis",
+        token=None,
+        play=lambda pcm, rate: None,
+        models_dir=tmp_path,
+        kokoro=StandInKokoro,
+    )
+    french.say("Le rapport est prêt.")
+    assert french._kokoro.said[-1][1:] == ("ff_siwis", "fr-fr")
+
+
+def test_without_kokoro_here_answers_go_to_the_service_or_say_how_to_have_them(
+    tmp_path,
+):
+    speaker = voice.Speaker(token=None, models_dir=tmp_path, play=lambda *a: None)
+    assert speaker.where == "server"
+    with pytest.raises(
+        voice.VoiceRefused, match="python -m agent_runtimes.voice.store"
+    ):
+        speaker.say("Hello there.")
+
+
+def test_a_voice_that_is_not_kokoro_s_is_refused_in_a_sentence(tmp_path, monkeypatch):
+    from agent_runtimes.voice import store
+
+    contents = {"kokoro-v1.0.onnx": b"o", "voices-v1.0.bin": b"v"}
+    monkeypatch.setitem(
+        store.SPEECH_MODEL_CATALOGUE,
+        "kokoro-82m",
+        _pinned_store(tmp_path, "kokoro-82m", contents),
+    )
+    store.fill(
+        ["kokoro-82m"],
+        tmp_path,
+        "https://cdn",
+        lambda url, target: target.write_bytes(contents[url.rsplit("/", 1)[1]]),
+    )
+    speaker = voice.Speaker(
+        voice="piper-nobody", token=None, models_dir=tmp_path, kokoro=StandInKokoro
+    )
+    with pytest.raises(voice.VoiceRefused, match="not a Kokoro voice"):
+        speaker.say("Hello there.")

@@ -196,6 +196,25 @@ async def hear_client_audio(
     return heard_body, json.dumps(heard_body).encode("utf-8")
 
 
+def mark_spoken(body: Any) -> None:
+    """
+    Say, for the run this body starts, whether its message was said (VOICE.md VO-27).
+
+    ``forwardedProps.voice`` is how a client that heard the person itself —
+    the page, ``loop --voice`` — says so: ``{"input": "voice", "language",
+    "engine", "where"}``.
+
+    Parameters
+    ----------
+    body : Any
+        The run's JSON body.
+    """
+    from ..voice import hear, spoken_of  # noqa: PLC0415
+
+    forwarded = body.get("forwardedProps") if isinstance(body, dict) else None
+    hear(spoken_of(forwarded.get("voice")) if isinstance(forwarded, dict) else None)
+
+
 @contextmanager
 def run_instructions(instructions: str | None) -> Iterator[None]:
     """Tell the runs started inside this block ``instructions`` besides their agent's."""
@@ -390,6 +409,10 @@ class AGUITransport(BaseTransport):
                         return heard
                     if heard is not None:
                         body, body_bytes = heard
+                    else:
+                        # A message said and heard by the client: marked
+                        # spoken for the run and the record (VO-15, VO-27).
+                        mark_spoken(body)
                     model = body.get("model")
                     if model:
                         logger.info(f"AG-UI using model from request body: {model}")

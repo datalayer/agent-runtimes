@@ -13,8 +13,12 @@ What is said is heard **on this machine** when ``faster-whisper`` is
 installed and the pinned store holds ``openai/whisper-small``
 (``DATALAYER_SPEECH_MODELS_DIR``, the layout of the speech service's store),
 else **on Datalayer's servers** with the person's token
-(``POST /api/ai-agents/v1/speech/transcriptions``). Answers are said by the
-speech service (``POST /speech/syntheses``, 16-bit PCM) and played here.
+(``POST /api/ai-agents/v1/speech/transcriptions``). Answers are said **on
+this machine** by Kokoro when ``kokoro-onnx`` (the ``voice`` extra) is
+installed and the store holds ``hexgrad/kokoro-82m``, else by the speech
+service (``POST /speech/syntheses``, 16-bit PCM), and played here. The store
+is filled from Datalayer's CDN, hash-checked: ``python -m
+agent_runtimes.voice.store`` (VO-16).
 
 A key toggles listening (``Ctrl``+``T``, the ``/voice`` command's shortcut):
 a terminal sees no key release, so there is no holding. The transcript is
@@ -31,6 +35,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from agent_runtimes.voice import store
+
 #: The rate recordings are made and heard at.
 RATE = 16_000
 
@@ -42,8 +48,11 @@ AI_AGENTS_URL_ENV = "DATALAYER_AI_AGENTS_URL"
 DEFAULT_AI_AGENTS_URL = "https://r1.datalayer.run"
 
 #: Where the pinned speech models are on this machine, laid out as the store.
-MODELS_DIR_ENV = "DATALAYER_SPEECH_MODELS_DIR"
-DEFAULT_MODELS_DIR = "~/.cache/voice-work/store"
+MODELS_DIR_ENV = store.MODELS_DIR_ENV
+DEFAULT_MODELS_DIR = store.DEFAULT_MODELS_DIR
+
+#: How the store is filled, said where a model is missing (VO-16).
+FILL_STORE = "python -m agent_runtimes.voice.store"
 
 #: The model heard with on this machine, when it is there.
 LOCAL_MODEL = "whisper-small"
@@ -222,7 +231,8 @@ class Hearing:
         if not self.token:
             return (
                 "Heard on Datalayer's servers, which needs you signed in: set DATALAYER_TOKEN "
-                f"or DATALAYER_API_KEY — or install faster-whisper and put {LOCAL_MODEL_FOLDER} in {self.models_dir}."
+                f"or DATALAYER_API_KEY — or install faster-whisper and fill {self.models_dir} "
+                f"with {LOCAL_MODEL_FOLDER} ({FILL_STORE})."
             )
         return None
 
@@ -282,7 +292,7 @@ class Hearing:
 
 
 class Speaker:
-    """Answers said by the speech service and played here (``--speak``)."""
+    """Answers said and played here (``--speak``): by Kokoro on this machine when it is here, else by the speech service (VO-16)."""
 
     def __init__(
         self,
@@ -293,6 +303,8 @@ class Speaker:
         ai_agents_url: Optional[str] = None,
         post: Optional[Callable[..., Any]] = None,
         play: Optional[Callable[[bytes, int], None]] = None,
+        models_dir: Optional[Path] = None,
+        kokoro: Optional[Callable[[str, str], Any]] = None,
     ) -> None:
         self.voice = voice
         self.language = language
@@ -300,17 +312,56 @@ class Speaker:
         self.ai_agents_url = (
             ai_agents_url or os.getenv(AI_AGENTS_URL_ENV) or DEFAULT_AI_AGENTS_URL
         ).rstrip("/")
+        self.models_dir = models_dir or store.models_dir()
         self._post = post
         self._play = play
+        # Kokoro(onnx path, voices path), kokoro-onnx's or a stand-in in a test.
+        self._kokoro_factory = kokoro
+        self._kokoro: Any = None
+
+    @property
+    def where(self) -> str:
+        """``local`` when kokoro-onnx and the pinned kokoro-82m are here, else ``server``."""
+        return "local" if self._local_folder() else "server"
+
+    def _local_folder(self) -> Optional[Path]:
+        folder = store.present(store.SPEAKING_MODEL, self.models_dir)
+        if folder is None:
+            return None
+        if self._kokoro_factory is None:
+            try:
+                import kokoro_onnx  # noqa: F401, PLC0415 - the voice extra's
+            except ImportError:
+                return None
+        return folder
+
+    def _voice_and_language(self) -> tuple[str, str]:
+        """Kokoro's own name for the voice, and the language it says it in."""
+        from agent_runtimes.specs.voices import VOICE_CATALOGUE  # noqa: PLC0415
+
+        spec = VOICE_CATALOGUE.get(self.voice)
+        if spec is None or spec.get("engine") != "kokoro":
+            raise VoiceRefused(
+                f"{self.voice} is not a Kokoro voice of the catalogue: "
+                f"{', '.join(sorted(VOICE_CATALOGUE))}."
+            )
+        language = self.language or spec["languages"][0]
+        return str(spec["voice"]), language.lower()
 
     def say(self, text: str) -> None:
-        """Say an answer, a sentence or a few at a time (the service takes 2,000 characters a call)."""
+        """Say an answer: here, whole sentences at a time; else by the service, 2,000 characters a call."""
         text = " ".join(text.split())
         if not text:
             return
+        folder = self._local_folder()
+        if folder is not None:
+            self._say_here(folder, text)
+            return
         if not self.token:
             raise VoiceRefused(
-                "Answers are said by Datalayer's speech service, which needs you signed in: set DATALAYER_TOKEN or DATALAYER_API_KEY."
+                "Answers are said by Datalayer's speech service, which needs you signed in: "
+                "set DATALAYER_TOKEN or DATALAYER_API_KEY — or install agent-runtimes[voice] "
+                f"and fill {self.models_dir} with hexgrad/{store.SPEAKING_MODEL} ({FILL_STORE})."
             )
         post = self._post or _post
         for piece in _pieces(text):
@@ -334,6 +385,27 @@ class Speaker:
                 )
             rate = _as_int(answered.headers.get("X-Speech-Rate")) or 24_000
             (self._play or _play)(answered.content, rate)
+
+    def _say_here(self, folder: Path, text: str) -> None:
+        import numpy as np  # noqa: PLC0415
+
+        voice, language = self._voice_and_language()
+        if self._kokoro is None:
+            files = [
+                item["path"] for item in store.model_spec(store.SPEAKING_MODEL)["files"]
+            ]
+            onnx = next(name for name in files if name.endswith(".onnx"))
+            voices = next(name for name in files if name.endswith(".bin"))
+            factory = self._kokoro_factory
+            if factory is None:
+                from kokoro_onnx import Kokoro  # noqa: PLC0415
+
+                factory = Kokoro
+            self._kokoro = factory(str(folder / onnx), str(folder / voices))
+        for piece in _pieces(text):
+            samples, rate = self._kokoro.create(piece, voice=voice, lang=language)
+            pcm = (np.clip(np.asarray(samples), -1.0, 1.0) * 32767.0).astype("<i2")
+            (self._play or _play)(pcm.tobytes(), int(rate))
 
 
 def _pieces(text: str, most: int = 1_800) -> List[str]:

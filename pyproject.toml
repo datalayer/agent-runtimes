@@ -206,11 +206,16 @@ acp = [
     "agent-client-protocol>=0.7.1",
 ]
 # Voice at the terminal (VOICE.md VO-16): the microphone and speaker of the
-# machine; never a default dependency. faster-whisper, installed beside it
-# with the pinned model in the store, hears on the machine; without it, the
-# person's token hears on Datalayer's servers.
+# machine, and Kokoro to say answers here; never a default dependency.
+# `python -m agent_runtimes.voice.store` fills the store from Datalayer's CDN,
+# hash-checked. faster-whisper, installed beside it with the pinned model in
+# the store, hears on the machine; without them, the person's token hears and
+# says on Datalayer's servers. kokoro-onnx brings eSpeak NG (GPL-3.0) through
+# espeakng-loader: installed by the person on their own machine, never in a
+# browser bundle (decision 1).
 voice = [
     "sounddevice>=0.5.0",
+    "kokoro-onnx>=0.6.1,<0.7",
 ]
 ui = [
     "ag-ui-protocol>=0.1.19,<1",  # 1.0.0 (17 September 2026) dropped ThinkingEndEvent and the thinking events transports/agui_stream.py writes; found on r1 in image 0.0.44 (SHIELD SH-10)

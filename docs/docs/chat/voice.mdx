@@ -86,19 +86,32 @@ text stays on screen.
 `loop --voice` listens with the machine's microphone: **`Ctrl`+`T`** (or
 `/voice`) starts listening — *Listening… (Ctrl+T or /voice to stop)* — and
 the next press stops it and hears what was said; the words go **on the prompt
-line**, to edit or send. With `--speak`, each answer is said through the
-machine's speaker, by Datalayer's speech service. A terminal sees no key
+line**, to edit or send. The message is sent marked as said — with the
+language, the model that heard it and where — even when you edited the words
+first, as the composer of a page does. With `--speak`, each answer is said
+through the machine's speaker. A terminal sees no key
 release, so there is no holding: a press starts, a press stops, and one
 press listens a minute at most.
 
 It needs the `voice` extra — `pip install 'agent-runtimes[voice]'`
-(sounddevice, MIT) — which is never a default dependency. What is said is
-heard **on the machine** when `faster-whisper` is installed beside it and the
-pinned store (`DATALAYER_SPEECH_MODELS_DIR`, `~/.cache/voice-work/store` by
-default) holds `openai/whisper-small`; otherwise **on Datalayer's servers**
-with your token (`DATALAYER_TOKEN` or `DATALAYER_API_KEY`). No microphone, no
-extra, no token: voice is refused in a sentence naming what was found, and
-the session goes on by typing.
+(sounddevice, MIT, and kokoro-onnx, MIT, which brings eSpeak NG, GPL-3.0,
+onto your machine) — which is never a default dependency. The models are
+copied into the pinned store (`DATALAYER_SPEECH_MODELS_DIR`,
+`~/.cache/voice-work/store` by default) from Datalayer's CDN, each file
+checked against the hash the catalogue pins:
+
+```bash
+python -m agent_runtimes.voice.store              # whisper-small and kokoro-82m, about 0.8 GB
+python -m agent_runtimes.voice.store kokoro-82m   # one model
+```
+
+Answers are said **on the machine** by Kokoro when the extra is installed and
+the store holds `hexgrad/kokoro-82m`. What is said is heard on the machine
+when `faster-whisper` is installed beside it and the store holds
+`openai/whisper-small`. Otherwise both happen **on Datalayer's servers** with
+your token (`DATALAYER_TOKEN` or `DATALAYER_API_KEY`); the line shown when
+voice starts says which. No microphone, no extra, no token: voice is refused
+in a sentence naming what was found, and the session goes on by typing.
 
 ## An application's voice
 
