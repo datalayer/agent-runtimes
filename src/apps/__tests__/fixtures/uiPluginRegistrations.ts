@@ -143,6 +143,8 @@ export const NOT_UI: Record<string, string> = {
   'plugins-panel':
     'A tool for whoever writes plugins: it lists and switches them.',
   graph: 'A tool for whoever writes plugins: it draws how they connect.',
+  'shield-displays':
+    "A coding agent's diffs and terminals, drawn where its tool results carry them in the chat, the embed and Activity: renderers, not a part of the interface an application chooses (SHIELD SH-16).",
   decks:
     'The deck editor, mounted by the decks package and not by the Loop editor.',
   assistant:
