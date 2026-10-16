@@ -203,3 +203,59 @@ describe('the portable entry', () => {
     ).toEqual(expect.arrayContaining(['semantic.ts', 'semanticOfAgUi.ts']));
   });
 });
+
+describe('the hosts entry (plans/DISCORD.md §4.2, DC-004)', () => {
+  const portable = join(__dirname, '..', 'portable');
+  const folder = join(portable, 'hosts');
+  const reached = reachedFrom(join(folder, 'index.ts'));
+  const withTypes = reachedFrom(join(folder, 'index.ts'), { types: true });
+  const PACKAGES = ['zod', 'node:crypto', 'node:http'];
+
+  it('reaches src/portable and src/portable/hosts only, types included', () => {
+    for (const file of withTypes.keys()) {
+      expect([portable, folder], file).toContain(dirname(file));
+    }
+    expect(reached.size).toBeGreaterThan(15);
+  });
+
+  it('reaches no package at run time but zod, node:crypto and node:http', () => {
+    for (const [file, source] of reached) {
+      const runtime = importsOf(source).runtime.filter(
+        path => !path.startsWith('.'),
+      );
+      for (const name of runtime) {
+        expect(PACKAGES, `${file}: ${name}`).toContain(name);
+      }
+    }
+  });
+
+  it("never imports '../index', so it never reaches ChatMessage's type chain", () => {
+    for (const [file, source] of withTypes) {
+      if (dirname(file) !== folder) {
+        continue;
+      }
+      const { runtime, types } = importsOf(source);
+      for (const path of [...runtime, ...types]) {
+        expect(path, file).not.toMatch(/^\.\.(\/index)?$/);
+      }
+    }
+    expect([...withTypes.keys()]).not.toContain(join(portable, 'index.ts'));
+    expect([...withTypes.keys()]).not.toContain(join(portable, 'sessions.ts'));
+    expect([...withTypes.keys()]).not.toContain(join(portable, 'thread.ts'));
+  });
+
+  it('reaches no DOM global', () => {
+    for (const [file, source] of withTypes) {
+      expect(withoutComments(source).match(DOM_GLOBAL)?.[0], file).toBe(
+        undefined,
+      );
+    }
+  });
+
+  it('is never reached from the portable entry a phone takes', () => {
+    const fromMobile = reachedFrom(join(portable, 'index.ts'), { types: true });
+    for (const file of fromMobile.keys()) {
+      expect(dirname(file), file).not.toBe(folder);
+    }
+  });
+});

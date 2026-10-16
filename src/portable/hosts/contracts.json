@@ -1,0 +1,381 @@
+{
+  "version": 1,
+  "about": "The generic host contracts of plans/SLACK.md §4.3, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and the Slack adapter (tech/datalayer/slack, test/contracts): each side's tests check its half against this file.",
+  "headers": {
+    "host_key": "X-Datalayer-Host-Key",
+    "signature": "X-Datalayer-Signature",
+    "timestamp": "X-Datalayer-Timestamp",
+    "delivery": "X-Datalayer-Delivery",
+    "idempotency_key": "Idempotency-Key"
+  },
+  "routes": {
+    "bind": "POST /api/ai-agents/v1/apps/hosts/bind",
+    "self": "GET /api/ai-agents/v1/apps/hosts/self",
+    "uninstalled": "DELETE /api/ai-agents/v1/apps/hosts/self",
+    "link_code": "POST /api/ai-agents/v1/apps/hosts/self/link-codes",
+    "link_state": "GET /api/ai-agents/v1/apps/hosts/self/links/{external_user_id}",
+    "unlink": "DELETE /api/ai-agents/v1/apps/hosts/self/links/{external_user_id}",
+    "exchange": "POST /api/ai-agents/v1/apps/hosts/self/token",
+    "webhook": "PUT /api/ai-agents/v1/apps/hosts/self/delivery",
+    "outbox": "GET /api/ai-agents/v1/apps/hosts/self/deliveries",
+    "ack": "POST /api/ai-agents/v1/apps/hosts/self/deliveries/{delivery_uid}/ack",
+    "bind_session": "PUT /api/ai-agents/v1/apps/hosts/sessions/{session_uid}",
+    "whoami": "GET /api/ai-agents/v1/apps/hosts/whoami",
+    "presentation": "GET /api/ai-agents/v1/tool-approvals/{approval_id}/presentation",
+    "decision": "POST /api/ai-agents/v1/apps/hosts/approvals/{approval_id}/decision",
+    "start_session": "POST {session_api.url}",
+    "send_message": "POST {session_api.url}/{session_uid}/messages",
+    "confirm_link": "POST /api/ai-agents/v1/apps/hosts/links",
+    "preview_link": "GET /api/ai-agents/v1/apps/hosts/links/preview?code={code}",
+    "change_host": "PATCH /api/ai-agents/v1/apps/hosts/{uid}",
+    "handoff": "POST /api/ai-agents/v1/apps/hosts/handoffs",
+    "redeem_handoff": "POST /api/ai-agents/v1/apps/hosts/handoffs/redeem"
+  },
+  "bind": {
+    "request": {
+      "code": "dlhc_…",
+      "external_id": "A0123:-:T0123",
+      "name": "Acme"
+    },
+    "response_keys": [
+      "success",
+      "host",
+      "host_key"
+    ]
+  },
+  "link_code": {
+    "request": {
+      "external_user_id": "U0ALICE",
+      "external_user_name": "Alice"
+    },
+    "response_keys": [
+      "success",
+      "code",
+      "expires_in",
+      "confirm"
+    ]
+  },
+  "exchange": {
+    "request": {
+      "external_user_id": "U0ALICE",
+      "deployment_uid": "dep-1"
+    },
+    "response_keys": [
+      "success",
+      "access_token",
+      "token_type",
+      "expires_in",
+      "exp",
+      "principal_uid",
+      "host_uid",
+      "deployment",
+      "session_api"
+    ],
+    "deployment_keys": [
+      "uid",
+      "app_uid",
+      "app_name",
+      "version"
+    ],
+    "session_api_keys": [
+      "url",
+      "agent"
+    ],
+    "optional_keys": [
+      "user_token"
+    ],
+    "token_claims": [
+      "jti",
+      "iss",
+      "iat",
+      "exp",
+      "aud",
+      "sub",
+      "azp",
+      "host_kind",
+      "link",
+      "deployment_uid",
+      "app_uid",
+      "scope"
+    ],
+    "audience": "datalayer:app:host",
+    "max_ttl_seconds": 900,
+    "optional_request": {
+      "place": {
+        "kind": "channel",
+        "id": "C0"
+      }
+    },
+    "place_kinds": [
+      "channel",
+      "direct"
+    ]
+  },
+  "whoami": {
+    "response_keys": [
+      "success",
+      "sub",
+      "azp",
+      "host_kind",
+      "deployment_uid",
+      "app_uid",
+      "link",
+      "scope",
+      "expires_in"
+    ]
+  },
+  "external_turn": {
+    "start_request": {
+      "agent": "agent-desk",
+      "deployment_uid": "dep-1",
+      "opener": "Summarize the launch risks",
+      "session": "slack-T0-C0-1700000000-000001",
+      "external_event_id": "Ev0123",
+      "user_token": ""
+    },
+    "message_request": {
+      "text": "And the costs?",
+      "external_event_id": "Ev0124"
+    },
+    "turn_event": {
+      "type": "CUSTOM",
+      "name": "loop.turn",
+      "value_keys": [
+        "turn",
+        "external_event_id",
+        "replayed",
+        "state"
+      ]
+    },
+    "replay": "The same Idempotency-Key (or, without one, the same external_event_id) and the same request answer the original session and turn with replayed=true, and run nothing; the same key with another request is 409."
+  },
+  "webhook": {
+    "request": {
+      "url": "https://slack.example/datalayer/deliveries",
+      "events": [
+        "approval.requested",
+        "approval.decided",
+        "turn.completed"
+      ]
+    },
+    "response_keys": [
+      "success",
+      "url",
+      "events",
+      "version",
+      "signing_secret"
+    ]
+  },
+  "delivery": {
+    "events": [
+      "approval.requested",
+      "approval.decided",
+      "turn.completed"
+    ],
+    "payload_keys": {
+      "approval.requested": [
+        "approval_id",
+        "tool_name",
+        "presentation",
+        "session_uid",
+        "deployment_uid",
+        "target"
+      ],
+      "approval.decided": [
+        "approval_id",
+        "status",
+        "decided_by",
+        "session_uid",
+        "deployment_uid",
+        "target"
+      ],
+      "turn.completed": [
+        "record_entry",
+        "session_uid",
+        "deployment_uid",
+        "target"
+      ]
+    },
+    "signing": {
+      "secret": "contract-signing-secret",
+      "timestamp": 1700000000,
+      "body": "{\"delivery\":\"d0c1\",\"event\":\"approval.requested\",\"payload\":{\"approval_id\":\"ap-1\",\"tool_name\":\"send_email\",\"presentation\":\"/api/ai-agents/v1/tool-approvals/ap-1/presentation\",\"session_uid\":\"slack-T0-C0-1700000000-000001\",\"deployment_uid\":\"dep-1\",\"target\":{\"channel\":\"C0\",\"thread_ts\":\"1700000000.000001\"}}}",
+      "signature": "v1=35630034244d3edab52b937cf4437542ec87958014351d587806b267f805b05f",
+      "rule": "v1= HMAC-SHA256(secret, \"<timestamp>.<raw body>\") in hex"
+    }
+  },
+  "presentation": {
+    "version": 1,
+    "response_keys": [
+      "success",
+      "presentation"
+    ],
+    "keys": [
+      "version",
+      "approval_id",
+      "status",
+      "owner_uid",
+      "tool_name",
+      "action_class",
+      "session_uid",
+      "created_at",
+      "expires_at",
+      "fields",
+      "arguments",
+      "secret_fields",
+      "complete",
+      "host_may_decide",
+      "reasons",
+      "digest"
+    ],
+    "action_classes": [
+      "read",
+      "send",
+      "write",
+      "execute",
+      "publish",
+      "delete",
+      "financial",
+      "unknown"
+    ],
+    "host_decidable": [
+      "read",
+      "send",
+      "write"
+    ],
+    "example": {
+      "version": 1,
+      "approval_id": "ap-1",
+      "status": "pending",
+      "owner_uid": "alice",
+      "tool_name": "send_email",
+      "action_class": "send",
+      "session_uid": "slack-T0-C0-1700000000-000001",
+      "created_at": "2026-10-07T10:00:00Z",
+      "expires_at": null,
+      "fields": [
+        {
+          "name": "to",
+          "label": "To",
+          "value": "release@example.com"
+        },
+        {
+          "name": "subject",
+          "label": "Subject",
+          "value": "Launch decision"
+        },
+        {
+          "name": "body",
+          "label": "Body",
+          "value": "We go with option B."
+        }
+      ],
+      "arguments": {
+        "to": "release@example.com",
+        "subject": "Launch decision",
+        "body": "We go with option B."
+      },
+      "secret_fields": [],
+      "complete": true,
+      "host_may_decide": true,
+      "reasons": [],
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "decision": {
+    "request": {
+      "approve": true,
+      "digest": "<presentation.digest>",
+      "note": null
+    },
+    "response_keys": [
+      "success",
+      "approval"
+    ]
+  },
+  "self": {
+    "host_keys": [
+      "uid",
+      "state",
+      "deployments",
+      "default_deployment",
+      "channels",
+      "direct_only",
+      "paused"
+    ],
+    "deployment_keys": [
+      "uid",
+      "app_uid",
+      "app_name",
+      "state",
+      "kept"
+    ]
+  },
+  "preview": {
+    "response_keys": [
+      "success",
+      "host",
+      "deployments",
+      "external_user_id",
+      "external_user_name",
+      "expires_in"
+    ],
+    "deployment_keys": [
+      "uid",
+      "app_name",
+      "default"
+    ]
+  },
+  "change_host": {
+    "request": {
+      "channels": [
+        {
+          "id": "C0",
+          "state": "deny"
+        },
+        {
+          "id": "C1",
+          "state": "allow",
+          "deployment": "dep-1"
+        }
+      ],
+      "direct_only": [
+        "dep-1"
+      ],
+      "paused": false
+    }
+  },
+  "handoff": {
+    "request": {
+      "kind": "approval",
+      "target": "ap-1"
+    },
+    "kinds": [
+      "session",
+      "approval"
+    ],
+    "response_keys": [
+      "success",
+      "code",
+      "expires_in",
+      "path"
+    ],
+    "code_prefix": "dlho_",
+    "redeem_request": {
+      "code": "dlho_…"
+    },
+    "redeem_response_keys": [
+      "success",
+      "kind",
+      "target",
+      "deployment_uid",
+      "path"
+    ],
+    "refusals": {
+      "unauthenticated": 401,
+      "another_account": 403,
+      "expired": 410,
+      "spent_or_unknown": 404
+    }
+  }
+}
