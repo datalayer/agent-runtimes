@@ -215,6 +215,63 @@ describe('the host agent client', () => {
     expect(turn.run.id).toBe('t1');
   });
 
+  it("sends the shape's provenance on the turn itself, as the contract's optional request (DISCORD §4.3)", async () => {
+    const provenance = (
+      contracts.external_turn as unknown as {
+        optional_request: { provenance: Record<string, unknown> };
+      }
+    ).optional_request.provenance;
+    const withProvenance: HostShape<Thread> = {
+      ...shape,
+      provenanceOf: one => ({
+        host_kind: 'discord',
+        message_id: one.provenance.thread,
+        place: { id: one.provenance.channel, kind: 'channel' },
+        thread: one.provenance.thread,
+      }),
+    };
+    const session = withProvenance.sessionUidOf(request);
+    const { calls, fetchImplementation } = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(exchanged),
+      [`POST ${exchanged.session_api.url}`]: () =>
+        sse({ type: 'RUN_FINISHED' }),
+      [`POST ${exchanged.session_api.url}/S1/messages`]: () =>
+        sse({ type: 'RUN_FINISHED' }),
+    });
+    const client = new HttpAgentClient(
+      API,
+      new HostKeyCredentials(
+        API,
+        async () => 'dlhk_key',
+        withProvenance,
+        fetchImplementation,
+      ),
+      withProvenance,
+      fetchImplementation,
+    );
+    await collect((await client.startTurn(request)).updates);
+    await collect(
+      (await client.startTurn({ ...request, sessionId: 'S1' })).updates,
+    );
+    const [, start, , message] = calls;
+    const sent = (start?.body as { provenance: Record<string, unknown> })
+      .provenance;
+    expect(Object.keys(sent).sort()).toEqual(Object.keys(provenance).sort());
+    expect(sent).toEqual({
+      host_kind: 'discord',
+      message_id: 'T',
+      place: { id: 'C', kind: 'channel' },
+      thread: 'T',
+    });
+    expect((message?.body as { provenance: unknown }).provenance).toEqual(sent);
+    expect(JSON.stringify(sent).length).toBeLessThanOrEqual(
+      (contracts.external_turn as unknown as { provenance_limit_bytes: number })
+        .provenance_limit_bytes,
+    );
+    expect(session).toMatch(/^discord-/);
+  });
+
   it('answers a replayed turn from the session, running nothing again', async () => {
     const thread = `${exchanged.session_api.url}/S1`;
     const { calls, fetchImplementation } = wire({

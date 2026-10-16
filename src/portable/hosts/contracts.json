@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The generic host contracts of plans/SLACK.md §4.3, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and the Slack adapter (tech/datalayer/slack, test/contracts): each side's tests check its half against this file.",
+  "about": "The generic host contracts of plans/SLACK.md §4.3 and plans/DISCORD.md §4.3, as ai-agents and the runtime's session API answer them. Shared verbatim by ai-agents (tests/fixtures/hosts) and agent-runtimes (src/portable/hosts, read by the Slack and Discord adapters from lib/portable/hosts): each side's tests check its half against this file.",
   "headers": {
     "host_key": "X-Datalayer-Host-Key",
     "signature": "X-Datalayer-Signature",
@@ -29,7 +29,8 @@
     "preview_link": "GET /api/ai-agents/v1/apps/hosts/links/preview?code={code}",
     "change_host": "PATCH /api/ai-agents/v1/apps/hosts/{uid}",
     "handoff": "POST /api/ai-agents/v1/apps/hosts/handoffs",
-    "redeem_handoff": "POST /api/ai-agents/v1/apps/hosts/handoffs/redeem"
+    "redeem_handoff": "POST /api/ai-agents/v1/apps/hosts/handoffs/redeem",
+    "admin": "POST /api/ai-agents/v1/apps/hosts/self/admin"
   },
   "bind": {
     "request": {
@@ -147,7 +148,19 @@
         "state"
       ]
     },
-    "replay": "The same Idempotency-Key (or, without one, the same external_event_id) and the same request answer the original session and turn with replayed=true, and run nothing; the same key with another request is 409."
+    "replay": "The same Idempotency-Key (or, without one, the same external_event_id) and the same request answer the original session and turn with replayed=true, and run nothing; the same key with another request is 409.",
+    "optional_request": {
+      "provenance": {
+        "host_kind": "discord",
+        "place": {
+          "kind": "channel",
+          "id": "345678901234567890"
+        },
+        "thread": "456789012345678901",
+        "message_id": "456789012345678901"
+      }
+    },
+    "provenance_limit_bytes": 1024
   },
   "webhook": {
     "request": {
@@ -379,6 +392,76 @@
       "another_account": 403,
       "expired": 410,
       "spent_or_unknown": 404
+    }
+  },
+  "admin": {
+    "request": {
+      "external_user_id": "567890123456789012",
+      "paused": true
+    },
+    "channel_request": {
+      "external_user_id": "567890123456789012",
+      "channel": {
+        "id": "345678901234567890",
+        "state": "deny"
+      }
+    },
+    "response_keys": [
+      "success",
+      "host"
+    ],
+    "refusals": {
+      "not_the_owner": 403,
+      "nothing_to_change": 422
+    }
+  },
+  "discord": {
+    "about": "Discord's forms of the generic contracts (plans/DISCORD.md §4.3): the installation is <application_id>:<guild_id>, a member is their snowflake, a thread is sent as its parent channel, the session uid is hostSessionUid(\"discord\", [application, guild, channel, thread]).",
+    "application_id": "123456789012345678",
+    "guild_id": "234567890123456789",
+    "bind_request": {
+      "code": "dlhc_…",
+      "external_id": "123456789012345678:234567890123456789",
+      "name": "Acme"
+    },
+    "external_user_id": "567890123456789012",
+    "thread": {
+      "channel": {
+        "id": "456789012345678901",
+        "type": 11,
+        "parent_id": "345678901234567890"
+      },
+      "place": {
+        "kind": "channel",
+        "id": "345678901234567890"
+      }
+    },
+    "direct": {
+      "channel": {
+        "id": "678901234567890123",
+        "type": 1
+      },
+      "place": {
+        "kind": "direct",
+        "id": "678901234567890123"
+      }
+    },
+    "session": {
+      "parts": [
+        "123456789012345678",
+        "234567890123456789",
+        "345678901234567890",
+        "456789012345678901"
+      ],
+      "uid": "discord-15beb80510370bbe027882df9d4d4666925017df"
+    },
+    "target": {
+      "applicationId": "123456789012345678",
+      "channelId": "345678901234567890",
+      "guildId": "234567890123456789",
+      "messageId": "456789012345678901",
+      "threadId": "456789012345678901",
+      "userId": "567890123456789012"
     }
   }
 }

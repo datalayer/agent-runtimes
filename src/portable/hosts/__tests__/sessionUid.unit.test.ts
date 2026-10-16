@@ -8,8 +8,16 @@
 /** One host thread, one session uid (plans/DISCORD.md DC-004, §4.3). */
 
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hostSessionUid } from '../sessionUid';
+
+const discord = (
+  JSON.parse(readFileSync(join(__dirname, '..', 'contracts.json'), 'utf8')) as {
+    discord: { session: { parts: string[]; uid: string } };
+  }
+).discord;
 
 const sha = (key: string) =>
   createHash('sha256').update(key).digest('hex').slice(0, 40);
@@ -35,6 +43,12 @@ describe('hostSessionUid', () => {
     expect(
       hostSessionUid('discord', ['app', 'guild', 'chan', 'thread'], 1),
     ).not.toBe(uid);
+  });
+
+  it("is the contract's Discord session uid (DC-006)", () => {
+    expect(hostSessionUid('discord', discord.session.parts)).toBe(
+      discord.session.uid,
+    );
   });
 
   it('refuses a kind ai-agents would refuse, and an empty part', () => {

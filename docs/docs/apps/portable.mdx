@@ -50,13 +50,17 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   `contracts.json`, byte-identical to ai-agents'
   `tests/fixtures/hosts/contracts.json`, which both sides test;
 - the host client (`DatalayerHostClient`: bind, link codes, the outbox,
-  handoffs, approval presentation and decision);
+  handoffs, approval presentation and decision, and `admin` — pause, resume
+  or one channel's rule from the host itself, which Datalayer takes only from
+  the host user linked to the installation's owner);
 - the agent client over the session API (`HttpAgentClient`,
   `HostKeyCredentials`): the host credential exchange, a turn run once by the
   host's event id, its stream reduced, its session mapped to the host's
   thread. What is the host's own is injected as a `HostShape`: the session uid
   (`hostSessionUid(kind, parts, generation)`), the place Datalayer checks the
-  channel policy against, and the delivery target;
+  channel policy against, the delivery target, and the turn's `provenance`
+  (`provenanceOf`: the host's kind, the place, the thread and the message,
+  sent on the turn itself, at most 1 KiB);
 - approval renderers (`renderApproval`) and `hostMayDecide`: a decision is
   offered only for a complete action the server says a host may decide, and
   only for mail (a send whose tool names mail, `MAIL_WORDS`): reads, writes,

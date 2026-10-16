@@ -170,6 +170,39 @@ export class DatalayerHostClient {
     };
   }
 
+  /**
+   * The host's own administration (plans/DISCORD.md DC-106,
+   * `/datalayer-admin`): pause, resume or one channel's rule, for the host
+   * user linked to the installation's owner; Datalayer refuses anyone else
+   * (403), whatever their role in the host.
+   */
+  async admin(
+    hostKey: string,
+    externalUserId: string,
+    change: Readonly<{
+      paused?: boolean;
+      channel?: Readonly<{
+        id: string;
+        state: 'allow' | 'deny';
+        deployment?: string;
+      }>;
+    }>,
+  ): Promise<{ paused: boolean }> {
+    const answered = await this.#call(
+      'Datalayer did not take the change',
+      '/apps/hosts/self/admin',
+      {
+        body: { external_user_id: externalUserId, ...change },
+        hostKey,
+        method: 'POST',
+      },
+      z.object({
+        host: z.object({ paused: z.boolean().optional() }).loose(),
+      }),
+    );
+    return { paused: answered.host.paused ?? false };
+  }
+
   /** The host unlinks one of its users: how many links ended. */
   async unlink(hostKey: string, externalUserId: string): Promise<number> {
     const answered = await this.#call(

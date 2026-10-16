@@ -59,6 +59,7 @@ export {
   type Place,
   type Starter,
   type StarterSource,
+  type TurnProvenance,
   type TurnStream,
 } from './agentClient';
 export { hostSessionUid } from './sessionUid';

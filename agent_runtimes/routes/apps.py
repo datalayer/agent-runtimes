@@ -56,7 +56,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_runtimes.loop.apps.callers import (
     LOCAL,
@@ -1008,6 +1008,43 @@ async def feedback(body: FeedbackRequest, request: Request) -> Dict[str, Any]:
 # session: what the chat of an application's page sends.
 
 
+#: The most a turn's provenance takes, serialized (plans/DISCORD.md §4.3).
+PROVENANCE_LIMIT_BYTES = 1024
+
+
+class TurnPlace(BaseModel):
+    """Where in the host a turn was asked: a channel (a thread as its parent), or a direct conversation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str = Field(..., pattern=r"^(channel|direct)$")
+    id: str = Field(..., min_length=1, max_length=128)
+
+
+class TurnProvenance(BaseModel):
+    """Where a host's turn comes from (plans/DISCORD.md §4.3, §4.4; SLACK
+    S-204): the host's kind, the place, its thread and message — other
+    people's words arrive marked with where they were said. Kept with the
+    turn: a retry naming another provenance is another request (409)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    host_kind: str = Field(..., pattern=r"^[a-z][a-z0-9-]{1,31}$")
+    place: TurnPlace
+    thread: str = Field("", max_length=128)
+    message_id: str = Field("", max_length=128)
+
+
+def _provenance_within_limit(
+    value: Optional[TurnProvenance],
+) -> Optional[TurnProvenance]:
+    if value is not None and len(value.model_dump_json()) > PROVENANCE_LIMIT_BYTES:
+        raise ValueError(
+            f"A turn's provenance takes at most {PROVENANCE_LIMIT_BYTES} bytes."
+        )
+    return value
+
+
 class StartSessionRequest(BaseModel):
     """What a session is started with."""
 
@@ -1048,6 +1085,11 @@ class StartSessionRequest(BaseModel):
             "`Idempotency-Key`, a retry answers the original session and turn (plans/SLACK.md §4.3)"
         ),
     )
+    provenance: Optional[TurnProvenance] = Field(
+        None, description="Where a host's turn comes from (plans/DISCORD.md §4.3)"
+    )
+
+    _provenance = field_validator("provenance")(_provenance_within_limit)
 
 
 class SessionMessageRequest(BaseModel):
@@ -1059,6 +1101,11 @@ class SessionMessageRequest(BaseModel):
         max_length=255,
         description="The host's own id for the turn: a retry answers the original turn",
     )
+    provenance: Optional[TurnProvenance] = Field(
+        None, description="Where a host's turn comes from (plans/DISCORD.md §4.3)"
+    )
+
+    _provenance = field_validator("provenance")(_provenance_within_limit)
 
 
 class SessionPageRequest(BaseModel):

@@ -14,6 +14,8 @@ the same key with another request is refused. Verified by asking ai-agents
 """
 
 import asyncio
+import json
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Tuple
 
 import httpx
@@ -312,3 +314,91 @@ def test_a_revoked_host_token_is_refused_in_ai_agents_words(
     with pytest.raises(CallerRefused) as refused:
         asyncio.run(CallerVerifier().verify(HOST_TOKEN, "app-1"))
     assert refused.value.status == 401 and "revoked" in refused.value.reason
+
+
+CONTRACTS = json.loads(
+    (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "portable"
+        / "hosts"
+        / "contracts.json"
+    ).read_text()
+)
+
+
+def test_a_turn_carries_its_provenance_as_the_contract_says(
+    runtime: Runtime, remote: TestClient, hosted: Any
+) -> None:
+    """plans/DISCORD.md §4.3, §4.4 (SLACK S-204): the turn itself carries
+    where it comes from, at most 1 KiB, and a retry naming another
+    provenance is another request."""
+    turn = CONTRACTS["external_turn"]
+    provenance = turn["optional_request"]["provenance"]
+    assert turn["provenance_limit_bytes"] == routes.PROVENANCE_LIMIT_BYTES
+    runtime.make("notes-assistant", ASSISTANT, DEPLOYED)
+    session = CONTRACTS["discord"]["session"]["uid"]
+    first = _turn(
+        events_of(
+            _start(
+                remote,
+                "host:alice:dep-1",
+                session,
+                external_event_id="discord:1",
+                provenance=provenance,
+            )
+        )
+    )
+    assert first["replayed"] is False and first["session"] == session
+    again = _start(
+        remote,
+        "host:alice:dep-1",
+        session,
+        external_event_id="discord:1",
+        provenance=provenance,
+    )
+    assert _turn(events_of(again))["replayed"] is True
+    elsewhere = {**provenance, "place": {"kind": "direct", "id": "678901234567890123"}}
+    assert (
+        _start(
+            remote,
+            "host:alice:dep-1",
+            session,
+            external_event_id="discord:1",
+            provenance=elsewhere,
+        ).status_code
+        == 409
+    )
+    # A message carries it too.
+    sent = remote.post(
+        f"/api/v1/apps/sessions/{session}/messages",
+        headers=as_("host:alice:dep-1"),
+        json={
+            "text": "And then?",
+            "external_event_id": "discord:2",
+            "provenance": provenance,
+        },
+    )
+    assert _turn(events_of(sent))["replayed"] is False
+    # The fields' own caps keep the largest provenance within the limit.
+    largest = routes.TurnProvenance(
+        host_kind="h" * 32,
+        place={"kind": "channel", "id": "c" * 128},
+        thread="t" * 128,
+        message_id="m" * 128,
+    )
+    assert len(largest.model_dump_json()) <= routes.PROVENANCE_LIMIT_BYTES
+    # Refused: a field too long, a key it does not know, a place of another kind.
+    for wrong in (
+        {**provenance, "thread": "x" * 129},
+        {**provenance, "channel_history": ["..."]},
+        {**provenance, "place": {"kind": "everywhere", "id": "1"}},
+    ):
+        refused = _start(
+            remote,
+            "host:alice:dep-1",
+            "discord-refused-0001",
+            external_event_id="discord:3",
+            provenance=wrong,
+        )
+        assert refused.status_code == 422, (wrong, refused.text)

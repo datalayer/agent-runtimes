@@ -68,15 +68,29 @@ export interface AgentClient<P> {
 export type Place = Readonly<{ kind: 'channel' | 'direct'; id: string }>;
 
 /**
+ * Where a turn comes from, as the session API takes it on the turn itself
+ * (`provenance`, plans/DISCORD.md §4.3, §4.4; at most 1 KiB): the host's
+ * kind, the place, the thread and the message.
+ */
+export type TurnProvenance = Readonly<{
+  host_kind: string;
+  place: Place;
+  thread: string;
+  message_id: string;
+}>;
+
+/**
  * What is the host's own in a turn: the session uid its thread derives
  * (`hostSessionUid`), the place Datalayer checks the channel policy against,
- * the delivery target handed back with every delivery, and what is said when
- * its installation holds no host key.
+ * the delivery target handed back with every delivery, the provenance sent
+ * with the turn, and what is said when its installation holds no host key.
  */
 export type HostShape<P> = Readonly<{
   sessionUidOf(request: HostTurnRequest<P>): string;
   placeOf(request: HostTurnRequest<P>): Place;
   targetOf(request: HostTurnRequest<P>): Record<string, unknown>;
+  /** The turn's provenance; a host that sends none leaves it out. */
+  provenanceOf?(request: HostTurnRequest<P>): TurnProvenance;
   notBound: string;
 }>;
 
@@ -351,6 +365,7 @@ export class HttpAgentClient<P> implements AgentClient<P> {
     const host = await this.credentials.forTurn(request);
     assertTrustedStreamUrl(this.apiUrl, host.sessionApiUrl);
     const sessionId = request.sessionId ?? this.shape.sessionUidOf(request);
+    const provenance = this.shape.provenanceOf?.(request);
     const headers = {
       accept: 'text/event-stream',
       authorization: `Bearer ${host.accessToken}`,
@@ -364,6 +379,7 @@ export class HttpAgentClient<P> implements AgentClient<P> {
             body: JSON.stringify({
               external_event_id: request.externalEventId,
               text: request.prompt,
+              ...(provenance ? { provenance } : {}),
             }),
             headers,
             method: 'POST',
@@ -377,6 +393,7 @@ export class HttpAgentClient<P> implements AgentClient<P> {
             opener: request.prompt,
             session: sessionId,
             ...(host.userToken ? { user_token: host.userToken } : {}),
+            ...(provenance ? { provenance } : {}),
           }),
           headers,
           method: 'POST',
