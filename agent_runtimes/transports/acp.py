@@ -163,7 +163,8 @@ class ACPTransport(BaseTransport):
             load_session=False,
             prompt_capabilities=PromptCapabilities(
                 image=False,
-                audio=False,
+                # Heard by the speech service before the turn (VOICE.md VO-28).
+                audio=True,
                 embedded_context=True,
             ),
             mcp_capabilities=McpCapabilities(
@@ -310,12 +311,39 @@ class ACPTransport(BaseTransport):
             yield PromptResponse(stop_reason="cancelled")
             return
 
-        # Extract prompt text from content blocks
-        prompt = self._extract_prompt_text(request.prompt)
-
         context = session.context
         if context is None:
             context = AgentContext(session_id=session_id)
+
+        # Audio blocks are heard by the speech service with the session's
+        # token, the prompt their transcript (VOICE.md VO-28).
+        from ..voice import hear
+        from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
+
+        blocks = [
+            block.model_dump(by_alias=True, exclude_none=True)
+            if hasattr(block, "model_dump")
+            else block
+            for block in request.prompt
+        ]
+        try:
+            heard_blocks, spoken = await hear_acp_prompt(
+                blocks,
+                token=str((context.metadata or {}).get("user_token") or ""),
+            )
+        except AudioNotHeard as refused:
+            yield session_notification(
+                session_id=session_id,
+                update=update_agent_message_text(str(refused)),
+            )
+            yield PromptResponse(stop_reason="refusal")
+            return
+        hear(spoken)
+        prompt = "\n".join(
+            str(block.get("text", ""))
+            for block in heard_blocks
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
 
         # Use per-request identities if provided, otherwise use session identities
         effective_identities = (

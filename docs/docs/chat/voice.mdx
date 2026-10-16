@@ -362,6 +362,13 @@ task is made: the agent is given the transcript, and the message's
 missing token or the service's refusal is answered as a JSON-RPC error
 (`-32602`) in a sentence, and no task is made.
 
+Over ACP, the runtime says `promptCapabilities.audio: true`. An
+`AudioContentBlock` in a `session/prompt` (`{"type": "audio", "data",
+"mimeType"}`) is heard with the connection's token — the one `authenticate`
+gave, or the socket's — and the agent is given its transcript, marked
+spoken; what cannot be heard is answered as a JSON-RPC error in a sentence,
+and no turn runs.
+
 Recordings sent to `POST /speech/transcriptions` may be WAV, FLAC, Ogg Opus
 or WebM Opus (what Chrome's `MediaRecorder` writes), up to a minute.
 

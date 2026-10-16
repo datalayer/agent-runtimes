@@ -31,6 +31,8 @@ import time
 import uuid
 from typing import Any
 
+import httpx
+
 # Import from official ACP SDK
 from acp import (
     PROTOCOL_VERSION as ACP_PROTOCOL_VERSION,
@@ -892,7 +894,8 @@ async def _handle_initialize(
             "loadSession": True,
             "promptCapabilities": {
                 "image": False,
-                "audio": False,
+                # Heard by the speech service, the prompt its transcript (VO-28).
+                "audio": True,
                 "embeddedContext": True,
             },
             "mcpCapabilities": {
@@ -1019,6 +1022,32 @@ async def _handle_prompt(
     model = metadata.get("model") if isinstance(metadata, dict) else None
     if model:
         logger.info(f"ACP: Using model from request metadata: {model}")
+
+    # Audio the client sent is heard first, with the connection's token, and
+    # the prompt is its transcript, marked spoken (VOICE.md VO-28).
+    from ..voice import hear
+    from ..voice.protocol_audio import AudioNotHeard, hear_acp_prompt
+
+    try:
+        content, spoken = await hear_acp_prompt(
+            list(content) if isinstance(content, list) else [],
+            token=user_jwt_token or "",
+        )
+    except AudioNotHeard as refused:
+        await _send_error(
+            websocket, message.id, ACPErrorCode.INVALID_PARAMS, str(refused)
+        )
+        return
+    except httpx.HTTPError as error:
+        await _send_error(
+            websocket,
+            message.id,
+            ACPErrorCode.INTERNAL_ERROR,
+            "The audio could not be heard: Datalayer's speech service did not "
+            f"answer ({type(error).__name__}).",
+        )
+        return
+    hear(spoken)
 
     # The text of every text block, in order.
     prompt = "\n".join(

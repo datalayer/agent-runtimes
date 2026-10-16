@@ -8,7 +8,9 @@ client may send the sound itself — AG-UI's ``AudioInputContent`` in a user
 message (``{"type": "audio", "source": {"type": "data", "value": <base64>,
 "mime_type": "audio/wav"}}``), or an A2A file part of an audio type
 (``{"kind": "file", "file": {"bytes": <base64>, "mimeType": "audio/wav"}}``,
-heard by ``HearA2AAudio`` before the task is made). The runtime does not hear it: it asks ai-agents'
+heard by ``HearA2AAudio`` before the task is made), or ACP's
+``AudioContentBlock`` (``{"type": "audio", "data": <base64>, "mimeType"}``,
+heard by ``hear_acp_prompt`` before the turn). The runtime does not hear it: it asks ai-agents'
 speech service (``POST /api/ai-agents/v1/speech/transcriptions``, VO-34) with
 the caller's own token, and the message enters the conversation as the
 transcript, marked spoken (``input: "voice"``, ``where: "server"``, VO-27) so
@@ -277,6 +279,55 @@ async def hear_a2a_message(
     return heard_message, spoken
 
 
+async def hear_acp_prompt(
+    content: List[Any],
+    *,
+    token: str,
+    ai_agents_url: Optional[str] = None,
+    client: Optional[httpx.AsyncClient] = None,
+) -> Tuple[List[Any], Optional[SpokenInput]]:
+    """An ACP prompt whose ``AudioContentBlock``s are heard (VO-28).
+
+    ``{"type": "audio", "data": <base64>, "mimeType": "audio/wav"}`` becomes
+    the text block of its transcript. Returns the prompt's blocks and the
+    spoken input it was — or the blocks unchanged and ``None`` when it holds
+    no audio.
+    """
+    if not any(isinstance(b, dict) and b.get("type") == "audio" for b in content):
+        return content, None
+    url = (
+        ai_agents_url if ai_agents_url is not None else os.getenv(AI_AGENTS_URL_ENV, "")
+    )
+    heard_blocks: List[Any] = []
+    language = ""
+    for block in content:
+        if not (isinstance(block, dict) and block.get("type") == "audio"):
+            heard_blocks.append(block)
+            continue
+        sound, kind = _sound_of(
+            {
+                "source": {
+                    "type": "data",
+                    "value": block.get("data"),
+                    "mime_type": block.get("mimeType") or block.get("mime_type"),
+                }
+            }
+        )
+        heard = await hear_audio(
+            sound, kind, token=token, ai_agents_url=url, client=client
+        )
+        del sound
+        if not heard.text:
+            raise AudioNotHeard(
+                "Nothing was heard in the audio: say it again, or type."
+            )
+        language = language or heard.language
+        heard_blocks.append({"type": "text", "text": heard.text})
+    return heard_blocks, SpokenInput(
+        language=language, engine=SERVER_ENGINE, where="server"
+    )
+
+
 #: The JSON-RPC methods of A2A that carry a message to the agent.
 A2A_MESSAGE_METHODS = ("message/send", "message/stream")
 
@@ -403,6 +454,7 @@ __all__ = [
     "HeardAudio",
     "SERVER_ENGINE",
     "hear_a2a_message",
+    "hear_acp_prompt",
     "hear_agui_messages",
     "hear_audio",
 ]
