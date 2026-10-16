@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.51
+
+DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **A session is mapped again once its host place changes** (DC-105): `HttpAgentClient.bindSession(sessionId, request)` (the new `SessionBinder` interface) exchanges the host key for the speaker again and PUTs the shape's target for `request`, replacing the binding. Discord maps a first `/ask` to the channel's message and, once the answer's thread is started, to the thread; an installation without a host key (development's credentials) answers `false`.
+
 ## 1.5.50
 
 VOICE, 16 October 2026 ([Voice](https://agent-runtimes.datalayer.tech/docs/chat/voice)):

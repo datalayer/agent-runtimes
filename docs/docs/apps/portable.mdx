@@ -60,7 +60,9 @@ What every chat host shares, so that Slack and Discord carry no copy of it:
   (`hostSessionUid(kind, parts, generation)`), the place Datalayer checks the
   channel policy against, the delivery target, and the turn's `provenance`
   (`provenanceOf`: the host's kind, the place, the thread and the message,
-  sent on the turn itself, at most 1 KiB);
+  sent on the turn itself, at most 1 KiB). `bindSession` maps a session again
+  once its place changes after the turn started (Discord's answer thread
+  exists only once the answer is shown), replacing the binding;
 - approval renderers (`renderApproval`) and `hostMayDecide`: a decision is
   offered only for a complete action the server says a host may decide, and
   only for mail (a send whose tool names mail, `MAIL_WORDS`): reads, writes,

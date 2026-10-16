@@ -57,6 +57,7 @@ export {
   type HostShape,
   type HostTurnRequest,
   type Place,
+  type SessionBinder,
   type Starter,
   type StarterSource,
   type TurnProvenance,

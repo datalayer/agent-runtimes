@@ -360,6 +360,79 @@ describe('the host agent client', () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("maps the session again with the shape's target as the speaker, or says nothing binds (DISCORD §3.2)", async () => {
+    const session = shape.sessionUidOf(request);
+    const { calls, fetchImplementation } = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(exchanged),
+      [`PUT ${API}/api/ai-agents/v1/apps/hosts/sessions/${session}`]: () =>
+        Response.json({ success: true }),
+    });
+    const hostKey = async () => 'dlhk_key';
+    const client = new HttpAgentClient(
+      API,
+      new HostKeyCredentials(API, hostKey, shape, fetchImplementation),
+      shape,
+      fetchImplementation,
+      hostKey,
+    );
+    const later = {
+      ...request,
+      provenance: { ...request.provenance, channel: 'C2' },
+    };
+    await expect(client.bindSession(session, later)).resolves.toBe(true);
+    const [exchange, bind] = calls;
+    expect(exchange?.url).toBe(`${API}/api/ai-agents/v1/apps/hosts/self/token`);
+    expect(bind?.method).toBe('PUT');
+    expect(bind?.headers.authorization).toBe('Bearer host-token');
+    expect(bind?.headers[contracts.headers.host_key!]).toBe('dlhk_key');
+    expect(bind?.body).toEqual({
+      target: { channelId: 'C2', userId: '80351110224678912' },
+    });
+
+    const refused = wire({
+      [`POST ${API}/api/ai-agents/v1/apps/hosts/self/token`]: () =>
+        Response.json(exchanged),
+      [`PUT ${API}/api/ai-agents/v1/apps/hosts/sessions/${session}`]: () =>
+        new Response('{}', { status: 403 }),
+    });
+    await expect(
+      new HttpAgentClient(
+        API,
+        new HostKeyCredentials(
+          API,
+          hostKey,
+          shape,
+          refused.fetchImplementation,
+        ),
+        shape,
+        refused.fetchImplementation,
+        hostKey,
+      ).bindSession(session, request),
+    ).rejects.toThrow(/403/);
+
+    const development = {
+      forTurn: async () => ({
+        accessToken: 'dev',
+        agent: 'agent-desk',
+        bindable: false,
+        deploymentUid: 'dep-1',
+        sessionApiUrl: exchanged.session_api.url,
+      }),
+    };
+    const none = wire({});
+    await expect(
+      new HttpAgentClient(
+        API,
+        development,
+        shape,
+        none.fetchImplementation,
+        hostKey,
+      ).bindSession(session, request),
+    ).resolves.toBe(false);
+    expect(none.calls).toHaveLength(0);
+  });
+
   it('stops a turn, taking 409 (already ended) as done', async () => {
     const stop = `${exchanged.session_api.url}/S1/stop`;
     for (const status of [200, 409]) {

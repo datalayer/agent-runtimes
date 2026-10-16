@@ -64,6 +64,16 @@ export interface AgentClient<P> {
   stopTurn(sessionId: string, request: HostTurnRequest<P>): Promise<void>;
 }
 
+/**
+ * Maps a session to its host place again, once the place changed after the
+ * turn started (plans/DISCORD.md §3.2: Discord's answer thread exists only
+ * once the answer is shown, so the target is PUT again with it).
+ */
+export interface SessionBinder<P> {
+  /** Whether the session was mapped: `false` where nothing binds (development's credentials). */
+  bindSession(sessionId: string, request: HostTurnRequest<P>): Promise<boolean>;
+}
+
 /** Where a host asks from (`exchange.optional_request.place`): a channel, or a direct conversation. */
 export type Place = Readonly<{ kind: 'channel' | 'direct'; id: string }>;
 
@@ -352,7 +362,7 @@ export async function* agUiEventsOf(
  * stream reduced to semantic events, and its session mapped to the host's
  * thread so that approvals and completions are delivered (§4.3, 3).
  */
-export class HttpAgentClient<P> implements AgentClient<P> {
+export class HttpAgentClient<P> implements AgentClient<P>, SessionBinder<P> {
   constructor(
     readonly apiUrl: string,
     readonly credentials: HostCredentials<P>,
@@ -414,6 +424,24 @@ export class HttpAgentClient<P> implements AgentClient<P> {
       sessionId,
       updates: this.#updates(response.body, host, sessionId, run),
     };
+  }
+
+  /**
+   * The session mapped again with the shape's target for `request`, as the
+   * speaker (a fresh exchange): the binding is replaced, never doubled.
+   */
+  async bindSession(
+    sessionId: string,
+    request: HostTurnRequest<P>,
+  ): Promise<boolean> {
+    const host = await this.credentials.forTurn(request);
+    const hostKey =
+      host.bindable && this.hostKeyFor
+        ? await this.hostKeyFor(request)
+        : undefined;
+    if (!hostKey) return false;
+    await this.#bind(request, host, sessionId, hostKey);
+    return true;
   }
 
   async stopTurn(
