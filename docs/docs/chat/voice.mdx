@@ -24,10 +24,13 @@ text stays on screen.
   says `where: server`, where it says `auto` and no model in the browser hears
   the language, or where the person chose *Detect the language I speak* in the
   voice menu, the browser still finds the speech and the silence, and sends
-  only the speech, as a recording, to the speech service
-  (`POST /api/ai-agents/v1/speech/transcriptions`). There Whisper large-v3-turbo
-  writes it, finding the language itself when asked to detect it. Its words
-  come once the person stops, not while they speak. The first use asks apart
+  the sound to the speech service as it is captured
+  (`WS /api/ai-agents/v1/speech/transcriptions/stream`). There Whisper writes
+  it — small for a spoken turn, large-v3-turbo past 20 seconds — finding the
+  language itself when asked to detect it. The words heard so far come back
+  while the person speaks and are greyed in the box until the final words
+  replace them. A press too short for a first look is sent whole, as a
+  recording (`POST /api/ai-agents/v1/speech/transcriptions`). The first use asks apart
   for this, in its own sentence: the sound goes to Datalayer's servers, and
   neither it nor the words are kept there. *Keep speech on this device* turns
   all of it off.
@@ -43,6 +46,16 @@ text stays on screen.
   the answer is marked *interrupted* in the conversation, and what you said
   starts the next turn. `Esc` or *Pause* pauses it; five quiet minutes
   pause it too; the toggle again turns it off.
+- **Pauses before I am done.** Someone who pauses longer while speaking
+  chooses *Longer* or *Much longer* in the voice menu, or on
+  */settings/appearance*: the silence that stops a microphone clicked on
+  (1.5 s) and the one that ends a hands-free turn (700 ms) become twice or
+  three times as long.
+- **A line said, not written.** An agent whose answers may be heard has one
+  more tool, `say_aloud`: a short line such as *One moment, I am looking that
+  up.*, at most 200 characters. It is shown as a caption beside the composer
+  while the run goes on, with a speaker icon, and said where answers are said
+  by themselves. The answer itself is always written.
 - **Read aloud, on request.** With `output: on_request`, the default of an
   Appspec, each answer the agent has finished has *Read aloud* under it. It
   stops whatever the voice was saying and reads that answer from its start, a
@@ -255,18 +268,51 @@ a CPU (in Node, not the browser):
 | `kokoro-ff-siwis`, said and heard back | 13.6% | 0.24 |
 
 French heard in the browser is weak with Whisper base. On the server,
-Whisper large-v3-turbo (faster-whisper, 8-bit on the CPU) heard the English
-fixture word for word; on r1's CPUs a 9-second recording takes about 16
-seconds to hear (33 when it also detects the language), so the browser stays
-the default where it hears the language.
+Whisper (faster-whisper, 8-bit on the CPU) heard the English fixture word for
+word. Measured on r1 on 16 October 2026, one pod of 4 CPUs, speech only
+(`scripts/speech_bench.py` in services' ai-agents):
+
+| | Time |
+|---|---|
+| A 9-second turn, told its language (Whisper small) | 4.3–4.6 s |
+| The same, detecting its language | 7.2–7.7 s |
+| A 3-second turn | 4.2–4.5 s |
+| The stream's first partial words (pcm16), words said at 0.7–2.7 s | 5.6 s |
+| The stream's final words, after its end | 4.1 s |
+| Kokoro's first audio: *One moment.* / a 56-character sentence | 0.9–1.2 s / 2.0–2.3 s |
+| 8 turns at once, the last heard | 33 s |
+
+A pod hears one turn at a time, and Whisper's 30-second window costs about
+4 seconds whatever the turn's length, so the browser stays the default where
+it hears the language.
 
 ### Streaming to the server
 
 `WS /api/ai-agents/v1/speech/transcriptions/stream` hears speech as it is
 said. The first message says who asks, never the address:
 `{"token": "…", "language": "en", "format": "pcm16"}`. Then come binary
-frames of 16-bit mono PCM at 16 kHz. Every 2 seconds of new sound, what was
+frames of 16-bit mono PCM at 16 kHz, or, with `"format": "ogg"`, the pages
+of an Ogg Opus stream as a recorder writes them. Every 2 seconds of new sound, what was
 said so far is sent back (`{"type": "partial"}`), and the whole at the end
 (`{"type": "final", "why"}`): when the page sends `{"type": "end"}`, after
 10 seconds of silence, when the principal's seconds are spent, or after
 5 minutes. A refusal is `{"type": "refused", "detail"}` in a sentence.
+
+### Over the protocols
+
+On the web the page hears and speaks; AG-UI carries text. Two custom events
+say what only the runtime knows: `voice.settings`, right after
+`RUN_STARTED`, with the voice and language of an agent whose answers may be
+heard, and `voice.say`, the line `say_aloud` says (`{"text", "voice",
+"language"}`). The Vercel AI stream carries the same as data parts,
+`data-voice.settings` and `data-voice.say`.
+
+A protocol client that sends the sound itself — AG-UI's `AudioInputContent`
+in the newest user message, its data inline as base64, WAV, FLAC, Ogg or
+WebM — is heard by the speech service with the caller's own token before the
+run. The message becomes the transcript, marked spoken, and the sound is not
+kept. A source given by address, another type, a missing token or the
+service's refusal is answered `422` in a sentence before the run starts.
+Recordings sent to `POST /speech/transcriptions` may be WAV, FLAC, Ogg Opus
+or WebM Opus (what Chrome's `MediaRecorder` writes), up to a minute.
+
