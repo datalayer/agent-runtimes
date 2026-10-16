@@ -7,6 +7,13 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.52
+
+SHIELD and SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **A model request through ai-inference is priced at the model catalogue's list price** (SH-32, d544ffd9): the runtime calls ai-inference as an OpenAI-compatible model named by the catalogue's id, so pydantic-ai priced a Bedrock id such as `us.anthropic.claude-sonnet-4-6` under OpenAI and found none; under a spend limit every later request was refused ("the price of … is unknown"). The Shield budget now reads the price from agentspecs' catalogue first.
+- **A refused turn is said to the person** (868b357e, d6058d67): a host's turn refused by the runtime, or a deployment not answering (a spent daily limit), is a `HostRefusedError` with the runtime's own reason; the in-memory development queue reports a failed job and works the next one instead of stopping the process.
+
 ## 1.5.51
 
 DISCORD, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
