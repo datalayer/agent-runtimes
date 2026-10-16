@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (the plan's ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.48
+
+SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **A host decides mail only** (S-302, decided by the user: SLACK §15, 5): the shared host kit's `renderApproval` keeps the mail renderer alone; reads and writes join `DATALAYER_ONLY`, and a send is mail only when its tool's name says so (`MAIL_WORDS`, `contracts.json` `presentation.mail_words`; `host_decidable` is `["send"]`, byte-identical to ai-agents').
+
 ## 1.5.47
 
 SHIELD, 16 October 2026 ([Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses/transports)):
