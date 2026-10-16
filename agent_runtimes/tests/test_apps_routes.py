@@ -129,6 +129,31 @@ def test_configure_runs_the_applications_agent_with_what_it_says(client: Any) ->
     assert request.transport == "ag-ui"
     current = client.get("/api/v1/apps/current").json()
     assert (current["id"], current["kind"]) == ("web-research", "chat")
+    assert current["starters"] == []
+
+
+def test_current_answers_the_applications_starters(client: Any) -> None:
+    """SLACK S-104: what a host suggests asking, each label with its message."""
+    starters = {
+        **WEB_RESEARCH,
+        "interface": {
+            "starters": [
+                {"label": "Compare", "message": "Compare the two launch options."},
+                {
+                    "label": "Risks",
+                    "message": "What are the risks?",
+                    "category": "Plan",
+                },
+            ]
+        },
+    }
+    assert (
+        client.post("/api/v1/apps/configure", json={"app": starters}).status_code == 200
+    )
+    assert client.get("/api/v1/apps/current").json()["starters"] == [
+        {"label": "Compare", "message": "Compare the two launch options."},
+        {"label": "Risks", "message": "What are the risks?"},
+    ]
 
 
 def test_what_the_builders_checks_refuse_is_refused_before_anything_runs(

@@ -872,7 +872,12 @@ async def apps(authorized: Authorized = Depends(a_person)) -> Dict[str, Any]:
 
 @router.get("/current")
 async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, Any]:
-    """Which application the runtime runs."""
+    """Which application the runtime runs, and the first messages it offers.
+
+    ``starters`` are the application's own (``interface.starters``): what a
+    host — @Datalayer's Home in Slack (plans/SLACK.md S-104) — suggests asking,
+    each with the words it shows and the message it sends.
+    """
     app = authorized.app
     if app is None:
         raise no_running_app()
@@ -884,6 +889,10 @@ async def current_app(authorized: Authorized = Depends(a_caller)) -> Dict[str, A
         "kind": app.kind,
         "setup": app.setup,
         "voice": voice_settings(app),
+        "starters": [
+            {"label": starter.label, "message": starter.message}
+            for starter in app.interface.starters
+        ],
     }
 
 
