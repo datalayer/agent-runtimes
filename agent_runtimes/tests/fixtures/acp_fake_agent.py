@@ -24,6 +24,13 @@ handed the MCP server its session was lent by that name, as a harness hands
 its sub-agents its own servers; the sub-agent calls each tool in turn over
 MCP and the agent says each answer (``subagent: <tool>: allowed|refused …``).
 Nothing else of the prompt is read (SHIELD SH-33).
+
+``tool: {"server": <name>, "tool": <tool>, "arguments": {...}}`` is the agent
+calling a lent tool itself, as a harness does: a tool call named
+``<server>_<tool>`` (kind ``other``), permission asked, and only when allowed
+the call made over MCP, its answer the call's content;
+``tool: {"kind": "fetch", "url": <url>}`` says a fetch of that URL. Nothing
+else of the prompt is read (SHIELD SH-70, SH-72).
 """
 
 from __future__ import annotations
@@ -161,6 +168,9 @@ class FakeAgent(Agent):
         )
         say = self.client.session_update
         await say(session_id=session_id, update=update_agent_thought_text("thinking"))
+        if text.startswith("tool:"):
+            await self._tool(session_id, json.loads(text.split(":", 1)[1]))
+            return PromptResponse(stop_reason="end_turn")
         if text.startswith("subagent:"):
             for line in await self._subagent(
                 session_id, json.loads(text.split(":", 1)[1])
@@ -384,6 +394,81 @@ class FakeAgent(Agent):
                 await asyncio.sleep(0.05)
         await say(session_id=session_id, update=update_agent_message_text("done"))
         return PromptResponse(stop_reason="end_turn")
+
+    async def _tool(self, session_id: str, asked: dict[str, Any]) -> None:
+        """A lent tool called by the agent itself, asked first; or a fetch said."""
+        say = self.client.session_update
+        self._counter += 1
+        call_id = f"t{self._counter}"
+        if asked.get("kind") == "fetch":
+            await say(
+                session_id=session_id,
+                update=start_tool_call(
+                    call_id,
+                    f"Fetch {asked['url']}",
+                    kind="fetch",
+                    status="pending",
+                    raw_input={"url": asked["url"]},
+                ),
+            )
+            await say(
+                session_id=session_id,
+                update=update_agent_message_text(f"tool: fetched {asked['url']}\n"),
+            )
+            return
+        name = f"{asked['server']}_{asked['tool']}"
+        arguments = dict(asked.get("arguments") or {})
+        call = ToolCallUpdate(
+            tool_call_id=call_id,
+            title=name,
+            kind="other",
+            status="pending",
+            raw_input={"name": name, **arguments},
+        )
+        await say(
+            session_id=session_id,
+            update=start_tool_call(
+                call_id,
+                name,
+                kind="other",
+                status="pending",
+                raw_input={"name": name, **arguments},
+            ),
+        )
+        answer = await self.client.request_permission(
+            session_id=session_id,
+            tool_call=call,
+            options=[
+                PermissionOption(option_id="allow", name="Allow", kind="allow_once"),
+                PermissionOption(option_id="reject", name="Reject", kind="reject_once"),
+            ],
+        )
+        if getattr(answer.outcome, "option_id", None) != "allow":
+            await say(
+                session_id=session_id, update=update_tool_call(call_id, status="failed")
+            )
+            await say(
+                session_id=session_id,
+                update=update_agent_message_text(f"tool: {name}: not made\n"),
+            )
+            return
+        lines = await self._subagent(
+            session_id,
+            {"server": asked["server"], "calls": [[asked["tool"], arguments]]},
+        )
+        said = "\n".join(lines)
+        await say(
+            session_id=session_id,
+            update=update_tool_call(
+                call_id,
+                status="completed",
+                content=[tool_content(text_block(said[:2000]))],
+            ),
+        )
+        await say(
+            session_id=session_id,
+            update=update_agent_message_text(f"tool: {said}\n"),
+        )
 
     async def _subagent(self, session_id: str, asked: dict[str, Any]) -> list[str]:
         """Spawn the sub-agent with the lent server named, and answer what it said."""
