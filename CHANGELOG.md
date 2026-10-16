@@ -9,6 +9,21 @@ say them) and links the page that documents them, at <https://agent-runtimes.dat
 
 ## Unreleased
 
+## 1.5.45
+
+VOICE, 16 October 2026 (agentspecs 0.0.108):
+
+- **The answer spoken over is marked interrupted in an application's own composer** (VO-13, 9cc07f65): `ChatBase`'s `markInterrupted`, handed to the host with the chat's controls.
+- **The sentence being said is marked in the conversation** (VO-65): its answer `aria-current` and `data-voice-saying` with a bar beside it, the sentence underlined through the CSS Custom Highlight API (`voice/captions`), from the chat's own speaker or the host's (`voiceSentence`).
+- **Audio over A2A and ACP** (VO-28, VO-36): an A2A audio file part heard by the speech service with the caller's token before the task is made (`HearA2AAudio`), a card naming no input modes lists the audio types, the agent's voice and its `say_aloud` lines in status messages' `metadata.voice`; ACP's `promptCapabilities.audio: true` and its `AudioContentBlock` heard before the turn; the Vercel AI page reads `data-voice.*` parts.
+- **`@app.audio`** (VO-46, LOOP P-22): `host.audio` hears a turn's sound in chunks, `@app.audio(session, HeardSpeech)` or the words as the message, marked spoken; `session.say(text)`; `host.interrupt` and `@app.interrupted`.
+- **Voice at the terminal** (VO-16, VO-15): Kokoro says answers on the machine when the `voice` extra (now with `kokoro-onnx`) and the pinned model are there; `python -m agent_runtimes.voice.store` fills the store from Datalayer's CDN, hash-checked; a line said at `loop`'s prompt is sent with how it was heard (`forwardedProps.voice`), and the AG-UI endpoint marks the run spoken.
+- **`where: auto`** (§5): `AutoHearing` chooses the device or the server per press, moving to the server when the device's model does not load and back to the device when the server refuses a press.
+- **Moonshine base measured on the server** (VO-47): `measure.py --server` runs the speech service's own engines and times a 3 s and a 9 s turn; `moonshine-base-en-server` in the catalogue, not switched to.
+- **e2e**: the hands-free case on its own fixture (`voice-hands-free.spec.ts`), the detection case reading the WebSocket stream.
+
+SHIELD, 16 October 2026:
+
 - **The Shield's examples** (SHIELD SH-23): `examples/shield/` — a coding agent on the local runtime as `loop --harness` starts it, the proxy driven from Python (`agent-shield run`), a rule tightened on a running session, the audit read back from the record, an orchestrator delegating to a coding agent over A2A and reading the diff; each on the fake agent with no key, its output in the README, run by `test_the_shield_examples.py` and held by `check_examples.py` (which now checks example folders: every script named in the README, every import existing). In the examples app, *Shield Harness* (the web chat on a harness runtime: diffs, terminals, the approval banner) and *Shield Policy* (`@datalayer/agent-shield`'s types and `describeDecision`). [Examples](https://agent-runtimes.datalayer.tech/docs/harnesses)
 - **The harnesses and Shield pages brought to what is built** (SH-20, SH-38, SH-06): the mapping tables as built, what each harness honours, the policies, the record, the trace, session rules, the budget. [Harnesses](https://agent-runtimes.datalayer.tech/docs/harnesses), [The Shield](https://agent-runtimes.datalayer.tech/docs/shield)
 
