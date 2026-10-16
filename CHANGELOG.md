@@ -7,6 +7,12 @@
 Each version names the LOOP boxes it carries (their ids, as its commits
 say them) and links the page that documents them, at <https://agent-runtimes.datalayer.tech>.
 
+## 1.5.53
+
+SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
+
+- **`DatalayerHostClient.self` returns the installation's uid** (S-301, 32ae4b1e): a host bound outside the install flow, such as a development Slack app given its host key, reads it to poll its outbox, so its approval cards and completions reach the workspace.
+
 ## 1.5.52
 
 SHIELD and SLACK, 16 October 2026 ([Portable code for phones and chat hosts](https://agent-runtimes.datalayer.tech/docs/apps/portable)):
